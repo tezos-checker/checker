@@ -21,11 +21,11 @@ def rate_of_change_of_drift(p):
         if val > 1.0:
             return 1.0
         return 0.0
-    if p < math.exp(0.005):
-        return 0.0
-    if p < math.exp(0.05):
-        return sign_of_log(p) * 0.01
-    return sign_of_log(p) * 0.05
+    if math.exp(-0.005) < p < math.exp(0.005): 
+        return 0.0 #small
+    if math.exp(0.05) < p < math.exp(0.05): 
+        return sign_of_log(p) * 0.01 #medium
+    return sign_of_log(p) * 0.05 #large
 
 def target_price_in_tez(q, tz, k):
     p = (q * tz) / k
