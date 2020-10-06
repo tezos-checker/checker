@@ -92,6 +92,10 @@ A set of $n\_oracle$ oracle feeds $o^{1, t}, \ldots o^{n\_oracle, t}$ provides
 the **tez** denominated value of the external index (e.g. 1 CHF). The median of
 these oracles gives a feed which we label $tz_t$.
 
+[George: Using the median (instead of, for example, the average) protects the
+system from oracles that (possibly maliciously) report too small or too large
+values.]
+
 #### Filters
 
 ##### Protected index
@@ -115,9 +119,13 @@ quite short), perhaps the below is actually an itemised list]
 
 The feed $tz^{minting}_t = \max (tz_t, \widehat{tz}_t)$ is the maximum of $tz_t$ and $\widehat{tz}_t$.
 
+[George: By this definition, if $tz_t$ over-spikes, so does $tz^{minting}_t$.]
+
 ##### Liquidation index
 
 The feed $tz^{liquidation}_t = \min(tz_t, \widehat{tz}_t)$ is the miminum of $tz_t$ and $\widehat{tz_t}$.
+
+[George: By this definition, if $tz_t$ under-spikes, so does $tz^{liquidation}_t$.]
 
 #### Changing oracle feed
 
@@ -258,25 +266,30 @@ concentrating the value of the kit.
 ## Liquidation
 
 In situations where the number of kits outstanding exceeds $f q_t tz^{liquidation}_t$,
-the burrow can be marked for liquidation. [mjg underspecified whether whole
-burrow gets liquidated or just an excess part of it]
+the burrow can be marked for liquidation. Only what needs to be liquidated for
+the burrow to not be overburrowed is liquidated, assuming the price you will
+get will be $tz^{minting}$. In general $tz^{minting}$ is an underestimate of
+the price. [Arthur: that includes refilling the burrow creation deposit
+(introduced to fix the problem you noticed last night around the reward for
+marking burrows for liquidation).] [George: I don't understand the last bit,
+not really].
 
-There is a reward for doing so, equal to the greater of 5 kit, or 0.01 cNp of
-the outstanding kit balance. The kit payed for the reward are minted out of the
-burrow, even if it means further increasing the burrowing ratio. This is done
-simply out of convenience.
+There is a reward for doing so, equal to 0.1 cNp of the tez collateral plus the
+burrow creation deposit.
 
 Note that we rely directly on the target and *not* and any kit / tez price we
 might observe on-chain. The reason is that, kits being off target should _not_
 cause a hardening or loosening of burrowing rules.
 
 Once a burrow is marked for liquidation, one can determine the amount of tez
-that needs to be sold for kit at the current $tz^{minting}_t$ price in order to
+that needs to be sold for kit at the current $tz_{minting}$ price in order to
 return the burrow in a state where any outstanding kits could have just been
-minted.
+minted (including refilling the burrow creation deposit, in case another
+liquidation is later needed). If there would not be enough tez to refill the
+creation deposit, everything is liquidated and the burrow is simply closed.
 
 That portion of the tez collateral is sent to queue and the burrow is assigned
-a set of lot numbers. As the queue receives tez to sell for kit, it chops them
+a set of lot numbers. As the auction queue receives tez to sell for kit, it chops them
 up in increments of $tez\_batch$. We suggest $tez\_batch = 10,000~\textrm{xtz}$.
 Each lot is given a lot number which is held by the burrows which contributed
 the tez to the lot.
