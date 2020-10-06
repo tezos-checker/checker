@@ -185,8 +185,8 @@ Two remarks:
 
 ## Burrows
 
-Burrows are similar to CDPs in MakerDAO. Each burrow is an independent smart
-contract, originated by the Checker contract.
+Burrows are similar to Collateralized Debt Positions (CDPs) in MakerDAO. Each
+burrow is an independent smart contract, originated by the Checker contract.
 
 **Important: the creator of the burrow can set the delegation address associated with it.**
 
