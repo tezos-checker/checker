@@ -96,17 +96,16 @@ these oracles gives a feed which we label $tz_t$.
 
 ##### Protected index
 
-The median of external oracles is itself filtered as follows:
-
-1. Define the protected index
-
-The protected indexe, $\widehat{tz}_t$ is defined as:
+The median of external oracles is itself filtered; the protected index, $\widehat{tz}_t$ is defined as:
 
 $$\widehat{tz}_{t_i} = \widehat{tz}_{t_{i-1}} \times \mathrm{clamp}\!\left(\frac{tz_{t_i}}{\widehat{tz}_{t_{i-1}} }, e^{-\epsilon (t_{i}-t_{i-1})}, e^{\epsilon (t_{i}-t_{i-1})}\right)$$
 
-We suggest a value of $\epsilon = 0.05~\mathrm{cNp/min}$ -- that's about 72 cNp / day, so the filter can catch up to a 2x or 0.5x move in 24 hours, and a 3% move in an hour.
+We suggest a value of $\epsilon = 0.05~\mathrm{cNp/min}$ -- that's about
+72 cNp / day, so the filter can catch up to a 2x or 0.5x move in 24 hours, and
+a 3% move in an hour.
 
-$\widehat{tz}_t$ is like the suspension of a car, it lags behind large moves, but is insensitive to spikes (real or fabricated).
+$\widehat{tz}_t$ is like the suspension of a car, it lags behind large moves,
+but is insensitive to spikes (real or fabricated).
 
 In addition, we define the following prices [mjg suggest creating a subsection
 for "Prices" and moving the indexes below down a level.  Or (because they're
@@ -450,7 +449,15 @@ module rec Burrow : sig
       or a {b user} right which can include depositing tez,
       withdrawing tez, minting kits, burning kit, and setting
      the delegate. *)
-  type rights = Admin | User of { deposit_tez : bool ; withdraw_tez : bool ; mint_kit : bool ; burn_kit : bool ; set_delegate : bool }
+  type rights
+    = Admin
+    | User of
+        { deposit_tez : bool
+        ; withdraw_tez : bool
+        ; mint_kit : bool
+        ; burn_kit : bool
+        ; set_delegate : bool
+        }
 
   (** A permission is a ticket containing a right. *)
   type permission = rights ticket
@@ -460,10 +467,12 @@ module rec Burrow : sig
 
   (**** Deposits and withdrawals, burns and mints ****)
 
-  (** Simple deposit, accepting only tez with no parameters. Only possible if allow_all_tez is set to true. *)
+  (** Simple deposit, accepting only tez with no parameters. Only possible if
+    * allow_all_tez is set to true. *)
   val default : t -> t
 
-  (** Deposit tez and / or burn kits. If the burrow does not require a permission to deposit, the permission can be None. *)
+  (** Deposit tez and / or burn kits. If the burrow does not require a
+    * permission to deposit, the permission can be None. *)
   val deposit : t -> call:Tezos.call -> permission option -> Checker.kit_utxo option -> t
 
   (** Withdraw tez and/or mint_kits *)
@@ -483,8 +492,9 @@ module rec Burrow : sig
   (** Creates a new permission. Requires admin. *)
   val make_permission : t -> permission -> rights -> (permission * t)
 
-  (** Requires admin. Increments a counter so that all previous permissions are now invalid and returns a new admin permission.
-      This makes is easy to transfer an admin permission to another party. *)
+  (** Requires admin. Increments a counter so that all previous permissions are
+    * now invalid and returns a new admin permission.  This makes is easy to
+    * transfer an admin permission to another party. *)
   val invalidate_all_permissions : t -> permission -> (permission * t)
 
 
@@ -493,31 +503,37 @@ module rec Burrow : sig
 
   (** - If the contract is not in liquidation and
          - It should not be liquidated : do nothing
-         - If it should be liquidated : send an appropriate amount of tez to the liquidation queue and tip the caller
+	 - If it should be liquidated : send an appropriate amount of tez to
+	   the liquidation queue and tip the caller
       - If the contract is in liquidation and
-         - The amount in the liquidation queue is insufficient : send more to the liquidation queue
+	 - The amount in the liquidation queue is insufficient : send more to
+	   the liquidation queue
          - The amount in the liquidation queue is too high :
-              - And that amount is 0: mark the contract as not being under liquidation anymore
-              - And that amount is greater than 0: cancel the next upcoming liquidation for this contract
+	      - And that amount is 0: mark the contract as not being under
+	        liquidation anymore
+	      - And that amount is greater than 0: cancel the next upcoming
+	        liquidation for this contract
 
-       To avoid hysteresis, it is assumed that tez sent to the liquidation will sell for, say 2/3 of
-       the current price estimate.
+       To avoid hysteresis, it is assumed that tez sent to the liquidation will
+       sell for, say 2/3 of the current price estimate.
    **)
 
   (** Anyone can call touch, this helps perform housekeeping operations on the burrow. *)
   val touch : t -> t
 
-  (* A few thoughts. What does it mean to be liquidated? It means that a portion of the funds is going to be
-     sent to a liquidation queue in the checker contract. That liquidation queue auctions out blocks of, say,
+  (* A few thoughts. What does it mean to be liquidated? It means that a
+     portion of the funds is going to be sent to a liquidation queue in the
+     checker contract. That liquidation queue auctions out blocks of, say,
      10,000 tez for kits (or some price defined amount).
 
-     When the tez is taken from the contract and placed in the queue, the amount and "bins" your collateral
-     is placed in is recorded. When the sell happens, a claim can be made for the kits burned to be
-     deducted from this contract debt at the pro-rata.
+     When the tez is taken from the contract and placed in the queue, the
+     amount and "bins" your collateral is placed in is recorded. When the sell
+     happens, a claim can be made for the kits burned to be deducted from this
+     contract debt at the pro-rata.
 
-     If the contract has recovered and should not be in liquidation anymore, cancel the earliest bid
-     in the auction queue and get some tez back. This can be called repeatedly until it's all
-     cancelled.
+     If the contract has recovered and should not be in liquidation anymore,
+     cancel the earliest bid in the auction queue and get some tez back. This
+     can be called repeatedly until it's all cancelled.
   *)
 
  end = struct
@@ -537,13 +553,16 @@ and Checker : sig
 
   (***** Burrow creation and kint minting section *****)
 
-  (** "touch" can be called by anyone, it performs housekeeping tasks on the contract state such as pulling in oracle values *)
+  (** "touch" can be called by anyone, it performs housekeeping tasks on the
+    * contract state such as pulling in oracle values *)
   val touch : t -> t
 
-  (** Creates and return a new burrow owned by owner, fund it if tez is passed to the call. *)
+  (** Creates and return a new burrow owned by owner, fund it if tez is passed
+    * to the call. *)
   val create_burrow : t -> call:Tezos.call -> owner:Tezos.address -> (Burrow.t * t)
 
-  (** Mint kits. Must be called by a burrow. Mint a kit utxo and send it back to the calling burrow. *)
+  (** Mint kits. Must be called by a burrow. Mint a kit utxo and send it back
+    * to the calling burrow. *)
   val mint_kit : t -> call:Tezos.call -> amount:Tezos.nat -> (t, error)  result
 
   (***** uniswap section *****)
@@ -570,7 +589,8 @@ end
 let's triple that and make it and assume a drift of 53.43 cNp (that's about
 70.61% a year!), over one minute this would only equate  / year\%$ a year
 (MakerDAO's stability fee's record high was $19.5\%$), over one minute, this
-would equate about $53.43~/~(365.25 \times 24 \times 60) \mathrm{cNp} \simeq 1.016 \times 10^{-4} \mathrm{cNp}$.
+would equate about
+$53.43~/~(365.25 \times 24 \times 60) \mathrm{cNp} \simeq 1.016 \times 10^{-4} \mathrm{cNp}$.
 The relative error in the approximation for $(e^x - (1+x))/ e^x$ is about
 $5 \times 10^{-9}$. Even if the system does not update for a whole day, the
 relative error would only be about $1.8 \times 10^{-5}$.
