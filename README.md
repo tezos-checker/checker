@@ -167,14 +167,14 @@ $t$, $d'_t$ is defined based on the imbalance:
 
 $$
 \left\{\begin{array}{ccc}
-|\log p_t| < 0.5~\textrm{cNp} & \Rightarrow & d'_t = 0\\
-0.5~\textrm{cNp} < |\log p_t| < 5~\textrm{cNp} & \Rightarrow & d'_t = \mathrm{sign}(\log p_t) 0.01~\textrm{cNp}/\textrm{day}^2\\
-5~\textrm{cNp} < |\log p_t| & \Rightarrow & d'_t = \mathrm{sign}(\log p_t) 0.05~\textrm{cNp}/\textrm{day}^2\\
+|\log p_{t_i}| < 0.5~\textrm{cNp} & \Rightarrow & d'_{t_{i+1}} = 0\\
+0.5~\textrm{cNp} < |\log p_{t_i}| < 5~\textrm{cNp} & \Rightarrow & d'_{t_{i+1}} = \mathrm{sign}(\log p_{t_i}) 0.01~\textrm{cNp}/\textrm{day}^2\\
+5~\textrm{cNp} < |\log p_{t_i}| & \Rightarrow & d'_{t_{i+1}} = \mathrm{sign}(\log p_{t_i}) 0.05~\textrm{cNp}/\textrm{day}^2\\
 \end{array}
 \right.
 $$
 
-It's easy to imagine models where $d'_t$ depends continuously on $\log p_t$ but
+It's easy to imagine models where $d'_{t_{i+1}}$ depends continuously on $\log p_{t_i}$ but
 our intuition is that such models tend to be less robust than simple bang-bang
 models such as the one above.
 
