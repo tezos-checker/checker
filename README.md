@@ -219,12 +219,19 @@ The actions that can be performed on a burrow are
 overpopulation of kits, the burrowing it limited depending on the number of tez
 in the burrow. Generally, kits can be minted so long as the tez in the burrow
 exceeds $f$ times the number of minted kits multiplied by $q_t$ multiplied by
-$tz^{minting}_t$. We propose $f = 2$.
-
+$tz^{minting}_t$. We propose $f = 2$. That it, at any moment in time, $t_i$,
+the following should hold between
+the number of kits ($\mathrm{kits}$) minted from and
+the number tez ($\mathrm{xtz}$) residing in
+a burrow:
+$$
+f \times \mathrm{kits} \times tz^{minting}_{t_i} \times q_{t_i} \le \mathrm{xtz}
+$$
 Assume for instance $tz^{minting}_t = 0.36 \textrm{xtz}$ and $q_t = 1.015$. To
 mint 10 kits, one would require $2 \times 10 \times 0.36 \times 1.015 = 7.308~\mathrm{xtz}$ in the burrow.
 
-In situations where the number of kits outstanding exceeds $f q_t tz^{liquidation}_t$, the burrow can be marked for liquidation, as we'll see
+In situations where the number of kits outstanding exceeds $f q_t
+tz^{liquidation}_t$, the burrow can be marked for liquidation, as we'll see
 later.
 
 ### Burrow fee
