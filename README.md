@@ -190,7 +190,7 @@ burrow is an independent smart contract, originated by the Checker contract.
 
 **Important: the creator of the burrow can set the delegation address associated with it.**
 
-Both tez and kit can be deposited in the burrow and, in the right conditions,
+Tez can be deposited in the burrow and, in the right conditions,
 the owner can mint kits from the burrow or withdraw tez.
 
 The actions that can be performed on a burrow are
