@@ -9,5 +9,6 @@ pkgs.mkShell {
     ocamlPackages.ocaml
     ocamlPackages.ocp-indent
     ocamlPackages.merlin
+    ocamlPackages.ocamlbuild
   ];
 }

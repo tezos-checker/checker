@@ -415,6 +415,14 @@ cancelled.
 
 Alternative: do not use Ligo, use meta-michelson in OCaml.
 
+# Building
+
+To build the OCaml code, enter the nix-shell and:
+
+```
+ocamlbuild -I src/ checker.byte
+```
+
 [^1]: MakerDAO's record high stability fee was 17.81 cNp / year (19.5% a year),
 let's triple that and make it and assume a drift of 53.43 cNp (that's about
 70.61% a year!), over one minute this would only equate  / year\%$ a year
