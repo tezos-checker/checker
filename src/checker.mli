@@ -38,3 +38,58 @@ val add_liquidity: t -> call:Tezos.call -> kits:(Tezos.nat option) -> lqs_utxo *
 
 (** Redeem lqs utxo. *)
 val redeem_liquidity : t -> call:Tezos.call -> lqs_utxo -> kit_utxo * Tezos.tez * t
+
+(***** auctions section *****)
+
+(**
+
+   Check state of a burrow and update if necessary.
+
+   - Updates the burrow's outstanding kit balance according to the
+     compounding burrowing fee and imbalance adjustments.
+
+   - Calculates whether the collateral is sufficient for the burrow's
+     outstanding kit balance.
+
+   The amount of tez needed per kit, to be considered adequate collateral, is
+
+    f * q * tz(liq).
+
+   The amount of outstanding kit that does not have adequate collateral is therefore
+
+    kit_without_collateral = kit_balance - (collateral / f * q * tz(liq))
+
+   If kit_without_collateral <= 0, then no liquidation is required.
+
+   We To each illiquid kit to restore that shortfall would be expected to cost
+
+    tz(minting)
+
+   The liquidation_threshold for the collateral is:
+
+     kit_balance * f * q * tz(liq)
+
+   If collateral >= liquidation_threshold then no action is taken.
+
+   Otherwise, a payment of burrow_creation_deposit + 0.1cNp of the tez
+   collateral is immediately transferred to the caller as a reward.
+
+   The burrow_creation_deposit is then refilled from the remaining
+   collateral, which is reduced accordingly. If it cannot be refilled,
+   everything is liquidated and the burrow is simply closed. FIXME
+
+   The cost in tez to mint the kit balance would be
+
+    full_minting_collateral = burrow_creation_deposit + kit_balance * f * q * tz(minting)
+
+   The amount
+
+    collateral_shortfall = full_minting_collateral - liquidation_threshold
+
+   is the amount of tez collateral that
+
+   Then, the difference between the threshold and the new tez balance
+   is set aside for auction.
+
+ **)
+val touch_burrow : t -> call:Tezos.call -> burrow:Tezos.address -> Tezos.payment option
