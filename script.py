@@ -55,23 +55,20 @@ if __name__ == "__main__":
     new_liquidation_limit = kit_liquidation_limit(q, c_without_reward, tz_liquidation)
     print ("New liquidation limit : {0}".format(new_liquidation_limit))
 
-    if k > new_liquidation_limit:
-      print ("Still overburrowed    : True")
+    amount_of_kit_to_write_off = kit_to_write_off(q, k, c_without_reward, tz_liquidation, tz_minting)
+    print ("Kits to write off     : {0}".format(amount_of_kit_to_write_off))
 
-      amount_of_kit_to_write_off = kit_to_write_off(q, k, c_without_reward, tz_liquidation, tz_minting)
-      print ("Kits to write off     : {0}".format(amount_of_kit_to_write_off))
+    amount_of_tez_to_auction = tez_to_auction(q, k, c_without_reward, tz_liquidation, tz_minting)
+    print ("Tez to auction        : {0}".format(amount_of_tez_to_auction))
 
-      amount_of_tez_to_auction = tez_to_auction(q, k, c_without_reward, tz_liquidation, tz_minting)
-      print ("Tez to auction        : {0}".format(amount_of_tez_to_auction))
+    final_collateral = c_without_reward - amount_of_tez_to_auction
+    print ("New collateral        : {0}".format(final_collateral))
 
-      final_collateral = c_without_reward - amount_of_tez_to_auction
-      print ("New collateral        : {0}".format(final_collateral))
+    final_kit = k - amount_of_kit_to_write_off
+    print ("New outstanding kit   : {0}".format(final_kit))
 
-      final_kit = k - amount_of_kit_to_write_off
-      print ("New outstanding kit   : {0}".format(final_kit))
+    final_liquidation_limit = kit_liquidation_limit(q, final_collateral, tz_liquidation)
+    print ("New liquidation limit : {0}".format(final_liquidation_limit))
 
-      final_liquidation_limit = kit_liquidation_limit(q, final_collateral, tz_liquidation)
-      print ("New liquidation limit : {0}".format(final_liquidation_limit))
-
-      print ("Still overburrowed    : {0}".format(final_kit > final_liquidation_limit))
+    print ("Still overburrowed    : {0}".format(final_kit > final_liquidation_limit))
 
