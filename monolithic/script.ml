@@ -164,6 +164,16 @@ let computeTezToAuction (p : parameters) (b : burrow) : tez =
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
   computeTezToAuction p b /. (p.q *. p.tz_minting)
 
+(*
+I can think of the following outcomes:
+  * A burrow does not need to be liquidated
+  * A burrow needs to be liquidated partially
+  * A burrow needs to be liquidated in its entirety
+The stuff below does not even deal with the last scenario yet but it should. We
+should also start looking into batching/auctioning after the basic stuff is out
+of the way.
+*)
+
 (* ************************************************************************* *)
 (* ************************************************************************* *)
 (* ************************************************************************* *)
@@ -187,6 +197,17 @@ let () =
   let reward = computeLiquidationReward params initial_burrow in
   printf "Reward                : %.15f\n" reward;
 
+  (* NOTE: George: The initial state of the burrow is the collateral C, the
+   * oustanding kit K, and the implicit creation deposit D (1 tez). I say
+   * implicit because it does not count towards the collateral. So, in honesty,
+   * the 1 tez in the reward does not come from the collateral, but it is the
+   * creation deposit D. But then, in order to bring the burrow in a good
+   * state, we need to stash away (implicitly, again) 1 tez as creation deposit
+   * (this will be used if (a) the owner wants to close the burrow or (b) we
+   * need to liquidate the burrow again). This one does come out of the
+   * collateral though. From the outside it all looks the same I guess, minus
+   * one plus one, but I thought that this intricacy is worth pointing out.
+   *)
   let burrow_without_reward = { initial_burrow with collateral_tez = initial_burrow.collateral_tez -. reward } in
   printf "New collateral        : %.15f\n" burrow_without_reward.collateral_tez;
 
