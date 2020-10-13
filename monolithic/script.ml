@@ -101,22 +101,38 @@ let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (f *. (p.q *. p.tz_liquidation))
   (* TEZ / (TEZ / KIT) = KIT *)
 
+(*
+The tez/kit price we expect to get when we liquidate is (q * tz_minting). So if
+we auction Δcollateral tez, and we receive Δkit kit for it, the following is
+expected to hold
+
+  Δcollateral = Δkit * (q * tz_minting)                      (1)
+
+  Δkit = Δcollateral / (q * tz_minting)                      (1)
+
+Furthermore, after liquidation, the burrow must not be liquidatable anymore, so
+the following must hold
+
+  (C + Δcollateral) = (K + Δkit) * f * q * tz_liquidation    (2)
+
+Solving the above equations gives:
+
+  Δcollateral = tz_mint * (C - K*f*q*tz_liq) / (f*tz_liq - tz_mint)
+  Δkit        = Δcollateral / (q * tz_minting)
+*)
+
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
-  * liquidation. George: We need some precision here. *)
+  * liquidation. George: We need some more accurate comments here. *)
 let computeTezToAuction (p : parameters) (b : burrow) : tez =
-  (* TODO: This calculation is actually wrong (look at the types), but leave it like this until the results are reproduced. We'll fix it immediately afterwards *)
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
     *. p.tz_minting
     *. (b.collateral_tez -. b.outstanding_kit *. f *. (p.q *. p.tz_liquidation))
-    /. (f *. (p.q *. p.tz_liquidation) -. p.tz_minting) (* TODO: wrong. No q here. *)
+    /. (f *. p.tz_liquidation -. p.tz_minting)
 
-(** Compute the amount of kits we expect to get from auctioning the needed tez.
-  * TODO: Explain and elaborate on the equations. NOTE: Previously named
-  * kit_to_write_off. *)
+(** Compute the amount of kits we expect to get from auctioning tez. *)
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
-  (* TODO: This calculation is actually wrong (look at the types), but leave it like this until the results are reproduced. We'll fix it immediately afterwards *)
-  computeTezToAuction p b /. p.tz_minting (* TODO: wrong. No q here. *)
+  computeTezToAuction p b /. (p.q *. p.tz_minting)
 
 (* ************************************************************************* *)
 (* ************************************************************************* *)
