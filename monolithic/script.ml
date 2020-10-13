@@ -5,6 +5,13 @@ open Format
 
 * What if computeTezToAuction returns something positive?
 
+About switching to an integer representation for tez and kit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Currently 1 tez (1 XTZ) is divisible to six decimal places, and the smallest
+unit is called a micro tez:
+
+  1 tez = 100 cents = 1,000,000 micro tez (mutez)
+
 *)
 
 (* ************************************************************************* *)
@@ -63,16 +70,17 @@ let depositTez (t : tez) (b : burrow) : burrow =
   * given the number of tez that have been deposited in it. The general limit
   * for burrowing is given by the following inequality:
   *
-  *   fplus * kit_outstanding * (q * tz_mint) < tez_collateral XXX I hope this can be <= instead.
+  *   fplus * kit_outstanding * (q * tz_mint) <= tez_collateral
   *
   * So we compute
   *
-  *   kit_outstanding < tez_collateral / (fplus * (q * tz_mint)) XXX I hope this can be <= instead.
+  *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
   *)
 let computeBurrowingLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fplus *. (p.q *. p.tz_minting))
 
-(* Check that a burrow is not overburrowed *)
+(** Check that a burrow is not overburrowed (that is, the kit outstanding does
+  * not exceed the burrowing limit). *)
 let isNotOverburrowed (p : parameters) (b : burrow) : bool =
   b.outstanding_kit <= computeBurrowingLimit p b
 
