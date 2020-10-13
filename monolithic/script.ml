@@ -28,8 +28,8 @@ let print_burrow (b : burrow) =
 (**                               CONSTANTS                                  *)
 (* ************************************************************************* *)
 
-(* TODO: define fplus and fminus (or fliq fmint) instead of having only one. *)
-let (f : float) = 2.0;;              (* dimensionless *)
+let (fplus  : float) = 2.1;; (* dimensionless. Alternatively: f_minting *)
+let (fminus : float) = 1.9;; (* dimensionless. Alternatively: f_liquidation *)
 let (creation_deposit : tez) = 1.0;;
 let (liquidation_reward_percentage : float) = 0.001;; (* TEZ% TODO: Use cNp *)
 
@@ -54,14 +54,27 @@ let createBurrow () : burrow =
     outstanding_kit = 0.0;
   }
 
-(* Add non-negative collateral to a burrow. *)
+(** Add non-negative collateral to a burrow. *)
 let depositTez (t : tez) (b : burrow) : burrow =
   assert (t >= 0.0);
   { b with collateral_tez = b.collateral_tez +. t }
 
+(** Compute the maximum number of kit that can be outstanding from a burrow,
+  * given the number of tez that have been deposited in it. The general limit
+  * for burrowing is given by the following inequality:
+  *
+  *   fplus * kit_outstanding * (q * tz_mint) < tez_collateral XXX I hope this can be <= instead.
+  *
+  * So we compute
+  *
+  *   kit_outstanding < tez_collateral / (fplus * (q * tz_mint)) XXX I hope this can be <= instead.
+  *)
+let computeBurrowingLimit (p : parameters) (b : burrow) : kit =
+  b.collateral_tez /. (fplus *. (p.q *. p.tz_minting))
+
 (* Check that a burrow is not overburrowed *)
 let isNotOverburrowed (p : parameters) (b : burrow) : bool =
-  f *. b.outstanding_kit *. p.tz_minting *. p.q < b.collateral_tez
+  b.outstanding_kit <= computeBurrowingLimit p b
 
 let isOverburrowed (p : parameters) (b : burrow) : bool =
   not (isNotOverburrowed p b)
@@ -80,44 +93,49 @@ let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
 let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
   failwith "to be implemented"
 
+(* ************************************************************************* *)
+(**                          LIQUIDATION-RELATED                             *)
+(* ************************************************************************* *)
+
 (** The reward for triggering a liquidation. This amounts to the burrow's
   * creation deposit, plus the liquidation reward percentage of the burrow's
-  * collateral. In the grand scheme of things, this should be given to the
+  * collateral. Of course, if the burrow does not qualify for liquidation, the
+  * reward is zero. In the grand scheme of things, this should be given to the
   * actor triggering liquidation. *)
 let computeLiquidationReward (p : parameters) (b : burrow) : tez =
   match isOverburrowed p b with
   | true  -> creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
-  | false -> 0.0 (* No reward if the burrow is OK *)
+  | false -> 0.0 (* No reward if the burrow should not be liquidated *)
 
 (** Compute the liquidation limit for a given burrow. The liquidation limit is
   * the maximum number of kits outstanding (given the collateral in the burrow)
   * that can be outstanding, so that the burrow cannot be marked for
   * liquidation. Essentially, if the following inequality is not satisfied,
   *
-  *   tez_collateral >= F * (q * tz_liquidation) * kits_outstanding
+  *   tez_collateral >= fminus * (q * tz_liquidation) * kit_outstanding
   *
   * then the burrow can be marked for liquidation.
 *)
 let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
-  b.collateral_tez /. (f *. (p.q *. p.tz_liquidation))
+  b.collateral_tez /. (fminus *. (p.q *. p.tz_liquidation))
   (* TEZ / (TEZ / KIT) = KIT *)
 
 (** The tez/kit price we expect to get when we liquidate is (q * tz_minting).
   * So if we auction Δcollateral tez, and we receive Δkit kit for it, the
   * following is expected to hold
   *
-  *   Δcollateral = Δkit * (q * tz_minting)                      (1)
+  *   Δcollateral = Δkit * (q * tz_minting)                          <=>
   *
-  *   Δkit = Δcollateral / (q * tz_minting)                      (1)
+  *   Δkit = Δcollateral / (q * tz_minting)                          (1)
   *
   * Furthermore, after liquidation, the burrow must not be liquidatable
   * anymore, so the following must hold
   *
-  *   (C + Δcollateral) = (K + Δkit) * f * q * tz_liquidation    (2)
+  *   (C + Δcollateral) = (K + Δkit) * fplus * q * tz_liquidation    (2)
   *
   * Solving the above equations gives:
   *
-  *   Δcollateral = tz_mint * (C - K*f*q*tz_liq) / (f*tz_liq - tz_mint)
+  *   Δcollateral = tz_mint * (C - K*fplus*q*tz_liq) / (fplus*tz_liq - tz_mint)
   *   Δkit        = Δcollateral / (q * tz_minting)
   *)
 
@@ -127,8 +145,8 @@ let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
 let computeTezToAuction (p : parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
     *. p.tz_minting
-    *. (b.collateral_tez -. b.outstanding_kit *. f *. (p.q *. p.tz_liquidation))
-    /. (f *. p.tz_liquidation -. p.tz_minting)
+    *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. p.tz_liquidation))
+    /. (fplus *. p.tz_liquidation -. p.tz_minting)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
