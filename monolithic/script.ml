@@ -1,18 +1,11 @@
 
 open Format
 
-(*
-collateral that will remain : (c - tez_to_auction - CREATION_DEPOSIT) :: TEZ
-kits that we can considered repaid (probably what you mean by wrote off) : tez_to_auction / (tz_minting * q) :: KIT
-so the position in kit will be: k - tez_to_auction / (tz_minting * q) :: KIT
+(* TODO: THINGS TO CONSIDER:
 
-and the ratio will be:  (c - tez_to_auction - CREATION_DEPOSIT) / (q * tz_liquidation * (k - tez_to_auction / (tz_minting * q))) :: DIMENSIONLESS
+* What if computeTezToAuction returns something positive?
 
-If (c - tez_to_auction - CREATION_DEPOSIT) / (q * tz_liquidation * (k - tez_to_auction / (tz_minting * q))) = F then
-
-tez_to_auction = tz_minting * (c - CREATION_DEPOSIT - F * k * q * tz_liquidation) / (F * tz_liquidation - tz_minting)
 *)
-
 
 (* ************************************************************************* *)
 (*                               BASIC TYPES                                 *)
@@ -25,9 +18,17 @@ type burrow =
     outstanding_kit : kit;
   }
 
+let print_burrow (b : burrow) =
+  printf
+    "{collateral  = %.15f tez;\n outstanding = %.15f kit}\n"
+    b.collateral_tez
+    b.outstanding_kit
+
 (* ************************************************************************* *)
 (**                               CONSTANTS                                  *)
 (* ************************************************************************* *)
+
+(* TODO: define fplus and fminus (or fliq fmint) instead of having only one. *)
 let (f : float) = 2.0;;              (* dimensionless *)
 let (creation_deposit : tez) = 1.0;;
 let (liquidation_reward_percentage : float) = 0.001;; (* TEZ% TODO: Use cNp *)
@@ -45,7 +46,9 @@ type parameters =
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
 
-(* Create a burrow without any tez collateral or outstanding kit. *)
+(** Create a burrow without any tez collateral or outstanding kit. George: With
+  * the current rules, this burrow is already undercollateralized, since 0 < 0
+  * is false. *)
 let createBurrow () : burrow =
   { collateral_tez = 0.0;
     outstanding_kit = 0.0;
@@ -53,9 +56,8 @@ let createBurrow () : burrow =
 
 (* Add non-negative collateral to a burrow. *)
 let depositTez (t : tez) (b : burrow) : burrow =
-  if t < 0.0
-    then failwith "depositTez: negative collateral given"
-    else { b with collateral_tez = b.collateral_tez +. t }
+  assert (t >= 0.0);
+  { b with collateral_tez = b.collateral_tez +. t }
 
 (* Check that a burrow is not overburrowed *)
 let isNotOverburrowed (p : parameters) (b : burrow) : bool =
@@ -67,12 +69,11 @@ let isOverburrowed (p : parameters) (b : burrow) : bool =
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
 let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
+  assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
-  if t < 0.0
-    then failwith "withdrawTez: negative amount given"
-    else if isOverburrowed p updated
-           then None
-           else Some updated
+  if isOverburrowed p updated
+    then None
+    else Some updated
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
@@ -101,25 +102,24 @@ let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (f *. (p.q *. p.tz_liquidation))
   (* TEZ / (TEZ / KIT) = KIT *)
 
-(*
-The tez/kit price we expect to get when we liquidate is (q * tz_minting). So if
-we auction Δcollateral tez, and we receive Δkit kit for it, the following is
-expected to hold
-
-  Δcollateral = Δkit * (q * tz_minting)                      (1)
-
-  Δkit = Δcollateral / (q * tz_minting)                      (1)
-
-Furthermore, after liquidation, the burrow must not be liquidatable anymore, so
-the following must hold
-
-  (C + Δcollateral) = (K + Δkit) * f * q * tz_liquidation    (2)
-
-Solving the above equations gives:
-
-  Δcollateral = tz_mint * (C - K*f*q*tz_liq) / (f*tz_liq - tz_mint)
-  Δkit        = Δcollateral / (q * tz_minting)
-*)
+(** The tez/kit price we expect to get when we liquidate is (q * tz_minting).
+  * So if we auction Δcollateral tez, and we receive Δkit kit for it, the
+  * following is expected to hold
+  *
+  *   Δcollateral = Δkit * (q * tz_minting)                      (1)
+  *
+  *   Δkit = Δcollateral / (q * tz_minting)                      (1)
+  *
+  * Furthermore, after liquidation, the burrow must not be liquidatable
+  * anymore, so the following must hold
+  *
+  *   (C + Δcollateral) = (K + Δkit) * f * q * tz_liquidation    (2)
+  *
+  * Solving the above equations gives:
+  *
+  *   Δcollateral = tz_mint * (C - K*f*q*tz_liq) / (f*tz_liq - tz_mint)
+  *   Δkit        = Δcollateral / (q * tz_minting)
+  *)
 
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
@@ -149,6 +149,8 @@ let () =
       tz_liquidation = 0.32;
     } in
 
+  print_burrow initial_burrow;
+
   let initial_liquidation_limit = computeLiquidationLimit params initial_burrow in
   printf "Overburrowed          : %B\n" (initial_burrow.outstanding_kit > initial_liquidation_limit);
 
@@ -168,8 +170,7 @@ let () =
     { collateral_tez = burrow_without_reward.collateral_tez -. tez_to_auction;
       outstanding_kit = burrow_without_reward.outstanding_kit -. kit_to_receive;
     } in
-  printf "New collateral        : %.15f\n" final_burrow.collateral_tez;
-  printf "New outstanding kit   : %.15f\n" final_burrow.outstanding_kit;
+  print_burrow final_burrow;
 
   let final_liquidation_limit = computeLiquidationLimit params final_burrow in
   printf "New liquidation limit : %.15f\n" final_liquidation_limit;
