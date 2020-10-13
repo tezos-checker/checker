@@ -1,2 +1,5 @@
 _build
 checker.byte
+
+*.cmi
+*.cmo
