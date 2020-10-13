@@ -99,7 +99,11 @@ let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
 let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
-  failwith "to be implemented"
+  assert (k >= 0.0);
+  let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
+  if isOverburrowed p updated
+    then None
+    else Some updated
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
