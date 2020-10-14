@@ -110,16 +110,6 @@ let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
 (**                          LIQUIDATION-RELATED                             *)
 (* ************************************************************************* *)
 
-(** The reward for triggering a liquidation. This amounts to the burrow's
-  * creation deposit, plus the liquidation reward percentage of the burrow's
-  * collateral. Of course, if the burrow does not qualify for liquidation, the
-  * reward is zero. In the grand scheme of things, this should be given to the
-  * actor triggering liquidation. *)
-let computeLiquidationReward (p : parameters) (b : burrow) : tez =
-  match isOverburrowed p b with
-  | true  -> creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
-  | false -> 0.0 (* No reward if the burrow should not be liquidated *)
-
 (** Compute the liquidation limit for a given burrow. The liquidation limit is
   * the maximum number of kits outstanding (given the collateral in the burrow)
   * that can be outstanding, so that the burrow cannot be marked for
@@ -132,6 +122,19 @@ let computeLiquidationReward (p : parameters) (b : burrow) : tez =
 let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fminus *. (p.q *. p.tz_liquidation))
 (* TEZ / (TEZ / KIT) = KIT *)
+
+let shouldBurrowBeLiquidated (p : parameters) (b : burrow) : bool =
+  b.outstanding_kit > computeLiquidationLimit p b
+
+(** The reward for triggering a liquidation. This amounts to the burrow's
+  * creation deposit, plus the liquidation reward percentage of the burrow's
+  * collateral. Of course, if the burrow does not qualify for liquidation, the
+  * reward is zero. In the grand scheme of things, this should be given to the
+  * actor triggering liquidation. *)
+let computeLiquidationReward (p : parameters) (b : burrow) : tez =
+  if shouldBurrowBeLiquidated p b
+  then creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
+  else 0. (* No reward if the burrow should not be liquidated *)
 
 (** The tez/kit price we expect to get when we liquidate is (q * tz_minting).
   * So if we auction Δcollateral tez, and we receive Δkit kit for it, the
@@ -318,8 +321,8 @@ let burrow_experiment () =
 
   print_burrow initial_burrow;
 
-  let initial_liquidation_limit = computeLiquidationLimit params initial_burrow in
-  printf "Overburrowed          : %B\n" (initial_burrow.outstanding_kit > initial_liquidation_limit);
+  printf "Overburrowed          : %B\n" (isOverburrowed params initial_burrow);
+  printf "Liquidatable          : %B\n" (shouldBurrowBeLiquidated params initial_burrow);
 
   let reward = computeLiquidationReward params initial_burrow in
   printf "Reward                : %.15f\n" reward;
@@ -352,7 +355,8 @@ let burrow_experiment () =
 
   let final_liquidation_limit = computeLiquidationLimit params final_burrow in
   printf "New liquidation limit : %.15f\n" final_liquidation_limit;
-  printf "Still overburrowed    : %B\n" (final_burrow.outstanding_kit > final_liquidation_limit);
+  printf "Still overburrowed    : %B\n" (isOverburrowed params final_burrow);
+  printf "Still liquidatable    : %B\n" (shouldBurrowBeLiquidated params final_burrow);
 
   printf "Hello, %s world\n%!" "cruel"
 
@@ -362,7 +366,7 @@ let uniswap_experiment () =
   printf "Returned tez: %f\n" tez;
   printf "Returned kit: %f\n" kit;
   print_uniswap uniswap;
-  printf "\n";
+  print_newline ();
   let (liq, tez, kit, uniswap) = buy_liquidity uniswap 20. 20. in
   printf "Returned liquidity: %d\n" liq;
   printf "Returned tez: %f\n" tez;
@@ -370,5 +374,6 @@ let uniswap_experiment () =
   print_uniswap uniswap
 
 let () =
-  uniswap_experiment ();
-  printf "\ndone."
+  burrow_experiment ();
+  (* uniswap_experiment (); *)
+  printf "\ndone.\n"
