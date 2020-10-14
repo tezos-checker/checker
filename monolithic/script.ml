@@ -202,6 +202,10 @@ of the way.
  * da / 2 will give you a better price than one order of size da, but  the
  * difference is far smaller than typical fees or any amount we care about.
  *)
+
+(* TODO: The state of uniswap should also (in the future) include an ongoing
+ * auction to decide who to delegate to, possibly multiple tez balances, etc.
+ * Just leaving this note here lest we forget. *)
 type uniswap =
   { tez: tez;
     kit: kit;
