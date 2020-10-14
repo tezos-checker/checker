@@ -41,6 +41,9 @@ let (fminus : float) = 1.9;; (* dimensionless. Alternatively: f_liquidation *)
 let (creation_deposit : tez) = 1.0;;
 let (liquidation_reward_percentage : float) = 0.001;; (* TEZ% TODO: Use cNp *)
 
+(** Percentage kept by the uniswap contract from the return asset. *)
+let (uniswap_fee_percentage : float) = 0.002;; (* TODO: Use cNp *)
+
 (* ************************************************************************* *)
 (**                           SYSTEM PARAMETERS                              *)
 (* ************************************************************************* *)
@@ -182,26 +185,22 @@ of the way.
 (**                               UNISWAP                                    *)
 (* ************************************************************************* *)
 
-(*
- * From Arthur:
- *
- * The general concept of uniswap is that you have quantity a of an asset A
+(* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
  * the product a * b constant. So if someone wants to sell a quantity da of
  * asset A to the contract, the balance would become (a + da) so you can
  * give that person a quantity db of asset B in exchange such that (a +
- * da)(b - db) = a b. Solving for db gives db  = da * b / (a + da). We
+ * da)(b - db) = a * b. Solving for db gives db  = da * b / (a + da). We
  * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
  * represents the  "price" before the order and a / (a + da)  represents
  * the "slippage". Indeed, a property of uniswap is that with arbitrageurs
- * around, the ration a / b gives you the market price of A in terms of B.
+ * around, the ratio (a / b) gives you the market price of A in terms of B.
  *
- * On top of that, we can add some fees, typically around 0.3 cNp. So the
- * equation becomes something like db = da * b / ( a + da) * (1 - 0.3/100)
- * (note that this formula is a first-order approximation in the sense that
- * two orders of size da / 2 will give you a better price than one order
- * of size da, but  the difference is far smaller than typical fees or any
- * amount we care about
+ * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
+ * something like db = da * b / ( a + da) * (1 - 0.2/100) (note that this
+ * formula is a first-order approximation in the sense that two orders of size
+ * da / 2 will give you a better price than one order of size da, but  the
+ * difference is far smaller than typical fees or any amount we care about.
  *)
 type uniswap =
   { tez: tez;
@@ -234,7 +233,7 @@ let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
 
   let price = uniswap.tez /. uniswap.kit in
   let slippage = uniswap.kit /. (uniswap.kit +. kit) in
-  let return = kit *. price *. slippage in
+  let return = kit *. price *. slippage *. (1. -. uniswap_fee_percentage) in
   let updated = { uniswap with
                   kit = uniswap.kit +. kit;
                   tez = uniswap.tez -. return } in
@@ -374,6 +373,6 @@ let uniswap_experiment () =
   print_uniswap uniswap
 
 let () =
-  burrow_experiment ();
-  (* uniswap_experiment (); *)
+  (* burrow_experiment (); *)
+  uniswap_experiment ();
   printf "\ndone.\n"
