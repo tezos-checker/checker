@@ -213,18 +213,21 @@ let print_uniswap (u : uniswap) =
     u.kit
     u.total_liquidity_tokens
 
+let uniswap_non_empty(u: uniswap) =
+  u.kit > 0. && u.tez > 0.
 
 let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
-  (* Utku: I think, as long as the contract has non-zero tez and kit initially
-   * this always succeeds and can not completely spend either after this.
+  (* Utku: I think, as long as the contract has non-zero tez and kit this
+   * always succeeds.
    *
    * So, I think the function should fail when the contract is missing either
    * currency. It will presumably be started with some amount of tez, and
    * the first minting fee will initialize the kit amount.
   *)
-  assert (uniswap.kit > 0.);
-  assert (uniswap.tez > 0.);
-  assert (kit > 0.);
+  if not (uniswap_non_empty uniswap)
+  then failwith "uniswap_non_empty"
+  else
+    assert (kit > 0.);
 
   let price = uniswap.tez /. uniswap.kit in
   let slippage = uniswap.kit /. (uniswap.kit +. kit) in
@@ -248,31 +251,55 @@ let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
  * continuously credited with the burrow fee taken from burrow holders.
 *)
 
-(* Adding liquidity always succeeds. *)
-let add_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
-  : tez * kit * liquidity * uniswap =
-  let ratio = uniswap.tez /. uniswap.kit in
-  let given = tez /. kit in
-  (* There is a chance that the given tez and kit have the wrong ratio,
-   * so we liquidate as much as we can and return the leftovers.
-   * Invariant here is that (tez', kit') should have the correct ratio.
-  *)
-  let (tez', kit') =
-    if given > ratio then (kit *. ratio, kit)
-    else if given < ratio then (tez, tez /. ratio)
-    else (tez, kit) in
-  let liquidity =
-    int_of_float (floor (
-        float_of_int uniswap.total_liquidity_tokens
-        *. tez'
-        /. uniswap.tez)) in
-  let updated =
-    {  kit = uniswap.kit +. kit';
-       tez = uniswap.tez +. tez';
-       total_liquidity_tokens =
-         uniswap.total_liquidity_tokens + liquidity } in
-  (tez -. tez', kit -. kit', liquidity, updated)
+let buy_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
+  : liquidity * tez * kit * uniswap =
+  (* Adding liquidity always succeeds, if the exchange has non-zero amount. *)
+  if not (uniswap_non_empty uniswap)
+  then failwith "uniswap_non_empty"
+  else
+    let ratio = uniswap.tez /. uniswap.kit in
+    let given = tez /. kit in
+    (* There is a chance that the given tez and kit have the wrong ratio,
+     * so we liquidate as much as we can and return the leftovers.
+     * Invariant here is that (tez', kit') should have the correct ratio.
+    *)
+    let (tez', kit') =
+      if given > ratio then (kit *. ratio, kit)
+      else if given < ratio then (tez, tez /. ratio)
+      else (tez, kit) in
+    let liquidity =
+      if uniswap.total_liquidity_tokens = 0
+      then 1
+      else int_of_float (floor (
+          float_of_int uniswap.total_liquidity_tokens
+          *. tez'
+          /. uniswap.tez))
+    in
+    let updated =
+      { kit = uniswap.kit +. kit';
+        tez = uniswap.tez +. tez';
+        total_liquidity_tokens =
+          uniswap.total_liquidity_tokens + liquidity } in
+    (liquidity, tez -. tez', kit -. kit', updated)
 
+(* Selling liquidity always succeeds, but might leave the contract
+ * without tez and kit if everybody sells their liquidity. I think
+ * it is unlikely to happen, since the last liquidity holders wouldn't
+ * want to lose the burrow fees.
+*)
+let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
+  : tez * kit * uniswap =
+  (* Since this requires a liquidity token, contract can not be empty *)
+  assert(uniswap_non_empty(uniswap));
+  let ratio =
+    float_of_int liquidity /. float_of_int uniswap.total_liquidity_tokens in
+  let tez = uniswap.tez *. ratio in
+  let kit = uniswap.kit *. ratio in
+  let updated = {
+    tez = uniswap.tez -. tez;
+    kit = uniswap.kit -. kit;
+    total_liquidity_tokens = uniswap.total_liquidity_tokens - liquidity } in
+  (tez, kit, updated)
 
 (* ************************************************************************* *)
 (* ************************************************************************* *)
@@ -330,11 +357,18 @@ let burrow_experiment () =
   printf "Hello, %s world\n%!" "cruel"
 
 let uniswap_experiment () =
-  let uniswap = { tez=1000.; kit=5000.; total_liquidity_tokens=1 }; in
+  let uniswap = { tez=10.; kit=5.; total_liquidity_tokens=1 }; in
   let (kit, tez, uniswap) = sell_kit uniswap 1. in
-  printf "Returned tez: %f\nReturned kit: %f\n" tez kit;
+  printf "Returned tez: %f\n" tez;
+  printf "Returned kit: %f\n" kit;
+  print_uniswap uniswap;
+  printf "\n";
+  let (liq, tez, kit, uniswap) = buy_liquidity uniswap 20. 20. in
+  printf "Returned liquidity: %d\n" liq;
+  printf "Returned tez: %f\n" tez;
+  printf "Returned kit: %f\n" kit;
   print_uniswap uniswap
 
 let () =
   uniswap_experiment ();
-  printf "done"
+  printf "\ndone."
