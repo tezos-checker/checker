@@ -197,9 +197,9 @@ of the way.
  * around, the ratio (a / b) gives you the market price of A in terms of B.
  *
  * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
- * something like db = da * b / ( a + da) * (1 - 0.2/100) (note that this
+ * something like db = da * b / (a + da) * (1 - 0.2/100) (note that this
  * formula is a first-order approximation in the sense that two orders of size
- * da / 2 will give you a better price than one order of size da, but  the
+ * da / 2 will give you a better price than one order of size da, but the
  * difference is far smaller than typical fees or any amount we care about.
  *)
 
@@ -266,7 +266,9 @@ let buy_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
     let ratio = uniswap.tez /. uniswap.kit in
     let given = tez /. kit in
     (* There is a chance that the given tez and kit have the wrong ratio,
-     * so we liquidate as much as we can and return the leftovers.
+     * so we liquidate as much as we can and return the leftovers. NOTE:
+     * Alternatively, the LP can use the uniswap contract to get the right
+     * ratio beforehand.
      * Invariant here is that (tez', kit') should have the correct ratio.
     *)
     let (tez', kit') =
@@ -358,6 +360,8 @@ let burrow_experiment () =
 
   let final_liquidation_limit = computeLiquidationLimit params final_burrow in
   printf "New liquidation limit : %.15f\n" final_liquidation_limit;
+  let final_burrowing_limit = computeBurrowingLimit params final_burrow in
+  printf "New burrowing   limit : %.15f\n" final_burrowing_limit;
   printf "Still overburrowed    : %B\n" (isOverburrowed params final_burrow);
   printf "Still liquidatable    : %B\n" (shouldBurrowBeLiquidated params final_burrow);
 
@@ -377,6 +381,6 @@ let uniswap_experiment () =
   print_uniswap uniswap
 
 let () =
-  (* burrow_experiment (); *)
-  uniswap_experiment ();
+   burrow_experiment ();
+  (* uniswap_experiment (); *)
   printf "\ndone.\n"
