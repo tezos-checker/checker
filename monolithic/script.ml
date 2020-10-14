@@ -362,7 +362,7 @@ let burrow_experiment () =
 
 let uniswap_experiment () =
   let uniswap = { tez=10.; kit=5.; total_liquidity_tokens=1 }; in
-  let (kit, tez, uniswap) = sell_kit uniswap 1. in
+  let (tez, kit, uniswap) = sell_kit uniswap 1. in
   printf "Returned tez: %f\n" tez;
   printf "Returned kit: %f\n" kit;
   print_uniswap uniswap;
