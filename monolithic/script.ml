@@ -19,6 +19,7 @@ open Format
 (* ************************************************************************* *)
 type tez = float;; (* TODO: Use int64 instead TODO: Use newtypes instead *)
 type kit = float;; (* TODO: Use int64 instead TODO: Use newtypes instead *)
+type liquidity = int;;
 
 type burrow =
   { collateral_tez : tez;
@@ -175,10 +176,109 @@ of the way.
 *)
 
 (* ************************************************************************* *)
+(**                               UNISWAP                                    *)
+(* ************************************************************************* *)
+
+(*
+ * From Arthur:
+ *
+ * The general concept of uniswap is that you have quantity a of an asset A
+ * and b of an asset B and you process buy and sell requests by maintaining
+ * the product a * b constant. So if someone wants to sell a quantity da of
+ * asset A to the contract, the balance would become (a + da) so you can
+ * give that person a quantity db of asset B in exchange such that (a +
+ * da)(b - db) = a b. Solving for db gives db  = da * b / (a + da). We
+ * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
+ * represents the  "price" before the order and a / (a + da)  represents
+ * the "slippage". Indeed, a property of uniswap is that with arbitrageurs
+ * around, the ration a / b gives you the market price of A in terms of B.
+ *
+ * On top of that, we can add some fees, typically around 0.3 cNp. So the
+ * equation becomes something like db = da * b / ( a + da) * (1 - 0.3/100)
+ * (note that this formula is a first-order approximation in the sense that
+ * two orders of size da / 2 will give you a better price than one order
+ * of size da, but  the difference is far smaller than typical fees or any
+ * amount we care about
+ *)
+type uniswap =
+  { tez: tez;
+    kit: kit;
+    total_liquidity_tokens: int;
+  }
+
+let print_uniswap (u : uniswap) =
+  printf
+    "{tez = %.15f tez;\n kit = %.15f; \n total_liquidity_tokens = %d}\n"
+    u.tez
+    u.kit
+    u.total_liquidity_tokens
+
+
+let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
+  (* Utku: I think, as long as the contract has non-zero tez and kit initially
+   * this always succeeds and can not completely spend either after this.
+   *
+   * So, I think the function should fail when the contract is missing either
+   * currency. It will presumably be started with some amount of tez, and
+   * the first minting fee will initialize the kit amount.
+  *)
+  assert (uniswap.kit > 0.);
+  assert (uniswap.tez > 0.);
+  assert (kit > 0.);
+
+  let price = uniswap.tez /. uniswap.kit in
+  let slippage = uniswap.kit /. (uniswap.kit +. kit) in
+  let return = kit *. price *. slippage in
+  let updated = { uniswap with
+                  kit = uniswap.kit +. kit;
+                  tez = uniswap.tez -. return } in
+  (return, 0.0, updated)
+
+(* From Arthur:
+ *
+ * But where do the assets in uniswap come from? Liquidity providers, or
+ * "LP" deposit can deposit a quantity la and lb of assets A and B in the
+ * same proportion as the contract la / lb = a / b . Assuming there are n
+ * "liquidity tokens" extant, they receive m = floor(n la / a) tokens and
+ * there are now m +n liquidity tokens extant. They can redeem then at
+ * anytime for a fraction of the assets A and B. The reason to do this in
+ * uniswap is that usage of uniswap costs 0.3%, and that ultimately can
+ * grow the balance of the assets in the contract. An additional reason
+ * to do it in huxian is that the kit balance of the uniswap contract is
+ * continuously credited with the burrow fee taken from burrow holders.
+*)
+
+(* Adding liquidity always succeeds. *)
+let add_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
+  : tez * kit * liquidity * uniswap =
+  let ratio = uniswap.tez /. uniswap.kit in
+  let given = tez /. kit in
+  (* There is a chance that the given tez and kit have the wrong ratio,
+   * so we liquidate as much as we can and return the leftovers.
+   * Invariant here is that (tez', kit') should have the correct ratio.
+  *)
+  let (tez', kit') =
+    if given > ratio then (kit *. ratio, kit)
+    else if given < ratio then (tez, tez /. ratio)
+    else (tez, kit) in
+  let liquidity =
+    int_of_float (floor (
+        float_of_int uniswap.total_liquidity_tokens
+        *. tez'
+        /. uniswap.tez)) in
+  let updated =
+    {  kit = uniswap.kit +. kit';
+       tez = uniswap.tez +. tez';
+       total_liquidity_tokens =
+         uniswap.total_liquidity_tokens + liquidity } in
+  (tez -. tez', kit -. kit', liquidity, updated)
+
+
+(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* ************************************************************************* *)
 
-let () =
+let burrow_experiment () =
   let initial_burrow =
     { outstanding_kit = 20.0;
       collateral_tez = 10.0;
@@ -207,7 +307,7 @@ let () =
    * need to liquidate the burrow again). This one does come out of the
    * collateral though. From the outside it all looks the same I guess, minus
    * one plus one, but I thought that this intricacy is worth pointing out.
-   *)
+  *)
   let burrow_without_reward = { initial_burrow with collateral_tez = initial_burrow.collateral_tez -. reward } in
   printf "New collateral        : %.15f\n" burrow_without_reward.collateral_tez;
 
@@ -227,5 +327,14 @@ let () =
   printf "New liquidation limit : %.15f\n" final_liquidation_limit;
   printf "Still overburrowed    : %B\n" (final_burrow.outstanding_kit > final_liquidation_limit);
 
-  printf "Hello, %s world\n%!" "cruel";
+  printf "Hello, %s world\n%!" "cruel"
 
+let uniswap_experiment () =
+  let uniswap = { tez=1000.; kit=5000.; total_liquidity_tokens=1 }; in
+  let (kit, tez, uniswap) = sell_kit uniswap 1. in
+  printf "Returned tez: %f\nReturned kit: %f\n" tez kit;
+  print_uniswap uniswap
+
+let () =
+  uniswap_experiment ();
+  printf "done"
