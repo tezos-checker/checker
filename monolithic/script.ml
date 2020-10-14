@@ -3,14 +3,14 @@ open Format
 
 (* TODO: THINGS TO CONSIDER:
 
-* What if computeTezToAuction returns something positive?
+ * What if computeTezToAuction returns something positive?
 
-About switching to an integer representation for tez and kit
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Currently 1 tez (1 XTZ) is divisible to six decimal places, and the smallest
-unit is called a micro tez:
+   About switching to an integer representation for tez and kit
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Currently 1 tez (1 XTZ) is divisible to six decimal places, and the smallest
+   unit is called a micro tez:
 
-  1 tez = 100 cents = 1,000,000 micro tez (mutez)
+   1 tez = 100 cents = 1,000,000 micro tez (mutez)
 
 *)
 
@@ -75,7 +75,7 @@ let depositTez (t : tez) (b : burrow) : burrow =
   * So we compute
   *
   *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
-  *)
+*)
 let computeBurrowingLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fplus *. (p.q *. p.tz_minting))
 
@@ -93,8 +93,8 @@ let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
   assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
   if isOverburrowed p updated
-    then None
-    else Some updated
+  then None
+  else Some updated
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
@@ -102,8 +102,8 @@ let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
   assert (k >= 0.0);
   let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
   if isOverburrowed p updated
-    then None
-    else Some updated
+  then None
+  else Some updated
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
@@ -130,7 +130,7 @@ let computeLiquidationReward (p : parameters) (b : burrow) : tez =
 *)
 let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fminus *. (p.q *. p.tz_liquidation))
-  (* TEZ / (TEZ / KIT) = KIT *)
+(* TEZ / (TEZ / KIT) = KIT *)
 
 (** The tez/kit price we expect to get when we liquidate is (q * tz_minting).
   * So if we auction Δcollateral tez, and we receive Δkit kit for it, the
@@ -149,16 +149,16 @@ let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
   *
   *   Δcollateral = tz_mint * (C - K*fplus*q*tz_liq) / (fplus*tz_liq - tz_mint)
   *   Δkit        = Δcollateral / (q * tz_minting)
-  *)
+*)
 
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
   * liquidation. George: We need some more accurate comments here. *)
 let computeTezToAuction (p : parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
-    *. p.tz_minting
-    *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. p.tz_liquidation))
-    /. (fplus *. p.tz_liquidation -. p.tz_minting)
+  *. p.tz_minting
+  *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. p.tz_liquidation))
+  /. (fplus *. p.tz_liquidation -. p.tz_minting)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
