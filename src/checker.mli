@@ -11,19 +11,58 @@ type lqs_utxo
 
 type error = | Insufficient_collateral
 
-(***** Burrow creation and kint minting section *****)
-
 (** "touch" can be called by anyone, it performs housekeeping tasks on the
   * contract state such as pulling in oracle values *)
 val touch : t -> t
 
-(** Creates and return a new burrow owned by owner, fund it if tez is passed
-  * to the call. *)
+(***** Burrow creation and kint minting section *****)
+
+(** Create and return a new burrow owned by owner, with given funds.
+  *
+  * Should contain funds >= the burrow creation deposit.
+  *
+  * Effects:
+  *
+  *   * A new burrow contract for the burrow, including the deposited funds.
+  *   * An entry for the burrow on the storage
+  *)
 val create_burrow : t -> call:Tezos.call -> owner:Tezos.address -> (Burrow.t * t)
 
-(** Mint kits. Must be called by a burrow. Mint a kit utxo and send it back
-  * to the calling burrow. *)
-val mint_kit : t -> call:Tezos.call -> amount:Tezos.nat -> (t, error)  result
+(** Set burrow delegate.
+  *)
+val set_burrow_delegate: t -> call:Tezos.call -> burrow:Tezos.address -> delegate:Tezos.address -> t
+
+(** Mint kits from a burrow.
+  *
+  * Errors if the given amount would increase the burrows outstanding kit
+  * balance to be more than:
+  *   `collateral / (f * q * tz(minting))`
+  *
+  * Effects:
+  *
+  *   * Increases the burrows outstanding kit balance by given amount.
+  *)
+val mint_kit : t -> call:Tezos.call -> burrow:Tezos.address -> (kit_utxo, error) result
+
+(** Burn kit, reducing the burrows outstanding kit balance.
+  *
+  * It accepts kits up to the burrows outstanding kit balance, any leftover is
+  * be returned back.
+  *
+  * Effects:
+  *
+  *   * Burns given kit.
+  *   * Decreases the burrows outstanding kit balance.
+  *)
+val burn_kit: t -> call:Tezos.call -> burrow:Tezos.address -> kit_utxo -> kit_utxo option * t
+
+(** Withdraws collateral from the burrow.
+  *
+  * Errors if the given amount would decrease the amount of colleteral in the
+  * burrow to be less than:
+  *   `kits * f * q * tz(minting)`
+  *)
+val withdraw_tez: t -> call:Tezos.call -> burrow:Tezos.address -> amount:Tezos.nat -> Tezos.payment * t
 
 (***** uniswap section *****)
 
