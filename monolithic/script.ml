@@ -345,9 +345,22 @@ type checker =
  * incorrect. *)
 (* George: Note that we don't really need to calculate the logs here (which can
  * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
- * and win some precision. This is for later though, let's get it to work
- * first. *)
+ * and win some precision, like this:
+
+    let computeDriftDerivative2 (target : float) : float =
+      assert (target > 0.);
+      match () with
+      (* No acceleration (0) *)
+      | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
+      (* Low acceleration (-/+) *)
+      | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp 0.01 /. (24. /. 60.) ** 2.)
+      | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp 0.01 /. (24. /. 60.) ** 2.)
+      (* High acceleration (-/+) *)
+      | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. /. 60.) ** 2.)
+      | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. /. 60.) ** 2.)
+ *)
 let computeDriftDerivative (target : float) : float =
+  assert (target > 0.);
   let log_target = log target in
   let abs_log_target = Float.abs log_target in
   if abs_log_target < cnp 0.5 then
