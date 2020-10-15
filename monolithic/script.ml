@@ -44,14 +44,30 @@ let (liquidation_reward_percentage : float) = 0.001;; (* TEZ% TODO: Use cNp *)
 (** Percentage kept by the uniswap contract from the return asset. *)
 let (uniswap_fee_percentage : float) = 0.002;; (* TODO: Use cNp *)
 
+(* Protected index epsilon. Higher this value is, faster the protected index
+ * catches up to the actual index.
+*)
+let protected_index_epsilon = 0.0005
+
 (* ************************************************************************* *)
 (**                           SYSTEM PARAMETERS                              *)
 (* ************************************************************************* *)
 type parameters =
-  { q : float;            (* 1/kit, really *)
-    tz_minting : tez;     (* tez. To get tez/kit must multiply with q. *)
-    tz_liquidation : tez; (* tez. To get tez/kit must multiply with q. *)
+  { q : float; (* 1/kit, really *)
+    index: tez;
+    protected_index: tez;
+    drift': float;
+    drift: float;
   }
+
+(* tez. To get tez/kit must multiply with q. *)
+let tz_minting (p: parameters) : tez =
+  max p.index p.protected_index
+let tz_liquidation (p: parameters) : tez =
+  min p.index p.protected_index
+
+let clamp (v: float) (lower: float) (upper: float) : float =
+  min upper (max v lower)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -81,7 +97,7 @@ let depositTez (t : tez) (b : burrow) : burrow =
   *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
 *)
 let computeBurrowingLimit (p : parameters) (b : burrow) : kit =
-  b.collateral_tez /. (fplus *. (p.q *. p.tz_minting))
+  b.collateral_tez /. (fplus *. (p.q *. tz_minting p))
 
 (** Check that a burrow is not overburrowed (that is, the kit outstanding does
   * not exceed the burrowing limit). *)
@@ -123,7 +139,7 @@ let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
   * then the burrow can be marked for liquidation.
 *)
 let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
-  b.collateral_tez /. (fminus *. (p.q *. p.tz_liquidation))
+  b.collateral_tez /. (fminus *. (p.q *. tz_liquidation p))
 (* TEZ / (TEZ / KIT) = KIT *)
 
 let shouldBurrowBeLiquidated (p : parameters) (b : burrow) : bool =
@@ -163,13 +179,13 @@ let computeLiquidationReward (p : parameters) (b : burrow) : tez =
   * liquidation. George: We need some more accurate comments here. *)
 let computeTezToAuction (p : parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
-  *. p.tz_minting
-  *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. p.tz_liquidation))
-  /. (fplus *. p.tz_liquidation -. p.tz_minting)
+  *. tz_minting p
+  *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. tz_liquidation p))
+  /. (fplus *. tz_liquidation  p -. tz_minting p)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
-  computeTezToAuction p b /. (p.q *. p.tz_minting)
+  computeTezToAuction p b /. (p.q *. tz_minting p)
 
 (*
 I can think of the following outcomes:
@@ -201,7 +217,7 @@ of the way.
  * formula is a first-order approximation in the sense that two orders of size
  * da / 2 will give you a better price than one order of size da, but the
  * difference is far smaller than typical fees or any amount we care about.
- *)
+*)
 
 (* TODO: The state of uniswap should also (in the future) include an ongoing
  * auction to decide who to delegate to, possibly multiple tez balances, etc.
@@ -243,9 +259,7 @@ let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
                   tez = uniswap.tez -. return } in
   (return, 0.0, updated)
 
-(* From Arthur:
- *
- * But where do the assets in uniswap come from? Liquidity providers, or
+(* But where do the assets in uniswap come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
  * same proportion as the contract la / lb = a / b . Assuming there are n
  * "liquidity tokens" extant, they receive m = floor(n la / a) tokens and
@@ -310,6 +324,69 @@ let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
   (tez, kit, updated)
 
 (* ************************************************************************* *)
+(**                               CHECKER                                    *)
+(* ************************************************************************* *)
+
+let cnp (i: float) : float = i /. 100.
+
+let sign (i: float) : int =
+  if i > 0. then 1
+  else if i == 0. then 0
+  else -1
+
+type checker =
+  { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)
+    uniswap : uniswap;
+    parameters : parameters;
+  }
+
+(* TODO: Not tested, take it with a grain of salt. *)
+let step (time_passed: int) (checker: checker) : checker =
+  let lim =
+    exp 1. *. float_of_int time_passed in
+  let new_protected_index =
+    checker.parameters.protected_index
+    *. clamp
+      (checker.parameters.index /. checker.parameters.protected_index)
+      (exp lim)
+      (exp (-. lim)) in
+  let new_drift' =
+    let kit_in_tez =
+      checker.uniswap.tez /. checker.uniswap.kit in
+    let target =
+      checker.parameters.q *. checker.parameters.index /. kit_in_tez in
+    let log_target =
+      log target in
+    (* Thresholds here are cnp / day^2, we should convert them
+     * to cnp / second^2, assuming we're measuring time in seconds.
+     * My calculations might be incorrect. *)
+    if Float.abs log_target < cnp 0.5 then
+      0.
+    else if Float.abs log_target < cnp 5. then
+      float_of_int (sign log_target) *. (cnp 0.01 /. 24. /. 60.)
+    else
+      float_of_int (sign log_target) *. (cnp 0.05 /. 24. /. 60.) in
+  let new_drift =
+    checker.parameters.drift
+    +. (1. /. 2.)
+       *. (checker.parameters.drift +. new_drift')
+       *. float_of_int time_passed in
+  let new_q =
+    checker.parameters.q
+    *. exp ( ( checker.parameters.drift
+               +. (1. /. 6.)
+                  *. (2. *. checker.parameters.drift' +. new_drift')
+                  *. float_of_int time_passed )
+             *. float_of_int time_passed ) in
+  { checker with
+    parameters = {
+      checker.parameters with
+      protected_index = new_protected_index;
+      drift = new_drift;
+      drift' = new_drift';
+      q = new_q }
+  }
+
 (* ************************************************************************* *)
 (* ************************************************************************* *)
 
@@ -320,8 +397,10 @@ let burrow_experiment () =
     } in
   let params =
     { q = 1.015;
-      tz_minting = 0.36;
-      tz_liquidation = 0.32;
+      index = 0.32;
+      protected_index = 0.36;
+      drift = 0.;
+      drift' = 0.;
     } in
 
   print_burrow initial_burrow;
@@ -381,6 +460,7 @@ let uniswap_experiment () =
   print_uniswap uniswap
 
 let () =
-   burrow_experiment ();
+  burrow_experiment ();
   (* uniswap_experiment (); *)
   printf "\ndone.\n"
+
