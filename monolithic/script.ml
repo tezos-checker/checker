@@ -363,9 +363,9 @@ let step (time_passed: int) (checker: checker) : checker =
     if Float.abs log_target < cnp 0.5 then
       0.
     else if Float.abs log_target < cnp 5. then
-      float_of_int (sign log_target) *. (cnp 0.01 /. 24. /. 60.)
+      float_of_int (sign log_target) *. (cnp 0.01 /. (24. /. 60.) ** 2.)
     else
-      float_of_int (sign log_target) *. (cnp 0.05 /. 24. /. 60.) in
+      float_of_int (sign log_target) *. (cnp 0.05 /. (24. /. 60.) ** 2.) in
   let new_drift =
     checker.parameters.drift
     +. (1. /. 2.)
