@@ -1,5 +1,5 @@
 
-open Format
+open Format;;
 
 (* TODO: THINGS TO CONSIDER:
 
@@ -44,9 +44,8 @@ let (liquidation_reward_percentage : float) = 0.001;; (* TEZ% TODO: Use cNp *)
 (** Percentage kept by the uniswap contract from the return asset. *)
 let (uniswap_fee_percentage : float) = 0.002;; (* TODO: Use cNp *)
 
-(* Protected index epsilon. Higher this value is, faster the protected index
- * catches up to the actual index.
-*)
+(* Protected index epsilon. The higher this value is, the faster the protected
+ * index catches up with the actual index. *)
 let protected_index_epsilon = 0.0005
 
 (* ************************************************************************* *)
@@ -66,7 +65,8 @@ let tz_minting (p: parameters) : tez =
 let tz_liquidation (p: parameters) : tez =
   min p.index p.protected_index
 
-let clamp (v: float) (lower: float) (upper: float) : float =
+let clamp (v: 'a) (lower: 'a) (upper: 'a) : float =
+  assert (lower <= upper);
   min upper (max v lower)
 
 (* ************************************************************************* *)
@@ -181,7 +181,7 @@ let computeTezToAuction (p : parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
   *. tz_minting p
   *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. tz_liquidation p))
-  /. (fplus *. tz_liquidation  p -. tz_minting p)
+  /. (fplus *. tz_liquidation p -. tz_minting p)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
@@ -329,10 +329,10 @@ let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
 
 let cnp (i: float) : float = i /. 100.
 
-let sign (i: float) : int =
-  if i > 0. then 1
-  else if i == 0. then 0
-  else -1
+let sign (i: float) : float =
+  if i > 0. then 1.
+  else if i == 0. then 0.
+  else -1.
 
 type checker =
   { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)
@@ -340,36 +340,50 @@ type checker =
     parameters : parameters;
   }
 
+(* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
+ * second^2, assuming we're measuring time in seconds. My calculations might be
+ * incorrect. *)
+(* George: Note that we don't really need to calculate the logs here (which can
+ * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
+ * and win some precision. This is for later though, let's get it to work
+ * first. *)
+let computeDriftDerivative (target : float) : float =
+  let log_target = log target in
+  let abs_log_target = Float.abs log_target in
+  if abs_log_target < cnp 0.5 then
+    0.
+  else if abs_log_target < cnp 5.0 then
+    sign log_target *. (cnp 0.01 /. (24. /. 60.) ** 2.)
+  else
+    sign log_target *. (cnp 0.05 /. (24. /. 60.) ** 2.)
+
 (* TODO: Not tested, take it with a grain of salt. *)
-let step (time_passed: int) (checker: checker) : checker =
-  let lim =
-    exp 1. *. float_of_int time_passed in
+let step (time_passed: int) (current_index: float) (checker: checker) : checker =
+  (* Compute the new protected index, using the time interval, the current
+   * index (given by the oracles right now), and the protected index of the
+   * previous timestamp. *)
+  let upper_lim = exp (protected_index_epsilon *. float_of_int time_passed) in
+  let lower_lim = exp (-. protected_index_epsilon *. float_of_int time_passed) in
   let new_protected_index =
     checker.parameters.protected_index
     *. clamp
-      (checker.parameters.index /. checker.parameters.protected_index)
-      (exp lim)
-      (exp (-. lim)) in
+      (current_index /. checker.parameters.protected_index)
+      lower_lim
+      upper_lim in
+  (* George: NOTE: I think that there is a small issue here:
+   * checker.parameters.q and checker.parameters.index are from the previous
+   * timestamp (as they should), but, if I understand correctly, kit_in_tez
+   * refers to the current time. *)
   let new_drift' =
     let kit_in_tez =
       checker.uniswap.tez /. checker.uniswap.kit in
     let target =
       checker.parameters.q *. checker.parameters.index /. kit_in_tez in
-    let log_target =
-      log target in
-    (* Thresholds here are cnp / day^2, we should convert them
-     * to cnp / second^2, assuming we're measuring time in seconds.
-     * My calculations might be incorrect. *)
-    if Float.abs log_target < cnp 0.5 then
-      0.
-    else if Float.abs log_target < cnp 5. then
-      float_of_int (sign log_target) *. (cnp 0.01 /. (24. /. 60.) ** 2.)
-    else
-      float_of_int (sign log_target) *. (cnp 0.05 /. (24. /. 60.) ** 2.) in
+    computeDriftDerivative target in
   let new_drift =
     checker.parameters.drift
     +. (1. /. 2.)
-       *. (checker.parameters.drift +. new_drift')
+       *. (checker.parameters.drift' +. new_drift')
        *. float_of_int time_passed in
   let new_q =
     checker.parameters.q
@@ -380,7 +394,7 @@ let step (time_passed: int) (checker: checker) : checker =
              *. float_of_int time_passed ) in
   { checker with
     parameters = {
-      checker.parameters with
+      index = current_index;
       protected_index = new_protected_index;
       drift = new_drift;
       drift' = new_drift';
