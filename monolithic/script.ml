@@ -15,6 +15,8 @@ open Format;;
  * * Find ways to test the system.
  *
  * * Deal with the case where the burrow needs to be liquidated in its entirety.
+ *
+ * * I don't think we have anything relating to imbalance or burrowing fees atm.
  *)
 
 (* ************************************************************************* *)
@@ -354,18 +356,22 @@ type checker =
 (* George: Note that we don't really need to calculate the logs here (which can
  * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
  * and win some precision, like this:
-
-    let computeDriftDerivative2 (target : float) : float =
+ *
+    let compute_drift_derivative_2 (target : float) : float =
       assert (target > 0.);
       match () with
       (* No acceleration (0) *)
       | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
       (* Low acceleration (-/+) *)
-      | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp 0.01 /. (24. /. 60.) ** 2.)
-      | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp 0.01 /. (24. /. 60.) ** 2.)
+      | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp 0.01 /. (24. *. 3600.) ** 2.)
+      | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp 0.01 /. (24. *. 3600.) ** 2.)
       (* High acceleration (-/+) *)
-      | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. /. 60.) ** 2.)
-      | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. /. 60.) ** 2.)
+      | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. *. 3600.) ** 2.)
+      | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. *. 3600.) ** 2.)
+      | _ -> failwith "impossible"
+ *
+ * NOTE: This implementation already gives different results on the swing
+ * points that compute_drift_derivative does, possibly due to precision issues.
 *)
 let compute_drift_derivative (target : float) : float =
   assert (target > 0.);
