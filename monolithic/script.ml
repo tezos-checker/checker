@@ -1,18 +1,21 @@
 
 open Format;;
 
-(* TODO: THINGS TO CONSIDER:
-
- * What if compute_tez_to_auction returns something positive?
-
-   About switching to an integer representation for tez and kit
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   Currently 1 tez (1 XTZ) is divisible to six decimal places, and the smallest
-   unit is called a micro tez:
-
-   1 tez = 100 cents = 1,000,000 micro tez (mutez)
-
-*)
+(* TODO: Things to consider / action items:
+ *
+ * * What if compute_tez_to_auction returns something positive?
+ *   => Create a kit UTXO for the burrow owner.
+ *
+ * * About switching to an integer representation for tez and kit: Currently 1
+ *   tez (1 XTZ) is divisible to six decimal places, and the smallest unit is
+ *   called a micro tez: 1 tez = 100 cents = 1,000,000 micro tez (mutez)
+ *
+ * * The auctioning logic is currently missing.
+ *
+ * * Find ways to test the system.
+ *
+ * * Deal with the case where the burrow needs to be liquidated in its entirety.
+ *)
 
 (* ************************************************************************* *)
 (*                               BASIC TYPES                                 *)
@@ -147,33 +150,33 @@ let compute_liquidation_reward (p : burrowing_parameters) (b : burrow) : tez =
   then creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
   else 0. (* No reward if the burrow should not be liquidated *)
 
-(** The tez/kit price we expect to get when we liquidate is (q * tz_minting).
-  * So if we auction Δcollateral tez, and we receive Δkit kit for it, the
-  * following is expected to hold
-  *
-  *   Δcollateral = Δkit * (q * tz_minting)                          <=>
-  *
-  *   Δkit = Δcollateral / (q * tz_minting)                          (1)
-  *
-  * Furthermore, after liquidation, the burrow must not be liquidatable
-  * anymore, so the following must hold
-  *
-  *   (C + Δcollateral) = (K + Δkit) * fplus * q * tz_liquidation    (2)
-  *
-  * Solving the above equations gives:
-  *
-  *   Δcollateral = tz_mint * (C - K*fplus*q*tz_liq) / (fplus*tz_liq - tz_mint)
-  *   Δkit        = Δcollateral / (q * tz_minting)
-*)
-
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
-  * liquidation. George: We need some more accurate comments here. *)
+  * liquidation.
+  *
+  * The tez/kit price we expect to get when we liquidate is (q * tz_minting).
+  * So if we auction tez_to_auction, and we receive repaid_kit for it, the
+  * following is expected to hold
+  *
+  *   tez_to_auction = repaid_kit * (q * tz_minting)                         <=>
+  *
+  *   repaid_kit = tez_to_auction / (q * tz_minting)                         (1)
+  *
+  * Furthermore, after liquidation, the burrow must not be neither
+  * liquidatable, nor overburrowed anymore. Since by design the burrowing limit
+  * is below the liquidation limit, during liquidation we target the burrowing
+  * limit to ensure both are respected:
+  *
+  *   (tez - tez_to_auction) = (kit - repaid_kit) * fplus * q * tz_minting   (2)
+  *
+  * Solving (1) and (2) gives:
+  *
+  *   tez_to_auction = (kit * fplus * q * tz_minting - tez ) / (fplus - 1)
+  *   repaid_kit     = tez_to_auction / (q * tz_minting)
+*)
 let compute_tez_to_auction (p : burrowing_parameters) (b : burrow) : tez =
-  (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
-  *. tz_minting p
-  *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. tz_liquidation p))
-  /. (fplus *. tz_liquidation p -. tz_minting p)
+  (b.outstanding_kit *. fplus *. p.q *. tz_minting p -. b.collateral_tez)
+  /. (fplus -. 1.)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let compute_expected_kit_from_auction (p : burrowing_parameters) (b : burrow) : kit =
@@ -521,6 +524,6 @@ let step_experiment () =
 let () =
   burrow_experiment ();
   (* uniswap_experiment (); *)
-  step_experiment ();
+  (* step_experiment (); *)
   printf "\ndone.\n"
 
