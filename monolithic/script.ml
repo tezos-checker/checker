@@ -96,15 +96,15 @@ let depositTez (t : tez) (b : burrow) : burrow =
   *
   *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
 *)
-let computeBurrowingLimit (p : parameters) (b : burrow) : kit =
+let compute_burrowing_limit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fplus *. (p.q *. tz_minting p))
 
 (** Check that a burrow is not overburrowed (that is, the kit outstanding does
   * not exceed the burrowing limit). *)
 let isNotOverburrowed (p : parameters) (b : burrow) : bool =
-  b.outstanding_kit <= computeBurrowingLimit p b
+  b.outstanding_kit <= compute_burrowing_limit p b
 
-let isOverburrowed (p : parameters) (b : burrow) : bool =
+let is_overburrowed (p : parameters) (b : burrow) : bool =
   not (isNotOverburrowed p b)
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
@@ -112,7 +112,7 @@ let isOverburrowed (p : parameters) (b : burrow) : bool =
 let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
   assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
-  if isOverburrowed p updated
+  if is_overburrowed p updated
   then None
   else Some updated
 
@@ -121,7 +121,7 @@ let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
 let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
   assert (k >= 0.0);
   let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
-  if isOverburrowed p updated
+  if is_overburrowed p updated
   then None
   else Some updated
 
@@ -138,20 +138,20 @@ let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
   *
   * then the burrow can be marked for liquidation.
 *)
-let computeLiquidationLimit (p : parameters) (b : burrow) : kit =
+let compute_liquidation_limit (p : parameters) (b : burrow) : kit =
   b.collateral_tez /. (fminus *. (p.q *. tz_liquidation p))
 (* TEZ / (TEZ / KIT) = KIT *)
 
-let shouldBurrowBeLiquidated (p : parameters) (b : burrow) : bool =
-  b.outstanding_kit > computeLiquidationLimit p b
+let should_burrow_be_liquidated (p : parameters) (b : burrow) : bool =
+  b.outstanding_kit > compute_liquidation_limit p b
 
 (** The reward for triggering a liquidation. This amounts to the burrow's
   * creation deposit, plus the liquidation reward percentage of the burrow's
   * collateral. Of course, if the burrow does not qualify for liquidation, the
   * reward is zero. In the grand scheme of things, this should be given to the
   * actor triggering liquidation. *)
-let computeLiquidationReward (p : parameters) (b : burrow) : tez =
-  if shouldBurrowBeLiquidated p b
+let compute_liquidation_reward (p : parameters) (b : burrow) : tez =
+  if should_burrow_be_liquidated p b
   then creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
   else 0. (* No reward if the burrow should not be liquidated *)
 
@@ -184,7 +184,7 @@ let computeTezToAuction (p : parameters) (b : burrow) : tez =
   /. (fplus *. tz_liquidation p -. tz_minting p)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
-let computeExpectedKitFromAuction (p : parameters) (b : burrow) : kit =
+let compute_expected_kit_from_auction (p : parameters) (b : burrow) : kit =
   computeTezToAuction p b /. (p.q *. tz_minting p)
 
 (*
@@ -359,7 +359,7 @@ type checker =
       | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. /. 60.) ** 2.)
       | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. /. 60.) ** 2.)
  *)
-let computeDriftDerivative (target : float) : float =
+let compute_drift_derivative (target : float) : float =
   assert (target > 0.);
   let log_target = log target in
   let abs_log_target = Float.abs log_target in
@@ -392,7 +392,7 @@ let step (time_passed: int) (current_index: float) (checker: checker) : checker 
       checker.uniswap.tez /. checker.uniswap.kit in
     let target =
       checker.parameters.q *. checker.parameters.index /. kit_in_tez in
-    computeDriftDerivative target in
+    compute_drift_derivative target in
   let new_drift =
     checker.parameters.drift
     +. (1. /. 2.)
@@ -432,10 +432,10 @@ let burrow_experiment () =
 
   print_burrow initial_burrow;
 
-  printf "Overburrowed          : %B\n" (isOverburrowed params initial_burrow);
-  printf "Liquidatable          : %B\n" (shouldBurrowBeLiquidated params initial_burrow);
+  printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
+  printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params initial_burrow);
 
-  let reward = computeLiquidationReward params initial_burrow in
+  let reward = compute_liquidation_reward params initial_burrow in
   printf "Reward                : %.15f\n" reward;
 
   (* NOTE: George: The initial state of the burrow is the collateral C, the
@@ -452,7 +452,7 @@ let burrow_experiment () =
   let burrow_without_reward = { initial_burrow with collateral_tez = initial_burrow.collateral_tez -. reward } in
   printf "New collateral        : %.15f\n" burrow_without_reward.collateral_tez;
 
-  let kit_to_receive = computeExpectedKitFromAuction params burrow_without_reward in
+  let kit_to_receive = compute_expected_kit_from_auction params burrow_without_reward in
   printf "Kits to write off     : %.15f\n" kit_to_receive;
 
   let tez_to_auction = computeTezToAuction params burrow_without_reward in
@@ -464,12 +464,12 @@ let burrow_experiment () =
     } in
   print_burrow final_burrow;
 
-  let final_liquidation_limit = computeLiquidationLimit params final_burrow in
+  let final_liquidation_limit = compute_liquidation_limit params final_burrow in
   printf "New liquidation limit : %.15f\n" final_liquidation_limit;
-  let final_burrowing_limit = computeBurrowingLimit params final_burrow in
+  let final_burrowing_limit = compute_burrowing_limit params final_burrow in
   printf "New burrowing   limit : %.15f\n" final_burrowing_limit;
-  printf "Still overburrowed    : %B\n" (isOverburrowed params final_burrow);
-  printf "Still liquidatable    : %B\n" (shouldBurrowBeLiquidated params final_burrow);
+  printf "Still overburrowed    : %B\n" (is_overburrowed params final_burrow);
+  printf "Still liquidatable    : %B\n" (should_burrow_be_liquidated params final_burrow);
 
   printf "Hello, %s world\n%!" "cruel"
 
