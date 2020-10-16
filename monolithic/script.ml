@@ -37,6 +37,22 @@ let print_burrow (b : burrow) =
     b.collateral_tez
     b.outstanding_kit
 
+type checker_parameters =
+  { q : float; (* 1/kit, really *)
+    index: tez;
+    protected_index: tez;
+    target: float;
+    drift': float;
+    drift: float;
+  }
+
+let print_checker_parameters (p: checker_parameters) =
+  printf "q: %f\n" p.q;
+  printf "index: %f\n" p.index;
+  printf "protected_index: %f\n" p.protected_index;
+  printf "drift: %.15f\n" p.drift;
+  printf "drift': %.15f\n" p.drift'
+
 (* ************************************************************************* *)
 (**                               CONSTANTS                                  *)
 (* ************************************************************************* *)
@@ -56,15 +72,6 @@ let protected_index_epsilon = 0.0005
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
-
-type checker_parameters =
-  { q : float; (* 1/kit, really *)
-    index: tez;
-    protected_index: tez;
-    target: float;
-    drift': float;
-    drift: float;
-  }
 
 (** Create a burrow without any tez collateral or outstanding kit. George: With
   * the current rules, this burrow is already undercollateralized, since 0 < 0
@@ -430,12 +437,103 @@ let step_parameters
 (* ************************************************************************* *)
 (* ************************************************************************* *)
 
+type liquidation_result =
+  | Unwarranted of burrow
+  | Partial of float * tez * kit * burrow
+  | Complete of float * tez * kit * burrow
+  | Close of float * tez * kit
+
+let print_liquidation_result (r: liquidation_result) =
+  match r with
+  | Unwarranted burrow ->
+    printf "Unwarranted Liquidation\n";
+    print_burrow burrow
+  | Partial (reward, tez_to_sell, expected_kit, burrow) ->
+    printf "Partial Liquidation\n";
+    printf "liquidation_reward: %.15f\n" reward;
+    printf "tez_to_sell: %.15f\n" tez_to_sell;
+    printf "expected_kit: %.15f\n" expected_kit;
+    print_burrow burrow
+  | Complete (reward, tez_to_sell, expected_kit, burrow) ->
+    printf "Complete Liquidation (deplete the collateral)\n";
+    printf "liquidation_reward: %.15f\n" reward;
+    printf "tez_to_sell: %.15f\n" tez_to_sell;
+    printf "expected_kit: %.15f\n" expected_kit;
+    print_burrow burrow
+  | Close (reward, tez_to_sell, expected_kit) ->
+    printf "Complete Liquidation (close the burrow)\n";
+    printf "liquidation_reward: %.15f\n" reward;
+    printf "tez_to_sell: %.15f\n" tez_to_sell;
+    printf "expected_kit: %.15f\n" expected_kit
+
+(* NOTE: George: The initial state of the burrow is the collateral C, the
+ * oustanding kit K, and the implicit creation deposit D (1 tez). I say
+ * implicit because it does not count towards the collateral. So, in honesty,
+ * the 1 tez in the reward does not come from the collateral, but it is the
+ * creation deposit D. But then, in order to bring the burrow in a good state,
+ * we need to stash away (implicitly, again) 1 tez as creation deposit (this
+ * will be used if (a) the owner wants to close the burrow or (b) we need to
+ * liquidate the burrow again). This one does come out of the collateral
+ * though. From the outside it all looks the same I guess, minus one plus one,
+ * but I thought that this intricacy is worth pointing out.
+*)
+(* TODO: Remove divisions in the conditions; use multiplication instead. *)
+let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result =
+  let liquidation_limit = b.collateral_tez /. (fminus *. (p.q *. tz_liquidation p)) in
+  let partial_reward = liquidation_reward_percentage *. b.collateral_tez in
+  let liquidation_reward = creation_deposit +. partial_reward in
+  (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
+   * liquidate. *)
+  if b.outstanding_kit <= liquidation_limit then
+    Unwarranted b
+  (* Case 2: Cannot even refill the creation deposit; liquidate the whole
+   * thing (after paying the liquidation reward of course). *)
+  else if b.collateral_tez < liquidation_reward then
+    let tez_to_auction = b.collateral_tez -. partial_reward in
+    let expected_kit = tez_to_auction /. (p.q *. tz_minting p) in
+    Close (liquidation_reward, tez_to_auction, expected_kit)
+  (* Case 3: With the current price it's impossible to make the burrow not
+   * undercollateralized; pay the liquidation reward, stash away the creation
+   * deposit, and liquidate all the remaining collateral, even if it is not
+   * expected to repay enough kit. *)
+  else if b.outstanding_kit *. p.q *. tz_minting p > b.collateral_tez -. liquidation_reward then
+    let b_without_reward = { b with collateral_tez = b.collateral_tez -. liquidation_reward } in
+    let tez_to_auction = b_without_reward.collateral_tez in
+    let expected_kit = tez_to_auction /. (p.q *. tz_minting p) in
+    let final_burrow =
+      { collateral_tez = b_without_reward.collateral_tez -. tez_to_auction; (* NOTE: SHOULD BE ZERO *)
+        outstanding_kit = b_without_reward.outstanding_kit -. expected_kit;
+      } in
+    Complete (liquidation_reward, tez_to_auction, expected_kit, final_burrow)
+  (* Case 4: Recovery is possible; pay the liquidation reward, stash away the
+   * creation deposit, and liquidate only the amount of collateral needed to
+   * underburrow the burrow (as approximated now). No more, no less. *)
+  else
+    let b_without_reward = { b with collateral_tez = b.collateral_tez -. liquidation_reward } in
+    let tez_to_auction = compute_tez_to_auction p b_without_reward in
+    let expected_kit = tez_to_auction /. (p.q *. tz_minting p) in
+    let final_burrow =
+      { collateral_tez = b_without_reward.collateral_tez -. tez_to_auction;
+        outstanding_kit = b_without_reward.outstanding_kit -. expected_kit;
+      } in
+    Partial (liquidation_reward, tez_to_auction, expected_kit, final_burrow)
+
 let burrow_experiment () =
+  (* OTHER EXAMPLES *)
+  (* Unwarranted liquidation for
+  let initial_burrow = { outstanding_kit = 10.0; collateral_tez = 10.0; } in *)
+  (* Partial liquidation for
+  let initial_burrow = { outstanding_kit = 20.0; collateral_tez = 10.0; } in *)
+  (* Complete liquidation (deplete the collateral, but keep the burrow) for
+  let initial_burrow = { outstanding_kit = 100.0; collateral_tez = 10.0; } in *)
+  (* Complete liquidation (close the burrow) for
+  let initial_burrow = { outstanding_kit = 100.0; collateral_tez = 1.001; } in *)
   let initial_burrow =
     { outstanding_kit = 20.0;
       collateral_tez = 10.0;
     } in
-
+  printf "\n=== Initial burrow state ===\n";
+  print_burrow initial_burrow;
   let params =
     { q = 1.015;
       index = 0.32;
@@ -444,49 +542,23 @@ let burrow_experiment () =
       drift = 0.0;
       drift' = 0.0;
     } in
+  printf "\n=== Checker parameters ===\n";
+  print_checker_parameters params;
 
-  print_burrow initial_burrow;
-
+  printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
   printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params initial_burrow);
+  printf "\n=== Liquidation request outcome ===\n";
+  let liquidation_result = request_liquidation params initial_burrow in
+  print_liquidation_result liquidation_result;
 
-  let reward = compute_liquidation_reward params initial_burrow in
-  printf "Reward                : %.15f\n" reward;
-
-  (* NOTE: George: The initial state of the burrow is the collateral C, the
-   * oustanding kit K, and the implicit creation deposit D (1 tez). I say
-   * implicit because it does not count towards the collateral. So, in honesty,
-   * the 1 tez in the reward does not come from the collateral, but it is the
-   * creation deposit D. But then, in order to bring the burrow in a good
-   * state, we need to stash away (implicitly, again) 1 tez as creation deposit
-   * (this will be used if (a) the owner wants to close the burrow or (b) we
-   * need to liquidate the burrow again). This one does come out of the
-   * collateral though. From the outside it all looks the same I guess, minus
-   * one plus one, but I thought that this intricacy is worth pointing out.
-  *)
-  let burrow_without_reward = { initial_burrow with collateral_tez = initial_burrow.collateral_tez -. reward } in
-  printf "New collateral        : %.15f\n" burrow_without_reward.collateral_tez;
-
-  let kit_to_receive = compute_expected_kit_from_auction params burrow_without_reward in
-  printf "Kits to write off     : %.15f\n" kit_to_receive;
-
-  let tez_to_auction = compute_tez_to_auction params burrow_without_reward in
-  printf "Tez to auction        : %.15f\n" tez_to_auction;
-
-  let final_burrow =
-    { collateral_tez = burrow_without_reward.collateral_tez -. tez_to_auction;
-      outstanding_kit = burrow_without_reward.outstanding_kit -. kit_to_receive;
-    } in
-  print_burrow final_burrow;
-
-  let final_liquidation_limit = compute_liquidation_limit params final_burrow in
-  printf "New liquidation limit : %.15f\n" final_liquidation_limit;
-  let final_burrowing_limit = compute_burrowing_limit params final_burrow in
-  printf "New burrowing   limit : %.15f\n" final_burrowing_limit;
-  printf "Still overburrowed    : %B\n" (is_overburrowed params final_burrow);
-  printf "Still liquidatable    : %B\n" (should_burrow_be_liquidated params final_burrow);
-
-  printf "Hello, %s world\n%!" "cruel"
+  printf "\n=== State of affairs ===\n";
+  match liquidation_result with
+  | Partial (_,_,_,b) | Complete (_,_,_,b) | Unwarranted b ->
+    printf "Overburrowed          : %B\n" (is_overburrowed params b);
+    printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
+  | Close (_,_,_) ->
+    printf "There is no burrow left to consider.\n"
 
 let uniswap_experiment () =
   let uniswap = { tez=10.; kit=5.; total_liquidity_tokens=1 }; in
@@ -500,13 +572,6 @@ let uniswap_experiment () =
   printf "Returned tez: %f\n" tez;
   printf "Returned kit: %f\n" kit;
   print_uniswap uniswap
-
-let print_checker_parameters (p: checker_parameters) =
-  printf "q: %f\n" p.q;
-  printf "index: %f\n" p.index;
-  printf "protected_index: %f\n" p.protected_index;
-  printf "drift: %.15f\n" p.drift;
-  printf "drift': %.15f\n" p.drift'
 
 let step_experiment () =
   let initial_parameters = { q = 0.9;
