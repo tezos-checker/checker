@@ -49,29 +49,14 @@ let (uniswap_fee_percentage : float) = 0.002;; (* TODO: Use cNp *)
 let protected_index_epsilon = 0.0005
 
 (* ************************************************************************* *)
-(**                           SYSTEM PARAMETERS                              *)
-(* ************************************************************************* *)
-type parameters =
-  { q : float; (* 1/kit, really *)
-    index: tez;
-    protected_index: tez;
-    drift': float;
-    drift: float;
-  }
-
-(* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: parameters) : tez =
-  max p.index p.protected_index
-let tz_liquidation (p: parameters) : tez =
-  min p.index p.protected_index
-
-let clamp (v: 'a) (lower: 'a) (upper: 'a) : float =
-  assert (lower <= upper);
-  min upper (max v lower)
-
-(* ************************************************************************* *)
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
+
+type burrowing_parameters =
+  { q : float; (* 1/kit, really *)
+    index: tez;
+    protected_index: tez
+  }
 
 (** Create a burrow without any tez collateral or outstanding kit. George: With
   * the current rules, this burrow is already undercollateralized, since 0 < 0
@@ -86,6 +71,13 @@ let deposit_tez (t : tez) (b : burrow) : burrow =
   assert (t >= 0.0);
   { b with collateral_tez = b.collateral_tez +. t }
 
+(* tez. To get tez/kit must multiply with q. *)
+let tz_minting (p: burrowing_parameters) : tez =
+  max p.index p.protected_index
+
+let tz_liquidation (p: burrowing_parameters) : tez =
+  min p.index p.protected_index
+
 (** Compute the maximum number of kit that can be outstanding from a burrow,
   * given the number of tez that have been deposited in it. The general limit
   * for burrowing is given by the following inequality:
@@ -96,20 +88,20 @@ let deposit_tez (t : tez) (b : burrow) : burrow =
   *
   *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
 *)
-let compute_burrowing_limit (p : parameters) (b : burrow) : kit =
+let compute_burrowing_limit (p : burrowing_parameters) (b : burrow) : kit =
   b.collateral_tez /. (fplus *. (p.q *. tz_minting p))
 
 (** Check that a burrow is not overburrowed (that is, the kit outstanding does
   * not exceed the burrowing limit). *)
-let is_not_overburrowed (p : parameters) (b : burrow) : bool =
+let is_not_overburrowed (p : burrowing_parameters) (b : burrow) : bool =
   b.outstanding_kit <= compute_burrowing_limit p b
 
-let is_overburrowed (p : parameters) (b : burrow) : bool =
+let is_overburrowed (p : burrowing_parameters) (b : burrow) : bool =
   not (is_not_overburrowed p b)
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdraw_tez (p : parameters) (t : tez) (b : burrow) : burrow option =
+let withdraw_tez (p : burrowing_parameters) (t : tez) (b : burrow) : burrow option =
   assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
   if is_overburrowed p updated
@@ -118,7 +110,7 @@ let withdraw_tez (p : parameters) (t : tez) (b : burrow) : burrow option =
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let mint_kits_from_burrow (p : parameters) (k : kit) (b : burrow) =
+let mint_kits_from_burrow (p : burrowing_parameters) (k : kit) (b : burrow) =
   assert (k >= 0.0);
   let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
   if is_overburrowed p updated
@@ -138,11 +130,11 @@ let mint_kits_from_burrow (p : parameters) (k : kit) (b : burrow) =
   *
   * then the burrow can be marked for liquidation.
 *)
-let compute_liquidation_limit (p : parameters) (b : burrow) : kit =
+let compute_liquidation_limit (p : burrowing_parameters) (b : burrow) : kit =
   b.collateral_tez /. (fminus *. (p.q *. tz_liquidation p))
 (* TEZ / (TEZ / KIT) = KIT *)
 
-let should_burrow_be_liquidated (p : parameters) (b : burrow) : bool =
+let should_burrow_be_liquidated (p : burrowing_parameters) (b : burrow) : bool =
   b.outstanding_kit > compute_liquidation_limit p b
 
 (** The reward for triggering a liquidation. This amounts to the burrow's
@@ -150,7 +142,7 @@ let should_burrow_be_liquidated (p : parameters) (b : burrow) : bool =
   * collateral. Of course, if the burrow does not qualify for liquidation, the
   * reward is zero. In the grand scheme of things, this should be given to the
   * actor triggering liquidation. *)
-let compute_liquidation_reward (p : parameters) (b : burrow) : tez =
+let compute_liquidation_reward (p : burrowing_parameters) (b : burrow) : tez =
   if should_burrow_be_liquidated p b
   then creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
   else 0. (* No reward if the burrow should not be liquidated *)
@@ -177,14 +169,14 @@ let compute_liquidation_reward (p : parameters) (b : burrow) : tez =
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
   * liquidation. George: We need some more accurate comments here. *)
-let compute_tez_to_auction (p : parameters) (b : burrow) : tez =
+let compute_tez_to_auction (p : burrowing_parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
   *. tz_minting p
   *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. tz_liquidation p))
   /. (fplus *. tz_liquidation p -. tz_minting p)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
-let compute_expected_kit_from_auction (p : parameters) (b : burrow) : kit =
+let compute_expected_kit_from_auction (p : burrowing_parameters) (b : burrow) : kit =
   compute_tez_to_auction p b /. (p.q *. tz_minting p)
 
 (*
@@ -327,6 +319,15 @@ let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
+type checker_parameters =
+  { q : float; (* 1/kit, really *)
+    index: tez;
+    protected_index: tez;
+    target: float;
+    drift': float;
+    drift: float;
+  }
+
 let cnp (i: float) : float = i /. 100.
 
 let sign (i: float) : float =
@@ -334,10 +335,14 @@ let sign (i: float) : float =
   else if i == 0. then 0.
   else -1.
 
+let clamp (v: 'a) (lower: 'a) (upper: 'a) : float =
+  assert (lower <= upper);
+  min upper (max v lower)
+
 type checker =
   { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)
     uniswap : uniswap;
-    parameters : parameters;
+    parameters : checker_parameters;
   }
 
 (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
@@ -358,7 +363,7 @@ type checker =
       (* High acceleration (-/+) *)
       | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. /. 60.) ** 2.)
       | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. /. 60.) ** 2.)
- *)
+*)
 let compute_drift_derivative (target : float) : float =
   assert (target > 0.);
   let log_target = log target in
@@ -366,52 +371,57 @@ let compute_drift_derivative (target : float) : float =
   if abs_log_target < cnp 0.5 then
     0.
   else if abs_log_target < cnp 5.0 then
-    sign log_target *. (cnp 0.01 /. (24. /. 60.) ** 2.)
+    sign log_target *. (cnp 0.01 /. (24. *. 3600.) ** 2.)
   else
-    sign log_target *. (cnp 0.05 /. (24. /. 60.) ** 2.)
+    sign log_target *. (cnp 0.05 /. (24. *. 3600.) ** 2.)
+
+type duration = Seconds of int
+let seconds_of_duration = function | Seconds s -> s
+
 
 (* TODO: Not tested, take it with a grain of salt. *)
-let step (time_passed: int) (current_index: float) (checker: checker) : checker =
+let step_parameters
+    (time_passed: duration)
+    (current_index: float)
+    (current_kit_in_tez: float)
+    (parameters: checker_parameters)
+  : checker_parameters =
   (* Compute the new protected index, using the time interval, the current
    * index (given by the oracles right now), and the protected index of the
    * previous timestamp. *)
-  let upper_lim = exp (protected_index_epsilon *. float_of_int time_passed) in
-  let lower_lim = exp (-. protected_index_epsilon *. float_of_int time_passed) in
-  let new_protected_index =
-    checker.parameters.protected_index
+  let duration_in_seconds = float_of_int (seconds_of_duration time_passed) in
+  let upper_lim = exp (protected_index_epsilon *. duration_in_seconds) in
+  let lower_lim = exp (-. protected_index_epsilon *. duration_in_seconds) in
+  let current_protected_index =
+    parameters.protected_index
     *. clamp
-      (current_index /. checker.parameters.protected_index)
+      (current_index /. parameters.protected_index)
       lower_lim
       upper_lim in
-  (* George: NOTE: I think that there is a small issue here:
-   * checker.parameters.q and checker.parameters.index are from the previous
-   * timestamp (as they should), but, if I understand correctly, kit_in_tez
-   * refers to the current time. *)
-  let new_drift' =
-    let kit_in_tez =
-      checker.uniswap.tez /. checker.uniswap.kit in
-    let target =
-      checker.parameters.q *. checker.parameters.index /. kit_in_tez in
-    compute_drift_derivative target in
-  let new_drift =
-    checker.parameters.drift
+  let current_drift' =
+    compute_drift_derivative parameters.target in
+  let current_drift =
+    parameters.drift
     +. (1. /. 2.)
-       *. (checker.parameters.drift' +. new_drift')
-       *. float_of_int time_passed in
-  let new_q =
-    checker.parameters.q
-    *. exp ( ( checker.parameters.drift
+       *. (parameters.drift' +. current_drift')
+       *. duration_in_seconds in
+
+  (* TODO: use integer arithmetic *)
+  let current_q =
+    parameters.q
+    *. exp ( ( parameters.drift
                +. (1. /. 6.)
-                  *. (2. *. checker.parameters.drift' +. new_drift')
-                  *. float_of_int time_passed )
-             *. float_of_int time_passed ) in
-  { checker with
-    parameters = {
-      index = current_index;
-      protected_index = new_protected_index;
-      drift = new_drift;
-      drift' = new_drift';
-      q = new_q }
+                  *. (2. *. parameters.drift' +. current_drift')
+                  *. duration_in_seconds )
+             *. duration_in_seconds ) in
+  let current_target = current_q *. current_index /. current_kit_in_tez in
+  {
+    index = current_index;
+    protected_index = current_protected_index;
+    target = current_target;
+    drift = current_drift;
+    drift' = current_drift';
+    q = current_q
   }
 
 (* ************************************************************************* *)
@@ -426,8 +436,6 @@ let burrow_experiment () =
     { q = 1.015;
       index = 0.32;
       protected_index = 0.36;
-      drift = 0.;
-      drift' = 0.;
     } in
 
   print_burrow initial_burrow;
@@ -486,8 +494,33 @@ let uniswap_experiment () =
   printf "Returned kit: %f\n" kit;
   print_uniswap uniswap
 
+let print_checker_parameters (p: checker_parameters) =
+  printf "q: %f\n" p.q;
+  printf "index: %f\n" p.index;
+  printf "protected_index: %f\n" p.protected_index;
+  printf "drift: %.15f\n" p.drift;
+  printf "drift': %.15f\n" p.drift'
+
+let step_experiment () =
+  let initial_parameters = { q = 0.9;
+                             index = 0.36;
+                             target = 1.08;
+                             protected_index = 0.35;
+                             drift = 0.0;
+                             drift' = 0.0;
+                           } in
+  let interblock_time = Seconds 3600 in
+  let new_index = 0.34 in
+  let tez_per_kit = 0.305 in
+  let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
+  printf "\n=== Initial checker parameters ===\n";
+  print_checker_parameters initial_parameters;
+  printf "\n=== New checker parameters ===\n";
+  print_checker_parameters new_parameters
+
 let () =
   burrow_experiment ();
   (* uniswap_experiment (); *)
+  step_experiment ();
   printf "\ndone.\n"
 
