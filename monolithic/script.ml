@@ -3,7 +3,7 @@ open Format;;
 
 (* TODO: THINGS TO CONSIDER:
 
- * What if computeTezToAuction returns something positive?
+ * What if compute_tez_to_auction returns something positive?
 
    About switching to an integer representation for tez and kit
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,13 +76,13 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : float =
 (** Create a burrow without any tez collateral or outstanding kit. George: With
   * the current rules, this burrow is already undercollateralized, since 0 < 0
   * is false. *)
-let createBurrow () : burrow =
+let create_burrow () : burrow =
   { collateral_tez = 0.0;
     outstanding_kit = 0.0;
   }
 
 (** Add non-negative collateral to a burrow. *)
-let depositTez (t : tez) (b : burrow) : burrow =
+let deposit_tez (t : tez) (b : burrow) : burrow =
   assert (t >= 0.0);
   { b with collateral_tez = b.collateral_tez +. t }
 
@@ -101,15 +101,15 @@ let compute_burrowing_limit (p : parameters) (b : burrow) : kit =
 
 (** Check that a burrow is not overburrowed (that is, the kit outstanding does
   * not exceed the burrowing limit). *)
-let isNotOverburrowed (p : parameters) (b : burrow) : bool =
+let is_not_overburrowed (p : parameters) (b : burrow) : bool =
   b.outstanding_kit <= compute_burrowing_limit p b
 
 let is_overburrowed (p : parameters) (b : burrow) : bool =
-  not (isNotOverburrowed p b)
+  not (is_not_overburrowed p b)
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
+let withdraw_tez (p : parameters) (t : tez) (b : burrow) : burrow option =
   assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
   if is_overburrowed p updated
@@ -118,7 +118,7 @@ let withdrawTez (p : parameters) (t : tez) (b : burrow) : burrow option =
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let mintKitsFromBurrow (p : parameters) (k : kit) (b : burrow) =
+let mint_kits_from_burrow (p : parameters) (k : kit) (b : burrow) =
   assert (k >= 0.0);
   let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
   if is_overburrowed p updated
@@ -177,7 +177,7 @@ let compute_liquidation_reward (p : parameters) (b : burrow) : tez =
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
   * liquidation. George: We need some more accurate comments here. *)
-let computeTezToAuction (p : parameters) (b : burrow) : tez =
+let compute_tez_to_auction (p : parameters) (b : burrow) : tez =
   (-1.0) (* NOTE: What the rest computes is really DeltaTez, which is negative (tez need to be auctioned). *)
   *. tz_minting p
   *. (b.collateral_tez -. b.outstanding_kit *. fplus *. (p.q *. tz_liquidation p))
@@ -185,7 +185,7 @@ let computeTezToAuction (p : parameters) (b : burrow) : tez =
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
 let compute_expected_kit_from_auction (p : parameters) (b : burrow) : kit =
-  computeTezToAuction p b /. (p.q *. tz_minting p)
+  compute_tez_to_auction p b /. (p.q *. tz_minting p)
 
 (*
 I can think of the following outcomes:
@@ -455,7 +455,7 @@ let burrow_experiment () =
   let kit_to_receive = compute_expected_kit_from_auction params burrow_without_reward in
   printf "Kits to write off     : %.15f\n" kit_to_receive;
 
-  let tez_to_auction = computeTezToAuction params burrow_without_reward in
+  let tez_to_auction = compute_tez_to_auction params burrow_without_reward in
   printf "Tez to auction        : %.15f\n" tez_to_auction;
 
   let final_burrow =
