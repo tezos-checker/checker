@@ -2,6 +2,9 @@
 all:
 	ocamlc script.ml
 
+run: all
+	./a.out
+
 clean:
 	$(RM) *.cmo *.cmi
 
