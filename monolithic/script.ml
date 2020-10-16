@@ -57,10 +57,13 @@ let protected_index_epsilon = 0.0005
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
 
-type burrowing_parameters =
+type checker_parameters =
   { q : float; (* 1/kit, really *)
     index: tez;
-    protected_index: tez
+    protected_index: tez;
+    target: float;
+    drift': float;
+    drift: float;
   }
 
 (** Create a burrow without any tez collateral or outstanding kit. George: With
@@ -77,10 +80,10 @@ let deposit_tez (t : tez) (b : burrow) : burrow =
   { b with collateral_tez = b.collateral_tez +. t }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: burrowing_parameters) : tez =
+let tz_minting (p: checker_parameters) : tez =
   max p.index p.protected_index
 
-let tz_liquidation (p: burrowing_parameters) : tez =
+let tz_liquidation (p: checker_parameters) : tez =
   min p.index p.protected_index
 
 (** Compute the maximum number of kit that can be outstanding from a burrow,
@@ -93,20 +96,20 @@ let tz_liquidation (p: burrowing_parameters) : tez =
   *
   *   kit_outstanding <= tez_collateral / (fplus * (q * tz_mint))
 *)
-let compute_burrowing_limit (p : burrowing_parameters) (b : burrow) : kit =
+let compute_burrowing_limit (p : checker_parameters) (b : burrow) : kit =
   b.collateral_tez /. (fplus *. (p.q *. tz_minting p))
 
 (** Check that a burrow is not overburrowed (that is, the kit outstanding does
   * not exceed the burrowing limit). *)
-let is_not_overburrowed (p : burrowing_parameters) (b : burrow) : bool =
+let is_not_overburrowed (p : checker_parameters) (b : burrow) : bool =
   b.outstanding_kit <= compute_burrowing_limit p b
 
-let is_overburrowed (p : burrowing_parameters) (b : burrow) : bool =
+let is_overburrowed (p : checker_parameters) (b : burrow) : bool =
   not (is_not_overburrowed p b)
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdraw_tez (p : burrowing_parameters) (t : tez) (b : burrow) : burrow option =
+let withdraw_tez (p : checker_parameters) (t : tez) (b : burrow) : burrow option =
   assert (t >= 0.0);
   let updated = { b with collateral_tez = b.collateral_tez -. t } in
   if is_overburrowed p updated
@@ -115,7 +118,7 @@ let withdraw_tez (p : burrowing_parameters) (t : tez) (b : burrow) : burrow opti
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let mint_kits_from_burrow (p : burrowing_parameters) (k : kit) (b : burrow) =
+let mint_kits_from_burrow (p : checker_parameters) (k : kit) (b : burrow) =
   assert (k >= 0.0);
   let updated = { b with outstanding_kit = b.outstanding_kit +. k } in
   if is_overburrowed p updated
@@ -135,11 +138,11 @@ let mint_kits_from_burrow (p : burrowing_parameters) (k : kit) (b : burrow) =
   *
   * then the burrow can be marked for liquidation.
 *)
-let compute_liquidation_limit (p : burrowing_parameters) (b : burrow) : kit =
+let compute_liquidation_limit (p : checker_parameters) (b : burrow) : kit =
   b.collateral_tez /. (fminus *. (p.q *. tz_liquidation p))
 (* TEZ / (TEZ / KIT) = KIT *)
 
-let should_burrow_be_liquidated (p : burrowing_parameters) (b : burrow) : bool =
+let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
   b.outstanding_kit > compute_liquidation_limit p b
 
 (** The reward for triggering a liquidation. This amounts to the burrow's
@@ -147,7 +150,7 @@ let should_burrow_be_liquidated (p : burrowing_parameters) (b : burrow) : bool =
   * collateral. Of course, if the burrow does not qualify for liquidation, the
   * reward is zero. In the grand scheme of things, this should be given to the
   * actor triggering liquidation. *)
-let compute_liquidation_reward (p : burrowing_parameters) (b : burrow) : tez =
+let compute_liquidation_reward (p : checker_parameters) (b : burrow) : tez =
   if should_burrow_be_liquidated p b
   then creation_deposit +. liquidation_reward_percentage *. b.collateral_tez
   else 0. (* No reward if the burrow should not be liquidated *)
@@ -176,12 +179,12 @@ let compute_liquidation_reward (p : burrowing_parameters) (b : burrow) : tez =
   *   tez_to_auction = (kit * fplus * q * tz_minting - tez ) / (fplus - 1)
   *   repaid_kit     = tez_to_auction / (q * tz_minting)
 *)
-let compute_tez_to_auction (p : burrowing_parameters) (b : burrow) : tez =
+let compute_tez_to_auction (p : checker_parameters) (b : burrow) : tez =
   (b.outstanding_kit *. fplus *. p.q *. tz_minting p -. b.collateral_tez)
   /. (fplus -. 1.)
 
 (** Compute the amount of kits we expect to get from auctioning tez. *)
-let compute_expected_kit_from_auction (p : burrowing_parameters) (b : burrow) : kit =
+let compute_expected_kit_from_auction (p : checker_parameters) (b : burrow) : kit =
   compute_tez_to_auction p b /. (p.q *. tz_minting p)
 
 (*
@@ -324,15 +327,6 @@ let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
-type checker_parameters =
-  { q : float; (* 1/kit, really *)
-    index: tez;
-    protected_index: tez;
-    target: float;
-    drift': float;
-    drift: float;
-  }
-
 let cnp (i: float) : float = i /. 100.
 
 let sign (i: float) : float =
@@ -441,10 +435,14 @@ let burrow_experiment () =
     { outstanding_kit = 20.0;
       collateral_tez = 10.0;
     } in
+
   let params =
     { q = 1.015;
       index = 0.32;
       protected_index = 0.36;
+      target = 1.08;
+      drift = 0.0;
+      drift' = 0.0;
     } in
 
   print_burrow initial_burrow;
