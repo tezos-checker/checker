@@ -1,0 +1,13 @@
+(library
+  (name huxian)
+  (modules Huxian))
+
+(executable
+  (name script)
+  (modules Script)
+  (libraries huxian))
+
+(executable
+  (name tests)
+  (libraries huxian ounit2)
+  (modules Tests))

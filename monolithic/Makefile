@@ -1,15 +1,16 @@
+all: tests
 
-all:
-	ocamlc script.ml
+run:
+	dune exec ./script.exe
 
-run: all
-	./a.out
+tests:
+	dune exec ./tests.exe
 
 clean:
 	$(RM) *.cmo *.cmi
 
 indent:
-	ocp-indent -i script.ml
+	ocp-indent -i *.ml
 
 distclean: clean
 	$(RM) a.out

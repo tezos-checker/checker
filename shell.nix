@@ -7,10 +7,10 @@ pkgs.mkShell {
   name = "huxian";
   buildInputs = [
     ocamlPackages.ocaml
+    ocamlPackages.dune
     ocamlPackages.findlib # Lets merlin see packages like ounit
     ocamlPackages.ocp-indent
     ocamlPackages.merlin
-    ocamlPackages.ocamlbuild
     ocamlPackages.ounit
   ];
 }
