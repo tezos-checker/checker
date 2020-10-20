@@ -5,18 +5,16 @@ open Tez
 
 let burrow_experiment () =
   (* OTHER EXAMPLES *)
-  (* Unwarranted liquidation for
-     let initial_burrow = { minted_kit = 10.0; collateral = 10.0; } in *)
-  (* Partial liquidation for
-     let initial_burrow = { minted_kit = 20.0; collateral = 10.0; } in *)
-  (* Complete liquidation (deplete the collateral, but keep the burrow) for
-     let initial_burrow = { minted_kit = 100.0; collateral = 10.0; } in *)
-  (* Complete liquidation (close the burrow) for
-     let initial_burrow = { minted_kit = 100.0; collateral = 1.001; } in *)
-  let initial_burrow =
-    { minted_kit = Kit.of_float 20.0;
-      collateral = Tez.of_float 10.0;
-    } in
+  (* Unwarranted liquidation for *)
+  (* let initial_burrow = { minted_kit = Kit.of_float 10.0; collateral = Tez.of_float 10.0; } in *)
+  (* Partial liquidation for *)
+  (* let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in *)
+  (* Complete liquidation (deplete the collateral, but keep the burrow) for *)
+  (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 10.0; } in *)
+  (* Complete liquidation (close the burrow) for *)
+  (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
+  (* DEFAULT *)
+  let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in
   printf "\n=== Initial burrow state ===\n";
   print_burrow initial_burrow;
   let params =
@@ -39,11 +37,12 @@ let burrow_experiment () =
 
   printf "\n=== State of affairs ===\n";
   match liquidation_result with
-  | Partial (_,_,_,b) | Complete (_,_,_,b) | Unwarranted b ->
-    printf "Overburrowed          : %B\n" (is_overburrowed params b);
-    printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
-  | Close (_,_,_) ->
-    printf "There is no burrow left to consider.\n"
+  | (outcome,_,_,_,b) ->
+    if outcome == Close then
+      printf "There is no burrow left to consider.\n"
+    else
+      printf "Overburrowed          : %B\n" (is_overburrowed params b);
+      printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
 
 let uniswap_experiment () =
   let uniswap =
@@ -79,8 +78,23 @@ let step_experiment () =
   printf "\n=== New checker parameters ===\n";
   print_checker_parameters new_parameters
 
+let arithmetic_experiment () =
+  let tz1 = Tez.of_float 5.0 in
+  let tz2 = Tez.of_float 3.0 in
+  Format.fprintf Format.std_formatter "Tez.add %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.add tz1 tz2));
+  Format.fprintf Format.std_formatter "Tez.sub %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.sub tz1 tz2));
+  Format.fprintf Format.std_formatter "Tez.mul %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.mul tz1 tz2));
+  Format.fprintf Format.std_formatter "Tez.div %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.div tz1 tz2));
+  Format.fprintf Format.std_formatter "Tez.rem %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.rem tz1 tz2));
+  let tz3 = Tez.of_float 5.1234 in
+  Format.fprintf Format.std_formatter "%t\n" (Tez.pp tz3);
+  Format.fprintf Format.std_formatter "Tez.div %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.div tz3 tz2));
+  Format.fprintf Format.std_formatter "Tez.rem %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.rem tz3 tz2));
+  Format.fprintf Format.std_formatter "Tez.mul %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.mul tz3 tz2))
+
 let () =
   burrow_experiment ();
+  (* arithmetic_experiment (); *)
   (* uniswap_experiment (); *)
   (* step_experiment (); *)
   printf "\ndone.\n"
