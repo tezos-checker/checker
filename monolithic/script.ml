@@ -40,10 +40,10 @@ let burrow_experiment () =
   printf "\n=== State of affairs ===\n";
   match liquidation_result with
   | Partial (_,_,_,b) | Complete (_,_,_,b) | Unwarranted b ->
-     printf "Overburrowed          : %B\n" (is_overburrowed params b);
-     printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
+    printf "Overburrowed          : %B\n" (is_overburrowed params b);
+    printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
   | Close (_,_,_) ->
-     printf "There is no burrow left to consider.\n"
+    printf "There is no burrow left to consider.\n"
 
 let uniswap_experiment () =
   let uniswap =

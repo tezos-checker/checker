@@ -427,33 +427,33 @@ type liquidation_result =
 let pp_liquidation_result (r: liquidation_result) (ppf: Format.formatter) =
   match r with
   | Unwarranted burrow ->
-  Format.fprintf
-    ppf
-    "Unwarranted Liquidation\nburrow_state: %t"
-    (pp_burrow burrow)
+    Format.fprintf
+      ppf
+      "Unwarranted Liquidation\nburrow_state: %t"
+      (pp_burrow burrow)
   | Partial (reward, tez_to_sell, expected_kit, burrow) ->
-  Format.fprintf
-    ppf
-    "Partial Liquidation\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\nburrow_state: %t\n"
-    (Tez.pp reward)
-    (Tez.pp tez_to_sell)
-    (Kit.pp expected_kit)
-    (pp_burrow burrow)
+    Format.fprintf
+      ppf
+      "Partial Liquidation\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\nburrow_state: %t\n"
+      (Tez.pp reward)
+      (Tez.pp tez_to_sell)
+      (Kit.pp expected_kit)
+      (pp_burrow burrow)
   | Complete (reward, tez_to_sell, expected_kit, burrow) ->
-  Format.fprintf
-    ppf
-    "Complete Liquidation (deplete the collateral)\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\nburrow_state: %t\n"
-    (Tez.pp reward)
-    (Tez.pp tez_to_sell)
-    (Kit.pp expected_kit)
-    (pp_burrow burrow)
+    Format.fprintf
+      ppf
+      "Complete Liquidation (deplete the collateral)\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\nburrow_state: %t\n"
+      (Tez.pp reward)
+      (Tez.pp tez_to_sell)
+      (Kit.pp expected_kit)
+      (pp_burrow burrow)
   | Close (reward, tez_to_sell, expected_kit) ->
-  Format.fprintf
-    ppf
-    "Complete Liquidation (close the burrow)\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\n"
-    (Tez.pp reward)
-    (Tez.pp tez_to_sell)
-    (Kit.pp expected_kit)
+    Format.fprintf
+      ppf
+      "Complete Liquidation (close the burrow)\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\n"
+      (Tez.pp reward)
+      (Tez.pp tez_to_sell)
+      (Kit.pp expected_kit)
 
 let print_liquidation_result (r: liquidation_result) =
   pp_liquidation_result r Format.std_formatter
