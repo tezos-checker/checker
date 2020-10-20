@@ -1,13 +1,28 @@
 (library
+  (name fixedPoint)
+  (modules FixedPoint))
+
+(library
+  (name tez)
+  (modules Tez)
+  (libraries fixedPoint))
+
+(library
+  (name kit)
+  (modules Kit)
+  (libraries fixedPoint))
+
+(library
   (name huxian)
-  (modules Huxian))
+  (modules Huxian)
+  (libraries fixedPoint kit tez))
 
 (executable
   (name script)
   (modules Script)
-  (libraries huxian))
+  (libraries huxian kit tez))
 
 (executable
   (name tests)
-  (libraries huxian ounit2)
+  (libraries huxian ounit2 tez)
   (modules Tests))

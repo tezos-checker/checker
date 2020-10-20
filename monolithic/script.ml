@@ -1,5 +1,7 @@
 open Huxian
 open Format
+open Kit
+open Tez
 
 let burrow_experiment () =
   (* OTHER EXAMPLES *)
@@ -12,21 +14,21 @@ let burrow_experiment () =
   (* Complete liquidation (close the burrow) for
      let initial_burrow = { minted_kit = 100.0; collateral = 1.001; } in *)
   let initial_burrow =
-    { minted_kit = 20.0;
-      collateral = 10.0;
+    { minted_kit = Kit.of_float 20.0;
+      collateral = Tez.of_float 10.0;
     } in
   printf "\n=== Initial burrow state ===\n";
   print_burrow initial_burrow;
   let params =
     { q = 1.015;
-      index = 0.32;
-      protected_index = 0.36;
+      index = Tez.of_float 0.32;
+      protected_index = Tez.of_float 0.36;
       target = 1.08;
       drift = 0.0;
       drift' = 0.0;
     } in
   printf "\n=== Checker parameters ===\n";
-  print_string (format_checker_parameters params);
+  print_checker_parameters params;
 
   printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
@@ -44,23 +46,27 @@ let burrow_experiment () =
      printf "There is no burrow left to consider.\n"
 
 let uniswap_experiment () =
-  let uniswap = { tez=10.; kit=5.; total_liquidity_tokens=1 }; in
-  let (tez, kit, uniswap) = sell_kit uniswap 1. in
-  printf "Returned tez: %f\n" tez;
-  printf "Returned kit: %f\n" kit;
+  let uniswap =
+    { tez = Tez.of_float 10.0;
+      kit = Kit.of_float 5.0;
+      total_liquidity_tokens = 1;
+    } in
+  let (tez, kit, uniswap) = sell_kit uniswap (Kit.of_float 1.0) in
+  printf "Returned tez: %t\n" (Tez.pp tez);
+  printf "Returned kit: %t\n" (Kit.pp kit);
   print_uniswap uniswap;
   print_newline ();
-  let (liq, tez, kit, uniswap) = buy_liquidity uniswap 20. 20. in
+  let (liq, tez, kit, uniswap) = buy_liquidity uniswap (Tez.of_float 20.0) (Kit.of_float 20.0) in
   printf "Returned liquidity: %d\n" liq;
-  printf "Returned tez: %f\n" tez;
-  printf "Returned kit: %f\n" kit;
+  printf "Returned tez: %t\n" (Tez.pp tez);
+  printf "Returned kit: %t\n" (Kit.pp kit);
   print_uniswap uniswap
 
 let step_experiment () =
   let initial_parameters = { q = 0.9;
-                             index = 0.36;
+                             index = Tez.of_float 0.36;
                              target = 1.08;
-                             protected_index = 0.35;
+                             protected_index = Tez.of_float 0.35;
                              drift = 0.0;
                              drift' = 0.0;
                            } in
@@ -69,9 +75,9 @@ let step_experiment () =
   let tez_per_kit = 0.305 in
   let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
-  print_string (format_checker_parameters initial_parameters);
+  print_checker_parameters initial_parameters;
   printf "\n=== New checker parameters ===\n";
-  print_string (format_checker_parameters new_parameters)
+  print_checker_parameters new_parameters
 
 let () =
   burrow_experiment ();
