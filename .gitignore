@@ -4,4 +4,3 @@ checker.byte
 *.mli
 *.cmi
 *.cmo
-/monolithic/dune-project
