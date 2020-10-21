@@ -27,7 +27,7 @@ module Kit : sig
   val to_fp : t -> FixedPoint.t
 
   (* Pretty printing functions *)
-  val pp : t -> Format.formatter -> unit
+  val pp : Format.formatter -> t -> unit
 end =
 struct
   type t = Int64.t
@@ -91,7 +91,7 @@ struct
     FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor scaling_factor))
 
   (* Pretty printing functions *)
-  let pp amount ppf =
+  let pp ppf amount =
     let zfill s width =
       let to_fill = width - (String.length s) in
       if to_fill <= 0

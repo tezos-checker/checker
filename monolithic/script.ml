@@ -51,14 +51,14 @@ let uniswap_experiment () =
       total_liquidity_tokens = 1;
     } in
   let (tez, kit, uniswap) = sell_kit uniswap (Kit.of_float 1.0) in
-  printf "Returned tez: %t\n" (Tez.pp tez);
-  printf "Returned kit: %t\n" (Kit.pp kit);
+  printf "Returned tez: %a\n" Tez.pp tez;
+  printf "Returned kit: %a\n" Kit.pp kit;
   print_uniswap uniswap;
   print_newline ();
   let (liq, tez, kit, uniswap) = buy_liquidity uniswap (Tez.of_float 20.0) (Kit.of_float 20.0) in
   printf "Returned liquidity: %d\n" liq;
-  printf "Returned tez: %t\n" (Tez.pp tez);
-  printf "Returned kit: %t\n" (Kit.pp kit);
+  printf "Returned tez: %a\n" Tez.pp tez;
+  printf "Returned kit: %a\n" Kit.pp kit;
   print_uniswap uniswap
 
 let step_experiment () =
@@ -81,16 +81,16 @@ let step_experiment () =
 let arithmetic_experiment () =
   let tz1 = Tez.of_float 5.0 in
   let tz2 = Tez.of_float 3.0 in
-  Format.fprintf Format.std_formatter "Tez.add %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.add tz1 tz2));
-  Format.fprintf Format.std_formatter "Tez.sub %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.sub tz1 tz2));
-  Format.fprintf Format.std_formatter "Tez.mul %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.mul tz1 tz2));
-  Format.fprintf Format.std_formatter "Tez.div %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.div tz1 tz2));
-  Format.fprintf Format.std_formatter "Tez.rem %t %t = %t\n" (Tez.pp tz1) (Tez.pp tz2) (Tez.pp (Tez.rem tz1 tz2));
+  printf "Tez.add %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.add tz1 tz2);
+  printf "Tez.sub %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.sub tz1 tz2);
+  printf "Tez.mul %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.mul tz1 tz2);
+  printf "Tez.div %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.div tz1 tz2);
+  printf "Tez.rem %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.rem tz1 tz2);
   let tz3 = Tez.of_float 5.1234 in
-  Format.fprintf Format.std_formatter "%t\n" (Tez.pp tz3);
-  Format.fprintf Format.std_formatter "Tez.div %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.div tz3 tz2));
-  Format.fprintf Format.std_formatter "Tez.rem %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.rem tz3 tz2));
-  Format.fprintf Format.std_formatter "Tez.mul %t %t = %t\n" (Tez.pp tz3) (Tez.pp tz2) (Tez.pp (Tez.mul tz3 tz2))
+  printf "%a\n" Tez.pp tz3;
+  printf "Tez.div %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.div tz3 tz2);
+  printf "Tez.rem %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.rem tz3 tz2);
+  printf "Tez.mul %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.mul tz3 tz2)
 
 let () =
   burrow_experiment ();

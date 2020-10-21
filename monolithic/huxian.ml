@@ -34,14 +34,14 @@ type burrow =
     minted_kit : kit;
   }
 
-let pp_burrow (b : burrow) (ppf: Format.formatter) : unit =
+let pp_burrow (ppf: Format.formatter) (b : burrow) : unit =
   Format.fprintf
     ppf
-    "{collateral = %t tez; minted_kit = %t kit}"
-    (Tez.pp b.collateral)
-    (Kit.pp b.minted_kit)
+    "{collateral = %a tez; minted_kit = %a kit}"
+    Tez.pp b.collateral
+    Kit.pp b.minted_kit
 
-let print_burrow (b : burrow) = pp_burrow b Format.std_formatter
+let print_burrow (b : burrow) = pp_burrow Format.std_formatter b
 
 type checker_parameters =
   { q : float; (* 1/kit, really *)
@@ -52,18 +52,18 @@ type checker_parameters =
     drift: float;
   }
 
-let pp_checker_parameters (p: checker_parameters) (ppf: Format.formatter) =
+let pp_checker_parameters (ppf: Format.formatter) (p: checker_parameters) =
   Format.fprintf
     ppf
-    "q: %f\nindex: %t\nprotected_index: %t\ndrift: %.15f\ndrift': %.15f\n"
+    "q: %f\nindex: %a\nprotected_index: %a\ndrift: %.15f\ndrift': %.15f\n"
     p.q
-    (Tez.pp p.index)
-    (Tez.pp p.protected_index)
+    Tez.pp p.index
+    Tez.pp p.protected_index
     p.drift
     p.drift'
 
 let print_checker_parameters (p: checker_parameters) =
-  pp_checker_parameters p Format.std_formatter
+  pp_checker_parameters Format.std_formatter p
 
 (* tez. To get tez/kit must multiply with q. *)
 let tz_minting (p: checker_parameters) : tez =
@@ -212,15 +212,15 @@ type uniswap =
     total_liquidity_tokens: int;
   }
 
-let pp_uniswap (u : uniswap) (ppf: Format.formatter) =
+let pp_uniswap (ppf: Format.formatter) (u : uniswap) =
   Format.fprintf
     ppf
-    "{tez = %t;\n kit = %t;\n total_liquidity_tokens = %d}\n"
-    (Tez.pp u.tez)
-    (Kit.pp u.kit)
+    "{tez = %a;\n kit = %a;\n total_liquidity_tokens = %d}\n"
+    Tez.pp u.tez
+    Kit.pp u.kit
     u.total_liquidity_tokens
 
-let print_uniswap (u : uniswap) = pp_uniswap u Format.std_formatter
+let print_uniswap (u : uniswap) = pp_uniswap Format.std_formatter u
 
 let uniswap_non_empty(u: uniswap) =
   u.kit > Kit.zero && u.tez > Tez.zero
@@ -430,7 +430,7 @@ type liquidation_result
   * kit                 (* expected kit from selling the tez *)
   * burrow              (* current state of the burrow *)
 
-let pp_liquidation_outcome (o: liquidation_outcome) (ppf: Format.formatter) =
+let pp_liquidation_outcome (ppf: Format.formatter) (o: liquidation_outcome) =
   match o with
   | Unwarranted -> Format.fprintf ppf "Unwarranted"
   | Partial -> Format.fprintf ppf "Partial"
@@ -438,22 +438,22 @@ let pp_liquidation_outcome (o: liquidation_outcome) (ppf: Format.formatter) =
   | Close -> Format.fprintf ppf "Complete (\"close\" the burrow)"
 
 let print_liquidation_outcome (o: liquidation_outcome) =
-  pp_liquidation_outcome o Format.std_formatter
+  pp_liquidation_outcome Format.std_formatter o
 
-let pp_liquidation_result (r: liquidation_result) (ppf: Format.formatter) =
+let pp_liquidation_result (ppf: Format.formatter) (r: liquidation_result) =
   match r with
   | (outcome, reward, tez_to_sell, expected_kit, burrow) ->
     Format.fprintf
       ppf
-      "%t\nliquidation_reward: %t\ntez_to_sell: %t\nexpected_kit: %t\nburrow_state: %t\n"
-      (pp_liquidation_outcome outcome)
-      (Tez.pp reward)
-      (Tez.pp tez_to_sell)
-      (Kit.pp expected_kit)
-      (pp_burrow burrow)
+      "%a\nliquidation_reward: %a\ntez_to_sell: %a\nexpected_kit: %a\nburrow_state: %a\n"
+      pp_liquidation_outcome outcome
+      Tez.pp reward
+      Tez.pp tez_to_sell
+      Kit.pp expected_kit
+      pp_burrow burrow
 
 let print_liquidation_result (r: liquidation_result) =
-  pp_liquidation_result r Format.std_formatter
+  pp_liquidation_result Format.std_formatter r
 
 (* NOTE: George: The initial state of the burrow is the collateral C, the
  * oustanding kit K, and the implicit creation deposit D (1 tez). I say
