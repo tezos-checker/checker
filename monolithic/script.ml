@@ -1,5 +1,6 @@
-open Huxian
+open FixedPoint
 open Format
+open Huxian
 open Kit
 open Tez
 
@@ -84,17 +85,17 @@ let arithmetic_experiment () =
   printf "Tez.add %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.add tz1 tz2);
   printf "Tez.sub %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.sub tz1 tz2);
   printf "Tez.mul %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.mul tz1 tz2);
-  printf "Tez.div %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.div tz1 tz2);
+  printf "Tez.div %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 FixedPoint.pp (Tez.div tz1 tz2);
   printf "Tez.rem %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.rem tz1 tz2);
   let tz3 = Tez.of_float 5.1234 in
   printf "%a\n" Tez.pp tz3;
-  printf "Tez.div %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.div tz3 tz2);
+  printf "Tez.div %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 FixedPoint.pp (Tez.div tz3 tz2);
   printf "Tez.rem %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.rem tz3 tz2);
   printf "Tez.mul %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.mul tz3 tz2)
 
 let () =
   burrow_experiment ();
-  (* arithmetic_experiment (); *)
+  arithmetic_experiment ();
   (* uniswap_experiment (); *)
   (* step_experiment (); *)
   printf "\ndone.\n"

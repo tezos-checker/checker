@@ -1,5 +1,6 @@
 
 open FixedPoint;;
+include FixedPoint;;
 
 (* ************************************************************************* *)
 (*                                   Tez                                     *)
@@ -12,9 +13,9 @@ module Tez : sig
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
   val add : t -> t -> t
   val sub : t -> t -> t
-  val mul : t -> t -> t
-  val div : t -> t -> t
-  val rem : t -> t -> t
+  val mul : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
+  val div : t -> t -> FixedPoint.t
+  val rem : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
 
   val zero : t
   val one : t
@@ -58,12 +59,6 @@ struct
       Int64.div (Int64.mul x y) scaling_factor
     )
 
-  let div x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (y > 0L); (* Overflow *)
-    Int64.mul (Int64.div x y) scaling_factor
-
   let rem x y =
     assert (x >= 0L);
     assert (y >= 0L);
@@ -89,6 +84,12 @@ struct
 
   let to_fp t = (* TODO: overflow check? *)
     FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor scaling_factor))
+
+  let div x y =
+    assert (x >= 0L);
+    assert (y >= 0L);
+    assert (y > 0L); (* Overflow *)
+    to_fp x /$ to_fp y
 
   (* Pretty printing functions *)
   let pp ppf amount =

@@ -59,7 +59,9 @@ struct
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
-    Int64.mul (Int64.div x y) scaling_factor
+    let upper = Int64.div x y in
+    let lower = Int64.div (Int64.mul (Int64.rem x y) scaling_factor) y in
+    Int64.add (Int64.mul upper scaling_factor) lower
 
   let zero = 0L
   let one = scaling_factor
