@@ -6,7 +6,7 @@ include FixedPoint;;
 (*                                   Kit                                     *)
 (* ************************************************************************* *)
 module Kit : sig
-  type t
+  type t (* Invariant: >= zero *)
 
   val scaling_factor : Int64.t
 
@@ -72,6 +72,7 @@ struct
 
   (* Conversions to/from other types. *)
   let of_float amount = (* TODO: lossy *)
+    assert (amount >= 0.0);
     let upper = Int64.of_float amount in
     let lower = Int64.of_float ((amount -. Int64.to_float upper) *. Int64.to_float scaling_factor) in
     Int64.add (Int64.mul upper scaling_factor) lower
@@ -96,6 +97,8 @@ struct
   let scale amount fp = (* TODO: Over/Under- flow checks *)
     of_fp (to_fp amount *$ fp)
 
+  let partition x = (Int64.div x scaling_factor, Int64.rem x scaling_factor)
+
   (* Pretty printing functions *)
   let pp ppf amount =
     let zfill s width =
@@ -104,8 +107,9 @@ struct
       then s
       else (String.make to_fill '0') ^ s in
 
+    let (upper, lower) = partition amount in
     Format.fprintf ppf "%s.%s"
-      (Int64.to_string (Int64.div amount scaling_factor))
-      (zfill (Int64.to_string (Int64.rem amount scaling_factor)) scaling_exponent)
+      (Int64.to_string upper)
+      (zfill (Int64.to_string lower) scaling_exponent)
 end
 

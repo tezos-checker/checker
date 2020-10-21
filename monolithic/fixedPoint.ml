@@ -2,7 +2,7 @@
 (*                               FixedPoint                                  *)
 (* ************************************************************************* *)
 module FixedPoint : sig
-  type t
+  type t (* Invariant: >= zero *)
 
   val scaling_factor : Int64.t
 
@@ -68,6 +68,7 @@ struct
 
   (* Conversions to/from other types. *)
   let of_float amount = (* TODO: lossy *)
+    assert (amount >= 0.0);
     let upper = Int64.of_float amount in
     let lower = Int64.of_float ((amount -. Int64.to_float upper) *. Int64.to_float scaling_factor) in
     Int64.add (Int64.mul upper scaling_factor) lower
@@ -75,7 +76,7 @@ struct
   let to_float amount = (* TODO: lossy *)
     (Int64.to_float amount) /. Int64.to_float scaling_factor
 
-  let of_int64 t = t
+  let of_int64 t = assert (t >= 0L); t
   let to_int64 t = t
 
   (* Pretty printing functions *)
