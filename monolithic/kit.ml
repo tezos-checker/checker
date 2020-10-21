@@ -27,6 +27,8 @@ module Kit : sig
   val of_fp : FixedPoint.t -> t
   val to_fp : t -> FixedPoint.t
 
+  val scale : t -> FixedPoint.t -> t
+
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
 end =
@@ -85,11 +87,14 @@ struct
   let to_fp t = (* TODO: overflow check? *)
     FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor scaling_factor))
 
-  let div x y =
+  let div x y = (* TODO: lossy *)
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
     to_fp x /$ to_fp y
+
+  let scale amount fp = (* TODO: Over/Under- flow checks *)
+    of_fp (to_fp amount *$ fp)
 
   (* Pretty printing functions *)
   let pp ppf amount =

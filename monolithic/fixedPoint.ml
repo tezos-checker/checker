@@ -55,7 +55,7 @@ struct
       Int64.div (Int64.mul x y) scaling_factor
     )
 
-  let ( /$ ) x y =
+  let ( /$ ) x y = (* TODO: lossy *)
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)

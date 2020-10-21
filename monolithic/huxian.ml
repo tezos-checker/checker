@@ -77,6 +77,21 @@ let tz_liquidation (p: checker_parameters) : tez =
   min p.index p.protected_index
 
 (* ************************************************************************* *)
+(**                           UTILITY FUNCTIONS                              *)
+(* ************************************************************************* *)
+
+let cnp (i: float) : float = i /. 100.
+
+let sign (i: float) : float =
+  if i > 0. then 1.
+  else if i == 0. then 0.
+  else -1.
+
+let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
+  assert (lower <= upper);
+  min upper (max v lower)
+
+(* ************************************************************************* *)
 (**                               CONSTANTS                                  *)
 (* ************************************************************************* *)
 
@@ -134,6 +149,40 @@ let mint_kits_from_burrow (p : checker_parameters) (k : kit) (b : burrow) =
   if is_overburrowed p updated
   then None
   else Some updated
+
+(* ************************************************************************* *)
+(**                               IMBALANCE                                  *)
+(* ************************************************************************* *)
+
+type imbalance =
+  | Balance
+  | Positive of FixedPoint.t (* Fee? *)
+  | Negative of FixedPoint.t (* Bonus? *)
+
+(* TODO: De-duplicate this *)
+let fp_cnp (i: FixedPoint.t) : FixedPoint.t = i /$ FixedPoint.of_float 100.0
+
+(** If we call burrowed the total amount of kit necessary to close all existing
+  * burrows, and minted the total amount of kit in circulation, then the
+  * imbalance fee/bonus is calculated as follows (per year):
+  *
+  *   min(   5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , if burrowed >= minted
+  *   max( - 5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , otherwise
+*)
+let compute_imbalance (burrowed: kit) (minted: kit) : imbalance =
+  assert (burrowed >= Kit.zero); (* Invariant *)
+  assert (minted >= Kit.zero); (* Invariant *)
+  let centinepers = fp_cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
+  let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_float 5.0) in
+  (* No kit in burrows or in circulation means no imbalance adjustment *)
+  if burrowed == Kit.zero then
+    (assert (minted == Kit.zero); Balance) (* George: Is it possible to have minted kit in circulation when nothing is burrowed? *)
+  else if burrowed == minted then
+    Balance (* George: I add this special case, to avoid rounding issues *)
+  else if burrowed >= minted then
+    Positive (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed minted)) centinepers) burrowed)
+  else
+    Negative (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub minted burrowed)) centinepers) burrowed)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
@@ -315,17 +364,6 @@ let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
 (* ************************************************************************* *)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
-
-let cnp (i: float) : float = i /. 100.
-
-let sign (i: float) : float =
-  if i > 0. then 1.
-  else if i == 0. then 0.
-  else -1.
-
-let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
-  assert (lower <= upper);
-  min upper (max v lower)
 
 type checker =
   { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)

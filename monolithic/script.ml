@@ -91,7 +91,9 @@ let arithmetic_experiment () =
   printf "%a\n" Tez.pp tz3;
   printf "Tez.div %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 FixedPoint.pp (Tez.div tz3 tz2);
   printf "Tez.rem %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.rem tz3 tz2);
-  printf "Tez.mul %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.mul tz3 tz2)
+  printf "Tez.mul %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.mul tz3 tz2);
+  let fp1 = FixedPoint.of_float 3.0 in
+  printf "Tez.scale %a %a = %a\n" Tez.pp tz3 FixedPoint.pp fp1 Tez.pp (Tez.scale tz3 fp1)
 
 let () =
   burrow_experiment ();
