@@ -7,11 +7,10 @@ module FixedPoint : sig
   val scaling_factor : Int64.t
 
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
-  val add : t -> t -> t
-  val sub : t -> t -> t
-  val mul : t -> t -> t
-  val div : t -> t -> t
-  val rem : t -> t -> t
+  val ( +$ ) : t -> t -> t
+  val ( -$ ) : t -> t -> t
+  val ( *$ ) : t -> t -> t
+  val ( /$ ) : t -> t -> t
 
   val zero : t
   val one : t
@@ -33,19 +32,19 @@ struct
   let scaling_exponent = 8
 
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
-  let add x y =
+  let ( +$ ) x y =
     assert (x >= 0L);
     assert (y >= 0L);
     assert (not (x > Int64.sub Int64.max_int y)); (* Overflow *)
     assert (not (y > Int64.sub Int64.max_int x)); (* Overflow *)
     Int64.add x y
 
-  let sub x y =
+  let ( -$ ) x y =
     assert (y >= 0L);
     assert (x >= y);
     Int64.sub x y
 
-  let mul x y =
+  let ( *$ ) x y =
     assert (x >= 0L);
     assert (y >= 0L);
     if (x == 0L || y == 0L) then
@@ -56,17 +55,11 @@ struct
       Int64.div (Int64.mul x y) scaling_factor
     )
 
-  let div x y =
+  let ( /$ ) x y =
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
     Int64.mul (Int64.div x y) scaling_factor
-
-  let rem x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (y > 0L); (* Overflow *)
-    Int64.rem x y
 
   let zero = 0L
   let one = scaling_factor

@@ -1,7 +1,10 @@
 
-open FixedPoint
+open FixedPoint;;
+include FixedPoint;;
+
 open Kit
 open Tez
+
 
 (* TODO: Things to consider / action items:
  *
@@ -175,7 +178,7 @@ let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
 let compute_tez_to_auction (p : checker_parameters) (b : burrow) : tez =
   Tez.of_float
     ((Kit.to_float b.minted_kit *. FixedPoint.to_float fplus *. p.q *. Tez.to_float (tz_minting p) -. Tez.to_float b.collateral)
-     /. FixedPoint.to_float (FixedPoint.sub fplus FixedPoint.one))
+     /. FixedPoint.to_float (fplus -$ FixedPoint.one))
 
 (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
 let compute_expected_kit (p : checker_parameters) (tez_to_auction: tez) : kit =
@@ -468,7 +471,7 @@ let print_liquidation_result (r: liquidation_result) =
 *)
 (* TODO: Remove divisions in the conditions; use multiplication instead. *)
 let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result =
-  let partial_reward = Tez.of_fp (FixedPoint.mul liquidation_reward_percentage (Tez.to_fp b.collateral)) in
+  let partial_reward = Tez.of_fp (liquidation_reward_percentage *$ (Tez.to_fp b.collateral)) in
   (* The reward for triggering a liquidation. This amounts to the burrow's
    * creation deposit, plus the liquidation reward percentage of the burrow's
    * collateral. Of course, this only applies if the burrow qualifies for
