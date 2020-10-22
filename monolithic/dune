@@ -4,46 +4,46 @@
 (library
   (name fixedPoint)
   (modules FixedPoint)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (library
   (name tez)
   (modules Tez)
   (libraries fixedPoint)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (library
   (name kit)
   (modules Kit)
   (libraries fixedPoint)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (library
   (name constants)
   (modules Constants)
   (libraries fixedPoint tez)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (library
   (name huxian)
   (modules Huxian)
   (libraries constants fixedPoint kit tez)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (executable
   (name script)
   (modules Script)
   (libraries huxian kit tez)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (executable
   (name tests)
   (libraries fixedPoint huxian ounit2 tez)
   (modules Tests)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
 
 (executable
   (name avl)
   (libraries ounit2 tez)
   (modules Avl)
-  (preprocess (pps ppx_deriving.show)))
+  (preprocess (pps ppx_deriving.std)))
