@@ -39,7 +39,7 @@ let burrow_experiment () =
   printf "\n=== State of affairs ===\n";
   match liquidation_result with
   | (outcome,_,_,_,b) ->
-    if outcome == Close then
+    if outcome = Close then
       printf "There is no burrow left to consider.\n"
     else
       printf "Overburrowed          : %B\n" (is_overburrowed params b);
@@ -105,6 +105,8 @@ let fp_arithmetic_experiment () =
   let fp3 = FixedPoint.of_float 5.1234 in
   let fp4 = FixedPoint.of_float 5001.0 in
   let fp5 = FixedPoint.of_float (-40.0) in
+  let fp6 = FixedPoint.of_float (0.1) in
+  printf "FixedPoint.exp (%a) = %a\n" FixedPoint.pp fp6 FixedPoint.pp (FixedPoint.exp fp6);
   printf "FixedPoint.(%a + %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 + fp2);
   printf "FixedPoint.(%a - %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 - fp2);
   printf "FixedPoint.(%a * %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 * fp2);

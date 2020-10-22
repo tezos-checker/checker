@@ -52,7 +52,7 @@ struct
   let mul x y =
     assert (x >= 0L);
     assert (y >= 0L);
-    if (x == 0L || y == 0L) then
+    if (x = 0L || y = 0L) then
       0L
     else (
       assert (not (x > Int64.div Int64.max_int y)); (* Overflow *)

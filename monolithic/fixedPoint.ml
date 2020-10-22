@@ -11,6 +11,7 @@ module FixedPoint : sig
   val ( - ) : t -> t -> t
   val ( * ) : t -> t -> t
   val ( / ) : t -> t -> t
+  val neg : t -> t
 
   val zero : t
   val one : t
@@ -23,7 +24,7 @@ module FixedPoint : sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
-  val exponentiate : t -> t
+  val exp : t -> t
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
@@ -54,7 +55,7 @@ struct
       x + (Int64.neg y)
 
   let ( * ) x y = (* TODO: lossy *)
-    if (x == 0L || y == 0L) then
+    if (x = 0L || y = 0L) then
       0L
     else
       (assert (x <> Int64.min_int && y <> Int64.min_int);
@@ -83,6 +84,8 @@ struct
     let lower = Int64.div (Int64.mul (Int64.rem absx absy) scaling_factor) absy in
     Int64.mul sign (Int64.add (Int64.mul upper scaling_factor) lower))
 
+  let neg x = assert (x <> Int64.min_int); Int64.neg x
+
   let zero = 0L
   let one = scaling_factor
 
@@ -101,8 +104,10 @@ struct
   let of_int64 t = t
   let to_int64 t = t
 
-  (* TODO: exp(x) ~ 1 + x + x^2/2 *)
-  let exponentiate amount = of_float (exp (to_float amount))
+  let exp amount = one + amount
+  (* Note: Use another term from the taylor sequence for more accuracy:
+       one + amount + (amount * amount) / (one + one)
+  *)
 
   (* Pretty printing functions *)
   let pp ppf amount =

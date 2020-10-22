@@ -231,9 +231,9 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
  * Right | Right => Z is a right child of its parent X and Z is not left-heavy
  * Right | Left  => Z is a right child of its parent X and Z is left-heavy
  *
- * The balance violation of case Dir1 == Dir2 is repaired by
+ * The balance violation of case Dir1 = Dir2 is repaired by
  *   a simple rotation: rotate_(−Dir1)
- * The case Dir1 != Dir2 is repaired by
+ * The case Dir1 <> Dir2 is repaired by
  *   a double rotation: rotate_Dir1Dir2
  *)
 let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
@@ -282,7 +282,7 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
           | Leaf { item = existing_item; parent = parent; } ->
             (match compare existing_item.id new_item.id with
               (* ... we override it if the keys are the same. *)
-              | cmp when cmp == 0 ->
+              | cmp when cmp = 0 ->
                   (* NOTE: I can not think of a case where we'd overwrite an
                    * existing liquidation, so maybe this case should fail.
                    *)
@@ -354,7 +354,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
         match Mem.find root_ptr mem with
           (* Deleting something from a singleton tree might be an empty tree. *)
           | Leaf existing ->
-            if existing.item.id == id
+            if existing.item.id = id
             then (Mem.remove root_ptr mem, None)
             else (mem, Some root_ptr)
           (* Deleting something from a branch recurses to the relevant side. *)
@@ -484,7 +484,7 @@ let suite =
       let expected =
         List.sort
           (fun a b -> compare a.id b.id)
-          (List.filter (fun i -> i.id != 5) items) in
+          (List.filter (fun i -> i.id <> 5) items) in
       assert_equal expected actual ~printer:show_item_list);
     "test_empty_from_list_to_list" >::
     (fun _ ->
