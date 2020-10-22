@@ -6,12 +6,15 @@
 type mutez = int [@@deriving show]
 type item_id = int [@@deriving show]
 
+
 (* A liquidation item *)
 type item = {
   id: item_id;
   mutez: mutez;
   }
 [@@deriving show]
+
+type item_list = item list [@@deriving show]
 
 (*
  * A doubly-linked balanced tree where the leaves contain the liquidation
@@ -51,7 +54,7 @@ let node_mutez n =
 
 let node_height n =
   match n with
-    | Leaf _leaf -> 1
+    | Leaf _ -> 1
     | Branch branch -> max branch.left_height branch.right_height + 1
 
 let node_key n =
@@ -110,8 +113,6 @@ let mem_get (m: 'a Mem.t) (k: ptr) : 'a =
  * (unless a leaf is deleted with 'del').
  *)
 
-(* TODO *)
-let balance (mem: mem) (parent: ptr option) : mem * ptr option = (mem, parent)
 
 (* Before:
  *
@@ -221,6 +222,53 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
   let mem = mem_set mem left_right_ptr updated_left_right in
   (mem, left_ptr)
 
+(* From: https://en.wikipedia.org/wiki/Avl_tree#Rebalancing
+ *
+ * Dir1  | Dir2
+ * ------+------
+ * Left  | Left  => Z is a left  child of its parent X and Z is not right-heavy
+ * Left  | Right => Z is a left  child of its parent X and Z is right-heavy
+ * Right | Right => Z is a right child of its parent X and Z is not left-heavy
+ * Right | Left  => Z is a right child of its parent X and Z is left-heavy
+ *
+ * The balance violation of case Dir1 == Dir2 is repaired by
+ *   a simple rotation: rotate_(−Dir1)
+ * The case Dir1 != Dir2 is repaired by
+ *   a double rotation: rotate_Dir1Dir2
+ *)
+let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
+    match mem_get mem parent_ptr with
+      | Branch branch
+        when abs (branch.left_height - branch.right_height) > 1 ->
+          let parent_balance = branch.right_height - branch.left_height in
+          let heavy_child_ptr = if parent_balance < 0 then branch.left else branch.right in
+          let heavy_child = match mem_get mem heavy_child_ptr with
+            | Leaf _ -> failwith "invariant violation: heavy_child should be a branch"
+            | Branch b -> b in
+          let heavy_child_balance =
+                heavy_child.right_height - heavy_child.left_height in
+          if parent_balance < 0 && heavy_child_balance <= 0 then
+             (* Left, Left *)
+             rotate_right mem parent_ptr
+          else if parent_balance < 0 && heavy_child_balance > 0 then
+             (* Left, Right *)
+             let (mem, child) = rotate_left mem heavy_child_ptr in
+             let mem =
+               mem_set mem parent_ptr (Branch { branch with left = child }) in
+             rotate_right mem parent_ptr
+          else if parent_balance > 0 && heavy_child_balance >= 0 then
+             (* Right, Right*)
+             rotate_left mem parent_ptr
+          else if parent_balance > 0 && heavy_child_balance < 0 then
+             (* Right, Left *)
+             let (mem, child) = rotate_right mem heavy_child_ptr in
+             let mem =
+               mem_set mem parent_ptr (Branch { branch with right = child }) in
+             rotate_left mem parent_ptr
+          else
+              failwith "invariant violation: balance predicates partial"
+      | _ -> (mem, parent_ptr)
+
 let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
   match root with
     (* When the tree is empty, create the initial leaf. *)
@@ -270,7 +318,7 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
            * updating the aggregates on the branch.
            *)
           | Branch existing_branch ->
-            let target_left = existing_branch.key < new_item.id in
+            let target_left = new_item.id < existing_branch.key in
             let (mem, new_subtree) =
               add
                 mem
@@ -294,7 +342,8 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
                          right_mutez = node_mutez new_node;
                          right_height = node_height new_node;
                        } in
-            (mem_set mem root_ptr new_branch, root_ptr)
+            let mem = mem_set mem root_ptr new_branch in
+            balance mem root_ptr
 
 let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
   match root with
@@ -310,7 +359,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
             else (mem, Some root_ptr)
           (* Deleting something from a branch recurses to the relevant side. *)
           | Branch existing ->
-            let target_left = existing.key < id in
+            let target_left = id < existing.key in
             let (mem, new_subtree') =
               del
                 mem
@@ -337,7 +386,8 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
                                right_height = node_height value;
                              } in
                   let mem = mem_set mem root_ptr new_branch in
-                  balance mem (Some root_ptr)
+                  (match balance mem root_ptr with
+                    (a, b) -> (a, Some b))
               (* If one side of the branch ends up being empty, we replace the
                * branch itself with the other side. *)
               | None ->
@@ -348,6 +398,19 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
                   let mem = Mem.remove root_ptr mem in
                   (mem, Some(preserved))
 
+let rec debug_string (mem: mem) (root: ptr option) : string =
+  let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
+  match root with
+    | None -> "Empty"
+    | Some root_ptr -> match mem_get mem root_ptr with
+      | Leaf leaf -> Int64.to_string root_ptr ^ ": Leaf " ^ show_leaf leaf
+      | Branch branch ->
+        Int64.to_string root_ptr ^ ": Branch " ^ show_branch branch ^ "\n"
+          ^ indent ("Left:\n"
+            ^ indent (debug_string mem (Some branch.left))) ^ "\n"
+          ^ indent ("Right:\n"
+            ^ indent (debug_string mem (Some branch.right)))
+
 let rec add_all (mem: mem) (root: ptr option) (items: item list)
   : mem * ptr option =
   match items with
@@ -355,6 +418,21 @@ let rec add_all (mem: mem) (root: ptr option) (items: item list)
     | x :: xs ->
       let (mem, root) = add mem root x in
       add_all mem (Some root) xs
+
+let add_all_debug (mem: mem) (root: ptr option) (items: item list)
+  : mem * ptr option =
+  let (mem, root) = List.fold_left
+      (fun (mem, root) item ->
+         print_string "--------------------------------\n";
+         print_string ("Inserting: " ^ show_item item ^ "\n");
+         let (mem, root) = add mem root item in
+         print_string (debug_string mem (Some root));
+         print_newline ();
+         (mem, Some root)
+      )
+      (mem, root)
+      items in
+  (mem, root)
 
 let rec to_list (mem: mem) (root: ptr option) : item list =
   match root with
@@ -366,5 +444,58 @@ let rec to_list (mem: mem) (root: ptr option) : item list =
           (to_list mem (Some branch.left))
           (to_list mem (Some branch.right))
 
-let rec from_list (mem: mem) (items: item list) : mem * ptr option =
+let from_list (mem: mem) (items: item list) : mem * ptr option =
   add_all mem None items
+
+open OUnit2
+
+let suite =
+  "AVLTests" >::: [
+    "test_singleton" >::
+    (fun _ ->
+      let item = { id = 0; mutez = 5; } in
+      let (mem, root) = add Mem.empty empty item in
+      let actual = to_list mem (Some root) in
+      let expected = [item] in
+      assert_equal expected actual);
+    "test_multiple" >::
+    (fun _ ->
+      let items =
+            (List.map (fun i -> { id = i; mutez = 5; })
+             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
+      let (mem, root) = add_all Mem.empty None items in
+      let actual = to_list mem root in
+      let expected = List.sort (fun a b -> compare a.id b.id) items in
+      assert_equal expected actual ~printer:show_item_list);
+    "test_del_singleton" >::
+    (fun _ ->
+      let (mem, root) = add Mem.empty None { id = 1; mutez = 5} in
+      let (mem, root) = del mem (Some root) 1 in
+      assert_equal None root;
+      assert_bool "mem wasn't empty" (Mem.is_empty mem));
+    "test_del" >::
+    (fun _ ->
+      let items =
+            (List.map (fun i -> { id = i; mutez = 5; })
+             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
+      let (mem, root) = from_list Mem.empty items in
+      let (mem, root) = del mem root 5 in
+      let actual = to_list mem root in
+      let expected =
+        List.sort
+          (fun a b -> compare a.id b.id)
+          (List.filter (fun i -> i.id != 5) items) in
+      assert_equal expected actual ~printer:show_item_list);
+    "test_empty_from_list_to_list" >::
+    (fun _ ->
+      let items = [] in
+      let (mem, root) = from_list Mem.empty items in
+      let actual = to_list mem root in
+      let expected = [] in
+      assert_equal expected actual);
+  ]
+
+
+let () =
+  run_test_tt_main suite
+

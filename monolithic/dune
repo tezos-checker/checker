@@ -2,11 +2,6 @@
 ;; otherwise there will be warnings printed about an inaccurate
 ;; .merlin file being generated.
 (library
-  (name avl)
-  (modules Avl)
-  (preprocess (pps ppx_deriving.show)))
-
-(library
   (name fixedPoint)
   (modules FixedPoint)
   (preprocess (pps ppx_deriving.show)))
@@ -39,4 +34,10 @@
   (name tests)
   (libraries huxian ounit2 tez)
   (modules Tests)
+  (preprocess (pps ppx_deriving.show)))
+
+(executable
+  (name avl)
+  (libraries ounit2 tez)
+  (modules Avl)
   (preprocess (pps ppx_deriving.show)))
