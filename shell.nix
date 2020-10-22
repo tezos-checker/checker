@@ -12,5 +12,6 @@ pkgs.mkShell {
     ocamlPackages.ocp-indent
     ocamlPackages.merlin
     ocamlPackages.ounit
+    ocamlPackages.ppx_deriving
   ];
 }

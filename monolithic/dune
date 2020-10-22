@@ -1,28 +1,39 @@
 (library
+  (name avl)
+  (modules Avl)
+  (preprocess (pps ppx_deriving.show)))
+
+(library
   (name fixedPoint)
-  (modules FixedPoint))
+  (modules FixedPoint)
+  (preprocess (pps ppx_deriving.show)))
 
 (library
   (name tez)
   (modules Tez)
-  (libraries fixedPoint))
+  (libraries fixedPoint)
+  (preprocess (pps ppx_deriving.show)))
 
 (library
   (name kit)
   (modules Kit)
-  (libraries fixedPoint))
+  (libraries fixedPoint)
+  (preprocess (pps ppx_deriving.show)))
 
 (library
   (name huxian)
   (modules Huxian)
-  (libraries fixedPoint kit tez))
+  (libraries fixedPoint kit tez avl)
+  (preprocess (pps ppx_deriving.show)))
 
 (executable
   (name script)
   (modules Script)
-  (libraries huxian kit tez))
+  (libraries huxian kit tez)
+  (preprocess (pps ppx_deriving.show)))
 
 (executable
   (name tests)
   (libraries huxian ounit2 tez)
-  (modules Tests))
+  (modules Tests)
+  (preprocess (pps ppx_deriving.show)))

@@ -17,7 +17,7 @@ let burrow_experiment () =
   (* DEFAULT *)
   let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in
   printf "\n=== Initial burrow state ===\n";
-  print_burrow initial_burrow;
+  print_string @@ show_burrow initial_burrow;
   let params =
     { q = 1.015;
       index = Tez.of_float 0.32;
@@ -27,7 +27,7 @@ let burrow_experiment () =
       drift' = 0.0;
     } in
   printf "\n=== Checker parameters ===\n";
-  print_checker_parameters params;
+  print_string @@ show_checker_parameters params;
 
   printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
@@ -43,7 +43,7 @@ let burrow_experiment () =
       printf "There is no burrow left to consider.\n"
     else
       printf "Overburrowed          : %B\n" (is_overburrowed params b);
-      printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
+    printf "Liquidatable          : %B\n" (should_burrow_be_liquidated params b)
 
 let uniswap_experiment () =
   let uniswap =
@@ -75,9 +75,9 @@ let step_experiment () =
   let tez_per_kit = 0.305 in
   let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
-  print_checker_parameters initial_parameters;
+  print_string @@ show_checker_parameters initial_parameters;
   printf "\n=== New checker parameters ===\n";
-  print_checker_parameters new_parameters
+  print_string @@ show_checker_parameters new_parameters
 
 let tez_arithmetic_experiment () =
   printf "\n=== Tez arithmetic experiment ===\n";

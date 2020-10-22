@@ -3,15 +3,15 @@
  * in future to avoid the module cycle.
  *)
 
-type mutez = int
-
-type item_id = int
+type mutez = int [@@deriving show]
+type item_id = int [@@deriving show]
 
 (* A liquidation item *)
 type item = {
   id: item_id;
   mutez: mutez;
-}
+  }
+[@@deriving show]
 
 (*
  * A doubly-linked balanced tree where the leaves contain the liquidation
@@ -19,12 +19,13 @@ type item = {
  * right children.
  *)
 
-type ptr = int64
+type ptr = int64 [@@deriving show]
 
 type leaf = {
   item: item;
   parent: int64 option;
-}
+  }
+[@@deriving show]
 
 type branch = {
   left: ptr;
@@ -36,10 +37,12 @@ type branch = {
   right: ptr;
   parent: int64 option;
 }
+[@@deriving show]
 
 type node =
   | Leaf of leaf
   | Branch of branch
+[@@deriving show]
 
 let node_mutez n =
   match n with
@@ -48,7 +51,7 @@ let node_mutez n =
 
 let node_height n =
   match n with
-    | Leaf leaf -> 1
+    | Leaf _leaf -> 1
     | Branch branch -> max branch.left_height branch.right_height + 1
 
 let node_key n =
@@ -338,7 +341,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
               (* If one side of the branch ends up being empty, we replace the
                * branch itself with the other side. *)
               | None ->
-                  let (deleted, preserved) =
+                  let (_deleted, preserved) =
                     if target_left
                     then (existing.left, existing.right)
                     else (existing.right, existing.left) in

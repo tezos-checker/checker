@@ -1,4 +1,3 @@
-
 open FixedPoint;;
 include FixedPoint;;
 
@@ -33,40 +32,20 @@ type kit = Kit.t;;
 type liquidity = int;;
 
 type burrow =
-  { collateral : tez;
-    minted_kit : kit;
+  { collateral : tez [@printer Tez.pp];
+    minted_kit : kit [@printer Kit.pp];
   }
-
-let pp_burrow (ppf: Format.formatter) (b : burrow) : unit =
-  Format.fprintf
-    ppf
-    "{collateral = %a tez; minted_kit = %a kit}"
-    Tez.pp b.collateral
-    Kit.pp b.minted_kit
-
-let print_burrow (b : burrow) = pp_burrow Format.std_formatter b
+[@@deriving show]
 
 type checker_parameters =
   { q : float; (* 1/kit, really *)
-    index: tez;
-    protected_index: tez;
+    index: tez [@printer Tez.pp];
+    protected_index: tez [@printer Tez.pp];
     target: float;
     drift': float;
     drift: float;
   }
-
-let pp_checker_parameters (ppf: Format.formatter) (p: checker_parameters) =
-  Format.fprintf
-    ppf
-    "q: %f\nindex: %a\nprotected_index: %a\ndrift: %.15f\ndrift': %.15f\n"
-    p.q
-    Tez.pp p.index
-    Tez.pp p.protected_index
-    p.drift
-    p.drift'
-
-let print_checker_parameters (p: checker_parameters) =
-  pp_checker_parameters Format.std_formatter p
+[@@deriving show]
 
 (* tez. To get tez/kit must multiply with q. *)
 let tz_minting (p: checker_parameters) : tez =
@@ -466,10 +445,10 @@ type liquidation_outcome =
 (* TODO: More sharing here please *)
 type liquidation_result
   = liquidation_outcome
-  * tez                 (* liquidation reward *)
-  * tez                 (* tez to auction *)
-  * kit                 (* expected kit from selling the tez *)
-  * burrow              (* current state of the burrow *)
+    * tez                 (* liquidation reward *)
+    * tez                 (* tez to auction *)
+    * kit                 (* expected kit from selling the tez *)
+    * burrow              (* current state of the burrow *)
 
 let pp_liquidation_outcome (ppf: Format.formatter) (o: liquidation_outcome) =
   match o with

@@ -16,12 +16,15 @@ let suite =
       let new_index = 0.34 in
       let tez_per_kit = 0.305 in
       let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
-      assert_equal 0.900000130208 new_parameters.q ~printer:string_of_float;
-      assert_equal 0.36 (Tez.to_float new_parameters.index) ~printer:string_of_float;
-      assert_equal 1.08 new_parameters.target ~printer:string_of_float;
-      assert_equal 0.35 (Tez.to_float new_parameters.protected_index) ~printer:string_of_float;
-      assert_equal 0.0 new_parameters.drift ~printer:string_of_float;
-      assert_equal 0.0 new_parameters.drift ~printer:string_of_float;
+      assert_equal
+        { q = 0.900000130208;
+          index = Tez.of_float 0.34;
+          protected_index = Tez.of_float 0.34;
+          target = 1.00327883367;
+          drift' = 6.69795953361e-14;
+          drift = 1.20563271605e-10 }
+        new_parameters
+        ~printer:show_checker_parameters
   ]
 
 
