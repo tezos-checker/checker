@@ -1,6 +1,5 @@
 
 open FixedPoint;;
-include FixedPoint;;
 
 (* ************************************************************************* *)
 (*                                   Kit                                     *)
@@ -92,10 +91,10 @@ struct
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
-    to_fp x /$ to_fp y
+    FixedPoint.(to_fp x / to_fp y)
 
   let scale amount fp = (* TODO: Over/Under- flow checks *)
-    of_fp (to_fp amount *$ fp)
+    of_fp FixedPoint.(to_fp amount * fp)
 
   let partition x = (Int64.div x scaling_factor, Int64.rem x scaling_factor)
 

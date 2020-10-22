@@ -1,6 +1,5 @@
-open FixedPoint;;
-include FixedPoint;;
 
+open FixedPoint;;
 open Kit
 open Tez
 
@@ -59,7 +58,7 @@ let tz_liquidation (p: checker_parameters) : tez =
 (**                           UTILITY FUNCTIONS                              *)
 (* ************************************************************************* *)
 
-let cnp (i: FixedPoint.t) : FixedPoint.t = i /$ FixedPoint.of_float 100.0
+let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / FixedPoint.of_float 100.0)
 
 let sign (i: float) : float =
   if i > 0. then 1.
@@ -98,7 +97,7 @@ let protected_index_epsilon = 0.0005
   * limit (normally kit_outstanding <= burrowing_limit).
 *)
 let is_overburrowed (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_fp b.collateral < fplus *$ Kit.to_fp b.minted_kit *$ (p.q *$ Tez.to_fp (tz_minting p))
+  Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * (p.q * Tez.to_fp (tz_minting p)))
 
 (** Create a burrow without any tez collateral or outstanding kit. *)
 let create_burrow () : burrow =
@@ -173,7 +172,7 @@ let compute_imbalance (burrowed: kit) (minted: kit) : imbalance =
   * liquidation limit.
 *)
 let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_fp b.collateral < fminus *$ Kit.to_fp b.minted_kit *$ (p.q *$ Tez.to_fp (tz_liquidation p))
+  Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp b.minted_kit * (p.q * Tez.to_fp (tz_liquidation p)))
 
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
@@ -202,12 +201,12 @@ let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
 (* TODO: Don't go through float, and ensure that it's skewed on the safe side (overapprox.). *)
 let compute_tez_to_auction (p : checker_parameters) (b : burrow) : tez =
   Tez.of_fp
-    ((Kit.to_fp b.minted_kit *$ fplus *$ p.q *$ Tez.to_fp (tz_minting p) -$ Tez.to_fp b.collateral)
-     /$ (fplus -$ FixedPoint.one))
+    FixedPoint.((Kit.to_fp b.minted_kit * fplus * p.q * Tez.to_fp (tz_minting p) - Tez.to_fp b.collateral)
+     / (fplus - FixedPoint.one))
 
 (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
 let compute_expected_kit (p : checker_parameters) (tez_to_auction: tez) : kit =
-  Kit.of_fp (Tez.to_fp tez_to_auction /$ (p.q *$ Tez.to_fp (tz_minting p)))
+  Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / (p.q * Tez.to_fp (tz_minting p)))
 
 (* ************************************************************************* *)
 (**                               UNISWAP                                    *)
@@ -409,17 +408,19 @@ let step_parameters
   let current_drift' =
     FixedPoint.of_float (compute_drift_derivative (FixedPoint.to_float parameters.target)) in
   let current_drift =
-    parameters.drift
-    +$ (FixedPoint.of_float (1. /. 2.))
-       *$ (parameters.drift' +$ current_drift')
-       *$ FixedPoint.of_float duration_in_seconds in
+    FixedPoint.(
+      parameters.drift
+      + (FixedPoint.of_float (1. /. 2.))
+        * (parameters.drift' + current_drift')
+        * FixedPoint.of_float duration_in_seconds
+    ) in
 
   (* TODO: use integer arithmetic *)
   let current_q =
     FixedPoint.to_float parameters.q
     *. exp ( ( FixedPoint.to_float parameters.drift
                +. (1. /. 6.)
-                  *. (2. *. FixedPoint.to_float (parameters.drift' +$ current_drift'))
+                  *. (2. *. FixedPoint.to_float FixedPoint.(parameters.drift' + current_drift'))
                   *. duration_in_seconds )
              *. duration_in_seconds ) in
   let current_target = current_q *. current_index /. current_kit_in_tez in
@@ -487,7 +488,7 @@ let print_liquidation_result (r: liquidation_result) =
 *)
 (* TODO: Remove divisions in the conditions; use multiplication instead. *)
 let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result =
-  let partial_reward = Tez.of_fp (liquidation_reward_percentage *$ (Tez.to_fp b.collateral)) in
+  let partial_reward = Tez.of_fp FixedPoint.(liquidation_reward_percentage * (Tez.to_fp b.collateral)) in
   (* The reward for triggering a liquidation. This amounts to the burrow's
    * creation deposit, plus the liquidation reward percentage of the burrow's
    * collateral. Of course, this only applies if the burrow qualifies for
@@ -508,7 +509,7 @@ let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
      * expected to repay enough kit. *)
-  else if Kit.to_fp b.minted_kit *$ p.q *$ Tez.to_fp (tz_minting p) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
+  else if FixedPoint.(Kit.to_fp b.minted_kit * p.q * Tez.to_fp (tz_minting p)) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
     let b_without_reward = { b with collateral = Tez.sub b.collateral liquidation_reward } in
     let tez_to_auction = b_without_reward.collateral in
     let expected_kit = compute_expected_kit p tez_to_auction in

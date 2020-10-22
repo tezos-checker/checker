@@ -7,10 +7,10 @@ module FixedPoint : sig
   val scaling_factor : Int64.t
 
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
-  val ( +$ ) : t -> t -> t
-  val ( -$ ) : t -> t -> t
-  val ( *$ ) : t -> t -> t
-  val ( /$ ) : t -> t -> t
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val ( * ) : t -> t -> t
+  val ( / ) : t -> t -> t
 
   val zero : t
   val one : t
@@ -34,19 +34,19 @@ struct
   let scaling_exponent = 8
 
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
-  let ( +$ ) x y =
+  let ( + ) x y =
     assert (x >= 0L);
     assert (y >= 0L);
     assert (not (x > Int64.sub Int64.max_int y)); (* Overflow *)
     assert (not (y > Int64.sub Int64.max_int x)); (* Overflow *)
     Int64.add x y
 
-  let ( -$ ) x y =
+  let ( - ) x y =
     assert (y >= 0L);
     assert (x >= y);
     Int64.sub x y
 
-  let ( *$ ) x y =
+  let ( * ) x y =
     assert (x >= 0L);
     assert (y >= 0L);
     if (x == 0L || y == 0L) then
@@ -57,7 +57,7 @@ struct
       Int64.div (Int64.mul x y) scaling_factor
     )
 
-  let ( /$ ) x y = (* TODO: lossy *)
+  let ( / ) x y = (* TODO: lossy *)
     assert (x >= 0L);
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
@@ -87,7 +87,7 @@ struct
   (* Pretty printing functions *)
   let pp ppf amount =
     let zfill s width =
-      let to_fill = width - (String.length s) in
+      let to_fill = Stdlib.(width - (String.length s)) in
       if to_fill <= 0
       then s
       else (String.make to_fill '0') ^ s in
