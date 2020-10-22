@@ -79,7 +79,7 @@ let (creation_deposit : tez) = Tez.of_float 1.0;;
 let (liquidation_reward_percentage : FixedPoint.t) = FixedPoint.of_float 0.001;; (* TEZ% TODO: Use cNp *)
 
 (** Percentage kept by the uniswap contract from the return asset. *)
-let (uniswap_fee_percentage : float) = 0.002;; (* TODO: Use cNp *)
+let (uniswap_fee_percentage : FixedPoint.t) = FixedPoint.of_float 0.002;; (* TODO: Use cNp *)
 
 (* Protected index epsilon. The higher this value is, the faster the protected
  * index catches up with the actual index. *)
@@ -258,9 +258,9 @@ let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
   assert (uniswap_non_empty uniswap);
   assert (kit > Kit.zero);
 
-  let price = Tez.to_float uniswap.tez /. Kit.to_float uniswap.kit in
-  let slippage = Kit.to_float uniswap.kit /. (Kit.to_float uniswap.kit +. Kit.to_float kit) in
-  let return = Tez.of_float (Kit.to_float kit *. price *. slippage *. (1. -. uniswap_fee_percentage)) in
+  let price = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
+  let slippage = Kit.div uniswap.kit (Kit.add uniswap.kit kit) in
+  let return = Tez.of_fp FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - uniswap_fee_percentage)) in
   let updated = { uniswap with
                   kit = Kit.add uniswap.kit kit;
                   tez = Tez.sub uniswap.tez return } in
@@ -284,19 +284,19 @@ let buy_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
   assert (uniswap_non_empty uniswap);
   (* TODO: How to compute things without explicitly calculating the ratio
    * (using division) here? *)
-  let ratio = Tez.to_float uniswap.tez /. Kit.to_float uniswap.kit in
+  let ratio = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
   (* There is a chance that the given tez and kit have the wrong ratio,
    * so we liquidate as much as we can and return the leftovers. NOTE:
    * Alternatively, the LP can use the uniswap contract to get the right
    * ratio beforehand.
    * Invariant here is that (tez', kit') should have the correct ratio.
   *)
-  let (tez', kit') =
-    if Tez.to_float tez *. Kit.to_float uniswap.kit > Kit.to_float kit *. Tez.to_float uniswap.tez
-    then (Tez.of_float (Kit.to_float kit *. ratio), kit)
-    else if Tez.to_float tez *. Kit.to_float uniswap.kit < Kit.to_float kit *. Tez.to_float uniswap.tez
-    then (tez, Kit.of_float (Tez.to_float tez /. ratio))
-    else (tez, kit) in
+  let (tez', kit') = FixedPoint.(
+    if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
+    then (Tez.of_fp (Kit.to_fp kit * ratio), kit)
+    else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
+    then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
+    else (tez, kit) ) in
   let liquidity =
     if uniswap.total_liquidity_tokens = 0
     then 1
