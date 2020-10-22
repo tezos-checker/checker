@@ -411,28 +411,27 @@ let rec debug_string (mem: mem) (root: ptr option) : string =
           ^ indent ("Right:\n"
             ^ indent (debug_string mem (Some branch.right)))
 
-let rec add_all (mem: mem) (root: ptr option) (items: item list)
+let add_all (mem: mem) (root: ptr option) (items: item list)
   : mem * ptr option =
-  match items with
-    | [] -> (mem, root)
-    | x :: xs ->
-      let (mem, root) = add mem root x in
-      add_all mem (Some root) xs
+  List.fold_left
+    (fun (mem, root) item ->
+       let (mem, root) = add mem root item in
+       (mem, Some root))
+    (mem, root)
+    items
 
 let add_all_debug (mem: mem) (root: ptr option) (items: item list)
   : mem * ptr option =
-  let (mem, root) = List.fold_left
-      (fun (mem, root) item ->
-         print_string "--------------------------------\n";
-         print_string ("Inserting: " ^ show_item item ^ "\n");
-         let (mem, root) = add mem root item in
-         print_string (debug_string mem (Some root));
-         print_newline ();
-         (mem, Some root)
-      )
-      (mem, root)
-      items in
-  (mem, root)
+  List.fold_left
+    (fun (mem, root) item ->
+       print_string "--------------------------------\n";
+       print_string ("Inserting: " ^ show_item item ^ "\n");
+       let (mem, root) = add mem root item in
+       print_string (debug_string mem (Some root));
+       print_newline ();
+       (mem, Some root))
+    (mem, root)
+    items
 
 let rec to_list (mem: mem) (root: ptr option) : item list =
   match root with
