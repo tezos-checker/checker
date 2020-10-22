@@ -1,5 +1,7 @@
 
-open FixedPoint;;
+open Constants
+include Constants
+open FixedPoint
 open Kit
 open Tez
 
@@ -68,22 +70,6 @@ let sign (i: float) : float =
 let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   assert (lower <= upper);
   min upper (max v lower)
-
-(* ************************************************************************* *)
-(**                               CONSTANTS                                  *)
-(* ************************************************************************* *)
-
-let (fplus  : FixedPoint.t) = FixedPoint.of_float 2.1;; (* dimensionless. Alternatively: f_minting *)
-let (fminus : FixedPoint.t) = FixedPoint.of_float 1.9;; (* dimensionless. Alternatively: f_liquidation *)
-let (creation_deposit : tez) = Tez.of_float 1.0;;
-let (liquidation_reward_percentage : FixedPoint.t) = FixedPoint.of_float 0.001;; (* TEZ% TODO: Use cNp *)
-
-(** Percentage kept by the uniswap contract from the return asset. *)
-let (uniswap_fee_percentage : FixedPoint.t) = FixedPoint.of_float 0.002;; (* TODO: Use cNp *)
-
-(* Protected index epsilon. The higher this value is, the faster the protected
- * index catches up with the actual index. *)
-let protected_index_epsilon = 0.0005
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)

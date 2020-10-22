@@ -19,9 +19,15 @@
   (preprocess (pps ppx_deriving.show)))
 
 (library
+  (name constants)
+  (modules Constants)
+  (libraries fixedPoint tez)
+  (preprocess (pps ppx_deriving.show)))
+
+(library
   (name huxian)
   (modules Huxian)
-  (libraries fixedPoint kit tez)
+  (libraries constants fixedPoint kit tez)
   (preprocess (pps ppx_deriving.show)))
 
 (executable
