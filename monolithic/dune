@@ -21,7 +21,7 @@
 (library
   (name huxian)
   (modules Huxian)
-  (libraries fixedPoint kit tez avl)
+  (libraries fixedPoint kit tez)
   (preprocess (pps ppx_deriving.show)))
 
 (executable
