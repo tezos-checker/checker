@@ -32,6 +32,12 @@ type tez = Tez.t;;
 type kit = Kit.t;;
 type liquidity = int;;
 
+(* TODOs for burrows:
+   - Add owner (delegate)
+   - Add field for incurred fee
+   - Fix all relevant interfaces (create, mint, burn, deposit, close)
+   - Move to separate module
+*)
 type burrow =
   { collateral : tez [@printer Tez.pp];
     minted_kit : kit [@printer Kit.pp];
