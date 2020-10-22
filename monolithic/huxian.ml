@@ -21,7 +21,7 @@ open Tez
  *
  * * Implement burrowing fees-related logic.
  *
- * * I don't think we have anything relating to imbalance or burrowing fees atm.
+ * * Do not go through floating-point numbers anywhere.
 *)
 
 (* ************************************************************************* *)
@@ -38,12 +38,12 @@ type burrow =
 [@@deriving show]
 
 type checker_parameters =
-  { q : float; (* 1/kit, really *)
+  { q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
     index: tez [@printer Tez.pp];
     protected_index: tez [@printer Tez.pp];
-    target: float;
-    drift': float;
-    drift: float;
+    target: FixedPoint.t [@printer FixedPoint.pp];
+    drift': FixedPoint.t [@printer FixedPoint.pp];
+    drift: FixedPoint.t [@printer FixedPoint.pp];
   }
 [@@deriving show]
 
@@ -59,7 +59,7 @@ let tz_liquidation (p: checker_parameters) : tez =
 (**                           UTILITY FUNCTIONS                              *)
 (* ************************************************************************* *)
 
-let cnp (i: float) : float = i /. 100.
+let cnp (i: FixedPoint.t) : FixedPoint.t = i /$ FixedPoint.of_float 100.0
 
 let sign (i: float) : float =
   if i > 0. then 1.
@@ -98,7 +98,7 @@ let protected_index_epsilon = 0.0005
   * limit (normally kit_outstanding <= burrowing_limit).
 *)
 let is_overburrowed (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_float b.collateral < FixedPoint.to_float fplus *. Kit.to_float b.minted_kit *. (p.q *. Tez.to_float (tz_minting p))
+  Tez.to_fp b.collateral < fplus *$ Kit.to_fp b.minted_kit *$ (p.q *$ Tez.to_fp (tz_minting p))
 
 (** Create a burrow without any tez collateral or outstanding kit. *)
 let create_burrow () : burrow =
@@ -138,9 +138,6 @@ type imbalance =
   | Positive of FixedPoint.t (* Fee? *)
   | Negative of FixedPoint.t (* Bonus? *)
 
-(* TODO: De-duplicate this *)
-let fp_cnp (i: FixedPoint.t) : FixedPoint.t = i /$ FixedPoint.of_float 100.0
-
 (** If we call burrowed the total amount of kit necessary to close all existing
   * burrows, and minted the total amount of kit in circulation, then the
   * imbalance fee/bonus is calculated as follows (per year):
@@ -151,7 +148,7 @@ let fp_cnp (i: FixedPoint.t) : FixedPoint.t = i /$ FixedPoint.of_float 100.0
 let compute_imbalance (burrowed: kit) (minted: kit) : imbalance =
   assert (burrowed >= Kit.zero); (* Invariant *)
   assert (minted >= Kit.zero); (* Invariant *)
-  let centinepers = fp_cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
+  let centinepers = cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
   let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_float 5.0) in
   (* No kit in burrows or in circulation means no imbalance adjustment *)
   if burrowed == Kit.zero then
@@ -176,7 +173,7 @@ let compute_imbalance (burrowed: kit) (minted: kit) : imbalance =
   * liquidation limit.
 *)
 let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_float b.collateral < FixedPoint.to_float fminus *. Kit.to_float b.minted_kit *. (p.q *. Tez.to_float (tz_liquidation p))
+  Tez.to_fp b.collateral < fminus *$ Kit.to_fp b.minted_kit *$ (p.q *$ Tez.to_fp (tz_liquidation p))
 
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
@@ -204,13 +201,13 @@ let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
 *)
 (* TODO: Don't go through float, and ensure that it's skewed on the safe side (overapprox.). *)
 let compute_tez_to_auction (p : checker_parameters) (b : burrow) : tez =
-  Tez.of_float
-    ((Kit.to_float b.minted_kit *. FixedPoint.to_float fplus *. p.q *. Tez.to_float (tz_minting p) -. Tez.to_float b.collateral)
-     /. FixedPoint.to_float (fplus -$ FixedPoint.one))
+  Tez.of_fp
+    ((Kit.to_fp b.minted_kit *$ fplus *$ p.q *$ Tez.to_fp (tz_minting p) -$ Tez.to_fp b.collateral)
+     /$ (fplus -$ FixedPoint.one))
 
 (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
 let compute_expected_kit (p : checker_parameters) (tez_to_auction: tez) : kit =
-  Kit.of_float (Tez.to_float tez_to_auction /. (p.q *. Tez.to_float (tz_minting p)))
+  Kit.of_fp (Tez.to_fp tez_to_auction /$ (p.q *$ Tez.to_fp (tz_minting p)))
 
 (* ************************************************************************* *)
 (**                               UNISWAP                                    *)
@@ -353,36 +350,38 @@ type checker =
 (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
  * second^2, assuming we're measuring time in seconds. My calculations might be
  * incorrect. *)
+let compute_drift_derivative (target : float) : float =
+  assert (target > 0.);
+  let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
+  let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
+
+  let log_target = log target in
+  let abs_log_target = Float.abs log_target in
+  if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 0.5)) then
+    0.
+  else if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 5.0)) then
+    sign log_target *. (cnp_001 /. (24. *. 3600.) ** 2.)
+  else
+    sign log_target *. (cnp_005 /. (24. *. 3600.) ** 2.)
+
 (* George: Note that we don't really need to calculate the logs here (which can
  * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
  * and win some precision, like this:
- *
-    let compute_drift_derivative_2 (target : float) : float =
-      assert (target > 0.);
-      match () with
-      (* No acceleration (0) *)
-      | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
-      (* Low acceleration (-/+) *)
-      | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp 0.01 /. (24. *. 3600.) ** 2.)
-      | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp 0.01 /. (24. *. 3600.) ** 2.)
-      (* High acceleration (-/+) *)
-      | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp 0.05 /. (24. *. 3600.) ** 2.)
-      | () when target >= exp    (5.0 /. 100.) ->    (cnp 0.05 /. (24. *. 3600.) ** 2.)
-      | _ -> failwith "impossible"
- *
- * NOTE: This implementation already gives different results on the swing
- * points that compute_drift_derivative does, possibly due to precision issues.
 *)
-let compute_drift_derivative (target : float) : float =
+let compute_drift_derivative_2 (target : float) : float =
   assert (target > 0.);
-  let log_target = log target in
-  let abs_log_target = Float.abs log_target in
-  if abs_log_target < cnp 0.5 then
-    0.
-  else if abs_log_target < cnp 5.0 then
-    sign log_target *. (cnp 0.01 /. (24. *. 3600.) ** 2.)
-  else
-    sign log_target *. (cnp 0.05 /. (24. *. 3600.) ** 2.)
+  let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
+  let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
+  match () with
+  (* No acceleration (0) *)
+  | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
+  (* Low acceleration (-/+) *)
+  | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp_001 /. (24. *. 3600.) ** 2.)
+  | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp_001 /. (24. *. 3600.) ** 2.)
+  (* High acceleration (-/+) *)
+  | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp_005 /. (24. *. 3600.) ** 2.)
+  | () when target >= exp    (5.0 /. 100.) ->    (cnp_005 /. (24. *. 3600.) ** 2.)
+  | _ -> failwith "impossible"
 
 type duration = Seconds of int
 let seconds_of_duration = function | Seconds s -> s
@@ -408,29 +407,29 @@ let step_parameters
       lower_lim
       upper_lim in
   let current_drift' =
-    compute_drift_derivative parameters.target in
+    FixedPoint.of_float (compute_drift_derivative (FixedPoint.to_float parameters.target)) in
   let current_drift =
     parameters.drift
-    +. (1. /. 2.)
-       *. (parameters.drift' +. current_drift')
-       *. duration_in_seconds in
+    +$ (FixedPoint.of_float (1. /. 2.))
+       *$ (parameters.drift' +$ current_drift')
+       *$ FixedPoint.of_float duration_in_seconds in
 
   (* TODO: use integer arithmetic *)
   let current_q =
-    parameters.q
-    *. exp ( ( parameters.drift
+    FixedPoint.to_float parameters.q
+    *. exp ( ( FixedPoint.to_float parameters.drift
                +. (1. /. 6.)
-                  *. (2. *. parameters.drift' +. current_drift')
+                  *. (2. *. FixedPoint.to_float (parameters.drift' +$ current_drift'))
                   *. duration_in_seconds )
              *. duration_in_seconds ) in
   let current_target = current_q *. current_index /. current_kit_in_tez in
   {
     index = Tez.of_float current_index;
     protected_index = Tez.of_float current_protected_index;
-    target = current_target;
+    target = FixedPoint.of_float current_target;
     drift = current_drift;
     drift' = current_drift';
-    q = current_q
+    q = FixedPoint.of_float current_q
   }
 
 (* ************************************************************************* *)
@@ -509,7 +508,7 @@ let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
      * expected to repay enough kit. *)
-  else if Kit.to_float b.minted_kit *. p.q *. Tez.to_float (tz_minting p) > Tez.to_float (Tez.sub b.collateral liquidation_reward) then
+  else if Kit.to_fp b.minted_kit *$ p.q *$ Tez.to_fp (tz_minting p) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
     let b_without_reward = { b with collateral = Tez.sub b.collateral liquidation_reward } in
     let tez_to_auction = b_without_reward.collateral in
     let expected_kit = compute_expected_kit p tez_to_auction in

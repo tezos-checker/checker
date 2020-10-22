@@ -19,12 +19,12 @@ let burrow_experiment () =
   printf "\n=== Initial burrow state ===\n";
   print_string @@ show_burrow initial_burrow;
   let params =
-    { q = 1.015;
+    { q = FixedPoint.of_float 1.015;
       index = Tez.of_float 0.32;
       protected_index = Tez.of_float 0.36;
-      target = 1.08;
-      drift = 0.0;
-      drift' = 0.0;
+      target = FixedPoint.of_float 1.08;
+      drift = FixedPoint.of_float 0.0;
+      drift' = FixedPoint.of_float 0.0;
     } in
   printf "\n=== Checker parameters ===\n";
   print_string @@ show_checker_parameters params;
@@ -63,12 +63,12 @@ let uniswap_experiment () =
   print_uniswap uniswap
 
 let step_experiment () =
-  let initial_parameters = { q = 0.9;
+  let initial_parameters = { q = FixedPoint.of_float 0.9;
                              index = Tez.of_float 0.36;
-                             target = 1.08;
+                             target = FixedPoint.of_float 1.08;
                              protected_index = Tez.of_float 0.35;
-                             drift = 0.0;
-                             drift' = 0.0;
+                             drift = FixedPoint.of_float 0.0;
+                             drift' = FixedPoint.of_float 0.0;
                            } in
   let interblock_time = Seconds 3600 in
   let new_index = 0.34 in

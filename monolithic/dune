@@ -32,7 +32,7 @@
 
 (executable
   (name tests)
-  (libraries huxian ounit2 tez)
+  (libraries fixedPoint huxian ounit2 tez)
   (modules Tests)
   (preprocess (pps ppx_deriving.show)))
 

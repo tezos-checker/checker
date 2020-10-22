@@ -23,6 +23,8 @@ module FixedPoint : sig
   val of_int64 : int64 -> t
   val to_int64 : t -> int64
 
+  val exponentiate : t -> t
+
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
 end =
@@ -78,6 +80,9 @@ struct
 
   let of_int64 t = assert (t >= 0L); t
   let to_int64 t = t
+
+  (* TODO: exp(x) ~ 1 + x + x^2/2 *)
+  let exponentiate amount = of_float (exp (to_float amount))
 
   (* Pretty printing functions *)
   let pp ppf amount =
