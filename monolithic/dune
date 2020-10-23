@@ -3,7 +3,7 @@
 ;; .merlin file being generated.
 (library
   (name huxian)
-  (modules Huxian Constants Avl Kit Tez FixedPoint)
+  (modules Huxian Constants Avl Kit Tez FixedPoint Parameters Burrow Uniswap)
   (wrapped false)
   (libraries ounit2 qcheck)
   (preprocess (pps ppx_deriving.std)))

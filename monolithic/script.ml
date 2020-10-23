@@ -2,6 +2,7 @@ open FixedPoint
 open Format
 open Huxian
 open Kit
+include Parameters
 open Tez
 
 let burrow_experiment () =
@@ -27,7 +28,7 @@ let burrow_experiment () =
       drift' = FixedPoint.of_float 0.0;
     } in
   printf "\n=== Checker parameters ===\n";
-  print_string @@ show_checker_parameters params;
+  print_string @@ Parameters.show_parameters params;
 
   printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
@@ -75,9 +76,9 @@ let step_experiment () =
   let tez_per_kit = 0.305 in
   let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
-  print_string @@ show_checker_parameters initial_parameters;
+  print_string @@ show_parameters initial_parameters;
   printf "\n=== New checker parameters ===\n";
-  print_string @@ show_checker_parameters new_parameters
+  print_string @@ show_parameters new_parameters
 
 
 let () =

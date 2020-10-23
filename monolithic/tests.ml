@@ -73,7 +73,7 @@ let suite =
           drift' = FixedPoint.of_float 6.69795953361e-14;
           drift = FixedPoint.of_float 1.20563271605e-10 }
         new_parameters
-        ~printer:show_checker_parameters
+        ~printer:show_parameters
   ]
 
 

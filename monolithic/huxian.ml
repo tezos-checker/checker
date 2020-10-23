@@ -1,10 +1,12 @@
 
+include Burrow
 open Constants
 include Constants
 open FixedPoint
 open Kit
+include Parameters
 open Tez
-
+include Uniswap
 
 (* TODO: Things to consider / action items:
  *
@@ -26,43 +28,6 @@ open Tez
 *)
 
 (* ************************************************************************* *)
-(*                               BASIC TYPES                                 *)
-(* ************************************************************************* *)
-type tez = Tez.t
-type kit = Kit.t
-type liquidity = int
-
-(* TODOs for burrows:
-   - Add owner (delegate)
-   - Add field for incurred fee
-   - Fix all relevant interfaces (create, mint, burn, deposit, close)
-   - Move to separate module
-*)
-type burrow =
-  { collateral : tez [@printer Tez.pp];
-    minted_kit : kit [@printer Kit.pp];
-  }
-[@@deriving show]
-
-type checker_parameters =
-  { q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
-    index: tez [@printer Tez.pp];
-    protected_index: tez [@printer Tez.pp];
-    target: FixedPoint.t [@printer FixedPoint.pp];
-    drift': FixedPoint.t [@printer FixedPoint.pp];
-    drift: FixedPoint.t [@printer FixedPoint.pp];
-  }
-[@@deriving show]
-
-(* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: checker_parameters) : tez =
-  max p.index p.protected_index
-
-(* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: checker_parameters) : tez =
-  min p.index p.protected_index
-
-(* ************************************************************************* *)
 (**                           UTILITY FUNCTIONS                              *)
 (* ************************************************************************* *)
 
@@ -78,48 +43,6 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   min upper (max v lower)
 
 (* ************************************************************************* *)
-(**                               BURROWS                                    *)
-(* ************************************************************************* *)
-
-(** Check whether a burrow is overburrowed. A burrow is overburrowed if
-  *
-  *   tez_collateral < fplus * kit_outstanding * (q * tz_mint)
-  *
-  * The quantity tez_collateral / (fplus * (q * tz_mint)) we call the burrowing
-  * limit (normally kit_outstanding <= burrowing_limit).
-*)
-let is_overburrowed (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * (p.q * Tez.to_fp (tz_minting p)))
-
-(** Create a burrow without any tez collateral or outstanding kit. *)
-let create_burrow () : burrow =
-  { collateral = Tez.of_float 0.0;
-    minted_kit = Kit.of_float 0.0;
-  }
-
-(** Add non-negative collateral to a burrow. *)
-let deposit_tez (t : tez) (b : burrow) : burrow =
-  assert (t >= Tez.zero);
-  { b with collateral = Tez.add b.collateral t }
-
-let overburrow_check  (p : checker_parameters) (burrow : burrow) : (burrow, string) result =
-  if is_overburrowed p burrow
-  then Error "burrow is or would be overburrowed"
-  else Ok burrow
-
-(** Withdraw a non-negative amount of tez from the burrow, as long as this will
-  * not overburrow it. *)
-let withdraw_tez (p : checker_parameters) (t : tez) (b : burrow) : (burrow, string) result =
-  assert (t >= Tez.zero);
-  overburrow_check p { b with collateral = Tez.sub b.collateral t }
-
-(** Mint a non-negative amount of kits from the burrow, as long as this will
-  * not overburrow it *)
-let mint_kits_from_burrow (p : checker_parameters) (k : kit) (b : burrow) =
-  assert (k >= Kit.zero);
-  overburrow_check p { b with minted_kit = Kit.add b.minted_kit k }
-
-(* ************************************************************************* *)
 (**                               IMBALANCE                                  *)
 (* ************************************************************************* *)
 
@@ -130,7 +53,7 @@ let mint_kits_from_burrow (p : checker_parameters) (k : kit) (b : burrow) =
   *   min(   5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , if burrowed >= minted
   *   max( - 5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , otherwise
 *)
-let compute_imbalance (burrowed: kit) (minted: kit) : FixedPoint.t =
+let compute_imbalance (burrowed: Kit.t) (minted: Kit.t) : FixedPoint.t =
   assert (burrowed >= Kit.zero); (* Invariant *)
   assert (minted >= Kit.zero); (* Invariant *)
   let centinepers = cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
@@ -146,190 +69,13 @@ let compute_imbalance (burrowed: kit) (minted: kit) : FixedPoint.t =
     FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub minted burrowed)) centinepers) burrowed)
 
 (* ************************************************************************* *)
-(**                          LIQUIDATION-RELATED                             *)
-(* ************************************************************************* *)
-
-(** Check whether a burrow can be marked for liquidation. A burrow can be
-  * marked for liquidation if:
-  *
-  *   tez_collateral < fminus * kit_outstanding * (q * tz_liquidation)
-  *
-  * The quantity tez_collateral / (fminus * (q * tz_liquidation)) we call the
-  * liquidation limit.
-*)
-let should_burrow_be_liquidated (p : checker_parameters) (b : burrow) : bool =
-  Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp b.minted_kit * (p.q * Tez.to_fp (tz_liquidation p)))
-
-(** Compute the number of tez that needs to be auctioned off so that the burrow
-  * can return to a state when it is no longer overburrowed or having a risk of
-  * liquidation.
-  *
-  * The tez/kit price we expect to get when we liquidate is (q * tz_minting).
-  * So if we auction tez_to_auction, and we receive repaid_kit for it, the
-  * following is expected to hold
-  *
-  *   tez_to_auction = repaid_kit * (q * tz_minting)                         <=>
-  *
-  *   repaid_kit = tez_to_auction / (q * tz_minting)                         (1)
-  *
-  * Furthermore, after liquidation, the burrow must not be neither
-  * liquidatable, nor overburrowed anymore. Since by design the burrowing limit
-  * is below the liquidation limit, during liquidation we target the burrowing
-  * limit to ensure both are respected:
-  *
-  *   (tez - tez_to_auction) = (kit - repaid_kit) * fplus * q * tz_minting   (2)
-  *
-  * Solving (1) and (2) gives:
-  *
-  *   tez_to_auction = (kit * fplus * q * tz_minting - tez ) / (fplus - 1)
-  *   repaid_kit     = tez_to_auction / (q * tz_minting)
-*)
-(* TODO: Don't go through float, and ensure that it's skewed on the safe side (overapprox.). *)
-let compute_tez_to_auction (p : checker_parameters) (b : burrow) : tez =
-  Tez.of_fp
-    FixedPoint.((Kit.to_fp b.minted_kit * fplus * p.q * Tez.to_fp (tz_minting p) - Tez.to_fp b.collateral)
-     / (fplus - FixedPoint.one))
-
-(* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
-let compute_expected_kit (p : checker_parameters) (tez_to_auction: tez) : kit =
-  Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / (p.q * Tez.to_fp (tz_minting p)))
-
-(* ************************************************************************* *)
-(**                               UNISWAP                                    *)
-(* ************************************************************************* *)
-
-(* The general concept of uniswap is that you have quantity a of an asset A
- * and b of an asset B and you process buy and sell requests by maintaining
- * the product a * b constant. So if someone wants to sell a quantity da of
- * asset A to the contract, the balance would become (a + da) so you can
- * give that person a quantity db of asset B in exchange such that (a +
- * da)(b - db) = a * b. Solving for db gives db  = da * b / (a + da). We
- * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
- * represents the  "price" before the order and a / (a + da)  represents
- * the "slippage". Indeed, a property of uniswap is that with arbitrageurs
- * around, the ratio (a / b) gives you the market price of A in terms of B.
- *
- * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
- * something like db = da * b / (a + da) * (1 - 0.2/100) (note that this
- * formula is a first-order approximation in the sense that two orders of size
- * da / 2 will give you a better price than one order of size da, but the
- * difference is far smaller than typical fees or any amount we care about.
-*)
-
-(* TODO: The state of uniswap should also (in the future) include an ongoing
- * auction to decide who to delegate to, possibly multiple tez balances, etc.
- * Just leaving this note here lest we forget. *)
-type uniswap =
-  { tez: tez;
-    kit: kit;
-    total_liquidity_tokens: int;
-  }
-
-let pp_uniswap (ppf: Format.formatter) (u : uniswap) =
-  Format.fprintf
-    ppf
-    "{tez = %a;\n kit = %a;\n total_liquidity_tokens = %d}\n"
-    Tez.pp u.tez
-    Kit.pp u.kit
-    u.total_liquidity_tokens
-
-let print_uniswap (u : uniswap) = pp_uniswap Format.std_formatter u
-
-let uniswap_non_empty(u: uniswap) =
-  u.kit > Kit.zero && u.tez > Tez.zero
-
-let sell_kit (uniswap: uniswap) (kit: kit) : tez * kit * uniswap =
-  (* Utku: I think, as long as the contract has non-zero tez and kit this
-   * always succeeds.
-   *
-   * So, I think the function should fail when the contract is missing either
-   * currency. It will presumably be started with some amount of tez, and
-   * the first minting fee will initialize the kit amount.
-  *)
-  assert (uniswap_non_empty uniswap);
-  assert (kit > Kit.zero);
-
-  let price = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
-  let slippage = Kit.div uniswap.kit (Kit.add uniswap.kit kit) in
-  let return = Tez.of_fp FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - uniswap_fee_percentage)) in
-  let updated = { uniswap with
-                  kit = Kit.add uniswap.kit kit;
-                  tez = Tez.sub uniswap.tez return } in
-  (return, Kit.zero, updated)
-
-(* But where do the assets in uniswap come from? Liquidity providers, or
- * "LP" deposit can deposit a quantity la and lb of assets A and B in the
- * same proportion as the contract la / lb = a / b . Assuming there are n
- * "liquidity tokens" extant, they receive m = floor(n la / a) tokens and
- * there are now m +n liquidity tokens extant. They can redeem then at
- * anytime for a fraction of the assets A and B. The reason to do this in
- * uniswap is that usage of uniswap costs 0.3%, and that ultimately can
- * grow the balance of the assets in the contract. An additional reason
- * to do it in huxian is that the kit balance of the uniswap contract is
- * continuously credited with the burrow fee taken from burrow holders.
-*)
-
-let buy_liquidity (uniswap: uniswap) (tez: tez) (kit: kit)
-  : liquidity * tez * kit * uniswap =
-  (* Adding liquidity always succeeds, if the exchange has non-zero amount. *)
-  assert (uniswap_non_empty uniswap);
-  (* TODO: How to compute things without explicitly calculating the ratio
-   * (using division) here? *)
-  let ratio = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
-  (* There is a chance that the given tez and kit have the wrong ratio,
-   * so we liquidate as much as we can and return the leftovers. NOTE:
-   * Alternatively, the LP can use the uniswap contract to get the right
-   * ratio beforehand.
-   * Invariant here is that (tez', kit') should have the correct ratio.
-  *)
-  let (tez', kit') = FixedPoint.(
-    if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
-    then (Tez.of_fp (Kit.to_fp kit * ratio), kit)
-    else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
-    then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
-    else (tez, kit) ) in
-  let liquidity =
-    if uniswap.total_liquidity_tokens = 0
-    then 1
-    else int_of_float (floor (
-        float_of_int uniswap.total_liquidity_tokens
-        *. Tez.to_float tez'
-        /. Tez.to_float uniswap.tez))
-  in
-  let updated =
-    { kit = Kit.add uniswap.kit kit';
-      tez = Tez.add uniswap.tez tez';
-      total_liquidity_tokens =
-        uniswap.total_liquidity_tokens + liquidity } in
-  (liquidity, Tez.sub tez tez', Kit.sub kit kit', updated)
-
-(* Selling liquidity always succeeds, but might leave the contract
- * without tez and kit if everybody sells their liquidity. I think
- * it is unlikely to happen, since the last liquidity holders wouldn't
- * want to lose the burrow fees.
-*)
-let sell_liquidity (uniswap: uniswap) (liquidity: liquidity)
-  : tez * kit * uniswap =
-  (* Since this requires a liquidity token, contract can not be empty *)
-  assert(uniswap_non_empty(uniswap));
-  let ratio =
-    float_of_int liquidity /. float_of_int uniswap.total_liquidity_tokens in
-  let tez = Tez.of_float (Tez.to_float uniswap.tez *. ratio) in
-  let kit = Kit.of_float (Kit.to_float uniswap.kit *. ratio) in
-  let updated = {
-    tez = Tez.sub uniswap.tez tez;
-    kit = Kit.sub uniswap.kit kit;
-    total_liquidity_tokens = uniswap.total_liquidity_tokens - liquidity } in
-  (tez, kit, updated)
-
-(* ************************************************************************* *)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
 type checker =
   { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)
     uniswap : uniswap;
-    parameters : checker_parameters;
+    parameters : parameters;
   }
 
 (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
@@ -377,8 +123,8 @@ let step_parameters
     (time_passed: duration)
     (current_index: float)
     (current_kit_in_tez: float)
-    (parameters: checker_parameters)
-  : checker_parameters =
+    (parameters: parameters)
+  : parameters =
   (* Compute the new protected index, using the time interval, the current
    * index (given by the oracles right now), and the protected index of the
    * previous timestamp. *)
@@ -431,9 +177,9 @@ type liquidation_outcome =
 (* TODO: More sharing here please *)
 type liquidation_result
   = liquidation_outcome
-    * tez                 (* liquidation reward *)
-    * tez                 (* tez to auction *)
-    * kit                 (* expected kit from selling the tez *)
+    * Tez.t               (* liquidation reward *)
+    * Tez.t               (* tez to auction *)
+    * Kit.t               (* expected kit from selling the tez *)
     * burrow              (* current state of the burrow *)
 
 let pp_liquidation_outcome (ppf: Format.formatter) (o: liquidation_outcome) =
@@ -473,7 +219,7 @@ let print_liquidation_result (r: liquidation_result) =
  * but I thought that this intricacy is worth pointing out.
 *)
 (* TODO: Remove divisions in the conditions; use multiplication instead. *)
-let request_liquidation (p: checker_parameters) (b: burrow) : liquidation_result =
+let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let partial_reward = Tez.of_fp FixedPoint.(liquidation_reward_percentage * (Tez.to_fp b.collateral)) in
   (* The reward for triggering a liquidation. This amounts to the burrow's
    * creation deposit, plus the liquidation reward percentage of the burrow's
