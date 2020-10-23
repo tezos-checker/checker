@@ -102,23 +102,22 @@ let deposit_tez (t : tez) (b : burrow) : burrow =
   assert (t >= Tez.zero);
   { b with collateral = Tez.add b.collateral t }
 
+let overburrow_check  (p : checker_parameters) (burrow : burrow) : (burrow, string) result =
+  if is_overburrowed p burrow
+  then Error "burrow is or would be overburrowed"
+  else Ok burrow
+
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdraw_tez (p : checker_parameters) (t : tez) (b : burrow) : burrow option =
+let withdraw_tez (p : checker_parameters) (t : tez) (b : burrow) : (burrow, string) result =
   assert (t >= Tez.zero);
-  let updated = { b with collateral = Tez.sub b.collateral t } in
-  if is_overburrowed p updated
-  then None
-  else Some updated
+  overburrow_check p { b with collateral = Tez.sub b.collateral t }
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
 let mint_kits_from_burrow (p : checker_parameters) (k : kit) (b : burrow) =
   assert (k >= Kit.zero);
-  let updated = { b with minted_kit = Kit.add b.minted_kit k } in
-  if is_overburrowed p updated
-  then None
-  else Some updated
+  overburrow_check p { b with minted_kit = Kit.add b.minted_kit k }
 
 (* ************************************************************************* *)
 (**                               IMBALANCE                                  *)
