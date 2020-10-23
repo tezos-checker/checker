@@ -173,7 +173,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
      * expected to repay enough kit. *)
-  else if FixedPoint.(Kit.to_fp b.minted_kit * p.q * Tez.to_fp (tz_minting p)) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
+  else if FixedPoint.(Kit.to_fp b.minted_kit * minting_price p) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
     let b_without_reward = { b with collateral = Tez.sub b.collateral liquidation_reward } in
     let tez_to_auction = b_without_reward.collateral in
     let expected_kit = compute_expected_kit p tez_to_auction in

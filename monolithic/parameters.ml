@@ -20,11 +20,11 @@ module Parameters : sig
   val show_parameters : parameters -> string
   val pp_parameters : Format.formatter -> parameters -> unit
 
-  (* tez. To get tez/kit must multiply with q. *)
-  val tz_minting : parameters -> Tez.t
+  (** Current minting price. *)
+  val minting_price : parameters -> FixedPoint.t
 
-  (* tez. To get tez/kit must multiply with q. *)
-  val tz_liquidation : parameters -> Tez.t
+  (** Current liquidation price. *)
+  val liquidation_price : parameters -> FixedPoint.t
 
   (** Given the amount of kit necessary to close all existing burrows
     * (burrowed) and the amount of kit that are currently in circulation,
@@ -55,6 +55,12 @@ struct
   (* tez. To get tez/kit must multiply with q. *)
   let tz_liquidation (p: parameters) : Tez.t =
     min p.index p.protected_index
+
+  let minting_price (p: parameters) : FixedPoint.t =
+    FixedPoint.(p.q * Tez.to_fp (tz_minting p))
+
+  let liquidation_price (p: parameters) : FixedPoint.t =
+    FixedPoint.(p.q * Tez.to_fp (tz_liquidation p))
 
   let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_float 100.0)
 
