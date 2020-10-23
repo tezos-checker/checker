@@ -1,18 +1,17 @@
 let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
-  ocamlPackages = pkgs.ocamlPackages;
 in
 pkgs.mkShell {
   name = "huxian";
-  buildInputs = [
-    ocamlPackages.ocaml
-    ocamlPackages.dune
-    ocamlPackages.findlib # Lets merlin see packages like ounit
-    ocamlPackages.ocp-indent
-    ocamlPackages.merlin
-    ocamlPackages.ounit
-    ocamlPackages.qcheck
-    ocamlPackages.ppx_deriving
+  buildInputs = with pkgs.ocamlPackages; [
+    ocaml
+    dune
+    findlib # Lets merlin see packages like ounit
+    ocp-indent
+    merlin
+    ounit
+    qcheck
+    ppx_deriving
   ];
 }
