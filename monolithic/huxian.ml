@@ -168,7 +168,12 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   else if b.collateral < liquidation_reward then
     let tez_to_auction = Tez.sub b.collateral partial_reward in
     let expected_kit = compute_expected_kit p tez_to_auction in
-    (Close, liquidation_reward, tez_to_auction, expected_kit, create_burrow ())
+    let final_burrow =
+      { b with
+        collateral = Tez.zero;
+        minted_kit = Kit.zero; (* TODO: this needs fixing *)
+      } in
+    (Close, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
     (* Case 3: With the current price it's impossible to make the burrow not
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
@@ -182,7 +187,8 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
      * expected assertion fails unpleasantly. TODO: add the assertion here once
      * you switch to the integer representation of tez. *)
     let final_burrow =
-      { collateral = Tez.sub b_without_reward.collateral tez_to_auction;
+      { b with
+        collateral = Tez.sub b_without_reward.collateral tez_to_auction;
         minted_kit = Kit.sub b_without_reward.minted_kit expected_kit;
       } in
     (Complete, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
@@ -194,7 +200,8 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     let tez_to_auction = compute_tez_to_auction p b_without_reward in
     let expected_kit = compute_expected_kit p tez_to_auction in
     let final_burrow =
-      { collateral = Tez.sub b_without_reward.collateral tez_to_auction;
+      { b with
+        collateral = Tez.sub b_without_reward.collateral tez_to_auction;
         minted_kit = Kit.sub b_without_reward.minted_kit expected_kit;
       } in
     (Partial, liquidation_reward, tez_to_auction, expected_kit, final_burrow)

@@ -1,3 +1,4 @@
+open Common
 open FixedPoint
 open Format
 open Huxian
@@ -16,7 +17,15 @@ let burrow_experiment () =
   (* Complete liquidation (close the burrow) for *)
   (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
   (* DEFAULT *)
-  let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in
+  let initial_burrow =
+    { owner = Common.of_string "someone";
+      delegate = None;
+      collateral = Tez.of_float 10.0;
+      minted_kit = Kit.of_float 20.0;
+      expected_kit = Kit.zero;
+      accumulated_fee = Kit.zero;
+      accumulated_imbalance = Kit.zero;
+    } in
   printf "\n=== Initial burrow state ===\n";
   print_string @@ show_burrow initial_burrow;
   let params =

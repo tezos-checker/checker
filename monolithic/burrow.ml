@@ -1,6 +1,7 @@
 
 open Error
 
+open Common
 open Constants
 include Constants
 open FixedPoint
@@ -9,10 +10,15 @@ open Parameters
 include Parameters
 open Tez
 
+include Common
+
 (* TODOs for burrows:
-   - Add owner (delegate)
-   - Add field for incurred fee
-   - Fix all relevant interfaces (create, mint, burn, deposit, close)
+   - Limit access to the representation of the burrow. Instead give access to
+     contents through functions.
+   - Fix (currently incorrect) calculation of is_overburrowed and
+     is_liquidatable; they should take into account all the fields, not just
+     minted_kit.
+   - Fix/add all relevant interfaces (create, mint, burn, deposit, close)
 *)
 
 (* ************************************************************************* *)
@@ -20,8 +26,27 @@ open Tez
 (* ************************************************************************* *)
 module Burrow : sig
   type burrow =
-    { collateral : Tez.t [@printer Tez.pp];
+    { (* The owner of the burrow. Set once during creation. *)
+      owner : Common.address;
+      delegate : Common.address option;
+      (* Confirmed collateral currently stored in the burrow. *)
+      collateral : Tez.t [@printer Tez.pp];
+      (* Outstanding kit minted out of the burrow. *)
       minted_kit : Kit.t [@printer Kit.pp];
+      (* Kit expected to be received from auctions; not confirmed yet. NOTE:
+       * Calculated when the corresponding collateral was sent to auction;
+       * prices might have changed in the meantime. *)
+      expected_kit : Kit.t [@printer Kit.pp];
+      (* Accumulated burrow fee (in kit). NOTE: we should somehow keep track of
+       * when was this last updated, and update accordingly, yet efficiently
+       * (not in O(n)). *)
+      accumulated_fee : Kit.t [@printer Kit.pp];
+      (* Accumulated imbalance adjustment fee/bonus (in kit). NOTE: we should
+       * somehow keep track of when was this last updated, and update
+       * accordingly, yet efficiently (not in O(n)). *)
+      accumulated_imbalance : Kit.t [@printer Kit.pp];
+      (* TODO: Keep track also of the lot numbers for tez currently being
+       * auctioned off. *)
     }
 
   type Error.error +=
@@ -49,8 +74,10 @@ module Burrow : sig
   *)
   val is_liquidatable : parameters -> burrow -> bool
 
-  (** Create a burrow without any tez collateral or outstanding kit. *)
-  val create_burrow : unit -> burrow
+  (** A pretty much empty burrow. NOTE: This is just for testing. To create a
+    * burrow we need more than that (at least 1 tez creation deposit, and a
+    * valid address. *)
+  val default_burrow : unit -> burrow
 
   (** Add non-negative collateral to a burrow. *)
   val deposit_tez : Tez.t -> burrow -> burrow
@@ -80,8 +107,13 @@ module Burrow : sig
 end =
 struct
   type burrow =
-    { collateral : Tez.t [@printer Tez.pp];
+    { owner : Common.address;
+      delegate : Common.address option;
+      collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
+      expected_kit : Kit.t [@printer Kit.pp];
+      accumulated_fee : Kit.t [@printer Kit.pp];
+      accumulated_imbalance : Kit.t [@printer Kit.pp];
     }
   [@@deriving show]
 
@@ -98,10 +130,17 @@ struct
   let is_overburrowed (p : parameters) (b : burrow) : bool =
     Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * minting_price p)
 
-  (** Create a burrow without any tez collateral or outstanding kit. *)
-  let create_burrow () : burrow =
-    { collateral = Tez.of_float 0.0;
-      minted_kit = Kit.of_float 0.0;
+  (** A pretty much empty burrow. NOTE: This is just for testing. To create a
+    * burrow we need more than that (at least 1 tez creation deposit, and a
+    * valid address. *)
+  let default_burrow () : burrow =
+    { owner = Common.of_string "";
+      delegate = None;
+      collateral = Tez.zero;
+      minted_kit = Kit.zero;
+      expected_kit = Kit.zero;
+      accumulated_fee = Kit.zero;
+      accumulated_imbalance = Kit.zero;
     }
 
   (** Add non-negative collateral to a burrow. *)

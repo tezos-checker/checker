@@ -9,9 +9,13 @@ module Common : sig
 
   val show_address : address -> string
   val pp_address : Format.formatter -> address -> unit
+
+  val of_string : string -> address
 end =
 struct
   type address = string
   [@@deriving show]
+
+  let of_string s = s
 end
 
