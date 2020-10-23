@@ -1,6 +1,7 @@
 open FixedPoint
 open Huxian
 open OUnit2
+open Parameters
 open Tez
 
 type tz = Tez.t [@@deriving show]

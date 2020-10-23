@@ -1,4 +1,5 @@
 
+open Burrow
 include Burrow
 open Constants
 include Constants
@@ -6,6 +7,7 @@ open FixedPoint
 open Kit
 include Parameters
 open Tez
+open Uniswap
 include Uniswap
 
 (* TODO: Things to consider / action items:
@@ -229,7 +231,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let liquidation_reward = Tez.add creation_deposit partial_reward in
   (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
    * liquidate. *)
-  if not (should_burrow_be_liquidated p b) then
+  if not (is_liquidatable p b) then
     (Unwarranted, Tez.zero, Tez.zero, Kit.zero, b)
     (* Case 2: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
