@@ -151,7 +151,6 @@ let rotate_left (mem: mem) (parent_ptr: ptr) : mem * ptr =
             right = right_left_ptr;
             right_mutez = node_mutez right_left;
             right_height = node_height right_left;
-            key = node_key right_left;
             parent = Some right_ptr;
         } in
   let updated_right = Branch
@@ -211,8 +210,8 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
         { left with
           parent = parent.parent;
           right = parent_ptr;
-          left_mutez = node_mutez updated_parent;
-          left_height = node_height updated_parent;
+          right_mutez = node_mutez updated_parent;
+          right_height = node_height updated_parent;
         } in
   let updated_left_right =
         node_set_parent left_right (Some parent_ptr) in
@@ -237,7 +236,7 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
  *   a double rotation: rotate_Dir1Dir2
  *)
 let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
-    match mem_get mem parent_ptr with
+    let (mem, ptr) = match mem_get mem parent_ptr with
       | Branch branch
         when abs (branch.left_height - branch.right_height) > 1 ->
           let parent_balance = branch.right_height - branch.left_height in
@@ -254,7 +253,10 @@ let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
              (* Left, Right *)
              let (mem, child) = rotate_left mem heavy_child_ptr in
              let mem =
-               mem_set mem parent_ptr (Branch { branch with left = child }) in
+               mem_set mem parent_ptr (Branch  {
+                 branch with
+                 left = child;
+                 left_height = branch.left_height - 1; }) in
              rotate_right mem parent_ptr
           else if parent_balance > 0 && heavy_child_balance >= 0 then
              (* Right, Right*)
@@ -263,11 +265,19 @@ let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
              (* Right, Left *)
              let (mem, child) = rotate_right mem heavy_child_ptr in
              let mem =
-               mem_set mem parent_ptr (Branch { branch with right = child }) in
+               mem_set mem parent_ptr (Branch {
+                 branch with
+                 right = child;
+                 right_height = branch.right_height - 1;}) in
              rotate_left mem parent_ptr
           else
               failwith "invariant violation: balance predicates partial"
-      | _ -> (mem, parent_ptr)
+      | _ -> (mem, parent_ptr) in
+     assert (
+       let b = match mem_get mem ptr with
+          | Branch b -> b | _ -> failwith "impossible" in
+       abs (b.left_height - b.right_height) <= 1);
+     (mem, ptr)
 
 let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
   match root with
@@ -446,7 +456,10 @@ let rec to_list (mem: mem) (root: ptr option) : item list =
 let from_list (mem: mem) (items: item list) : mem * ptr option =
   add_all mem None items
 
-open OUnit2
+open OUnit
+module Q = QCheck
+
+module IntSet = Set.Make(Int)
 
 let suite =
   "AVLTests" >::: [
@@ -492,9 +505,43 @@ let suite =
       let actual = to_list mem root in
       let expected = [] in
       assert_equal expected actual);
+    (QCheck_ounit.to_ounit_test
+       @@ Q.Test.make ~name:"test_from_list_to_list" Q.(list small_int)
+       @@ fun xs ->
+         let mkitem i = { id = i; mutez = 100 + i; } in
+
+         let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+         let actual = to_list mem root in
+
+         let expected = List.map mkitem (IntSet.elements @@ IntSet.of_list xs) in
+         assert_equal expected actual ~printer:show_item_list;
+         true
+    );
+    (QCheck_ounit.to_ounit_test
+       @@ Q.Test.make ~name:"test_del" Q.(list small_int)
+       @@ fun xs ->
+         Q.assume (List.length xs > 0);
+         let (to_del, xs) = (List.hd xs, List.tl xs) in
+
+         let mkitem i = { id = i; mutez = 100 + i; } in
+
+         let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+         let (mem, root) = del mem root to_del in
+         let actual = to_list mem root in
+
+         let expected =
+                xs
+                  |> IntSet.of_list
+                  |> IntSet.remove to_del
+                  |> IntSet.elements
+                  |> List.map mkitem in
+         assert_equal expected actual ~printer:show_item_list;
+         true
+    )
   ]
 
-
 let () =
-  run_test_tt_main suite
+  try exit (QCheck_ounit.run suite)
+  with Arg.Bad msg -> print_endline msg; exit 1
+     | Arg.Help msg -> print_endline msg; exit 0
 

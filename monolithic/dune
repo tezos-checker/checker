@@ -44,6 +44,6 @@
 
 (executable
   (name avl)
-  (libraries ounit2 tez)
+  (libraries ounit2 qcheck)
   (modules Avl)
   (preprocess (pps ppx_deriving.std)))
