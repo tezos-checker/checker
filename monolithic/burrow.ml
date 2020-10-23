@@ -51,6 +51,7 @@ module Burrow : sig
 
   type Error.error +=
     | Overburrowed of burrow
+    | InsufficientFunds of Tez.t
 
   val show_burrow : burrow -> string
   val pp_burrow : Format.formatter -> burrow -> unit
@@ -73,6 +74,11 @@ module Burrow : sig
     * liquidation limit.
   *)
   val is_liquidatable : parameters -> burrow -> bool
+
+  (** Given an address (owner) and amount of tez as collateral (including a
+    * creation deposit, not counting towards that collateral), create a burrow.
+    * Fail if the tez given is less than the creation deposit. *)
+  val create_burrow : Common.address -> Tez.t -> (burrow, Error.error) result
 
   (** A pretty much empty burrow. NOTE: This is just for testing. To create a
     * burrow we need more than that (at least 1 tez creation deposit, and a
@@ -119,6 +125,7 @@ struct
 
   type Error.error +=
     | Overburrowed of burrow
+    | InsufficientFunds of Tez.t
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
@@ -129,6 +136,19 @@ struct
   *)
   let is_overburrowed (p : parameters) (b : burrow) : bool =
     Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * minting_price p)
+
+  let create_burrow (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
+    if tez < creation_deposit
+    then Error (InsufficientFunds tez)
+    else Ok
+      { owner = address;
+        delegate = None;
+        collateral = Tez.sub tez creation_deposit;
+        minted_kit = Kit.zero;
+        expected_kit = Kit.zero;
+        accumulated_fee = Kit.zero;
+        accumulated_imbalance = Kit.zero;
+      }
 
   (** A pretty much empty burrow. NOTE: This is just for testing. To create a
     * burrow we need more than that (at least 1 tez creation deposit, and a
