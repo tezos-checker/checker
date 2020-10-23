@@ -102,6 +102,12 @@ let mem_new (m: 'a Mem.t) (v: 'a) : 'a Mem.t * ptr =
 let mem_get (m: 'a Mem.t) (k: ptr) : 'a =
   Mem.find k m
 
+let mem_update (m: 'a Mem.t) (k: ptr) (f: 'a -> 'a) : 'a Mem.t =
+  mem_set m k @@ f (mem_get m k)
+
+let mem_del (m: 'a Mem.t) (k: ptr) : 'a Mem.t =
+  Mem.remove k m
+
 (*
  * Operations on AVL trees.
  *
@@ -430,6 +436,16 @@ let add_all (mem: mem) (root: ptr option) (items: item list)
     (mem, root)
     items
 
+let rec max (mem: mem) (root: ptr) : item =
+  match mem_get mem root with
+    | Leaf leaf -> leaf.item
+    | Branch branch -> max mem branch.right
+
+let rec min (mem: mem) (root: ptr) : item =
+  match mem_get mem root with
+    | Leaf leaf -> leaf.item
+    | Branch branch -> min mem branch.left
+
 let add_all_debug (mem: mem) (root: ptr option) (items: item list)
   : mem * ptr option =
   List.fold_left
@@ -442,6 +458,68 @@ let add_all_debug (mem: mem) (root: ptr option) (items: item list)
        (mem, Some root))
     (mem, root)
     items
+
+let join
+      (mem: mem) (left_ptr: ptr) (right_ptr: ptr)
+      : mem * ptr =
+
+  assert ((max mem left_ptr).id < (min mem right_ptr).id);
+
+  let left = mem_get mem left_ptr in
+  let right = mem_get mem right_ptr in
+
+  let new_branch = Branch {
+    left = left_ptr;
+    left_height = node_height left;
+    left_mutez = node_mutez left;
+    key = node_key right;
+    right_mutez = node_mutez right;
+    right_height = node_height right;
+    right = right_ptr;
+    parent = None;
+  } in
+
+  let (mem, ptr) = mem_new mem new_branch in
+  balance mem ptr
+
+(* Split the longest prefix of the tree with less than
+ * given amount of tez.
+ *)
+let rec split (mem: mem) (root: ptr option) (limit: mutez)
+  : mem * ptr option * ptr option =
+  match root with
+    | None -> (mem, None, None)
+    | Some root_ptr -> match mem_get mem root_ptr with
+      | Leaf leaf ->
+        if leaf.item.mutez <= limit
+        then (mem, Some root_ptr, None)
+        else (mem, None, Some root_ptr)
+      | Branch branch ->
+        if branch.left_mutez + branch.right_mutez <= limit
+          then (* total_mutez <= limit *)
+            (mem, Some root_ptr, None)
+        else if branch.left_mutez == limit
+          then (* left_mutez == limit *)
+            (mem_del mem root_ptr,
+              Some branch.left,
+              Some branch.right)
+        else if limit < branch.left_mutez
+          then (* limit < left_mutez < total_mutez *)
+            match split mem (Some branch.left) limit with
+              | (mem, left, Some right) ->
+                  let (mem, joined) = join mem right branch.right in
+                  (mem_del mem root_ptr, left, Some joined)
+              | _ -> failwith "impossible"
+        else (* left_mutez < limit < total_mutez *)
+            let left = mem_get mem branch.left in
+            match split mem (Some branch.right) (limit - node_mutez left) with
+              | (mem, Some left, right) ->
+                  let (mem, joined) = join mem branch.left left in
+                  (mem_del mem root_ptr, Some joined, right)
+              | (mem, None, right) ->
+                  (mem_del mem root_ptr,
+                    Some branch.left,
+                    right)
 
 let rec to_list (mem: mem) (root: ptr option) : item list =
   match root with
@@ -544,6 +622,52 @@ let suite =
                   |> IntSet.elements
                   |> List.map mkitem in
          assert_equal expected actual ~printer:show_item_list;
+         true
+    );
+
+    (qcheck_to_ounit
+       @@ Q.Test.make ~name:"test_split" Q.(list small_int)
+       @@ fun xs ->
+         Q.assume (List.length xs > 0);
+         Q.assume (List.for_all (fun i -> i > 0) xs);
+         let (limit, xs) = (List.hd xs, List.tl xs) in
+
+         let mkitem i = { id = i; mutez = i; } in
+
+         let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+
+         let (mem, left, right) = split mem root limit in
+         let actual_left = to_list mem left in
+         let actual_right = to_list mem right in
+
+         let rec split_list lim xs =
+           match xs with
+             | [] -> ([], [])
+             | x :: xs ->
+               if x <= lim
+               then
+                 match split_list (lim - x) xs with
+                   (l, r) -> (x::l, r)
+               else
+                 ([], x::xs)
+               in
+
+         let (expected_left, expected_right) =
+                xs
+                  |> IntSet.of_list
+                  |> IntSet.elements
+                  |> split_list limit in
+
+         assert_equal
+           (List.map mkitem expected_left)
+           actual_left
+           ~printer:show_item_list;
+
+         assert_equal
+           (List.map mkitem expected_right)
+           actual_right
+           ~printer:show_item_list;
+
          true
     )
   ]
