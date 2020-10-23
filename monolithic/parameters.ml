@@ -7,12 +7,14 @@ open Tez
 (* ************************************************************************* *)
 module Parameters : sig
   type parameters =
-    { q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
+    { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
+      q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
       index: Tez.t [@printer Tez.pp];
       protected_index: Tez.t [@printer Tez.pp];
       target: FixedPoint.t [@printer FixedPoint.pp];
       drift': FixedPoint.t [@printer FixedPoint.pp];
       drift: FixedPoint.t [@printer FixedPoint.pp];
+      (* TODO: Add the imbalance adjustment index also *)
     }
 
   val show_parameters : parameters -> string
