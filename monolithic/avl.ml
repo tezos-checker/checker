@@ -456,8 +456,10 @@ let rec to_list (mem: mem) (root: ptr option) : item list =
 let from_list (mem: mem) (items: item list) : mem * ptr option =
   add_all mem None items
 
-open OUnit
+open OUnit2
 module Q = QCheck
+
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
 
@@ -470,6 +472,7 @@ let suite =
       let actual = to_list mem (Some root) in
       let expected = [item] in
       assert_equal expected actual);
+
     "test_multiple" >::
     (fun _ ->
       let items =
@@ -479,12 +482,14 @@ let suite =
       let actual = to_list mem root in
       let expected = List.sort (fun a b -> compare a.id b.id) items in
       assert_equal expected actual ~printer:show_item_list);
+
     "test_del_singleton" >::
     (fun _ ->
       let (mem, root) = add Mem.empty None { id = 1; mutez = 5} in
       let (mem, root) = del mem (Some root) 1 in
       assert_equal None root;
       assert_bool "mem wasn't empty" (Mem.is_empty mem));
+
     "test_del" >::
     (fun _ ->
       let items =
@@ -498,6 +503,7 @@ let suite =
           (fun a b -> compare a.id b.id)
           (List.filter (fun i -> i.id <> 5) items) in
       assert_equal expected actual ~printer:show_item_list);
+
     "test_empty_from_list_to_list" >::
     (fun _ ->
       let items = [] in
@@ -505,7 +511,8 @@ let suite =
       let actual = to_list mem root in
       let expected = [] in
       assert_equal expected actual);
-    (QCheck_ounit.to_ounit_test
+
+    (qcheck_to_ounit
        @@ Q.Test.make ~name:"test_from_list_to_list" Q.(list small_int)
        @@ fun xs ->
          let mkitem i = { id = i; mutez = 100 + i; } in
@@ -517,7 +524,8 @@ let suite =
          assert_equal expected actual ~printer:show_item_list;
          true
     );
-    (QCheck_ounit.to_ounit_test
+
+    (qcheck_to_ounit
        @@ Q.Test.make ~name:"test_del" Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
@@ -539,9 +547,3 @@ let suite =
          true
     )
   ]
-
-let () =
-  try exit (QCheck_ounit.run suite)
-  with Arg.Bad msg -> print_endline msg; exit 1
-     | Arg.Help msg -> print_endline msg; exit 0
-

@@ -4,7 +4,7 @@ run:
 	dune exec ./script.exe
 
 tests:
-	dune exec ./tests.exe
+	dune runtest .
 
 clean:
 	$(RM) *.cmo *.cmi

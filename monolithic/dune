@@ -25,9 +25,15 @@
   (preprocess (pps ppx_deriving.std)))
 
 (library
+  (name avl)
+  (libraries ounit2 qcheck)
+  (modules Avl)
+  (preprocess (pps ppx_deriving.std)))
+
+(library
   (name huxian)
   (modules Huxian)
-  (libraries constants fixedPoint kit tez)
+  (libraries constants fixedPoint kit tez avl)
   (preprocess (pps ppx_deriving.std)))
 
 (executable
@@ -36,14 +42,8 @@
   (libraries huxian kit tez)
   (preprocess (pps ppx_deriving.std)))
 
-(executable
+(test
   (name tests)
-  (libraries fixedPoint huxian ounit2 tez)
   (modules Tests)
-  (preprocess (pps ppx_deriving.std)))
-
-(executable
-  (name avl)
-  (libraries ounit2 qcheck)
-  (modules Avl)
+  (libraries fixedPoint huxian ounit2 tez)
   (preprocess (pps ppx_deriving.std)))
