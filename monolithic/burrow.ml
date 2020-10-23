@@ -1,3 +1,6 @@
+
+open Error
+
 open Constants
 include Constants
 open FixedPoint
@@ -20,6 +23,9 @@ module Burrow : sig
     { collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
     }
+
+  type Error.error +=
+    | Overburrowed of burrow
 
   val show_burrow : burrow -> string
   val pp_burrow : Format.formatter -> burrow -> unit
@@ -50,15 +56,15 @@ module Burrow : sig
   val deposit_tez : Tez.t -> burrow -> burrow
 
   (** Check whether a burrow is overburrowed. *)
-  val overburrow_check : parameters -> burrow -> (burrow, string) result
+  val overburrow_check : parameters -> burrow -> (burrow, Error.error) result
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  val withdraw_tez : parameters -> Tez.t -> burrow -> (burrow, string) result
+  val withdraw_tez : parameters -> Tez.t -> burrow -> (burrow, Error.error) result
 
   (** Mint a non-negative amount of kit from the burrow, as long as this will
     * not overburrow it *)
-  val mint_kit_from_burrow : parameters -> Kit.t -> burrow -> (burrow, string) result
+  val mint_kit_from_burrow : parameters -> Kit.t -> burrow -> (burrow, Error.error) result
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
@@ -78,6 +84,9 @@ struct
       minted_kit : Kit.t [@printer Kit.pp];
     }
   [@@deriving show]
+
+  type Error.error +=
+    | Overburrowed of burrow
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
@@ -100,14 +109,14 @@ struct
     assert (t >= Tez.zero);
     { b with collateral = Tez.add b.collateral t }
 
-  let overburrow_check  (p : parameters) (burrow : burrow) : (burrow, string) result =
+  let overburrow_check  (p : parameters) (burrow : burrow) : (burrow, Error.error) result =
     if is_overburrowed p burrow
-    then Error "burrow is or would be overburrowed"
+    then Error (Overburrowed burrow)
     else Ok burrow
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p : parameters) (t : Tez.t) (b : burrow) : (burrow, string) result =
+  let withdraw_tez (p : parameters) (t : Tez.t) (b : burrow) : (burrow, Error.error) result =
     assert (t >= Tez.zero);
     overburrow_check p { b with collateral = Tez.sub b.collateral t }
 
