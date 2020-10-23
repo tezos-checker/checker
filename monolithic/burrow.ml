@@ -14,10 +14,9 @@ include Common
 
 (* TODOs for burrows:
    - Limit access to the representation of the burrow. Instead give access to
-     contents through functions.
-   - Fix (currently incorrect) calculation of is_overburrowed and
-     is_liquidatable; they should take into account all the fields, not just
-     minted_kit.
+     contents through functions. For example currently
+     Huxian.request_liquidation completely ignores the burrowing fee, the
+     accumulated imbalance fee, etc. which is wrong.
    - Fix/add all relevant interfaces (create, mint, burn, deposit, close)
 *)
 
@@ -132,10 +131,14 @@ struct
     *   tez_collateral < fplus * kit_outstanding * minting_price
     *
     * The quantity tez_collateral / (fplus * minting_price) we call the burrowing
-    * limit (normally kit_outstanding <= burrowing_limit).
+    * limit (normally kit_outstanding <= burrowing_limit). NOTE: for the
+    * purposes of minting/checking overburrowedness, we do not take into
+    * account expected kit from pending auctions; for all we know, this could
+    * be lost forever.
   *)
   let is_overburrowed (p : parameters) (b : burrow) : bool =
-    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * minting_price p)
+    let outstanding_kit = Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance) in
+    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
 
   let create_burrow (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
     if tez < creation_deposit
@@ -195,10 +198,14 @@ struct
     *   tez_collateral < fminus * kit_outstanding * liquidation_price
     *
     * The quantity tez_collateral / (fminus * liquidation_price) we call the
-    * liquidation limit.
+    * liquidation limit. NOTE: for the purposes of liquidation, we also take
+    * into account expected kit from pending auctions, optimistically. TODO:
+    * George: but the price keeps changing. Do we use the one we calculated
+    * when we sent the tez to the auction?
   *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
-    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp b.minted_kit * liquidation_price p)
+    let outstanding_kit = Kit.add b.minted_kit (Kit.add b.expected_kit (Kit.add b.accumulated_fee b.accumulated_imbalance)) in
+    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 
   (** Compute the number of tez that needs to be auctioned off so that the burrow
     * can return to a state when it is no longer overburrowed or having a risk of
