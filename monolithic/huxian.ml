@@ -28,9 +28,9 @@ open Tez
 (* ************************************************************************* *)
 (*                               BASIC TYPES                                 *)
 (* ************************************************************************* *)
-type tez = Tez.t;;
-type kit = Kit.t;;
-type liquidity = int;;
+type tez = Tez.t
+type kit = Kit.t
+type liquidity = int
 
 (* TODOs for burrows:
    - Add owner (delegate)

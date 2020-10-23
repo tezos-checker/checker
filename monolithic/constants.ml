@@ -1,5 +1,5 @@
-open FixedPoint;;
-open Tez;;
+open FixedPoint
+open Tez
 
 (* ************************************************************************* *)
 (*                               Constants                                   *)
