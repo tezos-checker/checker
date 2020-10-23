@@ -2,48 +2,20 @@
 ;; otherwise there will be warnings printed about an inaccurate
 ;; .merlin file being generated.
 (library
-  (name fixedPoint)
-  (modules FixedPoint)
-  (preprocess (pps ppx_deriving.std)))
-
-(library
-  (name tez)
-  (modules Tez)
-  (libraries fixedPoint)
-  (preprocess (pps ppx_deriving.std)))
-
-(library
-  (name kit)
-  (modules Kit)
-  (libraries fixedPoint)
-  (preprocess (pps ppx_deriving.std)))
-
-(library
-  (name constants)
-  (modules Constants)
-  (libraries fixedPoint tez)
-  (preprocess (pps ppx_deriving.std)))
-
-(library
-  (name avl)
-  (libraries ounit2 qcheck)
-  (modules Avl)
-  (preprocess (pps ppx_deriving.std)))
-
-(library
   (name huxian)
-  (modules Huxian)
-  (libraries constants fixedPoint kit tez avl)
+  (modules Huxian Constants Avl Kit Tez FixedPoint)
+  (wrapped false)
+  (libraries ounit2 qcheck)
   (preprocess (pps ppx_deriving.std)))
 
 (executable
   (name script)
   (modules Script)
-  (libraries huxian kit tez)
+  (libraries huxian)
   (preprocess (pps ppx_deriving.std)))
 
 (test
   (name tests)
   (modules Tests)
-  (libraries fixedPoint huxian ounit2 tez)
+  (libraries huxian ounit2)
   (preprocess (pps ppx_deriving.std)))
