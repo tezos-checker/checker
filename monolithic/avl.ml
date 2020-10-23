@@ -591,7 +591,7 @@ let suite =
       assert_equal expected actual);
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_from_list_to_list" Q.(list small_int)
+       @@ Q.Test.make ~name:"test_from_list_to_list" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          let mkitem i = { id = i; mutez = 100 + i; } in
 
@@ -604,7 +604,7 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_del" Q.(list small_int)
+       @@ Q.Test.make ~name:"test_del" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          let (to_del, xs) = (List.hd xs, List.tl xs) in
@@ -626,7 +626,7 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_split" Q.(list small_int)
+       @@ Q.Test.make ~name:"test_split" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          Q.assume (List.for_all (fun i -> i > 0) xs);
