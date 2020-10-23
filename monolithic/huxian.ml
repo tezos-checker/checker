@@ -33,42 +33,9 @@ include Uniswap
 (**                           UTILITY FUNCTIONS                              *)
 (* ************************************************************************* *)
 
-let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / FixedPoint.of_float 100.0)
-
-let sign (i: float) : float =
-  if i > 0. then 1.
-  else if i = 0. then 0.
-  else -1.
-
 let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   assert (lower <= upper);
   min upper (max v lower)
-
-(* ************************************************************************* *)
-(**                               IMBALANCE                                  *)
-(* ************************************************************************* *)
-
-(** If we call burrowed the total amount of kit necessary to close all existing
-  * burrows, and minted the total amount of kit in circulation, then the
-  * imbalance fee/bonus is calculated as follows (per year):
-  *
-  *   min(   5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , if burrowed >= minted
-  *   max( - 5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , otherwise
-*)
-let compute_imbalance (burrowed: Kit.t) (minted: Kit.t) : FixedPoint.t =
-  assert (burrowed >= Kit.zero); (* Invariant *)
-  assert (minted >= Kit.zero); (* Invariant *)
-  let centinepers = cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
-  let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_float 5.0) in
-  (* No kit in burrows or in circulation means no imbalance adjustment *)
-  if burrowed = Kit.zero then
-    (assert (minted = Kit.zero); FixedPoint.zero) (* George: Is it possible to have minted kit in circulation when nothing is burrowed? *)
-  else if burrowed = minted then
-    FixedPoint.zero (* George: I add this special case, to avoid rounding issues *)
-  else if burrowed >= minted then
-    Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed minted)) centinepers) burrowed
-  else
-    FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub minted burrowed)) centinepers) burrowed)
 
 (* ************************************************************************* *)
 (**                               CHECKER                                    *)
@@ -80,45 +47,8 @@ type checker =
     parameters : parameters;
   }
 
-(* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
- * second^2, assuming we're measuring time in seconds. My calculations might be
- * incorrect. *)
-let compute_drift_derivative (target : float) : float =
-  assert (target > 0.);
-  let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
-  let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
-
-  let log_target = log target in
-  let abs_log_target = Float.abs log_target in
-  if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 0.5)) then
-    0.
-  else if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 5.0)) then
-    sign log_target *. (cnp_001 /. (24. *. 3600.) ** 2.)
-  else
-    sign log_target *. (cnp_005 /. (24. *. 3600.) ** 2.)
-
-(* George: Note that we don't really need to calculate the logs here (which can
- * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
- * and win some precision, like this:
-*)
-let compute_drift_derivative_2 (target : float) : float =
-  assert (target > 0.);
-  let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
-  let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
-  match () with
-  (* No acceleration (0) *)
-  | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
-  (* Low acceleration (-/+) *)
-  | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp_001 /. (24. *. 3600.) ** 2.)
-  | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp_001 /. (24. *. 3600.) ** 2.)
-  (* High acceleration (-/+) *)
-  | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp_005 /. (24. *. 3600.) ** 2.)
-  | () when target >= exp    (5.0 /. 100.) ->    (cnp_005 /. (24. *. 3600.) ** 2.)
-  | _ -> failwith "impossible"
-
 type duration = Seconds of int
 let seconds_of_duration = function | Seconds s -> s
-
 
 (* TODO: Not tested, take it with a grain of salt. *)
 let step_parameters
