@@ -24,9 +24,12 @@ module Constants : sig
   (** Percentage kept by the uniswap contract from the return asset. TODO: Use cNp. *)
   val uniswap_fee_percentage : FixedPoint.t
 
-  (* Protected index epsilon. The higher this value is, the faster the protected
-   * index catches up with the actual index. TODO: Use FixedPoint.t. *)
+  (** Protected index epsilon. The higher this value is, the faster the protected
+    * index catches up with the actual index. TODO: Use FixedPoint.t. *)
   val protected_index_epsilon : float
+
+  (** The maximum number of tez that can be in an auction lot. *)
+  val max_lot_size : Tez.t
 end =
 struct
   let fplus  = FixedPoint.of_float 2.1
@@ -40,5 +43,7 @@ struct
   let uniswap_fee_percentage = FixedPoint.of_float 0.002
 
   let protected_index_epsilon = 0.0005
+
+  let max_lot_size = Tez.of_float 10000.
 end
 
