@@ -79,47 +79,9 @@ let step_experiment () =
   printf "\n=== New checker parameters ===\n";
   print_string @@ show_checker_parameters new_parameters
 
-let tez_arithmetic_experiment () =
-  printf "\n=== Tez arithmetic experiment ===\n";
-  let tz1 = Tez.of_float 5.0 in
-  let tz2 = Tez.of_float 3.0 in
-  let tz3 = Tez.of_float 5.1234 in
-  let tz4 = Tez.of_float 5001.0 in
-  let tz5 = Tez.of_float 40.0 in
-  let fp1 = FixedPoint.of_float 3.0 in
-  printf "Tez.add %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.add tz1 tz2);
-  printf "Tez.sub %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.sub tz1 tz2);
-  printf "Tez.mul %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.mul tz1 tz2);
-  printf "Tez.mul %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.mul tz3 tz2);
-  printf "Tez.div %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 FixedPoint.pp (Tez.div tz1 tz2);
-  printf "Tez.div %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 FixedPoint.pp (Tez.div tz3 tz2);
-  printf "Tez.div %a %a = %a\n" Tez.pp tz4 Tez.pp tz5 FixedPoint.pp (Tez.div tz4 tz5);
-  printf "Tez.rem %a %a = %a\n" Tez.pp tz1 Tez.pp tz2 Tez.pp (Tez.rem tz1 tz2);
-  printf "Tez.rem %a %a = %a\n" Tez.pp tz3 Tez.pp tz2 Tez.pp (Tez.rem tz3 tz2);
-  printf "Tez.scale %a %a = %a\n" Tez.pp tz3 FixedPoint.pp fp1 Tez.pp (Tez.scale tz3 fp1)
-
-let fp_arithmetic_experiment () =
-  printf "\n=== FixedPoint arithmetic experiment ===\n";
-  let fp1 = FixedPoint.of_float 5.0 in
-  let fp2 = FixedPoint.of_float 3.0 in
-  let fp3 = FixedPoint.of_float 5.1234 in
-  let fp4 = FixedPoint.of_float 5001.0 in
-  let fp5 = FixedPoint.of_float (-40.0) in
-  let fp6 = FixedPoint.of_float (0.1) in
-  printf "FixedPoint.exp (%a) = %a\n" FixedPoint.pp fp6 FixedPoint.pp (FixedPoint.exp fp6);
-  printf "FixedPoint.(%a + %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 + fp2);
-  printf "FixedPoint.(%a - %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 - fp2);
-  printf "FixedPoint.(%a * %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 * fp2);
-  printf "FixedPoint.(%a * %a) = %a\n" FixedPoint.pp fp3 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp3 * fp2);
-  printf "FixedPoint.(%a * %a) = %a\n" FixedPoint.pp fp3 FixedPoint.pp fp5 FixedPoint.pp FixedPoint.(fp3 * fp5);
-  printf "FixedPoint.(%a / %a) = %a\n" FixedPoint.pp fp1 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp1 / fp2);
-  printf "FixedPoint.(%a / %a) = %a\n" FixedPoint.pp fp3 FixedPoint.pp fp2 FixedPoint.pp FixedPoint.(fp3 / fp2);
-  printf "FixedPoint.(%a / %a) = %a\n" FixedPoint.pp fp4 FixedPoint.pp fp5 FixedPoint.pp FixedPoint.(fp4 / fp5)
 
 let () =
   burrow_experiment ();
-  tez_arithmetic_experiment ();
-  fp_arithmetic_experiment ();
   (* uniswap_experiment (); *)
   (* step_experiment (); *)
   printf "\ndone.\n"

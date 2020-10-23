@@ -3,9 +3,54 @@ open Huxian
 open OUnit2
 open Tez
 
+type tz = Tez.t [@@deriving show]
+type fp = FixedPoint.t [@@deriving show]
+
 let suite =
   "HuxianTests" >::: [
     Avl.suite;
+
+    "tez arithmetic" >::
+    (fun _ ->
+       let tz1 = Tez.of_float 5.0 in
+       let tz2 = Tez.of_float 3.0 in
+       let tz3 = Tez.of_float 5.1234 in
+       let tz4 = Tez.of_float 5001.0 in
+       let tz5 = Tez.of_float 40.0 in
+       let fp1 = FixedPoint.of_float 3.0 in
+       assert_equal ~printer:show_tz (Tez.of_float 8.0) (Tez.add tz1 tz2);
+       assert_equal ~printer:show_tz (Tez.of_float 2.0)(Tez.sub tz1 tz2);
+       assert_equal ~printer:show_tz (Tez.of_float 15.0) (Tez.mul tz1 tz2);
+       assert_equal ~printer:show_tz (Tez.of_float 15.3702) (Tez.mul tz3 tz2);
+       (* TODO: negative numbers? *)
+       assert_equal ~printer:show_fp (FixedPoint.of_float 8.0) (Tez.div tz5 tz1);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 1.7078) (Tez.div tz3 tz2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 125.025) (Tez.div tz4 tz5);
+       assert_equal ~printer:show_tz (Tez.of_float 2.0) (Tez.rem tz1 tz2);
+       assert_equal ~printer:show_tz (Tez.of_float 2.1234) (Tez.rem tz3 tz2);
+       assert_equal ~printer:show_tz (Tez.of_float 15.3702) (Tez.scale tz3 fp1)
+    );
+
+    "fixedpoint arithmetic" >::
+    (fun _ ->
+       let fp1 = FixedPoint.of_float 5.0 in
+       let fp2 = FixedPoint.of_float 3.0 in
+       let fp3 = FixedPoint.of_float 5.1234 in
+       let fp4 = FixedPoint.of_float 5001.0 in
+       let fp5 = FixedPoint.of_float (-40.0) in
+       let fp6 = FixedPoint.of_float (0.1) in
+       assert_equal ~printer:show_fp (FixedPoint.of_float 1.1) (FixedPoint.exp fp6);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 8.0) FixedPoint.(fp1 + fp2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 2.0) FixedPoint.(fp1 - fp2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 15.0) FixedPoint.(fp1 * fp2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 15.3702) FixedPoint.(fp3 * fp2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float (-204.936)) FixedPoint.(fp3 * fp5);
+       (* assert_equal ~printer:show_fp (FixedPoint.of_float 1.6666666) FixedPoint.(fp1 / fp2); *)
+       assert_equal ~printer:show_fp (FixedPoint.of_float (-8.0)) FixedPoint.(fp5 / fp1);
+       assert_equal ~printer:show_fp (FixedPoint.of_float 1.7078) FixedPoint.(fp3 / fp2);
+       assert_equal ~printer:show_fp (FixedPoint.of_float (-125.025)) FixedPoint.(fp4 / fp5)
+    );
+
     "test_step" >::
     fun _ ->
       skip_if true "Float comparisons";
