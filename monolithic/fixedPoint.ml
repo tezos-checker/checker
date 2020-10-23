@@ -12,6 +12,7 @@ module FixedPoint : sig
   val ( * ) : t -> t -> t
   val ( / ) : t -> t -> t
   val neg : t -> t
+  val sqr : t -> t (* TODO: Generalize, if needed *)
 
   val zero : t
   val one : t
@@ -85,6 +86,8 @@ struct
     Int64.mul sign (Int64.add (Int64.mul upper scaling_factor) lower))
 
   let neg x = assert (x <> Int64.min_int); Int64.neg x
+
+  let sqr x = x * x
 
   let zero = 0L
   let one = scaling_factor

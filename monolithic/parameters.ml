@@ -35,7 +35,7 @@ module Parameters : sig
   (** Given the current target p, calculate the rate of change of the drift d'.
     * TODO: Use FixedPoint.t instead of float. *)
   val compute_drift_derivative : float -> float
-  val compute_drift_derivative_2 : float -> float
+  val compute_drift_derivative_2 : FixedPoint.t -> FixedPoint.t
 end =
 struct
   type parameters =
@@ -113,19 +113,22 @@ struct
    * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
    * and win some precision, like this:
   *)
-  let compute_drift_derivative_2 (target : float) : float =
-    assert (target > 0.);
-    let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
-    let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
-    match () with
-    (* No acceleration (0) *)
-    | () when exp (-. 0.5 /. 100.) < target && target < exp (0.5 /. 100.) -> 0.
-    (* Low acceleration (-/+) *)
-    | () when exp (-. 5.0 /. 100.) < target && target <= exp (-. 0.5 /. 100.) -> -. (cnp_001 /. (24. *. 3600.) ** 2.)
-    | () when exp    (5.0 /. 100.) > target && target >= exp    (0.5 /. 100.) ->    (cnp_001 /. (24. *. 3600.) ** 2.)
-    (* High acceleration (-/+) *)
-    | () when target <= exp (-. 5.0 /. 100.) -> -. (cnp_005 /. (24. *. 3600.) ** 2.)
-    | () when target >= exp    (5.0 /. 100.) ->    (cnp_005 /. (24. *. 3600.) ** 2.)
-    | _ -> failwith "impossible"
+  let compute_drift_derivative_2 (target : FixedPoint.t) : FixedPoint.t =
+    assert (target > FixedPoint.zero);
+    FixedPoint.(
+      let cnp_001 = cnp (of_float 0.01) in
+      let cnp_005 = cnp (of_float 0.05) in
+      let secs_in_a_day = of_float (24. *. 3600.) in
+      match () with
+      (* No acceleration (0) *)
+      | () when exp (of_float (-. 0.5 /. 100.)) < target && target < exp (of_float (0.5 /. 100.)) -> zero
+      (* Low acceleration (-/+) *)
+      | () when exp (of_float (-. 5.0 /. 100.)) < target && target <= exp (of_float (-. 0.5 /. 100.)) -> neg (cnp_001 / sqr secs_in_a_day)
+      | () when exp (of_float    (5.0 /. 100.)) > target && target >= exp (of_float    (0.5 /. 100.)) ->     (cnp_001 / sqr secs_in_a_day)
+      (* High acceleration (-/+) *)
+      | () when target <= exp (of_float (-. 5.0 /. 100.)) -> neg (cnp_005 / sqr secs_in_a_day)
+      | () when target >= exp (of_float    (5.0 /. 100.)) ->     (cnp_005 / sqr secs_in_a_day)
+      | _ -> failwith "impossible"
+    )
 end
 
