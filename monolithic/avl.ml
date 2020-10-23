@@ -485,6 +485,8 @@ let join
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
  *)
+
+(* TODO: Fixup parent pointers here *)
 let rec split (mem: mem) (root: ptr option) (limit: mutez)
   : mem * ptr option * ptr option =
   match root with
