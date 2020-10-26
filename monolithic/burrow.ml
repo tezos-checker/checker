@@ -59,6 +59,8 @@ module Burrow : sig
   type Error.error +=
     | Overburrowed of burrow
     | InsufficientFunds of Tez.t
+    | WithdrawTezFailure
+    | MintKitFailure
 
   val show_burrow : burrow -> string
   val pp_burrow : Format.formatter -> burrow -> unit
@@ -78,8 +80,9 @@ module Burrow : sig
     *   tez_collateral < fminus * kit_outstanding * liquidation_price
     *
     * The quantity tez_collateral / (fminus * liquidation_price) we call the
-    * liquidation limit.
-  *)
+    * liquidation limit. Note that for this check we optimistically take into
+    * account the expected kit from pending auctions (using the current minting
+    * price) when computing the outstanding kit. *)
   val is_liquidatable : parameters -> burrow -> bool
 
   (** Given an address (owner) and amount of tez as collateral (including a
@@ -92,19 +95,20 @@ module Burrow : sig
     * valid address. *)
   val default_burrow : unit -> burrow
 
-  (** Add non-negative collateral to a burrow. *)
+  (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
   val deposit_tez : Tez.t -> burrow -> burrow
-
-  (** Check whether a burrow is overburrowed. *)
-  val overburrow_check : parameters -> burrow -> (burrow, Error.error) result
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  val withdraw_tez : parameters -> Tez.t -> burrow -> (burrow, Error.error) result
+  val withdraw_tez : parameters -> Tez.t -> burrow -> (burrow * Tez.utxo, Error.error) result
 
   (** Mint a non-negative amount of kit from the burrow, as long as this will
     * not overburrow it *)
-  val mint_kit_from_burrow : parameters -> Kit.t -> burrow -> (burrow, Error.error) result
+  val mint_kit : parameters -> Kit.t -> burrow -> (burrow * Kit.utxo, Error.error) result
+
+  (** Deposit/burn a non-negative amount of kit to the burrow. Return any
+    * excess kit balance. TODO: Pass a Kit.utxo instead? *)
+  val burn_kit : Kit.t -> burrow -> burrow * Kit.t
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
@@ -133,6 +137,8 @@ struct
   type Error.error +=
     | Overburrowed of burrow
     | InsufficientFunds of Tez.t
+    | WithdrawTezFailure
+    | MintKitFailure
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
@@ -179,22 +185,34 @@ struct
     assert (t >= Tez.zero);
     { b with collateral = Tez.add b.collateral t }
 
-  let overburrow_check  (p : parameters) (burrow : burrow) : (burrow, Error.error) result =
-    if is_overburrowed p burrow
-    then Error (Overburrowed burrow)
-    else Ok burrow
-
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p : parameters) (t : Tez.t) (b : burrow) : (burrow, Error.error) result =
+  let withdraw_tez (p : parameters) (t : Tez.t) (b : burrow) : (burrow * Tez.utxo, Error.error) result =
     assert (t >= Tez.zero);
-    overburrow_check p { b with collateral = Tez.sub b.collateral t }
+    let new_burrow = { b with collateral = Tez.sub b.collateral t } in
+    let tez_utxo = Tez.{ destination = b.owner; amount = t } in
+    if is_overburrowed p new_burrow
+    then Error WithdrawTezFailure
+    else Ok (new_burrow, tez_utxo)
 
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
-  let mint_kit_from_burrow (p : parameters) (k : Kit.t) (b : burrow) =
+  let mint_kit (p : parameters) (k : Kit.t) (b : burrow) : (burrow * Kit.utxo, Error.error) result =
     assert (k >= Kit.zero);
-    overburrow_check p { b with minted_kit = Kit.add b.minted_kit k }
+    let new_burrow = { b with minted_kit = Kit.add b.minted_kit k } in
+    let kit_utxo = Kit.{ destination = b.owner; amount = k } in
+    if is_overburrowed p new_burrow
+    then Error MintKitFailure
+    else Ok (new_burrow, kit_utxo)
+
+  (** Deposit/burn a non-negative amount of kit to the burrow. Return any
+    * excess kit balance. *)
+  let burn_kit (k : Kit.t) (b : burrow) : burrow * Kit.t =
+    assert (k >= Kit.zero);
+    let kit_to_burn = min b.minted_kit k in
+    let kit_to_return = Kit.sub k kit_to_burn in
+    let new_burrow = { b with minted_kit = Kit.sub b.minted_kit kit_to_burn } in
+    (new_burrow, kit_to_return)
 
   (* ************************************************************************* *)
   (**                          LIQUIDATION-RELATED                             *)
@@ -239,9 +257,9 @@ struct
     *   tez_collateral < fminus * kit_outstanding * liquidation_price
     *
     * The quantity tez_collateral / (fminus * liquidation_price) we call the
-    * liquidation limit. NOTE: for the purposes of liquidation, we also take
-    * into account expected kit from pending auctions, optimistically (using
-    * the current minting price). *)
+    * liquidation limit. Note that for this check we optimistically take into
+    * account the expected kit from pending auctions (using the current minting
+    * price) when computing the outstanding kit. *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.auctioned_collateral in
     let outstanding_kit = Kit.sub (Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance)) expected_kit in
