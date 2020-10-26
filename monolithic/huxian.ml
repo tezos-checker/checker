@@ -189,7 +189,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     let final_burrow =
       { b with
         collateral = Tez.sub b_without_reward.collateral tez_to_auction;
-        minted_kit = Kit.sub b_without_reward.minted_kit expected_kit;
+        auctioned_collateral = Tez.add b.auctioned_collateral tez_to_auction;
       } in
     (Complete, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
     (* Case 4: Recovery is possible; pay the liquidation reward, stash away the
@@ -202,6 +202,6 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     let final_burrow =
       { b with
         collateral = Tez.sub b_without_reward.collateral tez_to_auction;
-        minted_kit = Kit.sub b_without_reward.minted_kit expected_kit;
+        auctioned_collateral = Tez.add b.auctioned_collateral tez_to_auction;
       } in
     (Partial, liquidation_reward, tez_to_auction, expected_kit, final_burrow)

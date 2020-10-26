@@ -18,6 +18,14 @@ include Common
      Huxian.request_liquidation completely ignores the burrowing fee, the
      accumulated imbalance fee, etc. which is wrong.
    - Fix/add all relevant interfaces (create, mint, burn, deposit, close)
+   - Remove accumulated_fee and accumulated_imbalance from the burrow state.
+     Instead, whenever you touch the burrow, the minted_kit state variable will
+     be changed to reflect the accumulated fee and accumulated imbalance. What
+     you actually need to need store as part of the burrow state is the last
+     time it was touched, and what the global imbalance index was at the time.
+     Note: Figure out how to extrapolate for this calculation (we don't want to
+     be too far off I assume, but we cannot depend on all intermediate values I
+     either; that'd be too expensive.
 *)
 
 (* ************************************************************************* *)
@@ -28,14 +36,14 @@ module Burrow : sig
     { (* The owner of the burrow. Set once during creation. *)
       owner : Common.address;
       delegate : Common.address option;
-      (* Confirmed collateral currently stored in the burrow. *)
+      (* Collateral currently stored in the burrow. *)
       collateral : Tez.t [@printer Tez.pp];
       (* Outstanding kit minted out of the burrow. *)
       minted_kit : Kit.t [@printer Kit.pp];
-      (* Kit expected to be received from auctions; not confirmed yet. NOTE:
-       * Calculated when the corresponding collateral was sent to auction;
-       * prices might have changed in the meantime. *)
-      expected_kit : Kit.t [@printer Kit.pp];
+      (* Collateral that has been sent off to auctions. For all intents and
+       * purposes, this collateral can be considered gone, but depending on the
+       * outcome of the auctions we expect some kit in return. *)
+      auctioned_collateral : Tez.t [@printer Tez.pp];
       (* Accumulated burrow fee (in kit). NOTE: we should somehow keep track of
        * when was this last updated, and update accordingly, yet efficiently
        * (not in O(n)). *)
@@ -116,7 +124,7 @@ struct
       delegate : Common.address option;
       collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
-      expected_kit : Kit.t [@printer Kit.pp];
+      auctioned_collateral : Tez.t [@printer Tez.pp];
       accumulated_fee : Kit.t [@printer Kit.pp];
       accumulated_imbalance : Kit.t [@printer Kit.pp];
     }
@@ -148,7 +156,7 @@ struct
         delegate = None;
         collateral = Tez.sub tez creation_deposit;
         minted_kit = Kit.zero;
-        expected_kit = Kit.zero;
+        auctioned_collateral = Tez.zero;
         accumulated_fee = Kit.zero;
         accumulated_imbalance = Kit.zero;
       }
@@ -161,7 +169,7 @@ struct
       delegate = None;
       collateral = Tez.zero;
       minted_kit = Kit.zero;
-      expected_kit = Kit.zero;
+      auctioned_collateral = Tez.zero;
       accumulated_fee = Kit.zero;
       accumulated_imbalance = Kit.zero;
     }
@@ -192,21 +200,6 @@ struct
   (**                          LIQUIDATION-RELATED                             *)
   (* ************************************************************************* *)
 
-  (** Check whether a burrow can be marked for liquidation. A burrow can be
-    * marked for liquidation if:
-    *
-    *   tez_collateral < fminus * kit_outstanding * liquidation_price
-    *
-    * The quantity tez_collateral / (fminus * liquidation_price) we call the
-    * liquidation limit. NOTE: for the purposes of liquidation, we also take
-    * into account expected kit from pending auctions, optimistically. TODO:
-    * George: but the price keeps changing. Do we use the one we calculated
-    * when we sent the tez to the auction?
-  *)
-  let is_liquidatable (p : parameters) (b : burrow) : bool =
-    let outstanding_kit = Kit.add b.minted_kit (Kit.add b.expected_kit (Kit.add b.accumulated_fee b.accumulated_imbalance)) in
-    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
-
   (** Compute the number of tez that needs to be auctioned off so that the burrow
     * can return to a state when it is no longer overburrowed or having a risk of
     * liquidation (assuming price minting_price). If we auction tez_to_auction,
@@ -229,6 +222,8 @@ struct
     *   repaid_kit     = tez_to_auction / minting_price
   *)
   (* TODO: Don't go through float, and ensure that it's skewed on the safe side (overapprox.). *)
+  (* TODO: Shall we take into account the kit that we expect to receive from
+   * the tez that currently lives in auction queues or not here? *)
   let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
     Tez.of_fp
       FixedPoint.((Kit.to_fp b.minted_kit * fplus * minting_price p - Tez.to_fp b.collateral)
@@ -237,4 +232,18 @@ struct
   (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
   let compute_expected_kit (p : parameters) (tez_to_auction: Tez.t) : Kit.t =
     Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / minting_price p)
+
+  (** Check whether a burrow can be marked for liquidation. A burrow can be
+    * marked for liquidation if:
+    *
+    *   tez_collateral < fminus * kit_outstanding * liquidation_price
+    *
+    * The quantity tez_collateral / (fminus * liquidation_price) we call the
+    * liquidation limit. NOTE: for the purposes of liquidation, we also take
+    * into account expected kit from pending auctions, optimistically (using
+    * the current minting price). *)
+  let is_liquidatable (p : parameters) (b : burrow) : bool =
+    let expected_kit = compute_expected_kit p b.auctioned_collateral in
+    let outstanding_kit = Kit.sub (Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance)) expected_kit in
+    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 end
