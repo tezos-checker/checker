@@ -1,4 +1,5 @@
 
+open Common
 open FixedPoint
 
 (* ************************************************************************* *)
@@ -30,6 +31,11 @@ module Tez : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
+
+  (* Tez UTXO *)
+  type utxo = {destination : Common.address ; amount : t}
+  val show_utxo : utxo -> string
+  val pp_utxo : Format.formatter -> utxo -> unit
 end =
 struct
   type t = Int64.t
@@ -110,5 +116,9 @@ struct
     Format.fprintf ppf "%s.%s"
       (Int64.to_string upper)
       (zfill (Int64.to_string lower) scaling_exponent)
+
+  (* Tez UTXO *)
+  type utxo = {destination : Common.address ; amount : t}
+  [@@deriving show]
 end
 
