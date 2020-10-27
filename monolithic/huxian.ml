@@ -90,9 +90,9 @@ let step_parameters
   let current_target = current_q *. current_index /. current_kit_in_tez in
 
   (* Update the indices *)
-  let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + burrow_fee_percentage)) in
-  let imbalance_percentage = compute_imbalance (failwith "TODO:burrowed") (failwith "TODO:minted") in
-  let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in
+  let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + burrow_fee_percentage)) in (* TODO: Yearly! *)
+  let imbalance_percentage = compute_imbalance parameters.global_last_outstanding_kit (failwith "TODO:circulating") in
+  let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in (* TODO: Yearly! *)
   let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.global_last_outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
   let total_accrual_to_uniswap = Kit.sub with_burrow_fee parameters.global_last_outstanding_kit in
   let current_global_last_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in

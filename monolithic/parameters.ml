@@ -81,27 +81,31 @@ struct
     else if i = 0. then 0.
     else -1.
 
-  (** If we call burrowed the total amount of kit necessary to close all existing
-    * burrows, and minted the total amount of kit in circulation, then the
-    * imbalance fee/bonus is calculated as follows (per year):
+  (** If we call "burrowed" the total amount of kit necessary to close all
+    * existing burrows, and "circulating" the total amount of kit in
+    * circulation, then the imbalance fee/bonus is calculated as follows (per
+    * year):
     *
-    *   min(   5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , if burrowed >= minted
-    *   max( - 5 * burrowed, (burrowed - minted) ) * 1.0 cNp / burrowed , otherwise
+    *   min(   5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , if burrowed >= circulating
+    *   max( - 5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , otherwise
   *)
-  let compute_imbalance (burrowed: Kit.t) (minted: Kit.t) : FixedPoint.t =
+  let compute_imbalance (burrowed: Kit.t) (circulating: Kit.t) : FixedPoint.t =
     assert (burrowed >= Kit.zero); (* Invariant *)
-    assert (minted >= Kit.zero); (* Invariant *)
+    assert (circulating >= Kit.zero); (* Invariant *)
     let centinepers = cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
     let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_float 5.0) in
     (* No kit in burrows or in circulation means no imbalance adjustment *)
     if burrowed = Kit.zero then
-      (assert (minted = Kit.zero); FixedPoint.zero) (* George: Is it possible to have minted kit in circulation when nothing is burrowed? *)
-    else if burrowed = minted then
+      (* TODO: George: though unlikely, it is possible to have kit in
+       * circulation, even when nothing is burrowed. How can we compute the
+       * imbalance in this edge case? *)
+      (assert (circulating = Kit.zero); FixedPoint.zero) (* George: the assert is just as a reminder *)
+    else if burrowed = circulating then
       FixedPoint.zero (* George: I add this special case, to avoid rounding issues *)
-    else if burrowed >= minted then
-      Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed minted)) centinepers) burrowed
+    else if burrowed >= circulating then
+      Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed circulating)) centinepers) burrowed
     else
-      FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub minted burrowed)) centinepers) burrowed)
+      FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub circulating burrowed)) centinepers) burrowed)
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
