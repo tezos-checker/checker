@@ -17,15 +17,6 @@ include Common
      contents through functions. For example currently
      Huxian.request_liquidation completely ignores the burrowing fee, the
      accumulated imbalance fee, etc. which is wrong.
-   - Fix/add all relevant interfaces (create, mint, burn, deposit, close)
-   - Remove accumulated_fee and accumulated_imbalance from the burrow state.
-     Instead, whenever you touch the burrow, the minted_kit state variable will
-     be changed to reflect the accumulated fee and accumulated imbalance. What
-     you actually need to need store as part of the burrow state is the last
-     time it was touched, and what the global imbalance index was at the time.
-     Note: Figure out how to extrapolate for this calculation (we don't want to
-     be too far off I assume, but we cannot depend on all intermediate values I
-     either; that'd be too expensive.
 *)
 
 (* ************************************************************************* *)
@@ -47,6 +38,7 @@ module Burrow : sig
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
       auctioned_collateral : Tez.t [@printer Tez.pp];
+      (* TODO: also keep track of the last time the burrow was touched *)
     }
 
   type Error.error +=
@@ -91,11 +83,6 @@ module Burrow : sig
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
   val create_burrow : parameters -> Common.address -> Tez.t -> (burrow, Error.error) result
-
-  (** A pretty much empty burrow. NOTE: This is just for testing. To create a
-    * burrow we need more than that (at least 1 tez creation deposit, and a
-    * valid address. *)
-  val default_burrow : unit -> burrow
 
   (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
   val deposit_tez : Tez.t -> burrow -> burrow
@@ -178,18 +165,6 @@ struct
         auctioned_collateral = Tez.zero;
       }
 
-  (** A pretty much empty burrow. NOTE: This is just for testing. To create a
-    * burrow we need more than that (at least 1 tez creation deposit, and a
-    * valid address. *)
-  let default_burrow () : burrow =
-    { owner = Common.of_string "";
-      delegate = None;
-      collateral = Tez.zero;
-      minted_kit = Kit.zero;
-      adjustment_index = FixedPoint.one;
-      auctioned_collateral = Tez.zero;
-    }
-
   (** Add non-negative collateral to a burrow. *)
   let deposit_tez (t : Tez.t) (b : burrow) : burrow =
     assert (t >= Tez.zero);
@@ -209,6 +184,9 @@ struct
     * not overburrow it *)
   let mint_kit (p : parameters) (k : Kit.t) (b : burrow) : (burrow * Kit.utxo, Error.error) result =
     assert (k >= Kit.zero);
+    (* TODO: we should probably update the minted_kit to the actual
+     * outstanding_kit here (that is, add the burrowing fee and imbalance
+     * adjustment, as computed by get_outstanding_kit)? *)
     let new_burrow = { b with minted_kit = Kit.add b.minted_kit k } in
     let kit_utxo = Kit.{ destination = b.owner; amount = k } in
     if is_overburrowed p new_burrow
@@ -221,6 +199,9 @@ struct
     assert (k >= Kit.zero);
     let kit_to_burn = min b.minted_kit k in
     let kit_to_return = Kit.sub k kit_to_burn in
+    (* TODO: we should probably update the minted_kit to the actual
+     * outstanding_kit here (that is, add the burrowing fee and imbalance
+     * adjustment, as computed by get_outstanding_kit)? *)
     let new_burrow = { b with minted_kit = Kit.sub b.minted_kit kit_to_burn } in
     (new_burrow, kit_to_return)
 
