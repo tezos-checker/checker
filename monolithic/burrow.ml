@@ -85,7 +85,7 @@ module Burrow : sig
     *
     *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
   *)
-  val get_minted_kit : parameters -> burrow -> Kit.t
+  val get_outstanding_kit : parameters -> burrow -> Kit.t
 
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
@@ -149,7 +149,7 @@ struct
     *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
   *)
   (* TODO: shall we update the burrow to reflect the change here? *)
-  let get_minted_kit (p : parameters) (b : burrow) : Kit.t =
+  let get_outstanding_kit (p : parameters) (b : burrow) : Kit.t =
     Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index)
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
@@ -163,7 +163,7 @@ struct
     * be lost forever.
   *)
   let is_overburrowed (p : parameters) (b : burrow) : bool =
-    let outstanding_kit = get_minted_kit p b in
+    let outstanding_kit = get_outstanding_kit p b in
     Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
 
   let create_burrow (p: parameters) (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
@@ -274,6 +274,6 @@ struct
    * expected_kit too or not? *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.auctioned_collateral in
-    let outstanding_kit = Kit.sub (get_minted_kit p b) expected_kit in
+    let outstanding_kit = Kit.sub (get_outstanding_kit p b) expected_kit in
     Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 end
