@@ -116,41 +116,19 @@ let step_parameters
 type liquidation_outcome =
   | Unwarranted
   | Partial
-  | Complete
-  | Close
+  | Complete (* complete: deplete the collateral *)
+  | Close (* complete: "close" the burrow *)
+  [@@deriving show]
 
 (* TODO: More sharing here please *)
-type liquidation_result
-  = liquidation_outcome
-    * Tez.t               (* liquidation reward *)
-    * Tez.t               (* tez to auction *)
-    * Kit.t               (* expected kit from selling the tez *)
-    * burrow              (* current state of the burrow *)
-
-let pp_liquidation_outcome (ppf: Format.formatter) (o: liquidation_outcome) =
-  match o with
-  | Unwarranted -> Format.fprintf ppf "Unwarranted"
-  | Partial -> Format.fprintf ppf "Partial"
-  | Complete -> Format.fprintf ppf "Complete (deplete the collateral)"
-  | Close -> Format.fprintf ppf "Complete (\"close\" the burrow)"
-
-let print_liquidation_outcome (o: liquidation_outcome) =
-  pp_liquidation_outcome Format.std_formatter o
-
-let pp_liquidation_result (ppf: Format.formatter) (r: liquidation_result) =
-  match r with
-  | (outcome, reward, tez_to_sell, expected_kit, burrow) ->
-    Format.fprintf
-      ppf
-      "%a\nliquidation_reward: %a\ntez_to_sell: %a\nexpected_kit: %a\nburrow_state: %a\n"
-      pp_liquidation_outcome outcome
-      Tez.pp reward
-      Tez.pp tez_to_sell
-      Kit.pp expected_kit
-      pp_burrow burrow
-
-let print_liquidation_result (r: liquidation_result) =
-  pp_liquidation_result Format.std_formatter r
+type liquidation_result =
+  { outcome : liquidation_outcome;
+    liquidation_reward : Tez.t;
+    tez_to_auction : Tez.t;
+    expected_kit : Kit.t;
+    burrow_state : burrow;
+  }
+  [@@deriving show]
 
 (* NOTE: George: The initial state of the burrow is the collateral C, the
  * oustanding kit K, and the implicit creation deposit D (1 tez). I say
@@ -175,7 +153,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
    * liquidate. *)
   if not (is_liquidatable p b) then
-    (Unwarranted, Tez.zero, Tez.zero, Kit.zero, b)
+    { outcome = Unwarranted; liquidation_reward = Tez.zero; tez_to_auction = Tez.zero; expected_kit = Kit.zero; burrow_state = b }
     (* Case 2: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
   else if b.collateral < liquidation_reward then
@@ -186,7 +164,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
         collateral = Tez.zero;
         minted_kit = Kit.zero; (* TODO: this needs fixing *)
       } in
-    (Close, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
+    { outcome = Close; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
     (* Case 3: With the current price it's impossible to make the burrow not
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
@@ -204,7 +182,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
         collateral = Tez.sub b_without_reward.collateral tez_to_auction;
         auctioned_collateral = Tez.add b.auctioned_collateral tez_to_auction;
       } in
-    (Complete, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
+    { outcome = Complete; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
     (* Case 4: Recovery is possible; pay the liquidation reward, stash away the
      * creation deposit, and liquidate only the amount of collateral needed to
      * underburrow the burrow (as approximated now). No more, no less. *)
@@ -217,4 +195,4 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
         collateral = Tez.sub b_without_reward.collateral tez_to_auction;
         auctioned_collateral = Tez.add b.auctioned_collateral tez_to_auction;
       } in
-    (Partial, liquidation_reward, tez_to_auction, expected_kit, final_burrow)
+    { outcome = Partial; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
