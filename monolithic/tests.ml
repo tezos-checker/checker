@@ -2,6 +2,7 @@ open FixedPoint
 open Huxian
 open OUnit2
 open Parameters
+open Kit
 open Tez
 
 type tz = Tez.t [@@deriving show]
@@ -61,18 +62,25 @@ let suite =
                                  protected_index = Tez.of_float 0.35;
                                  drift = FixedPoint.of_float 0.0;
                                  drift' = FixedPoint.of_float 0.0;
+                                 burrow_fee_index = FixedPoint.of_float 1.0;
+                                 imbalance_index = FixedPoint.of_float 1.0;
+                                 global_last_minted_kit = Kit.one; (* TODO: What should that be? *)
                                } in
       let interblock_time = Seconds 3600 in
       let new_index = 0.34 in
       let tez_per_kit = 0.305 in
-      let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
+      let _total_accrual_to_uniswap, new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
       assert_equal
         { q = FixedPoint.of_float 0.900000;
           index = Tez.of_float 0.34;
           protected_index = Tez.of_float 0.34;
           target = FixedPoint.of_float 1.00327868;
           drift' = FixedPoint.of_float 6.69795953361e-14;
-          drift = FixedPoint.of_float 1.20563271605e-10 }
+          drift = FixedPoint.of_float 1.20563271605e-10;
+          burrow_fee_index = FixedPoint.of_float 1.0;    (* TODO: use expected value. *)
+          imbalance_index = FixedPoint.of_float 1.0;     (* TODO: use expected value. *)
+          global_last_minted_kit = Kit.one;              (* TODO: use expected value. *)
+        }
         new_parameters
         ~printer:show_parameters
   ]

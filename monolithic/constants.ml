@@ -17,6 +17,9 @@ module Constants : sig
     * not count towards the burrow's collateral. *)
   val creation_deposit : Tez.t
 
+  (** Yearly burrow fee. *)
+  val burrow_fee_percentage : FixedPoint.t
+
   (** The percentage of the collateral (in tez) to give to the actor initiating
     * liquidation. TODO: Use cNp. *)
   val liquidation_reward_percentage : FixedPoint.t
@@ -37,6 +40,8 @@ struct
   let fminus = FixedPoint.of_float 1.9
 
   let creation_deposit = Tez.of_float 1.0
+
+  let burrow_fee_percentage = FixedPoint.of_float 0.005
 
   let liquidation_reward_percentage = FixedPoint.of_float 0.001
 

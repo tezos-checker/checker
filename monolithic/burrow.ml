@@ -40,6 +40,9 @@ module Burrow : sig
       collateral : Tez.t [@printer Tez.pp];
       (* Outstanding kit minted out of the burrow. *)
       minted_kit : Kit.t [@printer Kit.pp];
+      (* The imbalance adjustment index observed the last time the burrow was
+       * touched. *)
+      adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
       (* Collateral that has been sent off to auctions. For all intents and
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
@@ -85,10 +88,19 @@ module Burrow : sig
     * price) when computing the outstanding kit. *)
   val is_liquidatable : parameters -> burrow -> bool
 
+  (** Ask the current outstanding number of kit of a burrow. Since the last
+    * time the burrow was touched the balance can have changed, accruing burrow
+    * fees and imbalance adjustments, so the amount of current outstanding kit
+    * is thus computed
+    *
+    *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
+  *)
+  val get_minted_kit : parameters -> burrow -> Kit.t
+
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
-  val create_burrow : Common.address -> Tez.t -> (burrow, Error.error) result
+  val create_burrow : parameters -> Common.address -> Tez.t -> (burrow, Error.error) result
 
   (** A pretty much empty burrow. NOTE: This is just for testing. To create a
     * burrow we need more than that (at least 1 tez creation deposit, and a
@@ -128,6 +140,7 @@ struct
       delegate : Common.address option;
       collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
+      adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
       auctioned_collateral : Tez.t [@printer Tez.pp];
       accumulated_fee : Kit.t [@printer Kit.pp];
       accumulated_imbalance : Kit.t [@printer Kit.pp];
@@ -154,7 +167,18 @@ struct
     let outstanding_kit = Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance) in
     Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
 
-  let create_burrow (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
+  (** Ask the current outstanding number of kit of a burrow. Since the last
+    * time the burrow was touched the balance can have changed, accruing burrow
+    * fees and imbalance adjustments, so the amount of current outstanding kit
+    * is thus computed
+    *
+    *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
+  *)
+  (* TODO: shall we update the burrow to reflect the change here? *)
+  let get_minted_kit (p : parameters) (b : burrow) : Kit.t =
+    Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index)
+
+  let create_burrow (p: parameters) (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
     if tez < creation_deposit
     then Error (InsufficientFunds tez)
     else Ok
@@ -162,6 +186,7 @@ struct
         delegate = None;
         collateral = Tez.sub tez creation_deposit;
         minted_kit = Kit.zero;
+        adjustment_index = compute_adjustment_index p;
         auctioned_collateral = Tez.zero;
         accumulated_fee = Kit.zero;
         accumulated_imbalance = Kit.zero;
@@ -175,6 +200,7 @@ struct
       delegate = None;
       collateral = Tez.zero;
       minted_kit = Kit.zero;
+      adjustment_index = FixedPoint.one;
       auctioned_collateral = Tez.zero;
       accumulated_fee = Kit.zero;
       accumulated_imbalance = Kit.zero;

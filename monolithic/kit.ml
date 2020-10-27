@@ -31,6 +31,7 @@ module Kit : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
+  val show_kit : t -> string
 
   (* Kit UTXO *)
   type utxo = {destination : Common.address ; amount : t}
@@ -105,7 +106,7 @@ struct
   let partition x = (Int64.div x scaling_factor, Int64.rem x scaling_factor)
 
   (* Pretty printing functions *)
-  let pp ppf amount =
+  let show_kit amount =
     let zfill s width =
       let to_fill = width - (String.length s) in
       if to_fill <= 0
@@ -113,9 +114,12 @@ struct
       else (String.make to_fill '0') ^ s in
 
     let (upper, lower) = partition amount in
-    Format.fprintf ppf "%s.%s"
+    Format.sprintf "%s.%s"
       (Int64.to_string upper)
       (zfill (Int64.to_string lower) scaling_exponent)
+
+  let pp ppf amount =
+    Format.fprintf ppf "%s" (show_kit amount)
 
   (* Kit UTXO *)
   type utxo = {destination : Common.address ; amount : t}

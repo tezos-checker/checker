@@ -7,6 +7,19 @@ include Parameters
 open Tez
 
 let burrow_experiment () =
+  let params =
+    { q = FixedPoint.of_float 1.015;
+      index = Tez.of_float 0.32;
+      protected_index = Tez.of_float 0.36;
+      target = FixedPoint.of_float 1.08;
+      drift = FixedPoint.of_float 0.0;
+      drift' = FixedPoint.of_float 0.0;
+      burrow_fee_index = FixedPoint.of_float 1.0;
+      imbalance_index = FixedPoint.of_float 1.0;
+      global_last_minted_kit = Kit.one; (* TODO: What should that be? *)
+    } in
+  printf "\n=== Checker parameters ===\n";
+  print_string @@ Parameters.show_parameters params;
   (* OTHER EXAMPLES *)
   (* Unwarranted liquidation for *)
   (* let initial_burrow = { minted_kit = Kit.of_float 10.0; collateral = Tez.of_float 10.0; } in *)
@@ -22,22 +35,13 @@ let burrow_experiment () =
       delegate = None;
       collateral = Tez.of_float 10.0;
       minted_kit = Kit.of_float 20.0;
+      adjustment_index = compute_adjustment_index params;
       auctioned_collateral = Tez.of_float 0.0;
       accumulated_fee = Kit.zero;
       accumulated_imbalance = Kit.zero;
     } in
   printf "\n=== Initial burrow state ===\n";
   print_string @@ show_burrow initial_burrow;
-  let params =
-    { q = FixedPoint.of_float 1.015;
-      index = Tez.of_float 0.32;
-      protected_index = Tez.of_float 0.36;
-      target = FixedPoint.of_float 1.08;
-      drift = FixedPoint.of_float 0.0;
-      drift' = FixedPoint.of_float 0.0;
-    } in
-  printf "\n=== Checker parameters ===\n";
-  print_string @@ Parameters.show_parameters params;
 
   printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (is_overburrowed params initial_burrow);
@@ -79,16 +83,20 @@ let step_experiment () =
                              protected_index = Tez.of_float 0.35;
                              drift = FixedPoint.of_float 0.0;
                              drift' = FixedPoint.of_float 0.0;
+                             burrow_fee_index = FixedPoint.of_float 1.0;
+                             imbalance_index = FixedPoint.of_float 1.0;
+                             global_last_minted_kit = Kit.one; (* TODO: What should that be? *)
                            } in
   let interblock_time = Seconds 3600 in
   let new_index = 0.34 in
   let tez_per_kit = 0.305 in
-  let new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
+  let total_accrual_to_uniswap, new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
   print_string @@ show_parameters initial_parameters;
   printf "\n=== New checker parameters ===\n";
-  print_string @@ show_parameters new_parameters
-
+  print_string @@ show_parameters new_parameters;
+  printf "\n=== Total accrual to uniswap ===\n";
+  print_string @@ Kit.show_kit total_accrual_to_uniswap
 
 let () =
   burrow_experiment ();

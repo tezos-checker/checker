@@ -14,7 +14,11 @@ module Parameters : sig
       target: FixedPoint.t [@printer FixedPoint.pp];
       drift': FixedPoint.t [@printer FixedPoint.pp];
       drift: FixedPoint.t [@printer FixedPoint.pp];
-      (* TODO: Add the imbalance adjustment index also *)
+      burrow_fee_index: FixedPoint.t [@printer FixedPoint.pp];
+      imbalance_index: FixedPoint.t [@printer FixedPoint.pp];
+      (* TODO: What would be a good starting value for this? Cannot be zero
+       * because then it stays zero forever (only multiplications occur). *)
+      global_last_minted_kit: Kit.t [@printer Kit.pp];
     }
 
   val show_parameters : parameters -> string
@@ -32,6 +36,10 @@ module Parameters : sig
     * bonus). *)
   val compute_imbalance : Kit.t -> Kit.t -> FixedPoint.t
 
+  (** Compute the current adjustment index. Basically this is the product of
+    * the burrow fee index and the imbalance adjustment index. *)
+  val compute_adjustment_index : parameters -> FixedPoint.t
+
   (** Given the current target p, calculate the rate of change of the drift d'.
     * TODO: Use FixedPoint.t instead of float. *)
   val compute_drift_derivative : float -> float
@@ -45,6 +53,9 @@ struct
       target: FixedPoint.t [@printer FixedPoint.pp];
       drift': FixedPoint.t [@printer FixedPoint.pp];
       drift: FixedPoint.t [@printer FixedPoint.pp];
+      burrow_fee_index: FixedPoint.t [@printer FixedPoint.pp];
+      imbalance_index: FixedPoint.t [@printer FixedPoint.pp];
+      global_last_minted_kit: Kit.t [@printer Kit.pp];
     }
   [@@deriving show]
 
@@ -91,6 +102,11 @@ struct
       Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed minted)) centinepers) burrowed
     else
       FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub minted burrowed)) centinepers) burrowed)
+
+  (** Compute the current adjustment index. Basically this is the product of
+    * the burrow fee index and the imbalance adjustment index. *)
+  let compute_adjustment_index (p: parameters) : FixedPoint.t =
+    FixedPoint.(p.burrow_fee_index * p.imbalance_index)
 
   (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
    * second^2, assuming we're measuring time in seconds. My calculations might be
