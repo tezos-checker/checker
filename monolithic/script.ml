@@ -37,8 +37,6 @@ let burrow_experiment () =
       minted_kit = Kit.of_float 20.0;
       adjustment_index = compute_adjustment_index params;
       auctioned_collateral = Tez.of_float 0.0;
-      accumulated_fee = Kit.zero;
-      accumulated_imbalance = Kit.zero;
     } in
   printf "\n=== Initial burrow state ===\n";
   print_string @@ show_burrow initial_burrow;

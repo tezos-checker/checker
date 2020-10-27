@@ -47,16 +47,6 @@ module Burrow : sig
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
       auctioned_collateral : Tez.t [@printer Tez.pp];
-      (* Accumulated burrow fee (in kit). NOTE: we should somehow keep track of
-       * when was this last updated, and update accordingly, yet efficiently
-       * (not in O(n)). *)
-      accumulated_fee : Kit.t [@printer Kit.pp];
-      (* Accumulated imbalance adjustment fee/bonus (in kit). NOTE: we should
-       * somehow keep track of when was this last updated, and update
-       * accordingly, yet efficiently (not in O(n)). *)
-      accumulated_imbalance : Kit.t [@printer Kit.pp];
-      (* TODO: Keep track also of the lot numbers for tez currently being
-       * auctioned off. *)
     }
 
   type Error.error +=
@@ -142,8 +132,6 @@ struct
       minted_kit : Kit.t [@printer Kit.pp];
       adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
       auctioned_collateral : Tez.t [@printer Tez.pp];
-      accumulated_fee : Kit.t [@printer Kit.pp];
-      accumulated_imbalance : Kit.t [@printer Kit.pp];
     }
   [@@deriving show]
 
@@ -152,20 +140,6 @@ struct
     | InsufficientFunds of Tez.t
     | WithdrawTezFailure
     | MintKitFailure
-
-  (** Check whether a burrow is overburrowed. A burrow is overburrowed if
-    *
-    *   tez_collateral < fplus * kit_outstanding * minting_price
-    *
-    * The quantity tez_collateral / (fplus * minting_price) we call the burrowing
-    * limit (normally kit_outstanding <= burrowing_limit). NOTE: for the
-    * purposes of minting/checking overburrowedness, we do not take into
-    * account expected kit from pending auctions; for all we know, this could
-    * be lost forever.
-  *)
-  let is_overburrowed (p : parameters) (b : burrow) : bool =
-    let outstanding_kit = Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance) in
-    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
 
   (** Ask the current outstanding number of kit of a burrow. Since the last
     * time the burrow was touched the balance can have changed, accruing burrow
@@ -178,6 +152,20 @@ struct
   let get_minted_kit (p : parameters) (b : burrow) : Kit.t =
     Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index)
 
+  (** Check whether a burrow is overburrowed. A burrow is overburrowed if
+    *
+    *   tez_collateral < fplus * kit_outstanding * minting_price
+    *
+    * The quantity tez_collateral / (fplus * minting_price) we call the burrowing
+    * limit (normally kit_outstanding <= burrowing_limit). NOTE: for the
+    * purposes of minting/checking overburrowedness, we do not take into
+    * account expected kit from pending auctions; for all we know, this could
+    * be lost forever.
+  *)
+  let is_overburrowed (p : parameters) (b : burrow) : bool =
+    let outstanding_kit = get_minted_kit p b in
+    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
+
   let create_burrow (p: parameters) (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
     if tez < creation_deposit
     then Error (InsufficientFunds tez)
@@ -188,8 +176,6 @@ struct
         minted_kit = Kit.zero;
         adjustment_index = compute_adjustment_index p;
         auctioned_collateral = Tez.zero;
-        accumulated_fee = Kit.zero;
-        accumulated_imbalance = Kit.zero;
       }
 
   (** A pretty much empty burrow. NOTE: This is just for testing. To create a
@@ -202,8 +188,6 @@ struct
       minted_kit = Kit.zero;
       adjustment_index = FixedPoint.one;
       auctioned_collateral = Tez.zero;
-      accumulated_fee = Kit.zero;
-      accumulated_imbalance = Kit.zero;
     }
 
   (** Add non-negative collateral to a burrow. *)
@@ -286,8 +270,10 @@ struct
     * liquidation limit. Note that for this check we optimistically take into
     * account the expected kit from pending auctions (using the current minting
     * price) when computing the outstanding kit. *)
+  (* TODO: Should we compute imbalance adjustment and burrow fee on the
+   * expected_kit too or not? *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.auctioned_collateral in
-    let outstanding_kit = Kit.sub (Kit.add b.minted_kit (Kit.add b.accumulated_fee b.accumulated_imbalance)) expected_kit in
+    let outstanding_kit = Kit.sub (get_minted_kit p b) expected_kit in
     Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 end
