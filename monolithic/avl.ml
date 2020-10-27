@@ -412,6 +412,8 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
                     then (existing.left, existing.right)
                     else (existing.right, existing.left) in
                   let mem = Mem.remove root_ptr mem in
+                  let mem = mem_update mem preserved
+                        (fun n -> node_set_parent n existing.parent) in
                   (mem, Some(preserved))
 
 let rec debug_string (mem: mem) (root: ptr option) : string =
