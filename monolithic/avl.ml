@@ -1,3 +1,38 @@
+(* Current state
+ *
+ * The code is verbose, we should figure out some utilities to make it more
+ * readable. (especially around setting left and right children of a branches
+ * while maintaining the invariants, and we can implement more things in terms
+ * of 'join')
+ *
+ * The invariants of the functions are sometimes not clear. Especially around
+ * handling of the parent pointers; some functions overwrite the parent pointer
+ * of the return value and expect the caller to set it properly, but some leave
+ * it as is. This should be documented per function.
+ *
+ * Most of the times, when we set a value and return a pointer to it, the caller
+ * immediately reads that location again. We can do this more efficiently by
+ * returning the value of a pointer alongside with the pointer itself when
+ * possible. We choose to skip the optimisation to keep the code clearer.
+ *
+ * The split function currently splits out "at most" given amount of tokens,
+ * however the auction process requires us to split the next item if necessary.
+ * This can be implemented by popping the smallest leftover, splitting and
+ * re-inserting the pieces to both trees. And we might have some small
+ * functions helping this, but it shouldn't be too hard to implement them.
+ *
+ * However, if the item_ids are sequential, we can not split them with each
+ * piece having a different id, while still being smaller than the following
+ * items. We might have to change their representation to allow this.
+ *
+ * There are some amount of property tests on major code paths, but there
+ * might be other issues.
+ *
+ * On property tests, we use generic generators and skip most of them. This
+ * is very inefficient, instead we should have custom generators.
+ *
+ *)
+
 (*
  * A subset of checker types. We should split those to a separate module
  * in future to avoid the module cycle.
