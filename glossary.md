@@ -1,10 +1,30 @@
 # Glossary
 
+## Liquidation order
+
+Some amount of tez, tied to a burrow, which is inserted in the liquidation queue to be auctionned of for [kit](#kit)
+
+## Liquidation lot
+
+A batch of [liquidation orders](#liquidation-orders) currently being auctionned of.
+
+## Liquidation queue
+
+A dequeue implemented as a balanced binary tree representing an ordered list of [liquidation orders](#liquidation-orders).
+Orders at the front of the queue are periodically batched into a [liquidation lot](#liquidation-lot)
+
 
 ## Imbalance
 
 The ratio of the number of [circulating kits](#circulating-kits) to the number
 of [outstanding kits](#outstanding-kits).
+
+# Imbalance adjustment
+
+A compouding fee or reward applied to [burrows](#burrows) which implicitely
+increases or decreases the number of [outstanding kits](#outstanding-kits)
+over time to bring it closer to the number of [circulating kits](#circulating-kits)
+so as to bring the [imbalance](#imbalance) closer to 1.
 
 ## Kit
 
