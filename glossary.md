@@ -19,7 +19,7 @@ Orders at the front of the queue are periodically batched into a [liquidation lo
 The ratio of the number of [circulating kits](#circulating-kits) to the number
 of [outstanding kits](#outstanding-kits).
 
-# Imbalance adjustment
+## Imbalance adjustment
 
 A compouding fee or reward applied to [burrows](#burrows) which implicitely
 increases or decreases the number of [outstanding kits](#outstanding-kits)
