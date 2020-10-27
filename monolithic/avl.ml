@@ -62,7 +62,7 @@ let node_key n =
     | Leaf leaf -> leaf.item.id
     | Branch branch -> branch.key
 
-let node_set_parent (n: node) (p: ptr option) =
+let node_set_parent (p: ptr option) (n: node) =
   match n with
     | Leaf leaf -> Leaf { leaf with parent = p; }
     | Branch branch -> Branch { branch with parent = p; }
@@ -167,7 +167,7 @@ let rotate_left (mem: mem) (parent_ptr: ptr) : mem * ptr =
           left_height = node_height updated_parent;
         } in
   let updated_right_left =
-        node_set_parent right_left (Some parent_ptr) in
+        node_set_parent (Some parent_ptr) right_left in
   let mem = mem_set mem parent_ptr updated_parent in
   let mem = mem_set mem right_ptr updated_right in
   let mem = mem_set mem right_left_ptr updated_right_left in
@@ -220,7 +220,7 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
           right_height = node_height updated_parent;
         } in
   let updated_left_right =
-        node_set_parent left_right (Some parent_ptr) in
+        node_set_parent (Some parent_ptr) left_right in
 
   let mem = mem_set mem parent_ptr updated_parent in
   let mem = mem_set mem left_ptr updated_left in
@@ -245,6 +245,8 @@ let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
     let (mem, ptr) = match mem_get mem parent_ptr with
       | Branch branch
         when abs (branch.left_height - branch.right_height) > 1 ->
+          assert (abs (branch.left_height - branch.right_height) == 2);
+
           let parent_balance = branch.right_height - branch.left_height in
           let heavy_child_ptr = if parent_balance < 0 then branch.left else branch.right in
           let heavy_child = match mem_get mem heavy_child_ptr with
@@ -413,7 +415,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
                     else (existing.right, existing.left) in
                   let mem = Mem.remove root_ptr mem in
                   let mem = mem_update mem preserved
-                        (fun n -> node_set_parent n existing.parent) in
+                              (node_set_parent existing.parent) in
                   (mem, Some(preserved))
 
 let rec debug_string (mem: mem) (root: ptr option) : string =
@@ -461,39 +463,71 @@ let add_all_debug (mem: mem) (root: ptr option) (items: item list)
     (mem, root)
     items
 
-let join
-      (mem: mem) (left_ptr: ptr) (right_ptr: ptr)
-      : mem * ptr =
-
+let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
   assert ((max mem left_ptr).id < (min mem right_ptr).id);
 
   let left = mem_get mem left_ptr in
   let right = mem_get mem right_ptr in
 
-  let new_branch = Branch {
-    left = left_ptr;
-    left_height = node_height left;
-    left_mutez = node_mutez left;
-    key = node_key right;
-    right_mutez = node_mutez right;
-    right_height = node_height right;
-    right = right_ptr;
-    parent = None;
-  } in
+  if abs (node_height left - node_height right) < 2 then
+    let new_branch = Branch {
+      left = left_ptr;
+      left_height = node_height left;
+      left_mutez = node_mutez left;
+      key = node_key right;
+      right_mutez = node_mutez right;
+      right_height = node_height right;
+      right = right_ptr;
+      parent = None;
+    } in
 
-  let (mem, ptr) = mem_new mem new_branch in
-  balance mem ptr
+    let (mem, ptr) = mem_new mem new_branch in
+
+    let mem = mem_update mem left_ptr (node_set_parent (Some ptr)) in
+    let mem = mem_update mem right_ptr (node_set_parent (Some ptr)) in
+
+    (mem, ptr)
+  else if node_height left > node_height right then
+    let left = match left with Branch b -> b | Leaf _ -> failwith "impossible" in
+    let (mem, new_left_right_ptr) = join mem left.right right_ptr in
+    let new_left_right = mem_get mem new_left_right_ptr in
+    let mem = mem_set mem left_ptr @@ Branch
+                { left with
+                  right = new_left_right_ptr;
+                  right_height = node_height new_left_right;
+                  right_mutez = node_mutez new_left_right;
+                  parent = None;
+                } in
+    let mem = mem_update mem new_left_right_ptr
+                (node_set_parent (Some left_ptr)) in
+    let (mem, left_ptr) = balance mem left_ptr in
+    (mem, left_ptr)
+  else (* node_height left < node_height right *)
+    let right = match right with Branch b -> b | Leaf _ -> failwith "impossible" in
+    let (mem, new_right_left_ptr) = join mem left_ptr right.left in
+    let new_right_left = mem_get mem new_right_left_ptr in
+    let mem = mem_set mem right_ptr @@ Branch
+                { right with
+                  left = new_right_left_ptr;
+                  left_height = node_height new_right_left;
+                  left_mutez = node_mutez new_right_left;
+                  parent = None;
+                } in
+    let mem = mem_update mem new_right_left_ptr
+                (node_set_parent (Some right_ptr)) in
+    let (mem, right_ptr) = balance mem right_ptr in
+    (mem, right_ptr)
 
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
  *)
-
-(* TODO: Fixup parent pointers here *)
 let rec split (mem: mem) (root: ptr option) (limit: mutez)
   : mem * ptr option * ptr option =
   match root with
     | None -> (mem, None, None)
-    | Some root_ptr -> match mem_get mem root_ptr with
+    | Some root_ptr ->
+      let mem = mem_update mem root_ptr (node_set_parent None) in
+      match mem_get mem root_ptr with
       | Leaf leaf ->
         if leaf.item.mutez <= limit
         then (mem, Some root_ptr, None)
@@ -504,6 +538,8 @@ let rec split (mem: mem) (root: ptr option) (limit: mutez)
             (mem, Some root_ptr, None)
         else if branch.left_mutez = limit
           then (* left_mutez == limit *)
+            let mem = mem_update mem branch.left (node_set_parent None) in
+            let mem = mem_update mem branch.right (node_set_parent None) in
             (mem_del mem root_ptr,
               Some branch.left,
               Some branch.right)
@@ -521,6 +557,7 @@ let rec split (mem: mem) (root: ptr option) (limit: mutez)
                   let (mem, joined) = join mem branch.left left in
                   (mem_del mem root_ptr, Some joined, right)
               | (mem, None, right) ->
+                  let mem = mem_update mem branch.left (node_set_parent None) in
                   (mem_del mem root_ptr,
                     Some branch.left,
                     right)
@@ -548,8 +585,8 @@ let assert_invariants (mem: mem) (root: ptr option) =
             let right = mem_get mem branch.right in
             assert (branch.parent = parent);
             assert (branch.left_height = node_height left);
-            assert (branch.right_height = node_height right);
             assert (branch.left_mutez = node_mutez left);
+            assert (branch.right_height = node_height right);
             assert (branch.right_mutez = node_mutez right);
             assert (abs (branch.left_height - branch.right_height) < 2);
             go (Some curr) branch.left;
@@ -564,6 +601,8 @@ module Q = QCheck
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
+
+let property_test_count = 1000
 
 let suite =
   "AVLTests" >::: [
@@ -615,7 +654,7 @@ let suite =
       assert_equal expected actual);
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"prop_from_list_to_list" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count Q.(list small_int)
        @@ fun xs ->
          let mkitem i = { id = i; mutez = 100 + i; } in
 
@@ -630,7 +669,7 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"prop_del" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_del" ~count:property_test_count Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          let (to_del, xs) = (List.hd xs, List.tl xs) in
@@ -656,7 +695,64 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"prop_split" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_join" ~count:property_test_count Q.(list small_int)
+       @@ fun xs ->
+         Q.assume (List.length xs > 2);
+         let (pos, xs) = (List.hd xs, List.tl xs) in
+
+         let xs = List.sort_uniq (fun i j -> Int.compare i j) xs in
+
+         Q.assume (pos > 0);
+         Q.assume (pos < List.length xs - 1);
+         Q.assume (List.for_all (fun i -> i > 0) xs);
+
+         let splitAt n xs =
+              let rec go n xs acc =
+                    if n <= 0
+                    then (List.rev acc, xs)
+                    else match xs with
+                      | [] -> failwith "index out of bounds"
+                      | (x::xs) -> go (n-1) xs (x::acc)
+               in go n xs [] in
+
+         let mkitem i = { id = i; mutez = 100 + i; } in
+         let (left, right) = splitAt pos xs in
+         let (left, right) = (List.map mkitem left, List.map mkitem right) in
+
+         let mem = Mem.empty in
+         let (mem, left_tree) = add_all mem None left in
+         let (mem, right_tree) = add_all mem None right in
+
+         (*
+         print_string "=Left==================================\n";
+         print_string (debug_string mem left_tree);
+         print_newline ();
+         print_string "-Right---------------------------------\n";
+         print_string (debug_string mem right_tree);
+         print_newline ();
+         *)
+
+         let (mem, joined_tree) =
+           join mem (Option.get left_tree) (Option.get right_tree) in
+
+         (*
+         print_string "-Joined--------------------------------\n";
+         print_string (debug_string mem (Some joined_tree));
+         print_newline ();
+         *)
+
+         let joined_tree = Some joined_tree in
+         assert_invariants mem joined_tree;
+
+         let actual = to_list mem joined_tree in
+         let expected = left @ right in
+
+         assert_equal expected actual ~printer:show_item_list;
+         true
+    );
+
+    (qcheck_to_ounit
+       @@ Q.Test.make ~name:"prop_split" ~count:property_test_count Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          Q.assume (List.for_all (fun i -> i > 0) xs);
