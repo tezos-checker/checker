@@ -575,7 +575,7 @@ let rec to_list (mem: mem) (root: ptr option) : item list =
 let from_list (mem: mem) (items: item list) : mem * ptr option =
   add_all mem None items
 
-let assert_invariants (mem: mem) (root: ptr option) =
+let assert_invariants (mem: mem) (root: ptr option) : unit =
   let rec go (parent: ptr option) (curr: ptr) =
         match mem_get mem curr with
           | Leaf leaf ->
@@ -594,6 +594,22 @@ let assert_invariants (mem: mem) (root: ptr option) =
   in match root with
       | None -> ()
       | Some root_ptr -> go None root_ptr
+
+let assert_dangling_pointers (mem: mem) (roots: ptr option list) : unit =
+  let rec delete_tree (mem: mem) (root_ptr: ptr) : mem =
+        let root = mem_get mem root_ptr in
+        let mem = mem_del mem root_ptr in
+        match root with
+          | Leaf _ -> mem
+          | Branch branch ->
+            let mem = delete_tree mem branch.left in
+            let mem = delete_tree mem branch.right in
+            mem in
+  let mem = List.fold_left
+    (fun mem x -> Option.fold ~none:mem ~some:(delete_tree mem) x)
+    mem
+    roots in
+  assert (Mem.is_empty mem)
 
 open OUnit2
 module Q = QCheck
@@ -638,6 +654,8 @@ let suite =
              [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
       let (mem, root) = from_list Mem.empty items in
       let (mem, root) = del mem root 5 in
+      assert_invariants mem root;
+      assert_dangling_pointers mem [root];
       let actual = to_list mem root in
       let expected =
         List.sort
@@ -660,6 +678,7 @@ let suite =
 
          let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
          assert_invariants mem root;
+         assert_dangling_pointers mem [root];
 
          let actual = to_list mem root in
 
@@ -743,6 +762,7 @@ let suite =
 
          let joined_tree = Some joined_tree in
          assert_invariants mem joined_tree;
+         assert_dangling_pointers mem [joined_tree];
 
          let actual = to_list mem joined_tree in
          let expected = left @ right in
@@ -765,6 +785,7 @@ let suite =
          let (mem, left, right) = split mem root limit in
          assert_invariants mem left;
          assert_invariants mem right;
+         assert_dangling_pointers mem [left; right];
 
          let actual_left = to_list mem left in
          let actual_right = to_list mem right in
