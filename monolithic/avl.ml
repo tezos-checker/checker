@@ -500,7 +500,7 @@ let rec split (mem: mem) (root: ptr option) (limit: mutez)
         if branch.left_mutez + branch.right_mutez <= limit
           then (* total_mutez <= limit *)
             (mem, Some root_ptr, None)
-        else if branch.left_mutez == limit
+        else if branch.left_mutez = limit
           then (* left_mutez == limit *)
             (mem_del mem root_ptr,
               Some branch.left,
@@ -535,6 +535,26 @@ let rec to_list (mem: mem) (root: ptr option) : item list =
 
 let from_list (mem: mem) (items: item list) : mem * ptr option =
   add_all mem None items
+
+let assert_invariants (mem: mem) (root: ptr option) =
+  let rec go (parent: ptr option) (curr: ptr) =
+        match mem_get mem curr with
+          | Leaf leaf ->
+            assert (leaf.parent = parent)
+          | Branch branch ->
+            let left = mem_get mem branch.left in
+            let right = mem_get mem branch.right in
+            assert (branch.parent = parent);
+            assert (branch.left_height = node_height left);
+            assert (branch.right_height = node_height right);
+            assert (branch.left_mutez = node_mutez left);
+            assert (branch.right_mutez = node_mutez right);
+            assert (abs (branch.left_height - branch.right_height) < 2);
+            go (Some curr) branch.left;
+            go (Some curr) branch.right
+  in match root with
+      | None -> ()
+      | Some root_ptr -> go None root_ptr
 
 open OUnit2
 module Q = QCheck
@@ -593,11 +613,13 @@ let suite =
       assert_equal expected actual);
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_from_list_to_list" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_from_list_to_list" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          let mkitem i = { id = i; mutez = 100 + i; } in
 
          let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+         assert_invariants mem root;
+
          let actual = to_list mem root in
 
          let expected = List.map mkitem (IntSet.elements @@ IntSet.of_list xs) in
@@ -606,7 +628,7 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_del" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_del" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          let (to_del, xs) = (List.hd xs, List.tl xs) in
@@ -614,7 +636,11 @@ let suite =
          let mkitem i = { id = i; mutez = 100 + i; } in
 
          let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+         assert_invariants mem root;
+
          let (mem, root) = del mem root to_del in
+         assert_invariants mem root;
+
          let actual = to_list mem root in
 
          let expected =
@@ -628,7 +654,7 @@ let suite =
     );
 
     (qcheck_to_ounit
-       @@ Q.Test.make ~name:"test_split" ~count:10_000 Q.(list small_int)
+       @@ Q.Test.make ~name:"prop_split" ~count:10_000 Q.(list small_int)
        @@ fun xs ->
          Q.assume (List.length xs > 0);
          Q.assume (List.for_all (fun i -> i > 0) xs);
@@ -639,6 +665,9 @@ let suite =
          let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
 
          let (mem, left, right) = split mem root limit in
+         assert_invariants mem left;
+         assert_invariants mem right;
+
          let actual_left = to_list mem left in
          let actual_right = to_list mem right in
 
