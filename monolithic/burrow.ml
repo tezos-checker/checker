@@ -181,6 +181,7 @@ struct
 
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
+  (* TODO: This should update the parameters; more kit is now in circulation! *)
   let mint_kit (p : parameters) (k : Kit.t) (b : burrow) : (burrow * Kit.utxo, Error.error) result =
     assert (k >= Kit.zero);
     (* TODO: we should probably update the minted_kit to the actual
@@ -194,6 +195,7 @@ struct
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. *)
+  (* TODO: This should update the parameters; less kit is now in circulation! *)
   let burn_kit (k : Kit.t) (b : burrow) : burrow * Kit.t =
     assert (k >= Kit.zero);
     let kit_to_burn = min b.minted_kit k in

@@ -19,6 +19,7 @@ module Parameters : sig
       (* TODO: What would be a good starting value for this? Cannot be zero
        * because then it stays zero forever (only multiplications occur). *)
       global_last_outstanding_kit: Kit.t [@printer Kit.pp];
+      global_kit_in_circulation: Kit.t [@printer Kit.pp];
     }
 
   val show_parameters : parameters -> string
@@ -56,6 +57,7 @@ struct
       burrow_fee_index: FixedPoint.t [@printer FixedPoint.pp];
       imbalance_index: FixedPoint.t [@printer FixedPoint.pp];
       global_last_outstanding_kit: Kit.t [@printer Kit.pp];
+      global_kit_in_circulation: Kit.t [@printer Kit.pp];
     }
   [@@deriving show]
 

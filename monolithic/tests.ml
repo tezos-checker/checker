@@ -61,6 +61,7 @@ let suite =
                                  burrow_fee_index = FixedPoint.of_float 1.0;
                                  imbalance_index = FixedPoint.of_float 1.0;
                                  global_last_outstanding_kit = Kit.one; (* TODO: What should that be? *)
+                                 global_kit_in_circulation = Kit.zero; (* TODO: What should that be? *)
                                } in
       let interblock_time = Seconds 3600 in
       let new_index = 0.34 in
@@ -76,6 +77,7 @@ let suite =
           burrow_fee_index = FixedPoint.of_float 1.0;    (* TODO: use expected value. *)
           imbalance_index = FixedPoint.of_float 1.0;     (* TODO: use expected value. *)
           global_last_outstanding_kit = Kit.one;         (* TODO: use expected value. *)
+          global_kit_in_circulation = Kit.zero;          (* TODO: use expected value. *)
         }
         new_parameters
         ~printer:show_parameters
