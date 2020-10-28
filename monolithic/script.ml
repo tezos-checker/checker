@@ -16,8 +16,8 @@ let burrow_experiment () =
       drift' = FixedPoint.of_float 0.0;
       burrow_fee_index = FixedPoint.of_float 1.0;
       imbalance_index = FixedPoint.of_float 1.0;
-      global_last_outstanding_kit = Kit.one; (* TODO: What should that be? *)
-      global_kit_in_circulation = Kit.zero; (* TODO: What should that be? *)
+      outstanding_kit = Kit.one; (* TODO: What should that be? *)
+      circulating_kit = Kit.zero; (* TODO: What should that be? *)
     } in
   printf "\n=== Checker parameters ===\n";
   print_string @@ Parameters.show_parameters params;
@@ -83,8 +83,8 @@ let step_experiment () =
                              drift' = FixedPoint.of_float 0.0;
                              burrow_fee_index = FixedPoint.of_float 1.0;
                              imbalance_index = FixedPoint.of_float 1.0;
-                             global_last_outstanding_kit = Kit.one; (* TODO: What should that be? *)
-                             global_kit_in_circulation = Kit.zero; (* TODO: What should that be? *)
+                             outstanding_kit = Kit.one; (* TODO: What should that be? *)
+                             circulating_kit = Kit.zero; (* TODO: What should that be? *)
                            } in
   let interblock_time = Seconds 3600 in
   let new_index = 0.34 in

@@ -92,12 +92,12 @@ let step_parameters
 
   (* Update the indices *)
   let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + burrow_fee_percentage)) in (* TODO: Yearly! *)
-  let imbalance_percentage = compute_imbalance parameters.global_last_outstanding_kit parameters.global_kit_in_circulation in
+  let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
   let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in (* TODO: Yearly! *)
-  let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.global_last_outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
-  let total_accrual_to_uniswap = Kit.sub with_burrow_fee parameters.global_last_outstanding_kit in
-  let current_global_last_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
-  let current_global_kit_in_circulation = Kit.add parameters.global_kit_in_circulation total_accrual_to_uniswap in
+  let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
+  let total_accrual_to_uniswap = Kit.sub with_burrow_fee parameters.outstanding_kit in
+  let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
+  let current_circulating_kit = Kit.add parameters.circulating_kit total_accrual_to_uniswap in
   (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
   ( total_accrual_to_uniswap
   , {
@@ -109,8 +109,8 @@ let step_parameters
     q = FixedPoint.of_float current_q;
     burrow_fee_index = current_burrow_fee_index;
     imbalance_index = current_imbalance_index;
-    global_last_outstanding_kit = current_global_last_outstanding_kit;
-    global_kit_in_circulation = current_global_kit_in_circulation;
+    outstanding_kit = current_outstanding_kit;
+    circulating_kit = current_circulating_kit;
   }
   )
 
