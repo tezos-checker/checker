@@ -33,6 +33,7 @@
  *
 *)
 
+open BigMap
 (*
  * A subset of checker types. We should split those to a separate module
  * in future to avoid the module cycle.
@@ -40,7 +41,6 @@
 
 type mutez = int [@@deriving show]
 type item_id = int [@@deriving show]
-
 
 (* A liquidation item *)
 type item = {
@@ -56,8 +56,6 @@ type item_list = item list [@@deriving show]
  * items, and the branches contain the amount of tez on their left and
  * right children.
  *)
-
-type ptr = int64 [@@deriving show]
 
 type leaf = {
   item: item;
@@ -82,6 +80,8 @@ type node =
   | Branch of branch
 [@@deriving show]
 
+type mem = node BigMap.t
+
 let node_mutez n =
   match n with
   | Leaf leaf -> leaf.item.mutez
@@ -104,44 +104,6 @@ let node_set_parent (p: ptr option) (n: node) =
 
 let empty: ptr option = None
 
-(*
- * BigMap
- *
- * We use a bigmap as our memory, and an int64 as addresses.
- *
- * There is no garbage collection, so operations are responsible for
- * not leaving any dangling pointers.
- *
- * We always increase the memory addresses, even after removals. But
- * int64 is big enough that it shouldn't be an issue.
- *
- * TODO: Maybe we should use something like [int8] as a variable
- * width address.
- *)
-
-module Mem = Map.Make(Int64)
-type mem = node Mem.t
-
-let mem_next_ptr (m: 'a Mem.t): ptr =
-  match Mem.max_binding_opt m with
-  | None -> Int64.zero
-  | Some (t, _) -> Int64.succ t
-
-let mem_set (m: 'a Mem.t) (k: ptr) (v: 'a) : 'a Mem.t =
-  Mem.add k v m
-
-let mem_new (m: 'a Mem.t) (v: 'a) : 'a Mem.t * ptr =
-  let ptr = mem_next_ptr m in
-  (mem_set m ptr v, ptr)
-
-let mem_get (m: 'a Mem.t) (k: ptr) : 'a =
-  Mem.find k m
-
-let mem_update (m: 'a Mem.t) (k: ptr) (f: 'a -> 'a) : 'a Mem.t =
-  mem_set m k @@ f (mem_get m k)
-
-let mem_del (m: 'a Mem.t) (k: ptr) : 'a Mem.t =
-  Mem.remove k m
 
 (*
  * Operations on AVL trees.
@@ -330,7 +292,7 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
     mem_new mem node
   (* When there is already an element, *)
   | Some root_ptr ->
-    match Mem.find root_ptr mem with
+    match mem_get mem root_ptr with
     (* ... and if it is a leaf,*)
     | Leaf { item = existing_item; parent = parent; } ->
       (match compare existing_item.id new_item.id with
@@ -404,11 +366,11 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
   | None ->
     (mem, None)
   | Some root_ptr ->
-    match Mem.find root_ptr mem with
+    match BigMap.find root_ptr mem with
     (* Deleting something from a singleton tree might be an empty tree. *)
     | Leaf existing ->
       if existing.item.id = id
-      then (Mem.remove root_ptr mem, None)
+      then (BigMap.remove root_ptr mem, None)
       else (mem, Some root_ptr)
     (* Deleting something from a branch recurses to the relevant side. *)
     | Branch existing ->
@@ -448,7 +410,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
           if target_left
           then (existing.left, existing.right)
           else (existing.right, existing.left) in
-        let mem = Mem.remove root_ptr mem in
+        let mem = BigMap.remove root_ptr mem in
         let mem = mem_update mem preserved
             (node_set_parent existing.parent) in
         (mem, Some(preserved))

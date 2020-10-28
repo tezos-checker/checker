@@ -1,6 +1,7 @@
 open Avl
 open OUnit2
 module Q = QCheck
+open BigMap
 
 let rec to_list (mem: mem) (root: ptr option) : item list =
   match root with
@@ -49,7 +50,7 @@ let assert_dangling_pointers (mem: mem) (roots: ptr option list) : unit =
       (fun mem x -> Option.fold ~none:mem ~some:(delete_tree mem) x)
       mem
       roots in
-  assert (Mem.is_empty mem)
+  assert (BigMap.is_empty mem)
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
@@ -62,7 +63,7 @@ let suite =
     "test_singleton" >::
     (fun _ ->
        let item = { id = 0; mutez = 5; } in
-       let (mem, root) = add Mem.empty empty item in
+       let (mem, root) = add BigMap.empty empty item in
        let actual = to_list mem (Some root) in
        let expected = [item] in
        assert_equal expected actual);
@@ -72,24 +73,24 @@ let suite =
        let items =
          (List.map (fun i -> { id = i; mutez = 5; })
             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
-       let (mem, root) = add_all Mem.empty None items in
+       let (mem, root) = add_all BigMap.empty None items in
        let actual = to_list mem root in
        let expected = List.sort (fun a b -> compare a.id b.id) items in
        assert_equal expected actual ~printer:show_item_list);
 
     "test_del_singleton" >::
     (fun _ ->
-       let (mem, root) = add Mem.empty None { id = 1; mutez = 5} in
+       let (mem, root) = add BigMap.empty None { id = 1; mutez = 5} in
        let (mem, root) = del mem (Some root) 1 in
        assert_equal None root;
-       assert_bool "mem wasn't empty" (Mem.is_empty mem));
+       assert_bool "mem wasn't empty" (BigMap.is_empty mem));
 
     "test_del" >::
     (fun _ ->
        let items =
          (List.map (fun i -> { id = i; mutez = 5; })
             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
-       let (mem, root) = from_list Mem.empty items in
+       let (mem, root) = from_list BigMap.empty items in
        let (mem, root) = del mem root 5 in
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
@@ -103,7 +104,7 @@ let suite =
     "test_empty_from_list_to_list" >::
     (fun _ ->
        let items = [] in
-       let (mem, root) = from_list Mem.empty items in
+       let (mem, root) = from_list BigMap.empty items in
        let actual = to_list mem root in
        let expected = [] in
        assert_equal expected actual);
@@ -113,7 +114,7 @@ let suite =
      @@ fun xs ->
      let mkitem i = { id = i; mutez = 100 + i; } in
 
-     let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+     let (mem, root) = add_all BigMap.empty None (List.map mkitem xs) in
      assert_invariants mem root;
      assert_dangling_pointers mem [root];
 
@@ -132,7 +133,7 @@ let suite =
 
      let mkitem i = { id = i; mutez = 100 + i; } in
 
-     let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+     let (mem, root) = add_all BigMap.empty None (List.map mkitem xs) in
      assert_invariants mem root;
 
      let (mem, root) = del mem root to_del in
@@ -175,7 +176,7 @@ let suite =
      let (left, right) = splitAt pos xs in
      let (left, right) = (List.map mkitem left, List.map mkitem right) in
 
-     let mem = Mem.empty in
+     let mem = BigMap.empty in
      let (mem, left_tree) = add_all mem None left in
      let (mem, right_tree) = add_all mem None right in
 
@@ -217,7 +218,7 @@ let suite =
 
      let mkitem i = { id = i; mutez = i; } in
 
-     let (mem, root) = add_all Mem.empty None (List.map mkitem xs) in
+     let (mem, root) = add_all BigMap.empty None (List.map mkitem xs) in
 
      let (mem, left, right) = split mem root limit in
      assert_invariants mem left;
