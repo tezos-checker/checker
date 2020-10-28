@@ -1,7 +1,7 @@
 
 open Error
 
-open Common
+open Address
 open Constants
 include Constants
 open FixedPoint
@@ -9,8 +9,6 @@ open Kit
 open Parameters
 include Parameters
 open Tez
-
-include Common
 
 (* TODOs for burrows:
    - Limit access to the representation of the burrow. Instead give access to
@@ -25,8 +23,8 @@ include Common
 module Burrow : sig
   type burrow =
     { (* The owner of the burrow. Set once during creation. *)
-      owner : Common.address;
-      delegate : Common.address option;
+      owner : Address.t;
+      delegate : Address.t option;
       (* Collateral currently stored in the burrow. *)
       collateral : Tez.t [@printer Tez.pp];
       (* Outstanding kit minted out of the burrow. *)
@@ -82,7 +80,7 @@ module Burrow : sig
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
-  val create_burrow : parameters -> Common.address -> Tez.t -> (burrow, Error.error) result
+  val create_burrow : parameters -> Address.t -> Tez.t -> (burrow, Error.error) result
 
   (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
   val deposit_tez : Tez.t -> burrow -> burrow
@@ -113,8 +111,8 @@ module Burrow : sig
 end =
 struct
   type burrow =
-    { owner : Common.address;
-      delegate : Common.address option;
+    { owner : Address.t;
+      delegate : Address.t option;
       collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
       adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
@@ -154,7 +152,7 @@ struct
     let outstanding_kit = get_outstanding_kit p b in
     Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
 
-  let create_burrow (p: parameters) (address: Common.address) (tez: Tez.t) : (burrow, Error.error) result =
+  let create_burrow (p: parameters) (address: Address.t) (tez: Tez.t) : (burrow, Error.error) result =
     if tez < creation_deposit
     then Error (InsufficientFunds tez)
     else Ok

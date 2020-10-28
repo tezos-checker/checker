@@ -1,4 +1,4 @@
-open Common
+open Address
 open FixedPoint
 open Format
 open Huxian
@@ -31,7 +31,7 @@ let burrow_experiment () =
   (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
   (* DEFAULT *)
   let initial_burrow =
-    { owner = Common.of_string "someone";
+    { owner = Address.of_string "someone";
       delegate = None;
       collateral = Tez.of_float 10.0;
       minted_kit = Kit.of_float 20.0;

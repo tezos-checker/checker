@@ -1,4 +1,5 @@
 
+open Address
 open Burrow
 include Burrow
 open Constants
@@ -42,7 +43,7 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
 (* ************************************************************************* *)
 
 type checker =
-  { burrows : burrow Map.Make(String).t; (* TODO: Create an 'address' type *)
+  { burrows : burrow Map.Make(Address).t;
     uniswap : uniswap;
     parameters : parameters;
   }

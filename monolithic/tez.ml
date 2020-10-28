@@ -1,5 +1,5 @@
 
-open Common
+open Address
 open FixedPoint
 
 (* ************************************************************************* *)
@@ -34,7 +34,7 @@ module Tez : sig
   val show_tez : t -> string
 
   (* Tez UTXO *)
-  type utxo = {destination : Common.address ; amount : t}
+  type utxo = {destination : Address.t ; amount : t}
   val show_utxo : utxo -> string
   val pp_utxo : Format.formatter -> utxo -> unit
 end =
@@ -107,7 +107,7 @@ struct
     Format.fprintf ppf "%s" (show_tez amount)
 
   (* Tez UTXO *)
-  type utxo = {destination : Common.address ; amount : t}
+  type utxo = {destination : Address.t ; amount : t}
   [@@deriving show]
 end
 

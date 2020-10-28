@@ -3,7 +3,7 @@
 ;; .merlin file being generated.
 (library
   (name huxian)
-  (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow Uniswap Error Common)
+  (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow Uniswap Error Address)
   (wrapped false)
   (preprocess (pps ppx_deriving.std)))
 
