@@ -5,7 +5,6 @@
   (name huxian)
   (modules Huxian Constants Avl Kit Tez FixedPoint Parameters Burrow Uniswap Error Common)
   (wrapped false)
-  (libraries ounit2 qcheck)
   (preprocess (pps ppx_deriving.std)))
 
 (executable
@@ -16,6 +15,6 @@
 
 (test
   (name tests)
-  (modules Tests)
-  (libraries huxian ounit2)
+  (modules Tests AvlTests)
+  (libraries huxian ounit2 qcheck)
   (preprocess (pps ppx_deriving.std)))

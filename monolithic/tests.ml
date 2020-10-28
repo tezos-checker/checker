@@ -10,7 +10,7 @@ type fp = FixedPoint.t [@@deriving show]
 
 let suite =
   "HuxianTests" >::: [
-    Avl.suite;
+    AvlTests.suite;
 
     "tez arithmetic" >::
     (fun _ ->
