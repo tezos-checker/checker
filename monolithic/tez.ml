@@ -13,9 +13,7 @@ module Tez : sig
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
   val add : t -> t -> t
   val sub : t -> t -> t
-  val mul : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
   val div : t -> t -> FixedPoint.t
-  val rem : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
 
   val zero : t
   val one : t
@@ -33,6 +31,7 @@ module Tez : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
+  val show_tez : t -> string
 
   (* Tez UTXO *)
   type utxo = {destination : Common.address ; amount : t}
@@ -56,23 +55,6 @@ struct
     assert (y >= 0L);
     assert (x >= y);
     Int64.sub x y
-
-  let mul x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    if (x = 0L || y = 0L) then
-      0L
-    else (
-      assert (not (x > Int64.div Int64.max_int y)); (* Overflow *)
-      assert (not (y > Int64.div Int64.max_int x)); (* Overflow *)
-      Int64.div (Int64.mul x y) scaling_factor
-    )
-
-  let rem x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (y > 0L); (* Overflow *)
-    Int64.rem x y
 
   let compare x y = Int64.compare x y
 
@@ -109,7 +91,7 @@ struct
   let partition x = (Int64.div x scaling_factor, Int64.rem x scaling_factor)
 
   (* Pretty printing functions *)
-  let pp ppf amount =
+  let show_tez amount =
     let zfill s width =
       let to_fill = width - (String.length s) in
       if to_fill <= 0
@@ -117,9 +99,12 @@ struct
       else (String.make to_fill '0') ^ s in
 
     let (upper, lower) = partition amount in
-    Format.fprintf ppf "%s.%s"
+    Format.sprintf "%s.%s"
       (Int64.to_string upper)
       (zfill (Int64.to_string lower) scaling_exponent)
+
+  let pp ppf amount =
+    Format.fprintf ppf "%s" (show_tez amount)
 
   (* Tez UTXO *)
   type utxo = {destination : Common.address ; amount : t}

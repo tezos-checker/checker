@@ -13,12 +13,12 @@ module Kit : sig
   (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
   val add : t -> t -> t
   val sub : t -> t -> t
-  val mul : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
   val div : t -> t -> FixedPoint.t
-  val rem : t -> t -> t (* NOTE: I wonder in which cases would this function make sense *)
 
   val zero : t
   val one : t
+
+  val compare : t -> t -> int
 
   (* Conversions to/from other types. *)
   val of_float : float -> t (* TODO: Delete this one. *)
@@ -56,22 +56,7 @@ struct
     assert (x >= y);
     Int64.sub x y
 
-  let mul x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    if (x = 0L || y = 0L) then
-      0L
-    else (
-      assert (not (x > Int64.div Int64.max_int y)); (* Overflow *)
-      assert (not (y > Int64.div Int64.max_int x)); (* Overflow *)
-      Int64.div (Int64.mul x y) scaling_factor
-    )
-
-  let rem x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (y > 0L); (* Overflow *)
-    Int64.rem x y
+  let compare x y = Int64.compare x y
 
   let zero = 0L
   let one = scaling_factor

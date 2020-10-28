@@ -22,14 +22,10 @@ let suite =
        let fp1 = FixedPoint.of_float 3.0 in
        assert_equal ~printer:show_tz (Tez.of_float 8.0) (Tez.add tz1 tz2);
        assert_equal ~printer:show_tz (Tez.of_float 2.0)(Tez.sub tz1 tz2);
-       assert_equal ~printer:show_tz (Tez.of_float 15.0) (Tez.mul tz1 tz2);
-       assert_equal ~printer:show_tz (Tez.of_float 15.3702) (Tez.mul tz3 tz2);
        (* TODO: negative numbers? *)
        assert_equal ~printer:show_fp (FixedPoint.of_float 8.0) (Tez.div tz5 tz1);
        assert_equal ~printer:show_fp (FixedPoint.of_float 1.7078) (Tez.div tz3 tz2);
        assert_equal ~printer:show_fp (FixedPoint.of_float 125.025) (Tez.div tz4 tz5);
-       assert_equal ~printer:show_tz (Tez.of_float 2.0) (Tez.rem tz1 tz2);
-       assert_equal ~printer:show_tz (Tez.of_float 2.1234) (Tez.rem tz3 tz2);
        assert_equal ~printer:show_tz (Tez.of_float 15.3702) (Tez.scale tz3 fp1)
     );
 
