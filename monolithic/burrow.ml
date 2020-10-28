@@ -37,7 +37,7 @@ module Burrow : sig
       (* Collateral that has been sent off to auctions. For all intents and
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
-      auctioned_collateral : Tez.t [@printer Tez.pp];
+      collateral_at_auction : Tez.t [@printer Tez.pp];
       (* TODO: also keep track of the last time the burrow was touched *)
     }
 
@@ -118,7 +118,8 @@ struct
       collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
       adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
-      auctioned_collateral : Tez.t [@printer Tez.pp];
+      (* TODO: use this field in some calculations *)
+      collateral_at_auction : Tez.t [@printer Tez.pp];
     }
   [@@deriving show]
 
@@ -157,13 +158,13 @@ struct
     if tez < creation_deposit
     then Error (InsufficientFunds tez)
     else Ok
-      { owner = address;
-        delegate = None;
-        collateral = Tez.sub tez creation_deposit;
-        minted_kit = Kit.zero;
-        adjustment_index = compute_adjustment_index p;
-        auctioned_collateral = Tez.zero;
-      }
+        { owner = address;
+          delegate = None;
+          collateral = Tez.sub tez creation_deposit;
+          minted_kit = Kit.zero;
+          adjustment_index = compute_adjustment_index p;
+          collateral_at_auction = Tez.zero;
+        }
 
   (** Add non-negative collateral to a burrow. *)
   let deposit_tez (t : Tez.t) (b : burrow) : burrow =
@@ -254,7 +255,7 @@ struct
   (* TODO: Should we compute imbalance adjustment and burrow fee on the
    * expected_kit too or not? *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
-    let expected_kit = compute_expected_kit p b.auctioned_collateral in
+    let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let outstanding_kit = Kit.sub (get_outstanding_kit p b) expected_kit in
     Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 end
