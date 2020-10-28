@@ -16,11 +16,6 @@ include Uniswap
  * * What if compute_tez_to_auction returns something positive?
  *   => Create a kit UTXO for the burrow owner.
  *
- * * About switching to an integer representation for tez and kit: Currently 1
- *   tez (1 XTZ) is divisible to six decimal places, and the smallest unit is
- *   called a micro tez: 1 tez = 100 cents = 1,000,000 micro tez (mutez). Let's
- *   do the same for kit.
- *
  * * Implement auctioning logic.
  *
  * * Implement imbalance adjustment-related logic.
@@ -147,7 +142,7 @@ type liquidation_result =
 *)
 (* TODO: Remove divisions in the conditions; use multiplication instead. *)
 let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
-  let partial_reward = Tez.of_fp FixedPoint.(liquidation_reward_percentage * (Tez.to_fp b.collateral)) in
+  let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
   (* The reward for triggering a liquidation. This amounts to the burrow's
    * creation deposit, plus the liquidation reward percentage of the burrow's
    * collateral. Of course, this only applies if the burrow qualifies for
@@ -177,13 +172,9 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     let b_without_reward = { b with collateral = Tez.sub b.collateral liquidation_reward } in
     let tez_to_auction = b_without_reward.collateral in
     let expected_kit = compute_expected_kit p tez_to_auction in
-    (* NOTE: (Tez.sub b_without_reward.collateral tez_to_auction) should be
-     * zero, but with the current state of affairs (i.e. using floats) the
-     * expected assertion fails unpleasantly. TODO: add the assertion here once
-     * you switch to the integer representation of tez. *)
     let final_burrow =
       { b with
-        collateral = Tez.sub b_without_reward.collateral tez_to_auction;
+        collateral = Tez.zero;
         collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
       } in
     { outcome = Complete; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
