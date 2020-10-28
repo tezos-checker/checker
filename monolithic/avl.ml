@@ -16,14 +16,14 @@
  * possible. We choose to skip the optimisation to keep the code clearer.
  *
  * The split function currently splits out "at most" given amount of tokens,
- * however the auction process requires us to split the next item if necessary.
+ * however the auction process requires us to split the next element if necessary.
  * This can be implemented by popping the smallest leftover, splitting and
  * re-inserting the pieces to both trees. And we might have some small
  * functions helping this, but it shouldn't be too hard to implement them.
  *
  * However, if the item_ids are sequential, we can not split them with each
  * piece having a different id, while still being smaller than the following
- * items. We might have to change their representation to allow this.
+ * elements. We might have to change their representation to allow this.
  *
  * There are some amount of property tests on major code paths, but there
  * might be other issues.
@@ -40,25 +40,23 @@ open Tez
  * in future to avoid the module cycle.
  *)
 
-type item_id = int [@@deriving show]
+type element_id = int [@@deriving show]
 
-(* A liquidation item *)
-type item = {
-  id: item_id;
+(* A liquidation element *)
+type element = {
+  id: element_id;
   tez: Tez.t;
 }
 [@@deriving show]
 
-type item_list = item list [@@deriving show]
-
 (*
  * A doubly-linked balanced tree where the leaves contain the liquidation
- * items, and the branches contain the amount of tez on their left and
+ * elements, and the branches contain the amount of tez on their left and
  * right children.
  *)
 
 type leaf = {
-  item: item;
+  element: element;
   parent: int64 option;
 }
 [@@deriving show]
@@ -67,7 +65,7 @@ type branch = {
   left: ptr;
   left_height: int;
   left_tez: Tez.t;
-  key: item_id;
+  key: element_id;
   right_tez: Tez.t;
   right_height: int;
   right: ptr;
@@ -84,7 +82,7 @@ type mem = node BigMap.t
 
 let node_tez n =
   match n with
-  | Leaf leaf -> leaf.item.tez
+  | Leaf leaf -> leaf.element.tez
   | Branch branch -> Tez.add branch.left_tez branch.right_tez
 
 let node_height n =
@@ -94,7 +92,7 @@ let node_height n =
 
 let node_key n =
   match n with
-  | Leaf leaf -> leaf.item.id
+  | Leaf leaf -> leaf.element.id
   | Branch branch -> branch.key
 
 let node_set_parent (p: ptr option) (n: node) =
@@ -284,24 +282,24 @@ let balance (mem: mem) (parent_ptr: ptr) : mem * ptr =
     abs (b.left_height - b.right_height) <= 1);
   (mem, ptr)
 
-let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
+let rec add (mem: mem) (root: ptr option) (new_item : element) : mem * ptr =
   match root with
   (* When the tree is empty, create the initial leaf. *)
   | None ->
-    let node = Leaf { item=new_item; parent=None; } in
+    let node = Leaf { element=new_item; parent=None; } in
     mem_new mem node
   (* When there is already an element, *)
   | Some root_ptr ->
     match mem_get mem root_ptr with
     (* ... and if it is a leaf,*)
-    | Leaf { item = existing_item; parent = parent; } ->
+    | Leaf { element = existing_item; parent = parent; } ->
       (match compare existing_item.id new_item.id with
        (* ... we override it if the keys are the same. *)
        | cmp when cmp = 0 ->
          (* NOTE: I can not think of a case where we'd overwrite an
           * existing liquidation, so maybe this case should fail.
          *)
-         let node = Leaf {item=new_item; parent=parent; } in
+         let node = Leaf {element=new_item; parent=parent; } in
          let mem = mem_set mem root_ptr node in
          (mem, root_ptr)
        (* ... or we create a sibling leaf and a parent branch.  *)
@@ -312,8 +310,8 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
            if cmp < 0
            then (existing_item, root_ptr, new_item, new_ptr)
            else (new_item, new_ptr, existing_item, root_ptr) in
-         let left_leaf = Leaf { item=left; parent=Some branch_ptr; } in
-         let right_leaf = Leaf { item=right; parent=Some branch_ptr; } in
+         let left_leaf = Leaf { element=left; parent=Some branch_ptr; } in
+         let right_leaf = Leaf { element=right; parent=Some branch_ptr; } in
          let new_branch = Branch {
              left = left_ptr;
              left_height = 1;
@@ -360,7 +358,7 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
       let mem = mem_set mem root_ptr new_branch in
       balance mem root_ptr
 
-let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
+let rec del (mem: mem) (root: ptr option) (id : element_id) : mem * ptr option =
   match root with
   (* Deleting something from an empty tree returns an empty tree. *)
   | None ->
@@ -369,7 +367,7 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
     match BigMap.find root_ptr mem with
     (* Deleting something from a singleton tree might be an empty tree. *)
     | Leaf existing ->
-      if existing.item.id = id
+      if existing.element.id = id
       then (BigMap.remove root_ptr mem, None)
       else (mem, Some root_ptr)
     (* Deleting something from a branch recurses to the relevant side. *)
@@ -428,37 +426,37 @@ let rec debug_string (mem: mem) (root: ptr option) : string =
       ^ indent ("Right:\n"
                 ^ indent (debug_string mem (Some branch.right)))
 
-let add_all (mem: mem) (root: ptr option) (items: item list)
+let add_all (mem: mem) (root: ptr option) (elements: element list)
   : mem * ptr option =
   List.fold_left
-    (fun (mem, root) item ->
-       let (mem, root) = add mem root item in
+    (fun (mem, root) element ->
+       let (mem, root) = add mem root element in
        (mem, Some root))
     (mem, root)
-    items
+    elements
 
-let rec max (mem: mem) (root: ptr) : item =
+let rec max (mem: mem) (root: ptr) : element =
   match mem_get mem root with
-  | Leaf leaf -> leaf.item
+  | Leaf leaf -> leaf.element
   | Branch branch -> max mem branch.right
 
-let rec min (mem: mem) (root: ptr) : item =
+let rec min (mem: mem) (root: ptr) : element =
   match mem_get mem root with
-  | Leaf leaf -> leaf.item
+  | Leaf leaf -> leaf.element
   | Branch branch -> min mem branch.left
 
-let add_all_debug (mem: mem) (root: ptr option) (items: item list)
+let add_all_debug (mem: mem) (root: ptr option) (elements: element list)
   : mem * ptr option =
   List.fold_left
-    (fun (mem, root) item ->
+    (fun (mem, root) element ->
        print_string "--------------------------------\n";
-       print_string ("Inserting: " ^ show_item item ^ "\n");
-       let (mem, root) = add mem root item in
+       print_string ("Inserting: " ^ show_element element ^ "\n");
+       let (mem, root) = add mem root element in
        print_string (debug_string mem (Some root));
        print_newline ();
        (mem, Some root))
     (mem, root)
-    items
+    elements
 
 let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
   assert ((max mem left_ptr).id < (min mem right_ptr).id);
@@ -526,7 +524,7 @@ let rec split (mem: mem) (root: ptr option) (limit: Tez.t)
     let mem = mem_update mem root_ptr (node_set_parent None) in
     match mem_get mem root_ptr with
     | Leaf leaf ->
-      if Tez.compare leaf.item.tez limit <= 0
+      if Tez.compare leaf.element.tez limit <= 0
       then (mem, Some root_ptr, None)
       else (mem, None, Some root_ptr)
     | Branch branch ->

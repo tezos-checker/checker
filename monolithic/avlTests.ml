@@ -4,21 +4,23 @@ module Q = QCheck
 open BigMap
 open Tez
 
+type element_list = element list [@@deriving show]
+
 let nTez (i: int) : Tez.t =
   Tez.of_float (float_of_int i)
 
-let rec to_list (mem: mem) (root: ptr option) : item list =
+let rec to_list (mem: mem) (root: ptr option) : element list =
   match root with
   | None -> []
   | Some k -> match mem_get mem k with
-    | Leaf leaf -> [leaf.item]
+    | Leaf leaf -> [leaf.element]
     | Branch branch ->
       List.append
         (to_list mem (Some branch.left))
         (to_list mem (Some branch.right))
 
-let from_list (mem: mem) (items: item list) : mem * ptr option =
-  add_all mem None items
+let from_list (mem: mem) (elements: element list) : mem * ptr option =
+  add_all mem None elements
 
 let assert_invariants (mem: mem) (root: ptr option) : unit =
   let rec go (parent: ptr option) (curr: ptr) =
@@ -66,21 +68,21 @@ let suite =
   "AVLTests" >::: [
     "test_singleton" >::
     (fun _ ->
-       let item = { id = 0; tez = nTez 5; } in
-       let (mem, root) = add BigMap.empty empty item in
+       let element = { id = 0; tez = nTez 5; } in
+       let (mem, root) = add BigMap.empty empty element in
        let actual = to_list mem (Some root) in
-       let expected = [item] in
+       let expected = [element] in
        assert_equal expected actual);
 
     "test_multiple" >::
     (fun _ ->
-       let items =
+       let elements =
          (List.map (fun i -> { id = i; tez = nTez 5; })
             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
-       let (mem, root) = add_all BigMap.empty None items in
+       let (mem, root) = add_all BigMap.empty None elements in
        let actual = to_list mem root in
-       let expected = List.sort (fun a b -> compare a.id b.id) items in
-       assert_equal expected actual ~printer:show_item_list);
+       let expected = List.sort (fun a b -> compare a.id b.id) elements in
+       assert_equal expected actual ~printer:show_element_list);
 
     "test_del_singleton" >::
     (fun _ ->
@@ -91,10 +93,10 @@ let suite =
 
     "test_del" >::
     (fun _ ->
-       let items =
+       let elements =
          (List.map (fun i -> { id = i; tez = nTez 5; })
             [ 1; 2; 8; 4; 3; 5; 6; 7; ]) in
-       let (mem, root) = from_list BigMap.empty items in
+       let (mem, root) = from_list BigMap.empty elements in
        let (mem, root) = del mem root 5 in
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
@@ -102,13 +104,13 @@ let suite =
        let expected =
          List.sort
            (fun a b -> compare a.id b.id)
-           (List.filter (fun i -> i.id <> 5) items) in
-       assert_equal expected actual ~printer:show_item_list);
+           (List.filter (fun i -> i.id <> 5) elements) in
+       assert_equal expected actual ~printer:show_element_list);
 
     "test_empty_from_list_to_list" >::
     (fun _ ->
-       let items = [] in
-       let (mem, root) = from_list BigMap.empty items in
+       let elements = [] in
+       let (mem, root) = from_list BigMap.empty elements in
        let actual = to_list mem root in
        let expected = [] in
        assert_equal expected actual);
@@ -125,7 +127,7 @@ let suite =
      let actual = to_list mem root in
 
      let expected = List.map mkitem (IntSet.elements @@ IntSet.of_list xs) in
-     assert_equal expected actual ~printer:show_item_list;
+     assert_equal expected actual ~printer:show_element_list;
      true
     );
 
@@ -151,7 +153,7 @@ let suite =
        |> IntSet.remove to_del
        |> IntSet.elements
        |> List.map mkitem in
-     assert_equal expected actual ~printer:show_item_list;
+     assert_equal expected actual ~printer:show_element_list;
      true
     );
 
@@ -209,7 +211,7 @@ let suite =
      let actual = to_list mem joined_tree in
      let expected = left @ right in
 
-     assert_equal expected actual ~printer:show_item_list;
+     assert_equal expected actual ~printer:show_element_list;
      true
     );
 
@@ -252,12 +254,12 @@ let suite =
      assert_equal
        (List.map mkitem expected_left)
        actual_left
-       ~printer:show_item_list;
+       ~printer:show_element_list;
 
      assert_equal
        (List.map mkitem expected_right)
        actual_right
-       ~printer:show_item_list;
+       ~printer:show_element_list;
 
      true
     )
