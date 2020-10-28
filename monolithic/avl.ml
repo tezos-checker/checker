@@ -34,18 +34,18 @@
 *)
 
 open BigMap
+open Tez
 (*
  * A subset of checker types. We should split those to a separate module
  * in future to avoid the module cycle.
  *)
 
-type mutez = int [@@deriving show]
 type item_id = int [@@deriving show]
 
 (* A liquidation item *)
 type item = {
   id: item_id;
-  mutez: mutez;
+  tez: Tez.t;
 }
 [@@deriving show]
 
@@ -66,9 +66,9 @@ type leaf = {
 type branch = {
   left: ptr;
   left_height: int;
-  left_mutez: mutez;
+  left_tez: Tez.t;
   key: item_id;
-  right_mutez: mutez;
+  right_tez: Tez.t;
   right_height: int;
   right: ptr;
   parent: int64 option;
@@ -82,10 +82,10 @@ type node =
 
 type mem = node BigMap.t
 
-let node_mutez n =
+let node_tez n =
   match n with
-  | Leaf leaf -> leaf.item.mutez
-  | Branch branch -> branch.left_mutez + branch.right_mutez
+  | Leaf leaf -> leaf.item.tez
+  | Branch branch -> Tez.add branch.left_tez branch.right_tez
 
 let node_height n =
   match n with
@@ -152,7 +152,7 @@ let rotate_left (mem: mem) (parent_ptr: ptr) : mem * ptr =
   let updated_parent = Branch
       { parent with
         right = right_left_ptr;
-        right_mutez = node_mutez right_left;
+        right_tez = node_tez right_left;
         right_height = node_height right_left;
         parent = Some right_ptr;
       } in
@@ -160,7 +160,7 @@ let rotate_left (mem: mem) (parent_ptr: ptr) : mem * ptr =
       { right with
         parent = parent.parent;
         left = parent_ptr;
-        left_mutez = node_mutez updated_parent;
+        left_tez = node_tez updated_parent;
         left_height = node_height updated_parent;
       } in
   let updated_right_left =
@@ -205,7 +205,7 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
   let updated_parent = Branch
       { parent with
         left = left_right_ptr;
-        left_mutez = node_mutez left_right;
+        left_tez = node_tez left_right;
         left_height = node_height left_right;
         parent = Some left_ptr;
       } in
@@ -213,7 +213,7 @@ let rotate_right (mem: mem) (parent_ptr: ptr) : mem * ptr =
       { left with
         parent = parent.parent;
         right = parent_ptr;
-        right_mutez = node_mutez updated_parent;
+        right_tez = node_tez updated_parent;
         right_height = node_height updated_parent;
       } in
   let updated_left_right =
@@ -317,9 +317,9 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
          let new_branch = Branch {
              left = left_ptr;
              left_height = 1;
-             left_mutez = left.mutez;
+             left_tez = left.tez;
              key = right.id;
-             right_mutez = right.mutez;
+             right_tez = right.tez;
              right_height = 1;
              right = right_ptr;
              parent = parent;
@@ -348,13 +348,13 @@ let rec add (mem: mem) (root: ptr option) (new_item : item) : mem * ptr =
         then Branch {
             existing_branch with
             left = new_subtree;
-            left_mutez = node_mutez new_node;
+            left_tez = node_tez new_node;
             left_height = node_height new_node;
           }
         else Branch {
             existing_branch with
             right = new_subtree;
-            right_mutez = node_mutez new_node;
+            right_tez = node_tez new_node;
             right_height = node_height new_node;
           } in
       let mem = mem_set mem root_ptr new_branch in
@@ -391,13 +391,13 @@ let rec del (mem: mem) (root: ptr option) (id : item_id) : mem * ptr option =
           then Branch {
               existing with
               left = ptr;
-              left_mutez = node_mutez value;
+              left_tez = node_tez value;
               left_height = node_height value;
             }
           else Branch {
               existing with
               right = ptr;
-              right_mutez = node_mutez value;
+              right_tez = node_tez value;
               right_height = node_height value;
             } in
         let mem = mem_set mem root_ptr new_branch in
@@ -470,9 +470,9 @@ let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
     let new_branch = Branch {
         left = left_ptr;
         left_height = node_height left;
-        left_mutez = node_mutez left;
+        left_tez = node_tez left;
         key = node_key right;
-        right_mutez = node_mutez right;
+        right_tez = node_tez right;
         right_height = node_height right;
         right = right_ptr;
         parent = None;
@@ -492,7 +492,7 @@ let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
         { left with
           right = new_left_right_ptr;
           right_height = node_height new_left_right;
-          right_mutez = node_mutez new_left_right;
+          right_tez = node_tez new_left_right;
           parent = None;
         } in
     let mem = mem_update mem new_left_right_ptr
@@ -507,7 +507,7 @@ let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
         { right with
           left = new_right_left_ptr;
           left_height = node_height new_right_left;
-          left_mutez = node_mutez new_right_left;
+          left_tez = node_tez new_right_left;
           parent = None;
         } in
     let mem = mem_update mem new_right_left_ptr
@@ -518,7 +518,7 @@ let rec join (mem: mem) (left_ptr: ptr) (right_ptr: ptr) : mem * ptr =
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let rec split (mem: mem) (root: ptr option) (limit: mutez)
+let rec split (mem: mem) (root: ptr option) (limit: Tez.t)
   : mem * ptr option * ptr option =
   match root with
   | None -> (mem, None, None)
@@ -526,30 +526,30 @@ let rec split (mem: mem) (root: ptr option) (limit: mutez)
     let mem = mem_update mem root_ptr (node_set_parent None) in
     match mem_get mem root_ptr with
     | Leaf leaf ->
-      if leaf.item.mutez <= limit
+      if Tez.compare leaf.item.tez limit <= 0
       then (mem, Some root_ptr, None)
       else (mem, None, Some root_ptr)
     | Branch branch ->
-      if branch.left_mutez + branch.right_mutez <= limit
-      then (* total_mutez <= limit *)
+      if Tez.compare (Tez.add branch.left_tez branch.right_tez) limit <= 0
+      then (* total_tez <= limit *)
         (mem, Some root_ptr, None)
-      else if branch.left_mutez = limit
-      then (* left_mutez == limit *)
+      else if Tez.compare branch.left_tez limit = 0
+      then (* left_tez == limit *)
         let mem = mem_update mem branch.left (node_set_parent None) in
         let mem = mem_update mem branch.right (node_set_parent None) in
         (mem_del mem root_ptr,
          Some branch.left,
          Some branch.right)
-      else if limit < branch.left_mutez
-      then (* limit < left_mutez < total_mutez *)
+      else if Tez.compare limit branch.left_tez < 0
+      then (* limit < left_tez < total_tez *)
         match split mem (Some branch.left) limit with
         | (mem, left, Some right) ->
           let (mem, joined) = join mem right branch.right in
           (mem_del mem root_ptr, left, Some joined)
         | _ -> failwith "impossible"
-      else (* left_mutez < limit < total_mutez *)
+      else (* left_tez < limit < total_tez *)
         let left = mem_get mem branch.left in
-        match split mem (Some branch.right) (limit - node_mutez left) with
+        match split mem (Some branch.right) (Tez.sub limit (node_tez left)) with
         | (mem, Some left, right) ->
           let (mem, joined) = join mem branch.left left in
           (mem_del mem root_ptr, Some joined, right)

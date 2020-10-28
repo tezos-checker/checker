@@ -20,6 +20,8 @@ module Tez : sig
   val zero : t
   val one : t
 
+  val compare : t -> t -> int
+
   (* Conversions to/from other types. *)
   val of_float : float -> t (* TODO: Delete this one. *)
   val to_float : t -> float (* TODO: Delete this one. *)
@@ -71,6 +73,8 @@ struct
     assert (y >= 0L);
     assert (y > 0L); (* Overflow *)
     Int64.rem x y
+
+  let compare x y = Int64.compare x y
 
   let zero = 0L
   let one = scaling_factor
