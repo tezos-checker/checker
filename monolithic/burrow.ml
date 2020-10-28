@@ -237,7 +237,7 @@ struct
   let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
     Tez.of_fp
       FixedPoint.((Kit.to_fp b.minted_kit * fplus * minting_price p - Tez.to_fp b.collateral)
-       / (fplus - FixedPoint.one))
+                  / (fplus - FixedPoint.one))
 
   (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
   let compute_expected_kit (p : parameters) (tez_to_auction: Tez.t) : Kit.t =

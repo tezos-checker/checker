@@ -141,11 +141,11 @@ struct
      * Invariant here is that (tez', kit') should have the correct ratio.
     *)
     let (tez', kit') = FixedPoint.(
-      if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
-      then (Tez.of_fp (Kit.to_fp kit * ratio), kit)
-      else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
-      then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
-      else (tez, kit) ) in
+        if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
+        then (Tez.of_fp (Kit.to_fp kit * ratio), kit)
+        else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
+        then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
+        else (tez, kit) ) in
     let liquidity =
       if uniswap.total_liquidity_tokens = 0
       then 1

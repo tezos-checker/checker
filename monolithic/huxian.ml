@@ -98,16 +98,16 @@ let step_parameters
   let current_global_last_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
   ( total_accrual_to_uniswap
   , {
-      index = Tez.of_float current_index;
-      protected_index = Tez.of_float current_protected_index;
-      target = FixedPoint.of_float current_target;
-      drift = current_drift;
-      drift' = current_drift';
-      q = FixedPoint.of_float current_q;
-      burrow_fee_index = current_burrow_fee_index;
-      imbalance_index = current_imbalance_index;
-      global_last_outstanding_kit = current_global_last_outstanding_kit;
-    }
+    index = Tez.of_float current_index;
+    protected_index = Tez.of_float current_protected_index;
+    target = FixedPoint.of_float current_target;
+    drift = current_drift;
+    drift' = current_drift';
+    q = FixedPoint.of_float current_q;
+    burrow_fee_index = current_burrow_fee_index;
+    imbalance_index = current_imbalance_index;
+    global_last_outstanding_kit = current_global_last_outstanding_kit;
+  }
   )
 
 (* ************************************************************************* *)
@@ -118,7 +118,7 @@ type liquidation_outcome =
   | Partial
   | Complete (* complete: deplete the collateral *)
   | Close (* complete: "close" the burrow *)
-  [@@deriving show]
+[@@deriving show]
 
 (* TODO: More sharing here please *)
 type liquidation_result =
@@ -128,7 +128,7 @@ type liquidation_result =
     expected_kit : Kit.t;
     burrow_state : burrow;
   }
-  [@@deriving show]
+[@@deriving show]
 
 (* NOTE: George: The initial state of the burrow is the collateral C, the
  * oustanding kit K, and the implicit creation deposit D (1 tez). I say

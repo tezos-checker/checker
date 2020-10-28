@@ -62,8 +62,8 @@ struct
       (assert (x <> Int64.min_int && y <> Int64.min_int);
        let sign =
          if (x > 0L && y > 0L) || (x < 0L && y < 0L)
-           then Int64.one
-           else Int64.minus_one
+         then Int64.one
+         else Int64.minus_one
        in
        let absx = Int64.abs x in
        let absy = Int64.abs y in
@@ -72,18 +72,18 @@ struct
         Int64.mul sign (Int64.div (Int64.mul absx absy) scaling_factor)))
 
   let ( / ) x y = (* TODO: lossy *)
-   (assert (y <> 0L); (* Overflow/Underflow *)
-    assert (x <> Int64.min_int && y <> Int64.min_int); (* TODO *)
-    let sign =
-      if (x > 0L && y > 0L) || (x < 0L && y < 0L)
-        then Int64.one
-        else Int64.minus_one
-    in
-    let absx = Int64.abs x in
-    let absy = Int64.abs y in
-    let upper = Int64.div absx absy in
-    let lower = Int64.div (Int64.mul (Int64.rem absx absy) scaling_factor) absy in
-    Int64.mul sign (Int64.add (Int64.mul upper scaling_factor) lower))
+    (assert (y <> 0L); (* Overflow/Underflow *)
+     assert (x <> Int64.min_int && y <> Int64.min_int); (* TODO *)
+     let sign =
+       if (x > 0L && y > 0L) || (x < 0L && y < 0L)
+       then Int64.one
+       else Int64.minus_one
+     in
+     let absx = Int64.abs x in
+     let absy = Int64.abs y in
+     let upper = Int64.div absx absy in
+     let lower = Int64.div (Int64.mul (Int64.rem absx absy) scaling_factor) absy in
+     Int64.mul sign (Int64.add (Int64.mul upper scaling_factor) lower))
 
   let neg x = assert (x <> Int64.min_int); Int64.neg x
 
