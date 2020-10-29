@@ -4,7 +4,7 @@
 module FixedPoint : sig
   type t
 
-  val scaling_factor : t
+  val scaling_factor : Z.t
   val scaling_factor_int64 : Int64.t (* TODO: Remove; only for compatibility with kit/tez right now *)
 
   (* Basic arithmetic operations. *)
@@ -23,6 +23,9 @@ module FixedPoint : sig
   val to_float : t -> float (* TODO: Delete this one. *)
 
   (* CAUTION: These expose the internal representation. *)
+  val of_z : Z.t -> t (* TODO: Remove; only for compatibility with kit/tez right now *)
+  val to_z : t -> Z.t (* TODO: Remove; only for compatibility with kit/tez right now *)
+
   val of_int64 : int64 -> t (* TODO: Remove; only for compatibility with kit/tez right now *)
   val to_int64 : t -> int64 (* TODO: Remove; only for compatibility with kit/tez right now *)
 
@@ -65,6 +68,9 @@ struct
 
   let of_int64 t = Z.of_int64 t
   let to_int64 t = Z.to_int64 t
+
+  let of_z t = t
+  let to_z t = t
 
   let exp amount = one + amount
   (* Note: Use another term from the taylor sequence for more accuracy:
