@@ -62,9 +62,7 @@ struct
     (Z.to_float amount) /. Z.to_float scaling_factor
 
   let of_fp fp =
-    Z.div
-      (FixedPoint.to_z fp)
-      (Z.div FixedPoint.scaling_factor scaling_factor)
+    Z.((FixedPoint.to_z fp) * scaling_factor / FixedPoint.scaling_factor)
 
   let to_fp t = (* TODO: overflow check? *)
     FixedPoint.of_z (Z.mul t (Z.div FixedPoint.scaling_factor scaling_factor))
