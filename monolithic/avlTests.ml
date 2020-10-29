@@ -3,6 +3,7 @@ open OUnit2
 module Q = QCheck
 open BigMap
 open Tez
+open FixedPoint
 
 type element_list = (int * Tez.t) list [@@deriving show]
 
@@ -65,8 +66,8 @@ module IntSet = Set.Make(Int)
 
 let arb_tez = Q.(
   map
-    ~rev:(fun i -> int_of_float (Tez.to_float i))
-    (fun i -> Tez.of_float (float_of_int i))
+    ~rev:(fun i -> FixedPoint.to_int (Tez.to_fp i))
+    (fun i -> Tez.of_fp (FixedPoint.of_int i))
     small_int
 )
 

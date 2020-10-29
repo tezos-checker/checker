@@ -149,11 +149,12 @@ struct
     let liquidity =
       if uniswap.total_liquidity_tokens = 0
       then 1
-      else int_of_float (floor (
-          float_of_int uniswap.total_liquidity_tokens
-          *. Tez.to_float tez'
-          /. Tez.to_float uniswap.tez))
-    in
+      else FixedPoint.(
+        to_int (
+          of_int uniswap.total_liquidity_tokens
+          * Tez.to_fp tez'
+          / Tez.to_fp uniswap.tez)
+      ) in
     let updated =
       { kit = Kit.add uniswap.kit kit';
         tez = Tez.add uniswap.tez tez';
@@ -170,10 +171,9 @@ struct
     : Tez.t * Kit.t * uniswap =
     (* Since this requires a liquidity token, contract can not be empty *)
     assert(uniswap_non_empty(uniswap));
-    let ratio =
-      float_of_int liquidity /. float_of_int uniswap.total_liquidity_tokens in
-    let tez = Tez.of_float (Tez.to_float uniswap.tez *. ratio) in
-    let kit = Kit.of_float (Kit.to_float uniswap.kit *. ratio) in
+    let ratio = FixedPoint.(of_int liquidity / of_int uniswap.total_liquidity_tokens) in
+    let tez = Tez.scale uniswap.tez ratio in
+    let kit = Kit.scale uniswap.kit ratio in
     let updated = {
       tez = Tez.sub uniswap.tez tez;
       kit = Kit.sub uniswap.kit kit;

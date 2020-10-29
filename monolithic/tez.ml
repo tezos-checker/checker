@@ -22,7 +22,6 @@ module Tez : sig
 
   (* Conversions to/from other types. *)
   val of_float : float -> t (* TODO: Delete this one. *)
-  val to_float : t -> float (* TODO: Delete this one. *)
 
   val of_fp : FixedPoint.t -> t
   val to_fp : t -> FixedPoint.t
@@ -58,14 +57,11 @@ struct
     let lower = Z.of_float ((amount -. Z.to_float upper) *. Z.to_float scaling_factor) in
     Z.add (Z.mul upper scaling_factor) lower
 
-  let to_float amount = (* TODO: lossy *)
-    (Z.to_float amount) /. Z.to_float scaling_factor
-
   let of_fp fp =
-    Z.((FixedPoint.to_z fp) * scaling_factor / FixedPoint.scaling_factor)
+    Z.((FixedPoint.to_rep fp) * scaling_factor / FixedPoint.scaling_factor)
 
   let to_fp t = (* TODO: overflow check? *)
-    FixedPoint.of_z (Z.mul t (Z.div FixedPoint.scaling_factor scaling_factor))
+    FixedPoint.of_rep (Z.mul t (Z.div FixedPoint.scaling_factor scaling_factor))
 
   let div x y = (* TODO: lossy *)
     FixedPoint.(to_fp x / to_fp y)

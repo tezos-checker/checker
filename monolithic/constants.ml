@@ -29,7 +29,7 @@ module Constants : sig
 
   (** Protected index epsilon. The higher this value is, the faster the protected
     * index catches up with the actual index. TODO: Use FixedPoint.t. *)
-  val protected_index_epsilon : float
+  val protected_index_epsilon : FixedPoint.t
 
   (** The maximum number of tez that can be in an auction lot. *)
   val max_lot_size : Tez.t
@@ -47,7 +47,7 @@ struct
 
   let uniswap_fee_percentage = FixedPoint.of_float 0.002
 
-  let protected_index_epsilon = 0.0005
+  let protected_index_epsilon = FixedPoint.of_float 0.0005
 
   let max_lot_size = Tez.of_float 10000.
 end

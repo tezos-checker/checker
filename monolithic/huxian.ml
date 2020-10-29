@@ -21,8 +21,6 @@ include Uniswap
  * * Implement imbalance adjustment-related logic.
  *
  * * Implement burrowing fees-related logic.
- *
- * * Do not go through floating-point numbers anywhere.
 *)
 
 (* ************************************************************************* *)
@@ -49,41 +47,44 @@ let seconds_of_duration = function | Seconds s -> s
 (* TODO: Not tested, take it with a grain of salt. *)
 let step_parameters
     (time_passed: duration)
-    (current_index: float)
-    (current_kit_in_tez: float)
+    (current_index: FixedPoint.t)
+    (current_kit_in_tez: FixedPoint.t)
     (parameters: parameters)
   : Kit.t * parameters =
   (* Compute the new protected index, using the time interval, the current
    * index (given by the oracles right now), and the protected index of the
    * previous timestamp. *)
-  let duration_in_seconds = float_of_int (seconds_of_duration time_passed) in
-  let upper_lim = exp (protected_index_epsilon *. duration_in_seconds) in
-  let lower_lim = exp (-. protected_index_epsilon *. duration_in_seconds) in
+  let duration_in_seconds = FixedPoint.of_int (seconds_of_duration time_passed) in
+  let upper_lim = FixedPoint.(exp (protected_index_epsilon * duration_in_seconds)) in
+  let lower_lim = FixedPoint.(exp (neg protected_index_epsilon * duration_in_seconds)) in
   let current_protected_index =
-    Tez.to_float parameters.protected_index
-    *. clamp
-      (current_index /. Tez.to_float parameters.protected_index)
-      lower_lim
-      upper_lim in
-  let current_drift' =
-    FixedPoint.of_float (compute_drift_derivative (FixedPoint.to_float parameters.target)) in
+    FixedPoint.(
+      Tez.to_fp parameters.protected_index
+      * clamp
+        (current_index / Tez.to_fp parameters.protected_index)
+        lower_lim
+        upper_lim
+    ) in
+  let current_drift' = compute_drift_derivative parameters.target in
   let current_drift =
     FixedPoint.(
       parameters.drift
-      + (FixedPoint.of_float (1. /. 2.))
+      + of_float (1. /. 2.)
         * (parameters.drift' + current_drift')
-        * FixedPoint.of_float duration_in_seconds
+        * duration_in_seconds
     ) in
 
   (* TODO: use integer arithmetic *)
   let current_q =
-    FixedPoint.to_float parameters.q
-    *. exp ( ( FixedPoint.to_float parameters.drift
-               +. (1. /. 6.)
-                  *. (2. *. FixedPoint.to_float FixedPoint.(parameters.drift' + current_drift'))
-                  *. duration_in_seconds )
-             *. duration_in_seconds ) in
-  let current_target = current_q *. current_index /. current_kit_in_tez in
+    FixedPoint.(
+      parameters.q
+      * exp ( ( parameters.drift
+                + of_float (1. /. 6.)
+                  * (of_float 2. * (parameters.drift' + current_drift'))
+                  * duration_in_seconds )
+              * duration_in_seconds )
+    ) in
+  let current_target = FixedPoint.(current_q * current_index / current_kit_in_tez) in
 
   (* Update the indices *)
   let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + burrow_fee_percentage)) in (* TODO: Yearly! *)
@@ -96,12 +97,12 @@ let step_parameters
   (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
   ( total_accrual_to_uniswap
   , {
-    index = Tez.of_float current_index;
-    protected_index = Tez.of_float current_protected_index;
-    target = FixedPoint.of_float current_target;
+    index = Tez.of_fp current_index;
+    protected_index = Tez.of_fp current_protected_index;
+    target = current_target;
     drift = current_drift;
     drift' = current_drift';
-    q = FixedPoint.of_float current_q;
+    q = current_q;
     burrow_fee_index = current_burrow_fee_index;
     imbalance_index = current_imbalance_index;
     outstanding_kit = current_outstanding_kit;

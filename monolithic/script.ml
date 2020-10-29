@@ -87,8 +87,8 @@ let step_experiment () =
                              circulating_kit = Kit.zero; (* TODO: What should that be? *)
                            } in
   let interblock_time = Seconds 3600 in
-  let new_index = 0.34 in
-  let tez_per_kit = 0.305 in
+  let new_index = FixedPoint.of_float 0.34 in
+  let tez_per_kit = FixedPoint.of_float 0.305 in
   let total_accrual_to_uniswap, new_parameters = step_parameters interblock_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
   print_string @@ show_parameters initial_parameters;

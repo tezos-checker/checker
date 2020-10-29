@@ -41,10 +41,8 @@ module Parameters : sig
     * the burrow fee index and the imbalance adjustment index. *)
   val compute_adjustment_index : parameters -> FixedPoint.t
 
-  (** Given the current target p, calculate the rate of change of the drift d'.
-    * TODO: Use FixedPoint.t instead of float. *)
-  val compute_drift_derivative : float -> float
-  val compute_drift_derivative_2 : FixedPoint.t -> FixedPoint.t
+  (** Given the current target p, calculate the rate of change of the drift d'. *)
+  val compute_drift_derivative : FixedPoint.t -> FixedPoint.t
 end =
 struct
   type parameters =
@@ -77,12 +75,6 @@ struct
 
   let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_float 100.0)
 
-  (* TODO: Eventually get rid of? *)
-  let sign (i: float) : float =
-    if i > 0. then 1.
-    else if i = 0. then 0.
-    else -1.
-
   (** If we call "burrowed" the total amount of kit necessary to close all
     * existing burrows, and "circulating" the total amount of kit in
     * circulation, then the imbalance fee/bonus is calculated as follows (per
@@ -114,13 +106,14 @@ struct
   let compute_adjustment_index (p: parameters) : FixedPoint.t =
     FixedPoint.(p.burrow_fee_index * p.imbalance_index)
 
+(*
   (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
    * second^2, assuming we're measuring time in seconds. My calculations might be
    * incorrect. *)
-  let compute_drift_derivative (target : float) : float =
-    assert (target > 0.);
-    let cnp_001 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.01)) in
-    let cnp_005 = FixedPoint.to_float (cnp (FixedPoint.of_float 0.05)) in
+  let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
+    assert (target > FixedPoint.zero);
+    let cnp_001 = cnp (FixedPoint.of_float 0.01) in
+    let cnp_005 = cnp (FixedPoint.of_float 0.05) in
 
     let log_target = log target in
     let abs_log_target = Float.abs log_target in
@@ -130,12 +123,12 @@ struct
       sign log_target *. (cnp_001 /. (24. *. 3600.) ** 2.)
     else
       sign log_target *. (cnp_005 /. (24. *. 3600.) ** 2.)
+*)
 
   (* George: Note that we don't really need to calculate the logs here (which can
    * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
-   * and win some precision, like this:
-  *)
-  let compute_drift_derivative_2 (target : FixedPoint.t) : FixedPoint.t =
+   * and win some precision, like this. My calculations might be incorrect. *)
+  let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     assert (target > FixedPoint.zero);
     FixedPoint.(
       let cnp_001 = cnp (of_float 0.01) in
