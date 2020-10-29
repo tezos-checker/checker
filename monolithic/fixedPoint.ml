@@ -41,7 +41,9 @@ struct
   let ( + ) x y = Z.(x + y)
   let ( - ) x y = Z.(x - y)
   let ( * ) x y = Z.((x * y) / scaling_factor)
-  let ( / ) x y = Z.(x / y)
+  let ( / ) x y =
+    let upper, lower = Z.div_rem x y in
+    Z.((upper * scaling_factor) + ((lower * scaling_factor) / y))
 
   let neg x = Z.neg x
   let sqr x = x * x
