@@ -21,40 +21,32 @@
  * re-inserting the pieces to both trees. And we might have some small
  * functions helping this, but it shouldn't be too hard to implement them.
  *
- * However, if the item_ids are sequential, we can not split them with each
- * piece having a different id, while still being smaller than the following
- * elements. We might have to change their representation to allow this.
- *
  * There are some amount of property tests on major code paths, but there
  * might be other issues.
- *
- * On property tests, we use generic generators and skip most of them. This
- * is very inefficient, instead we should have custom generators.
- *
 *)
 
 open BigMap
 open Tez
+open Format
 
 (*
- * A doubly-linked balanced tree where the leaves contain the liquidation
- * elements, and the branches contain the amount of tez on their left and
+ * A double-ended queue backed by a doubly-linked balanced tree where
+ * the leaves contain the liquidation elements, and the branches contain
+ * the amount of tez on their left and
  * right children.
  *)
 
-type ('k, 'v) leaf = {
-  key: 'k;
-  value: 'v;
+type 't leaf = {
+  value: 't;
   tez: Tez.t;
   parent: int64 option;
 }
 [@@deriving show]
 
-type 'k branch = {
+type branch = {
   left: ptr;
   left_height: int;
   left_tez: Tez.t;
-  key: 'k;
   right_tez: Tez.t;
   right_height: int;
   right: ptr;
@@ -62,12 +54,12 @@ type 'k branch = {
 }
 [@@deriving show]
 
-type ('k, 'v) node =
-  | Leaf of ('k, 'v) leaf
-  | Branch of 'k branch
+type 't node =
+  | Leaf of 't leaf
+  | Branch of branch
 [@@deriving show]
 
-type ('k, 'v) mem = (('k, 'v) node) BigMap.t
+type 't mem = ('t node) BigMap.t
 
 let node_tez n =
   match n with
@@ -79,12 +71,12 @@ let node_height n =
   | Leaf _ -> 1
   | Branch branch -> max branch.left_height branch.right_height + 1
 
-let node_key n =
+let node_parent n =
   match n with
-  | Leaf leaf -> leaf.key
-  | Branch branch -> branch.key
+  | Leaf leaf -> leaf.parent
+  | Branch branch -> branch.parent
 
-let node_set_parent (p: ptr option) (n: ('k, 'v) node) =
+let node_set_parent (p: ptr option) (n: 't node) =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
   | Branch branch -> Branch { branch with parent = p; }
@@ -124,7 +116,7 @@ let empty: ptr option = None
  *       /     \
  *     left  right_left
 *)
-let rotate_left (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
+let rotate_left (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
   let parent =
     match mem_get mem parent_ptr with
     | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
@@ -177,7 +169,7 @@ let rotate_left (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
  *               /     \
  *         left_right  right
 *)
-let rotate_right (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
+let rotate_right (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
   let parent =
     match mem_get mem parent_ptr with
     | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
@@ -225,7 +217,7 @@ let rotate_right (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
  * The case Dir1 <> Dir2 is repaired by
  *   a double rotation: rotate_Dir1Dir2
 *)
-let balance (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
+let balance (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
   let (mem, ptr) = match mem_get mem parent_ptr with
     | Branch branch
       when abs (branch.left_height - branch.right_height) > 1 ->
@@ -271,195 +263,7 @@ let balance (mem: ('k, 'v) mem) (parent_ptr: ptr) : ('k, 'v) mem * ptr =
     abs (b.left_height - b.right_height) <= 1);
   (mem, ptr)
 
-let rec add
-  (mem: ('k, 'v) mem) (root: ptr option)
-  (key: 'k) (value: 'v) (tez: 'tez)
-  : ('k, 'v) mem * ptr =
-  match root with
-  (* When the tree is empty, create the initial leaf. *)
-  | None ->
-    let node = Leaf { key=key; value=value; tez=tez; parent=None; } in
-    mem_new mem node
-  (* When there is already an element, *)
-  | Some root_ptr ->
-    match mem_get mem root_ptr with
-    (* ... and if it is a leaf,*)
-    | Leaf existing ->
-      (match compare existing.key key with
-       (* ... we override it if the keys are the same. *)
-       | cmp when cmp = 0 ->
-         (* NOTE: I can not think of a case where we'd overwrite an
-          * existing liquidation, so maybe this case should fail.
-         *)
-         let node = Leaf { key=key; value=value; tez=tez; parent=existing.parent; } in
-         let mem = mem_set mem root_ptr node in
-         (mem, root_ptr)
-       (* ... or we create a sibling leaf and a parent branch.  *)
-       | cmp ->
-         let new_ptr = mem_next_ptr(mem) in
-         let branch_ptr = Int64.succ new_ptr in
-
-         let new_leaf = { key=key; value=value; tez=tez; parent=existing.parent; } in
-
-         let (left, left_ptr, right, right_ptr) =
-           if cmp < 0
-           then (existing, root_ptr, new_leaf, new_ptr)
-           else (new_leaf, new_ptr, existing, root_ptr) in
-         let left = { left with parent=Some branch_ptr; } in
-         let right = { right with parent=Some branch_ptr; } in
-         let new_branch = Branch {
-             left = left_ptr;
-             left_height = 1;
-             left_tez = left.tez;
-             key = right.key;
-             right_tez = right.tez;
-             right_height = 1;
-             right = right_ptr;
-             parent = existing.parent;
-           } in
-         let mem = mem_set mem left_ptr (Leaf left)in
-         let mem = mem_set mem right_ptr (Leaf right) in
-         let mem = mem_set mem branch_ptr new_branch in
-         (mem, branch_ptr)
-      )
-    (* ... if it is a branch, we insert it to the corresponding side
-     * updating the aggregates on the branch.
-    *)
-    | Branch existing_branch ->
-      let target_left = key < existing_branch.key in
-      let (mem, new_subtree) =
-        add
-          mem
-          (Some
-             (if target_left
-              then existing_branch.left
-              else existing_branch.right))
-          key value tez in
-      let new_node = mem_get mem new_subtree in
-      let new_branch =
-        if target_left
-        then Branch {
-            existing_branch with
-            left = new_subtree;
-            left_tez = node_tez new_node;
-            left_height = node_height new_node;
-          }
-        else Branch {
-            existing_branch with
-            right = new_subtree;
-            right_tez = node_tez new_node;
-            right_height = node_height new_node;
-          } in
-      let mem = mem_set mem root_ptr new_branch in
-      balance mem root_ptr
-
-let rec del (mem: ('k, 'v) mem) (root: ptr option) (key: 'k) : ('k, 'v) mem * ptr option =
-  match root with
-  (* Deleting something from an empty tree returns an empty tree. *)
-  | None ->
-    (mem, None)
-  | Some root_ptr ->
-    match BigMap.find root_ptr mem with
-    (* Deleting something from a singleton tree might be an empty tree. *)
-    | Leaf existing ->
-      if existing.key = key
-      then (BigMap.remove root_ptr mem, None)
-      else (mem, Some root_ptr)
-    (* Deleting something from a branch recurses to the relevant side. *)
-    | Branch existing ->
-      let target_left = key < existing.key in
-      let (mem, new_subtree') =
-        del
-          mem
-          (Some
-             (if target_left
-              then existing.left
-              else existing.right))
-          key in
-      match new_subtree' with
-      | Some ptr ->
-        let value = mem_get mem ptr in
-        let new_branch =
-          if target_left
-          then Branch {
-              existing with
-              left = ptr;
-              left_tez = node_tez value;
-              left_height = node_height value;
-            }
-          else Branch {
-              existing with
-              right = ptr;
-              right_tez = node_tez value;
-              right_height = node_height value;
-            } in
-        let mem = mem_set mem root_ptr new_branch in
-        (match balance mem root_ptr with
-           (a, b) -> (a, Some b))
-      (* If one side of the branch ends up being empty, we replace the
-       * branch itself with the other side. *)
-      | None ->
-        let (_deleted, preserved) =
-          if target_left
-          then (existing.left, existing.right)
-          else (existing.right, existing.left) in
-        let mem = BigMap.remove root_ptr mem in
-        let mem = mem_update mem preserved
-            (node_set_parent existing.parent) in
-        (mem, Some(preserved))
-
-(*
-let rec debug_string (mem: ('k, 'v) mem) (root: ptr option) : string =
-  let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-  match root with
-  | None -> "Empty"
-  | Some root_ptr -> match mem_get mem root_ptr with
-    | Leaf leaf -> Int64.to_string root_ptr ^ ": Leaf " ^ show_leaf leaf
-    | Branch branch ->
-      Int64.to_string root_ptr ^ ": Branch " ^ show_branch branch ^ "\n"
-      ^ indent ("Left:\n"
-                ^ indent (debug_string mem (Some branch.left))) ^ "\n"
-      ^ indent ("Right:\n"
-                ^ indent (debug_string mem (Some branch.right)))
-*)
-
-let add_all (mem: ('k, 'v) mem) (root: ptr option) (xs: ('k * 'v * Tez.t) list)
-  : ('k, 'v) mem * ptr option =
-  List.fold_left
-    (fun (mem, root) (key, value, tez) ->
-       let (mem, root) = add mem root key value tez in
-       (mem, Some root))
-    (mem, root)
-    xs
-
-let rec max (mem: ('k, 'v) mem) (root: ptr) : ('k, 'v) leaf =
-  match mem_get mem root with
-  | Leaf leaf -> leaf
-  | Branch branch -> max mem branch.right
-
-let rec min (mem: ('k, 'v) mem) (root: ptr) : ('k, 'v) leaf =
-  match mem_get mem root with
-  | Leaf leaf -> leaf
-  | Branch branch -> min mem branch.left
-
-(*
-let add_all_debug (mem: ('k, 'v) mem) (root: ptr option) (elements: element list)
-  : ('k, 'v) mem * ptr option =
-  List.fold_left
-    (fun (mem, root) element ->
-       print_string "--------------------------------\n";
-       print_string ("Inserting: " ^ show_element element ^ "\n");
-       let (mem, root) = add mem root element in
-       print_string (debug_string mem (Some root));
-       print_newline ();
-       (mem, Some root))
-    (mem, root)
-    elements
-*)
-
-let rec join (mem: ('k, 'v) mem) (left_ptr: ptr) (right_ptr: ptr) : ('k, 'v) mem * ptr =
-  assert ((max mem left_ptr).key < (min mem right_ptr).key);
-
+let rec join (mem: 't mem) (left_ptr: ptr) (right_ptr: ptr) : 't mem * ptr =
   let left = mem_get mem left_ptr in
   let right = mem_get mem right_ptr in
 
@@ -468,7 +272,6 @@ let rec join (mem: ('k, 'v) mem) (left_ptr: ptr) (right_ptr: ptr) : ('k, 'v) mem
         left = left_ptr;
         left_height = node_height left;
         left_tez = node_tez left;
-        key = node_key right;
         right_tez = node_tez right;
         right_height = node_height right;
         right = right_ptr;
@@ -476,7 +279,6 @@ let rec join (mem: ('k, 'v) mem) (left_ptr: ptr) (right_ptr: ptr) : ('k, 'v) mem
       } in
 
     let (mem, ptr) = mem_new mem new_branch in
-
     let mem = mem_update mem left_ptr (node_set_parent (Some ptr)) in
     let mem = mem_update mem right_ptr (node_set_parent (Some ptr)) in
 
@@ -512,11 +314,146 @@ let rec join (mem: ('k, 'v) mem) (left_ptr: ptr) (right_ptr: ptr) : ('k, 'v) mem
     let (mem, right_ptr) = balance mem right_ptr in
     (mem, right_ptr)
 
+let push_back
+  (mem: 't mem) (root: ptr option) (value: 't) (tez: 'tez)
+  : 't mem * ptr * ptr =
+  match root with
+  (* When the tree is empty, create the initial leaf. *)
+  | None ->
+    let node = Leaf { value=value; tez=tez; parent=None; } in
+    (match mem_new mem node with (mem, ptr) -> (mem, ptr, ptr))
+  (* When there is already an element, append it. *)
+  | Some root_ptr ->
+    let mem, new_leaf =
+          mem_new mem @@ Leaf { value=value; tez=tez; parent=None; } in
+    (match join mem root_ptr new_leaf with (mem, avl) -> (mem, avl, new_leaf))
+
+let push_front
+  (mem: 't mem) (root: ptr option) (value: 't) (tez: 'tez)
+  : 't mem * ptr * ptr =
+  match root with
+  (* When the tree is empty, create the initial leaf. *)
+  | None ->
+    let node = Leaf { value=value; tez=tez; parent=None; } in
+    (match mem_new mem node with (mem, ptr) -> (mem, ptr, ptr))
+  (* When there is already an element, append it. *)
+  | Some root_ptr ->
+    let mem, new_leaf =
+          mem_new mem @@ Leaf { value=value; tez=tez; parent=None; } in
+    (match join mem new_leaf root_ptr with (mem, avl) -> (mem, avl, new_leaf))
+
+let del (mem: 't mem) (ptr: ptr): 't mem * ptr option =
+  let self = mem_get mem ptr in
+  let mem = mem_del mem ptr in
+  match node_parent self with
+    (* when deleting the sole element, we return an empty tree *)
+    | None -> (mem, None)
+    (* otherwise, the parent of the deleted element is redundant since it
+     * only has a single child, so we delete the parent and the orphan sibling
+     * is adopted by the grandparent who have lost its child. *)
+    | Some parent_ptr -> match mem_get mem parent_ptr with
+      | Leaf _ -> failwith "del: parent is a leaf"
+      | Branch parent ->
+        let sibling_ptr = if parent.left = ptr
+                            then parent.right
+                            else parent.left in
+        assert (sibling_ptr <> ptr);
+        let mem = mem_del mem parent_ptr in
+        let mem = mem_update mem sibling_ptr (node_set_parent parent.parent) in
+        match parent.parent with
+          | None -> (mem, Some sibling_ptr)
+          | Some grandparent_ptr ->
+            let update_matching_child mem ptr from_ptr to_ptr =
+              mem_update mem ptr @@ fun v -> match v with
+                | Leaf _ -> failwith "update_matching_child: got a leaf"
+                | Branch b ->
+                   let to_ = mem_get mem to_ptr in
+                   if b.left = from_ptr
+                   then Branch {
+                           b with
+                           left = to_ptr;
+                           left_tez = node_tez to_;
+                           left_height = node_height to_;
+                         }
+                   else (
+                     assert (b.right = from_ptr);
+                     Branch {
+                       b with
+                       right = to_ptr;
+                       right_tez = node_tez to_;
+                       right_height = node_height to_;
+                     }) in
+
+            let mem = update_matching_child mem grandparent_ptr parent_ptr sibling_ptr in
+
+            let rec balance_parents mem ptr =
+                let parent_ptr = node_parent (mem_get mem ptr) in
+                let (mem, new_ptr) = balance mem ptr in
+                match parent_ptr with
+                  | None -> (mem, new_ptr)
+                  | Some parent_ptr ->
+                    let mem = update_matching_child mem parent_ptr ptr new_ptr in
+                    balance_parents mem parent_ptr in
+
+             match balance_parents mem grandparent_ptr with
+               (mem, root) -> (mem, Some root)
+
+let rec debug_string (mem: 't mem) (show: 't -> string) (root: ptr option) : string =
+  let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
+  match root with
+  | None -> "Empty"
+  | Some root_ptr -> match mem_get mem root_ptr with
+    | Leaf leaf ->
+      Int64.to_string root_ptr
+        ^ sprintf ": Leaf { value: %s; tez: %s; parent: %s }"
+            (show leaf.value) (Tez.show_tez leaf.tez)
+            (match leaf.parent with | Some i -> Int64.to_string i | None -> "None")
+    | Branch branch ->
+      Int64.to_string root_ptr ^ ": Branch " ^ show_branch branch ^ "\n"
+      ^ indent ("Left:\n"
+                ^ indent (debug_string mem show (Some branch.left))) ^ "\n"
+      ^ indent ("Right:\n"
+                ^ indent (debug_string mem show (Some branch.right)))
+
+let add_all (mem: 't mem) (root: ptr option) (xs: ('t * Tez.t) list)
+  : 't mem * ptr option =
+  List.fold_left
+    (fun (mem, root) (value, tez) ->
+       let (mem, root, _) = push_back mem root value tez in
+       (mem, Some root))
+    (mem, root)
+    xs
+
+let rec max (mem: 't mem) (root: ptr) : ptr * 't leaf =
+  match mem_get mem root with
+  | Leaf leaf -> (root, leaf)
+  | Branch branch -> max mem branch.right
+
+let rec min (mem: 't mem) (root: ptr) : ptr * 't leaf =
+  match mem_get mem root with
+  | Leaf leaf -> (root, leaf)
+  | Branch branch -> min mem branch.left
+
+(*
+let add_all_debug (mem: 't mem) (root: ptr option) (elements: element list)
+  : 't mem * ptr option =
+  List.fold_left
+    (fun (mem, root) element ->
+       print_string "--------------------------------\n";
+       print_string ("Inserting: " ^ show_element element ^ "\n");
+       let (mem, root) = add mem root element in
+       print_string (debug_string mem (Some root));
+       print_newline ();
+       (mem, Some root))
+    (mem, root)
+    elements
+*)
+
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let rec split (mem: ('k, 'v) mem) (root: ptr option) (limit: Tez.t)
-  : ('k, 'v) mem * ptr option * ptr option =
+let rec split (mem: 't mem) (root: ptr option) (limit: Tez.t)
+  : 't mem * ptr option * ptr option =
   match root with
   | None -> (mem, None, None)
   | Some root_ptr ->
