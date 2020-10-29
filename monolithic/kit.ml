@@ -76,10 +76,10 @@ struct
   let of_fp fp =
     Int64.div
       (FixedPoint.to_int64 fp)
-      (Int64.div FixedPoint.scaling_factor scaling_factor)
+      (Int64.div FixedPoint.scaling_factor_int64 scaling_factor)
 
   let to_fp t = (* TODO: overflow check? *)
-    FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor scaling_factor))
+    FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor_int64 scaling_factor))
 
   let div x y = (* TODO: lossy *)
     assert (x >= 0L);
