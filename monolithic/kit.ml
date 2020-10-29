@@ -10,7 +10,7 @@ module Kit : sig
 
   val scaling_factor : Z.t
 
-  (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
+  (* Basic arithmetic operations. *)
   val add : t -> t -> t
   val sub : t -> t -> t
   val div : t -> t -> FixedPoint.t
@@ -43,7 +43,7 @@ struct
   let scaling_factor = Z.of_int64 1000000L
   let scaling_exponent = 6
 
-  (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
+  (* Basic arithmetic operations. *)
   let add x y = Z.(x + y)
   let sub x y = Z.(x - y)
 
@@ -75,8 +75,6 @@ struct
   let scale amount fp = (* TODO: Over/Under- flow checks *)
     of_fp FixedPoint.(to_fp amount * fp)
 
-  let partition x = (Z.div x scaling_factor, Z.rem x scaling_factor)
-
   (* Pretty printing functions *)
   let show_kit amount =
     let zfill s width =
@@ -85,7 +83,7 @@ struct
       then s
       else (String.make to_fill '0') ^ s in
 
-    let (upper, lower) = partition amount in
+    let (upper, lower) = Z.div_rem amount scaling_factor in
     Format.sprintf "%s.%s"
       (Z.to_string upper)
       (zfill (Z.to_string lower) scaling_exponent)

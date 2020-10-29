@@ -5,9 +5,12 @@ module FixedPoint : sig
   type t
 
   val scaling_factor : Z.t
-  val scaling_factor_int64 : Int64.t (* TODO: Remove; only for compatibility with kit/tez right now *)
 
-  (* Basic arithmetic operations. *)
+  (* Predefined values. *)
+  val zero : t
+  val one : t
+
+  (* Arithmetic operations. *)
   val ( + ) : t -> t -> t
   val ( - ) : t -> t -> t
   val ( * ) : t -> t -> t
@@ -15,19 +18,11 @@ module FixedPoint : sig
   val neg : t -> t
   val sqr : t -> t (* TODO: Generalize, if needed *)
 
-  val zero : t
-  val one : t
-
   (* Conversions to/from other types. *)
   val of_float : float -> t (* TODO: Delete this one. *)
   val to_float : t -> float (* TODO: Delete this one. *)
-
-  (* CAUTION: These expose the internal representation. *)
-  val of_z : Z.t -> t (* TODO: Remove; only for compatibility with kit/tez right now *)
-  val to_z : t -> Z.t (* TODO: Remove; only for compatibility with kit/tez right now *)
-
-  val of_int64 : int64 -> t (* TODO: Remove; only for compatibility with kit/tez right now *)
-  val to_int64 : t -> int64 (* TODO: Remove; only for compatibility with kit/tez right now *)
+  val of_z : Z.t -> t (* NOTE: Exposes internal representation. *)
+  val to_z : t -> Z.t (* NOTE: Exposes internal representation. *)
 
   val exp : t -> t
 
@@ -38,25 +33,30 @@ struct
   type t = Z.t
   let scaling_factor = Z.of_int64 100000000L
   let scaling_exponent = 8
-  let scaling_factor_int64 = Z.to_int64 scaling_factor
 
-  (* Basic arithmetic operations. *)
-  let ( + ) x y = Z.(x + y)
-  let ( - ) x y = Z.(x - y)
-  let ( * ) x y = Z.((x * y) / scaling_factor)
-  let ( / ) x y =
-    let upper, lower = Z.div_rem x y in
-    Z.((upper * scaling_factor) + ((lower * scaling_factor) / y))
-
-  let neg x = Z.neg x
-  let sqr x = x * x
-
+  (* Predefined values. *)
   let zero = Z.zero
   let one = scaling_factor
 
+  (* Arithmetic operations. *)
+  let ( + ) x y = Z.(x + y)
+  let ( - ) x y = Z.(x - y)
+  let ( * ) x y = Z.((x * y) / scaling_factor)
+
+  (* We round towards 0, for fixedpoint calculation, measuring things which are
+   * inherently noisy, this is ok. Greater care must be excerced when doing
+   * accounting (e.g. uniswap)... for measuring things like drift, targets,
+   * imbalances etc which are naturally imprecise this is fine. *)
+  let ( / ) x y = Z.(x * scaling_factor / y)
+  let neg x = Z.neg x
+  let sqr x = x * x
+
+  (* NOTE: Use another term from the taylor sequence for more accuracy:
+   *   one + amount + (amount * amount) / (one + one) *)
+  let exp amount = one + amount
+
   (* Conversions to/from other types. *)
   let of_float x = (* TODO: lossy *)
-    (* TODO: Assertions here *)
     let sign = if (x >= 0.0) then Z.one else Z.minus_one in
     let amount = Float.abs x in
     let upper = Z.of_float amount in
@@ -66,16 +66,8 @@ struct
   let to_float amount = (* TODO: lossy *)
     (Z.to_float amount) /. Z.to_float scaling_factor
 
-  let of_int64 t = Z.of_int64 t
-  let to_int64 t = Z.to_int64 t
-
   let of_z t = t
   let to_z t = t
-
-  let exp amount = one + amount
-  (* Note: Use another term from the taylor sequence for more accuracy:
-       one + amount + (amount * amount) / (one + one)
-  *)
 
   (* Pretty printing functions *)
   let pp ppf amount =
