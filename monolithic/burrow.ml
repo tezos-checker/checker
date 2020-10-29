@@ -77,13 +77,19 @@ module Burrow : sig
   *)
   val get_outstanding_kit : parameters -> burrow -> Kit.t
 
+  (** Perform housekeeping tasks on the burrow. This includes:
+    * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
+    * - NOTE: Are there any other tasks to put in this list?
+  *)
+  val touch : parameters -> burrow -> burrow
+
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
   val create_burrow : parameters -> Address.t -> Tez.t -> (burrow, Error.error) result
 
   (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
-  val deposit_tez : Tez.t -> burrow -> burrow
+  val deposit_tez : parameters -> Tez.t -> burrow -> burrow
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
@@ -95,7 +101,7 @@ module Burrow : sig
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. TODO: Pass a Kit.utxo instead? *)
-  val burn_kit : Kit.t -> burrow -> burrow * Kit.t
+  val burn_kit : parameters -> Kit.t -> burrow -> burrow * Kit.t
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
@@ -134,7 +140,6 @@ struct
     *
     *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
   *)
-  (* TODO: shall we update the burrow to reflect the change here? *)
   let get_outstanding_kit (p : parameters) (b : burrow) : Kit.t =
     Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index)
 
@@ -147,10 +152,17 @@ struct
     * purposes of minting/checking overburrowedness, we do not take into
     * account expected kit from pending auctions; for all we know, this could
     * be lost forever.
+    * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
   let is_overburrowed (p : parameters) (b : burrow) : bool =
-    let outstanding_kit = get_outstanding_kit p b in
-    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp outstanding_kit * minting_price p)
+    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * minting_price p)
+
+  (* Update the outstanding kit, update the adjustment index, TODO: and the timestamp? *)
+  let touch (p: parameters) (b: burrow) : burrow =
+    { b with
+      minted_kit = get_outstanding_kit p b;
+      adjustment_index = compute_adjustment_index p;
+    }
 
   let create_burrow (p: parameters) (address: Address.t) (tez: Tez.t) : (burrow, Error.error) result =
     if tez < creation_deposit
@@ -165,14 +177,16 @@ struct
         }
 
   (** Add non-negative collateral to a burrow. *)
-  let deposit_tez (t : Tez.t) (b : burrow) : burrow =
+  let deposit_tez (p: parameters) (t: Tez.t) (burrow: burrow) : burrow =
     assert (t >= Tez.zero);
+    let b = touch p burrow in
     { b with collateral = Tez.add b.collateral t }
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p : parameters) (t : Tez.t) (b : burrow) : (burrow * Tez.utxo, Error.error) result =
+  let withdraw_tez (p: parameters) (t: Tez.t) (burrow: burrow) : (burrow * Tez.utxo, Error.error) result =
     assert (t >= Tez.zero);
+    let b = touch p burrow in
     let new_burrow = { b with collateral = Tez.sub b.collateral t } in
     let tez_utxo = Tez.{ destination = b.owner; amount = t } in
     if is_overburrowed p new_burrow
@@ -182,11 +196,9 @@ struct
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
   (* TODO: This should update the parameters; more kit is now in circulation! *)
-  let mint_kit (p : parameters) (k : Kit.t) (b : burrow) : (burrow * Kit.utxo, Error.error) result =
+  let mint_kit (p: parameters) (k: Kit.t) (burrow: burrow) : (burrow * Kit.utxo, Error.error) result =
     assert (k >= Kit.zero);
-    (* TODO: we should probably update the minted_kit to the actual
-     * outstanding_kit here (that is, add the burrowing fee and imbalance
-     * adjustment, as computed by get_outstanding_kit)? *)
+    let b = touch p burrow in
     let new_burrow = { b with minted_kit = Kit.add b.minted_kit k } in
     let kit_utxo = Kit.{ destination = b.owner; amount = k } in
     if is_overburrowed p new_burrow
@@ -196,8 +208,9 @@ struct
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. *)
   (* TODO: This should update the parameters; less kit is now in circulation! *)
-  let burn_kit (k : Kit.t) (b : burrow) : burrow * Kit.t =
+  let burn_kit (p: parameters) (k: Kit.t) (burrow: burrow) : burrow * Kit.t =
     assert (k >= Kit.zero);
+    let b = touch p burrow in
     let kit_to_burn = min b.minted_kit k in
     let kit_to_return = Kit.sub k kit_to_burn in
     (* TODO: we should probably update the minted_kit to the actual
@@ -231,9 +244,11 @@ struct
     *   tez_to_auction = (kit * fplus * minting_price - tez ) / (fplus - 1)
     *   repaid_kit     = tez_to_auction / minting_price
   *)
-  (* TODO: Don't go through float, and ensure that it's skewed on the safe side (overapprox.). *)
+  (* TODO: Ensure that it's skewed on the safe side (overapprox.). *)
   (* TODO: Shall we take into account the kit that we expect to receive from
    * the tez that currently lives in auction queues or not here? *)
+  (* TODO: Don't forget to add the 10% majoration here, so that we can take a
+   * 10% penalty in case of a warranted liquidation. *)
   let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
     Tez.of_fp
       FixedPoint.((Kit.to_fp b.minted_kit * fplus * minting_price p - Tez.to_fp b.collateral)
@@ -251,9 +266,9 @@ struct
     * The quantity tez_collateral / (fminus * liquidation_price) we call the
     * liquidation limit. Note that for this check we optimistically take into
     * account the expected kit from pending auctions (using the current minting
-    * price) when computing the outstanding kit. *)
-  (* TODO: Should we compute imbalance adjustment and burrow fee on the
-   * expected_kit too or not? *)
+    * price) when computing the outstanding kit.
+    * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
+  *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let outstanding_kit = Kit.sub (get_outstanding_kit p b) expected_kit in
