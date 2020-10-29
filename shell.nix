@@ -13,5 +13,6 @@ pkgs.mkShell {
     ounit
     qcheck
     ppx_deriving
+    zarith
   ];
 }

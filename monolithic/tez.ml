@@ -1,6 +1,4 @@
 
-(* TODO: Switch to Z from "zarith" *)
-
 open Address
 open FixedPoint
 
@@ -10,9 +8,9 @@ open FixedPoint
 module Tez : sig
   type t (* Invariant: >= zero *)
 
-  val scaling_factor : Int64.t
+  val scaling_factor : Z.t
 
-  (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
+  (* Basic arithmetic operations. *)
   val add : t -> t -> t
   val sub : t -> t -> t
   val div : t -> t -> FixedPoint.t
@@ -41,56 +39,41 @@ module Tez : sig
   val pp_utxo : Format.formatter -> utxo -> unit
 end =
 struct
-  type t = Int64.t
-  let scaling_factor = 1000000L
+  type t = Z.t
+  let scaling_factor = Z.of_int64 1000000L
   let scaling_exponent = 6
 
-  (* Basic arithmetic operations. TODO: delete division, or at least limit it. *)
-  let add x y =
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (not (x > Int64.sub Int64.max_int y)); (* Overflow *)
-    assert (not (y > Int64.sub Int64.max_int x)); (* Overflow *)
-    Int64.add x y
+  (* Basic arithmetic operations. *)
+  let add x y = Z.(x + y)
+  let sub x y = Z.(x - y)
 
-  let sub x y =
-    assert (y >= 0L);
-    assert (x >= y);
-    Int64.sub x y
+  let compare x y = Z.compare x y
 
-  let compare x y = Int64.compare x y
-
-  let zero = 0L
+  let zero = Z.zero
   let one = scaling_factor
 
   (* Conversions to/from other types. *)
   let of_float amount = (* TODO: lossy *)
-    assert (amount >= 0.0);
-    let upper = Int64.of_float amount in
-    let lower = Int64.of_float ((amount -. Int64.to_float upper) *. Int64.to_float scaling_factor) in
-    Int64.add (Int64.mul upper scaling_factor) lower
+    let upper = Z.of_float amount in
+    let lower = Z.of_float ((amount -. Z.to_float upper) *. Z.to_float scaling_factor) in
+    Z.add (Z.mul upper scaling_factor) lower
 
   let to_float amount = (* TODO: lossy *)
-    (Int64.to_float amount) /. Int64.to_float scaling_factor
+    (Z.to_float amount) /. Z.to_float scaling_factor
 
   let of_fp fp =
-    Int64.div
-      (FixedPoint.to_int64 fp)
-      (Int64.div FixedPoint.scaling_factor scaling_factor)
+    Z.div
+      (FixedPoint.to_z fp)
+      (Z.div FixedPoint.scaling_factor scaling_factor)
 
   let to_fp t = (* TODO: overflow check? *)
-    FixedPoint.of_int64 (Int64.mul t (Int64.div FixedPoint.scaling_factor scaling_factor))
+    FixedPoint.of_z (Z.mul t (Z.div FixedPoint.scaling_factor scaling_factor))
 
   let div x y = (* TODO: lossy *)
-    assert (x >= 0L);
-    assert (y >= 0L);
-    assert (y > 0L); (* Overflow *)
     FixedPoint.(to_fp x / to_fp y)
 
   let scale amount fp = (* TODO: Over/Under- flow checks *)
     of_fp FixedPoint.(to_fp amount * fp)
-
-  let partition x = (Int64.div x scaling_factor, Int64.rem x scaling_factor)
 
   (* Pretty printing functions *)
   let show_tez amount =
@@ -100,10 +83,10 @@ struct
       then s
       else (String.make to_fill '0') ^ s in
 
-    let (upper, lower) = partition amount in
+    let (upper, lower) = Z.div_rem amount scaling_factor in
     Format.sprintf "%s.%s"
-      (Int64.to_string upper)
-      (zfill (Int64.to_string lower) scaling_exponent)
+      (Z.to_string upper)
+      (zfill (Z.to_string lower) scaling_exponent)
 
   let pp ppf amount =
     Format.fprintf ppf "%s" (show_tez amount)
