@@ -168,6 +168,8 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
      * expected to repay enough kit. *)
     (* George: the way I see it though, the entire position will be liquidated
      * immediately afterwards, if the collateral remaining is zero. Hmmm. *)
+    (* Note: the condition here checks basically whether compute_tez_to_auction
+     * would return a negative amount of tez. *)
   else if FixedPoint.(Kit.to_fp b.minted_kit * minting_price p) > Tez.(to_fp (b.collateral - liquidation_reward)) then
     let b_without_reward = { b with collateral = Tez.(b.collateral - liquidation_reward) } in
     let tez_to_auction = b_without_reward.collateral in

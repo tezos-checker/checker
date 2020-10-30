@@ -20,7 +20,6 @@ module FixedPoint : sig
 
   (* Conversions to/from other types. *)
   val of_float : float -> t (* TODO: Delete this one. *)
-  val to_float : t -> float (* TODO: Delete this one. *)
   val of_int : int -> t
   val to_int : t -> int
   val of_rep : Z.t -> t (* NOTE: Exposes internal representation. *)
@@ -64,9 +63,6 @@ struct
     let upper = Z.of_float amount in
     let lower = Z.of_float ((amount -. Z.to_float upper) *. Z.to_float scaling_factor) in
     Z.mul sign (Z.add (Z.mul upper scaling_factor) lower)
-
-  let to_float amount = (* TODO: lossy *)
-    (Z.to_float amount) /. Z.to_float scaling_factor
 
   let of_int amount = Z.(of_int amount * scaling_factor)
   let to_int amount = Z.(to_int (amount / scaling_factor))

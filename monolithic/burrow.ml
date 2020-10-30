@@ -10,13 +10,6 @@ open Parameters
 include Parameters
 open Tez
 
-(* TODOs for burrows:
-   - Limit access to the representation of the burrow. Instead give access to
-     contents through functions. For example currently
-     Huxian.request_liquidation completely ignores the burrowing fee, the
-     accumulated imbalance fee, etc. which is wrong.
-*)
-
 (* ************************************************************************* *)
 (*                                Burrows                                    *)
 (* ************************************************************************* *)
@@ -110,14 +103,11 @@ module Burrow : sig
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
-    * when it is no longer overburrowed or having a risk of liquidation.
-  *)
+    * when it is no longer overburrowed or having a risk of liquidation. *)
   val compute_tez_to_auction : parameters -> burrow -> Tez.t
 
-  (** Given the number of tez to be auctioned off (as computed by
-    * compute_tez_to_auction), compute the expected return in kit, given the
-    * current minting price.
-  *)
+  (** Given the number of tez to be auctioned off, compute the expected return
+    * in kit, given the current minting price. *)
   val compute_expected_kit : parameters -> Tez.t -> Kit.t
 end =
 struct
