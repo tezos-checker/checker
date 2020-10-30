@@ -251,8 +251,10 @@ struct
   (* TODO: Ensure that it's skewed on the safe side (overapprox.). It currently isn't. *)
   (* TODO: Shall we take into account the kit that we expect to receive from
    * the tez that currently lives in auction queues or not here? *)
-  (* TODO: Don't forget to add the 10% majoration here, so that we can take a
-   * 10% penalty in case of a warranted liquidation. *)
+  (* NOTE: This function computes the actual needed tez that needs to be
+   * auctioned off to bring the burrow in a collateralized state. The 10%
+   * majoration (as a penalty in case of a warranted liquidation) is added at
+   * the call sites. *)
   let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
     let collateral = Tez.to_fp b.collateral in
     let outstanding_kit = Kit.to_fp b.minted_kit in

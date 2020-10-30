@@ -200,3 +200,41 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
       } in
     { outcome = Partial; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
 
+(* George: My notes/calculations about whether an auction is warranted:
+
+To check whether a burrow needs to be liquidated, we first optimistically
+assume that all the tez that have been sent off to auctions in previous
+liquidations will be sold at the current minting price:
+
+  outstanding_kit = outstanding_kit - (collateral_at_auction / minting_price p)
+
+and then check if there is enough collateral in the burrow to satisfy the
+following:
+
+  tez_collateral >= fminus * outstanding_kit * (liquidation_price p) <=>
+  liquidation_price p <= tez_collateral / (fminus * kit_outstanding)      (1)
+
+That is, if (1) were satisfied we wouldn't be able to liquidate the burrow. So,
+let's assume that we sent tez_to_auction to be auctioned off, and we ended up
+receiving repaid_kit back for it. We have:
+
+  maximum_non_liquidating_price = tez_collateral / (fminus * kit_outstanding)    <== would not have triggered the liquidation
+  originally_assumed_price      = liquidation_price p                            <== triggered the liquidation
+  real_price                    = tez_to_auction / repaid_kit                    <== derived from the auction
+
+If real_price <= maximum_non_liquidating_price then the liquidation was not
+warranted (i.e. originally_assumed_price was off) and we should return the kit
+we received from the auction in its entirety to the burrow:
+
+  tez_to_auction / repaid_kit <= tez_collateral / (fminus * kit_outstanding) <=>
+  tez_to_auction * (fminus * kit_outstanding) <= repaid_kit * tez_collateral <=>
+  tez_to_auction * (fminus * kit_outstanding) / tez_collateral <= repaid_kit <=>
+  repaid_kit >= tez_to_auction * (fminus * kit_outstanding) / tez_collateral
+
+So, if the kit that the auction yields is more than
+
+  (tez_to_auction * (fminus * kit_outstanding) / tez_collateral)
+
+then it was unwarranted.
+*)
+
