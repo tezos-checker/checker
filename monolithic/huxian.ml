@@ -74,7 +74,6 @@ let step_parameters
         * duration_in_seconds
     ) in
 
-  (* TODO: use integer arithmetic *)
   let current_q =
     FixedPoint.(
       parameters.q
@@ -181,10 +180,18 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     { outcome = Complete; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
     (* Case 4: Recovery is possible; pay the liquidation reward, stash away the
      * creation deposit, and liquidate only the amount of collateral needed to
-     * underburrow the burrow (as approximated now). No more, no less. *)
+     * underburrow the burrow (as approximated now). Actually, liquidate 10%
+     * more, to punish the burrow for being liquidated. If---when the auction
+     * is over---we realize that the liquidation was not really warranted, we
+     * shall return the auction earnings in their entirety. If not, then only
+     * 90% of the earnings shall be returned. *)
   else
     let b_without_reward = { b with collateral = Tez.(b.collateral - liquidation_reward) } in
-    let tez_to_auction = compute_tez_to_auction p b_without_reward in
+    let tez_to_auction =
+      let essential_tez = compute_tez_to_auction p b_without_reward in
+      let with_penalty = Tez.scale essential_tez FixedPoint.(one + liquidation_penalty_percentage) in
+      min b_without_reward.collateral with_penalty (* Cannot be more than the burrow's collateral! *)
+    in
     let expected_kit = compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
@@ -192,6 +199,4 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
         collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
       } in
     { outcome = Partial; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
-
-
 
