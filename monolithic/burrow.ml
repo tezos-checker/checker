@@ -203,11 +203,11 @@ struct
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
   (* TODO: This should update the parameters; more kit is now in circulation! *)
-  let mint_kit (p: parameters) (k: Kit.t) (burrow: burrow) : (burrow * Kit.utxo, Error.error) result =
-    assert (k >= Kit.zero);
+  let mint_kit (p: parameters) (kit: Kit.t) (burrow: burrow) : (burrow * Kit.utxo, Error.error) result =
+    assert (kit >= Kit.zero);
     let b = touch p burrow in
-    let new_burrow = { b with minted_kit = Kit.(b.minted_kit + k) } in
-    let kit_utxo = Kit.{ destination = b.owner; amount = k } in
+    let new_burrow = { b with minted_kit = Kit.(b.minted_kit + kit) } in
+    let kit_utxo = Kit.{ destination = b.owner; amount = kit } in
     if is_overburrowed p new_burrow
     then Error MintKitFailure
     else Ok (new_burrow, kit_utxo)
@@ -220,9 +220,6 @@ struct
     let b = touch p burrow in
     let kit_to_burn = min b.minted_kit k in
     let kit_to_return = Kit.(k - kit_to_burn) in
-    (* TODO: we should probably update the minted_kit to the actual
-     * outstanding_kit here (that is, add the burrowing fee and imbalance
-     * adjustment, as computed by get_outstanding_kit)? *)
     let new_burrow = { b with minted_kit = Kit.(b.minted_kit - kit_to_burn) } in
     (new_burrow, kit_to_return)
 
@@ -251,17 +248,17 @@ struct
     *   tez_to_auction = (kit * fplus * minting_price - tez ) / (fplus - 1)
     *   repaid_kit     = tez_to_auction / minting_price
   *)
-  (* TODO: Ensure that it's skewed on the safe side (overapprox.). *)
+  (* TODO: Ensure that it's skewed on the safe side (overapprox.). It currently isn't. *)
   (* TODO: Shall we take into account the kit that we expect to receive from
    * the tez that currently lives in auction queues or not here? *)
   (* TODO: Don't forget to add the 10% majoration here, so that we can take a
    * 10% penalty in case of a warranted liquidation. *)
   let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
-    Tez.of_fp
-      FixedPoint.((Kit.to_fp b.minted_kit * fplus * minting_price p - Tez.to_fp b.collateral)
-                  / (fplus - FixedPoint.one))
+    let collateral = Tez.to_fp b.collateral in
+    let outstanding_kit = Kit.to_fp b.minted_kit in
+    Tez.of_fp FixedPoint.((outstanding_kit * fplus * minting_price p - collateral) / (fplus - one))
 
-  (* TODO: Don't go through float, and ensure that it's skewed on the safe side (underapprox.). *)
+  (* TODO: And ensure that it's skewed on the safe side (underapprox.). *)
   let compute_expected_kit (p : parameters) (tez_to_auction: Tez.t) : Kit.t =
     Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / minting_price p)
 
