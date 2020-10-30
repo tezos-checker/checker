@@ -11,7 +11,7 @@ Some amount of tez, tied to a burrow, which is inserted in the liquidation queue
 
 ## Liquidation queue
 
-A dequeue implemented as a balanced binary tree representing an ordered list of [liquidation orders](#liquidation-orders).
+A dequeue implemented as a balanced binary tree representing an ordered list of [liquidation slices](#liquidation-slice).
 Orders at the front of the queue are periodically batched into a [liquidation lot](#liquidation-lot)
 
 
