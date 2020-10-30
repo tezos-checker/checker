@@ -1,12 +1,13 @@
 # Glossary
 
-## Liquidation order
-
-Some amount of tez, tied to a burrow, which is inserted in the liquidation queue to be auctionned of for [kit](#kit)
 
 ## Liquidation lot
 
 A batch of [liquidation orders](#liquidation-orders) currently being auctionned of.
+
+## Liquidation slice
+
+Some amount of tez, tied to a burrow, which is inserted in the liquidation queue to be auctionned of for [kit](#kit)
 
 ## Liquidation queue
 
