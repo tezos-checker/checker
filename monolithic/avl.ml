@@ -424,6 +424,12 @@ let add_all (mem: 't mem) (root: ptr option) (xs: ('t * Tez.t) list)
     (mem, root)
     xs
 
+let rec find_root (mem: 't mem) (node: ptr) : ptr =
+  match node_parent (mem_get mem node) with
+  | None -> node
+  | Some parent_ptr -> find_root mem parent_ptr
+
+
 let rec max (mem: 't mem) (root: ptr) : ptr * 't leaf =
   match mem_get mem root with
   | Leaf leaf -> (root, leaf)
