@@ -114,13 +114,14 @@ let step_parameters
 (* ************************************************************************* *)
 
 type liquidation_outcome =
+  (* TODO: careful with the terminology on warranted/unwarranted. There's also
+   * https://tezos-dev.slack.com/archives/G01AAK05N86/p1603108889364300 *)
   | Unwarranted
   | Partial
   | Complete (* complete: deplete the collateral *)
   | Close (* complete: "close" the burrow *)
 [@@deriving show]
 
-(* TODO: More sharing here please *)
 type liquidation_result =
   { outcome : liquidation_outcome;
     liquidation_reward : Tez.t;
@@ -141,14 +142,10 @@ type liquidation_result =
  * though. From the outside it all looks the same I guess, minus one plus one,
  * but I thought that this intricacy is worth pointing out.
 *)
-(* TODO: Remove divisions in the conditions; use multiplication instead. *)
 let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
-  (* The reward for triggering a liquidation. This amounts to the burrow's
-   * creation deposit, plus the liquidation reward percentage of the burrow's
-   * collateral. Of course, this only applies if the burrow qualifies for
-   * liquidation. This reward is to be given to the ator triggering the
-   * liquidation. *)
+  (* Only applies if the burrow qualifies for liquidation; it is to be given to
+   * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.add creation_deposit partial_reward in
   (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
    * liquidate. *)
@@ -156,20 +153,23 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
     { outcome = Unwarranted; liquidation_reward = Tez.zero; tez_to_auction = Tez.zero; expected_kit = Kit.zero; burrow_state = b }
     (* Case 2: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
-  else if b.collateral < liquidation_reward then
+  else if Tez.sub b.collateral partial_reward < creation_deposit then
     let tez_to_auction = Tez.sub b.collateral partial_reward in
     let expected_kit = compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
+        has_creation_deposit = false;
         collateral = Tez.zero;
-        minted_kit = Kit.zero; (* TODO: this needs fixing *)
+        minted_kit = Kit.zero;
       } in
     { outcome = Close; liquidation_reward = liquidation_reward; tez_to_auction = tez_to_auction; expected_kit = expected_kit; burrow_state = final_burrow }
     (* Case 3: With the current price it's impossible to make the burrow not
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
      * expected to repay enough kit. *)
-  else if FixedPoint.(Kit.to_fp b.minted_kit * minting_price p) > Tez.to_fp (Tez.sub b.collateral liquidation_reward) then
+    (* George: the way I see it though, the entire position will be liquidated
+     * immediately afterwards, if the collateral remaining is zero. Hmmm. *)
+  else if FixedPoint.(Kit.to_fp b.minted_kit * minting_price p) > Tez.(to_fp (sub b.collateral liquidation_reward)) then
     let b_without_reward = { b with collateral = Tez.sub b.collateral liquidation_reward } in
     let tez_to_auction = b_without_reward.collateral in
     let expected_kit = compute_expected_kit p tez_to_auction in

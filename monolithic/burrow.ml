@@ -22,7 +22,12 @@ open Tez
 (* ************************************************************************* *)
 module Burrow : sig
   type burrow =
-    { (* The owner of the burrow. Set once during creation. *)
+    { (* Whether the creation deposit for the burrow has been paid. If the
+       * creation deposit has been paid, the burrow is considered "active" and
+       * "closed"/inactive otherwise. Paying the creation deposit re-activates
+       * a "closed" burrow. *)
+      has_creation_deposit : bool;
+      (* The owner of the burrow. Set once during creation. *)
       owner : Address.t;
       delegate : Address.t option;
       (* Collateral currently stored in the burrow. *)
@@ -117,7 +122,8 @@ module Burrow : sig
 end =
 struct
   type burrow =
-    { owner : Address.t;
+    { has_creation_deposit : bool;
+      owner : Address.t;
       delegate : Address.t option;
       collateral : Tez.t [@printer Tez.pp];
       minted_kit : Kit.t [@printer Kit.pp];
@@ -168,7 +174,8 @@ struct
     if tez < creation_deposit
     then Error (InsufficientFunds tez)
     else Ok
-        { owner = address;
+        { has_creation_deposit = true;
+          owner = address;
           delegate = None;
           collateral = Tez.sub tez creation_deposit;
           minted_kit = Kit.zero;
