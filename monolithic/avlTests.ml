@@ -236,7 +236,7 @@ let suite =
        | x :: xs ->
          if Tez.compare (snd x) lim <= 0
          then
-           match split_list (Tez.sub lim (snd x)) xs with
+           match split_list Tez.(lim - snd x) xs with
              (l, r) -> (x::l, r)
          else
            ([], x::xs)

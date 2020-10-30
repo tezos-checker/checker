@@ -177,7 +177,7 @@ struct
         { has_creation_deposit = true;
           owner = address;
           delegate = None;
-          collateral = Tez.sub tez creation_deposit;
+          collateral = Tez.(tez - creation_deposit);
           minted_kit = Kit.zero;
           adjustment_index = compute_adjustment_index p;
           collateral_at_auction = Tez.zero;
@@ -187,14 +187,14 @@ struct
   let deposit_tez (p: parameters) (t: Tez.t) (burrow: burrow) : burrow =
     assert (t >= Tez.zero);
     let b = touch p burrow in
-    { b with collateral = Tez.add b.collateral t }
+    { b with collateral = Tez.(b.collateral + t) }
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
   let withdraw_tez (p: parameters) (t: Tez.t) (burrow: burrow) : (burrow * Tez.utxo, Error.error) result =
     assert (t >= Tez.zero);
     let b = touch p burrow in
-    let new_burrow = { b with collateral = Tez.sub b.collateral t } in
+    let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
     let tez_utxo = Tez.{ destination = b.owner; amount = t } in
     if is_overburrowed p new_burrow
     then Error WithdrawTezFailure
@@ -206,7 +206,7 @@ struct
   let mint_kit (p: parameters) (k: Kit.t) (burrow: burrow) : (burrow * Kit.utxo, Error.error) result =
     assert (k >= Kit.zero);
     let b = touch p burrow in
-    let new_burrow = { b with minted_kit = Kit.add b.minted_kit k } in
+    let new_burrow = { b with minted_kit = Kit.(b.minted_kit + k) } in
     let kit_utxo = Kit.{ destination = b.owner; amount = k } in
     if is_overburrowed p new_burrow
     then Error MintKitFailure
@@ -219,11 +219,11 @@ struct
     assert (k >= Kit.zero);
     let b = touch p burrow in
     let kit_to_burn = min b.minted_kit k in
-    let kit_to_return = Kit.sub k kit_to_burn in
+    let kit_to_return = Kit.(k - kit_to_burn) in
     (* TODO: we should probably update the minted_kit to the actual
      * outstanding_kit here (that is, add the burrowing fee and imbalance
      * adjustment, as computed by get_outstanding_kit)? *)
-    let new_burrow = { b with minted_kit = Kit.sub b.minted_kit kit_to_burn } in
+    let new_burrow = { b with minted_kit = Kit.(b.minted_kit - kit_to_burn) } in
     (new_burrow, kit_to_return)
 
   (* ************************************************************************* *)
@@ -278,6 +278,6 @@ struct
   *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
-    let outstanding_kit = Kit.sub (get_outstanding_kit p b) expected_kit in
+    let outstanding_kit = Kit.((get_outstanding_kit p b) - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
 end

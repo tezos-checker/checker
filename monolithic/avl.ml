@@ -64,7 +64,7 @@ type 't mem = ('t node) BigMap.t
 let node_tez n =
   match n with
   | Leaf leaf -> leaf.tez
-  | Branch branch -> Tez.add branch.left_tez branch.right_tez
+  | Branch branch -> Tez.(branch.left_tez + branch.right_tez)
 
 let node_height n =
   match n with
@@ -470,7 +470,7 @@ let rec split (mem: 't mem) (root: ptr option) (limit: Tez.t)
       then (mem, Some root_ptr, None)
       else (mem, None, Some root_ptr)
     | Branch branch ->
-      if Tez.compare (Tez.add branch.left_tez branch.right_tez) limit <= 0
+      if Tez.compare Tez.(branch.left_tez + branch.right_tez) limit <= 0
       then (* total_tez <= limit *)
         (mem, Some root_ptr, None)
       else if Tez.compare branch.left_tez limit = 0
@@ -489,7 +489,7 @@ let rec split (mem: 't mem) (root: ptr option) (limit: Tez.t)
         | _ -> failwith "impossible"
       else (* left_tez < limit < total_tez *)
         let left = mem_get mem branch.left in
-        match split mem (Some branch.right) (Tez.sub limit (node_tez left)) with
+        match split mem (Some branch.right) Tez.(limit - (node_tez left)) with
         | (mem, Some left, right) ->
           let (mem, joined) = join mem branch.left left in
           (mem_del mem root_ptr, Some joined, right)

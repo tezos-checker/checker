@@ -11,9 +11,9 @@ module Kit : sig
   val scaling_factor : Z.t
 
   (* Basic arithmetic operations. *)
-  val add : t -> t -> t
-  val sub : t -> t -> t
-  val div : t -> t -> FixedPoint.t
+  val ( + ) : t -> t -> t
+  val ( - ) : t -> t -> t
+  val ( / ) : t -> t -> FixedPoint.t
 
   val zero : t
   val one : t
@@ -43,8 +43,8 @@ struct
   let scaling_exponent = 6
 
   (* Basic arithmetic operations. *)
-  let add x y = Z.(x + y)
-  let sub x y = Z.(x - y)
+  let ( + ) x y = Z.(x + y)
+  let ( - ) x y = Z.(x - y)
 
   let compare x y = Z.compare x y
 
@@ -55,15 +55,15 @@ struct
   let of_float amount = (* TODO: lossy *)
     let upper = Z.of_float amount in
     let lower = Z.of_float ((amount -. Z.to_float upper) *. Z.to_float scaling_factor) in
-    Z.add (Z.mul upper scaling_factor) lower
+    Z.(upper * scaling_factor + lower)
 
   let of_fp fp =
     Z.((FixedPoint.to_rep fp) * scaling_factor / FixedPoint.scaling_factor)
 
   let to_fp t = (* TODO: overflow check? *)
-    FixedPoint.of_rep (Z.mul t (Z.div FixedPoint.scaling_factor scaling_factor))
+    FixedPoint.of_rep Z.(t * (FixedPoint.scaling_factor / scaling_factor))
 
-  let div x y = (* TODO: lossy *)
+  let ( / ) x y = (* TODO: lossy *)
     FixedPoint.(to_fp x / to_fp y)
 
   let scale amount fp = (* TODO: Over/Under- flow checks *)
@@ -72,7 +72,7 @@ struct
   (* Pretty printing functions *)
   let show_kit amount =
     let zfill s width =
-      let to_fill = width - (String.length s) in
+      let to_fill = Stdlib.(width - (String.length s)) in
       if to_fill <= 0
       then s
       else (String.make to_fill '0') ^ s in

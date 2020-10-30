@@ -96,10 +96,8 @@ struct
       (assert (circulating = Kit.zero); FixedPoint.zero) (* George: the assert is just as a reminder *)
     else if burrowed = circulating then
       FixedPoint.zero (* George: I add this special case, to avoid rounding issues *)
-    else if burrowed >= circulating then
-      Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub burrowed circulating)) centinepers) burrowed
     else
-      FixedPoint.neg (Kit.div (Kit.scale (min burrowed_fivefold (Kit.sub circulating burrowed)) centinepers) burrowed)
+      Kit.((scale (min burrowed_fivefold (burrowed - circulating)) centinepers) / burrowed)
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)

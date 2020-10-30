@@ -109,11 +109,11 @@ struct
     assert (kit > Kit.zero);
 
     let price = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
-    let slippage = Kit.div uniswap.kit (Kit.add uniswap.kit kit) in
+    let slippage = Kit.(uniswap.kit / (uniswap.kit + kit)) in
     let return = Tez.of_fp FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - uniswap_fee_percentage)) in
     let updated = { uniswap with
-                    kit = Kit.add uniswap.kit kit;
-                    tez = Tez.sub uniswap.tez return } in
+                    kit = Kit.(uniswap.kit + kit);
+                    tez = Tez.(uniswap.tez - return) } in
     (return, Kit.zero, updated)
 
   (* But where do the assets in uniswap come from? Liquidity providers, or
@@ -156,11 +156,11 @@ struct
           / Tez.to_fp uniswap.tez)
       ) in
     let updated =
-      { kit = Kit.add uniswap.kit kit';
-        tez = Tez.add uniswap.tez tez';
+      { kit = Kit.(uniswap.kit + kit');
+        tez = Tez.(uniswap.tez + tez');
         total_liquidity_tokens =
           uniswap.total_liquidity_tokens + liquidity } in
-    (liquidity, Tez.sub tez tez', Kit.sub kit kit', updated)
+    (liquidity, Tez.(tez - tez'), Kit.(kit - kit'), updated)
 
   (* Selling liquidity always succeeds, but might leave the contract
    * without tez and kit if everybody sells their liquidity. I think
@@ -175,8 +175,8 @@ struct
     let tez = Tez.scale uniswap.tez ratio in
     let kit = Kit.scale uniswap.kit ratio in
     let updated = {
-      tez = Tez.sub uniswap.tez tez;
-      kit = Kit.sub uniswap.kit kit;
+      tez = Tez.(uniswap.tez - tez);
+      kit = Kit.(uniswap.kit - kit);
       total_liquidity_tokens = uniswap.total_liquidity_tokens - liquidity } in
     (tez, kit, updated)
 end
