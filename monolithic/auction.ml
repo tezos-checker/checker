@@ -126,6 +126,13 @@ let start_auction_if_possible
        * in the auction queue. This is to avoid the auction queue being
        * too slow to liquidate if there’s a lot of tez to auction.
        *)
+       (* TODO: When we did not get enough tez for a lot, we should
+        * look at the next element and split it to fill up our lot,
+        * and insert the leftover back in front of the queue.
+        *
+        * When this happens, we should also update the burrow of the
+        * split item to make sure that the references are correct.
+        *)
        let (storage, new_auction, new_queue) =
             split
               auctions.storage
