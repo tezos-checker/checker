@@ -36,4 +36,5 @@ let mem_update (m: 'a BigMap.t) (k: ptr) (f: 'a -> 'a) : 'a BigMap.t =
   mem_set m k @@ f (mem_get m k)
 
 let mem_del (m: 'a BigMap.t) (k: ptr) : 'a BigMap.t =
+  assert (BigMap.mem k m);
   BigMap.remove k m
