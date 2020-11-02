@@ -24,16 +24,16 @@ module Burrow : sig
       owner : Address.t;
       delegate : Address.t option;
       (* Collateral currently stored in the burrow. *)
-      collateral : Tez.t [@printer Tez.pp];
+      collateral : Tez.t;
       (* Outstanding kit minted out of the burrow. *)
-      minted_kit : Kit.t [@printer Kit.pp];
+      minted_kit : Kit.t;
       (* The imbalance adjustment index observed the last time the burrow was
        * touched. *)
-      adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
+      adjustment_index : FixedPoint.t;
       (* Collateral that has been sent off to auctions. For all intents and
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
-      collateral_at_auction : Tez.t [@printer Tez.pp];
+      collateral_at_auction : Tez.t;
       (* TODO: also keep track of the last time the burrow was touched *)
     }
 
@@ -115,11 +115,11 @@ struct
     { has_creation_deposit : bool;
       owner : Address.t;
       delegate : Address.t option;
-      collateral : Tez.t [@printer Tez.pp];
-      minted_kit : Kit.t [@printer Kit.pp];
-      adjustment_index : FixedPoint.t [@printer FixedPoint.pp];
+      collateral : Tez.t;
+      minted_kit : Kit.t;
+      adjustment_index : FixedPoint.t;
       (* TODO: use this field in some calculations *)
-      collateral_at_auction : Tez.t [@printer Tez.pp];
+      collateral_at_auction : Tez.t;
     }
   [@@deriving show]
 

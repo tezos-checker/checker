@@ -406,7 +406,7 @@ let rec debug_string (mem: 't mem) (show: 't -> string) (root: ptr option) : str
     | Leaf leaf ->
       Int64.to_string root_ptr
         ^ sprintf ": Leaf { value: %s; tez: %s; parent: %s }"
-            (show leaf.value) (Tez.show_tez leaf.tez)
+            (show leaf.value) (Tez.show leaf.tez)
             (match leaf.parent with | Some i -> Int64.to_string i | None -> "None")
     | Branch branch ->
       Int64.to_string root_ptr ^ ": Branch " ^ show_branch branch ^ "\n"

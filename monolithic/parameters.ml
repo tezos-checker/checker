@@ -8,18 +8,18 @@ open Tez
 module Parameters : sig
   type parameters =
     { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
-      q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
-      index: Tez.t [@printer Tez.pp];
-      protected_index: Tez.t [@printer Tez.pp];
-      target: FixedPoint.t [@printer FixedPoint.pp];
-      drift': FixedPoint.t [@printer FixedPoint.pp];
-      drift: FixedPoint.t [@printer FixedPoint.pp];
-      burrow_fee_index: FixedPoint.t [@printer FixedPoint.pp];
-      imbalance_index: FixedPoint.t [@printer FixedPoint.pp];
+      q : FixedPoint.t; (* 1/kit, really *)
+      index: Tez.t;
+      protected_index: Tez.t;
+      target: FixedPoint.t;
+      drift': FixedPoint.t;
+      drift: FixedPoint.t;
+      burrow_fee_index: FixedPoint.t;
+      imbalance_index: FixedPoint.t;
       (* TODO: What would be a good starting value for this? Cannot be zero
        * because then it stays zero forever (only multiplications occur). *)
-      outstanding_kit: Kit.t [@printer Kit.pp];
-      circulating_kit: Kit.t [@printer Kit.pp];
+      outstanding_kit: Kit.t;
+      circulating_kit: Kit.t;
     }
 
   val show_parameters : parameters -> string
@@ -46,16 +46,16 @@ module Parameters : sig
 end =
 struct
   type parameters =
-    { q : FixedPoint.t [@printer FixedPoint.pp]; (* 1/kit, really *)
-      index: Tez.t [@printer Tez.pp];
-      protected_index: Tez.t [@printer Tez.pp];
-      target: FixedPoint.t [@printer FixedPoint.pp];
-      drift': FixedPoint.t [@printer FixedPoint.pp];
-      drift: FixedPoint.t [@printer FixedPoint.pp];
-      burrow_fee_index: FixedPoint.t [@printer FixedPoint.pp];
-      imbalance_index: FixedPoint.t [@printer FixedPoint.pp];
-      outstanding_kit: Kit.t [@printer Kit.pp];
-      circulating_kit: Kit.t [@printer Kit.pp];
+    { q : FixedPoint.t; (* 1/kit, really *)
+      index: Tez.t;
+      protected_index: Tez.t;
+      target: FixedPoint.t;
+      drift': FixedPoint.t;
+      drift: FixedPoint.t;
+      burrow_fee_index: FixedPoint.t;
+      imbalance_index: FixedPoint.t;
+      outstanding_kit: Kit.t;
+      circulating_kit: Kit.t;
     }
   [@@deriving show]
 

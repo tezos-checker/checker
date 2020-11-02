@@ -96,7 +96,7 @@ let step_experiment () =
   printf "\n=== New checker parameters ===\n";
   print_string @@ show_parameters new_parameters;
   printf "\n=== Total accrual to uniswap ===\n";
-  print_string @@ Kit.show_kit total_accrual_to_uniswap
+  print_string @@ Kit.show total_accrual_to_uniswap
 
 let () =
   burrow_experiment ();

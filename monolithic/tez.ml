@@ -30,7 +30,7 @@ module Tez : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
-  val show_tez : t -> string
+  val show : t -> string
 
   (* Tez UTXO *)
   type utxo = {destination : Address.t ; amount : t}
@@ -70,7 +70,7 @@ struct
     of_fp FixedPoint.(to_fp amount * fp)
 
   (* Pretty printing functions *)
-  let show_tez amount =
+  let show amount =
     let zfill s width =
       let to_fill = Stdlib.(width - (String.length s)) in
       if to_fill <= 0
@@ -83,7 +83,7 @@ struct
       (zfill (Z.to_string lower) scaling_exponent)
 
   let pp ppf amount =
-    Format.fprintf ppf "%s" (show_tez amount)
+    Format.fprintf ppf "%s" (show amount)
 
   (* Tez UTXO *)
   type utxo = {destination : Address.t ; amount : t}

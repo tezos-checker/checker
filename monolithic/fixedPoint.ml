@@ -29,6 +29,7 @@ module FixedPoint : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
+  val show : t -> string
 end =
 struct
   type t = Z.t
@@ -71,7 +72,7 @@ struct
   let to_rep t = t
 
   (* Pretty printing functions *)
-  let pp ppf amount =
+  let show amount =
     let zfill s width =
       let to_fill = Stdlib.(width - (String.length s)) in
       if to_fill <= 0
@@ -80,9 +81,12 @@ struct
 
     let abs_amount = Z.abs amount in
 
-    Format.fprintf ppf "%s%s.%s"
+    Format.sprintf "%s%s.%s"
       (if amount >= Z.zero then "" else "-")
       (Z.to_string (Z.div abs_amount scaling_factor))
       (zfill (Z.to_string (Z.rem abs_amount scaling_factor)) scaling_exponent)
+
+  let pp ppf amount =
+    Format.fprintf ppf "%s" (show amount)
 end
 

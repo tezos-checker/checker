@@ -30,7 +30,7 @@ module Kit : sig
 
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
-  val show_kit : t -> string
+  val show : t -> string
 
   (* Kit UTXO *)
   type utxo = {destination : Address.t ; amount : t}
@@ -70,7 +70,7 @@ struct
     of_fp FixedPoint.(to_fp amount * fp)
 
   (* Pretty printing functions *)
-  let show_kit amount =
+  let show amount =
     let zfill s width =
       let to_fill = Stdlib.(width - (String.length s)) in
       if to_fill <= 0
@@ -83,7 +83,7 @@ struct
       (zfill (Z.to_string lower) scaling_exponent)
 
   let pp ppf amount =
-    Format.fprintf ppf "%s" (show_kit amount)
+    Format.fprintf ppf "%s" (show amount)
 
   (* Kit UTXO *)
   type utxo = {destination : Address.t ; amount : t}
