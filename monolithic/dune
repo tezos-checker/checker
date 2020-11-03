@@ -1,21 +1,26 @@
 ;; The "preprocess" directive must be the same in every clause,
 ;; otherwise there will be warnings printed about an inaccurate
 ;; .merlin file being generated.
+
 (library
-  (name huxian)
-  (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow Uniswap Error Address Auction)
-  (libraries zarith)
-  (wrapped false)
-  (preprocess (pps ppx_deriving.std)))
+ (name huxian)
+ (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow
+   Uniswap Error Address Auction)
+ (libraries zarith)
+ (wrapped false)
+ (preprocess
+  (pps ppx_deriving.std)))
 
 (executable
-  (name script)
-  (modules Script)
-  (libraries huxian)
-  (preprocess (pps ppx_deriving.std)))
+ (name script)
+ (modules Script)
+ (libraries huxian)
+ (preprocess
+  (pps ppx_deriving.std)))
 
 (test
-  (name tests)
-  (modules Tests TestAvl TestFixedPoint TestTez)
-  (libraries huxian ounit2 qcheck)
-  (preprocess (pps ppx_deriving.std)))
+ (name tests)
+ (modules Tests TestAvl TestFixedPoint TestTez)
+ (libraries huxian ounit2 qcheck)
+ (preprocess
+  (pps ppx_deriving.std)))
