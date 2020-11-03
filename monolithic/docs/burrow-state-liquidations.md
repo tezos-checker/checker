@@ -1,3 +1,4 @@
+
 # Burrow State & Liquidation
 
 George's operational interpretation of the burrow state and operations on it.
@@ -166,10 +167,23 @@ repaid_kit >= tez_to_auction * (fliquidation * optimistic_outstanding) / collate
 ```
 So, if the kit that the auction yields is more than
 ```
-(tez_to_auction * (fliquidation * optimistic_outstanding) / collateral)
+min_received_kit_for_unwarranted = tez_to_auction * (fliquidation * optimistic_outstanding) / collateral
 ```
 then this liquidation was unwarranted.
 
+## What if the liquidation was warranted
+
+When we send `tez_to_auction` to an auction, we also send `min_received_kit_for_unwarranted` so that---after the auction is over---we can determine whether it was warranted. If it was warranted, then we wish to return the received kit in its entirety to the burrow. Otherwise we burn 10% of the kit earnings.
+
+The auction logic might end up splitting `tez_to_auction` into parts (slices) that can be sold for different prices; we perform the above check per slice.
+```
+tez_to_auction = tez_1 + tez_2 + ... + tez_n
+```
+If we end up selling slice `tez_i` for `kit_i`, this part of the liquidation is considered unwarranted (and thus `kit_i` is returned to the burrow) only if
+```
+kit_i >= min_received_kit_for_unwarranted * (tez_i / tez_to_auction) <=>
+tez_to_auction * kit_i >= min_received_kit_for_unwarranted * tez_i
+```
 
 ## Misc
 
@@ -177,5 +191,4 @@ then this liquidation was unwarranted.
 * `fminting > fliquidation`
 * `minting_price >= liquidation_price`
 * `punishment = 10%`
-
 

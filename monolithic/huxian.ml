@@ -168,6 +168,21 @@ let compute_min_received_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
   let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
   Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction * (fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
 
+(** Compute whether the liquidation of an auction slice was (retroactively)
+  * unwarranted or not. *)
+let was_slice_liquidation_unwarranted
+  (* Original amount of tez sent to liquidation queue *)
+  (tez_to_auction: Tez.t)
+  (* Pre-calculated minimum amount of kit required to receive when selling
+   * tez_to_auction to consider the liquidation unwarranted *)
+  (min_received_kit_for_unwarranted: Kit.t)
+  (* The slice of tez_to_auction that we have sold *)
+  (liquidation_slice: Tez.t)
+  (* The amount of kit we received for liquidation_slice *)
+  (liquidation_earning: Kit.t)
+  : bool =
+  FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_received_kit_for_unwarranted * Tez.to_fp liquidation_slice)
+
 let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
