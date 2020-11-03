@@ -73,7 +73,7 @@ struct
   let liquidation_price (p: parameters) : FixedPoint.t =
     FixedPoint.(p.q * Tez.to_fp (tz_liquidation p))
 
-  let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_float 100.0)
+  let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_string "100.0")
 
   (** If we call "burrowed" the total amount of kit necessary to close all
     * existing burrows, and "circulating" the total amount of kit in
@@ -86,8 +86,8 @@ struct
   let compute_imbalance (burrowed: Kit.t) (circulating: Kit.t) : FixedPoint.t =
     assert (burrowed >= Kit.zero); (* Invariant *)
     assert (circulating >= Kit.zero); (* Invariant *)
-    let centinepers = cnp (FixedPoint.of_float 0.1) in (* TODO: per year! *)
-    let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_float 5.0) in
+    let centinepers = cnp (FixedPoint.of_string "0.1") in (* TODO: per year! *)
+    let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_string "5.0") in
     (* No kit in burrows or in circulation means no imbalance adjustment *)
     if burrowed = Kit.zero then
       (* TODO: George: though unlikely, it is possible to have kit in
@@ -129,18 +129,18 @@ struct
   let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     assert (target > FixedPoint.zero);
     FixedPoint.(
-      let cnp_001 = cnp (of_float 0.01) in
-      let cnp_005 = cnp (of_float 0.05) in
-      let secs_in_a_day = of_float (24. *. 3600.) in
+      let cnp_001 = cnp (of_string "0.01") in
+      let cnp_005 = cnp (of_string "0.05") in
+      let secs_in_a_day = of_int Stdlib.(24 * 3600) in
       match () with
       (* No acceleration (0) *)
-      | () when exp (of_float (-. 0.5 /. 100.)) < target && target < exp (of_float (0.5 /. 100.)) -> zero
+      | () when exp (of_string "-0.005") < target && target < exp (of_string "0.005") -> zero
       (* Low acceleration (-/+) *)
-      | () when exp (of_float (-. 5.0 /. 100.)) < target && target <= exp (of_float (-. 0.5 /. 100.)) -> neg (cnp_001 / sqr secs_in_a_day)
-      | () when exp (of_float    (5.0 /. 100.)) > target && target >= exp (of_float    (0.5 /. 100.)) ->     (cnp_001 / sqr secs_in_a_day)
+      | () when exp (of_string "-0.05") < target && target <= exp (of_string "-0.005") -> neg (cnp_001 / sqr secs_in_a_day)
+      | () when exp (of_string  "0.05") > target && target >= exp (of_string  "0.005") ->     (cnp_001 / sqr secs_in_a_day)
       (* High acceleration (-/+) *)
-      | () when target <= exp (of_float (-. 5.0 /. 100.)) -> neg (cnp_005 / sqr secs_in_a_day)
-      | () when target >= exp (of_float    (5.0 /. 100.)) ->     (cnp_005 / sqr secs_in_a_day)
+      | () when target <= exp (of_string "-0.05") -> neg (cnp_005 / sqr secs_in_a_day)
+      | () when target >= exp (of_string  "0.05") ->     (cnp_005 / sqr secs_in_a_day)
       | _ -> failwith "impossible"
     )
 end

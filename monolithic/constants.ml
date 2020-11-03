@@ -39,22 +39,22 @@ module Constants : sig
   val liquidation_penalty_percentage : FixedPoint.t
 end =
 struct
-  let fplus  = FixedPoint.of_float 2.1
+  let fplus  = FixedPoint.of_string "2.1"
 
-  let fminus = FixedPoint.of_float 1.9
+  let fminus = FixedPoint.of_string "1.9"
 
   let creation_deposit = Tez.of_float 1.0
 
-  let burrow_fee_percentage = FixedPoint.of_float 0.005
+  let burrow_fee_percentage = FixedPoint.of_string "0.005"
 
-  let liquidation_reward_percentage = FixedPoint.of_float 0.001
+  let liquidation_reward_percentage = FixedPoint.of_string "0.001"
 
-  let uniswap_fee_percentage = FixedPoint.of_float 0.002
+  let uniswap_fee_percentage = FixedPoint.of_string "0.002"
 
-  let protected_index_epsilon = FixedPoint.of_float 0.0005
+  let protected_index_epsilon = FixedPoint.of_string "0.0005"
 
   let max_lot_size = Tez.of_float 10000.
 
-  let liquidation_penalty_percentage = FixedPoint.of_float 0.10
+  let liquidation_penalty_percentage = FixedPoint.of_string "0.10"
 end
 

@@ -69,7 +69,7 @@ let step_parameters
   let current_drift =
     FixedPoint.(
       parameters.drift
-      + of_float (1. /. 2.)
+      + (of_int 1 / of_int 2)
         * (parameters.drift' + current_drift')
         * duration_in_seconds
     ) in
@@ -78,8 +78,8 @@ let step_parameters
     FixedPoint.(
       parameters.q
       * exp ( ( parameters.drift
-                + of_float (1. /. 6.)
-                  * (of_float 2. * (parameters.drift' + current_drift'))
+                + (of_int 1 / of_int 6)
+                  * (of_int 2 * (parameters.drift' + current_drift'))
                   * duration_in_seconds )
               * duration_in_seconds )
     ) in
