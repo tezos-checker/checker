@@ -5,6 +5,7 @@ open Huxian
 open Kit
 include Parameters
 open Tez
+open Uniswap
 
 let burrow_experiment () =
   let params =
@@ -67,13 +68,13 @@ let uniswap_experiment () =
   let (tez, kit, uniswap) = sell_kit uniswap (Kit.of_float 1.0) in
   printf "Returned tez: %a\n" Tez.pp tez;
   printf "Returned kit: %a\n" Kit.pp kit;
-  print_uniswap uniswap;
+  print_string @@ show_uniswap uniswap;
   print_newline ();
   let (liq, tez, kit, uniswap) = buy_liquidity uniswap (Tez.of_float 20.0) (Kit.of_float 20.0) in
-  printf "Returned liquidity: %d\n" liq;
+  printf "Returned liquidity: %a\n" Uniswap.pp_liquidity liq;
   printf "Returned tez: %a\n" Tez.pp tez;
   printf "Returned kit: %a\n" Kit.pp kit;
-  print_uniswap uniswap
+  print_string @@ show_uniswap uniswap
 
 let step_experiment () =
   let initial_parameters = { q = FixedPoint.of_string "0.9";

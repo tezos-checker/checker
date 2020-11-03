@@ -26,7 +26,10 @@ open Tez
  * difference is far smaller than typical fees or any amount we care about.
 *)
 module Uniswap : sig
-  type liquidity = int
+  type liquidity
+
+  val show_liquidity : liquidity -> string
+  val pp_liquidity : Format.formatter -> liquidity -> unit
 
   (* TODO: The state of uniswap should also (in the future) include an ongoing
    * auction to decide who to delegate to, possibly multiple tez balances, etc.
@@ -37,8 +40,8 @@ module Uniswap : sig
       total_liquidity_tokens: int;
     }
 
+  val show_uniswap : uniswap -> string
   val pp_uniswap : Format.formatter -> uniswap -> unit
-  val print_uniswap : uniswap -> unit
 
   (** Check whether the uniswap contract contains at least some kit and some tez. *)
   val uniswap_non_empty : uniswap -> bool
@@ -73,7 +76,7 @@ module Uniswap : sig
   val sell_liquidity : uniswap -> liquidity -> Tez.t * Kit.t * uniswap
 end =
 struct
-  type liquidity = int
+  type liquidity = int [@@deriving show]
 
   (* TODO: The state of uniswap should also (in the future) include an ongoing
    * auction to decide who to delegate to, possibly multiple tez balances, etc.
@@ -83,18 +86,9 @@ struct
       kit: Kit.t;
       total_liquidity_tokens: int;
     }
+  [@@deriving show]
 
-  let pp_uniswap (ppf: Format.formatter) (u : uniswap) =
-    Format.fprintf
-      ppf
-      "{tez = %a;\n kit = %a;\n total_liquidity_tokens = %d}\n"
-      Tez.pp u.tez
-      Kit.pp u.kit
-      u.total_liquidity_tokens
-
-  let print_uniswap (u : uniswap) = pp_uniswap Format.std_formatter u
-
-  let uniswap_non_empty(u: uniswap) =
+  let uniswap_non_empty (u: uniswap) =
     u.kit > Kit.zero && u.tez > Tez.zero
 
   let sell_kit (uniswap: uniswap) (kit: Kit.t) : Tez.t * Kit.t * uniswap =

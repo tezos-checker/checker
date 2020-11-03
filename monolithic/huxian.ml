@@ -17,10 +17,6 @@ include Uniswap
  *   => Create a kit UTXO for the burrow owner.
  *
  * * Implement auctioning logic.
- *
- * * Implement imbalance adjustment-related logic.
- *
- * * Implement burrowing fees-related logic.
 *)
 
 (* ************************************************************************* *)
@@ -55,7 +51,7 @@ let step_parameters
    * index (given by the oracles right now), and the protected index of the
    * previous timestamp. *)
   let duration_in_seconds = FixedPoint.of_int (seconds_of_duration time_passed) in
-  let upper_lim = FixedPoint.(exp (protected_index_epsilon * duration_in_seconds)) in
+  let upper_lim = FixedPoint.(exp     (protected_index_epsilon * duration_in_seconds)) in
   let lower_lim = FixedPoint.(exp (neg protected_index_epsilon * duration_in_seconds)) in
   let current_protected_index =
     FixedPoint.(
