@@ -66,17 +66,9 @@ module Burrow : sig
     * price) when computing the outstanding kit. *)
   val is_liquidatable : parameters -> burrow -> bool
 
-  (** Ask the current outstanding number of kit of a burrow. Since the last
-    * time the burrow was touched the balance can have changed, accruing burrow
-    * fees and imbalance adjustments, so the amount of current outstanding kit
-    * is thus computed
-    *
-    *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
-  *)
-  val get_outstanding_kit : parameters -> burrow -> Kit.t
-
   (** Perform housekeeping tasks on the burrow. This includes:
     * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
+    * - Update the last observed adjustment index
     * - NOTE: Are there any other tasks to put in this list?
   *)
   val touch : parameters -> burrow -> burrow
@@ -129,16 +121,6 @@ struct
     | WithdrawTezFailure
     | MintKitFailure
 
-  (** Ask the current outstanding number of kit of a burrow. Since the last
-    * time the burrow was touched the balance can have changed, accruing burrow
-    * fees and imbalance adjustments, so the amount of current outstanding kit
-    * is thus computed
-    *
-    *   current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index)
-  *)
-  let get_outstanding_kit (p : parameters) (b : burrow) : Kit.t =
-    Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index)
-
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
     *   tez_collateral < fplus * kit_outstanding * minting_price
@@ -156,7 +138,8 @@ struct
   (* Update the outstanding kit, update the adjustment index, TODO: and the timestamp? *)
   let touch (p: parameters) (b: burrow) : burrow =
     { b with
-      minted_kit = get_outstanding_kit p b;
+      (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
+      minted_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index);
       adjustment_index = compute_adjustment_index p;
     }
 
@@ -267,6 +250,6 @@ struct
   *)
   let is_liquidatable (p : parameters) (b : burrow) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
-    let outstanding_kit = Kit.((get_outstanding_kit p b) - expected_kit) in
-    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp outstanding_kit * liquidation_price p)
+    let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
+    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp optimistic_outstanding * liquidation_price p)
 end
