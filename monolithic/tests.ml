@@ -10,44 +10,9 @@ type fp = FixedPoint.t [@@deriving show]
 
 let suite =
   "HuxianTests" >::: [
-    AvlTests.suite;
-
-    "tez arithmetic" >::
-    (fun _ ->
-       let tz1 = Tez.of_float 5.0 in
-       let tz2 = Tez.of_float 3.0 in
-       let tz3 = Tez.of_float 5.1234 in
-       let tz4 = Tez.of_float 5001.0 in
-       let tz5 = Tez.of_float 40.0 in
-       let fp1 = FixedPoint.of_float 3.0 in
-       assert_equal ~printer:show_tz (Tez.of_float 8.0) Tez.(tz1 + tz2);
-       assert_equal ~printer:show_tz (Tez.of_float 2.0) Tez.(tz1 - tz2);
-       (* TODO: negative numbers? *)
-       assert_equal ~printer:show_fp (FixedPoint.of_float 8.0)     Tez.(tz5 / tz1);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 1.7078)  Tez.(tz3 / tz2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 125.025) Tez.(tz4 / tz5);
-       assert_equal ~printer:show_tz (Tez.of_float 15.3702) (Tez.scale tz3 fp1)
-    );
-
-    "fixedpoint arithmetic" >::
-    (fun _ ->
-       let fp1 = FixedPoint.of_float 5.0 in
-       let fp2 = FixedPoint.of_float 3.0 in
-       let fp3 = FixedPoint.of_float 5.1234 in
-       let fp4 = FixedPoint.of_float 5001.0 in
-       let fp5 = FixedPoint.of_float (-40.0) in
-       let fp6 = FixedPoint.of_float (0.1) in
-       assert_equal ~printer:show_fp (FixedPoint.of_float 1.1) (FixedPoint.exp fp6);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 8.0) FixedPoint.(fp1 + fp2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 2.0) FixedPoint.(fp1 - fp2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 15.0) FixedPoint.(fp1 * fp2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 15.3702) FixedPoint.(fp3 * fp2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float (-204.936)) FixedPoint.(fp3 * fp5);
-       (* assert_equal ~printer:show_fp (FixedPoint.of_float 1.6666666) FixedPoint.(fp1 / fp2); *)
-       assert_equal ~printer:show_fp (FixedPoint.of_float (-8.0)) FixedPoint.(fp5 / fp1);
-       assert_equal ~printer:show_fp (FixedPoint.of_float 1.7078) FixedPoint.(fp3 / fp2);
-       assert_equal ~printer:show_fp (FixedPoint.of_float (-125.025)) FixedPoint.(fp4 / fp5)
-    );
+    TestFixedPoint.suite;
+    TestTez.suite;
+    TestAvl.suite;
 
     "test_step" >::
     fun _ ->
@@ -70,14 +35,14 @@ let suite =
       assert_equal
         { q = FixedPoint.of_float 0.900000;
           index = Tez.of_float 0.34;
-          protected_index = Tez.of_float 0.34;
+          protected_index = Tez.of_float 0.339999;
           target = FixedPoint.of_float 1.00327868;
           drift' = FixedPoint.of_float 6.69795953361e-14;
           drift = FixedPoint.of_float 1.20563271605e-10;
-          burrow_fee_index = FixedPoint.of_float 1.0;    (* TODO: use expected value. *)
-          imbalance_index = FixedPoint.of_float 1.0;     (* TODO: use expected value. *)
-          outstanding_kit = Kit.one;                     (* TODO: use expected value. *)
-          circulating_kit = Kit.zero;                    (* TODO: use expected value. *)
+          burrow_fee_index = FixedPoint.of_float 1.005;
+          imbalance_index = FixedPoint.of_float 1.001;
+          outstanding_kit = Kit.of_float 1.006005;
+          circulating_kit = Kit.of_float 0.005;
         }
         new_parameters
         ~printer:show_parameters

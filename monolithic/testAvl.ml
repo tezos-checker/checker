@@ -65,11 +65,11 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 module IntSet = Set.Make(Int)
 
 let arb_tez = Q.(
-  map
-    ~rev:(fun i -> FixedPoint.to_int (Tez.to_fp i))
-    (fun i -> Tez.of_fp (FixedPoint.of_int i))
-    small_int
-)
+    map
+      ~rev:(fun i -> FixedPoint.to_int (Tez.to_fp i))
+      (fun i -> Tez.of_fp (FixedPoint.of_int i))
+      small_int
+  )
 
 let arb_item = Q.(pair small_int arb_tez)
 
@@ -152,7 +152,7 @@ let suite =
 
     (qcheck_to_ounit
      @@ Q.Test.make ~name:"prop_del" ~count:property_test_count
-          Q.(triple (list arb_item) arb_item (list arb_item))
+       Q.(triple (list arb_item) arb_item (list arb_item))
      @@ fun (left_items, mid_item, right_items) ->
 
      let (mem, root) = from_list BigMap.empty left_items in
@@ -175,7 +175,7 @@ let suite =
     );
     (qcheck_to_ounit
      @@ Q.Test.make ~name:"prop_join" ~count:property_test_count
-          Q.(pair (list arb_item) (list arb_item))
+       Q.(pair (list arb_item) (list arb_item))
      @@ fun (left, right) ->
      Q.assume (List.length left > 0);
      Q.assume (List.length right > 0);
