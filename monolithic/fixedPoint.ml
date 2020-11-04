@@ -65,44 +65,12 @@ struct
   let to_rep t = t
 
   let of_string str =
-    let ensure_only_digits s =
-      let is_digit c = Char.(code '0' <= code c && code c <= code '9') in
-      let check_is_digit c =
-        if is_digit c
-        then ()
-        else failwith (Format.sprintf "FixedPoint.check_is_digit: Unexpected input: %c" c)
-      in
-      String.iter check_is_digit s ; s
-    in
-    let take width s =
-      if width <= 0 then
-        ""
-      else if width >= String.length s then
-        s
-      else
-        String.sub s 0 width (* TODO: Warn about ignored digits? *)
-    in
-    let zfill s width = match Stdlib.(width - (String.length s)) with
-      | to_fill when to_fill <= 0 -> s
-      | to_fill -> s ^ (String.make to_fill '0')
-    in
-    let compute_upper u = Z.(of_string u * scaling_factor) in
-    let compute_lower l = zfill (take 8 l) 8 |> ensure_only_digits |> Z.of_string in
-    let compute_sign u =
-      if String.length u = 0 then
-        Z.one
-      else if String.get u 0 = '-' then
-        Z.minus_one
-      else
-        Z.one
-    in
-    match String.split_on_char '.' str with
-    | [ left ; right ] ->
-      let upper = compute_upper left in
-      let lower = Z.(compute_lower right * compute_sign left) in
-      Z.(upper + lower)
-    | [ left ] -> compute_upper left
-    | _ -> failwith (Format.sprintf "FixedPoint.of_string: Unexpected input: %s" str)
+    let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
+    let dotpos = String.rindex_opt str '.' in
+    let mantissa = match dotpos with
+      | None -> Z.one
+      | Some pos -> Z.pow (Z.of_int 10) Stdlib.(String.length str - pos - 1) in
+    Z.((Z.of_string without_dot * scaling_factor) / mantissa)
 
   (* Pretty printing functions *)
   let show amount =

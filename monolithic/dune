@@ -6,7 +6,7 @@
  (name huxian)
  (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow
    Uniswap Error Address Auction)
- (libraries zarith)
+ (libraries str zarith)
  (wrapped false)
  (preprocess
   (pps ppx_deriving.std)))
