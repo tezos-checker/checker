@@ -34,6 +34,12 @@ module Burrow : sig
        * outcome of the auctions we expect some kit in return. *)
       collateral_at_auction : Tez.t;
       (* The last time the burrow was touched. *)
+      (* TODO: George: in our past discussions we always assumed that this
+       * field existed, but since we regulate the adjustment index (we actually
+       * factor down the burrow_fee_index and the imbalance_index) to take into
+       * account the time interval, do we actually need this here as well?
+       * Perhaps it could save some gas in cases where the burrow is up-to-date
+       * and we see that no bookkeeping is required. We'll see. *)
       last_touched : Timestamp.t;
     }
 
@@ -69,6 +75,7 @@ module Burrow : sig
   (** Perform housekeeping tasks on the burrow. This includes:
     * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
     * - Update the last observed adjustment index
+    * - Update the last observed timestamp.
     * - NOTE: Are there any other tasks to put in this list?
   *)
   val touch : Parameters.t -> t -> t
