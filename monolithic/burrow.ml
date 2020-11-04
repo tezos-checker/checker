@@ -3,18 +3,16 @@ open Error
 
 open Address
 open Constants
-include Constants
 open FixedPoint
 open Kit
 open Parameters
-include Parameters
 open Tez
 
 (* ************************************************************************* *)
 (*                                Burrows                                    *)
 (* ************************************************************************* *)
 module Burrow : sig
-  type burrow =
+  type t =
     { (* Whether the creation deposit for the burrow has been paid. If the
        * creation deposit has been paid, the burrow is considered "active" and
        * "closed"/inactive otherwise. Paying the creation deposit re-activates
@@ -38,13 +36,13 @@ module Burrow : sig
     }
 
   type Error.error +=
-    | Overburrowed of burrow
+    | Overburrowed of t
     | InsufficientFunds of Tez.t
     | WithdrawTezFailure
     | MintKitFailure
 
-  val show_burrow : burrow -> string
-  val pp_burrow : Format.formatter -> burrow -> unit
+  val show : t -> string
+  val pp : Format.formatter -> t -> unit
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
@@ -53,7 +51,7 @@ module Burrow : sig
     * The quantity tez_collateral / (fplus * minting_price) we call the burrowing
     * limit (normally kit_outstanding <= burrowing_limit).
   *)
-  val is_overburrowed : parameters -> burrow -> bool
+  val is_overburrowed : Parameters.t -> t -> bool
 
   (** Check whether a burrow can be marked for liquidation. A burrow can be
     * marked for liquidation if:
@@ -64,46 +62,45 @@ module Burrow : sig
     * liquidation limit. Note that for this check we optimistically take into
     * account the expected kit from pending auctions (using the current minting
     * price) when computing the outstanding kit. *)
-  val is_liquidatable : parameters -> burrow -> bool
+  val is_liquidatable : Parameters.t -> t -> bool
 
   (** Perform housekeeping tasks on the burrow. This includes:
     * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
     * - Update the last observed adjustment index
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : parameters -> burrow -> burrow
+  val touch : Parameters.t -> t -> t
 
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
-  val create_burrow : parameters -> Address.t -> Tez.t -> (burrow, Error.error) result
+  val create_burrow : Parameters.t -> Address.t -> Tez.t -> (t, Error.error) result
 
   (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
-  val deposit_tez : parameters -> Tez.t -> burrow -> burrow
+  val deposit_tez : Parameters.t -> Tez.t -> t -> t
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  val withdraw_tez : parameters -> Tez.t -> burrow -> (burrow * Tez.utxo, Error.error) result
+  val withdraw_tez : Parameters.t -> Tez.t -> t -> (t * Tez.utxo, Error.error) result
 
   (** Mint a non-negative amount of kit from the burrow, as long as this will
     * not overburrow it *)
-  val mint_kit : parameters -> Kit.t -> burrow -> (burrow * Kit.utxo, Error.error) result
+  val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.utxo, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. TODO: Pass a Kit.utxo instead? *)
-  val burn_kit : parameters -> Kit.t -> burrow -> burrow * Kit.t
+  val burn_kit : Parameters.t -> Kit.t -> t -> t * Kit.t
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
     * when it is no longer overburrowed or having a risk of liquidation. *)
-  val compute_tez_to_auction : parameters -> burrow -> Tez.t
+  val compute_tez_to_auction : Parameters.t -> t -> Tez.t
 
   (** Given the number of tez to be auctioned off, compute the expected return
     * in kit, given the current minting price. *)
-  val compute_expected_kit : parameters -> Tez.t -> Kit.t
-end =
-struct
-  type burrow =
+  val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
+end = struct
+  type t =
     { has_creation_deposit : bool;
       owner : Address.t;
       delegate : Address.t option;
@@ -116,7 +113,7 @@ struct
   [@@deriving show]
 
   type Error.error +=
-    | Overburrowed of burrow
+    | Overburrowed of t
     | InsufficientFunds of Tez.t
     | WithdrawTezFailure
     | MintKitFailure
@@ -132,39 +129,39 @@ struct
     * be lost forever.
     * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
-  let is_overburrowed (p : parameters) (b : burrow) : bool =
-    Tez.to_fp b.collateral < FixedPoint.(fplus * Kit.to_fp b.minted_kit * minting_price p)
+  let is_overburrowed (p : Parameters.t) (b : t) : bool =
+    Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.minted_kit * Parameters.minting_price p)
 
   (* Update the outstanding kit, update the adjustment index, TODO: and the timestamp? *)
-  let touch (p: parameters) (b: burrow) : burrow =
+  let touch (p: Parameters.t) (b: t) : t =
     { b with
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
-      minted_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * compute_adjustment_index p / b.adjustment_index);
-      adjustment_index = compute_adjustment_index p;
+      minted_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
+      adjustment_index = Parameters.compute_adjustment_index p;
     }
 
-  let create_burrow (p: parameters) (address: Address.t) (tez: Tez.t) : (burrow, Error.error) result =
-    if tez < creation_deposit
+  let create_burrow (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
+    if tez < Constants.creation_deposit
     then Error (InsufficientFunds tez)
     else Ok
         { has_creation_deposit = true;
           owner = address;
           delegate = None;
-          collateral = Tez.(tez - creation_deposit);
+          collateral = Tez.(tez - Constants.creation_deposit);
           minted_kit = Kit.zero;
-          adjustment_index = compute_adjustment_index p;
+          adjustment_index = Parameters.compute_adjustment_index p;
           collateral_at_auction = Tez.zero;
         }
 
   (** Add non-negative collateral to a burrow. *)
-  let deposit_tez (p: parameters) (t: Tez.t) (burrow: burrow) : burrow =
+  let deposit_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : t =
     assert (t >= Tez.zero);
     let b = touch p burrow in
     { b with collateral = Tez.(b.collateral + t) }
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p: parameters) (t: Tez.t) (burrow: burrow) : (burrow * Tez.utxo, Error.error) result =
+  let withdraw_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : (t * Tez.utxo, Error.error) result =
     assert (t >= Tez.zero);
     let b = touch p burrow in
     let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
@@ -176,7 +173,7 @@ struct
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
   (* TODO: This should update the parameters; more kit is now in circulation! *)
-  let mint_kit (p: parameters) (kit: Kit.t) (burrow: burrow) : (burrow * Kit.utxo, Error.error) result =
+  let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.utxo, Error.error) result =
     assert (kit >= Kit.zero);
     let b = touch p burrow in
     let new_burrow = { b with minted_kit = Kit.(b.minted_kit + kit) } in
@@ -188,7 +185,7 @@ struct
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. *)
   (* TODO: This should update the parameters; less kit is now in circulation! *)
-  let burn_kit (p: parameters) (k: Kit.t) (burrow: burrow) : burrow * Kit.t =
+  let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t * Kit.t =
     assert (k >= Kit.zero);
     let b = touch p burrow in
     let kit_to_burn = min b.minted_kit k in
@@ -228,14 +225,14 @@ struct
    * auctioned off to bring the burrow in a collateralized state. The 10%
    * majoration (as a penalty in case of a warranted liquidation) is added at
    * the call sites. *)
-  let compute_tez_to_auction (p : parameters) (b : burrow) : Tez.t =
+  let compute_tez_to_auction (p : Parameters.t) (b : t) : Tez.t =
     let collateral = Tez.to_fp b.collateral in
     let outstanding_kit = Kit.to_fp b.minted_kit in
-    Tez.of_fp FixedPoint.((outstanding_kit * fplus * minting_price p - collateral) / (fplus - one))
+    Tez.of_fp FixedPoint.((outstanding_kit * Constants.fplus * Parameters.minting_price p - collateral) / (Constants.fplus - one))
 
   (* TODO: And ensure that it's skewed on the safe side (underapprox.). *)
-  let compute_expected_kit (p : parameters) (tez_to_auction: Tez.t) : Kit.t =
-    Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / minting_price p)
+  let compute_expected_kit (p : Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
+    Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / Parameters.minting_price p)
 
   (** Check whether a burrow can be marked for liquidation. A burrow can be
     * marked for liquidation if:
@@ -248,8 +245,8 @@ struct
     * price) when computing the outstanding kit.
     * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
-  let is_liquidatable (p : parameters) (b : burrow) : bool =
+  let is_liquidatable (p : Parameters.t) (b : t) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
-    Tez.to_fp b.collateral < FixedPoint.(fminus * Kit.to_fp optimistic_outstanding * liquidation_price p)
+    Tez.to_fp b.collateral < FixedPoint.(Constants.fminus * Kit.to_fp optimistic_outstanding * Parameters.liquidation_price p)
 end

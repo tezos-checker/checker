@@ -1,14 +1,11 @@
-
 open Address
 open Burrow
-include Burrow
 open Constants
-include Constants
 open FixedPoint
+open Parameters
 open Kit
 open Tez
 open Uniswap
-include Uniswap
 
 (* TODO: Things to consider / action items:
  *
@@ -23,9 +20,9 @@ include Uniswap
 (* ************************************************************************* *)
 
 type checker =
-  { burrows : burrow Map.Make(Address).t;
-    uniswap : uniswap;
-    parameters : parameters;
+  { burrows : Burrow.t Map.Make(Address).t;
+    uniswap : Uniswap.t;
+    parameters : Parameters.t;
   }
 
 (* ************************************************************************* *)
@@ -44,7 +41,7 @@ type liquidation_result =
     tez_to_auction : Tez.t;
     expected_kit : Kit.t;
     min_received_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
-    burrow_state : burrow;
+    burrow_state : Burrow.t;
   }
 [@@deriving show]
 
@@ -85,11 +82,11 @@ type liquidation_result =
 
    then it was unwarranted.
 *)
-let compute_min_received_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Tez.t) : Kit.t =
+let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (tez_to_auction: Tez.t) : Kit.t =
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
-  let expected_kit = compute_expected_kit p b.collateral_at_auction in
+  let expected_kit = Burrow.compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
-  Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction * (fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
+  Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction * (Constants.fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
 
 (** Compute whether the liquidation of an auction slice was (retroactively)
   * unwarranted or not. *)
@@ -106,12 +103,12 @@ let was_slice_liquidation_unwarranted
   : bool =
   FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_received_kit_for_unwarranted * Tez.to_fp liquidation_slice)
 
-let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
-  let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
+let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
+  let partial_reward = Tez.scale b.collateral Constants.liquidation_reward_percentage in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
-  let liquidation_reward = Tez.(creation_deposit + partial_reward) in
-  if not (is_liquidatable p b) then
+  let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
+  if not (Burrow.is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
      * liquidate. *)
     { outcome = Unnecessary;
@@ -120,11 +117,11 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
       expected_kit = Kit.zero;
       min_received_kit_for_unwarranted = Kit.zero; (* todo: use better representation *)
       burrow_state = b }
-  else if Tez.(b.collateral - partial_reward) < creation_deposit then
+  else if Tez.(b.collateral - partial_reward) < Constants.creation_deposit then
     (* Case 2: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
     let tez_to_auction = Tez.(b.collateral - partial_reward) in
-    let expected_kit = compute_expected_kit p tez_to_auction in
+    let expected_kit = Burrow.compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
         has_creation_deposit = false;
@@ -137,7 +134,7 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
       expected_kit = expected_kit;
       min_received_kit_for_unwarranted = compute_min_received_kit_for_unwarranted p b tez_to_auction;
       burrow_state = final_burrow }
-  else if FixedPoint.(Kit.to_fp b.minted_kit * minting_price p) > Tez.(to_fp (b.collateral - partial_reward - creation_deposit)) then
+  else if FixedPoint.(Kit.to_fp b.minted_kit * Parameters.minting_price p) > Tez.(to_fp (b.collateral - partial_reward - Constants.creation_deposit)) then
     (* Case 3: With the current price it's impossible to make the burrow not
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
@@ -146,9 +143,9 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
      * immediately afterwards, if the collateral remaining is zero. Hmmm. *)
     (* Note: the condition here checks basically whether compute_tez_to_auction
      * would return a negative amount of tez. *)
-    let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - creation_deposit) } in
+    let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - Constants.creation_deposit) } in
     let tez_to_auction = b_without_reward.collateral in
-    let expected_kit = compute_expected_kit p tez_to_auction in
+    let expected_kit = Burrow.compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
         collateral = Tez.zero;
@@ -168,13 +165,13 @@ let request_liquidation (p: parameters) (b: burrow) : liquidation_result =
      * is over---we realize that the liquidation was not really warranted, we
      * shall return the auction earnings in their entirety. If not, then only
      * 90% of the earnings shall be returned. *)
-    let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - creation_deposit) } in
+    let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - Constants.creation_deposit) } in
     let tez_to_auction =
-      let essential_tez = compute_tez_to_auction p b_without_reward in
-      let with_penalty = Tez.scale essential_tez FixedPoint.(one + liquidation_penalty_percentage) in
+      let essential_tez = Burrow.compute_tez_to_auction p b_without_reward in
+      let with_penalty = Tez.scale essential_tez FixedPoint.(one + Constants.liquidation_penalty_percentage) in
       min b_without_reward.collateral with_penalty (* Cannot be more than the burrow's collateral! *)
     in
-    let expected_kit = compute_expected_kit p tez_to_auction in
+    let expected_kit = Burrow.compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
         collateral = Tez.(b_without_reward.collateral - tez_to_auction);

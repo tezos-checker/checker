@@ -9,7 +9,7 @@ let suite =
   "Parameters tests" >::: [
     "test_step" >::
     fun _ ->
-      let initial_parameters : Parameters.parameters =
+      let initial_parameters : Parameters.t =
         { q = FixedPoint.of_string "0.9";
           index = Tez.of_float 0.36;
           target = FixedPoint.of_string "1.08";
@@ -38,5 +38,5 @@ let suite =
           circulating_kit = Kit.of_float 0.005;
         }
         new_parameters
-        ~printer:Parameters.show_parameters
+        ~printer:Parameters.show
   ]

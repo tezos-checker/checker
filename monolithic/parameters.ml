@@ -8,7 +8,7 @@ open Tez
 (*                               Parameters                                  *)
 (* ************************************************************************* *)
 module Parameters : sig
-  type parameters =
+  type t =
     { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
       q : FixedPoint.t; (* 1/kit, really *)
       index: Tez.t;
@@ -25,16 +25,16 @@ module Parameters : sig
     }
 
   val step :
-    Duration.t -> FixedPoint.t -> FixedPoint.t -> parameters -> Kit.t * parameters
+    Duration.t -> FixedPoint.t -> FixedPoint.t -> t -> Kit.t * t
 
-  val show_parameters : parameters -> string
-  val pp_parameters : Format.formatter -> parameters -> unit
+  val show : t -> string
+  val pp : Format.formatter -> t -> unit
 
   (** Current minting price. *)
-  val minting_price : parameters -> FixedPoint.t
+  val minting_price : t -> FixedPoint.t
 
   (** Current liquidation price. *)
-  val liquidation_price : parameters -> FixedPoint.t
+  val liquidation_price : t -> FixedPoint.t
 
   (** Given the amount of kit necessary to close all existing burrows
     * (burrowed) and the amount of kit that are currently in circulation,
@@ -44,13 +44,13 @@ module Parameters : sig
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
-  val compute_adjustment_index : parameters -> FixedPoint.t
+  val compute_adjustment_index : t -> FixedPoint.t
 
   (** Given the current target p, calculate the rate of change of the drift d'. *)
   val compute_drift_derivative : FixedPoint.t -> FixedPoint.t
 end =
 struct
-  type parameters =
+  type t =
     { q : FixedPoint.t; (* 1/kit, really *)
       index: Tez.t;
       protected_index: Tez.t;
@@ -65,17 +65,17 @@ struct
   [@@deriving show]
 
   (* tez. To get tez/kit must multiply with q. *)
-  let tz_minting (p: parameters) : Tez.t =
+  let tz_minting (p: t) : Tez.t =
     max p.index p.protected_index
 
   (* tez. To get tez/kit must multiply with q. *)
-  let tz_liquidation (p: parameters) : Tez.t =
+  let tz_liquidation (p: t) : Tez.t =
     min p.index p.protected_index
 
-  let minting_price (p: parameters) : FixedPoint.t =
+  let minting_price (p: t) : FixedPoint.t =
     FixedPoint.(p.q * Tez.to_fp (tz_minting p))
 
-  let liquidation_price (p: parameters) : FixedPoint.t =
+  let liquidation_price (p: t) : FixedPoint.t =
     FixedPoint.(p.q * Tez.to_fp (tz_liquidation p))
 
   let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_string "100.0")
@@ -106,7 +106,7 @@ struct
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
-  let compute_adjustment_index (p: parameters) : FixedPoint.t =
+  let compute_adjustment_index (p: t) : FixedPoint.t =
     FixedPoint.(p.burrow_fee_index * p.imbalance_index)
 
 (*
@@ -157,8 +157,8 @@ struct
       (time_passed: Duration.t)
       (current_index: FixedPoint.t)
       (current_kit_in_tez: FixedPoint.t)
-      (parameters: parameters)
-    : Kit.t * parameters =
+      (parameters: t)
+    : Kit.t * t =
     (* Compute the new protected index, using the time interval, the current
      * index (given by the oracles right now), and the protected index of the
      * previous timestamp. *)
