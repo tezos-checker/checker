@@ -46,7 +46,7 @@ struct
   let ( * ) x y = Z.((x * y) / scaling_factor)
 
   (* We round towards 0, for fixedpoint calculation, measuring things which are
-   * inherently noisy, this is ok. Greater care must be excerced when doing
+   * inherently noisy, this is ok. Greater care must be excercised when doing
    * accounting (e.g. uniswap)... for measuring things like drift, targets,
    * imbalances etc which are naturally imprecise this is fine. *)
   let ( / ) x y = Z.(x * scaling_factor / y)
