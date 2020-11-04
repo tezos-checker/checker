@@ -3,11 +3,11 @@ open Burrow
 open Duration
 open FixedPoint
 open Format
-open Huxian
 open Kit
 open Parameters
 open Tez
 open Uniswap
+open Liquidation
 
 let burrow_experiment () =
   let params : Parameters.t =
