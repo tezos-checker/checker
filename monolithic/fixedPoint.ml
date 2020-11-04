@@ -70,7 +70,7 @@ struct
     let mantissa = match dotpos with
       | None -> Z.one
       | Some pos -> Z.pow (Z.of_int 10) Stdlib.(String.length str - pos - 1) in
-    Z.((Z.of_string without_dot * scaling_factor) / mantissa)
+    Z.((Z.of_string_base 10 without_dot * scaling_factor) / mantissa)
 
   (* Pretty printing functions *)
   let show amount =
