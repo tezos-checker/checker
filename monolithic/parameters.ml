@@ -1,8 +1,8 @@
 open FixedPoint
 open Constants
-open Duration
 open Kit
 open Tez
+open Timestamp
 
 (* ************************************************************************* *)
 (*                               Parameters                                  *)
@@ -22,10 +22,11 @@ module Parameters : sig
        * because then it stays zero forever (only multiplications occur). *)
       outstanding_kit: Kit.t;
       circulating_kit: Kit.t;
+      last_touched: Timestamp.t;
     }
 
   val step :
-    Duration.t -> FixedPoint.t -> FixedPoint.t -> t -> Kit.t * t
+    Timestamp.t -> FixedPoint.t -> FixedPoint.t -> t -> Kit.t * t
 
   val show : t -> string
   val pp : Format.formatter -> t -> unit
@@ -61,6 +62,7 @@ struct
       imbalance_index: FixedPoint.t;
       outstanding_kit: Kit.t;
       circulating_kit: Kit.t;
+      last_touched: Timestamp.t;
     }
   [@@deriving show]
 
@@ -154,7 +156,7 @@ struct
     min upper (max v lower)
 
   let step
-      (time_passed: Duration.t)
+      (now: Timestamp.t)
       (current_index: FixedPoint.t)
       (current_kit_in_tez: FixedPoint.t)
       (parameters: t)
@@ -162,7 +164,7 @@ struct
     (* Compute the new protected index, using the time interval, the current
      * index (given by the oracles right now), and the protected index of the
      * previous timestamp. *)
-    let duration_in_seconds = FixedPoint.of_int (Duration.to_seconds time_passed) in
+    let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed parameters.last_touched now) in
     let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
     let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
     let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
@@ -219,6 +221,7 @@ struct
       imbalance_index = current_imbalance_index;
       outstanding_kit = current_outstanding_kit;
       circulating_kit = current_circulating_kit;
+      last_touched = now;
     }
     )
 end

@@ -1,6 +1,6 @@
 open Address
 open Burrow
-open Duration
+open Timestamp
 open FixedPoint
 open Format
 open Kit
@@ -21,6 +21,7 @@ let burrow_experiment () =
       imbalance_index = FixedPoint.of_string "1.0";
       outstanding_kit = Kit.one; (* TODO: What should that be? *)
       circulating_kit = Kit.zero; (* TODO: What should that be? *)
+      last_touched = Timestamp.of_seconds 0;
     } in
   printf "\n=== Checker parameters ===\n";
   print_string @@ Parameters.show params;
@@ -90,11 +91,12 @@ let step_experiment () =
       imbalance_index = FixedPoint.of_string "1.0";
       outstanding_kit = Kit.one; (* TODO: What should that be? *)
       circulating_kit = Kit.zero; (* TODO: What should that be? *)
+      last_touched = Timestamp.of_seconds 0;
     } in
-  let interblock_time = Duration.of_seconds 3600 in
+  let current_time = Timestamp.of_seconds 3600 in
   let new_index = FixedPoint.of_string "0.34" in
   let tez_per_kit = FixedPoint.of_string "0.305" in
-  let total_accrual_to_uniswap, new_parameters = Parameters.step interblock_time new_index tez_per_kit initial_parameters in
+  let total_accrual_to_uniswap, new_parameters = Parameters.step current_time new_index tez_per_kit initial_parameters in
   printf "\n=== Initial checker parameters ===\n";
   print_string @@ Parameters.show initial_parameters;
   printf "\n=== New checker parameters ===\n";
