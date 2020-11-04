@@ -163,6 +163,7 @@ struct
      * index (given by the oracles right now), and the protected index of the
      * previous timestamp. *)
     let duration_in_seconds = FixedPoint.of_int (Duration.to_seconds time_passed) in
+    let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
     let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
     let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
     let current_protected_index =
@@ -194,9 +195,13 @@ struct
     let current_target = FixedPoint.(current_q * current_index / current_kit_in_tez) in
 
     (* Update the indices *)
-    let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage)) in (* TODO: Yearly! *)
+    let current_burrow_fee_index = FixedPoint.(
+      parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
+    ) in
     let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
-    let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in (* TODO: Yearly! *)
+    let current_imbalance_index = FixedPoint.(
+      parameters.imbalance_index * (one + imbalance_percentage * duration_in_seconds / seconds_in_a_year)
+    ) in
     let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
     let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
     let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in

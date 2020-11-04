@@ -37,6 +37,10 @@ module Constants : sig
   (** The percentage of additional collateral that we charge when liquidating
     * a burrow, to penalize it for liquidation. *)
   val liquidation_penalty_percentage : FixedPoint.t
+
+  (** For convenience. The number of seconds in a year, taking into account
+    * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
+  val seconds_in_a_year : int
 end =
 struct
   let fplus  = FixedPoint.of_string "2.1"
@@ -56,5 +60,7 @@ struct
   let max_lot_size = Tez.of_float 10000.
 
   let liquidation_penalty_percentage = FixedPoint.of_string "0.10"
+
+  let seconds_in_a_year = 31556952
 end
 

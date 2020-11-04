@@ -32,10 +32,10 @@ let suite =
           target = FixedPoint.of_string "1.00327868";
           drift' = FixedPoint.of_string "0.0";
           drift = FixedPoint.of_string "0.0";
-          burrow_fee_index = FixedPoint.of_string "1.005";
-          imbalance_index = FixedPoint.of_string "1.001";
-          outstanding_kit = Kit.of_float 1.006005;
-          circulating_kit = Kit.of_float 0.005;
+          burrow_fee_index = FixedPoint.of_string "1.00000057";
+          imbalance_index = FixedPoint.of_string "1.00000011";
+          outstanding_kit = Kit.of_float 1.000000; (* NOTE that it ends up being identical to the one we started with *)
+          circulating_kit = Kit.of_float 0.000000; (* NOTE that it ends up being identical to the one we started with *)
         }
         new_parameters
         ~printer:Parameters.show
