@@ -59,6 +59,7 @@ type liquidation_result =
 
    then it was unwarranted.
 *)
+(* NOTE: This does not touch the burrow, it assumes that it has been touched already. *)
 let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (tez_to_auction: Tez.t) : Kit.t =
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
   let expected_kit = Burrow.compute_expected_kit p b.collateral_at_auction in
@@ -80,6 +81,9 @@ let was_slice_liquidation_unwarranted
   : bool =
   FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_received_kit_for_unwarranted * Tez.to_fp liquidation_slice)
 
+(* NOTE: This does not touch the burrow, it assumes that it has been touched
+ * already (notice how the output burrow has the same timestamp as the input
+ * one). *)
 let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
   let partial_reward = Tez.scale b.collateral Constants.liquidation_reward_percentage in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to

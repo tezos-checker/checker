@@ -7,6 +7,7 @@ open FixedPoint
 open Kit
 open Parameters
 open Tez
+open Timestamp
 
 (* ************************************************************************* *)
 (*                                Burrows                                    *)
@@ -32,7 +33,8 @@ module Burrow : sig
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
       collateral_at_auction : Tez.t;
-      (* TODO: also keep track of the last time the burrow was touched *)
+      (* The last time the burrow was touched. *)
+      last_touched : Timestamp.t;
     }
 
   type Error.error +=
@@ -109,6 +111,7 @@ end = struct
       adjustment_index : FixedPoint.t;
       (* TODO: use this field in some calculations *)
       collateral_at_auction : Tez.t;
+      last_touched : Timestamp.t;
     }
   [@@deriving show]
 
@@ -138,6 +141,7 @@ end = struct
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
       minted_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
       adjustment_index = Parameters.compute_adjustment_index p;
+      last_touched = p.last_touched;
     }
 
   let create_burrow (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
@@ -151,6 +155,7 @@ end = struct
           minted_kit = Kit.zero;
           adjustment_index = Parameters.compute_adjustment_index p;
           collateral_at_auction = Tez.zero;
+          last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
         }
 
   (** Add non-negative collateral to a burrow. *)

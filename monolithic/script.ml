@@ -21,7 +21,7 @@ let burrow_experiment () =
       imbalance_index = FixedPoint.of_string "1.0";
       outstanding_kit = Kit.one; (* TODO: What should that be? *)
       circulating_kit = Kit.zero; (* TODO: What should that be? *)
-      last_touched = Timestamp.of_seconds 0;
+      last_touched = Timestamp.of_seconds 1;
     } in
   printf "\n=== Checker parameters ===\n";
   print_string @@ Parameters.show params;
@@ -43,6 +43,7 @@ let burrow_experiment () =
       minted_kit = Kit.of_float 20.0;
       adjustment_index = Parameters.compute_adjustment_index params;
       collateral_at_auction = Tez.of_float 0.0;
+      last_touched = Timestamp.of_seconds 0;
     } in
   printf "\n=== Initial burrow state ===\n";
   print_string @@ Burrow.show initial_burrow;
