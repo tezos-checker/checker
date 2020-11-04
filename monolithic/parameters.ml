@@ -1,4 +1,6 @@
 open FixedPoint
+open Constants
+open Duration
 open Kit
 open Tez
 
@@ -21,6 +23,9 @@ module Parameters : sig
       outstanding_kit: Kit.t;
       circulating_kit: Kit.t;
     }
+
+  val step :
+    Duration.t -> FixedPoint.t -> FixedPoint.t -> parameters -> Kit.t * parameters
 
   val show_parameters : parameters -> string
   val pp_parameters : Format.formatter -> parameters -> unit
@@ -142,6 +147,74 @@ struct
       | () when target <= exp (of_string "-0.05") -> neg (cnp_005 / sqr secs_in_a_day)
       | () when target >= exp (of_string  "0.05") ->     (cnp_005 / sqr secs_in_a_day)
       | _ -> failwith "impossible"
+    )
+
+  let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
+    assert (lower <= upper);
+    min upper (max v lower)
+
+  let step
+      (time_passed: Duration.t)
+      (current_index: FixedPoint.t)
+      (current_kit_in_tez: FixedPoint.t)
+      (parameters: parameters)
+    : Kit.t * parameters =
+    (* Compute the new protected index, using the time interval, the current
+     * index (given by the oracles right now), and the protected index of the
+     * previous timestamp. *)
+    let duration_in_seconds = FixedPoint.of_int (Duration.to_seconds time_passed) in
+    let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
+    let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
+    let current_protected_index =
+      FixedPoint.(
+        Tez.to_fp parameters.protected_index
+        * clamp
+          (current_index / Tez.to_fp parameters.protected_index)
+          lower_lim
+          upper_lim
+      ) in
+    let current_drift' = compute_drift_derivative parameters.target in
+    let current_drift =
+      FixedPoint.(
+        parameters.drift
+        + (of_int 1 / of_int 2)
+          * (parameters.drift' + current_drift')
+          * duration_in_seconds
+      ) in
+
+    let current_q =
+      FixedPoint.(
+        parameters.q
+        * exp ( ( parameters.drift
+                  + (of_int 1 / of_int 6)
+                    * (of_int 2 * (parameters.drift' + current_drift'))
+                    * duration_in_seconds )
+                * duration_in_seconds )
+      ) in
+    let current_target = FixedPoint.(current_q * current_index / current_kit_in_tez) in
+
+    (* Update the indices *)
+    let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage)) in (* TODO: Yearly! *)
+    let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
+    let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in (* TODO: Yearly! *)
+    let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
+    let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
+    let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
+    let current_circulating_kit = Kit.(parameters.circulating_kit + total_accrual_to_uniswap) in
+    (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
+    ( total_accrual_to_uniswap
+    , {
+      index = Tez.of_fp current_index;
+      protected_index = Tez.of_fp current_protected_index;
+      target = current_target;
+      drift = current_drift;
+      drift' = current_drift';
+      q = current_q;
+      burrow_fee_index = current_burrow_fee_index;
+      imbalance_index = current_imbalance_index;
+      outstanding_kit = current_outstanding_kit;
+      circulating_kit = current_circulating_kit;
+    }
     )
 end
 

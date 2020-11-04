@@ -4,8 +4,8 @@
 
 (library
  (name huxian)
- (modules Huxian Constants BigMap Avl Kit Tez FixedPoint Parameters Burrow
-   Uniswap Error Address Auction)
+ (modules Huxian Constants Duration BigMap Avl Kit Tez FixedPoint Parameters
+   Burrow Uniswap Error Address Auction)
  (libraries str zarith)
  (wrapped false)
  (preprocess
@@ -20,7 +20,7 @@
 
 (test
  (name tests)
- (modules Tests TestAvl TestFixedPoint TestTez)
+ (modules Tests TestAvl TestFixedPoint TestTez TestParameters)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

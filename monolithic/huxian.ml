@@ -6,7 +6,6 @@ open Constants
 include Constants
 open FixedPoint
 open Kit
-include Parameters
 open Tez
 open Uniswap
 include Uniswap
@@ -20,14 +19,6 @@ include Uniswap
 *)
 
 (* ************************************************************************* *)
-(**                           UTILITY FUNCTIONS                              *)
-(* ************************************************************************* *)
-
-let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
-  assert (lower <= upper);
-  min upper (max v lower)
-
-(* ************************************************************************* *)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
@@ -36,74 +27,6 @@ type checker =
     uniswap : uniswap;
     parameters : parameters;
   }
-
-type duration = Seconds of int
-let seconds_of_duration = function | Seconds s -> s
-
-(* TODO: Not tested, take it with a grain of salt. *)
-let step_parameters
-    (time_passed: duration)
-    (current_index: FixedPoint.t)
-    (current_kit_in_tez: FixedPoint.t)
-    (parameters: parameters)
-  : Kit.t * parameters =
-  (* Compute the new protected index, using the time interval, the current
-   * index (given by the oracles right now), and the protected index of the
-   * previous timestamp. *)
-  let duration_in_seconds = FixedPoint.of_int (seconds_of_duration time_passed) in
-  let upper_lim = FixedPoint.(exp     (protected_index_epsilon * duration_in_seconds)) in
-  let lower_lim = FixedPoint.(exp (neg protected_index_epsilon * duration_in_seconds)) in
-  let current_protected_index =
-    FixedPoint.(
-      Tez.to_fp parameters.protected_index
-      * clamp
-        (current_index / Tez.to_fp parameters.protected_index)
-        lower_lim
-        upper_lim
-    ) in
-  let current_drift' = compute_drift_derivative parameters.target in
-  let current_drift =
-    FixedPoint.(
-      parameters.drift
-      + (of_int 1 / of_int 2)
-        * (parameters.drift' + current_drift')
-        * duration_in_seconds
-    ) in
-
-  let current_q =
-    FixedPoint.(
-      parameters.q
-      * exp ( ( parameters.drift
-                + (of_int 1 / of_int 6)
-                  * (of_int 2 * (parameters.drift' + current_drift'))
-                  * duration_in_seconds )
-              * duration_in_seconds )
-    ) in
-  let current_target = FixedPoint.(current_q * current_index / current_kit_in_tez) in
-
-  (* Update the indices *)
-  let current_burrow_fee_index = FixedPoint.(parameters.burrow_fee_index * (one + burrow_fee_percentage)) in (* TODO: Yearly! *)
-  let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
-  let current_imbalance_index = FixedPoint.(parameters.imbalance_index * (one + imbalance_percentage)) in (* TODO: Yearly! *)
-  let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
-  let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
-  let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
-  let current_circulating_kit = Kit.(parameters.circulating_kit + total_accrual_to_uniswap) in
-  (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
-  ( total_accrual_to_uniswap
-  , {
-    index = Tez.of_fp current_index;
-    protected_index = Tez.of_fp current_protected_index;
-    target = current_target;
-    drift = current_drift;
-    drift' = current_drift';
-    q = current_q;
-    burrow_fee_index = current_burrow_fee_index;
-    imbalance_index = current_imbalance_index;
-    outstanding_kit = current_outstanding_kit;
-    circulating_kit = current_circulating_kit;
-  }
-  )
 
 (* ************************************************************************* *)
 (* ************************************************************************* *)
@@ -127,40 +50,40 @@ type liquidation_result =
 
 (* George: My notes/calculations about whether an auction is warranted:
 
-To check whether a burrow needs to be liquidated, we first optimistically
-assume that all the tez that have been sent off to auctions in previous
-liquidations will be sold at the current minting price:
+   To check whether a burrow needs to be liquidated, we first optimistically
+   assume that all the tez that have been sent off to auctions in previous
+   liquidations will be sold at the current minting price:
 
-  outstanding_kit = outstanding_kit - (collateral_at_auction / minting_price p)
+   outstanding_kit = outstanding_kit - (collateral_at_auction / minting_price p)
 
-and then check if there is enough collateral in the burrow to satisfy the
-following:
+   and then check if there is enough collateral in the burrow to satisfy the
+   following:
 
-  tez_collateral >= fminus * outstanding_kit * (liquidation_price p) <=>
-  liquidation_price p <= tez_collateral / (fminus * kit_outstanding)      (1)
+   tez_collateral >= fminus * outstanding_kit * (liquidation_price p) <=>
+   liquidation_price p <= tez_collateral / (fminus * kit_outstanding)      (1)
 
-That is, if (1) were satisfied we wouldn't be able to liquidate the burrow. So,
-let's assume that we sent tez_to_auction to be auctioned off, and we ended up
-receiving repaid_kit back for it. We have:
+   That is, if (1) were satisfied we wouldn't be able to liquidate the burrow. So,
+   let's assume that we sent tez_to_auction to be auctioned off, and we ended up
+   receiving repaid_kit back for it. We have:
 
-  maximum_non_liquidating_price = tez_collateral / (fminus * kit_outstanding)    <== would not have triggered the liquidation
-  originally_assumed_price      = liquidation_price p                            <== triggered the liquidation
-  real_price                    = tez_to_auction / repaid_kit                    <== derived from the auction
+   maximum_non_liquidating_price = tez_collateral / (fminus * kit_outstanding)    <== would not have triggered the liquidation
+   originally_assumed_price      = liquidation_price p                            <== triggered the liquidation
+   real_price                    = tez_to_auction / repaid_kit                    <== derived from the auction
 
-If real_price <= maximum_non_liquidating_price then the liquidation was not
-warranted (i.e. originally_assumed_price was off) and we should return the kit
-we received from the auction in its entirety to the burrow:
+   If real_price <= maximum_non_liquidating_price then the liquidation was not
+   warranted (i.e. originally_assumed_price was off) and we should return the kit
+   we received from the auction in its entirety to the burrow:
 
-  tez_to_auction / repaid_kit <= tez_collateral / (fminus * kit_outstanding) <=>
-  tez_to_auction * (fminus * kit_outstanding) <= repaid_kit * tez_collateral <=>
-  tez_to_auction * (fminus * kit_outstanding) / tez_collateral <= repaid_kit <=>
-  repaid_kit >= tez_to_auction * (fminus * kit_outstanding) / tez_collateral
+   tez_to_auction / repaid_kit <= tez_collateral / (fminus * kit_outstanding) <=>
+   tez_to_auction * (fminus * kit_outstanding) <= repaid_kit * tez_collateral <=>
+   tez_to_auction * (fminus * kit_outstanding) / tez_collateral <= repaid_kit <=>
+   repaid_kit >= tez_to_auction * (fminus * kit_outstanding) / tez_collateral
 
-So, if the kit that the auction yields is more than
+   So, if the kit that the auction yields is more than
 
-  (tez_to_auction * (fminus * kit_outstanding) / tez_collateral)
+   (tez_to_auction * (fminus * kit_outstanding) / tez_collateral)
 
-then it was unwarranted.
+   then it was unwarranted.
 *)
 let compute_min_received_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Tez.t) : Kit.t =
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
@@ -171,15 +94,15 @@ let compute_min_received_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
 (** Compute whether the liquidation of an auction slice was (retroactively)
   * unwarranted or not. *)
 let was_slice_liquidation_unwarranted
-  (* Original amount of tez sent to liquidation queue *)
-  (tez_to_auction: Tez.t)
-  (* Pre-calculated minimum amount of kit required to receive when selling
-   * tez_to_auction to consider the liquidation unwarranted *)
-  (min_received_kit_for_unwarranted: Kit.t)
-  (* The slice of tez_to_auction that we have sold *)
-  (liquidation_slice: Tez.t)
-  (* The amount of kit we received for liquidation_slice *)
-  (liquidation_earning: Kit.t)
+    (* Original amount of tez sent to liquidation queue *)
+    (tez_to_auction: Tez.t)
+    (* Pre-calculated minimum amount of kit required to receive when selling
+     * tez_to_auction to consider the liquidation unwarranted *)
+    (min_received_kit_for_unwarranted: Kit.t)
+    (* The slice of tez_to_auction that we have sold *)
+    (liquidation_slice: Tez.t)
+    (* The amount of kit we received for liquidation_slice *)
+    (liquidation_earning: Kit.t)
   : bool =
   FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_received_kit_for_unwarranted * Tez.to_fp liquidation_slice)
 
