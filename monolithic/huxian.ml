@@ -14,6 +14,11 @@ open Kit
  * * Implement auctioning logic.
  *
  * * George: Do we need >>= for type result?
+ *
+ * * TODO: George: I think that all operations should return something like (X
+ *   result * Checker.t) and not ((X * Checker.t) result); even if the operation
+ *   fails for some reason, I'd assume that we wish to keep the updated state of
+ *   the contract, right?
 *)
 
 module AddressMap = Map.Make(Address)
@@ -111,7 +116,19 @@ struct
 
   let mint_kit = failwith "Not implemented yet"
 
-  let withdraw_tez = failwith "Not implemented yet"
+  let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(tez:Tez.t) =
+    (* TODO: Call Checker.touch. *)
+    (* TODO: Call Burrow.touch. *)
+    match AddressMap.find_opt address state.burrows with
+    | Some burrow when burrow.owner = owner -> (
+        match Burrow.withdraw_tez state.parameters tez burrow with
+        | Ok (burrow, withdrawn) ->
+            assert (tez = withdrawn);
+            Ok (withdrawn, {state with burrows = AddressMap.add address burrow state.burrows})
+        | Error err -> Error err
+      )
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | None -> Error (NonExistentBurrow address)
 
   let burn_kit = failwith "Not implemented yet"
 end
