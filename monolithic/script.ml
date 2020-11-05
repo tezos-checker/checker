@@ -37,7 +37,7 @@ let burrow_experiment () =
   (* DEFAULT *)
   let initial_burrow : Burrow.t =
     { has_creation_deposit = true;
-      owner = Address.of_string "someone";
+      owner = Address.of_string "192837";
       delegate = None;
       collateral = Tez.of_float 10.0;
       minted_kit = Kit.of_float 20.0;

@@ -12,11 +12,11 @@ module Address : sig
   val of_string : string -> t
 end =
 struct
-  type t = string
+  type t = int
   [@@deriving show]
 
-  let compare = String.compare
+  let compare = Stdlib.compare
 
-  let of_string s = s
+  let of_string s = int_of_string s
 end
 
