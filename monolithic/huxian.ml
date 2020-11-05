@@ -50,20 +50,20 @@ module Checker : sig
     * given tez as collateral, minus the creation deposit. Fail if the tez is
     * not enough to cover the creation deposit.
     * NOTE: Call Checker.touch too. *)
-  val create_burrow : t -> owner:Address.t -> tez:Tez.t -> (Address.t * t, Error.error) result
+  val create_burrow : t -> owner:Address.t -> amount:Tez.t -> (Address.t * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     * someone else owns the burrow, or if the burrow does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val deposit_tez : t -> owner:Address.t -> address:Address.t -> tez:Tez.t -> (t, Error.error) result
+  val deposit_tez : t -> owner:Address.t -> address:Address.t -> amount:Tez.t -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
     * does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val withdraw_tez : t -> owner:Address.t -> address:Address.t -> tez:Tez.t -> (Tez.t * t, Error.error) result
+  val withdraw_tez : t -> owner:Address.t -> address:Address.t -> amount:Tez.t -> (Tez.t * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
     * if the burrow owner does not match, or if the burrow does not exist.
@@ -97,33 +97,33 @@ struct
 
   let touch = failwith "Not implemented yet"
 
-  let create_burrow (state:t) ~(owner:Address.t) ~(tez:Tez.t) =
+  let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     let address = mk_next_burrow_address state.burrows in
-    match Burrow.create state.parameters owner tez with
+    match Burrow.create state.parameters owner amount with
     | Ok burrow -> Ok (address, {state with burrows = AddressMap.add address burrow state.burrows})
     | Error err -> Error err
 
-  let deposit_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(tez:Tez.t) =
+  let deposit_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when burrow.owner = owner ->
-        let updated = Burrow.deposit_tez state.parameters tez burrow in
+        let updated = Burrow.deposit_tez state.parameters amount burrow in
         Ok {state with burrows = AddressMap.add address updated state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
     | None -> Error (NonExistentBurrow address)
 
   let mint_kit = failwith "Not implemented yet"
 
-  let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(tez:Tez.t) =
+  let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when burrow.owner = owner -> (
-        match Burrow.withdraw_tez state.parameters tez burrow with
+        match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (burrow, withdrawn) ->
-            assert (tez = withdrawn);
+            assert (amount = withdrawn);
             Ok (withdrawn, {state with burrows = AddressMap.add address burrow state.burrows})
         | Error err -> Error err
       )
