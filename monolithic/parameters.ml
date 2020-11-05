@@ -41,7 +41,7 @@ module Parameters : sig
     * (burrowed) and the amount of kit that are currently in circulation,
     * compute the current imbalance adjustment (can be either a fee or a
     * bonus). *)
-  val compute_imbalance : Kit.t -> Kit.t -> FixedPoint.t
+  val compute_imbalance : burrowed:Kit.t -> circulating:Kit.t -> FixedPoint.t
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
@@ -90,7 +90,7 @@ struct
     *   min(   5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , if burrowed >= circulating
     *   max( - 5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , otherwise
   *)
-  let compute_imbalance (burrowed: Kit.t) (circulating: Kit.t) : FixedPoint.t =
+  let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
     assert (burrowed >= Kit.zero); (* Invariant *)
     assert (circulating >= Kit.zero); (* Invariant *)
     let centinepers = cnp (FixedPoint.of_string "0.1") in (* TODO: per year! *)
@@ -200,7 +200,7 @@ struct
     let current_burrow_fee_index = FixedPoint.(
         parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
       ) in
-    let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
+    let imbalance_percentage = compute_imbalance ~burrowed:parameters.outstanding_kit ~circulating:parameters.circulating_kit in
     let current_imbalance_index = FixedPoint.(
         parameters.imbalance_index * (one + imbalance_percentage * duration_in_seconds / seconds_in_a_year)
       ) in
