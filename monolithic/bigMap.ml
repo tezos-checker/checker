@@ -23,7 +23,7 @@ let mem_next_ptr (m: 'a BigMap.t): ptr =
   | Some (t, _) -> Int64.succ t
 
 let null: ptr = Int64.zero
-let is_null (p: ptr) = p == null
+let is_null (p: ptr) = p = null
 
 let mem_set (m: 'a BigMap.t) (k: ptr) (v: 'a) : 'a BigMap.t =
   BigMap.add k v m

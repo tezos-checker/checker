@@ -245,7 +245,7 @@ let balance (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
     when abs (branch.left_height - branch.right_height) > 1 ->
 
     let balance = branch.right_height - branch.left_height in
-    assert (abs balance == 2);
+    assert (abs balance = 2);
 
     let heavy_child_ptr =
       if balance < 0 then branch.left else branch.right in
@@ -407,7 +407,7 @@ let ref_del (mem: 't mem) (ptr: ptr): 't mem =
       | Leaf _ -> failwith "impossible"
       | Branch b ->
         let (mem, new_curr) = balance mem curr_ptr in
-        assert (node_parent (mem_get mem new_curr) == b.parent);
+        assert (node_parent (mem_get mem new_curr) = b.parent);
         let mem = update_matching_child mem b.parent curr_ptr new_curr in
         balance_bottom_up mem b.parent in
     balance_bottom_up mem grandparent_ptr
@@ -443,7 +443,7 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
       let mem = mem_update mem branch.right (node_set_parent branch.parent) in
 
       if Tez.compare branch.left_tez limit = 0
-      then (* left_tez == limit *)
+      then (* left_tez = limit *)
         (mem, Some branch.left, Some branch.right)
 
       else if Tez.compare limit branch.left_tez < 0
