@@ -147,7 +147,7 @@ end = struct
   let is_overburrowed (p : Parameters.t) (b : t) : bool =
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.minted_kit * Parameters.minting_price p)
 
-  (* Update the outstanding kit, update the adjustment index, TODO: and the timestamp? *)
+  (* Update the outstanding kit, update the adjustment index, and the timestamp *)
   let touch (p: Parameters.t) (b: t) : t =
     { b with
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)

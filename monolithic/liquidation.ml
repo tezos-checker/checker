@@ -5,11 +5,17 @@ open Constants
 open FixedPoint
 open Parameters
 
+(* Some notes:
+ * - Notes about the formulas live in docs/burrow-state-liquidations.md
+ * - If we deplete the collateral then the next liquidation will close the burrow
+ *   (unless the owner collateralizes it).
+*)
+
 type liquidation_outcome =
-  | Unnecessary
-  | Partial
-  | Complete (* complete: deplete the collateral *)
-  | Close (* complete: "close" the burrow *)
+  | Unnecessary (* the burrow does not qualify for liquidation *)
+  | Partial     (* partial: some collateral remains in the burrow *)
+  | Complete    (* complete: deplete the collateral *)
+  | Close       (* complete: deplete the collateral AND the creation deposit *)
 [@@deriving show]
 
 type liquidation_result =
@@ -22,43 +28,6 @@ type liquidation_result =
   }
 [@@deriving show]
 
-(* George: My notes/calculations about whether an auction is warranted:
-
-   To check whether a burrow needs to be liquidated, we first optimistically
-   assume that all the tez that have been sent off to auctions in previous
-   liquidations will be sold at the current minting price:
-
-   outstanding_kit = outstanding_kit - (collateral_at_auction / minting_price p)
-
-   and then check if there is enough collateral in the burrow to satisfy the
-   following:
-
-   tez_collateral >= fminus * outstanding_kit * (liquidation_price p) <=>
-   liquidation_price p <= tez_collateral / (fminus * kit_outstanding)      (1)
-
-   That is, if (1) were satisfied we wouldn't be able to liquidate the burrow. So,
-   let's assume that we sent tez_to_auction to be auctioned off, and we ended up
-   receiving repaid_kit back for it. We have:
-
-   maximum_non_liquidating_price = tez_collateral / (fminus * kit_outstanding)    <== would not have triggered the liquidation
-   originally_assumed_price      = liquidation_price p                            <== triggered the liquidation
-   real_price                    = tez_to_auction / repaid_kit                    <== derived from the auction
-
-   If real_price <= maximum_non_liquidating_price then the liquidation was not
-   warranted (i.e. originally_assumed_price was off) and we should return the kit
-   we received from the auction in its entirety to the burrow:
-
-   tez_to_auction / repaid_kit <= tez_collateral / (fminus * kit_outstanding) <=>
-   tez_to_auction * (fminus * kit_outstanding) <= repaid_kit * tez_collateral <=>
-   tez_to_auction * (fminus * kit_outstanding) / tez_collateral <= repaid_kit <=>
-   repaid_kit >= tez_to_auction * (fminus * kit_outstanding) / tez_collateral
-
-   So, if the kit that the auction yields is more than
-
-   (tez_to_auction * (fminus * kit_outstanding) / tez_collateral)
-
-   then it was unwarranted.
-*)
 (* NOTE: This does not touch the burrow, it assumes that it has been touched already. *)
 let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (tez_to_auction: Tez.t) : Kit.t =
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
@@ -90,8 +59,8 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
    * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
   if not (Burrow.is_liquidatable p b) then
-    (* Case 1: The outstanding kit does not exceed the liquidation limit; don't
-     * liquidate. *)
+    (* Case 1: The outstanding kit does not exceed the liquidation limit; we
+     * shouldn't liquidate the burrow, it's solid. *)
     { outcome = Unnecessary;
       liquidation_reward = Tez.zero;
       tez_to_auction = Tez.zero;
@@ -120,8 +89,6 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not
      * expected to repay enough kit. *)
-    (* George: the way I see it though, the entire position will be liquidated
-     * immediately afterwards, if the collateral remaining is zero. Hmmm. *)
     (* Note: the condition here checks basically whether compute_tez_to_auction
      * would return a negative amount of tez. *)
     let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - Constants.creation_deposit) } in
@@ -142,15 +109,20 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
     (* Case 4: Recovery is possible; pay the liquidation reward, stash away the
      * creation deposit, and liquidate only the amount of collateral needed to
      * underburrow the burrow (as approximated now). Actually, liquidate 10%
-     * more, to punish the burrow for being liquidated. If---when the auction
-     * is over---we realize that the liquidation was not really warranted, we
-     * shall return the auction earnings in their entirety. If not, then only
-     * 90% of the earnings shall be returned. *)
+     * more, to punish the burrow for being liquidated (if the collateral is
+     * not enough to cover that extra 10% we fallback into Case 3). If---when
+     * the auction is over---we realize that the liquidation was not really
+     * warranted, we shall return the auction earnings in their entirety. If
+     * not, then only 90% of the earnings shall be returned. *)
     let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - Constants.creation_deposit) } in
-    let tez_to_auction =
+    let outcome, tez_to_auction =
       let essential_tez = Burrow.compute_tez_to_auction p b_without_reward in
       let with_penalty = Tez.scale essential_tez FixedPoint.(one + Constants.liquidation_penalty_percentage) in
-      min b_without_reward.collateral with_penalty (* Cannot be more than the burrow's collateral! *)
+      if b_without_reward.collateral >= with_penalty
+        (* There is enough collateral to pay the 10% too *)
+        then (Partial, with_penalty)
+        (* There is not enough collateral to pay the 10%. Deplete the colalteral *)
+        else (Complete, b_without_reward.collateral)
     in
     let expected_kit = Burrow.compute_expected_kit p tez_to_auction in
     let final_burrow =
@@ -158,7 +130,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
         collateral = Tez.(b_without_reward.collateral - tez_to_auction);
         collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
       } in
-    { outcome = Partial;
+    { outcome = outcome;
       liquidation_reward = liquidation_reward;
       tez_to_auction = tez_to_auction;
       expected_kit = expected_kit;
