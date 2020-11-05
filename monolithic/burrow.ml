@@ -198,7 +198,6 @@ end = struct
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. *)
-  (* TODO: This should update the parameters; less kit is now in circulation! *)
   let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t * Kit.t =
     assert (k >= Kit.zero);
     let b = touch p burrow in
