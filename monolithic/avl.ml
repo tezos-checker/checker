@@ -414,6 +414,17 @@ let ref_del (mem: 't mem) (ptr: ptr): 't mem =
 
 let del (mem: 't mem) (LeafPtr ptr): 't mem = ref_del mem ptr
 
+let read_leaf (mem: 't mem) (LeafPtr ptr): 't * Tez.t =
+  match mem_get mem ptr with
+    | Leaf l -> (l.value, l.tez)
+    | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
+
+let is_empty (mem: 't mem) (AVLPtr ptr) : bool =
+  match mem_get mem ptr with
+    | Root None -> true
+    | Root (Some _) -> false
+    | _ -> failwith "is_empty: avl_ptr does not point to a Root"
+
 let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
   let rec go (ptr: ptr) : avl_ptr =
     match mem_get mem ptr with

@@ -34,7 +34,9 @@ type auction_outcome = {
 }
 
 module PtrMap =
-  Map.Make(struct type t = BigMap.ptr let compare = Int64.compare end)
+  Map.Make(struct
+    type t = avl_ptr
+    let compare (AVLPtr a) (AVLPtr b) = Int64.compare a b end)
 
 type auctions = {
   storage: liquidation_slice mem;
@@ -71,7 +73,6 @@ let cancel_liquidation
      * or completed, so we can not cancel it. *)
     None
 
-(*
 let liquidation_outcome
   (auctions: auctions)
   (leaf_ptr: leaf_ptr)
@@ -80,9 +81,7 @@ let liquidation_outcome
   match PtrMap.find_opt root auctions.completed_auctions with
     | None -> None (* slice does not correspond to a completed auction *)
     | Some outcome ->
-      let slice = match BigMap.mem_get auctions.storage leaf_ptr with
-        | Leaf leaf -> leaf.value
-        | Branch _ -> failwith "slice should point to a leaf" in
+      let (slice, _) = read_leaf auctions.storage leaf_ptr in
       let kit = Kit.of_fp FixedPoint.FixedPoint.(
         (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit_utxo.amount)
           / (Tez.to_fp outcome.sold_tez)) in
@@ -92,18 +91,10 @@ let liquidation_outcome
        * the lot root to change, so we also update completed_auctions
        * to reflect that.
        *)
-      let (storage, popped) = del auctions.storage leaf_ptr in
-      let replaced =
-            auctions.completed_auctions
-              |> PtrMap.remove root
-              |> Option.fold
-                   ~some:(fun t -> PtrMap.add t outcome)
-                   ~none:(fun i -> i)
-                   popped in
+      let storage = del auctions.storage leaf_ptr in
       let auctions =
             { auctions with
               storage = storage;
-              completed_auctions = replaced;
             } in
       Some (auctions, kit)
 
@@ -124,13 +115,13 @@ let start_auction_if_possible
         * When this happens, we should also update the burrow of the
         * split item to make sure that the references are correct.
         *)
-       let (storage, new_auction, new_queue) =
-            split
+       let (storage, new_auction) =
+            take
               auctions.storage
               auctions.queued_slices
               (Tez.of_fp (FixedPoint.FixedPoint.of_int 10_000)) in
        let current_auction =
-             if Option.is_none new_auction
+             if is_empty storage new_auction
              then None
              else Some
                     { id = ();
@@ -139,10 +130,10 @@ let start_auction_if_possible
                       leading_bid = None; } in
        { auctions with
           storage = storage;
-          queued_slices = new_queue;
           current_auction = current_auction;
        }
 
+(*
 let complete_auction_if_possible
   (auctions: auctions): auctions =
   match auctions.current_auction with
