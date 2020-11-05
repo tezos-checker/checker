@@ -88,7 +88,7 @@ module Burrow : sig
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
-  val create_burrow : Parameters.t -> Address.t -> Tez.t -> (t, Error.error) result
+  val create : Parameters.t -> Address.t -> Tez.t -> (t, Error.error) result
 
   (** Add non-negative collateral to a burrow. *)
   val deposit_tez : Parameters.t -> Tez.t -> t -> t
@@ -156,7 +156,7 @@ end = struct
       last_touched = p.last_touched;
     }
 
-  let create_burrow (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
+  let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
     if tez < Constants.creation_deposit
     then Error (InsufficientFunds tez)
     else Ok

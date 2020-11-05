@@ -12,7 +12,11 @@ open Kit
  *   => Create a kit UTXO for the burrow owner.
  *
  * * Implement auctioning logic.
+ *
+ * * George: Do we need >>= for type result?
 *)
+
+module AddressMap = Map.Make(Address)
 
 (* ************************************************************************* *)
 (**                               CHECKER                                    *)
@@ -20,7 +24,7 @@ open Kit
 
 module Checker : sig
   type t =
-    { burrows : Burrow.t Map.Make(Address).t;
+    { burrows : Burrow.t AddressMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
       (* TODO: add auction-related data here. *)
@@ -67,14 +71,25 @@ module Checker : sig
 end =
 struct
   type t =
-    { burrows : Burrow.t Map.Make(Address).t;
+    { burrows : Burrow.t AddressMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
     }
 
+  (* Utility function to give us burrow addresses *)
+  let mk_next_burrow_address (burrows: Burrow.t AddressMap.t) : Address.t =
+    match AddressMap.max_binding_opt burrows with
+    | None -> Address.initial_address
+    | Some (a, _) -> Address.next a
+
   let touch = failwith "Not implemented yet"
 
-  let create_burrow = failwith "Not implemented yet"
+  let create_burrow (state: t) ~(owner:Address.t) ~(tez:Tez.t) =
+    (* TODO: Call Checker.touch. *)
+    let address = mk_next_burrow_address state.burrows in
+    match Burrow.create state.parameters owner tez with
+    | Ok burrow -> Ok (address, {state with burrows = AddressMap.add address burrow state.burrows})
+    | Error err -> Error err
 
   let deposit_tez = failwith "Not implemented yet"
 
