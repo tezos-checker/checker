@@ -198,12 +198,12 @@ struct
 
     (* Update the indices *)
     let current_burrow_fee_index = FixedPoint.(
-      parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
-    ) in
+        parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
+      ) in
     let imbalance_percentage = compute_imbalance parameters.outstanding_kit parameters.circulating_kit in
     let current_imbalance_index = FixedPoint.(
-      parameters.imbalance_index * (one + imbalance_percentage * duration_in_seconds / seconds_in_a_year)
-    ) in
+        parameters.imbalance_index * (one + imbalance_percentage * duration_in_seconds / seconds_in_a_year)
+      ) in
     let with_burrow_fee = Kit.of_fp FixedPoint.(Kit.to_fp parameters.outstanding_kit * current_burrow_fee_index / parameters.burrow_fee_index) in
     let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
     let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in

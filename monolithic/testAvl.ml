@@ -23,10 +23,10 @@ let add_all (mem: 't mem) (root: avl_ptr) (xs: element_list)
 let debug_mem (mem: int mem) : unit =
   BigMap.iter
     (fun k v ->
-      printf
-        "%s -> %s\n"
-        (Int64.to_string k)
-        (show_node pp_print_int v);
+       printf
+         "%s -> %s\n"
+         (Int64.to_string k)
+         (show_node pp_print_int v);
     )
     mem
 
@@ -34,17 +34,17 @@ let debug_avl (mem: int mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
     sprintf "%s: " (Int64.to_string curr) ^
-      match mem_get mem curr with
-      | Root None -> "Root Empty"
-      | Root (Some r) -> "Root\n" ^ indent (go r)
-      | Leaf leaf ->
-        sprintf "Leaf { value: %s; tez: %s; parent: %s }"
-          (Int.to_string leaf.value) (Tez.show leaf.tez) (Int64.to_string leaf.parent)
-      | Branch branch ->
-        "Branch " ^ show_branch branch ^ "\n"
-          ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
-          ^ indent ("Right:\n" ^ indent (go branch.right));
-   in printf "%s\n" (go root)
+    match mem_get mem curr with
+    | Root None -> "Root Empty"
+    | Root (Some r) -> "Root\n" ^ indent (go r)
+    | Leaf leaf ->
+      sprintf "Leaf { value: %s; tez: %s; parent: %s }"
+        (Int.to_string leaf.value) (Tez.show leaf.tez) (Int64.to_string leaf.parent)
+    | Branch branch ->
+      "Branch " ^ show_branch branch ^ "\n"
+      ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
+      ^ indent ("Right:\n" ^ indent (go branch.right));
+  in printf "%s\n" (go root)
 
 let assert_invariants (mem: int mem) (AVLPtr root) : unit =
   let rec go (parent: ptr) (curr: ptr) =
@@ -110,12 +110,12 @@ let add_all_debug (mem: 't mem) (root: avl_ptr) (xs: element_list)
 let to_list (mem: int mem) (AVLPtr ptr) : element_list =
   let rec go ptr: element_list =
     match mem_get mem ptr with
-      | Root None -> []
-      | Root (Some ptr) -> go ptr
-      | Leaf leaf ->
-        [(leaf.value, leaf.tez)]
-      | Branch branch ->
-        List.append (go branch.left) (go branch.right) in
+    | Root None -> []
+    | Root (Some ptr) -> go ptr
+    | Leaf leaf ->
+      [(leaf.value, leaf.tez)]
+    | Branch branch ->
+      List.append (go branch.left) (go branch.right) in
   go ptr
 
 let from_list (mem: int mem) (elements: element_list)

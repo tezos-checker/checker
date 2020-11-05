@@ -47,19 +47,19 @@ type auctions = {
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
  * when we start auctions.
- *)
+*)
 let send_to_auction
-  (auctions: auctions)
-  (slice: liquidation_slice)
+    (auctions: auctions)
+    (slice: liquidation_slice)
   : auctions * leaf_ptr =
   let (new_storage, ret) =
-        push_back auctions.storage auctions.queued_slices slice slice.tez in
+    push_back auctions.storage auctions.queued_slices slice slice.tez in
   let new_state = { auctions with storage = new_storage; } in
   (new_state, ret)
 
 let cancel_liquidation
-  (auctions: auctions)
-  (slice: leaf_ptr)
+    (auctions: auctions)
+    (slice: leaf_ptr)
   : auctions option =
   if find_root auctions.storage slice = auctions.queued_slices
   then
