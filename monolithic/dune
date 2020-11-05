@@ -20,7 +20,7 @@
 
 (test
  (name tests)
- (modules Tests TestAvl TestFixedPoint TestTez TestParameters)
+ (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

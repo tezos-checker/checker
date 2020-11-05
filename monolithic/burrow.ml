@@ -61,6 +61,11 @@ module Burrow : sig
   *)
   val is_overburrowed : Parameters.t -> t -> bool
 
+  (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
+    * that all collateral that is in auctions at the moment will be sold at the
+    * current minting price. *)
+  val is_optimistically_overburrowed : Parameters.t -> t -> bool
+
   (** Check whether a burrow can be marked for liquidation. A burrow can be
     * marked for liquidation if:
     *
@@ -261,4 +266,12 @@ end = struct
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(Constants.fminus * Kit.to_fp optimistic_outstanding * Parameters.liquidation_price p)
+
+  (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
+    * that all collateral that is in auctions at the moment will be sold at the
+    * current minting price. *)
+  let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
+    let expected_kit = compute_expected_kit p b.collateral_at_auction in
+    let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
+    Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp optimistic_outstanding * Parameters.minting_price p)
 end

@@ -50,6 +50,7 @@ let burrow_experiment () =
 
   printf "\n=== State of affairs ===\n";
   printf "Overburrowed          : %B\n" (Burrow.is_overburrowed params initial_burrow);
+  printf "Overburrowed (optim.) : %B\n" (Burrow.is_optimistically_overburrowed params initial_burrow);
   printf "Liquidatable          : %B\n" (Burrow.is_liquidatable params initial_burrow);
   printf "\n=== Liquidation request outcome ===\n";
   let liquidation_result = request_liquidation params initial_burrow in
@@ -60,6 +61,7 @@ let burrow_experiment () =
     printf "There is no burrow left to consider.\n"
   else (
     printf "Overburrowed          : %B\n" (Burrow.is_overburrowed params liquidation_result.burrow_state);
+    printf "Overburrowed (optim.) : %B\n" (Burrow.is_optimistically_overburrowed params liquidation_result.burrow_state);
     printf "Liquidatable          : %B\n" (Burrow.is_liquidatable params liquidation_result.burrow_state)
   )
 
