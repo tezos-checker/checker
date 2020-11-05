@@ -11,8 +11,8 @@ open Liquidation
 let burrow_experiment () =
   let params : Parameters.t =
     { q = FixedPoint.of_string "1.015";
-      index = Tez.of_float 0.32;
-      protected_index = Tez.of_float 0.36;
+      index = Tez.of_string "0.32";
+      protected_index = Tez.of_string "0.36";
       target = FixedPoint.of_string "1.08";
       drift = FixedPoint.of_string "0.0";
       drift' = FixedPoint.of_string "0.0";
@@ -38,10 +38,10 @@ let burrow_experiment () =
     { has_creation_deposit = true;
       owner = Address.of_string "192837";
       delegate = None;
-      collateral = Tez.of_float 10.0;
-      minted_kit = Kit.of_float 20.0;
+      collateral = Tez.of_string "10.0";
+      minted_kit = Kit.of_string "20.0";
       adjustment_index = Parameters.compute_adjustment_index params;
-      collateral_at_auction = Tez.of_float 0.0;
+      collateral_at_auction = Tez.of_string "0.0";
       last_touched = Timestamp.of_seconds 0;
     } in
   printf "\n=== Initial burrow state ===\n";
@@ -67,9 +67,9 @@ let burrow_experiment () =
 let step_experiment () =
   let initial_parameters : Parameters.t =
     { q = FixedPoint.of_string "0.9";
-      index = Tez.of_float 0.36;
+      index = Tez.of_string "0.36";
       target = FixedPoint.of_string "1.08";
-      protected_index = Tez.of_float 0.35;
+      protected_index = Tez.of_string "0.35";
       drift = FixedPoint.of_string "0.0";
       drift' = FixedPoint.of_string "0.0";
       burrow_fee_index = FixedPoint.of_string "1.0";

@@ -11,9 +11,9 @@ let suite =
     fun _ ->
       let initial_parameters : Parameters.t =
         { q = FixedPoint.of_string "0.9";
-          index = Tez.of_float 0.36;
+          index = Tez.of_string "0.36";
           target = FixedPoint.of_string "1.08";
-          protected_index = Tez.of_float 0.35;
+          protected_index = Tez.of_string "0.35";
           drift = FixedPoint.of_string "0.0";
           drift' = FixedPoint.of_string "0.0";
           burrow_fee_index = FixedPoint.of_string "1.0";
@@ -28,15 +28,15 @@ let suite =
       let _total_accrual_to_uniswap, new_parameters = Parameters.step current_time new_index tez_per_kit initial_parameters in
       assert_equal
         { q = FixedPoint.of_string "0.900000";
-          index = Tez.of_float 0.34;
-          protected_index = Tez.of_float 0.339999;
+          index = Tez.of_string "0.34";
+          protected_index = Tez.of_string "0.339999";
           target = FixedPoint.of_string "1.00327868";
           drift' = FixedPoint.of_string "0.0";
           drift = FixedPoint.of_string "0.0";
           burrow_fee_index = FixedPoint.of_string "1.00000057";
           imbalance_index = FixedPoint.of_string "1.00000011";
-          outstanding_kit = Kit.of_float 1.000000; (* NOTE that it ends up being identical to the one we started with *)
-          circulating_kit = Kit.of_float 0.000000; (* NOTE that it ends up being identical to the one we started with *)
+          outstanding_kit = Kit.of_string "1.000000"; (* NOTE that it ends up being identical to the one we started with *)
+          circulating_kit = Kit.of_string "0.000000"; (* NOTE that it ends up being identical to the one we started with *)
           last_touched = current_time;
         }
         new_parameters

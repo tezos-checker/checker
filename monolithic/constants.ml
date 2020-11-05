@@ -47,7 +47,7 @@ struct
 
   let fminus = FixedPoint.of_string "1.9"
 
-  let creation_deposit = Tez.of_float 1.0
+  let creation_deposit = Tez.of_string "1.0"
 
   let burrow_fee_percentage = FixedPoint.of_string "0.005"
 
@@ -57,7 +57,7 @@ struct
 
   let protected_index_epsilon = FixedPoint.of_string "0.0005"
 
-  let max_lot_size = Tez.of_float 10000.
+  let max_lot_size = Tez.of_string "10000"
 
   let liquidation_penalty_percentage = FixedPoint.of_string "0.10"
 

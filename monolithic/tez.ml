@@ -21,7 +21,7 @@ module Tez : sig
   val compare : t -> t -> int
 
   (* Conversions to/from other types. *)
-  val of_float : float -> t (* TODO: Delete this one. *)
+  val of_string : string -> t
 
   val of_fp : FixedPoint.t -> t
   val to_fp : t -> FixedPoint.t
@@ -52,10 +52,13 @@ struct
   let one = scaling_factor
 
   (* Conversions to/from other types. *)
-  let of_float amount = (* TODO: lossy *)
-    let upper = Z.of_float amount in
-    let lower = Z.of_float ((amount -. Z.to_float upper) *. Z.to_float scaling_factor) in
-    Z.(upper * scaling_factor + lower)
+  let of_string str =
+    let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
+    let dotpos = String.rindex_opt str '.' in
+    let mantissa = match dotpos with
+      | None -> Z.one
+      | Some pos -> Z.pow (Z.of_int 10) Stdlib.(String.length str - pos - 1) in
+    Z.((Z.of_string_base 10 without_dot * scaling_factor) / mantissa)
 
   let of_fp fp =
     Z.((FixedPoint.to_rep fp) * scaling_factor / FixedPoint.scaling_factor)

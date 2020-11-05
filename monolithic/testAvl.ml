@@ -9,7 +9,7 @@ open Format
 type element_list = (int * Tez.t) list [@@deriving show]
 
 let nTez (i: int) : Tez.t =
-  Tez.of_float (float_of_int i)
+  Tez.of_string (string_of_int i)
 
 let add_all (mem: 't mem) (root: avl_ptr) (xs: element_list)
   : 't mem =
