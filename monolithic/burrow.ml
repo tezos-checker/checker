@@ -90,19 +90,19 @@ module Burrow : sig
     * Fail if the tez given is less than the creation deposit. *)
   val create_burrow : Parameters.t -> Address.t -> Tez.t -> (t, Error.error) result
 
-  (** Add non-negative collateral to a burrow. TODO: Pass a Tez.utxo instead? *)
+  (** Add non-negative collateral to a burrow. *)
   val deposit_tez : Parameters.t -> Tez.t -> t -> t
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  val withdraw_tez : Parameters.t -> Tez.t -> t -> (t * Tez.utxo, Error.error) result
+  val withdraw_tez : Parameters.t -> Tez.t -> t -> (t * Tez.t, Error.error) result
 
   (** Mint a non-negative amount of kit from the burrow, as long as this will
     * not overburrow it *)
-  val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.utxo, Error.error) result
+  val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
-    * excess kit balance. TODO: Pass a Kit.utxo instead? *)
+    * excess kit balance. *)
   val burn_kit : Parameters.t -> Kit.t -> t -> t * Kit.t
 
   (** Compute the least number of tez that needs to be auctioned off (given the
@@ -178,26 +178,24 @@ end = struct
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : (t * Tez.utxo, Error.error) result =
+  let withdraw_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : (t * Tez.t, Error.error) result =
     assert (t >= Tez.zero);
     let b = touch p burrow in
     let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
-    let tez_utxo = Tez.{ destination = b.owner; amount = t } in
     if is_overburrowed p new_burrow
     then Error WithdrawTezFailure
-    else Ok (new_burrow, tez_utxo)
+    else Ok (new_burrow, t)
 
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
   (* TODO: This should update the parameters; more kit is now in circulation! *)
-  let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.utxo, Error.error) result =
+  let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.t, Error.error) result =
     assert (kit >= Kit.zero);
     let b = touch p burrow in
     let new_burrow = { b with minted_kit = Kit.(b.minted_kit + kit) } in
-    let kit_utxo = Kit.{ destination = b.owner; amount = kit } in
     if is_overburrowed p new_burrow
     then Error MintKitFailure
-    else Ok (new_burrow, kit_utxo)
+    else Ok (new_burrow, kit)
 
   (** Deposit/burn a non-negative amount of kit to the burrow. Return any
     * excess kit balance. *)
