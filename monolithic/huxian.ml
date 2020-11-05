@@ -114,7 +114,24 @@ struct
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
     | None -> Error (NonExistentBurrow address)
 
-  let mint_kit = failwith "Not implemented yet"
+  let mint_kit (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Kit.t) =
+    (* TODO: Call Checker.touch. *)
+    (* TODO: Call Burrow.touch. *)
+    match AddressMap.find_opt address state.burrows with
+    | Some burrow when burrow.owner = owner -> (
+        match Burrow.mint_kit state.parameters amount burrow with
+        | Ok (updated_burrow, minted) ->
+            assert (amount = minted);
+            Ok ( minted,
+                 {state with
+                    burrows = AddressMap.add address updated_burrow state.burrows;
+                    parameters = {state.parameters with circulating_kit = Kit.(state.parameters.circulating_kit + minted)};
+                 }
+               )
+        | Error err -> Error err
+      )
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | None -> Error (NonExistentBurrow address)
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)

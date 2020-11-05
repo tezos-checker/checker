@@ -188,7 +188,6 @@ end = struct
 
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
-  (* TODO: This should update the parameters; more kit is now in circulation! *)
   let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.t, Error.error) result =
     assert (kit >= Kit.zero);
     let b = touch p burrow in
