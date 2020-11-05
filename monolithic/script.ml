@@ -6,7 +6,6 @@ open Format
 open Kit
 open Parameters
 open Tez
-open Uniswap
 open Liquidation
 
 let burrow_experiment () =
@@ -65,23 +64,6 @@ let burrow_experiment () =
     printf "Liquidatable          : %B\n" (Burrow.is_liquidatable params liquidation_result.burrow_state)
   )
 
-let uniswap_experiment () =
-  let uniswap : Uniswap.t =
-    { tez = Tez.of_float 10.0;
-      kit = Kit.of_float 5.0;
-      total_liquidity_tokens = 1;
-    } in
-  let (tez, kit, uniswap) = Uniswap.sell_kit uniswap (Kit.of_float 1.0) in
-  printf "Returned tez: %a\n" Tez.pp tez;
-  printf "Returned kit: %a\n" Kit.pp kit;
-  print_string @@ Uniswap.show uniswap;
-  print_newline ();
-  let (liq, tez, kit, uniswap) = Uniswap.buy_liquidity uniswap (Tez.of_float 20.0) (Kit.of_float 20.0) in
-  printf "Returned liquidity: %a\n" Uniswap.pp_liquidity liq;
-  printf "Returned tez: %a\n" Tez.pp tez;
-  printf "Returned kit: %a\n" Kit.pp kit;
-  print_string @@ Uniswap.show uniswap
-
 let step_experiment () =
   let initial_parameters : Parameters.t =
     { q = FixedPoint.of_string "0.9";
@@ -108,8 +90,7 @@ let step_experiment () =
   print_string @@ Kit.show total_accrual_to_uniswap
 
 let () =
-  burrow_experiment ();
-  (* uniswap_experiment (); *)
+  (* burrow_experiment (); *)
   (* step_experiment (); *)
   printf "\ndone.\n"
 

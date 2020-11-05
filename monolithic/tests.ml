@@ -7,6 +7,7 @@ let suite =
     TestAvl.suite;
     TestParameters.suite;
     TestLiquidation.suite;
+    TestUniswap.suite;
   ]
 
 let () =

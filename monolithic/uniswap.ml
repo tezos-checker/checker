@@ -29,6 +29,8 @@ module Uniswap : sig
   val show_liquidity : liquidity -> string
   val pp_liquidity : Format.formatter -> liquidity -> unit
 
+  val liquidity_of_int : int -> liquidity
+
   (* TODO: The state of uniswap should also (in the future) include an ongoing
    * auction to decide who to delegate to, possibly multiple tez balances, etc.
    * Just leaving this note here lest we forget. *)
@@ -75,6 +77,8 @@ module Uniswap : sig
 end =
 struct
   type liquidity = int [@@deriving show]
+
+  let liquidity_of_int i = i
 
   (* TODO: The state of uniswap should also (in the future) include an ongoing
    * auction to decide who to delegate to, possibly multiple tez balances, etc.
