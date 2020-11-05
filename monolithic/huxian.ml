@@ -30,6 +30,10 @@ module Checker : sig
       (* TODO: add auction-related data here. *)
     }
 
+  type Error.error +=
+    | OwnershipMismatch of Address.t * Address.t
+    | NonExistentBurrow of Address.t
+
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the parameters. TODO: We have to find a way to represent
     *   external inputs here; the inputs that Parameters.step requires.
@@ -76,6 +80,10 @@ struct
       parameters : Parameters.t;
     }
 
+  type Error.error +=
+    | OwnershipMismatch of Address.t * Address.t
+    | NonExistentBurrow of Address.t
+
   (* Utility function to give us burrow addresses *)
   let mk_next_burrow_address (burrows: Burrow.t AddressMap.t) : Address.t =
     match AddressMap.max_binding_opt burrows with
@@ -84,14 +92,22 @@ struct
 
   let touch = failwith "Not implemented yet"
 
-  let create_burrow (state: t) ~(owner:Address.t) ~(tez:Tez.t) =
+  let create_burrow (state:t) ~(owner:Address.t) ~(tez:Tez.t) =
     (* TODO: Call Checker.touch. *)
     let address = mk_next_burrow_address state.burrows in
     match Burrow.create state.parameters owner tez with
     | Ok burrow -> Ok (address, {state with burrows = AddressMap.add address burrow state.burrows})
     | Error err -> Error err
 
-  let deposit_tez = failwith "Not implemented yet"
+  let deposit_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(tez:Tez.t) =
+    (* TODO: Call Checker.touch. *)
+    (* TODO: Call Burrow.touch. *)
+    match AddressMap.find_opt address state.burrows with
+    | Some burrow when burrow.owner = owner ->
+        let updated = Burrow.deposit_tez state.parameters tez burrow in
+        Ok {state with burrows = AddressMap.add address updated state.burrows}
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | None -> Error (NonExistentBurrow address)
 
   let mint_kit = failwith "Not implemented yet"
 
