@@ -27,7 +27,9 @@
 
 open BigMap
 open Tez
-open Format
+
+type avl_ptr = AVLPtr of ptr
+type leaf_ptr = LeafPtr of ptr
 
 (*
  * A double-ended queue backed by a doubly-linked balanced tree where
@@ -39,7 +41,7 @@ open Format
 type 't leaf = {
   value: 't;
   tez: Tez.t;
-  parent: int64 option;
+  parent: ptr;
 }
 [@@deriving show]
 
@@ -50,13 +52,14 @@ type branch = {
   right_tez: Tez.t;
   right_height: int;
   right: ptr;
-  parent: int64 option;
+  parent: ptr;
 }
 [@@deriving show]
 
 type 't node =
   | Leaf of 't leaf
   | Branch of branch
+  | Root of ptr option
 [@@deriving show]
 
 type 't mem = ('t node) BigMap.t
@@ -65,24 +68,53 @@ let node_tez n =
   match n with
   | Leaf leaf -> leaf.tez
   | Branch branch -> Tez.(branch.left_tez + branch.right_tez)
+  | Root _ -> failwith "node_tez found Root"
 
 let node_height n =
   match n with
   | Leaf _ -> 1
   | Branch branch -> max branch.left_height branch.right_height + 1
+  | Root _ -> failwith "node_height found Root"
 
 let node_parent n =
   match n with
   | Leaf leaf -> leaf.parent
   | Branch branch -> branch.parent
+  | Root _ -> failwith "node_parent found Root"
 
-let node_set_parent (p: ptr option) (n: 't node) =
+let node_set_parent (p: ptr) (n: 't node) =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
   | Branch branch -> Branch { branch with parent = p; }
+  | Root _ -> failwith "node_set_parent found Root"
 
-let empty: ptr option = None
-
+let update_matching_child
+  (mem: 't mem) (ptr: ptr) (from_ptr: ptr) (to_ptr: ptr) : 't mem =
+  match mem_get mem ptr with
+    | Root b ->
+      assert (b = Some from_ptr);
+      mem_set mem ptr (Root (Some to_ptr))
+    | Leaf _ ->
+      failwith "update_matching_child: got a leaf"
+    | Branch old_branch ->
+       let to_ = mem_get mem to_ptr in
+       let new_branch =
+         if old_branch.left = from_ptr
+         then Branch {
+                 old_branch with
+                 left = to_ptr;
+                 left_tez = node_tez to_;
+                 left_height = node_height to_;
+               }
+         else (
+           assert (old_branch.right = from_ptr);
+           Branch {
+             old_branch with
+             right = to_ptr;
+             right_tez = node_tez to_;
+             right_height = node_height to_;
+           }) in
+          mem_set mem ptr new_branch
 
 (*
  * Operations on AVL trees.
@@ -95,66 +127,63 @@ let empty: ptr option = None
  * (unless a leaf is deleted with 'del').
  *)
 
+let mk_empty (mem: 't mem): 't mem * avl_ptr =
+  let (mem, ptr) = mem_new mem (Root None) in
+  (mem, AVLPtr ptr)
 
 (* Before:
  *
- *            parent
- *            /    \
- *           /      \
- *         left    right
- *                 /   \
- *                /     \
- *           right_left  a
+ *            curr
+ *            /  \
+ *           /    \
+ *         left  right
+ *               /   \
+ *              /     \
+ *         right_left  a
  *
  * After:
  *
  *            right
  *            /   \
  *           /     \
- *        parent    a
+ *        curr      a
  *        /   \
  *       /     \
  *     left  right_left
 *)
-let rotate_left (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
-  let parent =
-    match mem_get mem parent_ptr with
-    | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
-    | Branch parent -> parent in
-  let right_ptr = parent.right in
+let ref_rotate_left (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+  let curr =
+    match mem_get mem curr_ptr with
+    | Root _ -> failwith "rotate_left: curr_ptr is Root"
+    | Leaf _ -> failwith "rotate_left: curr_ptr is Leaf"
+    | Branch curr -> curr in
+
+  let right_ptr = curr.right in
   let right =
     match mem_get mem right_ptr with
-    | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
+    | Root _ -> failwith "rotate_left: right_ptr is Root"
+    | Leaf _ -> failwith "rotate_left: right_ptr is Leaf"
     | Branch right -> right in
+
   let right_left_ptr = right.left in
-  let right_left = mem_get mem right_left_ptr in
-  let updated_parent = Branch
-      { parent with
-        right = right_left_ptr;
-        right_tez = node_tez right_left;
-        right_height = node_height right_left;
-        parent = Some right_ptr;
-      } in
-  let updated_right = Branch
-      { right with
-        parent = parent.parent;
-        left = parent_ptr;
-        left_tez = node_tez updated_parent;
-        left_height = node_height updated_parent;
-      } in
-  let updated_right_left =
-    node_set_parent (Some parent_ptr) right_left in
-  let mem = mem_set mem parent_ptr updated_parent in
-  let mem = mem_set mem right_ptr updated_right in
-  let mem = mem_set mem right_left_ptr updated_right_left in
+
+  (* move right_left under curr *)
+  let mem = mem_update mem right_left_ptr (node_set_parent curr_ptr) in
+  let mem = update_matching_child mem curr_ptr right_ptr right_left_ptr in
+
+  (* move curr under right *)
+  let mem = mem_update mem right_ptr (node_set_parent curr.parent) in
+  let mem = mem_update mem curr_ptr (node_set_parent right_ptr) in
+  let mem = update_matching_child mem right_ptr right_left_ptr curr_ptr in
+
   (mem, right_ptr)
 
 (* Before:
  *
- *            parent
- *            /    \
- *           /      \
- *         left    right
+ *            curr
+ *            /  \
+ *           /    \
+ *         left  right
  *         / \
  *        /   \
  *       a  left_right
@@ -164,43 +193,36 @@ let rotate_left (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
  *             left
  *             /  \
  *            /    \
- *           a    parent
- *                /   \
- *               /     \
- *         left_right  right
+ *           a    curr
+ *               /    \
+ *              /      \
+ *        left_right   right
 *)
-let rotate_right (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
-  let parent =
-    match mem_get mem parent_ptr with
-    | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
-    | Branch parent -> parent in
-  let left_ptr = parent.left in
+let ref_rotate_right (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+  let curr =
+    match mem_get mem curr_ptr with
+    | Root _ -> failwith "rotate_right: curr_ptr is Root"
+    | Leaf _ -> failwith "rotate_right: curr_ptr is Leaf"
+    | Branch curr -> curr in
+
+  let left_ptr = curr.left in
   let left =
     match mem_get mem left_ptr with
-    | Leaf _ -> failwith "rotate_left: can't rotate a leaf"
+    | Root _ -> failwith "rotate_right: left_ptr is Root"
+    | Leaf _ -> failwith "rotate_right: curr_ptr is Leaf"
     | Branch left -> left in
-  let left_right_ptr = left.right in
-  let left_right = mem_get mem left_right_ptr in
-  let updated_parent = Branch
-      { parent with
-        left = left_right_ptr;
-        left_tez = node_tez left_right;
-        left_height = node_height left_right;
-        parent = Some left_ptr;
-      } in
-  let updated_left = Branch
-      { left with
-        parent = parent.parent;
-        right = parent_ptr;
-        right_tez = node_tez updated_parent;
-        right_height = node_height updated_parent;
-      } in
-  let updated_left_right =
-    node_set_parent (Some parent_ptr) left_right in
 
-  let mem = mem_set mem parent_ptr updated_parent in
-  let mem = mem_set mem left_ptr updated_left in
-  let mem = mem_set mem left_right_ptr updated_left_right in
+  let left_right_ptr = left.right in
+
+  (* move left_right under curr *)
+  let mem = mem_update mem left_right_ptr (node_set_parent curr_ptr) in
+  let mem = update_matching_child mem curr_ptr left_ptr left_right_ptr in
+
+  (* move curr under left *)
+  let mem = mem_update mem left_ptr (node_set_parent curr.parent) in
+  let mem = mem_update mem curr_ptr (node_set_parent left_ptr) in
+  let mem = update_matching_child mem left_ptr left_right_ptr curr_ptr in
+
   (mem, left_ptr)
 
 (* From: https://en.wikipedia.org/wiki/Avl_tree#Rebalancing
@@ -217,55 +239,58 @@ let rotate_right (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
  * The case Dir1 <> Dir2 is repaired by
  *   a double rotation: rotate_Dir1Dir2
 *)
-let balance (mem: 't mem) (parent_ptr: ptr) : 't mem * ptr =
-  let (mem, ptr) = match mem_get mem parent_ptr with
+let balance (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+  match mem_get mem curr_ptr with
     | Branch branch
       when abs (branch.left_height - branch.right_height) > 1 ->
-      assert (abs (branch.left_height - branch.right_height) == 2);
 
-      let parent_balance = branch.right_height - branch.left_height in
-      let heavy_child_ptr = if parent_balance < 0 then branch.left else branch.right in
+      let balance = branch.right_height - branch.left_height in
+      assert (abs balance == 2);
+
+      let heavy_child_ptr =
+        if balance < 0 then branch.left else branch.right in
       let heavy_child = match mem_get mem heavy_child_ptr with
-        | Leaf _ -> failwith "invariant violation: heavy_child should be a branch"
-        | Branch b -> b in
+        | Branch b -> b
+        | _ -> failwith "invariant violation: heavy_child should be a branch" in
       let heavy_child_balance =
         heavy_child.right_height - heavy_child.left_height in
-      if parent_balance < 0 && heavy_child_balance <= 0 then
+
+      if balance < 0 && heavy_child_balance <= 0 then
         (* Left, Left *)
-        rotate_right mem parent_ptr
-      else if parent_balance < 0 && heavy_child_balance > 0 then
+        ref_rotate_right mem curr_ptr
+      else if balance < 0 && heavy_child_balance > 0 then
         (* Left, Right *)
-        let (mem, child) = rotate_left mem heavy_child_ptr in
-        let mem =
-          mem_set mem parent_ptr (Branch  {
-              branch with
-              left = child;
-              left_height = branch.left_height - 1; }) in
-        rotate_right mem parent_ptr
-      else if parent_balance > 0 && heavy_child_balance >= 0 then
+        let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
+        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+        ref_rotate_right mem curr_ptr
+      else if balance > 0 && heavy_child_balance >= 0 then
         (* Right, Right*)
-        rotate_left mem parent_ptr
-      else if parent_balance > 0 && heavy_child_balance < 0 then
+        ref_rotate_left mem curr_ptr
+      else if balance > 0 && heavy_child_balance < 0 then
         (* Right, Left *)
-        let (mem, child) = rotate_right mem heavy_child_ptr in
-        let mem =
-          mem_set mem parent_ptr (Branch {
-              branch with
-              right = child;
-              right_height = branch.right_height - 1;}) in
-        rotate_left mem parent_ptr
+        let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
+        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+        ref_rotate_left mem curr_ptr
       else
         failwith "invariant violation: balance predicates partial"
-    | _ -> (mem, parent_ptr) in
-  assert (
-    let b = match mem_get mem ptr with
-      | Branch b -> b | _ -> failwith "impossible" in
-    abs (b.left_height - b.right_height) <= 1);
-  (mem, ptr)
+    | _ -> (mem, curr_ptr)
+  (* (match mem_get mem ptr with
+    | Branch b -> assert (abs (b.left_height - b.right_height) <= 1); ()
+    | Root _ -> ()
+    | Leaf _ -> failwith "impossible"); *)
 
-let rec join (mem: 't mem) (left_ptr: ptr) (right_ptr: ptr) : 't mem * ptr =
+type join_direction =
+  | Left
+  | Right
+
+let rec ref_join
+  (mem: 't mem) (direction: join_direction)
+  (left_ptr: ptr) (right_ptr: ptr) : 't mem * ptr =
   let left = mem_get mem left_ptr in
   let right = mem_get mem right_ptr in
+
+  let focused = match direction with | Left -> left | Right -> right in
+  let parent_ptr = node_parent focused in
 
   if abs (node_height left - node_height right) < 2 then
     let new_branch = Branch {
@@ -275,226 +300,189 @@ let rec join (mem: 't mem) (left_ptr: ptr) (right_ptr: ptr) : 't mem * ptr =
         right_tez = node_tez right;
         right_height = node_height right;
         right = right_ptr;
-        parent = None;
+        parent = parent_ptr;
       } in
 
     let (mem, ptr) = mem_new mem new_branch in
-    let mem = mem_update mem left_ptr (node_set_parent (Some ptr)) in
-    let mem = mem_update mem right_ptr (node_set_parent (Some ptr)) in
-
+    let mem = mem_update mem left_ptr (node_set_parent ptr) in
+    let mem = mem_update mem right_ptr (node_set_parent ptr) in
     (mem, ptr)
   else if node_height left > node_height right then
-    let left = match left with Branch b -> b | Leaf _ -> failwith "impossible" in
-    let (mem, new_left_right_ptr) = join mem left.right right_ptr in
-    let new_left_right = mem_get mem new_left_right_ptr in
-    let mem = mem_set mem left_ptr @@ Branch
-        { left with
-          right = new_left_right_ptr;
-          right_height = node_height new_left_right;
-          right_tez = node_tez new_left_right;
-          parent = None;
-        } in
-    let mem = mem_update mem new_left_right_ptr
-        (node_set_parent (Some left_ptr)) in
-    let (mem, left_ptr) = balance mem left_ptr in
-    (mem, left_ptr)
+    let left = match left with Branch b -> b | _ -> failwith "impossible" in
+    let (mem, new_) = ref_join mem Left left.right right_ptr in
+    let mem = update_matching_child mem left_ptr left.right new_ in
+    let (mem, new_) = balance mem left_ptr in
+    (mem, new_)
   else (* node_height left < node_height right *)
-    let right = match right with Branch b -> b | Leaf _ -> failwith "impossible" in
-    let (mem, new_right_left_ptr) = join mem left_ptr right.left in
-    let new_right_left = mem_get mem new_right_left_ptr in
-    let mem = mem_set mem right_ptr @@ Branch
-        { right with
-          left = new_right_left_ptr;
-          left_height = node_height new_right_left;
-          left_tez = node_tez new_right_left;
-          parent = None;
-        } in
-    let mem = mem_update mem new_right_left_ptr
-        (node_set_parent (Some right_ptr)) in
-    let (mem, right_ptr) = balance mem right_ptr in
-    (mem, right_ptr)
+    let right = match right with Branch b -> b | _ -> failwith "impossible" in
+    let (mem, new_) = ref_join mem Right left_ptr right.left in
+    let mem = update_matching_child mem right_ptr right.left new_ in
+    let (mem, new_) = balance mem right_ptr in
+    let mem = mem_update mem new_ (node_set_parent parent_ptr) in
+    (mem, new_)
 
 let push_back
-  (mem: 't mem) (root: ptr option) (value: 't) (tez: 'tez)
-  : 't mem * ptr * ptr =
-  match root with
+  (mem: 't mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+  : 't mem * leaf_ptr =
+  let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
+  let (mem, leaf_ptr) = mem_new mem node in
+  match mem_get mem root_ptr with
   (* When the tree is empty, create the initial leaf. *)
-  | None ->
-    let node = Leaf { value=value; tez=tez; parent=None; } in
-    (match mem_new mem node with (mem, ptr) -> (mem, ptr, ptr))
-  (* When there is already an element, append it. *)
-  | Some root_ptr ->
-    let mem, new_leaf =
-          mem_new mem @@ Leaf { value=value; tez=tez; parent=None; } in
-    (match join mem root_ptr new_leaf with (mem, avl) -> (mem, avl, new_leaf))
+  | Root None ->
+    let mem = mem_set mem root_ptr (Root (Some leaf_ptr)) in
+    (mem, LeafPtr leaf_ptr)
+  (* When there is already an element, join with the new leaf. *)
+  | Root (Some r) ->
+    let (mem, ret) = ref_join mem Left r leaf_ptr in
+    let mem = mem_set mem root_ptr (Root (Some ret)) in
+    (mem, LeafPtr leaf_ptr)
+  | _ ->
+    failwith "push_back is passed a non-root pointer."
 
+let append (mem: 't mem) (AVLPtr left_ptr) (AVLPtr right_ptr): 't mem =
+  let mem = match (mem_get mem left_ptr, mem_get mem right_ptr) with
+    | (Root _, Root None) ->
+      mem
+    | (Root None, Root (Some r)) ->
+      let mem = mem_set mem left_ptr (Root (Some r)) in
+      mem_update mem r (node_set_parent left_ptr)
+    | (Root (Some l), Root (Some r)) ->
+      let (mem, l) = ref_join mem Left l r in
+      mem_set mem left_ptr (Root (Some l))
+    | _ ->
+      failwith "avlptr is not root" in
+  mem_del mem right_ptr
+
+(* The only implementation difference between this and push_back
+ * is the order of parameters on 'join'. We should probably combine
+ * these.
+ *)
 let push_front
-  (mem: 't mem) (root: ptr option) (value: 't) (tez: 'tez)
-  : 't mem * ptr * ptr =
-  match root with
+  (mem: 't mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+  : 't mem * leaf_ptr =
+  let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
+  let (mem, leaf_ptr) = mem_new mem node in
+  match mem_get mem root_ptr with
   (* When the tree is empty, create the initial leaf. *)
-  | None ->
-    let node = Leaf { value=value; tez=tez; parent=None; } in
-    (match mem_new mem node with (mem, ptr) -> (mem, ptr, ptr))
-  (* When there is already an element, append it. *)
-  | Some root_ptr ->
-    let mem, new_leaf =
-          mem_new mem @@ Leaf { value=value; tez=tez; parent=None; } in
-    (match join mem new_leaf root_ptr with (mem, avl) -> (mem, avl, new_leaf))
+  | Root None ->
+    let mem = mem_set mem root_ptr (Root (Some leaf_ptr)) in
+    (mem, LeafPtr leaf_ptr)
+  (* When there is already an element, join with the new leaf. *)
+  | Root (Some r) ->
+    let (mem, ret) = ref_join mem Right leaf_ptr r in
+    let mem = mem_set mem root_ptr (Root (Some ret)) in
+    (mem, LeafPtr leaf_ptr)
+  | _ ->
+    failwith "push_front is passed a non-root pointer."
 
-let del (mem: 't mem) (ptr: ptr): 't mem * ptr option =
+let ref_del (mem: 't mem) (ptr: ptr): 't mem =
   let self = mem_get mem ptr in
+  let parent_ptr = node_parent self in
   let mem = mem_del mem ptr in
-  match node_parent self with
-    (* when deleting the sole element, we return an empty tree *)
-    | None -> (mem, None)
-    (* otherwise, the parent of the deleted element is redundant since it
-     * only has a single child, so we delete the parent and the orphan sibling
-     * is adopted by the grandparent who have lost its child. *)
-    | Some parent_ptr -> match mem_get mem parent_ptr with
+  match mem_get mem parent_ptr with
       | Leaf _ -> failwith "del: parent is a leaf"
+      (* when deleting the sole element, we return an empty tree *)
+      | Root _ ->
+        mem_set mem parent_ptr (Root None)
+      (* otherwise, the parent of the deleted element is redundant since it
+       * only has a single child, so we delete the parent and the orphan sibling
+       * is adopted by the grandparent who have lost its child. *)
       | Branch parent ->
         let sibling_ptr = if parent.left = ptr
                             then parent.right
                             else parent.left in
         assert (sibling_ptr <> ptr);
         let mem = mem_del mem parent_ptr in
-        let mem = mem_update mem sibling_ptr (node_set_parent parent.parent) in
-        match parent.parent with
-          | None -> (mem, Some sibling_ptr)
-          | Some grandparent_ptr ->
-            let update_matching_child mem ptr from_ptr to_ptr =
-              mem_update mem ptr @@ fun v -> match v with
-                | Leaf _ -> failwith "update_matching_child: got a leaf"
-                | Branch b ->
-                   let to_ = mem_get mem to_ptr in
-                   if b.left = from_ptr
-                   then Branch {
-                           b with
-                           left = to_ptr;
-                           left_tez = node_tez to_;
-                           left_height = node_height to_;
-                         }
-                   else (
-                     assert (b.right = from_ptr);
-                     Branch {
-                       b with
-                       right = to_ptr;
-                       right_tez = node_tez to_;
-                       right_height = node_height to_;
-                     }) in
+       let grandparent_ptr = parent.parent in
+        let mem = mem_update mem sibling_ptr (node_set_parent grandparent_ptr) in
+        let mem = update_matching_child
+                    mem
+                    grandparent_ptr
+                    parent_ptr
+                    sibling_ptr in
+        let rec balance_bottom_up mem curr_ptr =
+            let curr = mem_get mem curr_ptr in
+            match curr with
+              | Root _ -> mem
+              | Leaf _ -> failwith "impossible"
+              | Branch b ->
+                let (mem, new_curr) = balance mem curr_ptr in
+                assert (node_parent (mem_get mem new_curr) == b.parent);
+                let mem = update_matching_child mem b.parent curr_ptr new_curr in
+                balance_bottom_up mem b.parent in
+        balance_bottom_up mem grandparent_ptr
 
-            let mem = update_matching_child mem grandparent_ptr parent_ptr sibling_ptr in
+let del (mem: 't mem) (LeafPtr ptr): 't mem = ref_del mem ptr
 
-            let rec balance_parents mem ptr =
-                let parent_ptr = node_parent (mem_get mem ptr) in
-                let (mem, new_ptr) = balance mem ptr in
-                match parent_ptr with
-                  | None -> (mem, new_ptr)
-                  | Some parent_ptr ->
-                    let mem = update_matching_child mem parent_ptr ptr new_ptr in
-                    balance_parents mem parent_ptr in
+let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
+  let rec go (ptr: ptr) : avl_ptr =
+    match mem_get mem ptr with
+      | Root _ -> AVLPtr ptr
+      | Branch b -> go b.parent
+      | Leaf l -> go l.parent in
+   go leaf
 
-             match balance_parents mem grandparent_ptr with
-               (mem, root) -> (mem, Some root)
-
-let rec debug_string (mem: 't mem) (show: 't -> string) (root: ptr option) : string =
-  let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-  match root with
-  | None -> "Empty"
-  | Some root_ptr -> match mem_get mem root_ptr with
+let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
+  : 't mem * ptr option * ptr option =
+  match mem_get mem curr_ptr with
+    | Root _ -> failwith "ref_split found Root"
     | Leaf leaf ->
-      Int64.to_string root_ptr
-        ^ sprintf ": Leaf { value: %s; tez: %s; parent: %s }"
-            (show leaf.value) (Tez.show leaf.tez)
-            (match leaf.parent with | Some i -> Int64.to_string i | None -> "None")
+      if Tez.compare leaf.tez limit <= 0
+      then
+        let mem = mem_update mem curr_ptr (node_set_parent null) in
+        (mem, Some curr_ptr, None)
+      else
+        (mem, None, Some curr_ptr)
     | Branch branch ->
-      Int64.to_string root_ptr ^ ": Branch " ^ show_branch branch ^ "\n"
-      ^ indent ("Left:\n"
-                ^ indent (debug_string mem show (Some branch.left))) ^ "\n"
-      ^ indent ("Right:\n"
-                ^ indent (debug_string mem show (Some branch.right)))
+      if Tez.compare Tez.(branch.left_tez + branch.right_tez) limit <= 0
+      then (* total_tez <= limit *)
+        let mem = mem_update mem curr_ptr (node_set_parent null) in
+        (mem, Some curr_ptr, None)
+      else
+        let mem = mem_del mem curr_ptr in
+        let mem = mem_update mem branch.right (node_set_parent branch.parent) in
 
-let add_all (mem: 't mem) (root: ptr option) (xs: ('t * Tez.t) list)
-  : 't mem * ptr option =
-  List.fold_left
-    (fun (mem, root) (value, tez) ->
-       let (mem, root, _) = push_back mem root value tez in
-       (mem, Some root))
-    (mem, root)
-    xs
+        if Tez.compare branch.left_tez limit = 0
+        then (* left_tez == limit *)
+          (mem, Some branch.left, Some branch.right)
 
-let rec find_root (mem: 't mem) (node: ptr) : ptr =
-  match node_parent (mem_get mem node) with
-  | None -> node
-  | Some parent_ptr -> find_root mem parent_ptr
+        else if Tez.compare limit branch.left_tez < 0
+        then (* limit < left_tez < total_tez *)
+          match ref_split mem branch.left limit with
+          | (_, _, None) -> failwith "impossible"
+          | (mem, left, Some right) ->
+            let (mem, joined) = ref_join mem Right right branch.right in
+            (mem, left, Some joined)
 
-
-let rec max (mem: 't mem) (root: ptr) : ptr * 't leaf =
-  match mem_get mem root with
-  | Leaf leaf -> (root, leaf)
-  | Branch branch -> max mem branch.right
-
-let rec min (mem: 't mem) (root: ptr) : ptr * 't leaf =
-  match mem_get mem root with
-  | Leaf leaf -> (root, leaf)
-  | Branch branch -> min mem branch.left
-
-(*
-let add_all_debug (mem: 't mem) (root: ptr option) (elements: element list)
-  : 't mem * ptr option =
-  List.fold_left
-    (fun (mem, root) element ->
-       print_string "--------------------------------\n";
-       print_string ("Inserting: " ^ show_element element ^ "\n");
-       let (mem, root) = add mem root element in
-       print_string (debug_string mem (Some root));
-       print_newline ();
-       (mem, Some root))
-    (mem, root)
-    elements
-*)
+        else (* left_tez < limit < total_tez *)
+          let left = mem_get mem branch.left in
+          match ref_split mem branch.right Tez.(limit - (node_tez left)) with
+          | (mem, Some left, right) ->
+            let (mem, joined) = ref_join mem Left branch.left left in
+            let mem =
+              match right with
+                | None -> mem
+                | Some r -> mem_update mem r (node_set_parent branch.parent) in
+            (mem, Some joined, right)
+          | (mem, None, right) ->
+            let mem = mem_update mem branch.left (node_set_parent null) in
+            (mem, Some branch.left, right)
 
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let rec split (mem: 't mem) (root: ptr option) (limit: Tez.t)
-  : 't mem * ptr option * ptr option =
-  match root with
-  | None -> (mem, None, None)
-  | Some root_ptr ->
-    let mem = mem_update mem root_ptr (node_set_parent None) in
-    match mem_get mem root_ptr with
-    | Leaf leaf ->
-      if Tez.compare leaf.tez limit <= 0
-      then (mem, Some root_ptr, None)
-      else (mem, None, Some root_ptr)
-    | Branch branch ->
-      if Tez.compare Tez.(branch.left_tez + branch.right_tez) limit <= 0
-      then (* total_tez <= limit *)
-        (mem, Some root_ptr, None)
-      else if Tez.compare branch.left_tez limit = 0
-      then (* left_tez == limit *)
-        let mem = mem_update mem branch.left (node_set_parent None) in
-        let mem = mem_update mem branch.right (node_set_parent None) in
-        (mem_del mem root_ptr,
-         Some branch.left,
-         Some branch.right)
-      else if Tez.compare limit branch.left_tez < 0
-      then (* limit < left_tez < total_tez *)
-        match split mem (Some branch.left) limit with
-        | (mem, left, Some right) ->
-          let (mem, joined) = join mem right branch.right in
-          (mem_del mem root_ptr, left, Some joined)
-        | _ -> failwith "impossible"
-      else (* left_tez < limit < total_tez *)
-        let left = mem_get mem branch.left in
-        match split mem (Some branch.right) Tez.(limit - (node_tez left)) with
-        | (mem, Some left, right) ->
-          let (mem, joined) = join mem branch.left left in
-          (mem_del mem root_ptr, Some joined, right)
-        | (mem, None, right) ->
-          let mem = mem_update mem branch.left (node_set_parent None) in
-          (mem_del mem root_ptr,
-           Some branch.left,
-           right)
+let take (mem: 't mem) (AVLPtr root_ptr) (limit: Tez.t)
+  : 't mem * avl_ptr =
+  match mem_get mem root_ptr with
+  | Root (Some r) ->
+    let (mem, l, r) = ref_split mem r limit in
+    let (mem, new_root) = mem_new mem (Root l) in
+    let mem = match l with
+      | Some l -> mem_update mem l (node_set_parent new_root)
+      | None -> mem in
+    let mem = mem_set mem root_ptr (Root r) in
+    (mem, AVLPtr new_root)
+  | Root None ->
+    let (mem, new_root) = mem_new mem (Root None) in
+    (mem, AVLPtr new_root)
+  | _ -> failwith "invariant violation: avl_ptr does not point to a Root"

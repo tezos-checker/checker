@@ -14,10 +14,6 @@ type liquidation_slice = {
   tez: Tez.t
 }
 
-type slice_ptr = BigMap.ptr
-
-type tree = BigMap.ptr option
-
 type auction_start = { block_number: block_number; time: time }
 
 type bid = { address: Address.t; kit_utxo: Kit.utxo }
@@ -27,14 +23,14 @@ type bid_token = { auction_id: auction_id; bid: bid }
 
 type current_auction = {
   id: auction_id;
-  contents: tree;
+  contents: avl_ptr;
   start: auction_start;
   leading_bid: bid option;
 }
 
 type auction_outcome = {
   sold_tez: Tez.t;
-  got_kit: Kit.t;
+  winning_bid: bid;
 }
 
 module PtrMap =
@@ -43,7 +39,7 @@ module PtrMap =
 type auctions = {
   storage: liquidation_slice mem;
 
-  queued_slices: tree;
+  queued_slices: avl_ptr;
   current_auction: current_auction option;
   completed_auctions: auction_outcome PtrMap.t;
 }
@@ -55,45 +51,40 @@ type auctions = {
 let send_to_auction
   (auctions: auctions)
   (slice: liquidation_slice)
-  : auctions * slice_ptr =
-  let (new_storage, new_queue, ret) =
+  : auctions * leaf_ptr =
+  let (new_storage, ret) =
         push_back auctions.storage auctions.queued_slices slice slice.tez in
-  let new_state = { auctions with
-                    storage = new_storage;
-                    queued_slices = Some new_queue; } in
+  let new_state = { auctions with storage = new_storage; } in
   (new_state, ret)
 
 let cancel_liquidation
   (auctions: auctions)
-  (slice: slice_ptr)
+  (slice: leaf_ptr)
   : auctions option =
-  if Some (find_root auctions.storage slice) = auctions.queued_slices
+  if find_root auctions.storage slice = auctions.queued_slices
   then
     (* if the slice belongs to queued_slices tree, we can cancel it *)
-    let (new_storage, new_queue) = del auctions.storage slice in
-    Some
-      { auctions with
-        storage = new_storage;
-        queued_slices = new_queue;
-      }
+    let new_storage = del auctions.storage slice in
+    Some { auctions with storage = new_storage; }
   else
     (* otherwise, it means that the auction is either in progress
      * or completed, so we can not cancel it. *)
     None
 
+(*
 let liquidation_outcome
   (auctions: auctions)
-  (slice_ptr: slice_ptr)
+  (leaf_ptr: leaf_ptr)
   : (auctions * Kit.t) option =
-  let root = find_root auctions.storage slice_ptr in
+  let root = find_root auctions.storage leaf_ptr in
   match PtrMap.find_opt root auctions.completed_auctions with
     | None -> None (* slice does not correspond to a completed auction *)
     | Some outcome ->
-      let slice = match BigMap.mem_get auctions.storage slice_ptr with
+      let slice = match BigMap.mem_get auctions.storage leaf_ptr with
         | Leaf leaf -> leaf.value
         | Branch _ -> failwith "slice should point to a leaf" in
       let kit = Kit.of_fp FixedPoint.FixedPoint.(
-        (Tez.to_fp slice.tez) * (Kit.to_fp outcome.got_kit)
+        (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit_utxo.amount)
           / (Tez.to_fp outcome.sold_tez)) in
 
       (* Now we delete the slice from the lot, so it can not be
@@ -101,7 +92,7 @@ let liquidation_outcome
        * the lot root to change, so we also update completed_auctions
        * to reflect that.
        *)
-      let (storage, popped) = del auctions.storage slice_ptr in
+      let (storage, popped) = del auctions.storage leaf_ptr in
       let replaced =
             auctions.completed_auctions
               |> PtrMap.remove root
@@ -151,6 +142,18 @@ let start_auction_if_possible
           queued_slices = new_queue;
           current_auction = current_auction;
        }
+
+let complete_auction_if_possible
+  (auctions: auctions): auctions =
+  match auctions.current_auction with
+    | None -> auctions
+    | Some _ ->
+      (* check if the auction is finished *)
+      if failwith "not_implemented"
+      then auctions
+      else failwith "not_implemented"
+
+*)
 
 (**
  * - Check there's an auction

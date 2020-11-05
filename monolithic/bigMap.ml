@@ -19,8 +19,11 @@ type ptr = int64 [@@deriving show]
 
 let mem_next_ptr (m: 'a BigMap.t): ptr =
   match BigMap.max_binding_opt m with
-  | None -> Int64.zero
+  | None -> Int64.one
   | Some (t, _) -> Int64.succ t
+
+let null: ptr = Int64.zero
+let is_null (p: ptr) = p == null
 
 let mem_set (m: 'a BigMap.t) (k: ptr) (v: 'a) : 'a BigMap.t =
   BigMap.add k v m
