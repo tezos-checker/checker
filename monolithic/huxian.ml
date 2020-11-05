@@ -109,8 +109,8 @@ struct
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when burrow.owner = owner ->
-        let updated = Burrow.deposit_tez state.parameters amount burrow in
-        Ok {state with burrows = AddressMap.add address updated state.burrows}
+        let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
+        Ok {state with burrows = AddressMap.add address updated_burrow state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
     | None -> Error (NonExistentBurrow address)
 
@@ -139,9 +139,9 @@ struct
     match AddressMap.find_opt address state.burrows with
     | Some burrow when burrow.owner = owner -> (
         match Burrow.withdraw_tez state.parameters amount burrow with
-        | Ok (burrow, withdrawn) ->
+        | Ok (updated_burrow, withdrawn) ->
             assert (amount = withdrawn);
-            Ok (withdrawn, {state with burrows = AddressMap.add address burrow state.burrows})
+            Ok (withdrawn, {state with burrows = AddressMap.add address updated_burrow state.burrows})
         | Error err -> Error err
       )
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
