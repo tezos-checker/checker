@@ -1,5 +1,4 @@
 open FixedPoint
-open Constants
 open Kit
 open Tez
 open Timestamp
@@ -136,6 +135,7 @@ struct
   let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     assert (target > FixedPoint.zero);
     FixedPoint.(
+      (* TODO: 0.005 and 0.05 should come from constants.ml *)
       let cnp_001 = cnp (of_string "0.01") in
       let cnp_005 = cnp (of_string "0.05") in
       let secs_in_a_day = of_int Stdlib.(24 * 3600) in
@@ -211,8 +211,8 @@ struct
     (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
     ( total_accrual_to_uniswap
     , {
-      index = Tez.of_fp current_index;
-      protected_index = Tez.of_fp current_protected_index;
+      index = Tez.(scale one current_index);
+      protected_index = Tez.(scale one current_protected_index);
       target = current_target;
       drift = current_drift;
       drift' = current_drift';

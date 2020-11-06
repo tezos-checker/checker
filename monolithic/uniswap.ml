@@ -1,4 +1,3 @@
-open Constants
 open FixedPoint
 open Kit
 open Tez
@@ -106,7 +105,7 @@ struct
 
     let price = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
     let slippage = Kit.(uniswap.kit / (uniswap.kit + kit)) in
-    let return = Tez.of_fp FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - Constants.uniswap_fee_percentage)) in
+    let return = Tez.(scale one FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - Constants.uniswap_fee_percentage))) in
     let updated = { uniswap with
                     kit = Kit.(uniswap.kit + kit);
                     tez = Tez.(uniswap.tez - return) } in
@@ -138,7 +137,7 @@ struct
     *)
     let (tez', kit') = FixedPoint.(
         if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
-        then (Tez.of_fp (Kit.to_fp kit * ratio), kit)
+        then (Tez.scale Tez.one (Kit.to_fp kit * ratio), kit)
         else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
         then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
         else (tez, kit) ) in

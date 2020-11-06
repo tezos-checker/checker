@@ -8,8 +8,7 @@ open Format
 
 type element_list = (int * Tez.t) list [@@deriving show]
 
-let nTez (i: int) : Tez.t =
-  Tez.of_string (string_of_int i)
+let nTez (i: int) : Tez.t = Tez.of_mutez (1_000_000 * i)
 
 let add_all (mem: 't mem) (root: avl_ptr) (xs: element_list)
   : 't mem =
@@ -130,7 +129,7 @@ module IntSet = Set.Make(Int)
 let arb_tez = Q.(
     map
       ~rev:(fun i -> FixedPoint.to_int (Tez.to_fp i))
-      (fun i -> Tez.of_fp (FixedPoint.of_int i))
+      (fun i -> nTez i)
       small_int
   )
 

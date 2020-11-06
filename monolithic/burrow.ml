@@ -2,7 +2,6 @@
 open Error
 
 open Address
-open Constants
 open FixedPoint
 open Kit
 open Parameters
@@ -25,7 +24,7 @@ module Burrow : sig
       (* Collateral currently stored in the burrow. *)
       collateral : Tez.t;
       (* Outstanding kit minted out of the burrow. *)
-      minted_kit : Kit.t;
+      outstanding_kit : Kit.t;
       (* The imbalance adjustment index observed the last time the burrow was
        * touched. *)
       adjustment_index : FixedPoint.t;
@@ -119,7 +118,7 @@ end = struct
       owner : Address.t;
       delegate : Address.t option;
       collateral : Tez.t;
-      minted_kit : Kit.t;
+      outstanding_kit : Kit.t;
       adjustment_index : FixedPoint.t;
       (* TODO: use this field in some calculations *)
       collateral_at_auction : Tez.t;
@@ -145,13 +144,13 @@ end = struct
     * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
   let is_overburrowed (p : Parameters.t) (b : t) : bool =
-    Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.minted_kit * Parameters.minting_price p)
+    Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.outstanding_kit * Parameters.minting_price p)
 
   (* Update the outstanding kit, update the adjustment index, and the timestamp *)
   let touch (p: Parameters.t) (b: t) : t =
     { b with
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
-      minted_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.minted_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
+      outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
       adjustment_index = Parameters.compute_adjustment_index p;
       last_touched = p.last_touched;
     }
@@ -164,7 +163,7 @@ end = struct
           owner = address;
           delegate = None;
           collateral = Tez.(tez - Constants.creation_deposit);
-          minted_kit = Kit.zero;
+          outstanding_kit = Kit.zero;
           adjustment_index = Parameters.compute_adjustment_index p;
           collateral_at_auction = Tez.zero;
           last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
@@ -191,7 +190,7 @@ end = struct
   let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.t, Error.error) result =
     assert (kit >= Kit.zero);
     let b = touch p burrow in
-    let new_burrow = { b with minted_kit = Kit.(b.minted_kit + kit) } in
+    let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit + kit) } in
     if is_overburrowed p new_burrow
     then Error MintKitFailure
     else Ok (new_burrow, kit)
@@ -201,9 +200,9 @@ end = struct
   let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t * Kit.t =
     assert (k >= Kit.zero);
     let b = touch p burrow in
-    let kit_to_burn = min b.minted_kit k in
+    let kit_to_burn = min b.outstanding_kit k in
     let kit_to_return = Kit.(k - kit_to_burn) in
-    let new_burrow = { b with minted_kit = Kit.(b.minted_kit - kit_to_burn) } in
+    let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit - kit_to_burn) } in
     (new_burrow, kit_to_return)
 
   (* ************************************************************************* *)
@@ -240,8 +239,8 @@ end = struct
    * the call sites. *)
   let compute_tez_to_auction (p : Parameters.t) (b : t) : Tez.t =
     let collateral = Tez.to_fp b.collateral in
-    let outstanding_kit = Kit.to_fp b.minted_kit in
-    Tez.of_fp FixedPoint.((outstanding_kit * Constants.fplus * Parameters.minting_price p - collateral) / (Constants.fplus - one))
+    let outstanding_kit = Kit.to_fp b.outstanding_kit in
+    Tez.(scale one FixedPoint.((outstanding_kit * Constants.fplus * Parameters.minting_price p - collateral) / (Constants.fplus - one)))
 
   (* TODO: And ensure that it's skewed on the safe side (underapprox.). *)
   let compute_expected_kit (p : Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
@@ -260,7 +259,7 @@ end = struct
   *)
   let is_liquidatable (p : Parameters.t) (b : t) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
-    let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
+    let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(Constants.fminus * Kit.to_fp optimistic_outstanding * Parameters.liquidation_price p)
 
   (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
@@ -268,6 +267,6 @@ end = struct
     * current minting price. *)
   let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
-    let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
+    let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp optimistic_outstanding * Parameters.minting_price p)
 end

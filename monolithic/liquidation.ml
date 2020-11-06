@@ -1,7 +1,6 @@
 open Tez
 open Kit
 open Burrow
-open Constants
 open FixedPoint
 open Parameters
 
@@ -32,7 +31,7 @@ type liquidation_result =
 let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (tez_to_auction: Tez.t) : Kit.t =
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
   let expected_kit = Burrow.compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(b.minted_kit - expected_kit) in
+  let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
   Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction * (Constants.fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
 
 (** Compute whether the liquidation of an auction slice was (retroactively)
@@ -76,7 +75,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
       { b with
         has_creation_deposit = false;
         collateral = Tez.zero;
-        minted_kit = Kit.zero;
+        outstanding_kit = Kit.zero;
       } in
     { outcome = Close;
       liquidation_reward = liquidation_reward;
@@ -84,7 +83,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
       expected_kit = expected_kit;
       min_received_kit_for_unwarranted = compute_min_received_kit_for_unwarranted p b tez_to_auction;
       burrow_state = final_burrow }
-  else if FixedPoint.(Kit.to_fp b.minted_kit * Parameters.minting_price p) > Tez.(to_fp (b.collateral - partial_reward - Constants.creation_deposit)) then
+  else if FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.minting_price p) > Tez.(to_fp (b.collateral - partial_reward - Constants.creation_deposit)) then
     (* Case 3: With the current price it's impossible to make the burrow not
      * undercollateralized; pay the liquidation reward, stash away the creation
      * deposit, and liquidate all the remaining collateral, even if it is not

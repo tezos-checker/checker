@@ -195,7 +195,7 @@ let start_auction_if_possible
     | Some _ -> auctions
     | None ->
       (* TODO: The maximum lot size will be decided by the queue size.
-       * It should be the greater of 1,000 tez or 5% of the total amount
+       * It should be the greater of 10,000 tez or 5% of the total amount
        * in the auction queue. This is to avoid the auction queue being
        * too slow to liquidate if there’s a lot of tez to auction.
        *)
@@ -210,7 +210,7 @@ let start_auction_if_possible
             take
               auctions.storage
               auctions.queued_slices
-              (Tez.of_fp (FixedPoint.FixedPoint.of_int 10_000)) in
+              (Tez.of_mutez 10_000_000_000) in
        let current_auction =
              if is_empty storage new_auction
              then None

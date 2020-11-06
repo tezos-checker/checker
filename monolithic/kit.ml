@@ -1,5 +1,4 @@
 
-open Address
 open FixedPoint
 
 (* ************************************************************************* *)
@@ -31,11 +30,6 @@ module Kit : sig
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
   val show : t -> string
-
-  (* Kit UTXO *)
-  type utxo = {destination : Address.t ; amount : t}
-  val show_utxo : utxo -> string
-  val pp_utxo : Format.formatter -> utxo -> unit
 end =
 struct
   type t = Z.t
@@ -88,9 +82,5 @@ struct
 
   let pp ppf amount =
     Format.fprintf ppf "%s" (show amount)
-
-  (* Kit UTXO *)
-  type utxo = {destination : Address.t ; amount : t}
-  [@@deriving show]
 end
 

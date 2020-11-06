@@ -16,14 +16,14 @@ let suite =
     "sell kit" >::
     (fun _ ->
        let uniswap : Uniswap.t =
-         { tez = Tez.of_string "10.0";
+         { tez = Tez.of_mutez 10_000_000;
            kit = Kit.of_string "5.0";
            total_liquidity_tokens = 1;
          } in
-       let expected_returned_tez = Tez.of_string "1.663333" in
+       let expected_returned_tez = Tez.of_mutez 1_663_333 in
        let expected_returned_kit = Kit.of_string "0.000000" in
        let expected_updated_uniswap : Uniswap.t =
-         { tez = Tez.of_string "8.336667";
+         { tez = Tez.of_mutez 8_336_667;
            kit = Kit.of_string "6.000000";
            total_liquidity_tokens = 1;
          } in
@@ -36,20 +36,20 @@ let suite =
     "buy liquidity" >::
     (fun _ ->
        let uniswap : Uniswap.t =
-         { tez = Tez.of_string "8.336667";
+         { tez = Tez.of_mutez 8_336_667;
            kit = Kit.of_string "6.000000";
            total_liquidity_tokens = 1;
          } in
        let expected_returned_liquidity = Uniswap.liquidity_of_int 2 in
-       let expected_returned_tez = Tez.of_string "0.000000" in
+       let expected_returned_tez = Tez.zero in
        let expected_returned_kit = Kit.of_string "5.605759" in
        let expected_updated_uniswap : Uniswap.t =
-         { tez = Tez.of_string "28.336667";
+         { tez = Tez.of_mutez 28_336_667;
            kit = Kit.of_string "20.394241";
            total_liquidity_tokens = 3;
          } in
        let returned_liquidity, returned_tez, returned_kit, updated_uniswap =
-         Uniswap.buy_liquidity uniswap (Tez.of_string "20.0") (Kit.of_string "20.0") in
+         Uniswap.buy_liquidity uniswap (Tez.of_mutez 20_000_000) (Kit.of_string "20.0") in
        assert_equal ~printer:show_lq expected_returned_liquidity returned_liquidity;
        assert_equal ~printer:show_tz expected_returned_tez returned_tez;
        assert_equal ~printer:show_kt expected_returned_kit returned_kit;

@@ -1,5 +1,4 @@
 
-open Address
 open FixedPoint
 
 (* ************************************************************************* *)
@@ -21,9 +20,8 @@ module Tez : sig
   val compare : t -> t -> int
 
   (* Conversions to/from other types. *)
-  val of_string : string -> t
+  val of_mutez : int -> t
 
-  val of_fp : FixedPoint.t -> t
   val to_fp : t -> FixedPoint.t
 
   val scale : t -> FixedPoint.t -> t
@@ -31,11 +29,6 @@ module Tez : sig
   (* Pretty printing functions *)
   val pp : Format.formatter -> t -> unit
   val show : t -> string
-
-  (* Tez UTXO *)
-  type utxo = {destination : Address.t ; amount : t}
-  val show_utxo : utxo -> string
-  val pp_utxo : Format.formatter -> utxo -> unit
 end =
 struct
   type t = Z.t
@@ -52,16 +45,7 @@ struct
   let one = scaling_factor
 
   (* Conversions to/from other types. *)
-  let of_string str =
-    let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
-    let dotpos = String.rindex_opt str '.' in
-    let mantissa = match dotpos with
-      | None -> Z.one
-      | Some pos -> Z.pow (Z.of_int 10) Stdlib.(String.length str - pos - 1) in
-    Z.((Z.of_string_base 10 without_dot * scaling_factor) / mantissa)
-
-  let of_fp fp =
-    Z.((FixedPoint.to_rep fp) * scaling_factor / FixedPoint.scaling_factor)
+  let of_mutez = Z.of_int
 
   let to_fp t = (* TODO: overflow check? *)
     FixedPoint.of_rep Z.(t * (FixedPoint.scaling_factor / scaling_factor))
@@ -70,7 +54,7 @@ struct
     FixedPoint.(to_fp x / to_fp y)
 
   let scale amount fp = (* TODO: Over/Under- flow checks *)
-    of_fp FixedPoint.(to_fp amount * fp)
+    Z.(FixedPoint.(to_rep (to_fp amount * fp)) * scaling_factor / FixedPoint.scaling_factor)
 
   (* Pretty printing functions *)
   let show amount =
@@ -87,9 +71,5 @@ struct
 
   let pp ppf amount =
     Format.fprintf ppf "%s" (show amount)
-
-  (* Tez UTXO *)
-  type utxo = {destination : Address.t ; amount : t}
-  [@@deriving show]
 end
 

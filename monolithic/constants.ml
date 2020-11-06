@@ -4,63 +4,41 @@ open Tez
 (* ************************************************************************* *)
 (*                               Constants                                   *)
 (* ************************************************************************* *)
-module Constants : sig
-  (** Dimensionless. Factor used for setting the minting limit
-    * (alternatively: f_minting). *)
-  val fplus  : FixedPoint.t
 
-  (** Dimensionless. Factor used for setting the liquidation limit
-    * (alternatively: f_liquidation). *)
-  val fminus : FixedPoint.t
+(** Dimensionless. Factor used for setting the minting limit
+  * (alternatively: f_minting). *)
+let fplus : FixedPoint.t = FixedPoint.of_string "2.1"
 
-  (** Number of tez needed to be given for the creation of a burrow; it does
-    * not count towards the burrow's collateral. *)
-  val creation_deposit : Tez.t
+(** Dimensionless. Factor used for setting the liquidation limit
+  * (alternatively: f_liquidation). *)
+let fminus : FixedPoint.t = FixedPoint.of_string "1.9"
 
-  (** Yearly burrow fee. *)
-  val burrow_fee_percentage : FixedPoint.t
+(** Number of tez needed to be given for the creation of a burrow; it does
+  * not count towards the burrow's collateral. *)
+let creation_deposit : Tez.t = Tez.one
 
-  (** The percentage of the collateral (in tez) to give to the actor initiating
-    * liquidation. TODO: Use cNp. *)
-  val liquidation_reward_percentage : FixedPoint.t
+(** Yearly burrow fee. *)
+let burrow_fee_percentage : FixedPoint.t = FixedPoint.of_string "0.005"
 
-  (** Percentage kept by the uniswap contract from the return asset. TODO: Use cNp. *)
-  val uniswap_fee_percentage : FixedPoint.t
+(** The percentage of a burrow's collateral that we offer to whoever triggers
+  * the burrow's liquidation. *)
+let liquidation_reward_percentage : FixedPoint.t = FixedPoint.of_string "0.001"
 
-  (** Protected index epsilon. The higher this value is, the faster the protected
-    * index catches up with the actual index. *)
-  val protected_index_epsilon : FixedPoint.t
+(** Percentage kept by the uniswap contract from the return asset. TODO: Use cNp. *)
+let uniswap_fee_percentage = FixedPoint.of_string "0.002"
 
-  (** The maximum number of tez that can be in an auction lot. *)
-  val max_lot_size : Tez.t
+(** Protected index epsilon. The higher this value is, the faster the protected
+  * index catches up with the actual index. *)
+let protected_index_epsilon : FixedPoint.t = FixedPoint.of_string "0.0005"
 
-  (** The percentage of additional collateral that we charge when liquidating
-    * a burrow, to penalize it for liquidation. *)
-  val liquidation_penalty_percentage : FixedPoint.t
+(** The maximum number of tez that can be in an auction lot. *)
+let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000
 
-  (** For convenience. The number of seconds in a year, taking into account
-    * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
-  val seconds_in_a_year : int
-end =
-struct
-  let fplus  = FixedPoint.of_string "2.1"
+(** The percentage of additional collateral that we charge when liquidating
+  * a burrow, to penalize it for liquidation. *)
+let liquidation_penalty_percentage : FixedPoint.t = FixedPoint.of_string "0.10"
 
-  let fminus = FixedPoint.of_string "1.9"
-
-  let creation_deposit = Tez.of_string "1.0"
-
-  let burrow_fee_percentage = FixedPoint.of_string "0.005"
-
-  let liquidation_reward_percentage = FixedPoint.of_string "0.001"
-
-  let uniswap_fee_percentage = FixedPoint.of_string "0.002"
-
-  let protected_index_epsilon = FixedPoint.of_string "0.0005"
-
-  let max_lot_size = Tez.of_string "10000"
-
-  let liquidation_penalty_percentage = FixedPoint.of_string "0.10"
-
-  let seconds_in_a_year = 31556952
-end
+(** For convenience. The number of seconds in a year, taking into account
+  * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
+let seconds_in_a_year : int = 31556952
 
