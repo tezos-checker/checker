@@ -135,19 +135,18 @@ struct
   let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     assert (target > FixedPoint.zero);
     FixedPoint.(
-      (* TODO: 0.005 and 0.05 should come from constants.ml *)
       let cnp_001 = cnp (of_string "0.01") in
       let cnp_005 = cnp (of_string "0.05") in
       let secs_in_a_day = of_int Stdlib.(24 * 3600) in
       match () with
       (* No acceleration (0) *)
-      | () when exp (of_string "-0.005") < target && target < exp (of_string "0.005") -> zero
+      | () when exp (neg Constants.target_low_bracket) < target && target < exp Constants.target_low_bracket -> zero
       (* Low acceleration (-/+) *)
-      | () when exp (of_string "-0.05") < target && target <= exp (of_string "-0.005") -> neg (cnp_001 / sqr secs_in_a_day)
-      | () when exp (of_string  "0.05") > target && target >= exp (of_string  "0.005") ->     (cnp_001 / sqr secs_in_a_day)
+      | () when exp (neg Constants.target_high_bracket) < target && target <= exp (neg Constants.target_low_bracket) -> neg (cnp_001 / sqr secs_in_a_day)
+      | () when exp      Constants.target_high_bracket  > target && target >= exp      Constants.target_low_bracket  ->     (cnp_001 / sqr secs_in_a_day)
       (* High acceleration (-/+) *)
-      | () when target <= exp (of_string "-0.05") -> neg (cnp_005 / sqr secs_in_a_day)
-      | () when target >= exp (of_string  "0.05") ->     (cnp_005 / sqr secs_in_a_day)
+      | () when target <= exp (neg Constants.target_high_bracket) -> neg (cnp_005 / sqr secs_in_a_day)
+      | () when target >= exp      Constants.target_high_bracket  ->     (cnp_005 / sqr secs_in_a_day)
       | _ -> failwith "impossible"
     )
 

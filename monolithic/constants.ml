@@ -42,3 +42,9 @@ let liquidation_penalty_percentage : FixedPoint.t = FixedPoint.of_string "0.10"
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
 let seconds_in_a_year : int = 31556952
 
+(** Low bracket used for the calculation of the drift derivative. *)
+let target_low_bracket : FixedPoint.t = FixedPoint.of_string "0.005"
+
+(** High bracket used for the calculation of the drift derivative. *)
+let target_high_bracket : FixedPoint.t = FixedPoint.of_string "0.05"
+
