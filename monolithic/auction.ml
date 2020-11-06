@@ -1,3 +1,93 @@
+(*
+Utku: Lifecycle of liquidation slices.
+
+1. When a 'liquidation_slice' is created from a burrow, it is
+   added to the 'queued_slices' queue. This is backed by an AVL
+   tree.
+
+   Adding something to the tree returns a 'leaf_ptr'.  This needs to
+   be stored in a FIFO queue inside the burrow. This queue needs to have an
+   efficient prepend and append methods.
+
+2. When checker is touched, and there is no existing auction
+   going on, a prefix of the 'queued_slices' is split, and inserted
+   as 'current_auction' alongside with the current timestamp. This
+   process is efficient because of the AVL tree.
+
+   When the prefix returned does not have as much tez as we
+   want, this means that the next liquidation_slice in 'queued_slices'
+   needs to be split. We can do this by popping the first item if exists,
+   which as an invariant has more tez than we need, and splitting
+   it into two slices, appending the first slice to the end of
+   'current_auction', and the second one to back to the front of
+   'queued_slices'.
+
+   While doing this, we also need to pass this information to the
+   burrow. And make sure that it references the new slices rather
+   than the original.
+
+   (NOTE, an idea for efficiently handling splits on burrow side:
+    We can do that by maintaining another 'split_slices' queue
+    storing a FIFO queue of (original_leaf, first_half, second_half) triplets
+    within the burrow. When a burrow is traversing it's liquidation slices,
+    it has to check it against the head of the 'split_slices' queue, and
+    replace it by the split counterparts if it matches.)
+
+   Alternatively, we should store burrows slices within an AVL tree, then
+   we can efficiently replace a slice with two new slices eagerly.
+
+3. Then an auction starts:
+
+   > If there are any lots waiting to be auctioned, Checker starts an open,
+   > ascending bid auction. There is a reserve price set at tz_t which declines
+   > exponentially over time as long as no bid as been placed. Once a bid
+   > is placed, the auction continues. Every bid needs to improve over the
+   > previous bid by at least 0.33 cNp and adds the longer of 20 blocks or
+   > 20 minutes, to the time before the auction expires.
+
+   TODO: Figure out how a `bid` should be represented as.
+
+   Every bid here is either ends as a 'leading_bid' in 'current_auction', or in
+   'unclaimed_bids' set when overbid.
+
+   At any time, the owner of a bid can claim an bid if it is in 'unclaimed_bid'
+   set. If it is, it is removed and the amount of kit is given back.
+
+   When an auction expires, the current auction is both moved to 'completed_auctions'
+   FIFO queue, and to another map from tree_ptr to auction_outcome called `outcomes`.
+
+4. When a burrow is touched, it checks if the head of its slices belongs to
+   a completed auction or not. This can be checked via the 'find_root'
+   function of AVL trees. If we end up in 'queued_slices' or 'curent_auction',
+   it is not complete, if not, it means that we're in 'completed_auctions'.
+
+   If the slice is completed, then the burrows outstanding kit balance is
+   adjusted (FIXME, clarify, quite a bit of stuff to do on burrow side,
+   but AFAIK they are already implemented) and the leaf is deleted from
+   the tree.
+
+   If the deletion causes the tree to become empty, then the tree is popped from
+   `outcomes` map, and the leading bid is moved to `unclaimed_bid` set.
+
+5. When checker is touched, it fetches the oldest auction from `completed_auctions`
+   queue, and processes a few of oldest liquidations via touching their burrows. This
+   is to clean-up the slices that haven't been claimed for some reason.
+
+NOTE: !!! Below code does not yet completely reflect the above process.
+
+Notes on data structures:
+
+* When we need a queue we can prepend and append, we can simply use a
+((int, 't) bigmap, int, int) triplet, where the bigmap contains consecutive
+integer keys, and we also store the bounds of the keys of the map. Prepending
+and appending (and maybe updating) can be done efficiently.
+
+* If we use an AVL tree as a queue, then we also have the ability to delete or
+insert elements in the middle. However, this requires us to write our AVL tree
+more generically, and also much slower than the above method. So I don't think
+we should do this.
+*)
+
 open Kit
 open Tez
 open Avl
@@ -16,7 +106,7 @@ type liquidation_slice = {
 
 type auction_start = { block_number: block_number; time: time }
 
-type bid = { address: Address.t; kit_utxo: Kit.utxo }
+type bid = { address: Address.t; kit: Kit.t }
 
 type auction_id = unit
 type bid_token = { auction_id: auction_id; bid: bid }
@@ -83,7 +173,7 @@ let liquidation_outcome
     | Some outcome ->
       let (slice, _) = read_leaf auctions.storage leaf_ptr in
       let kit = Kit.of_fp FixedPoint.FixedPoint.(
-        (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit_utxo.amount)
+        (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit)
           / (Tez.to_fp outcome.sold_tez)) in
 
       (* Now we delete the slice from the lot, so it can not be
