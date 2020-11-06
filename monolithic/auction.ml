@@ -193,7 +193,7 @@ let start_auction_if_possible
   match auctions.current_auction with
     | Some _ -> auctions
     | None ->
-      (* TODO: The lot size will be decided by the queue size.
+      (* TODO: The maximum lot size will be decided by the queue size.
        * It should be the greater of 1,000 tez or 5% of the total amount
        * in the auction queue. This is to avoid the auction queue being
        * too slow to liquidate if there’s a lot of tez to auction.
