@@ -45,6 +45,10 @@ module Uniswap : sig
   (** Check whether the uniswap contract contains at least some kit and some tez. *)
   val uniswap_non_empty : t -> bool
 
+  (** Compute the current price of kit in tez, as estimated using the ratio of
+    * tez and kit currently in the uniswap contract. *)
+  val kit_in_tez : t -> FixedPoint.t (* TODO: Something less lossy here? Maybe Q.t for this *)
+
   (** Sell some kit to the uniswap contract. George: I am unclear as to why we
     * also return a zero amount of kit. Looks like leftovers we need to clean
     * up. *)
@@ -73,6 +77,9 @@ module Uniswap : sig
     * liquidity holders wouldn't want to lose the burrow fees.
   *)
   val sell_liquidity : t -> liquidity -> Tez.t * Kit.t * t
+
+  (** Add accrued burrowing fees to the uniswap contract. TODO: non-negative? *)
+  val add_accrued_kit : t -> Kit.t -> t
 end =
 struct
   type liquidity = int [@@deriving show]
@@ -91,6 +98,8 @@ struct
 
   let uniswap_non_empty (u: t) =
     u.kit > Kit.zero && u.tez > Tez.zero
+
+  let kit_in_tez (uniswap: t) = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit)
 
   let sell_kit (uniswap: t) (kit: Kit.t) : Tez.t * Kit.t * t =
     (* Utku: I think, as long as the contract has non-zero tez and kit this
@@ -128,7 +137,7 @@ struct
     assert (uniswap_non_empty uniswap);
     (* TODO: How to compute things without explicitly calculating the ratio
      * (using division) here? *)
-    let ratio = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
+    let ratio = kit_in_tez uniswap in
     (* There is a chance that the given tez and kit have the wrong ratio,
      * so we liquidate as much as we can and return the leftovers. NOTE:
      * Alternatively, the LP can use the uniswap contract to get the right
@@ -174,4 +183,7 @@ struct
       kit = Kit.(uniswap.kit - kit);
       total_liquidity_tokens = uniswap.total_liquidity_tokens - liquidity } in
     (tez, kit, updated)
+
+  let add_accrued_kit (uniswap: t) (accrual: Kit.t) : t =
+    { uniswap with kit = Kit.(uniswap.kit + accrual) }
 end

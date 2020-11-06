@@ -207,7 +207,6 @@ struct
     let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
     let current_outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp with_burrow_fee * (current_imbalance_index / parameters.imbalance_index)) in
     let current_circulating_kit = Kit.(parameters.circulating_kit + total_accrual_to_uniswap) in
-    (* TODO: Don't forget to actually add total_accrual_to_uniswap to the uniswap contract! *)
     ( total_accrual_to_uniswap
     , {
       index = Tez.(scale one current_index);

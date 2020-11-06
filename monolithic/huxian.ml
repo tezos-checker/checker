@@ -5,6 +5,8 @@ open Parameters
 open Uniswap
 open Tez
 open Kit
+open Timestamp
+open FixedPoint
 
 (* TODO: Things to consider / action items:
  *
@@ -44,7 +46,7 @@ module Checker : sig
     *   external inputs here; the inputs that Parameters.step requires.
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> t
+  val touch : t -> now:Timestamp.t -> index:FixedPoint.t -> t
 
   (** Create and return a new burrow owned by the given owner, containing the
     * given tez as collateral, minus the creation deposit. Fail if the tez is
@@ -95,7 +97,22 @@ struct
     | None -> Address.initial_address
     | Some (a, _) -> Address.next a
 
-  let touch = failwith "Not implemented yet"
+  let touch (state:t) ~(now:Timestamp.t) ~(index:FixedPoint.t) : t =
+    (* TODO: What is the right order in which to do things here? We use the
+     * last observed kit_in_tez price from uniswap to update the parameters,
+     * which return kit to be added to the uniswap contract. Gotta make sure we
+     * do things in the right order here. *)
+    (* 1: Update the system parameters *)
+    let total_accrual_to_uniswap, updated_parameters =
+      Parameters.step now index (Uniswap.kit_in_tez state.uniswap) state.parameters
+    in
+    (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
+    let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+    (* TODO: Add more tasks here *)
+    { state with
+      parameters = updated_parameters;
+      uniswap = updated_uniswap;
+    }
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
