@@ -20,7 +20,8 @@ Utku: Lifecycle of liquidation slices.
    which as an invariant has more tez than we need, and splitting
    it into two slices, appending the first slice to the end of
    'current_auction', and the second one to back to the front of
-   'queued_slices'.
+   'queued_slices'. If there is no more slices, we still start the
+   auction.
 
    While doing this, we also need to pass this information to the
    burrow. And make sure that it references the new slices rather
