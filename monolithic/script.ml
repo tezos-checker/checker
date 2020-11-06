@@ -64,33 +64,7 @@ let burrow_experiment () =
     printf "Liquidatable          : %B\n" (Burrow.is_liquidatable params liquidation_result.burrow_state)
   )
 
-let step_experiment () =
-  let initial_parameters : Parameters.t =
-    { q = FixedPoint.of_string "0.9";
-      index = Tez.of_string "0.36";
-      target = FixedPoint.of_string "1.08";
-      protected_index = Tez.of_string "0.35";
-      drift = FixedPoint.of_string "0.0";
-      drift' = FixedPoint.of_string "0.0";
-      burrow_fee_index = FixedPoint.of_string "1.0";
-      imbalance_index = FixedPoint.of_string "1.0";
-      outstanding_kit = Kit.one; (* TODO: What should that be? *)
-      circulating_kit = Kit.zero; (* TODO: What should that be? *)
-      last_touched = Timestamp.of_seconds 0;
-    } in
-  let current_time = Timestamp.of_seconds 3600 in
-  let new_index = FixedPoint.of_string "0.34" in
-  let tez_per_kit = FixedPoint.of_string "0.305" in
-  let total_accrual_to_uniswap, new_parameters = Parameters.step current_time new_index tez_per_kit initial_parameters in
-  printf "\n=== Initial checker parameters ===\n";
-  print_string @@ Parameters.show initial_parameters;
-  printf "\n=== New checker parameters ===\n";
-  print_string @@ Parameters.show new_parameters;
-  printf "\n=== Total accrual to uniswap ===\n";
-  print_string @@ Kit.show total_accrual_to_uniswap
-
 let () =
-  (* burrow_experiment (); *)
-  (* step_experiment (); *)
+  burrow_experiment ();
   printf "\ndone.\n"
 
