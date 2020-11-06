@@ -17,7 +17,7 @@ module Burrow : sig
        * creation deposit has been paid, the burrow is considered "active" and
        * "closed"/inactive otherwise. Paying the creation deposit re-activates
        * a "closed" burrow. *)
-      has_creation_deposit : bool;
+      active : bool;
       (* The owner of the burrow. Set once during creation. *)
       owner : Address.t;
       delegate : Address.t option;
@@ -114,7 +114,7 @@ module Burrow : sig
   val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
 end = struct
   type t =
-    { has_creation_deposit : bool;
+    { active : bool;
       owner : Address.t;
       delegate : Address.t option;
       collateral : Tez.t;
@@ -159,7 +159,7 @@ end = struct
     if tez < Constants.creation_deposit
     then Error (InsufficientFunds tez)
     else Ok
-        { has_creation_deposit = true;
+        { active = true;
           owner = address;
           delegate = None;
           collateral = Tez.(tez - Constants.creation_deposit);

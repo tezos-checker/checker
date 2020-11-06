@@ -5,14 +5,14 @@ George's operational interpretation of the burrow state and operations on it.
 
 ## State
 
-* `outstanding`: the amount of kit that is outstanding from the burrow. This **does not** take into account kit we expect to receive (to burn) from pending auctions. However, `outstanding` does increase over time, since the burrowing fee and the adjustment fee are added to it. So, effectively, before doing anything else with a burrow, we update its state ("touch" it, see below).
+* `outstanding_kit`: the amount of kit that is outstanding from the burrow. This **does not** take into account kit we expect to receive (to burn) from pending auctions. However, `outstanding_kit` does increase over time, since the burrowing fee and the adjustment fee are added to it. So, effectively, before doing anything else with a burrow, we update its state ("touch" it, see below).
 * `collateral`: the amount of tez stored in the burrow. Collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever.
 * `collateral_at_auction`: the total amount of tez that has been sent to auctions from this burrow, to be sold for kit.
 
 Additional fields:
 * `timestamp`: the last time the burrow was touched.
 * `adjustment_index`: the last observed adjustment index (at time `timestamp`).
-* `has_creation_deposit`: whether the burrow is supported by a creation deposit. If not, it's considered "inactive".
+* `active`: whether the burrow is supported by a creation deposit. If not, it's considered "inactive".
 
 ## Touching
 
@@ -25,16 +25,10 @@ First thing to do before considering any of the things below is to update the st
   ```
   new_outstanding = old_outstanding * (new_adjustment_index / old_adjustment_index)
   ```
-**TODO** Take into account the time difference between touches.
+
+Note that if the current timestamp is identical to that stored in the burrow, we do not perform either of the above.
 
 So, for the remainder, let's assume that the burrow has been touched, and its current state is up-to-date.
-
-Q1: When the burrow is touched and we must update its outstanding kit, do we compute the burrowing fee and the imbalance fee on `outstanding_kit` or on `outstanding_kit - repaid_kit`?
-```
-new_outstanding = old_outstanding * (new_adjustment_index / old_adjustment_index)
-new_outstanding = (old_outstanding - repaid_kit) * (new_adjustment_index / old_adjustment_index)
-```
-I assume the first of the two but better ask.
 
 ## Is a burrow collateralized (i.e. not overburrowed)
 
@@ -44,7 +38,7 @@ collateral >= outstanding * fminting * current_minting_price      (1)
 ```
 `collateral` here refers to the amount of tez stored in the burrow (collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever).
 
-`outstanding` here refers to the accrued amount of kit that is outstanding from the burrow (kit we expect to receive from pending auctions **is not** considered burned here, but still outstanding).
+`outstanding_kit` here refers to the accrued amount of kit that is outstanding from the burrow (kit we expect to receive from pending auctions **is not** considered burned here, but still outstanding).
 
 ## Is a burrow not a candidate for liquidation
 The burrow cannot be marked for liquidation if the following holds:
@@ -53,7 +47,7 @@ collateral >= optimistic_outstanding * fliquidation * liquidation_price      (2)
 ```
 `collateral` here refers to the amount of tez stored in the burrow (collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever).
 
-`outstanding` here refers to the accrued amount of kit that is outstanding from the burrow. In this case we optimistically **do take into account** kit we expect to receive from pending auctions at the `current_minting_price`. That is
+`outstanding_kit` here refers to the accrued amount of kit that is outstanding from the burrow. In this case we optimistically **do take into account** kit we expect to receive from pending auctions at the `current_minting_price`. That is
 ```
 optimistic_outstanding = outstanding - (collateral_at_auction / current_minting_price)
 ```
@@ -80,7 +74,7 @@ liquidation_reward = creation_deposit + (collateral * liquidation_reward_percent
 ```
 That is, before we compute anything else, we leave the burrow with less collateral and without a creation deposit:
 ```
-has_creation_deposit = false
+active               = false
 collateral           = collateral - (collateral * liquidation_reward_percentage)
 ```
 Now, depending on how much collateral remains, we have the following cases:
@@ -90,7 +84,7 @@ We cannot replenish the creation deposit.
 * We send all the remaining collateral to be auctioned off for kit
 * We reset and "deactivate" the burrow:
   ```
-  has_creation_deposit  = false
+  active                = false
   collateral            = 0
   outstanding           = 0
   collateral_at_auction = 0
@@ -121,7 +115,7 @@ repaid_kit     = tez_to_auction / current_minting_price
 
 * If `optimistic_outstanding * fminting * current_minting_price < collateral` then restoration is impossible: liquidate the entire remaining collateral:
   ```
-  has_creation_deposit  = true
+  active                = true
   collateral            = 0
   collateral_at_auction = collateral_at_auction + collateral
   ```
@@ -131,13 +125,13 @@ repaid_kit     = tez_to_auction / current_minting_price
   ```
   If this means that `tez_to_auction > collateral` then, again, liquidate the entire remaining collateral:
   ```
-  has_creation_deposit  = true
+  active                = true
   collateral            = 0
   collateral_at_auction = collateral_at_auction + collateral
   ```
 * Otherwise auction off exactly `tez_to_auction`:
   ```
-  has_creation_deposit  = true
+  active                = true
   collateral            = collateral - tez_to_auction
   collateral_at_auction = collateral_at_auction + tez_to_auction
   ```

@@ -16,7 +16,12 @@ module Address : sig
 end =
 struct
   type t = int
-  [@@deriving show]
+
+  let show address =
+    Format.sprintf "tz_%d" address
+
+  let pp ppf address =
+    Format.fprintf ppf "%s" (show address)
 
   let initial_address = 0
   let next = succ

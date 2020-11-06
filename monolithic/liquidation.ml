@@ -73,7 +73,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
     let expected_kit = Burrow.compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
-        has_creation_deposit = false;
+        active = false;
         collateral = Tez.zero;
         outstanding_kit = Kit.zero;
       } in
