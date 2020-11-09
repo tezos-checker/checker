@@ -76,6 +76,7 @@ module Burrow : sig
     * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
     * - Update the last observed adjustment index
     * - Update the last observed timestamp.
+    * - Rebalance outstanding_kit/excess_kit
     * - NOTE: Are there any other tasks to put in this list?
   *)
   val touch : Parameters.t -> t -> t
@@ -156,13 +157,17 @@ end = struct
 
   (* Update the outstanding kit (and excess_kit), update the adjustment index, and the timestamp *)
   let touch (p: Parameters.t) (burrow: t) : t =
-    let b = rebalance_kit burrow in
-    { b with
-      (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
-      outstanding_kit = Kit.scale Kit.one FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
-      adjustment_index = Parameters.compute_adjustment_index p;
-      last_touched = p.last_touched;
-    }
+    if p.last_touched = burrow.last_touched
+    then
+      burrow
+    else
+      let b = rebalance_kit burrow in
+      { b with
+        (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
+        outstanding_kit = Kit.scale Kit.one FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
+        adjustment_index = Parameters.compute_adjustment_index p;
+        last_touched = p.last_touched;
+      }
 
   let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
     if tez < Constants.creation_deposit
