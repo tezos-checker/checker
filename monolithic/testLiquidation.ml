@@ -53,6 +53,7 @@ let initial_burrow : Burrow.t =
     active = true;
     collateral = Tez.of_mutez 10_000_000;
     outstanding_kit = Kit.of_string "20.0";
+    excess_kit = Kit.zero;
     adjustment_index = Parameters.compute_adjustment_index params;
     collateral_at_auction = Tez.zero;
     last_touched = Timestamp.of_seconds 0;
@@ -75,6 +76,7 @@ let suite =
         assert_equal { burrow with
                        collateral = Tez.of_mutez 2_633_201;
                        outstanding_kit = Kit.of_string "20";
+                       excess_kit = Kit.zero;
                        collateral_at_auction = Tez.of_mutez 6_356_799; }
           new_burrow ~printer:Burrow.show;
 
@@ -90,7 +92,8 @@ let suite =
     ("unwarranted liquidation test" >:: fun _ ->
         let burrow = { initial_burrow with
                        collateral = Tez.of_mutez 10_000_000;
-                       outstanding_kit = Kit.of_string "10" } in
+                       outstanding_kit = Kit.of_string "10";
+                       excess_kit = Kit.zero; } in
 
         assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
         assert_bool "is optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
@@ -108,7 +111,8 @@ let suite =
     ("complete liquidation test" >:: fun _ ->
         let burrow = { initial_burrow with
                        collateral = Tez.of_mutez 10_000_000;
-                       outstanding_kit = Kit.of_string "100" } in
+                       outstanding_kit = Kit.of_string "100";
+                       excess_kit = Kit.zero; } in
 
         assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
         assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
@@ -122,6 +126,7 @@ let suite =
         assert_equal { burrow with
                        collateral = Tez.zero;
                        outstanding_kit = Kit.of_string "100";
+                       excess_kit = Kit.zero;
                        collateral_at_auction = Tez.of_mutez 8_990_000; }
           new_burrow ~printer:Burrow.show;
 
@@ -137,7 +142,8 @@ let suite =
     ("complete and close liquidation test" >:: fun _ ->
         let burrow = { initial_burrow with
                        collateral = Tez.of_mutez 1_000_000;
-                       outstanding_kit = Kit.of_string "100" } in
+                       outstanding_kit = Kit.of_string "100";
+                       excess_kit = Kit.zero; } in
 
         assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
         assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
@@ -152,6 +158,7 @@ let suite =
                        active = false;
                        collateral = Tez.zero;
                        outstanding_kit = Kit.zero;
+                       excess_kit = Kit.zero;
                        collateral_at_auction = Tez.zero; }
           new_burrow ~printer:Burrow.show;
 

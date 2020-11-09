@@ -25,6 +25,8 @@ module Burrow : sig
       collateral : Tez.t;
       (* Outstanding kit minted out of the burrow. *)
       outstanding_kit : Kit.t;
+      (* Excess kit returned by auctions. *)
+      excess_kit : Kit.t;
       (* The imbalance adjustment index observed the last time the burrow was
        * touched. *)
       adjustment_index : FixedPoint.t;
@@ -33,12 +35,6 @@ module Burrow : sig
        * outcome of the auctions we expect some kit in return. *)
       collateral_at_auction : Tez.t;
       (* The last time the burrow was touched. *)
-      (* TODO: George: in our past discussions we always assumed that this
-       * field existed, but since we regulate the adjustment index (we actually
-       * factor down the burrow_fee_index and the imbalance_index) to take into
-       * account the time interval, do we actually need this here as well?
-       * Perhaps it could save some gas in cases where the burrow is up-to-date
-       * and we see that no bookkeeping is required. We'll see. *)
       last_touched : Timestamp.t;
     }
 
@@ -100,9 +96,9 @@ module Burrow : sig
     * not overburrow it *)
   val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t, Error.error) result
 
-  (** Deposit/burn a non-negative amount of kit to the burrow. Return any
-    * excess kit balance. *)
-  val burn_kit : Parameters.t -> Kit.t -> t -> t * Kit.t
+  (** Deposit/burn a non-negative amount of kit to the burrow. If there is
+    * excess kit, simply store it into the burrow. *)
+  val burn_kit : Parameters.t -> Kit.t -> t -> t
 
   (** Compute the least number of tez that needs to be auctioned off (given the
     * current expected minting price) so that the burrow can return to a state
@@ -119,6 +115,7 @@ end = struct
       delegate : Address.t option;
       collateral : Tez.t;
       outstanding_kit : Kit.t;
+      excess_kit : Kit.t;
       adjustment_index : FixedPoint.t;
       (* TODO: use this field in some calculations *)
       collateral_at_auction : Tez.t;
@@ -146,8 +143,20 @@ end = struct
   let is_overburrowed (p : Parameters.t) (b : t) : bool =
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.outstanding_kit * Parameters.minting_price p)
 
-  (* Update the outstanding kit, update the adjustment index, and the timestamp *)
-  let touch (p: Parameters.t) (b: t) : t =
+  (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
+    * or b.outstanding_kit is zero. *)
+  let rebalance_kit (b: t) : t =
+    assert (b.outstanding_kit >= Kit.zero);
+    assert (b.excess_kit >= Kit.zero);
+    let kit_to_move = min b.outstanding_kit b.excess_kit in
+    { b with
+      outstanding_kit = Kit.(b.outstanding_kit - kit_to_move);
+      excess_kit = Kit.(b.excess_kit - kit_to_move);
+    }
+
+  (* Update the outstanding kit (and excess_kit), update the adjustment index, and the timestamp *)
+  let touch (p: Parameters.t) (burrow: t) : t =
+    let b = rebalance_kit burrow in
     { b with
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
       outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
@@ -164,6 +173,7 @@ end = struct
           delegate = None;
           collateral = Tez.(tez - Constants.creation_deposit);
           outstanding_kit = Kit.zero;
+          excess_kit = Kit.zero;
           adjustment_index = Parameters.compute_adjustment_index p;
           collateral_at_auction = Tez.zero;
           last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
@@ -195,15 +205,17 @@ end = struct
     then Error MintKitFailure
     else Ok (new_burrow, kit)
 
-  (** Deposit/burn a non-negative amount of kit to the burrow. Return any
-    * excess kit balance. *)
-  let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t * Kit.t =
+  (** Deposit/burn a non-negative amount of kit to the burrow. If there is
+    * excess kit, simply store it into the burrow. *)
+  let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t =
     assert (k >= Kit.zero);
     let b = touch p burrow in
     let kit_to_burn = min b.outstanding_kit k in
-    let kit_to_return = Kit.(k - kit_to_burn) in
-    let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit - kit_to_burn) } in
-    (new_burrow, kit_to_return)
+    let kit_to_store = Kit.(k - kit_to_burn) in
+    { b with
+      outstanding_kit = Kit.(b.outstanding_kit - kit_to_burn);
+      excess_kit = Kit.(b.excess_kit + kit_to_store);
+    }
 
   (* ************************************************************************* *)
   (**                          LIQUIDATION-RELATED                             *)

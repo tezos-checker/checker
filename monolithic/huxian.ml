@@ -73,12 +73,12 @@ module Checker : sig
     * NOTE: Call Burrow.touch too. *)
   val mint_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (Kit.t * t, Error.error) result
 
-  (** Deposit/burn a non-negative amount of kit in the burrow; return any
-    * excess kit balance. Fail if the burrow owner does not match, or if the
-    * burrow does not exist.
+  (** Deposit/burn a non-negative amount of kit to a burrow. If there is
+    * excess kit, simply store it into the burrow. Fail if the burrow owner
+    * does not match, or if the burrow does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val burn_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (Kit.t * t, Error.error) result
+  val burn_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (t, Error.error) result
 end =
 struct
   type t =
@@ -169,15 +169,13 @@ struct
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when burrow.owner = owner ->
-        let updated_burrow, unburnt = Burrow.burn_kit state.parameters amount burrow in
+        let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
         (* TODO: What should happen if the following is violated? *)
-        assert Kit.(state.parameters.circulating_kit >= amount - unburnt);
-        Ok ( unburnt,
-             {state with
-                burrows = AddressMap.add address updated_burrow state.burrows;
-                parameters = {state.parameters with circulating_kit = Kit.(state.parameters.circulating_kit + amount - unburnt)};
-             }
-           )
+        assert (state.parameters.circulating_kit >= amount);
+        Ok {state with
+              burrows = AddressMap.add address updated_burrow state.burrows;
+              parameters = {state.parameters with circulating_kit = Kit.(state.parameters.circulating_kit - amount)};
+           }
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
     | None -> Error (NonExistentBurrow address)
 end
