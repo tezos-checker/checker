@@ -11,13 +11,6 @@
  (preprocess
   (pps ppx_deriving.std)))
 
-(executable
- (name script)
- (modules Script)
- (libraries huxian)
- (preprocess
-  (pps ppx_deriving.std)))
-
 (test
  (name tests)
  (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation TestUniswap)

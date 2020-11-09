@@ -1,8 +1,5 @@
 all: tests
 
-run:
-	dune exec ./script.exe
-
 tests:
 	dune runtest .
 
