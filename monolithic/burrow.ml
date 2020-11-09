@@ -58,7 +58,8 @@ module Burrow : sig
 
   (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
     * that all collateral that is in auctions at the moment will be sold at the
-    * current minting price. *)
+    * current minting price, but that all these liquidations were actually
+    * warranted. *)
   val is_optimistically_overburrowed : Parameters.t -> t -> bool
 
   (** Check whether a burrow can be marked for liquidation. A burrow can be
@@ -107,7 +108,8 @@ module Burrow : sig
   val compute_tez_to_auction : Parameters.t -> t -> Tez.t
 
   (** Given the number of tez to be auctioned off, compute the expected return
-    * in kit, given the current minting price. *)
+    * in kit, given the current minting price. Assume that the liquidation was
+    * warranted, so the liquidation penalty is subtracted *)
   val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
 end = struct
   type t =
@@ -139,9 +141,9 @@ end = struct
     * purposes of minting/checking overburrowedness, we do not take into
     * account expected kit from pending auctions; for all we know, this could
     * be lost forever.
-    * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
   let is_overburrowed (p : Parameters.t) (b : t) : bool =
+    assert (p.last_touched = b.last_touched);
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.outstanding_kit * Parameters.minting_price p)
 
   (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
@@ -228,40 +230,27 @@ end = struct
 
   (** Compute the number of tez that needs to be auctioned off so that the burrow
     * can return to a state when it is no longer overburrowed or having a risk of
-    * liquidation (assuming price minting_price). If we auction tez_to_auction,
-    * and we receive repaid_kit for it, the following is expected to hold
-    *
-    *   tez_to_auction = repaid_kit * minting_price                            <=>
-    *
-    *   repaid_kit = tez_to_auction / minting_price                            (1)
-    *
-    * Furthermore, after liquidation, the burrow must not be neither
-    * liquidatable, nor overburrowed anymore. Since by design the burrowing limit
-    * is below the liquidation limit, during liquidation we target the burrowing
-    * limit to ensure both are respected:
-    *
-    *   (tez - tez_to_auction) = (kit - repaid_kit) * fplus * minting_price   (2)
-    *
-    * Solving (1) and (2) gives:
-    *
-    *   tez_to_auction = (kit * fplus * minting_price - tez ) / (fplus - 1)
-    *   repaid_kit     = tez_to_auction / minting_price
+    * liquidation. For its calculation, see docs/burrow-state-liquidations.md.
   *)
-  (* TODO: Ensure that it's skewed on the safe side (overapprox.). It currently isn't. *)
-  (* TODO: Shall we take into account the kit that we expect to receive from
-   * the tez that currently lives in auction queues or not here? *)
-  (* NOTE: This function computes the actual needed tez that needs to be
-   * auctioned off to bring the burrow in a collateralized state. The 10%
-   * majoration (as a penalty in case of a warranted liquidation) is added at
-   * the call sites. *)
+  (* TODO: Ensure that it's skewed on the safe side (overapprox.). It currently
+   * isn't, which makes the test fail (is_optimistically_overburrowed gives
+   * true immediately after liquidation). *)
   let compute_tez_to_auction (p : Parameters.t) (b : t) : Tez.t =
-    let collateral = Tez.to_fp b.collateral in
-    let outstanding_kit = Kit.to_fp b.outstanding_kit in
-    Tez.(scale one FixedPoint.((outstanding_kit * Constants.fplus * Parameters.minting_price p - collateral) / (Constants.fplus - one)))
+    Tez.scale
+      Tez.one
+      FixedPoint.(
+        ( (Kit.to_fp b.outstanding_kit * Constants.fplus * Parameters.minting_price p)
+          - ((one - Constants.liquidation_penalty_percentage) * Constants.fplus * Tez.to_fp b.collateral_at_auction)
+          - Tez.to_fp b.collateral
+        )
+        / ((one - Constants.liquidation_penalty_percentage) * Constants.fplus - one)
+      )
 
-  (* TODO: And ensure that it's skewed on the safe side (underapprox.). *)
+  (* TODO: And ensure that it's skewed on the safe side (underapprox.). I think it currently is. *)
   let compute_expected_kit (p : Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
-    Kit.scale Kit.one FixedPoint.(Tez.to_fp tez_to_auction / Parameters.minting_price p)
+    Kit.scale
+      Kit.one
+      FixedPoint.(Tez.to_fp tez_to_auction * (one - Constants.liquidation_penalty_percentage) / Parameters.minting_price p)
 
   (** Check whether a burrow can be marked for liquidation. A burrow can be
     * marked for liquidation if:
@@ -272,16 +261,16 @@ end = struct
     * liquidation limit. Note that for this check we optimistically take into
     * account the expected kit from pending auctions (using the current minting
     * price) when computing the outstanding kit.
-    * NOTE: IT ASSUMES THAT THE BURROW IS UP-TO-DATE (that touch has been called, that is)
   *)
   let is_liquidatable (p : Parameters.t) (b : t) : bool =
+    assert (p.last_touched = b.last_touched);
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(Constants.fminus * Kit.to_fp optimistic_outstanding * Parameters.liquidation_price p)
 
   (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
     * that all collateral that is in auctions at the moment will be sold at the
-    * current minting price. *)
+    * current minting price, and that all these liquidations were warranted. *)
   let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in

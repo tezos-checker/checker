@@ -6,6 +6,7 @@ George's operational interpretation of the burrow state and operations on it.
 ## State
 
 * `outstanding_kit`: the amount of kit that is outstanding from the burrow. This **does not** take into account kit we expect to receive (to burn) from pending auctions. However, `outstanding_kit` does increase over time, since the burrowing fee and the adjustment fee are added to it. So, effectively, before doing anything else with a burrow, we update its state ("touch" it, see below).
+* `excess_kit`: additional kit stored in the burrow.
 * `collateral`: the amount of tez stored in the burrow. Collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever.
 * `collateral_at_auction`: the total amount of tez that has been sent to auctions from this burrow, to be sold for kit.
 
@@ -21,12 +22,17 @@ First thing to do before considering any of the things below is to update the st
   ```
   new_timestamp   = now()
   ```
+* Re-balance `outstanding_kit` and `excess_kit`: either `outstanding_kit` or `excess_kit` is zero
+  ```
+  new_outstanding_kit = old_outstanding_kit - min old_outstanding_kit old_excess_kit
+  new_excess_kit      = old_excess_kit      - min old_outstanding_kit old_excess_kit
+  ```
 * To add accrued burrow and adjustment fee to its outstanding kit
   ```
   new_outstanding = old_outstanding * (new_adjustment_index / old_adjustment_index)
   ```
 
-Note that if the current timestamp is identical to that stored in the burrow, we do not perform either of the above.
+Note that if the current timestamp is identical to that stored in the burrow, we do not perform any of the above.
 
 So, for the remainder, let's assume that the burrow has been touched, and its current state is up-to-date.
 
@@ -47,18 +53,44 @@ collateral >= optimistic_outstanding * fliquidation * liquidation_price      (2)
 ```
 `collateral` here refers to the amount of tez stored in the burrow (collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever).
 
-`outstanding_kit` here refers to the accrued amount of kit that is outstanding from the burrow. In this case we optimistically **do take into account** kit we expect to receive from pending auctions at the `current_minting_price`. That is
+`outstanding_kit` here refers to the accrued amount of kit that is outstanding from the burrow. In this case we optimistically **do take into account** kit we expect to receive from pending auctions at the `current_minting_price`, but pessimistically assume that these pending auctions are warranted (so we lose the liquidation penalty). That is
 ```
-optimistic_outstanding = outstanding - (collateral_at_auction / current_minting_price)
+optimistic_outstanding = outstanding - (1 - liquidation_penalty) * (collateral_at_auction / current_minting_price)
 ```
-
-Q2: Is the above calculation correct? It assumes that the liquidation was not warranted (see below), and we will thus receive all the kit that corresponds to the collateral we have sent to auctions. Is that OK or should we compute
-```
-optimistic_outstanding = outstanding - (90% * collateral_at_auction / current_minting_price)
-```
-instead, assuming that the liquidation **is** warranted?
 
 ## How much collateral should we liquidate
+
+In general, in order to calculate how much should we auction off we assume that a) this auction is warranted, b) all pending auctions are also warranted, c) the price we'll get for everything is `current_minting_price`. a) and b) effectively mean that we can only expect `(1 - liquidation_penalty)` returns from all auctions considered. Formally:
+
+* First, from auctioning we expect to get the current `minting_price`, so, if we send `tez_to_auction` and `repaid_kit` is received, we have
+  ```
+  tez_to_auction = repaid_kit * minting_price                   <=>
+  repaid_kit = tez_to_auction / minting_price                   (3)
+  ```
+* Second, we assume that the auction is warranted (so we lose the liquidation penalty), thus
+  ```
+  actual_repaid_kit = repaid_kit * (1 - liquidation_penalty)    (4)
+  ```
+* Third, we consider all pending auctions to be successful, using the current `minting_price`, but also warranted:
+  ```
+  optimistic_outstanding = outstanding_kit - (1 - liquidation_penalty) * (collateral_at_auction / minting_price)       (5)
+  ```
+* Fourth, under the above conditions we aim to bring the burrow into a state where it's not oveburrowed anymore, thus
+  ```
+  collateral - tez_to_auction >= (optimistic_outstanding - actual_repaid_kit) * fminting * minting_price    (6)
+  ```
+
+Solving `(3)`, `(4)`, `(5)`, and `(6)` the above gives us `(7)`:
+```
+tez_to_auction >=
+  ( outstanding_kit * fminting * minting_price
+  - (1 - liquidation_penalty) * fminting * collateral_at_auction
+  - collateral
+  )
+  /
+  ((1 - liquidation_penalty) * fminting - 1)
+```
+if `((1 - liquidation_penalty) * fminting - 1) > 0`.
 
 Say the burrow has been touched and all its parameters are up to date. Concerning liquidation, we have the following cases:
 
@@ -90,7 +122,7 @@ We cannot replenish the creation deposit.
   collateral_at_auction = 0
   ```
 
-**NOTE**: I assume that the system shall burn the kit it receives from selling the tez right away.
+**NOTE**: I assume that the system shall burn the kit it receives from selling the tez right away. **TODO**: That's not necessarily correct, see discussion here: https://github.com/tzConnectBerlin/huxian/pull/10/files/5b6e4a6d47e42a6994c4b0daf03c793082b25e2a#r518695279.
 
 #### Case 2B: `collateral >= creation_deposit`
 We can replenish the creation deposit, and this is the first thing we do:
@@ -98,32 +130,19 @@ We can replenish the creation deposit, and this is the first thing we do:
 collateral = collateral - creation_deposit
 ```
 
-Now all that remains is to compute what should we auction off to bring the burrow to a state where _"any outstanding kits could have just been minted"_, assuming that all tez in auctions will optimistically be sold for `current_minting_price`:
+Now all that remains is to compute what should we auction off to bring the burrow to a state where _"any outstanding kits could have just been minted"_. For that, we use the `(7)`:
 ```
-optimistic_outstanding = outstanding - (collateral_at_auction / current_minting_price)
+tez_to_auction = ceil (
+  ( outstanding_kit * fminting * minting_price
+  - (1 - liquidation_penalty) * fminting * collateral_at_auction
+  - collateral
+  )
+  /
+  ((1 - liquidation_penalty) * fminting - 1)
+)
 ```
-Using (1) from earlier, we basically require the following to hold between `tez_to_auction` and `repaid_kit`:
-```
-tez_to_auction = repaid_kit * current_minting_price
-collateral - tez_to_auction = (optimistic_outstanding - expected_kit) * fminting * current_minting_price
-```
-which, once solved, gives:
-```
-tez_to_auction = (optimistic_outstanding * fminting * current_minting_price - collateral) / (fminting - 1)
-repaid_kit     = tez_to_auction / current_minting_price
-```
+* If `tez_to_auction < 0` or `tez_to_auction > collateral`, then restoration is impossible: liquidate the entire remaining collateral:
 
-* If `optimistic_outstanding * fminting * current_minting_price < collateral` then restoration is impossible: liquidate the entire remaining collateral:
-  ```
-  active                = true
-  collateral            = 0
-  collateral_at_auction = collateral_at_auction + collateral
-  ```
-* If `optimistic_outstanding * fminting * current_minting_price >= collateral` then add a penalty of 10% to `tez_to_auction`:
-  ```
-  tez_to_auction = tez_to_auction * (1 + punishment)
-  ```
-  If this means that `tez_to_auction > collateral` then, again, liquidate the entire remaining collateral:
   ```
   active                = true
   collateral            = 0
@@ -184,5 +203,5 @@ tez_to_auction * kit_i >= min_received_kit_for_unwarranted * tez_i
 * I have replaced `fplus` with `fminting` and `fminus` with `fliquidation`; I think they are more descriptive.
 * `fminting > fliquidation`
 * `minting_price >= liquidation_price`
-* `punishment = 10%`
+* `liquidation_penalty = 10%`
 
