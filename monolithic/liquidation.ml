@@ -32,7 +32,7 @@ let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (te
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
   let expected_kit = Burrow.compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
-  Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction * (Constants.fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
+  Kit.scale Kit.one FixedPoint.(Tez.to_fp tez_to_auction * (Constants.fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
 
 (** Compute whether the liquidation of an auction slice was (retroactively)
   * unwarranted or not. *)

@@ -173,7 +173,7 @@ let liquidation_outcome
     | None -> None (* slice does not correspond to a completed auction *)
     | Some outcome ->
       let (slice, _) = read_leaf auctions.storage leaf_ptr in
-      let kit = Kit.of_fp FixedPoint.FixedPoint.(
+      let kit = Kit.scale Kit.one FixedPoint.FixedPoint.(
         (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit)
           / (Tez.to_fp outcome.sold_tez)) in
 

@@ -159,7 +159,7 @@ end = struct
     let b = rebalance_kit burrow in
     { b with
       (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
-      outstanding_kit = Kit.of_fp FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
+      outstanding_kit = Kit.scale Kit.one FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
       adjustment_index = Parameters.compute_adjustment_index p;
       last_touched = p.last_touched;
     }
@@ -256,7 +256,7 @@ end = struct
 
   (* TODO: And ensure that it's skewed on the safe side (underapprox.). *)
   let compute_expected_kit (p : Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
-    Kit.of_fp FixedPoint.(Tez.to_fp tez_to_auction / Parameters.minting_price p)
+    Kit.scale Kit.one FixedPoint.(Tez.to_fp tez_to_auction / Parameters.minting_price p)
 
   (** Check whether a burrow can be marked for liquidation. A burrow can be
     * marked for liquidation if:

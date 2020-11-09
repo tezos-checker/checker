@@ -148,7 +148,7 @@ struct
         if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
         then (Tez.scale Tez.one (Kit.to_fp kit * ratio), kit)
         else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
-        then (tez, Kit.of_fp (Tez.to_fp tez / ratio))
+        then (tez, Kit.scale Kit.one (Tez.to_fp tez / ratio))
         else (tez, kit) ) in
     let liquidity =
       if uniswap.total_liquidity_tokens = 0
