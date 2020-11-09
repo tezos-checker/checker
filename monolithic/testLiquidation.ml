@@ -157,14 +157,12 @@ let suite =
         assert_equal { burrow with
                        active = false;
                        collateral = Tez.zero;
-                       outstanding_kit = Kit.zero;
-                       excess_kit = Kit.zero;
-                       collateral_at_auction = Tez.zero; }
+                       collateral_at_auction = Tez.of_mutez 999_000; }
           new_burrow ~printer:Burrow.show;
 
         (* TODO: reward exceeds initial collateral in burrow - is that right? *)
         assert_equal Tez.(Constants.creation_deposit + Tez.of_mutez 1000)  liquidation_result.liquidation_reward ~printer:Tez.show;
-        assert_bool "not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params new_burrow));
-        assert_bool "not liquidatable" (not (Burrow.is_liquidatable params new_burrow));
-        assert_bool "not overburrowed" (not (Burrow.is_overburrowed params new_burrow)));
+        assert_bool "optimistically overburrowed" (Burrow.is_optimistically_overburrowed params new_burrow);
+        assert_bool "liquidatable" (Burrow.is_liquidatable params new_burrow);
+        assert_bool "overburrowed" (Burrow.is_overburrowed params new_burrow));
   ]

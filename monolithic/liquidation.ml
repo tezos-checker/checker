@@ -73,7 +73,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
       { b with
         active = false;
         collateral = Tez.zero;
-        outstanding_kit = Kit.zero;
+        collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
       } in
     { outcome = Close;
       liquidation_reward = liquidation_reward;

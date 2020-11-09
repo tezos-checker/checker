@@ -114,15 +114,14 @@ Now, depending on how much collateral remains, we have the following cases:
 #### Case 2A: `collateral < creation_deposit`
 We cannot replenish the creation deposit.
 * We send all the remaining collateral to be auctioned off for kit
-* We reset and "deactivate" the burrow:
+* We deactivate the burrow:
   ```
   active                = false
   collateral            = 0
-  outstanding           = 0
-  collateral_at_auction = 0
+  collateral_at_auction = collateral_at_auction + tez_to_auction
   ```
 
-**NOTE**: I assume that the system shall burn the kit it receives from selling the tez right away. **TODO**: That's not necessarily correct, see discussion here: https://github.com/tzConnectBerlin/huxian/pull/10/files/5b6e4a6d47e42a6994c4b0daf03c793082b25e2a#r518695279.
+**NOTE**: Though we deactivate the burrow, we do not reset everything. It is still possible for owners to deposit more tez (which would go first into refilling the creation deposit), or claim slices that have been sent off to auctions. If the burrow reaches a state where it is deactivated _**and**_ there is no more collateral left in auctions, then (when the last slice is collected) we simply reset `outstanding_kit` to zero.
 
 #### Case 2B: `collateral >= creation_deposit`
 We can replenish the creation deposit, and this is the first thing we do:
