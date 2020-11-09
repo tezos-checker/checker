@@ -33,8 +33,6 @@ If a liquidation was deemed Close:
 * the resulting burrow is zeroed and inactive
 *)
 
-let tez_of_string s = Tez.scale Tez.one (FixedPoint.of_string s)
-
 let params : Parameters.t =
   { q = FixedPoint.of_string "1.015";
     index = Tez.of_mutez 320_000;
@@ -62,39 +60,65 @@ let initial_burrow : Burrow.t =
 
 let suite =
   "LiquidationTests" >::: [
-    "liquidation test" >:: fun _ ->
-      (* OTHER EXAMPLES *)
-      (* Unwarranted liquidation for *)
-      (* let initial_burrow = { minted_kit = Kit.of_float 10.0; collateral = Tez.of_float 10.0; } in *)
-      (* Partial liquidation for *)
-      (* let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in *)
-      (* Complete liquidation (deplete the collateral, but keep the burrow) for *)
-      (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 10.0; } in *)
-      (* Complete liquidation (close the burrow) for *)
-      (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
-      (* DEFAULT *)
-      let burrow = initial_burrow in
+    ("partial liquidation test" >:: fun _ ->
+        (* OTHER EXAMPLES *)
+        (* Unwarranted liquidation for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 10.0; collateral = Tez.of_float 10.0; } in *)
+        (* Partial liquidation for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in *)
+        (* Complete liquidation (deplete the collateral, but keep the burrow) for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 10.0; } in *)
+        (* Complete liquidation (close the burrow) for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
+        (* DEFAULT *)
+        let burrow = initial_burrow in
 
-      assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-      assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-      assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+        assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+        assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+        assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
 
-      let liquidation_result = request_liquidation params burrow in
+        let liquidation_result = request_liquidation params burrow in
 
-      assert_equal Partial liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
+        assert_equal Partial liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
 
-      let new_burrow = liquidation_result.burrow_state in
-      assert_equal { burrow with
-                     collateral = Tez.of_mutez 2_633_201;
-                     outstanding_kit = Kit.of_string "20";
-                     collateral_at_auction = Tez.of_mutez 6_356_799; }
-        new_burrow ~printer:Burrow.show;
-      assert_equal
-        Tez.(new_burrow.collateral + new_burrow.collateral_at_auction + liquidation_result.liquidation_reward)
-        Tez.(burrow.collateral + burrow.collateral_at_auction)
-        ~printer:Tez.show;
-      assert_bool "not now optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params new_burrow));
-      assert_bool "not now liquidatable" (not (Burrow.is_liquidatable params new_burrow));
-      (* FIXME: this seems broken!?  *)
-      assert_bool "still overburrowed" (Burrow.is_overburrowed params new_burrow);
+        let new_burrow = liquidation_result.burrow_state in
+        assert_equal { burrow with
+                       collateral = Tez.of_mutez 2_633_201;
+                       outstanding_kit = Kit.of_string "20";
+                       collateral_at_auction = Tez.of_mutez 6_356_799; }
+          new_burrow ~printer:Burrow.show;
+
+        assert_equal Tez.(Constants.creation_deposit + Tez.of_mutez 10_000) liquidation_result.liquidation_reward ~printer:Tez.show;
+        assert_equal
+          Tez.(new_burrow.collateral + new_burrow.collateral_at_auction + liquidation_result.liquidation_reward)
+          Tez.(burrow.collateral + burrow.collateral_at_auction)
+          ~printer:Tez.show;
+        assert_bool "not now optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params new_burrow));
+        assert_bool "not now liquidatable" (not (Burrow.is_liquidatable params new_burrow));
+        assert_bool "still overburrowed" (Burrow.is_overburrowed params new_burrow));
+
+    ("unwarranted liquidation test" >:: fun _ ->
+        (* Partial liquidation for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 20.0; collateral = Tez.of_float 10.0; } in *)
+        (* Complete liquidation (deplete the collateral, but keep the burrow) for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 10.0; } in *)
+        (* Complete liquidation (close the burrow) for *)
+        (* let initial_burrow = { minted_kit = Kit.of_float 100.0; collateral = Tez.of_float 1.001; } in *)
+        (* DEFAULT *)
+        let burrow = { initial_burrow with
+                       collateral = Tez.of_mutez 10_000_000;
+                       outstanding_kit = Kit.of_string "10" } in
+
+        assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
+        assert_bool "is optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
+        assert_bool "is liquidatable" (not (Burrow.is_liquidatable params burrow));
+
+        let liquidation_result = request_liquidation params burrow in
+
+        assert_equal Unnecessary liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
+
+        let new_burrow = liquidation_result.burrow_state in
+        assert_equal burrow new_burrow ~printer:Burrow.show;
+        assert_equal Tez.zero liquidation_result.liquidation_reward ~printer:Tez.show;
+    );
   ]
