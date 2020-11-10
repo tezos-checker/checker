@@ -5,7 +5,6 @@ open Kit
 open Timestamp
 open Burrow
 open Address
-open Liquidation
 open OUnit2
 
 (*
@@ -68,7 +67,7 @@ let suite =
         assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
         assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
 
-        let liquidation_result = request_liquidation params burrow in
+        let liquidation_result = Burrow.request_liquidation params burrow in
 
         assert_equal
           (Partial
@@ -85,7 +84,7 @@ let suite =
              }
           )
           liquidation_result
-          ~printer:Liquidation.show_liquidation_result;
+          ~printer:Burrow.show_liquidation_result;
     );
 
     ("unwarranted liquidation test" >:: fun _ ->
@@ -98,9 +97,9 @@ let suite =
         assert_bool "is optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
         assert_bool "is liquidatable" (not (Burrow.is_liquidatable params burrow));
 
-        let liquidation_result = request_liquidation params burrow in
+        let liquidation_result = Burrow.request_liquidation params burrow in
 
-        assert_equal Unnecessary liquidation_result ~printer:Liquidation.show_liquidation_result;
+        assert_equal Unnecessary liquidation_result ~printer:Burrow.show_liquidation_result;
     );
 
     ("complete liquidation test" >:: fun _ ->
@@ -113,7 +112,7 @@ let suite =
         assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
         assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
 
-        let liquidation_result = request_liquidation params burrow in
+        let liquidation_result = Burrow.request_liquidation params burrow in
 
         assert_equal
           (Complete
@@ -130,7 +129,7 @@ let suite =
              }
           )
           liquidation_result
-          ~printer:Liquidation.show_liquidation_result;
+          ~printer:Burrow.show_liquidation_result;
     );
 
     ("complete and close liquidation test" >:: fun _ ->
@@ -143,7 +142,7 @@ let suite =
         assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
         assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
 
-        let liquidation_result = request_liquidation params burrow in
+        let liquidation_result = Burrow.request_liquidation params burrow in
 
         assert_equal
           (Close
@@ -159,6 +158,6 @@ let suite =
              }
           )
           liquidation_result
-          ~printer:Liquidation.show_liquidation_result;
+          ~printer:Burrow.show_liquidation_result;
     );
   ]
