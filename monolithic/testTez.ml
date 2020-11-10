@@ -1,6 +1,4 @@
-open FixedPoint
 open OUnit2
-open Tez
 
 type tz = Tez.t [@@deriving show]
 type fp = FixedPoint.t [@@deriving show]

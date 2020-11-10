@@ -1,8 +1,4 @@
 open Parameters
-open FixedPoint
-open Tez
-open Kit
-open Timestamp
 open Burrow
 open Address
 open OUnit2

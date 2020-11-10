@@ -2,8 +2,6 @@ open Avl
 open OUnit2
 module Q = QCheck
 open BigMap
-open Tez
-open FixedPoint
 open Format
 
 type element_list = (int * Tez.t) list [@@deriving show]

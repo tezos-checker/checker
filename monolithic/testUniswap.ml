@@ -1,8 +1,5 @@
 
 open Uniswap
-open FixedPoint
-open Tez
-open Kit
 open OUnit2
 
 type lq = Uniswap.liquidity [@@deriving show]

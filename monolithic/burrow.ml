@@ -1,12 +1,6 @@
 
-open Error
-
 open Address
-open FixedPoint
-open Kit
 open Parameters
-open Tez
-open Timestamp
 
 (* ************************************************************************* *)
 (*                                Burrows                                    *)

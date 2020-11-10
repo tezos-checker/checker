@@ -1,4 +1,3 @@
-open FixedPoint
 open OUnit2
 
 type fp = FixedPoint.t [@@deriving show]

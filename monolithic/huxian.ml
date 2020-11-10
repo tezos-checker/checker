@@ -1,12 +1,7 @@
-open Error
 open Address
 open Burrow
 open Parameters
 open Uniswap
-open Tez
-open Kit
-open Timestamp
-open FixedPoint
 
 (* TODO: Things to consider / action items:
  *

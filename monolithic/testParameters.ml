@@ -1,9 +1,5 @@
 open Parameters
 open OUnit2
-open FixedPoint
-open Tez
-open Kit
-open Timestamp
 
 let suite =
   "Parameters tests" >::: [

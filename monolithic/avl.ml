@@ -26,7 +26,6 @@
 *)
 
 open BigMap
-open Tez
 
 type avl_ptr = AVLPtr of ptr
 type leaf_ptr = LeafPtr of ptr
