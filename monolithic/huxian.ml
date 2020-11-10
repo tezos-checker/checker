@@ -142,7 +142,7 @@ struct
             Ok ( minted,
                  {state with
                     burrows = AddressMap.add address updated_burrow state.burrows;
-                    parameters = {state.parameters with circulating_kit = Kit.(state.parameters.circulating_kit + minted)};
+                    parameters = Parameters.add_circulating_kit state.parameters minted;
                  }
                )
         | Error err -> Error err
@@ -174,7 +174,7 @@ struct
         assert (state.parameters.circulating_kit >= amount);
         Ok {state with
               burrows = AddressMap.add address updated_burrow state.burrows;
-              parameters = {state.parameters with circulating_kit = Kit.(state.parameters.circulating_kit - amount)};
+              parameters = Parameters.remove_circulating_kit state.parameters amount;
            }
     | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
     | None -> Error (NonExistentBurrow address)

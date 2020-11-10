@@ -48,6 +48,12 @@ module Parameters : sig
 
   (** Given the current target p, calculate the rate of change of the drift d'. *)
   val compute_drift_derivative : FixedPoint.t -> FixedPoint.t
+
+  (** Add some kit to the kit in circulation. *)
+  val add_circulating_kit : t -> Kit.t -> t
+
+  (** Remove some kit from circulation. *)
+  val remove_circulating_kit : t -> Kit.t -> t
 end =
 struct
   type t =
@@ -222,5 +228,13 @@ struct
       last_touched = now;
     }
     )
+
+  let add_circulating_kit (parameters: t) (kit: Kit.t) : t =
+    assert (kit >= Kit.zero);
+    { parameters with circulating_kit = Kit.(parameters.circulating_kit + kit); }
+
+  let remove_circulating_kit (parameters: t) (kit: Kit.t) : t =
+    assert (kit >= Kit.zero);
+    { parameters with circulating_kit = Kit.(parameters.circulating_kit - kit); }
 end
 
