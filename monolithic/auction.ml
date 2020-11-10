@@ -164,6 +164,7 @@ let cancel_liquidation
      * or completed, so we can not cancel it. *)
     None
 
+(* TODO: Use precice calculations here (Z, Q) for precision, not FixedPoint. *)
 let liquidation_outcome
   (auctions: auctions)
   (leaf_ptr: leaf_ptr)
