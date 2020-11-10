@@ -169,7 +169,7 @@ struct
     (* Compute the new protected index, using the time interval, the current
      * index (given by the oracles right now), and the protected index of the
      * previous timestamp. *)
-    let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed parameters.last_touched now) in
+    let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:now) in
     let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
     let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
     let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in

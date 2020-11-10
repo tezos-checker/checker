@@ -213,10 +213,11 @@ end = struct
       burrow
     else
       let b = rebalance_kit burrow in
+      let current_adjustment_index = Parameters.compute_adjustment_index p in
       { b with
         (* current_outstanding_kit = last_outstanding_kit * (adjustment_index / last_adjustment_index) *)
-        outstanding_kit = Kit.scale Kit.one FixedPoint.(Kit.to_fp b.outstanding_kit * Parameters.compute_adjustment_index p / b.adjustment_index);
-        adjustment_index = Parameters.compute_adjustment_index p;
+        outstanding_kit = Kit.scale Kit.one FixedPoint.(Kit.to_fp b.outstanding_kit * current_adjustment_index / b.adjustment_index);
+        adjustment_index = current_adjustment_index;
         last_touched = p.last_touched;
       }
 
