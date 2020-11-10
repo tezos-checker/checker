@@ -33,6 +33,8 @@ module Burrow : sig
       (* Collateral that has been sent off to auctions. For all intents and
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
+      (* TODO: We also need a leaf_ptr here, pointing to the head of the list
+       * of pending auctions (regarding this burrow only) currently going on. *)
       collateral_at_auction : Tez.t;
       (* The last time the burrow was touched. *)
       last_touched : Timestamp.t;

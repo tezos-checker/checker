@@ -34,12 +34,13 @@ module Checker : sig
     { burrows : Burrow.t AddressMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
-      (* TODO: add auction-related data here. *)
+      auctions : Auction.auctions;
     }
 
   type Error.error +=
     | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of Address.t
+    | NotLiquidationCandidate of Address.t
 
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the parameters. TODO: We have to find a way to represent
@@ -79,17 +80,26 @@ module Checker : sig
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
   val burn_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (t, Error.error) result
+
+  (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
+    * liquidation or if the burrow does not exist. If successful, return the
+    * reward, to be credited to the liquidator.
+    * NOTE: Call Checker.touch too.
+    * NOTE: Call Burrow.touch too. *)
+  val mark_for_liquidation : t -> liquidator:Address.t -> address:Address.t -> (Tez.t * t, Error.error) result
 end =
 struct
   type t =
     { burrows : Burrow.t AddressMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
+      auctions : Auction.auctions;
     }
 
   type Error.error +=
     | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of Address.t
+    | NotLiquidationCandidate of Address.t
 
   (* Utility function to give us burrow addresses *)
   let mk_next_burrow_address (burrows: Burrow.t AddressMap.t) : Address.t =
@@ -116,6 +126,7 @@ struct
       { burrows = state.burrows; (* leave as-is *)
         parameters = updated_parameters;
         uniswap = updated_uniswap;
+        auctions = state.auctions; (* TODO: this definitely needs to be updated! *)
       }
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
@@ -130,8 +141,8 @@ struct
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
-        let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
-        Ok {state with burrows = AddressMap.add address updated_burrow state.burrows}
+      let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
+      Ok {state with burrows = AddressMap.add address updated_burrow state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow address)
 
@@ -142,13 +153,13 @@ struct
     | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.mint_kit state.parameters amount burrow with
         | Ok (updated_burrow, minted) ->
-            assert (amount = minted);
-            Ok ( minted,
-                 {state with
-                    burrows = AddressMap.add address updated_burrow state.burrows;
-                    parameters = Parameters.add_circulating_kit state.parameters minted;
-                 }
-               )
+          assert (amount = minted);
+          Ok ( minted,
+               {state with
+                burrows = AddressMap.add address updated_burrow state.burrows;
+                parameters = Parameters.add_circulating_kit state.parameters minted;
+               }
+             )
         | Error err -> Error err
       )
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
@@ -161,8 +172,8 @@ struct
     | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (updated_burrow, withdrawn) ->
-            assert (amount = withdrawn);
-            Ok (withdrawn, {state with burrows = AddressMap.add address updated_burrow state.burrows})
+          assert (amount = withdrawn);
+          Ok (withdrawn, {state with burrows = AddressMap.add address updated_burrow state.burrows})
         | Error err -> Error err
       )
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
@@ -173,14 +184,40 @@ struct
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
-        let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
-        (* TODO: What should happen if the following is violated? *)
-        assert (state.parameters.circulating_kit >= amount);
-        Ok {state with
-              burrows = AddressMap.add address updated_burrow state.burrows;
-              parameters = Parameters.remove_circulating_kit state.parameters amount;
-           }
+      let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
+      (* TODO: What should happen if the following is violated? *)
+      assert (state.parameters.circulating_kit >= amount);
+      Ok {state with
+          burrows = AddressMap.add address updated_burrow state.burrows;
+          parameters = Parameters.remove_circulating_kit state.parameters amount;
+         }
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
+    | None -> Error (NonExistentBurrow address)
+
+  (* TODO: the liquidator's address must be used, eventually. *)
+  let mark_for_liquidation (state:t) ~liquidator:_ ~(address:Address.t) =
+    (* TODO: Call Checker.touch. *)
+    (* TODO: Call Burrow.touch. *)
+    match AddressMap.find_opt address state.burrows with
+    | Some burrow -> (
+        match Burrow.request_liquidation state.parameters burrow with
+        | Unnecessary -> Error (NotLiquidationCandidate address)
+        | Partial details | Complete details | Close details ->
+          (* TODO: At the moment the auction machinery and representation do
+           * not have support for the min_received_kit_for_unwarranted field
+           * (used to determine what to return to the burrow, once an auction
+           * is over), but they should.  *)
+          let liquidation_slice = Auction.{burrow = address; tez = details.tez_to_auction} in
+          let updated_auctions, _leaf_ptr = Auction.send_to_auction state.auctions liquidation_slice in
+          (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
+          let updated_burrow = details.burrow_state in
+          Ok ( details.liquidation_reward,
+               {state with
+                burrows = AddressMap.add address updated_burrow state.burrows;
+                auctions = updated_auctions;
+               }
+             )
+      )
     | None -> Error (NonExistentBurrow address)
 end
 
