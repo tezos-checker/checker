@@ -56,6 +56,9 @@ module Burrow : sig
   *)
   val is_overburrowed : Parameters.t -> t -> bool
 
+  (** Check if the owner matches. TODO: implement permissions properly. *)
+  val is_owned_by : t -> Address.t -> bool
+
   (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
     * that all collateral that is in auctions at the moment will be sold at the
     * current minting price, but that all these liquidations were actually
@@ -188,6 +191,9 @@ end = struct
   let is_overburrowed (p : Parameters.t) (b : t) : bool =
     assert (p.last_touched = b.last_touched);
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp b.outstanding_kit * Parameters.minting_price p)
+
+  (** Check if the owner matches. TODO: implement permissions properly. *)
+  let is_owned_by (b: t) (address: Address.t) = b.owner = address
 
   (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
     * or b.outstanding_kit is zero. *)

@@ -38,7 +38,7 @@ module Checker : sig
     }
 
   type Error.error +=
-    | OwnershipMismatch of Address.t * Address.t
+    | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of Address.t
 
   (** Perform housekeeping tasks on the contract state. This includes:
@@ -88,7 +88,7 @@ struct
     }
 
   type Error.error +=
-    | OwnershipMismatch of Address.t * Address.t
+    | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of Address.t
 
   (* Utility function to give us burrow addresses *)
@@ -125,17 +125,17 @@ struct
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
-    | Some burrow when burrow.owner = owner ->
+    | Some burrow when Burrow.is_owned_by burrow owner ->
         let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
         Ok {state with burrows = AddressMap.add address updated_burrow state.burrows}
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow address)
 
   let mint_kit (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
-    | Some burrow when burrow.owner = owner -> (
+    | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.mint_kit state.parameters amount burrow with
         | Ok (updated_burrow, minted) ->
             assert (amount = minted);
@@ -147,28 +147,28 @@ struct
                )
         | Error err -> Error err
       )
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow address)
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
-    | Some burrow when burrow.owner = owner -> (
+    | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (updated_burrow, withdrawn) ->
             assert (amount = withdrawn);
             Ok (withdrawn, {state with burrows = AddressMap.add address updated_burrow state.burrows})
         | Error err -> Error err
       )
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow address)
 
   let burn_kit (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
     match AddressMap.find_opt address state.burrows with
-    | Some burrow when burrow.owner = owner ->
+    | Some burrow when Burrow.is_owned_by burrow owner ->
         let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
         (* TODO: What should happen if the following is violated? *)
         assert (state.parameters.circulating_kit >= amount);
@@ -176,7 +176,7 @@ struct
               burrows = AddressMap.add address updated_burrow state.burrows;
               parameters = Parameters.remove_circulating_kit state.parameters amount;
            }
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow.owner))
+    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow address)
 end
 
