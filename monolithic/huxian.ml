@@ -98,21 +98,25 @@ struct
     | Some (a, _) -> Address.next a
 
   let touch (state:t) ~(now:Timestamp.t) ~(index:FixedPoint.t) : t =
-    (* TODO: What is the right order in which to do things here? We use the
-     * last observed kit_in_tez price from uniswap to update the parameters,
-     * which return kit to be added to the uniswap contract. Gotta make sure we
-     * do things in the right order here. *)
-    (* 1: Update the system parameters *)
-    let total_accrual_to_uniswap, updated_parameters =
-      Parameters.step now index (Uniswap.kit_in_tez state.uniswap) state.parameters
-    in
-    (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
-    let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
-    (* TODO: Add more tasks here *)
-    { state with
-      parameters = updated_parameters;
-      uniswap = updated_uniswap;
-    }
+    if state.parameters.last_touched = now then
+      (* Do nothing if up-to-date (idempotence) *)
+      state
+    else
+      (* TODO: What is the right order in which to do things here? We use the
+       * last observed kit_in_tez price from uniswap to update the parameters,
+       * which return kit to be added to the uniswap contract. Gotta make sure we
+       * do things in the right order here. *)
+      (* 1: Update the system parameters *)
+      let total_accrual_to_uniswap, updated_parameters =
+        Parameters.step now index (Uniswap.kit_in_tez state.uniswap) state.parameters
+      in
+      (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
+      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+      (* TODO: Add more tasks here *)
+      { burrows = state.burrows; (* leave as-is *)
+        parameters = updated_parameters;
+        uniswap = updated_uniswap;
+      }
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
