@@ -236,16 +236,16 @@ end = struct
         }
 
   (** Add non-negative collateral to a burrow. *)
-  let deposit_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : t =
+  let deposit_tez (p: Parameters.t) (t: Tez.t) (b: t) : t =
     assert (t >= Tez.zero);
-    let b = touch p burrow in
+    assert (p.last_touched = b.last_touched);
     { b with collateral = Tez.(b.collateral + t) }
 
   (** Withdraw a non-negative amount of tez from the burrow, as long as this will
     * not overburrow it. *)
-  let withdraw_tez (p: Parameters.t) (t: Tez.t) (burrow: t) : (t * Tez.t, Error.error) result =
+  let withdraw_tez (p: Parameters.t) (t: Tez.t) (b: t) : (t * Tez.t, Error.error) result =
     assert (t >= Tez.zero);
-    let b = touch p burrow in
+    assert (p.last_touched = b.last_touched);
     let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
     if is_overburrowed p new_burrow
     then Error WithdrawTezFailure
@@ -253,9 +253,9 @@ end = struct
 
   (** Mint a non-negative amount of kits from the burrow, as long as this will
     * not overburrow it *)
-  let mint_kit (p: Parameters.t) (kit: Kit.t) (burrow: t) : (t * Kit.t, Error.error) result =
+  let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t, Error.error) result =
     assert (kit >= Kit.zero);
-    let b = touch p burrow in
+    assert (p.last_touched = b.last_touched);
     let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit + kit) } in
     if is_overburrowed p new_burrow
     then Error MintKitFailure
@@ -263,9 +263,9 @@ end = struct
 
   (** Deposit/burn a non-negative amount of kit to the burrow. If there is
     * excess kit, simply store it into the burrow. *)
-  let burn_kit (p: Parameters.t) (k: Kit.t) (burrow: t) : t =
+  let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
     assert (k >= Kit.zero);
-    let b = touch p burrow in
+    assert (p.last_touched = b.last_touched);
     let kit_to_burn = min b.outstanding_kit k in
     let kit_to_store = Kit.(k - kit_to_burn) in
     { b with
@@ -321,6 +321,7 @@ end = struct
     * that all collateral that is in auctions at the moment will be sold at the
     * current minting price, and that all these liquidations were warranted. *)
   let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
+    assert (p.last_touched = b.last_touched);
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
     Tez.to_fp b.collateral < FixedPoint.(Constants.fplus * Kit.to_fp optimistic_outstanding * Parameters.minting_price p)
@@ -346,8 +347,8 @@ end = struct
   [@@deriving show]
 
   let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Tez.t) : Kit.t =
-    assert (p.last_touched = b.last_touched);
     assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
+    assert (p.last_touched = b.last_touched);
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
     let optimistic_outstanding = Kit.(b.outstanding_kit - expected_kit) in
     Kit.scale Kit.one FixedPoint.(Tez.to_fp tez_to_auction * (Constants.fminus * Kit.to_fp optimistic_outstanding) / Tez.to_fp b.collateral)
