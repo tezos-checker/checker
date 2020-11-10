@@ -32,11 +32,6 @@ module Checker : sig
       auctions : Auction.auctions;
     }
 
-  type Error.error +=
-    | OwnershipMismatch of Address.t * Burrow.t
-    | NonExistentBurrow of Address.t
-    | NotLiquidationCandidate of Address.t
-
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the parameters. TODO: We have to find a way to represent
     *   external inputs here; the inputs that Parameters.step requires.

@@ -34,12 +34,6 @@ module Burrow : sig
       last_touched : Timestamp.t;
     }
 
-  type Error.error +=
-    | Overburrowed of t
-    | InsufficientFunds of Tez.t
-    | WithdrawTezFailure
-    | MintKitFailure
-
   val show : t -> string
   val pp : Format.formatter -> t -> unit
 
@@ -169,7 +163,6 @@ end = struct
   [@@deriving show]
 
   type Error.error +=
-    | Overburrowed of t
     | InsufficientFunds of Tez.t
     | WithdrawTezFailure
     | MintKitFailure
