@@ -10,21 +10,24 @@ open Parameters
  *   (unless the owner collateralizes it).
 *)
 
-type liquidation_outcome =
-  | Unnecessary (* the burrow does not qualify for liquidation *)
-  | Partial     (* partial: some collateral remains in the burrow *)
-  | Complete    (* complete: deplete the collateral *)
-  | Close       (* complete: deplete the collateral AND the creation deposit *)
-[@@deriving show]
-
-type liquidation_result =
-  { outcome : liquidation_outcome;
-    liquidation_reward : Tez.t;
+type liquidation_details =
+  { liquidation_reward : Tez.t;
     tez_to_auction : Tez.t;
     expected_kit : Kit.t;
     min_received_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : Burrow.t;
   }
+[@@deriving show]
+
+type liquidation_result =
+  (* the burrow does not qualify for liquidation *)
+  | Unnecessary
+  (* partial: some collateral remains in the burrow *)
+  | Partial of liquidation_details
+  (* complete: deplete the collateral *)
+  | Complete of liquidation_details
+  (* complete: deplete the collateral AND the creation deposit *)
+  | Close of liquidation_details
 [@@deriving show]
 
 let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: Burrow.t) (tez_to_auction: Tez.t) : Kit.t =
@@ -58,12 +61,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
   if not (Burrow.is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit; we
      * shouldn't liquidate the burrow, it's solid. *)
-    { outcome = Unnecessary;
-      liquidation_reward = Tez.zero;
-      tez_to_auction = Tez.zero;
-      expected_kit = Kit.zero;
-      min_received_kit_for_unwarranted = Kit.zero; (* todo: use better representation *)
-      burrow_state = b }
+    Unnecessary
   else if Tez.(b.collateral - partial_reward) < Constants.creation_deposit then
     (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
@@ -75,7 +73,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
         collateral = Tez.zero;
         collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
       } in
-    { outcome = Close;
+    Close {
       liquidation_reward = liquidation_reward;
       tez_to_auction = tez_to_auction;
       expected_kit = expected_kit;
@@ -100,7 +98,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
           collateral = Tez.zero;
           collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
         } in
-      { outcome = Complete;
+      Complete {
         liquidation_reward = liquidation_reward;
         tez_to_auction = tez_to_auction;
         expected_kit = expected_kit;
@@ -121,7 +119,7 @@ let request_liquidation (p: Parameters.t) (b: Burrow.t) : liquidation_result =
           collateral = Tez.(b_without_reward.collateral - tez_to_auction);
           collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
         } in
-      { outcome = Partial;
+      Partial {
         liquidation_reward = liquidation_reward;
         tez_to_auction = tez_to_auction;
         expected_kit = expected_kit;

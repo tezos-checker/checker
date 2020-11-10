@@ -70,24 +70,23 @@ let suite =
 
         let liquidation_result = request_liquidation params burrow in
 
-        assert_equal Partial liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
-
-        let new_burrow = liquidation_result.burrow_state in
-        assert_equal { burrow with
-                       collateral = Tez.of_mutez 1_847_529;
-                       outstanding_kit = Kit.of_mukit 20_000_000;
-                       excess_kit = Kit.zero;
-                       collateral_at_auction = Tez.of_mutez 7_142_471; }
-          new_burrow ~printer:Burrow.show;
-
-        assert_equal Tez.(Constants.creation_deposit + Tez.of_mutez 10_000) liquidation_result.liquidation_reward ~printer:Tez.show;
         assert_equal
-          Tez.(new_burrow.collateral + new_burrow.collateral_at_auction + liquidation_result.liquidation_reward)
-          Tez.(burrow.collateral + burrow.collateral_at_auction)
-          ~printer:Tez.show;
-        (* FIXME: assert_bool "not now optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params new_burrow)); *)
-        assert_bool "not now liquidatable" (not (Burrow.is_liquidatable params new_burrow));
-        assert_bool "still overburrowed" (Burrow.is_overburrowed params new_burrow));
+          (Partial
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
+               tez_to_auction = Tez.of_mutez 7_142_471;
+               expected_kit = Kit.of_mukit 17_592_293;
+               min_received_kit_for_unwarranted = Kit.of_mukit 27_141_389;
+               burrow_state =
+                 { burrow with
+                   collateral = Tez.of_mutez 1_847_529;
+                   outstanding_kit = Kit.of_mukit 20_000_000;
+                   excess_kit = Kit.zero;
+                   collateral_at_auction = Tez.of_mutez 7_142_471; };
+             }
+          )
+          liquidation_result
+          ~printer:Liquidation.show_liquidation_result;
+    );
 
     ("unwarranted liquidation test" >:: fun _ ->
         let burrow = { initial_burrow with
@@ -101,11 +100,7 @@ let suite =
 
         let liquidation_result = request_liquidation params burrow in
 
-        assert_equal Unnecessary liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
-
-        let new_burrow = liquidation_result.burrow_state in
-        assert_equal burrow new_burrow ~printer:Burrow.show;
-        assert_equal Tez.zero liquidation_result.liquidation_reward ~printer:Tez.show;
+        assert_equal Unnecessary liquidation_result ~printer:Liquidation.show_liquidation_result;
     );
 
     ("complete liquidation test" >:: fun _ ->
@@ -120,24 +115,23 @@ let suite =
 
         let liquidation_result = request_liquidation params burrow in
 
-        assert_equal Complete liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
-
-        let new_burrow = liquidation_result.burrow_state in
-        assert_equal { burrow with
-                       collateral = Tez.zero;
-                       outstanding_kit = Kit.of_mukit 100_000_000;
-                       excess_kit = Kit.zero;
-                       collateral_at_auction = Tez.of_mutez 8_990_000; }
-          new_burrow ~printer:Burrow.show;
-
-        assert_equal Tez.(Constants.creation_deposit + Tez.of_mutez 10_000) liquidation_result.liquidation_reward ~printer:Tez.show;
         assert_equal
-          Tez.(new_burrow.collateral + new_burrow.collateral_at_auction + liquidation_result.liquidation_reward)
-          Tez.(burrow.collateral + burrow.collateral_at_auction)
-          ~printer:Tez.show;
-        assert_bool "optimistically overburrowed" (Burrow.is_optimistically_overburrowed params new_burrow);
-        assert_bool "liquidatable" (Burrow.is_liquidatable params new_burrow);
-        assert_bool "still overburrowed" (Burrow.is_overburrowed params new_burrow));
+          (Complete
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
+               tez_to_auction = Tez.of_mutez 8_990_000;
+               expected_kit = Kit.of_mukit 22_142_857;
+               min_received_kit_for_unwarranted = Kit.of_mukit 170_810_000;
+               burrow_state =
+                 { burrow with
+                   collateral = Tez.zero;
+                   outstanding_kit = Kit.of_mukit 100_000_000;
+                   excess_kit = Kit.zero;
+                   collateral_at_auction = Tez.of_mutez 8_990_000; };
+             }
+          )
+          liquidation_result
+          ~printer:Liquidation.show_liquidation_result;
+    );
 
     ("complete and close liquidation test" >:: fun _ ->
         let burrow = { initial_burrow with
@@ -151,18 +145,20 @@ let suite =
 
         let liquidation_result = request_liquidation params burrow in
 
-        assert_equal Close liquidation_result.outcome ~printer:Liquidation.show_liquidation_outcome;
-
-        let new_burrow = liquidation_result.burrow_state in
-        assert_equal { burrow with
-                       active = false;
-                       collateral = Tez.zero;
-                       collateral_at_auction = Tez.of_mutez 999_000; }
-          new_burrow ~printer:Burrow.show;
-
-        (* TODO: reward exceeds initial collateral in burrow - is that right? *)
-        assert_equal Tez.(Constants.creation_deposit + Tez.of_mutez 1000)  liquidation_result.liquidation_reward ~printer:Tez.show;
-        assert_bool "optimistically overburrowed" (Burrow.is_optimistically_overburrowed params new_burrow);
-        assert_bool "liquidatable" (Burrow.is_liquidatable params new_burrow);
-        assert_bool "overburrowed" (Burrow.is_overburrowed params new_burrow));
+        assert_equal
+          (Close
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 1000);
+               tez_to_auction = Tez.of_mutez 999_000;
+               expected_kit = Kit.of_mukit 2_460_591;
+               min_received_kit_for_unwarranted = Kit.of_mukit 189_810_000;
+               burrow_state =
+                 { burrow with
+                   active = false;
+                   collateral = Tez.zero;
+                   collateral_at_auction = Tez.of_mutez 999_000; };
+             }
+          )
+          liquidation_result
+          ~printer:Liquidation.show_liquidation_result;
+    );
   ]
