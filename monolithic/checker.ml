@@ -124,7 +124,7 @@ struct
        * do things in the right order here. *)
       (* 1: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
-        Parameters.step now index (Uniswap.kit_in_tez state.uniswap) state.parameters
+        Parameters.step now index (FixedPoint.of_q_floor (Uniswap.kit_in_tez state.uniswap)) state.parameters (* TODO: Should stick with Q.t here I think *)
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in

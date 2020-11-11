@@ -20,7 +20,7 @@ let burrow_fee_percentage : FixedPoint.t = FixedPoint.of_string "0.005"
 let liquidation_reward_percentage : FixedPoint.t = FixedPoint.of_string "0.001"
 
 (** Percentage kept by the uniswap contract from the return asset. TODO: Use cNp. *)
-let uniswap_fee_percentage = FixedPoint.of_string "0.002"
+let uniswap_fee = FixedPoint.(to_q (of_string "0.002"))
 
 (** Protected index epsilon. The higher this value is, the faster the protected
   * index catches up with the actual index. *)

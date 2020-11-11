@@ -32,7 +32,7 @@ val liquidity_of_int : int -> liquidity
 type t =
   { tez: Tez.t;
     kit: Kit.t;
-    total_liquidity_tokens: int;
+    total_liquidity_tokens: liquidity;
   }
 
 val show : t -> string
@@ -43,12 +43,15 @@ val uniswap_non_empty : t -> bool
 
 (** Compute the current price of kit in tez, as estimated using the ratio of
   * tez and kit currently in the uniswap contract. *)
-val kit_in_tez : t -> FixedPoint.t (* TODO: Something less lossy here? Maybe Q.t for this *)
+val kit_in_tez : t -> Q.t
 
-(** Sell some kit to the uniswap contract. George: I am unclear as to why we
-  * also return a zero amount of kit. Looks like leftovers we need to clean
-  * up. *)
-val sell_kit : t -> Kit.t -> Tez.t * Kit.t * t
+(** Buy some kit from the uniswap contract. Fail if the desired amount of kit
+  * cannot be bought or if the deadline has passed. *)
+val buy_kit : t -> Tez.t -> min_kit_expected:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+
+(** Sell some kit to the uniswap contract. Fail if the desired amount of tez
+  * cannot be bought or if the deadline has passed. *)
+val sell_kit : t -> Kit.t -> min_tez_expected:Tez.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
   * some kit. If the given amounts does not have the right ratio, we

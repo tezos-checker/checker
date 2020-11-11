@@ -11,16 +11,42 @@ let liquidity_of_int i = i
 type t =
   { tez: Tez.t;
     kit: Kit.t;
-    total_liquidity_tokens: int;
+    total_liquidity_tokens: liquidity;
   }
 [@@deriving show]
 
 let uniswap_non_empty (u: t) =
   u.kit > Kit.zero && u.tez > Tez.zero
 
-let kit_in_tez (uniswap: t) = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit)
+let kit_in_tez (uniswap: t) = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit)
 
-let sell_kit (uniswap: t) (kit: Kit.t) : Tez.t * Kit.t * t =
+type Error.error +=
+  | UniswapBuyKitPriceFailure
+  | UniswapBuyKitTooLate
+  | UniswapSellKitPriceFailure
+  | UniswapSellKitTooLate
+
+let buy_kit (uniswap: t) (tez: Tez.t) ~min_kit_expected ~now ~deadline =
+  assert (uniswap_non_empty uniswap);
+  assert (tez > Tez.zero);
+  if now > deadline then
+    Error UniswapBuyKitTooLate
+  else
+    let price = Q.(Kit.to_q uniswap.kit / Tez.to_q uniswap.tez) in
+    let slippage = Q.(Tez.to_q uniswap.tez / Tez.(to_q (uniswap.tez + tez))) in
+    let return = (* TODO: floor or ceil? *)
+      Kit.of_q_floor Q.(Tez.to_q tez * price * slippage * (one - Constants.uniswap_fee)) in
+
+    if return < min_kit_expected then
+      Error UniswapBuyKitPriceFailure
+    else
+      Ok ( return,
+           { uniswap with
+             kit = Kit.(uniswap.kit - return);
+             tez = Tez.(uniswap.tez + tez) }
+      )
+
+let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
   (* Utku: I think, as long as the contract has non-zero tez and kit this
    * always succeeds.
    *
@@ -31,13 +57,22 @@ let sell_kit (uniswap: t) (kit: Kit.t) : Tez.t * Kit.t * t =
   assert (uniswap_non_empty uniswap);
   assert (kit > Kit.zero);
 
-  let price = FixedPoint.(Tez.to_fp uniswap.tez / Kit.to_fp uniswap.kit) in
-  let slippage = Kit.(uniswap.kit / (uniswap.kit + kit)) in
-  let return = Tez.(scale one FixedPoint.(Kit.to_fp kit * price * slippage * (FixedPoint.one - Constants.uniswap_fee_percentage))) in
-  let updated = { uniswap with
-                  kit = Kit.(uniswap.kit + kit);
-                  tez = Tez.(uniswap.tez - return) } in
-  (return, Kit.zero, updated)
+  if now > deadline then
+    Error UniswapSellKitTooLate
+  else
+    let price = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit) in
+    let slippage = Q.(Kit.to_q uniswap.kit / Kit.(to_q (uniswap.kit + kit))) in
+    let return = (* TODO: floor or ceil? *)
+      Tez.of_q_floor Q.(Kit.to_q kit * price * slippage * (one - Constants.uniswap_fee)) in
+
+    if return < min_tez_expected then
+      Error UniswapSellKitPriceFailure
+    else
+      Ok ( return,
+           { uniswap with
+             kit = Kit.(uniswap.kit + kit);
+             tez = Tez.(uniswap.tez - return) }
+      )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
@@ -54,8 +89,6 @@ let buy_liquidity (uniswap: t) (tez: Tez.t) (kit: Kit.t)
   : liquidity * Tez.t * Kit.t * t =
   (* Adding liquidity always succeeds, if the exchange has non-zero amount. *)
   assert (uniswap_non_empty uniswap);
-  (* TODO: How to compute things without explicitly calculating the ratio
-   * (using division) here? *)
   let ratio = kit_in_tez uniswap in
   (* There is a chance that the given tez and kit have the wrong ratio,
    * so we liquidate as much as we can and return the leftovers. NOTE:
@@ -63,20 +96,21 @@ let buy_liquidity (uniswap: t) (tez: Tez.t) (kit: Kit.t)
    * ratio beforehand.
    * Invariant here is that (tez', kit') should have the correct ratio.
   *)
-  let (tez', kit') = FixedPoint.(
-      if Tez.to_fp tez * Kit.to_fp uniswap.kit > Kit.to_fp kit * Tez.to_fp uniswap.tez
-      then (Tez.scale Tez.one (Kit.to_fp kit * ratio), kit)
-      else if Tez.to_fp tez * Kit.to_fp uniswap.kit < Kit.to_fp kit * Tez.to_fp uniswap.tez
-      then (tez, Kit.scale Kit.one (Tez.to_fp tez / ratio))
-      else (tez, kit) ) in
+  let (tez', kit') =
+    if Q.(Tez.to_q tez * Kit.to_q uniswap.kit > Kit.to_q kit * Tez.to_q uniswap.tez)
+    then (Tez.of_q_floor Q.(Kit.to_q kit * ratio), kit) (* TODO: floor or ceil? *)
+    else if Q.(Tez.to_q tez * Kit.to_q uniswap.kit < Kit.to_q kit * Tez.to_q uniswap.tez)
+    then (tez, Kit.of_q_floor Q.(Tez.to_q tez / ratio)) (* TODO: floor or ceil? *)
+    else (tez, kit)
+  in
   let liquidity =
     if uniswap.total_liquidity_tokens = 0
     then 1
-    else FixedPoint.(
-        to_int (
+    else Q.(
+        to_int ( (* floors it *)
           of_int uniswap.total_liquidity_tokens
-          * Tez.to_fp tez'
-          / Tez.to_fp uniswap.tez)
+          * Tez.to_q tez'
+          / Tez.to_q uniswap.tez)
       ) in
   let updated =
     { kit = Kit.(uniswap.kit + kit');
@@ -94,9 +128,9 @@ let sell_liquidity (uniswap: t) (liquidity: liquidity)
   : Tez.t * Kit.t * t =
   (* Since this requires a liquidity token, contract can not be empty *)
   assert(uniswap_non_empty(uniswap));
-  let ratio = FixedPoint.(of_int liquidity / of_int uniswap.total_liquidity_tokens) in
-  let tez = Tez.scale uniswap.tez ratio in
-  let kit = Kit.scale uniswap.kit ratio in
+  let ratio = Q.(of_int liquidity / of_int uniswap.total_liquidity_tokens) in
+  let tez = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
+  let kit = Kit.of_q_floor Q.(Kit.to_q uniswap.kit * ratio) in
   let updated = {
     tez = Tez.(uniswap.tez - tez);
     kit = Kit.(uniswap.kit - kit);
