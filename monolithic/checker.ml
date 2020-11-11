@@ -1,7 +1,6 @@
 open Address
 open Burrow
 open Parameters
-open Uniswap
 
 (* TODO: Things to consider / action items:
  *

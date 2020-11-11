@@ -1,5 +1,4 @@
 
-open Uniswap
 open OUnit2
 
 type lq = Uniswap.liquidity [@@deriving show]
