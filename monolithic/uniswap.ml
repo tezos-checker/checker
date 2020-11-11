@@ -21,16 +21,19 @@ let uniswap_non_empty (u: t) =
 let kit_in_tez (uniswap: t) = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit)
 
 type Error.error +=
+  | EmptyUniswap
+  | UniswapNonPositiveInput
+  | UniswapTooLate
   | UniswapBuyKitPriceFailure
-  | UniswapBuyKitTooLate
   | UniswapSellKitPriceFailure
-  | UniswapSellKitTooLate
 
 let buy_kit (uniswap: t) (tez: Tez.t) ~min_kit_expected ~now ~deadline =
-  assert (uniswap_non_empty uniswap);
-  assert (tez > Tez.zero);
-  if now > deadline then
-    Error UniswapBuyKitTooLate
+  if not (uniswap_non_empty uniswap) then
+    Error EmptyUniswap
+  else if (tez <= Tez.zero) then
+    Error UniswapNonPositiveInput
+  else if now > deadline then
+    Error UniswapTooLate
   else
     let price = Q.(Kit.to_q uniswap.kit / Tez.to_q uniswap.tez) in
     let slippage = Q.(Tez.to_q uniswap.tez / Tez.(to_q (uniswap.tez + tez))) in
@@ -54,11 +57,12 @@ let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
    * currency. It will presumably be started with some amount of tez, and
    * the first minting fee will initialize the kit amount.
   *)
-  assert (uniswap_non_empty uniswap);
-  assert (kit > Kit.zero);
-
-  if now > deadline then
-    Error UniswapSellKitTooLate
+  if not (uniswap_non_empty uniswap) then
+    Error EmptyUniswap
+  else if (kit <= Kit.zero) then
+    Error UniswapNonPositiveInput
+  else if now > deadline then
+    Error UniswapTooLate
   else
     let price = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit) in
     let slippage = Q.(Kit.to_q uniswap.kit / Kit.(to_q (uniswap.kit + kit))) in
