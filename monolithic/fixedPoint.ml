@@ -20,9 +20,12 @@ let ( * ) x y = Z.((x * y) / scaling_factor)
  * imbalances etc which are naturally imprecise this is fine. *)
 let ( / ) x y = Z.(x * scaling_factor / y)
 let neg x = Z.neg x
-let sqr x = x * x
 
-let pow x y = Z.div (Z.pow x y) (Z.pow scaling_factor Stdlib.(y - 1))
+let pow x y =
+  assert (y >= 0); (* TODO: George: we should allow zero too here, I say. *)
+  if y = 0
+  then Z.one
+  else Z.div (Z.pow x y) (Z.pow scaling_factor Stdlib.(y - 1))
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amount + (amount * amount) / (one + one) *)

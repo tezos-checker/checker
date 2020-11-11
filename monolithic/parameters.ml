@@ -143,11 +143,11 @@ struct
       (* No acceleration (0) *)
       | () when exp (neg Constants.target_low_bracket) < target && target < exp Constants.target_low_bracket -> zero
       (* Low acceleration (-/+) *)
-      | () when exp (neg Constants.target_high_bracket) < target && target <= exp (neg Constants.target_low_bracket) -> neg (cnp_001 / sqr secs_in_a_day)
-      | () when exp      Constants.target_high_bracket  > target && target >= exp      Constants.target_low_bracket  ->     (cnp_001 / sqr secs_in_a_day)
+      | () when exp (neg Constants.target_high_bracket) < target && target <= exp (neg Constants.target_low_bracket) -> neg (cnp_001 / pow secs_in_a_day 2)
+      | () when exp      Constants.target_high_bracket  > target && target >= exp      Constants.target_low_bracket  ->     (cnp_001 / pow secs_in_a_day 2)
       (* High acceleration (-/+) *)
-      | () when target <= exp (neg Constants.target_high_bracket) -> neg (cnp_005 / sqr secs_in_a_day)
-      | () when target >= exp      Constants.target_high_bracket  ->     (cnp_005 / sqr secs_in_a_day)
+      | () when target <= exp (neg Constants.target_high_bracket) -> neg (cnp_005 / pow secs_in_a_day 2)
+      | () when target >= exp      Constants.target_high_bracket  ->     (cnp_005 / pow secs_in_a_day 2)
       | _ -> failwith "impossible"
     )
 

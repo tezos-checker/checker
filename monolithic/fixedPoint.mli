@@ -15,7 +15,6 @@ val ( - ) : t -> t -> t
 val ( * ) : t -> t -> t
 val ( / ) : t -> t -> t
 val neg : t -> t
-val sqr : t -> t (* TODO: Generalize, if needed *)
 val pow : t -> int -> t
 
 (* Conversions to/from other types. *)
