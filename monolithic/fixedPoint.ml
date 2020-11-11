@@ -47,7 +47,6 @@ let of_string str =
   Z.((Z.of_string_base 10 without_dot * scaling_factor) / mantissa)
 
 let to_q amount = Q.make amount scaling_factor
-
 let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
 let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)

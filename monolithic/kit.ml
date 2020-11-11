@@ -20,6 +20,11 @@ let of_mukit = Z.of_int
 let to_fp t = (* TODO: overflow check? *)
   FixedPoint.of_rep Z.(t * (FixedPoint.scaling_factor / scaling_factor))
 
+let to_q amount = Q.make amount scaling_factor
+let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
+let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
+(* George: do we need flooring-division or truncating-division? more thought is needed *)
+
 let ( / ) x y = (* TODO: lossy *)
   FixedPoint.(to_fp x / to_fp y)
 

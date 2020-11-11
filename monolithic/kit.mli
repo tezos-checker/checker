@@ -20,6 +20,10 @@ val of_mukit : int -> t
 
 val to_fp : t -> FixedPoint.t
 
+val to_q : t -> Q.t (* NOTE: For precision. *)
+val of_q_ceil : Q.t -> t (* NOTE: For precision. *)
+val of_q_floor : Q.t -> t (* NOTE: For precision. *)
+
 val scale : t -> FixedPoint.t -> t
 
 (* Pretty printing functions *)
