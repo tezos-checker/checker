@@ -22,6 +22,8 @@ let ( / ) x y = Z.(x * scaling_factor / y)
 let neg x = Z.neg x
 let sqr x = x * x
 
+let pow x y = Z.div (Z.pow x y) (Z.pow scaling_factor Stdlib.(y - 1))
+
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amount + (amount * amount) / (one + one) *)
 let exp amount = one + amount

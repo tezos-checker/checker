@@ -77,6 +77,15 @@ module Checker : sig
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> address:Address.t -> (Tez.t * t, Error.error) result
+
+
+  (** Bid in current auction. Fail if the auction is closed, or if the bid is
+    * too low. If successful, return a token which can be used to either
+    * reclaim the kit when overbid, or claim the auction result. *)
+  val place_bid : t -> now:Timestamp.t ->  sender:Address.t -> amount:Kit.t -> (Auction.bid_token * t, Error.error) result
+
+  val reclaim_bid : t -> address:Address.t -> bid_token:Auction.bid_token
+        -> (Kit.t, Error.error) result
 end =
 struct
   type t =
@@ -209,5 +218,20 @@ struct
              )
       )
     | None -> Error (NonExistentBurrow address)
+
+  let place_bid state ~now ~sender ~amount =
+    let bid = { Auction.address=sender; kit=amount; } in
+    match
+      Auction.with_current_auction state.auctions @@
+        fun auction -> Auction.place_bid now auction bid with
+      | Error err -> Error err
+      | Ok (new_auctions, bid_ticket) ->
+        Ok (
+         bid_ticket,
+         {state with auctions=new_auctions;}
+        )
+
+  let reclaim_bid state ~address:_ ~bid_token =
+     Auction.reclaim_bid state.auctions bid_token
 end
 

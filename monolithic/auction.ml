@@ -92,29 +92,32 @@ we should do this.
 open Avl
 open Address
 
+type Error.error +=
+  | NoOpenAuction
+  | BidTooLow
+  | CannotReclaimLeadingBid
+
 (* Stub types *)
 type burrow_id = unit
-type block_number = unit
-type time = unit
-type 'a ticket = unit
+type 'a ticket = 'a
 
 type liquidation_slice = {
   burrow: Address.t;
   tez: Tez.t
 }
 
-type auction_start = { block_number: block_number; time: time }
-
 type bid = { address: Address.t; kit: Kit.t }
 
-type auction_id = unit
+type auction_id = avl_ptr
 type bid_token = { auction_id: auction_id; bid: bid }
 
+type auction_state =
+  | Descending of Kit.t * Timestamp.t
+  | Ascending of bid * Timestamp.t
+
 type current_auction = {
-  id: auction_id;
   contents: avl_ptr;
-  start: auction_start;
-  leading_bid: bid option;
+  state: auction_state;
 }
 
 type auction_outcome = {
@@ -189,7 +192,7 @@ let liquidation_outcome
       Some (auctions, kit)
 
 let start_auction_if_possible
-  (auctions: auctions): auctions =
+  (now: Timestamp.t) (auctions: auctions): auctions =
   match auctions.current_auction with
     | Some _ -> auctions
     | None ->
@@ -213,35 +216,96 @@ let start_auction_if_possible
        let current_auction =
              if is_empty storage new_auction
              then None
-             else Some
-                    { id = ();
-                      contents = new_auction;
-                      start = { time = (); block_number = (); };
-                      leading_bid = None; } in
+             else
+               let start_value = failwith "FIXME" in
+               Some
+                 { contents = new_auction;
+                   state = Descending (start_value, now); } in
        { auctions with
           storage = storage;
           current_auction = current_auction;
        }
 
-(*
-let complete_auction_if_possible
-  (auctions: auctions): auctions =
-  match auctions.current_auction with
-    | None -> auctions
-    | Some _ ->
-      (* check if the auction is finished *)
-      if failwith "not_implemented"
-      then auctions
-      else failwith "not_implemented"
+(* TODO also check if 20 blocks have passed *)
+let is_auction_complete (now: Timestamp.t) (auction: current_auction) : bool =
+  match auction.state with
+    | Descending _ -> false
+    | Ascending (_, t) ->
+      Timestamp.to_seconds now > Timestamp.to_seconds t + 86400
 
-*)
+let complete_auction_if_possible
+  (now: Timestamp.t) (auctions: auctions): auctions =
+  match auctions.current_auction with
+    | None ->
+      auctions
+    | Some curr when not (is_auction_complete now curr) ->
+      auctions
+    | _ -> failwith "not_implemented"
 
 (**
- * - Check there's an auction
  * - Only accept certain amounts
 *)
-let place_bid : auctions -> bid -> auctions * (bid_token ticket) option =
-  failwith "not implemented"
+let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
+  : (current_auction * bid_token ticket, Error.error) result =
+  match auction.state with
+    | Descending (start_value, start_time) ->
+      let decay =
+        FixedPoint.pow
+          Constants.auction_decay_rate
+          (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
+      let min_bid = Kit.scale start_value decay in
+      if Kit.compare bid.kit min_bid >= 0
+      then
+        Ok (
+          { auction with state = Ascending (bid, now); },
+          { auction_id = auction.contents; bid = bid; }
+        )
+      else Error BidTooLow
+    | Ascending (winning_bid, _) ->
+      if Kit.compare winning_bid.kit bid.kit < 0
+      then
+        Ok (
+          { auction with state = Ascending (bid, now); },
+          { auction_id = auction.contents; bid = bid; }
+        )
+      else Error BidTooLow
+
+let with_current_auction
+  (auctions: auctions)
+  (f: current_auction -> (current_auction * 'a, Error.error) result)
+  : (auctions * 'a, Error.error) result =
+  match auctions.current_auction with
+    | None -> Error NoOpenAuction
+    | Some curr -> match f curr with
+       | Error err -> Error err
+       | Ok (updated, ret)
+         -> Ok ({ auctions with current_auction = Some updated; }, ret)
+
+let is_leading_current_auction
+  (auctions: auctions) (bid_token: bid_token): bool =
+  match auctions.current_auction with
+    | Some auction when auction.contents = bid_token.auction_id ->
+      (match auction.state with
+        | Ascending (bid, _) -> bid = bid_token.bid
+        | Descending _ -> false)
+    | _ -> false
+
+let has_won_completed_auction
+  (auctions: auctions) (bid_token: bid_token): bool =
+  match PtrMap.find_opt bid_token.auction_id auctions.completed_auctions with
+    | None -> false
+    | Some outcome -> outcome.winning_bid = bid_token.bid
+
+
+let reclaim_bid
+  (auctions: auctions)
+  (bid_token: bid_token)
+  : (Kit.t, Error.error) result =
+  if is_leading_current_auction auctions bid_token
+     || has_won_completed_auction auctions bid_token
+  then Error CannotReclaimLeadingBid
+  else Ok bid_token.bid.kit
+
 
 (*
  * - Decrease / increase price gradually

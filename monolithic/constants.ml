@@ -45,3 +45,5 @@ let target_low_bracket : FixedPoint.t = FixedPoint.of_string "0.005"
 (** High bracket used for the calculation of the drift derivative. *)
 let target_high_bracket : FixedPoint.t = FixedPoint.of_string "0.05"
 
+(** How fast a descending option price drops. *)
+let auction_decay_rate : FixedPoint.t = FixedPoint.of_string "0.999"
