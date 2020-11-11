@@ -140,6 +140,15 @@ type auctions = {
   completed_auctions: auction_outcome PtrMap.t;
 }
 
+let empty : auctions =
+  let storage = BigMap.BigMap.empty in
+  let (storage, queued_slices) = Avl.mk_empty storage in
+  { storage = storage;
+    queued_slices = queued_slices;
+    current_auction = None;
+    completed_auctions = PtrMap.empty;
+  }
+
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
  * when we start auctions.
@@ -194,7 +203,7 @@ let liquidation_outcome
     Some (auctions, kit)
 
 let start_auction_if_possible
-    (now: Timestamp.t) (auctions: auctions): auctions =
+    (now: Timestamp.t) (start_price: Kit.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
@@ -219,7 +228,7 @@ let start_auction_if_possible
       if is_empty storage new_auction
       then None
       else
-        let start_value = failwith "FIXME" in
+        let start_value = Kit.scale start_price (Tez.to_fp (Avl.avl_tez storage new_auction))  in
         Some
           { contents = new_auction;
             state = Descending (start_value, now); } in
@@ -319,6 +328,16 @@ let reclaim_winning_bid
   | Some outcome -> Ok outcome.sold_tez
   | _ -> Error NotAWinningBid
 
+
+let touch (auctions: auctions) (now: Timestamp.t) (price: Kit.t) : auctions =
+  auctions
+  |> complete_auction_if_possible now
+  |> start_auction_if_possible now price
+
+let current_auction_tez (auctions: auctions) : Tez.t option =
+  Option.map
+    (fun auction -> avl_tez auctions.storage auction.contents)
+    auctions.current_auction
 
 (*
  * - Decrease / increase price gradually

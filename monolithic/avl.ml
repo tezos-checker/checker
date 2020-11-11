@@ -415,14 +415,14 @@ let del (mem: 't mem) (LeafPtr ptr): 't mem = ref_del mem ptr
 
 let read_leaf (mem: 't mem) (LeafPtr ptr): 't * Tez.t =
   match mem_get mem ptr with
-    | Leaf l -> (l.value, l.tez)
-    | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
+  | Leaf l -> (l.value, l.tez)
+  | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
 
 let is_empty (mem: 't mem) (AVLPtr ptr) : bool =
   match mem_get mem ptr with
-    | Root None -> true
-    | Root (Some _) -> false
-    | _ -> failwith "is_empty: avl_ptr does not point to a Root"
+  | Root None -> true
+  | Root (Some _) -> false
+  | _ -> failwith "is_empty: avl_ptr does not point to a Root"
 
 let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
   let rec go (ptr: ptr) : avl_ptr =
@@ -496,3 +496,9 @@ let take (mem: 't mem) (AVLPtr root_ptr) (limit: Tez.t)
     let (mem, new_root) = mem_new mem (Root None) in
     (mem, AVLPtr new_root)
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
+
+let avl_tez (mem: 't mem) (AVLPtr ptr) =
+  match mem_get mem ptr with
+  | Root (Some ptr) -> node_tez (mem_get mem ptr)
+  | Root None -> Tez.zero
+  | _ -> failwith "impossible"

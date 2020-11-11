@@ -78,7 +78,6 @@ module Checker : sig
     * NOTE: Call Burrow.touch too. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> address:Address.t -> (Tez.t * t, Error.error) result
 
-
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
