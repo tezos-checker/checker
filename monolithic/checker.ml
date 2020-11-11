@@ -38,6 +38,10 @@ module Checker : sig
   *)
   val touch : t -> now:Timestamp.t -> index:FixedPoint.t -> t
 
+  (* ************************************************************************* *)
+  (**                               BURROWS                                    *)
+  (* ************************************************************************* *)
+
   (** Create and return a new burrow owned by the given owner, containing the
     * given tez as collateral, minus the creation deposit. Fail if the tez is
     * not enough to cover the creation deposit.
@@ -76,6 +80,23 @@ module Checker : sig
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> address:Address.t -> (Tez.t * t, Error.error) result
+
+  (* ************************************************************************* *)
+  (**                                UNISWAP                                   *)
+  (* ************************************************************************* *)
+
+  (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
+    * cannot be bought or if the deadline has passed. *)
+  (* NOTE: an address is needed too, eventually. *)
+  val buy_kit : t -> Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+
+  (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
+    * cannot be bought or if the deadline has passed. *)
+  val sell_kit : t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+
+  (* ************************************************************************* *)
+  (**                               AUCTIONS                                   *)
+  (* ************************************************************************* *)
 
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
@@ -134,6 +155,10 @@ struct
         uniswap = updated_uniswap;
         auctions = state.auctions; (* TODO: this definitely needs to be updated! *)
       }
+
+  (* ************************************************************************* *)
+  (**                               BURROWS                                    *)
+  (* ************************************************************************* *)
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
@@ -226,6 +251,33 @@ struct
       )
     | None -> Error (NonExistentBurrow address)
 
+  (* ************************************************************************* *)
+  (**                                UNISWAP                                   *)
+  (* ************************************************************************* *)
+
+  (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
+    * cannot be bought or if the deadline has passed. *)
+  (* NOTE: an address is needed too, eventually. *)
+  let buy_kit (state:t) (tez:Tez.t) ~min_kit_expected ~deadline =
+    match Uniswap.buy_kit state.uniswap tez ~min_kit_expected ~now:state.parameters.last_touched ~deadline with
+    | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
+    | Error err -> Error err
+
+  (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
+    * cannot be bought or if the deadline has passed. *)
+  (* NOTE: an address is needed too, eventually. *)
+  let sell_kit (state:t) (kit:Kit.t) ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now:state.parameters.last_touched ~deadline with
+    | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
+    | Error err -> Error err
+
+  (* ************************************************************************* *)
+  (**                               AUCTIONS                                   *)
+  (* ************************************************************************* *)
+
+  (* George: I think that ~now should come from state.parameters.last_touched,
+   * instead of being passed as a separate argument, which ideally (if checker
+   * has been touched in this block) is indeed NOW. *)
   let place_bid state ~now ~sender ~amount =
     let bid = { Auction.address=sender; kit=amount; } in
     match
