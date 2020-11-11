@@ -2,13 +2,11 @@
 (*                               Constants                                   *)
 (* ************************************************************************* *)
 
-(** Dimensionless. Factor used for setting the minting limit
-  * (alternatively: f_minting). *)
-let fplus : FixedPoint.t = FixedPoint.of_string "2.1"
+(** Dimensionless. Factor used for setting the minting limit. *)
+let fminting : Q.t = FixedPoint.(to_q (of_string "2.1"))
 
-(** Dimensionless. Factor used for setting the liquidation limit
-  * (alternatively: f_liquidation). *)
-let fminus : FixedPoint.t = FixedPoint.of_string "1.9"
+(** Dimensionless. Factor used for setting the liquidation limit. *)
+let fliquidation : Q.t = FixedPoint.(to_q (of_string "1.9"))
 
 (** Number of tez needed to be given for the creation of a burrow; it does
   * not count towards the burrow's collateral. *)
@@ -33,7 +31,7 @@ let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000
 
 (** The percentage of additional collateral that we charge when liquidating
   * a burrow, to penalize it for liquidation. *)
-let liquidation_penalty_percentage : FixedPoint.t = FixedPoint.of_string "0.10"
+let liquidation_penalty : Q.t = FixedPoint.(to_q (of_string "0.10"))
 
 (** For convenience. The number of seconds in a year, taking into account
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)

@@ -26,10 +26,10 @@ module Parameters : sig
   val pp : Format.formatter -> t -> unit
 
   (** Current minting price. *)
-  val minting_price : t -> FixedPoint.t
+  val minting_price : t -> Q.t
 
   (** Current liquidation price. *)
-  val liquidation_price : t -> FixedPoint.t
+  val liquidation_price : t -> Q.t
 
   (** Given the amount of kit necessary to close all existing burrows
     * (burrowed) and the amount of kit that are currently in circulation,
@@ -39,7 +39,7 @@ module Parameters : sig
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
-  val compute_adjustment_index : t -> FixedPoint.t
+  val compute_adjustment_index : t -> Q.t
 
   (** Given the current target p, calculate the rate of change of the drift d'. *)
   val compute_drift_derivative : FixedPoint.t -> FixedPoint.t
@@ -74,11 +74,11 @@ struct
   let tz_liquidation (p: t) : Tez.t =
     min p.index p.protected_index
 
-  let minting_price (p: t) : FixedPoint.t =
-    FixedPoint.(p.q * Tez.to_fp (tz_minting p))
+  let minting_price (p: t) : Q.t =
+    Q.(FixedPoint.to_q p.q * Tez.to_q (tz_minting p))
 
-  let liquidation_price (p: t) : FixedPoint.t =
-    FixedPoint.(p.q * Tez.to_fp (tz_liquidation p))
+  let liquidation_price (p: t) : Q.t =
+    Q.(FixedPoint.to_q p.q * Tez.to_q (tz_liquidation p))
 
   let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_string "100.0")
 
@@ -108,8 +108,10 @@ struct
 
   (** Compute the current adjustment index. Basically this is the product of
     * the burrow fee index and the imbalance adjustment index. *)
-  let compute_adjustment_index (p: t) : FixedPoint.t =
-    FixedPoint.(p.burrow_fee_index * p.imbalance_index)
+  let compute_adjustment_index (p: t) : Q.t =
+    let burrow_fee_index = FixedPoint.to_q p.burrow_fee_index in
+    let imbalance_index = FixedPoint.to_q p.imbalance_index in
+    Q.(burrow_fee_index * imbalance_index)
 
 (*
   (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /

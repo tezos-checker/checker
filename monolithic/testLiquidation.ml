@@ -49,7 +49,7 @@ let initial_burrow : Burrow.t =
     collateral = Tez.of_mutez 10_000_000;
     outstanding_kit = Kit.of_mukit 20_000_000;
     excess_kit = Kit.zero;
-    adjustment_index = Parameters.compute_adjustment_index params;
+    adjustment_index = FixedPoint.of_q_floor (Parameters.compute_adjustment_index params); (* TODO: round up or down here? *)
     collateral_at_auction = Tez.zero;
     last_touched = Timestamp.of_seconds 0;
   }
@@ -68,19 +68,28 @@ let suite =
         assert_equal
           (Partial
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
-               tez_to_auction = Tez.of_mutez 7_142_471;
-               expected_kit = Kit.of_mukit 17_592_293;
-               min_received_kit_for_unwarranted = Kit.of_mukit 27_141_389;
+               tez_to_auction = Tez.of_mutez 7_142_472;
+               expected_kit = Kit.of_mukit 17_592_296;
+               min_received_kit_for_unwarranted = Kit.of_mukit 27_141_394;
                burrow_state =
                  { burrow with
-                   collateral = Tez.of_mutez 1_847_529;
+                   collateral = Tez.of_mutez 1_847_528;
                    outstanding_kit = Kit.of_mukit 20_000_000;
                    excess_kit = Kit.zero;
-                   collateral_at_auction = Tez.of_mutez 7_142_471; };
+                   collateral_at_auction = Tez.of_mutez 7_142_472; };
              }
           )
           liquidation_result
           ~printer:Burrow.show_liquidation_result;
+
+        match liquidation_result with
+        | Unnecessary | Complete _ | Close _ -> failwith "impossible"
+        | Partial details -> (
+            assert_bool "is overburrowed" (Burrow.is_overburrowed params details.burrow_state);
+            assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params details.burrow_state));
+            assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params details.burrow_state));
+            assert_bool "is active" details.burrow_state.active;
+          )
     );
 
     ("unwarranted liquidation test" >:: fun _ ->
@@ -90,8 +99,8 @@ let suite =
                        excess_kit = Kit.zero; } in
 
         assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
-        assert_bool "is optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
-        assert_bool "is liquidatable" (not (Burrow.is_liquidatable params burrow));
+        assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
+        assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
 
         let liquidation_result = Burrow.request_liquidation params burrow in
 
@@ -114,7 +123,7 @@ let suite =
           (Complete
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
                tez_to_auction = Tez.of_mutez 8_990_000;
-               expected_kit = Kit.of_mukit 22_142_857;
+               expected_kit = Kit.of_mukit 22_142_858;
                min_received_kit_for_unwarranted = Kit.of_mukit 170_810_000;
                burrow_state =
                  { burrow with
@@ -126,6 +135,15 @@ let suite =
           )
           liquidation_result
           ~printer:Burrow.show_liquidation_result;
+
+        match liquidation_result with
+        | Unnecessary | Partial _ | Close _ -> failwith "impossible"
+        | Complete details -> (
+            assert_bool "is overburrowed" (Burrow.is_overburrowed params details.burrow_state);
+            assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params details.burrow_state);
+            assert_bool "is liquidatable" (Burrow.is_liquidatable params details.burrow_state);
+            assert_bool "is active" details.burrow_state.active;
+          );
     );
 
     ("complete and close liquidation test" >:: fun _ ->
@@ -144,7 +162,7 @@ let suite =
           (Close
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 1000);
                tez_to_auction = Tez.of_mutez 999_000;
-               expected_kit = Kit.of_mukit 2_460_591;
+               expected_kit = Kit.of_mukit 2_460_592;
                min_received_kit_for_unwarranted = Kit.of_mukit 189_810_000;
                burrow_state =
                  { burrow with
@@ -155,5 +173,15 @@ let suite =
           )
           liquidation_result
           ~printer:Burrow.show_liquidation_result;
+
+        match liquidation_result with
+        | Unnecessary | Partial _ | Complete _ -> failwith "impossible"
+        | Close details -> (
+            assert_bool "is overburrowed" (Burrow.is_overburrowed params details.burrow_state);
+            assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params details.burrow_state);
+            assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params details.burrow_state));
+            assert_bool "is inactive" (not details.burrow_state.active);
+          );
+
     );
   ]
