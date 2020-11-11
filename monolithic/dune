@@ -14,7 +14,7 @@
 (test
  (name tests)
  (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation
-   TestUniswap TestAuction)
+   TestUniswap)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))
