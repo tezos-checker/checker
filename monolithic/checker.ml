@@ -94,6 +94,17 @@ module Checker : sig
     * cannot be bought or if the deadline has passed. *)
   val sell_kit : t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
+  (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
+    * giving it some tez and some kit. If the given amounts do not have the
+    * right ratio, the uniswap contract keeps as much of the given tez and kit
+    * as possible with the right ratio, and returns the leftovers, along with
+    * the liquidity tokens. *)
+  val buy_liquidity : t -> Tez.t -> Kit.t -> Uniswap.liquidity * Tez.t * Kit.t * t
+
+  (** Sell some liquidity (liquidity tokens) to the uniswap contract in
+    * exchange for the corresponding tez and kit of the right ratio. *)
+  val sell_liquidity : t -> Uniswap.liquidity -> Tez.t * Kit.t * t
+
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
   (* ************************************************************************* *)
@@ -255,21 +266,28 @@ struct
   (**                                UNISWAP                                   *)
   (* ************************************************************************* *)
 
-  (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
-    * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
   let buy_kit (state:t) (tez:Tez.t) ~min_kit_expected ~deadline =
     match Uniswap.buy_kit state.uniswap tez ~min_kit_expected ~now:state.parameters.last_touched ~deadline with
     | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
-  (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
-    * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
   let sell_kit (state:t) (kit:Kit.t) ~min_tez_expected ~deadline =
     match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now:state.parameters.last_touched ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
+
+  (* NOTE: an address is needed too, eventually. *)
+  let buy_liquidity (state:t) (tez:Tez.t) (kit:Kit.t) : Uniswap.liquidity * Tez.t * Kit.t * t =
+    let tokens, leftover_tez, leftover_kit, updated_uniswap =
+      Uniswap.buy_liquidity state.uniswap tez kit in
+    (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
+
+  (* NOTE: an address is needed too, eventually. *)
+  let sell_liquidity (state:t) (liquidity:Uniswap.liquidity) : Tez.t * Kit.t * t =
+    let tez, kit, updated_uniswap = Uniswap.sell_liquidity state.uniswap liquidity in
+    (tez, kit, {state with uniswap = updated_uniswap})
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
