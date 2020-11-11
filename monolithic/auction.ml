@@ -96,6 +96,7 @@ type Error.error +=
   | NoOpenAuction
   | BidTooLow
   | CannotReclaimLeadingBid
+  | NotAWinningBid
 
 (* Stub types *)
 type burrow_id = unit
@@ -109,7 +110,8 @@ type liquidation_slice = {
 type bid = { address: Address.t; kit: Kit.t }
 
 type auction_id = avl_ptr
-type bid_token = { auction_id: auction_id; bid: bid }
+type bid_details = { auction_id: auction_id; bid: bid; }
+type bid_ticket = bid_details Ticket.ticket
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
@@ -167,156 +169,167 @@ let cancel_liquidation
 
 (* TODO: Use precice calculations here (Z, Q) for precision, not FixedPoint. *)
 let liquidation_outcome
-  (auctions: auctions)
-  (leaf_ptr: leaf_ptr)
+    (auctions: auctions)
+    (leaf_ptr: leaf_ptr)
   : (auctions * Kit.t) option =
   let root = find_root auctions.storage leaf_ptr in
   match PtrMap.find_opt root auctions.completed_auctions with
-    | None -> None (* slice does not correspond to a completed auction *)
-    | Some outcome ->
-      let (slice, _) = read_leaf auctions.storage leaf_ptr in
-      let kit = Kit.scale Kit.one FixedPoint.(
+  | None -> None (* slice does not correspond to a completed auction *)
+  | Some outcome ->
+    let (slice, _) = read_leaf auctions.storage leaf_ptr in
+    let kit = Kit.scale Kit.one FixedPoint.(
         (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit)
-          / (Tez.to_fp outcome.sold_tez)) in
+        / (Tez.to_fp outcome.sold_tez)) in
 
-      (* Now we delete the slice from the lot, so it can not be
-       * withdrawn twice, also to save storage. This might cause
-       * the lot root to change, so we also update completed_auctions
-       * to reflect that.
-       *)
-      let storage = del auctions.storage leaf_ptr in
-      let auctions =
-            { auctions with
-              storage = storage;
-            } in
-      Some (auctions, kit)
+    (* Now we delete the slice from the lot, so it can not be
+     * withdrawn twice, also to save storage. This might cause
+     * the lot root to change, so we also update completed_auctions
+     * to reflect that.
+    *)
+    let storage = del auctions.storage leaf_ptr in
+    let auctions =
+      { auctions with
+        storage = storage;
+      } in
+    Some (auctions, kit)
 
 let start_auction_if_possible
-  (now: Timestamp.t) (auctions: auctions): auctions =
+    (now: Timestamp.t) (auctions: auctions): auctions =
   match auctions.current_auction with
-    | Some _ -> auctions
-    | None ->
-      (* TODO: The maximum lot size will be decided by the queue size.
-       * It should be the greater of 10,000 tez or 5% of the total amount
-       * in the auction queue. This is to avoid the auction queue being
-       * too slow to liquidate if there’s a lot of tez to auction.
-       *)
-       (* TODO: When we did not get enough tez for a lot, we should
-        * look at the next element and split it to fill up our lot,
-        * and insert the leftover back in front of the queue.
-        *
-        * When this happens, we should also update the burrow of the
-        * split item to make sure that the references are correct.
-        *)
-       let (storage, new_auction) =
-            take
-              auctions.storage
-              auctions.queued_slices
-              (Tez.of_mutez 10_000_000_000) in
-       let current_auction =
-             if is_empty storage new_auction
-             then None
-             else
-               let start_value = failwith "FIXME" in
-               Some
-                 { contents = new_auction;
-                   state = Descending (start_value, now); } in
-       { auctions with
-          storage = storage;
-          current_auction = current_auction;
-       }
+  | Some _ -> auctions
+  | None ->
+    (* TODO: The maximum lot size will be decided by the queue size.
+     * It should be the greater of 10,000 tez or 5% of the total amount
+     * in the auction queue. This is to avoid the auction queue being
+     * too slow to liquidate if there’s a lot of tez to auction.
+    *)
+    (* TODO: When we did not get enough tez for a lot, we should
+     * look at the next element and split it to fill up our lot,
+     * and insert the leftover back in front of the queue.
+     *
+     * When this happens, we should also update the burrow of the
+     * split item to make sure that the references are correct.
+    *)
+    let (storage, new_auction) =
+      take
+        auctions.storage
+        auctions.queued_slices
+        (Tez.of_mutez 10_000_000_000) in
+    let current_auction =
+      if is_empty storage new_auction
+      then None
+      else
+        let start_value = failwith "FIXME" in
+        Some
+          { contents = new_auction;
+            state = Descending (start_value, now); } in
+    { auctions with
+      storage = storage;
+      current_auction = current_auction;
+    }
 
 (* TODO also check if 20 blocks have passed *)
 let is_auction_complete (now: Timestamp.t) (auction: current_auction) : bool =
   match auction.state with
-    | Descending _ -> false
-    | Ascending (_, t) ->
-      Timestamp.to_seconds now > Timestamp.to_seconds t + 86400
+  | Descending _ -> false
+  | Ascending (_, t) ->
+    Timestamp.to_seconds now > Timestamp.to_seconds t + 86400
 
 let complete_auction_if_possible
-  (now: Timestamp.t) (auctions: auctions): auctions =
+    (now: Timestamp.t) (auctions: auctions): auctions =
   match auctions.current_auction with
-    | None ->
-      auctions
-    | Some curr when not (is_auction_complete now curr) ->
-      auctions
-    | _ -> failwith "not_implemented"
+  | None ->
+    auctions
+  | Some curr when not (is_auction_complete now curr) ->
+    auctions
+  | _ -> failwith "not_implemented"
 
 (**
  * - Only accept certain amounts
 *)
 let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
-  : (current_auction * bid_token ticket, Error.error) result =
+  : (current_auction * bid_ticket ticket, Error.error) result =
   match auction.state with
-    | Descending (start_value, start_time) ->
-      let decay =
-        FixedPoint.pow
-          Constants.auction_decay_rate
-          (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
-      let min_bid = Kit.scale start_value decay in
-      if Kit.compare bid.kit min_bid >= 0
-      then
-        Ok (
-          { auction with state = Ascending (bid, now); },
-          { auction_id = auction.contents; bid = bid; }
-        )
-      else Error BidTooLow
-    | Ascending (winning_bid, _) ->
-      if Kit.compare winning_bid.kit bid.kit < 0
-      then
-        Ok (
-          { auction with state = Ascending (bid, now); },
-          { auction_id = auction.contents; bid = bid; }
-        )
-      else Error BidTooLow
+  | Descending (start_value, start_time) ->
+    let decay =
+      FixedPoint.pow
+        Constants.auction_decay_rate
+        (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
+    let min_bid = Kit.scale start_value decay in
+    if Kit.compare bid.kit min_bid >= 0
+    then
+      Ok (
+        { auction with state = Ascending (bid, now); },
+        Ticket.create { auction_id = auction.contents; bid = bid; }
+      )
+    else Error BidTooLow
+  | Ascending (winning_bid, _) ->
+    if Kit.compare winning_bid.kit bid.kit < 0
+    then
+      Ok (
+        { auction with state = Ascending (bid, now); },
+        Ticket.create { auction_id = auction.contents; bid = bid; }
+      )
+    else Error BidTooLow
 
 let with_current_auction
-  (auctions: auctions)
-  (f: current_auction -> (current_auction * 'a, Error.error) result)
+    (auctions: auctions)
+    (f: current_auction -> (current_auction * 'a, Error.error) result)
   : (auctions * 'a, Error.error) result =
   match auctions.current_auction with
-    | None -> Error NoOpenAuction
-    | Some curr -> match f curr with
-       | Error err -> Error err
-       | Ok (updated, ret)
-         -> Ok ({ auctions with current_auction = Some updated; }, ret)
+  | None -> Error NoOpenAuction
+  | Some curr -> match f curr with
+    | Error err -> Error err
+    | Ok (updated, ret)
+      -> Ok ({ auctions with current_auction = Some updated; }, ret)
 
 let is_leading_current_auction
-  (auctions: auctions) (bid_token: bid_token): bool =
+    (auctions: auctions) (bid_details: bid_details): bool =
   match auctions.current_auction with
-    | Some auction when auction.contents = bid_token.auction_id ->
-      (match auction.state with
-        | Ascending (bid, _) -> bid = bid_token.bid
-        | Descending _ -> false)
-    | _ -> false
+  | Some auction when auction.contents = bid_details.auction_id ->
+    (match auction.state with
+     | Ascending (bid, _) -> bid = bid_details.bid
+     | Descending _ -> false)
+  | _ -> false
 
-let has_won_completed_auction
-  (auctions: auctions) (bid_token: bid_token): bool =
-  match PtrMap.find_opt bid_token.auction_id auctions.completed_auctions with
-    | None -> false
-    | Some outcome -> outcome.winning_bid = bid_token.bid
-
+let completed_auction_won_by
+    (auctions: auctions) (bid_details: bid_details): auction_outcome option =
+  match PtrMap.find_opt bid_details.auction_id auctions.completed_auctions with
+  | Some outcome when outcome.winning_bid = bid_details.bid -> Some outcome
+  | _ -> None
 
 let reclaim_bid
-  (auctions: auctions)
-  (bid_token: bid_token)
+    (auctions: auctions)
+    (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
-  if is_leading_current_auction auctions bid_token
-     || has_won_completed_auction auctions bid_token
+  let bid_details = Ticket.read bid_ticket in
+  if is_leading_current_auction auctions bid_details
+  || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
-  else Ok bid_token.bid.kit
+  else
+    (* TODO: punch tickets *)
+    Ok bid_details.bid.kit
+
+let reclaim_winning_bid
+    (auctions: auctions)
+    (bid_ticket: bid_ticket)
+  : (Tez.t, Error.error) result =
+  let bid_details = Ticket.read bid_ticket in
+  match completed_auction_won_by auctions bid_details with
+  | Some outcome -> Ok outcome.sold_tez
+  | _ -> Error NotAWinningBid
 
 
 (*
  * - Decrease / increase price gradually
  * - Close an auction if complete
- * - Called from Huxian contract's "touch" operation
+ * - Called from Checker contract's "touch" operation
  * touch   auctions -> auctions
  *
  * - Check token is not the leading bid for the current lot
- * claim_failed_bid   auctions -> bid_token -> auctions * kit.utxo option
+ * claim_failed_bid   auctions -> bid_ticket -> auctions * kit.utxo option
  *
- * claim_winning_bid  auctions -> bid_token -> auctions * kit.tez option
+ * claim_winning_bid  auctions -> bid_ticket -> auctions * kit.tez option
  *
  * claim_sold   auctions -> burrow_id -> auctions * tez
  *

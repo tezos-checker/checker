@@ -4,8 +4,8 @@
 
 (library
  (name huxian)
- (modules Huxian Constants Timestamp BigMap Avl Kit Tez FixedPoint Parameters
-   Burrow Uniswap Error Address Auction)
+ (modules Checker Constants Timestamp BigMap Avl Kit Tez FixedPoint
+   Parameters Burrow Uniswap Error Address Auction Ticket)
  (libraries str zarith)
  (wrapped false)
  (preprocess
@@ -13,7 +13,8 @@
 
 (test
  (name tests)
- (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation TestUniswap)
+ (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation
+   TestUniswap)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

@@ -82,10 +82,19 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> now:Timestamp.t ->  sender:Address.t -> amount:Kit.t -> (Auction.bid_token * t, Error.error) result
+  val place_bid : t -> now:Timestamp.t ->  sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
 
-  val reclaim_bid : t -> address:Address.t -> bid_token:Auction.bid_token
-        -> (Kit.t, Error.error) result
+  (** Reclaim a failed bid for the current or a completed auction. *)
+  val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
+    -> (Kit.t, Error.error) result
+
+  (** Reclaim a winning bid for the current or a completed auction. *)
+  val reclaim_winning_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
+    -> (Tez.t, Error.error) result
+
+  (* (\** Increase a failed bid for the current auction. *\)
+   * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:Auction.bid_ticket
+   *   -> (Auction.bid_ticket, Error.error) result *)
 end =
 struct
   type t =
@@ -223,15 +232,19 @@ struct
     let bid = { Auction.address=sender; kit=amount; } in
     match
       Auction.with_current_auction state.auctions @@
-        fun auction -> Auction.place_bid now auction bid with
-      | Error err -> Error err
-      | Ok (new_auctions, bid_ticket) ->
-        Ok (
-         bid_ticket,
-         {state with auctions=new_auctions;}
-        )
+      fun auction -> Auction.place_bid now auction bid with
+    | Error err -> Error err
+    | Ok (new_auctions, bid_ticket) ->
+      Ok (
+        bid_ticket,
+        {state with auctions=new_auctions;}
+      )
 
-  let reclaim_bid state ~address:_ ~bid_token =
-     Auction.reclaim_bid state.auctions bid_token
+  let reclaim_bid state ~address:_ ~bid_ticket =
+    Auction.reclaim_bid state.auctions bid_ticket
+
+  let reclaim_winning_bid state ~address:_ ~bid_ticket =
+    Auction.reclaim_winning_bid state.auctions bid_ticket
+
 end
 
