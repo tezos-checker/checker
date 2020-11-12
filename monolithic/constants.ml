@@ -54,6 +54,11 @@ let auction_decay_rate : FixedPoint.t = FixedPoint.of_string "0.999"
   * pass between two bids. Currently set to 20min (20min * 60sec/min = 1200s). *)
 let max_bid_interval_in_seconds : int = 1200
 
+(** The maximum number of blocks that can pass between two (ascending) bids
+  * during an auction. The auction should expire if more blocks than this
+  * number pass between two bids. Currently set to 20. *)
+let max_bid_interval_in_blocks : int = 20
+
 (** Every bid in an ascending auction needs to improve over the previous bid by
   * at least 0.33 cNp. *)
 let bid_improvement_factor : FixedPoint.t = FixedPoint.of_string "0.0033"
