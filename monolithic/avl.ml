@@ -28,7 +28,12 @@
 open BigMap
 
 type avl_ptr = AVLPtr of ptr
+[@@deriving show]
+
 type leaf_ptr = LeafPtr of ptr
+[@@deriving show]
+
+let ptr_of_leaf_ptr (LeafPtr ptr) = ptr
 
 (*
  * A double-ended queue backed by a doubly-linked balanced tree where

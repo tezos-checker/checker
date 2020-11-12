@@ -104,7 +104,9 @@ type 'a ticket = 'a
 
 type liquidation_slice = {
   burrow: Address.t;
-  tez: Tez.t
+  tez: Tez.t;
+  older: leaf_ptr option;
+  younger: leaf_ptr option;
 }
 
 type bid = { address: Address.t; kit: Kit.t }

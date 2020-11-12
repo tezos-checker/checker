@@ -47,7 +47,7 @@ let buy_kit (uniswap: t) (tez: Tez.t) ~min_kit_expected ~now ~deadline =
            { uniswap with
              kit = Kit.(uniswap.kit - return);
              tez = Tez.(uniswap.tez + tez) }
-      )
+         )
 
 let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
   (* Utku: I think, as long as the contract has non-zero tez and kit this
@@ -76,7 +76,7 @@ let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
            { uniswap with
              kit = Kit.(uniswap.kit + kit);
              tez = Tez.(uniswap.tez - return) }
-      )
+         )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the

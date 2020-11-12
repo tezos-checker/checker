@@ -249,14 +249,50 @@ struct
            * not have support for the min_received_kit_for_unwarranted field
            * (used to determine what to return to the burrow, once an auction
            * is over), but they should.  *)
-          let liquidation_slice = Auction.{burrow = address; tez = details.tez_to_auction} in
-          let updated_auctions, _leaf_ptr = Auction.send_to_auction state.auctions liquidation_slice in
+          let liquidation_slice =
+            Auction.{
+              burrow = address;
+              tez = details.tez_to_auction;
+              older = Option.map
+                  Burrow.(fun i -> i.youngest)
+                  burrow.liquidation_slices;
+              younger = None;
+            } in
+          let updated_auctions, leaf_ptr =
+            Auction.send_to_auction state.auctions liquidation_slice in
+
+          (* Fixup the previous youngest pointer since the newly added slice
+           * is even younger.
+           *
+           * This is hacky, but couldn't figure out a nicer way, please do
+           * refactor if you do.
+          *)
+          let updated_storage = Option.fold
+              ~none:updated_auctions.storage
+              ~some:
+                (fun older_ptr ->
+                   BigMap.mem_update
+                     state.auctions.storage
+                     (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+                   match older with
+                   | Leaf l -> Leaf
+                                 { l with value = { l.value with younger = Some leaf_ptr; }; }
+                   | _ -> failwith "impossible"
+                )
+              liquidation_slice.older in
+
           (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
-          let updated_burrow = details.burrow_state in
+          let updated_burrow =
+            { details.burrow_state with
+              liquidation_slices =
+                match details.burrow_state.liquidation_slices with
+                | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
+                | Some s -> Some { s with youngest=leaf_ptr; };
+            } in
           Ok ( details.liquidation_reward,
                {state with
                 burrows = AddressMap.add address updated_burrow state.burrows;
-                auctions = updated_auctions;
+                auctions = { updated_auctions with storage = updated_storage; };
                }
              )
       )

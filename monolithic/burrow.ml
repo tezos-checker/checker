@@ -6,6 +6,9 @@ open Parameters
 (*                                Burrows                                    *)
 (* ************************************************************************* *)
 module Burrow : sig
+  type burrow_liquidation_slices =
+    { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
+
   type t =
     { (* Whether the creation deposit for the burrow has been paid. If the
        * creation deposit has been paid, the burrow is considered "active" and
@@ -32,10 +35,14 @@ module Burrow : sig
       collateral_at_auction : Tez.t;
       (* The last time the burrow was touched. *)
       last_touched : Timestamp.t;
+      (* Pointers to liquidation slices in auction queue *)
+      liquidation_slices : burrow_liquidation_slices option
     }
 
   val show : t -> string
   val pp : Format.formatter -> t -> unit
+  val pp_burrow_liquidation_slices
+    : Format.formatter -> burrow_liquidation_slices -> unit
 
   (** Check whether a burrow is overburrowed. A burrow is overburrowed if
     *
@@ -150,6 +157,10 @@ module Burrow : sig
   val request_liquidation : Parameters.t -> t -> liquidation_result
 
 end = struct
+  type burrow_liquidation_slices =
+    { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
+  [@@deriving show]
+
   type t =
     { active : bool;
       owner : Address.t;
@@ -161,6 +172,7 @@ end = struct
       (* TODO: use this field in some calculations *)
       collateral_at_auction : Tez.t;
       last_touched : Timestamp.t;
+      liquidation_slices : burrow_liquidation_slices option;
     }
   [@@deriving show]
 
@@ -232,6 +244,7 @@ end = struct
           adjustment_index = FixedPoint.of_q_floor (Parameters.compute_adjustment_index p); (* TODO: round up or down here? *)
           collateral_at_auction = Tez.zero;
           last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
+          liquidation_slices = None;
         }
 
   (** Add non-negative collateral to a burrow. *)

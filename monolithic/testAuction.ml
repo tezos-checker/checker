@@ -10,7 +10,11 @@ let suite =
      fun _ ->
        let auctions = Auction.empty in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "12345"; tez = Tez.of_mutez 2_000_000; } in
+         Auction.send_to_auction auctions {
+           burrow = Address.of_string "12345";
+           tez = Tez.of_mutez 2_000_000;
+           younger = None; older = None;
+         } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
        let auctions = Auction.touch auctions start_time start_price in
@@ -28,11 +32,20 @@ let suite =
      fun _ ->
        let auctions = Auction.empty in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "12345"; tez = Tez.of_mutez 5_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "12345"; tez = Tez.of_mutez 5_000_000_000;
+             younger = None; older = None; } in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "23456"; tez = Tez.of_mutez 5_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "23456"; tez = Tez.of_mutez 5_000_000_000;
+             younger = None; older = None; } in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "34567"; tez = Tez.of_mutez 5_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "34567"; tez = Tez.of_mutez 5_000_000_000;
+             younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
        let auctions = Auction.touch auctions start_time start_price in
@@ -43,11 +56,20 @@ let suite =
      fun _ ->
        let auctions = Auction.empty in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "12345"; tez = Tez.of_mutez 4_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "12345"; tez = Tez.of_mutez 4_000_000_000;
+             younger = None; older = None; } in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "23456"; tez = Tez.of_mutez 5_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "23456"; tez = Tez.of_mutez 5_000_000_000;
+             younger = None; older = None; } in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "34567"; tez = Tez.of_mutez 3_000_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "34567"; tez = Tez.of_mutez 3_000_000_000;
+             younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
        let auctions = Auction.touch auctions start_time start_price in
@@ -58,7 +80,10 @@ let suite =
      fun _ ->
        let auctions = Auction.empty in
        let (auctions, _) =
-         Auction.send_to_auction auctions { burrow = Address.of_string "12345"; tez = Tez.of_mutez 2_000_000; } in
+         Auction.send_to_auction
+           auctions
+           { burrow = Address.of_string "12345"; tez = Tez.of_mutez 2_000_000;
+             younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
        let auctions = Auction.touch auctions start_time start_price in

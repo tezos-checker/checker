@@ -52,6 +52,7 @@ let initial_burrow : Burrow.t =
     adjustment_index = FixedPoint.of_q_floor (Parameters.compute_adjustment_index params); (* TODO: round up or down here? *)
     collateral_at_auction = Tez.zero;
     last_touched = Timestamp.of_seconds 0;
+    liquidation_slices = None;
   }
 
 let suite =
