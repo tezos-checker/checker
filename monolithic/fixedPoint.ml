@@ -24,7 +24,7 @@ let neg x = Z.neg x
 let pow x y =
   assert (y >= 0); (* TODO: George: we should allow zero too here, I say. *)
   if y = 0
-  then Z.one
+  then one
   else Z.div (Z.pow x y) (Z.pow scaling_factor Stdlib.(y - 1))
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
