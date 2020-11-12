@@ -133,7 +133,7 @@ let arb_tez = Q.(
 
 let arb_item = Q.(pair small_int arb_tez)
 
-let property_test_count = 100
+let property_test_count = 1000
 
 let suite =
   "AVLTests" >::: [
