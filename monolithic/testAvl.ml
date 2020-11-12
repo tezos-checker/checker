@@ -180,7 +180,9 @@ let suite =
        let (mem, x) = pop_front mem root in
        assert_equal [ (2, nTez 5) ] (to_list mem root) ~printer:show_element_list;
        assert_equal x (Some 1);
-       assert_equal 2 (BigMap.cardinal mem);
+       let (mem, x) = pop_front mem root in
+       assert_equal [] (to_list mem root) ~printer:show_element_list;
+       assert_equal x (Some 2);
     );
 
     "test_del_singleton" >::
