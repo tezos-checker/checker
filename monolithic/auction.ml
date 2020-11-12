@@ -202,18 +202,28 @@ let liquidation_outcome
       } in
     Some (auctions, kit)
 
+let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
+  assert (Tez.compare amount Tez.zero > 0);
+  assert (Tez.compare amount slice.tez < 0);
+  ( { slice with tez = amount }, { slice with tez = Tez.(slice.tez - amount); })
+
 let take_with_splitting storage queued_slices split_threshold =
   let (storage, new_auction) = take storage queued_slices split_threshold in
-  (* if Tez.compare (Avl.avl_tez storage new_auction) split_threshold < 0
-   * then
-   *   (\* split next thing *\)
-   *   let (storage, next) = Avl.pop_front storage queued_slices in
-   *   let (part1, part2) = split next in
-   *   let (storage, _) = Avl.push_front storage part2 queued_slices in
-   *   let (storage, _) = Avl.push_back storage part1 new_auction in
-   *   (new_storage, new_auction)
-   * else *)
-  (storage, new_auction)
+  let queued_amount = Avl.avl_tez storage new_auction in
+  if Tez.compare queued_amount split_threshold < 0
+  then
+    (* split next thing *)
+    let (storage, next) = Avl.pop_front storage queued_slices in
+    match next with
+    | Some slice ->
+      let (part1, part2) = split Tez.(split_threshold - queued_amount) slice in
+      let (storage, _) = Avl.push_front storage queued_slices part2 part2.tez in
+      let (storage, _) = Avl.push_back storage new_auction part1 part1.tez in
+      (storage, new_auction)
+    | None ->
+      (storage, new_auction)
+  else
+    (storage, new_auction)
 
 let start_auction_if_possible
     (now: Timestamp.t) (start_price: Kit.t) (auctions: auctions): auctions =

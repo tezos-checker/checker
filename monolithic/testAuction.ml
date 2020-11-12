@@ -41,7 +41,6 @@ let suite =
 
     ("test splits up auction lots to fit batch size" >::
      fun _ ->
-       skip_if true "splitting";
        let auctions = Auction.empty in
        let (auctions, _) =
          Auction.send_to_auction auctions { burrow = Address.of_string "12345"; tez = Tez.of_mutez 4_000_000_000; } in
