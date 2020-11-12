@@ -89,11 +89,11 @@ module Checker : sig
   (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
     * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
-  val buy_kit : t -> Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+  val buy_kit : t -> now:Timestamp.t -> Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit : t -> now:Timestamp.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
@@ -304,14 +304,14 @@ struct
   (* ************************************************************************* *)
 
   (* NOTE: an address is needed too, eventually. *)
-  let buy_kit (state:t) (tez:Tez.t) ~min_kit_expected ~deadline =
-    match Uniswap.buy_kit state.uniswap tez ~min_kit_expected ~now:state.parameters.last_touched ~deadline with
+  let buy_kit (state:t) ~now (tez:Tez.t) ~min_kit_expected ~deadline =
+    match Uniswap.buy_kit state.uniswap tez ~min_kit_expected ~now ~deadline with
     | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) (kit:Kit.t) ~min_tez_expected ~deadline =
-    match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now:state.parameters.last_touched ~deadline with
+  let sell_kit (state:t) ~now (kit:Kit.t) ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
@@ -330,9 +330,6 @@ struct
   (**                               AUCTIONS                                   *)
   (* ************************************************************************* *)
 
-  (* George: I think that ~now should come from state.parameters.last_touched,
-   * instead of being passed as a separate argument, which ideally (if checker
-   * has been touched in this block) is indeed NOW. *)
   let place_bid state ~now ~sender ~amount =
     let bid = { Auction.address=sender; kit=amount; } in
     match
