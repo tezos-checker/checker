@@ -1,5 +1,4 @@
 open OUnit2
-open Address
 
 type some_kit = Kit.t option [@@deriving show]
 

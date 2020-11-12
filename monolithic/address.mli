@@ -1,15 +1,15 @@
 (* ************************************************************************* *)
 (*                                Address                                    *)
 (* ************************************************************************* *)
-type t = int
+type t
 
-let show address = Format.sprintf "tz_%d" address
-let pp ppf address = Format.fprintf ppf "%s" (show address)
+val show : t -> string
+val pp : Format.formatter -> t -> unit
 
-let initial_address = 0
-let next = succ
+val initial_address : t
+val next : t -> t
 
-let compare = Stdlib.compare
+val compare : t -> t -> int
 
-let of_string s = int_of_string s
+val of_string : string -> t
 

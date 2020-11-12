@@ -90,7 +90,6 @@ we should do this.
 *)
 
 open Avl
-open Address
 
 type Error.error +=
   | NoOpenAuction

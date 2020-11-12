@@ -1,6 +1,5 @@
 open Parameters
 open Burrow
-open Address
 open OUnit2
 
 (*
