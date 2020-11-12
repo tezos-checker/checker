@@ -462,14 +462,14 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
   | Leaf leaf ->
     if leaf.tez <= limit
     then
-      let mem = mem_update mem curr_ptr (node_set_parent null) in
+      let mem = mem_update mem curr_ptr (node_set_parent Ptr.null) in
       (mem, Some curr_ptr, None)
     else
       (mem, None, Some curr_ptr)
   | Branch branch ->
     if Tez.(branch.left_tez + branch.right_tez) <= limit
     then (* total_tez <= limit *)
-      let mem = mem_update mem curr_ptr (node_set_parent null) in
+      let mem = mem_update mem curr_ptr (node_set_parent Ptr.null) in
       (mem, Some curr_ptr, None)
     else
       let mem = mem_del mem curr_ptr in
@@ -498,7 +498,7 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
             | Some r -> mem_update mem r (node_set_parent branch.parent) in
           (mem, Some joined, right)
         | (mem, None, right) ->
-          let mem = mem_update mem branch.left (node_set_parent null) in
+          let mem = mem_update mem branch.left (node_set_parent Ptr.null) in
           (mem, Some branch.left, right)
 
 (* Split the longest prefix of the tree with less than

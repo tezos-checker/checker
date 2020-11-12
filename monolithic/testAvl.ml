@@ -22,7 +22,7 @@ let debug_mem (mem: int mem) : unit =
     (fun k v ->
        printf
          "%s -> %s\n"
-         (Int64.to_string k)
+         (Ptr.to_string k)
          (show_node pp_print_int v);
     )
     mem
@@ -30,13 +30,13 @@ let debug_mem (mem: int mem) : unit =
 let debug_avl (mem: int mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-    sprintf "%s: " (Int64.to_string curr) ^
+    sprintf "%s: " (Ptr.to_string curr) ^
     match mem_get mem curr with
     | Root None -> "Root Empty"
     | Root (Some r) -> "Root\n" ^ indent (go r)
     | Leaf leaf ->
       sprintf "Leaf { value: %s; tez: %s; parent: %s }"
-        (Int.to_string leaf.value) (Tez.show leaf.tez) (Int64.to_string leaf.parent)
+        (Int.to_string leaf.value) (Tez.show leaf.tez) (Ptr.to_string leaf.parent)
     | Branch branch ->
       "Branch " ^ show_branch branch ^ "\n"
       ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
@@ -57,7 +57,7 @@ let assert_invariants (mem: int mem) (AVLPtr root) : unit =
       (*
       if (branch.right_tez <> node_tez right)
             || (branch.left_tez <> node_tez left)
-        then printf "Failed branch: %s\n" (Int64.to_string curr);
+        then printf "Failed branch: %s\n" (Ptr.to_string curr);
       *)
       assert (branch.parent = parent);
       assert (branch.left_height = node_height left);

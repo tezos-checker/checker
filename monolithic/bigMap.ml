@@ -13,17 +13,16 @@
  * width address.
  *)
 
-module BigMap = Map.Make(Int64)
+module BigMap = Map.Make(Ptr)
 
-type ptr = int64 [@@deriving show]
+type ptr = Ptr.t [@@deriving show]
 
 let mem_next_ptr (m: 'a BigMap.t): ptr =
   match BigMap.max_binding_opt m with
-  | None -> Int64.one
-  | Some (t, _) -> Int64.succ t
+  | None -> Ptr.init
+  | Some (t, _) -> Ptr.next t
 
-let null: ptr = Int64.zero
-let is_null (p: ptr) = p = null
+let is_null (p: ptr) = p = Ptr.null
 
 let mem_set (m: 'a BigMap.t) (k: ptr) (v: 'a) : 'a BigMap.t =
   BigMap.add k v m

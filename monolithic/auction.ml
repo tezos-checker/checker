@@ -102,7 +102,7 @@ type burrow_id = unit
 type 'a ticket = 'a
 
 type liquidation_slice = {
-  burrow: Address.t;
+  burrow: Ptr.t;
   tez: Tez.t;
   older: leaf_ptr option;
   younger: leaf_ptr option;
@@ -131,7 +131,7 @@ type auction_outcome = {
 module PtrMap =
   Map.Make(struct
     type t = avl_ptr
-    let compare (AVLPtr a) (AVLPtr b) = Int64.compare a b end)
+    let compare (AVLPtr a) (AVLPtr b) = Ptr.compare a b end)
 
 type auctions = {
   storage: liquidation_slice mem;

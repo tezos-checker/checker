@@ -16,15 +16,17 @@ open Parameters
  *   the contract, right?
 *)
 
-module AddressMap = Map.Make(Address)
+module PtrMap = Map.Make(Ptr)
 
 (* ************************************************************************* *)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
+type burrow_id = Ptr.t
+
 module Checker : sig
   type t =
-    { burrows : Burrow.t AddressMap.t;
+    { burrows : Burrow.t PtrMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
       auctions : Auction.auctions;
@@ -45,40 +47,40 @@ module Checker : sig
     * given tez as collateral, minus the creation deposit. Fail if the tez is
     * not enough to cover the creation deposit.
     * NOTE: Call Checker.touch too. *)
-  val create_burrow : t -> owner:Address.t -> amount:Tez.t -> (Address.t * t, Error.error) result
+  val create_burrow : t -> owner:Address.t -> amount:Tez.t -> (burrow_id * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     * someone else owns the burrow, or if the burrow does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val deposit_tez : t -> owner:Address.t -> address:Address.t -> amount:Tez.t -> (t, Error.error) result
+  val deposit_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
     * does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val withdraw_tez : t -> owner:Address.t -> address:Address.t -> amount:Tez.t -> (Tez.t * t, Error.error) result
+  val withdraw_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (Tez.t * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
     * if the burrow owner does not match, or if the burrow does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val mint_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (Kit.t * t, Error.error) result
+  val mint_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow owner
     * does not match, or if the burrow does not exist.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val burn_kit : t -> owner:Address.t -> address:Address.t -> amount:Kit.t -> (t, Error.error) result
+  val burn_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator.
     * NOTE: Call Checker.touch too.
     * NOTE: Call Burrow.touch too. *)
-  val mark_for_liquidation : t -> liquidator:Address.t -> address:Address.t -> (Tez.t * t, Error.error) result
+  val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
@@ -111,7 +113,7 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> now:Timestamp.t ->  sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
+  val place_bid : t -> now:Timestamp.t -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
   val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
@@ -127,7 +129,7 @@ module Checker : sig
 end =
 struct
   type t =
-    { burrows : Burrow.t AddressMap.t;
+    { burrows : Burrow.t PtrMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
       auctions : Auction.auctions;
@@ -135,14 +137,14 @@ struct
 
   type Error.error +=
     | OwnershipMismatch of Address.t * Burrow.t
-    | NonExistentBurrow of Address.t
-    | NotLiquidationCandidate of Address.t
+    | NonExistentBurrow of burrow_id
+    | NotLiquidationCandidate of burrow_id
 
   (* Utility function to give us burrow addresses *)
-  let mk_next_burrow_address (burrows: Burrow.t AddressMap.t) : Address.t =
-    match AddressMap.max_binding_opt burrows with
-    | None -> Address.initial_address
-    | Some (a, _) -> Address.next a
+  let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
+    match PtrMap.max_binding_opt burrows with
+    | None -> Ptr.init
+    | Some (id, _) -> Ptr.next id
 
   let touch (state:t) ~(now:Timestamp.t) ~(index:FixedPoint.t) : t =
     if state.parameters.last_touched = now then
@@ -172,77 +174,77 @@ struct
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
-    let address = mk_next_burrow_address state.burrows in
+    let address = mk_next_burrow_id state.burrows in
     match Burrow.create state.parameters owner amount with
-    | Ok burrow -> Ok (address, {state with burrows = AddressMap.add address burrow state.burrows})
+    | Ok burrow -> Ok (address, {state with burrows = PtrMap.add address burrow state.burrows})
     | Error err -> Error err
 
-  let deposit_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
+  let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
-    match AddressMap.find_opt address state.burrows with
+    match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
       let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
-      Ok {state with burrows = AddressMap.add address updated_burrow state.burrows}
+      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow address)
+    | None -> Error (NonExistentBurrow burrow_id)
 
-  let mint_kit (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Kit.t) =
+  let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
-    match AddressMap.find_opt address state.burrows with
+    match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.mint_kit state.parameters amount burrow with
         | Ok (updated_burrow, minted) ->
           assert (amount = minted);
           Ok ( minted,
                {state with
-                burrows = AddressMap.add address updated_burrow state.burrows;
+                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
                 parameters = Parameters.add_circulating_kit state.parameters minted;
                }
              )
         | Error err -> Error err
       )
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow address)
+    | None -> Error (NonExistentBurrow burrow_id)
 
-  let withdraw_tez (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Tez.t) =
+  let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
-    match AddressMap.find_opt address state.burrows with
+    match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
         match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (updated_burrow, withdrawn) ->
           assert (amount = withdrawn);
-          Ok (withdrawn, {state with burrows = AddressMap.add address updated_burrow state.burrows})
+          Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
         | Error err -> Error err
       )
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow address)
+    | None -> Error (NonExistentBurrow burrow_id)
 
-  let burn_kit (state:t) ~(owner:Address.t) ~(address:Address.t) ~(amount:Kit.t) =
+  let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
-    match AddressMap.find_opt address state.burrows with
+    match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
       let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= amount);
       Ok {state with
-          burrows = AddressMap.add address updated_burrow state.burrows;
+          burrows = PtrMap.add burrow_id updated_burrow state.burrows;
           parameters = Parameters.remove_circulating_kit state.parameters amount;
          }
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow address)
+    | None -> Error (NonExistentBurrow burrow_id)
 
   (* TODO: the liquidator's address must be used, eventually. *)
-  let mark_for_liquidation (state:t) ~liquidator:_ ~(address:Address.t) =
+  let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =
     (* TODO: Call Checker.touch. *)
     (* TODO: Call Burrow.touch. *)
-    match AddressMap.find_opt address state.burrows with
+    match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
         match Burrow.request_liquidation state.parameters burrow with
-        | Unnecessary -> Error (NotLiquidationCandidate address)
+        | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
         | Partial details | Complete details | Close details ->
           (* TODO: At the moment the auction machinery and representation do
            * not have support for the min_received_kit_for_unwarranted field
@@ -250,7 +252,7 @@ struct
            * is over), but they should.  *)
           let liquidation_slice =
             Auction.{
-              burrow = address;
+              burrow = burrow_id;
               tez = details.tez_to_auction;
               older = Option.map
                   Burrow.(fun i -> i.youngest)
@@ -290,12 +292,12 @@ struct
             } in
           Ok ( details.liquidation_reward,
                {state with
-                burrows = AddressMap.add address updated_burrow state.burrows;
+                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
                 auctions = { updated_auctions with storage = updated_storage; };
                }
              )
       )
-    | None -> Error (NonExistentBurrow address)
+    | None -> Error (NonExistentBurrow burrow_id)
 
   (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
