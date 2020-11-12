@@ -253,33 +253,30 @@ let complete_auction_if_possible
     auctions
   | _ -> failwith "not_implemented"
 
-(**
- * - Only accept certain amounts
-*)
-let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
-  : (current_auction * bid_ticket ticket, Error.error) result =
+let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
     let decay =
       FixedPoint.pow
         Constants.auction_decay_rate
         (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
-    let min_bid = Kit.scale start_value decay in
-    if Kit.compare bid.kit min_bid >= 0
-    then
-      Ok (
-        { auction with state = Ascending (bid, now); },
-        Ticket.create { auction_id = auction.contents; bid = bid; }
-      )
-    else Error BidTooLow
-  | Ascending (winning_bid, _) ->
-    if Kit.compare winning_bid.kit bid.kit < 0
-    then
-      Ok (
-        { auction with state = Ascending (bid, now); },
-        Ticket.create { auction_id = auction.contents; bid = bid; }
-      )
-    else Error BidTooLow
+    Kit.scale start_value decay
+  | Ascending (leading_bid, _) ->
+    leading_bid.kit
+
+(**
+ * - Only accept certain amounts
+*)
+let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
+  : (current_auction * bid_ticket ticket, Error.error) result =
+  let min_bid = current_auction_bid_threshold now auction in
+  if Kit.compare bid.kit min_bid > 0
+  then
+    Ok (
+      { auction with state = Ascending (bid, now); },
+      Ticket.create { auction_id = auction.contents; bid = bid; }
+    )
+  else Error BidTooLow
 
 let with_current_auction
     (auctions: auctions)

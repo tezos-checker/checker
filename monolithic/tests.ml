@@ -8,6 +8,7 @@ let suite =
     TestParameters.suite;
     TestLiquidation.suite;
     TestUniswap.suite;
+    TestAuction.suite;
   ]
 
 let () =
