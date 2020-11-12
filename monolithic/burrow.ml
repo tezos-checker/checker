@@ -41,6 +41,9 @@ module Burrow : sig
 
   val show : t -> string
   val pp : Format.formatter -> t -> unit
+
+  val show_burrow_liquidation_slices
+    : burrow_liquidation_slices -> string
   val pp_burrow_liquidation_slices
     : Format.formatter -> burrow_liquidation_slices -> unit
 

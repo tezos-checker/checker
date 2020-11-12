@@ -267,12 +267,16 @@ let start_auction_if_possible
       current_auction = current_auction;
     }
 
+(** Check if an auction is complete. A descending auction declines
+  * exponentially over time, so it is effectively never complete (George: I
+  * guess when it reaches zero it is, but I'd expect someone to buy before
+  * that?). If the auction is ascending, then every bid adds the longer of 20
+  * minutes or 20 blocks to the time before the auction expires. *)
 (* TODO also check if 20 blocks have passed *)
 let is_auction_complete (now: Timestamp.t) (auction: current_auction) : bool =
   match auction.state with
   | Descending _ -> false
-  | Ascending (_, t) ->
-    Timestamp.to_seconds now > Timestamp.to_seconds t + 86400
+  | Ascending (_, t) -> Timestamp.seconds_elapsed ~start:t ~finish:now > Constants.max_bid_interval_in_seconds
 
 let complete_auction_if_possible
     (now: Timestamp.t) (auctions: auctions): auctions =
@@ -283,6 +287,10 @@ let complete_auction_if_possible
     auctions
   | _ -> failwith "not_implemented"
 
+(** Compute the current threshold for a bid to be accepted. For a descending
+  * auction this amounts to the reserve price (which is exponentially
+  * dropping). For a descending auction we should improve upon the last bid
+  * a fixed factor. *)
 let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
@@ -292,7 +300,7 @@ let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) 
         (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _) ->
-    leading_bid.kit
+    Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
 
 (**
  * - Only accept certain amounts

@@ -22,7 +22,7 @@ let ( / ) x y = Z.(x * scaling_factor / y)
 let neg x = Z.neg x
 
 let pow x y =
-  assert (y >= 0); (* TODO: George: we should allow zero too here, I say. *)
+  assert (y >= 0);
   if y = 0
   then one
   else Z.div (Z.pow x y) (Z.pow scaling_factor Stdlib.(y - 1))
