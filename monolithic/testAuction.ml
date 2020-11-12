@@ -92,12 +92,12 @@ let suite =
 
        (* Below threshold *)
        assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time current { address = bidder; kit = Kit.of_mukit 1_000_000; });
-       (* At threshold *)
-       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time current { address = bidder; kit = Kit.of_mukit 2_000_000; });
-       (* Above threshold, we get a bid ticket and our bid plus 0.33 cNp becomes the new threshold *)
-       let (current, _ticket) = Result.get_ok (Auction.place_bid start_time current { address = bidder; kit = Kit.of_mukit 2_000_001; }) in
-       assert_equal (Kit.of_mukit 2_006_601) (Auction.current_auction_bid_threshold start_time current) ~printer:Kit.show;
+       (* Right below threshold *)
+       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time current { address = bidder; kit = Kit.of_mukit 1_999_999; });
+       (* On/Above threshold, we get a bid ticket and our bid plus 0.33 cNp becomes the new threshold *)
+       let (current, _ticket) = Result.get_ok (Auction.place_bid start_time current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
+       assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_bid_threshold start_time current) ~printer:Kit.show;
        (* Threshold does not drop over time *)
-       assert_equal (Kit.of_mukit 2_006_601) (Auction.current_auction_bid_threshold (Timestamp.add_seconds start_time 10) current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_bid_threshold (Timestamp.add_seconds start_time 10) current) ~printer:Kit.show;
     )
   ]

@@ -302,13 +302,11 @@ let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) 
   | Ascending (leading_bid, _) ->
     Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
 
-(**
- * - Only accept certain amounts
-*)
+(** Place a bid in the current auction. Fail if the bid is too low (must be at
+  * least as much as the current_auction_bid_threshold. *)
 let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket ticket, Error.error) result =
-  let min_bid = current_auction_bid_threshold now auction in
-  if Kit.compare bid.kit min_bid > 0
+  if bid.kit >= current_auction_bid_threshold now auction
   then
     Ok (
       { auction with state = Ascending (bid, now); },
