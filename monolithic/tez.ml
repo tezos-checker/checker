@@ -31,9 +31,6 @@ let ( / ) x y = (* TODO: lossy *)
 let scale amount fp = (* TODO: Over/Under- flow checks *)
   Z.(FixedPoint.(to_rep (to_fp amount * fp)) * scaling_factor / FixedPoint.scaling_factor)
 
-let max x y =
-  if compare x y > 0 then x else y
-
 (* Pretty printing functions *)
 let show amount =
   let zfill s width =

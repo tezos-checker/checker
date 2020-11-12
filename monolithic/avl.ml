@@ -460,14 +460,14 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
   match mem_get mem curr_ptr with
   | Root _ -> failwith "ref_split found Root"
   | Leaf leaf ->
-    if Tez.compare leaf.tez limit <= 0
+    if leaf.tez <= limit
     then
       let mem = mem_update mem curr_ptr (node_set_parent null) in
       (mem, Some curr_ptr, None)
     else
       (mem, None, Some curr_ptr)
   | Branch branch ->
-    if Tez.compare Tez.(branch.left_tez + branch.right_tez) limit <= 0
+    if Tez.(branch.left_tez + branch.right_tez) <= limit
     then (* total_tez <= limit *)
       let mem = mem_update mem curr_ptr (node_set_parent null) in
       (mem, Some curr_ptr, None)
@@ -475,11 +475,11 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
       let mem = mem_del mem curr_ptr in
       let mem = mem_update mem branch.right (node_set_parent branch.parent) in
 
-      if Tez.compare branch.left_tez limit = 0
+      if branch.left_tez = limit
       then (* left_tez = limit *)
         (mem, Some branch.left, Some branch.right)
 
-      else if Tez.compare limit branch.left_tez < 0
+      else if limit < branch.left_tez
       then (* limit < left_tez < total_tez *)
         match ref_split mem branch.left limit with
         | (_, _, None) -> failwith "impossible"

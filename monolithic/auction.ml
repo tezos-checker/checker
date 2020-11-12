@@ -205,14 +205,14 @@ let liquidation_outcome
     Some (auctions, kit)
 
 let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
-  assert (Tez.compare amount Tez.zero > 0);
-  assert (Tez.compare amount slice.tez < 0);
+  assert (amount > Tez.zero);
+  assert (amount < slice.tez);
   ( { slice with tez = amount }, { slice with tez = Tez.(slice.tez - amount); })
 
 let take_with_splitting storage queued_slices split_threshold =
   let (storage, new_auction) = take storage queued_slices split_threshold in
   let queued_amount = Avl.avl_tez storage new_auction in
-  if Tez.compare queued_amount split_threshold < 0
+  if queued_amount < split_threshold
   then
     (* split next thing *)
     let (storage, next) = Avl.pop_front storage queued_slices in
@@ -246,7 +246,7 @@ let start_auction_if_possible
     *)
     let queued_amount = Avl.avl_tez auctions.storage auctions.queued_slices in
     let split_threshold =
-      Tez.max
+      max
         Constants.max_lot_size
         (Tez.scale queued_amount Constants.min_lot_auction_queue_fraction) in
     let (storage, new_auction) =

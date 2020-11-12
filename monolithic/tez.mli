@@ -25,7 +25,6 @@ val of_q_ceil : Q.t -> t (* NOTE: For precision. *)
 val of_q_floor : Q.t -> t (* NOTE: For precision. *)
 
 val scale : t -> FixedPoint.t -> t
-val max : t -> t -> t
 
 (* Pretty printing functions *)
 val pp : Format.formatter -> t -> unit

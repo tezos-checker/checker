@@ -293,8 +293,8 @@ let suite =
      @@ Q.Test.make ~name:"prop_take" ~count:property_test_count Q.(pair arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     Q.assume (List.for_all (fun (_, t) -> Tez.compare t Tez.zero > 0) xs);
-     Q.assume (Tez.compare limit Tez.zero > 0);
+     Q.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
+     Q.assume (limit > Tez.zero);
 
      let (mem, right) = from_list BigMap.empty xs in
      let (mem, left) = take mem right limit in
@@ -310,7 +310,7 @@ let suite =
        match xs with
        | [] -> ([], [])
        | x :: xs ->
-         if Tez.compare (snd x) lim <= 0
+         if snd x <= lim
          then
            match split_list Tez.(lim - snd x) xs with
              (l, r) -> (x::l, r)
@@ -336,8 +336,8 @@ let suite =
      @@ Q.Test.make ~name:"prop_take_append" ~count:property_test_count Q.(pair arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     Q.assume (List.for_all (fun (_, t) -> Tez.compare t Tez.zero > 0) xs);
-     Q.assume (Tez.compare limit Tez.zero > 0);
+     Q.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
+     Q.assume (limit > Tez.zero);
 
      let (mem, right) = from_list BigMap.empty xs in
      let (mem, left) = take mem right limit in
