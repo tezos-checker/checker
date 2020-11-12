@@ -432,6 +432,24 @@ let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
     | Leaf l -> go l.parent in
   go leaf
 
+let rec ref_peek_front (mem: 't mem) (ptr: ptr) : leaf_ptr =
+  let self = mem_get mem ptr in
+  match self with
+  | Leaf _ -> LeafPtr ptr
+  | Branch b -> ref_peek_front mem b.left
+  | _ -> failwith "node is not leaf or branch"
+
+(* FIXME: needs an efficient reimplementation *)
+let pop_front (mem: 't mem) (AVLPtr root_ptr) : 't mem * 't option =
+  match mem_get mem root_ptr with
+  | Root None -> (mem, None)
+  | Root (Some r) ->
+    let leafptr = ref_peek_front mem r in
+    let (x, _) = read_leaf mem leafptr in
+    let mem = del mem leafptr in
+    (mem, Some x)
+  | _ -> failwith "pop_front: avl_ptr does not point to a Root"
+
 let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
   : 't mem * ptr option * ptr option =
   match mem_get mem curr_ptr with

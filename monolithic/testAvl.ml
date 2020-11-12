@@ -133,7 +133,7 @@ let arb_tez = Q.(
 
 let arb_item = Q.(pair small_int arb_tez)
 
-let property_test_count = 1000
+let property_test_count = 100
 
 let suite =
   "AVLTests" >::: [
@@ -165,6 +165,24 @@ let suite =
        let actual = to_list mem root in
        assert_equal elements actual ~printer:show_element_list);
 
+    "test_pop_front_empty" >::
+    (fun _ ->
+       let (mem, root) = from_list BigMap.empty [] in
+       let (mem, x) = pop_front mem root in
+       assert_equal [] (to_list mem root) ~printer:show_element_list;
+       assert_equal x None;
+    );
+
+    "test_pop_front" >::
+    (fun _ ->
+       let elements = [ (1, nTez 5); (2, nTez 5) ] in
+       let (mem, root) = from_list BigMap.empty elements in
+       let (mem, x) = pop_front mem root in
+       assert_equal [ (2, nTez 5) ] (to_list mem root) ~printer:show_element_list;
+       assert_equal x (Some 1);
+       assert_equal 2 (BigMap.cardinal mem);
+    );
+
     "test_del_singleton" >::
     (fun _ ->
        let (mem, root) = mk_empty BigMap.empty in
@@ -172,6 +190,7 @@ let suite =
        let mem = del mem elem in
        assert_equal [] (to_list mem root);
        assert_equal 1 (BigMap.cardinal mem));
+
     "test_del" >::
     (fun _ ->
        let fst_elements =
