@@ -202,6 +202,19 @@ let liquidation_outcome
       } in
     Some (auctions, kit)
 
+let take_with_splitting storage queued_slices split_threshold =
+  let (storage, new_auction) = take storage queued_slices split_threshold in
+  (* if Tez.compare (Avl.avl_tez storage new_auction) split_threshold < 0
+   * then
+   *   (\* split next thing *\)
+   *   let (storage, next) = Avl.pop_front storage queued_slices in
+   *   let (part1, part2) = split next in
+   *   let (storage, _) = Avl.push_front storage part2 queued_slices in
+   *   let (storage, _) = Avl.push_back storage part1 new_auction in
+   *   (new_storage, new_auction)
+   * else *)
+  (storage, new_auction)
+
 let start_auction_if_possible
     (now: Timestamp.t) (start_price: Kit.t) (auctions: auctions): auctions =
   match auctions.current_auction with
@@ -219,11 +232,16 @@ let start_auction_if_possible
      * When this happens, we should also update the burrow of the
      * split item to make sure that the references are correct.
     *)
+    let queued_amount = Avl.avl_tez auctions.storage auctions.queued_slices in
+    let split_threshold =
+      Tez.max
+        Constants.max_lot_size
+        (Tez.scale queued_amount Constants.min_lot_auction_queue_fraction) in
     let (storage, new_auction) =
-      take
+      take_with_splitting
         auctions.storage
         auctions.queued_slices
-        (Tez.of_mutez 10_000_000_000) in
+        split_threshold in
     let current_auction =
       if is_empty storage new_auction
       then None

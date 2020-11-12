@@ -19,6 +19,7 @@ let suite =
        assert_equal ~printer:show_fp (FixedPoint.of_string "8.0")     Tez.(tz5 / tz1);
        assert_equal ~printer:show_fp (FixedPoint.of_string "1.7078")  Tez.(tz3 / tz2);
        assert_equal ~printer:show_fp (FixedPoint.of_string "125.025") Tez.(tz4 / tz5);
-       assert_equal ~printer:show_tz (Tez.of_mutez 15_370_200) (Tez.scale tz3 fp1)
+       assert_equal ~printer:show_tz (Tez.of_mutez 15_370_200) (Tez.scale tz3 fp1);
+       assert_equal ~printer:show_tz tz1 (Tez.max tz1 tz2)
     )
   ]
