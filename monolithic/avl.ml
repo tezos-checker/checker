@@ -56,6 +56,8 @@ open BigMap
 type avl_ptr = AVLPtr of ptr
 [@@deriving show]
 
+let ptr_of_avl_ptr (AVLPtr ptr) = ptr
+
 type leaf_ptr = LeafPtr of ptr
 [@@deriving show]
 
@@ -447,6 +449,12 @@ let del (mem: 't mem) (LeafPtr ptr): 't mem = ref_del mem ptr
 let read_leaf (mem: 't mem) (LeafPtr ptr): 't * Tez.t =
   match mem_get mem ptr with
   | Leaf l -> (l.value, l.tez)
+  | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
+
+let update_leaf (mem: 't mem) (LeafPtr ptr) (f: 't -> 't): 't mem =
+  match mem_get mem ptr with
+  | Leaf l ->
+    mem_set mem ptr (Leaf { l with value = f l.value })
   | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
 
 let is_empty (mem: 't mem) (AVLPtr ptr) : bool =
