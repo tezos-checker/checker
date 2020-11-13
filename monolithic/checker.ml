@@ -105,11 +105,11 @@ module Checker : sig
     * right ratio, the uniswap contract keeps as much of the given tez and kit
     * as possible with the right ratio, and returns the leftovers, along with
     * the liquidity tokens. *)
-  val buy_liquidity : t -> Tez.t -> Kit.t -> Uniswap.liquidity * Tez.t * Kit.t * t
+  val add_liquidity : t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val sell_liquidity : t -> Uniswap.liquidity -> Tez.t * Kit.t * t
+  val remove_liquidity : t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
@@ -418,15 +418,18 @@ struct
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let buy_liquidity (state:t) (tez:Tez.t) (kit:Kit.t) : Uniswap.liquidity * Tez.t * Kit.t * t =
-    let tokens, leftover_tez, leftover_kit, updated_uniswap =
-      Uniswap.buy_liquidity state.uniswap tez kit in
-    (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
+  let add_liquidity (state:t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline =
+    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline with
+    | Error err -> Error err
+    | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
+        Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_liquidity (state:t) (liquidity:Uniswap.liquidity) : Tez.t * Kit.t * t =
-    let tez, kit, updated_uniswap = Uniswap.sell_liquidity state.uniswap liquidity in
-    (tez, kit, {state with uniswap = updated_uniswap})
+  let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
+    match Uniswap.remove_liquidity state.uniswap ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline with
+    | Error err -> Error err
+    | Ok (tez, kit, updated_uniswap) ->
+        Ok (tez, kit, {state with uniswap = updated_uniswap})
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)

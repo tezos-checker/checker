@@ -18,6 +18,11 @@
  * da / 2 will give you a better price than one order of size da, but the
  * difference is far smaller than typical fees or any amount we care about.
 *)
+(* Check out dexter for technical details:
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
+*)
+(* TODO: At some point we should also specify how things should work for the
+ * first liquidity provider, when the total liquidity is zero. *)
 type liquidity
 
 val show_liquidity : liquidity -> string
@@ -38,8 +43,14 @@ type t =
 val show : t -> string
 val pp : Format.formatter -> t -> unit
 
-(** Check whether the uniswap contract contains at least some kit and some tez. *)
-val uniswap_non_empty : t -> bool
+(** Check whether the uniswap contract contains zero tez. *)
+val is_tez_pool_empty : t -> bool
+
+(** Check whether the uniswap contract contains zero kit. *)
+val is_token_pool_empty : t -> bool
+
+(** Check whether the uniswap contract contains zero liquidity tokens. *)
+val is_liquidity_token_pool_empty : t -> bool
 
 (** Compute the current price of kit in tez, as estimated using the ratio of
   * tez and kit currently in the uniswap contract. *)
@@ -68,14 +79,14 @@ val sell_kit : t -> Kit.t -> min_tez_expected:Tez.t -> now:Timestamp.t -> deadli
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders.
 *)
-val buy_liquidity : t -> Tez.t -> Kit.t -> liquidity * Tez.t * Kit.t * t
+val add_liquidity : t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (liquidity * Tez.t * Kit.t * t, Error.error) result
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
   * sells their liquidity. I think it is unlikely to happen, since the last
   * liquidity holders wouldn't want to lose the burrow fees.
 *)
-val sell_liquidity : t -> liquidity -> Tez.t * Kit.t * t
+val remove_liquidity : t -> lqt_burned:liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
 val add_accrued_kit : t -> Kit.t -> t

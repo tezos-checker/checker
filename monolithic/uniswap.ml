@@ -3,7 +3,7 @@
 (* ************************************************************************* *)
 type liquidity = int [@@deriving show]
 
-let liquidity_of_int i = i
+let liquidity_of_int i = assert (i > 0); i
 
 (* TODO: The state of uniswap should also (in the future) include an ongoing
  * auction to decide who to delegate to, possibly multiple tez balances, etc.
@@ -15,24 +15,44 @@ type t =
   }
 [@@deriving show]
 
-let uniswap_non_empty (u: t) =
-  u.kit > Kit.zero && u.tez > Tez.zero
+let is_tez_pool_empty (u: t) = assert (u.tez >= Tez.zero); u.tez = Tez.zero
+
+let is_token_pool_empty (u: t) = assert (u.kit >= Kit.zero); u.kit = Kit.zero
+
+let is_liquidity_token_pool_empty (u: t) =
+  assert (u.total_liquidity_tokens >= 0);
+  u.total_liquidity_tokens = 0
 
 let kit_in_tez (uniswap: t) = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit)
 
 type Error.error +=
-  | EmptyUniswap
+  | UniswapEmptyTezPool
+  | UniswapEmptyTokenPool
+  | UniswapEmptyLiquidityTokenPool
+  | UniswapNoTezGiven
+  | UniswapNoLiquidityToBeAdded
+  | UniswapTooLowLiquidityMinted
+  | UniswapTooManyTokensRequired
+  | UniswapCantWithdrawEnoughTez
+  | UniswapCantWithdrawEnoughTokens
+  | UniswapTooManyTezWithdrawn
+  | UniswapTooManyTokensWithdrawn
+  | UniswapNoLiquidityBurned
+  | UniswapTooMuchLiquidityBurned
+  | UniswapZeroTokensDeposited
   | UniswapNonPositiveInput
   | UniswapTooLate
   | UniswapBuyKitPriceFailure
   | UniswapSellKitPriceFailure
 
 let buy_kit (uniswap: t) (tez: Tez.t) ~min_kit_expected ~now ~deadline =
-  if not (uniswap_non_empty uniswap) then
-    Error EmptyUniswap
+  if is_tez_pool_empty uniswap then
+    Error UniswapEmptyTezPool
+  else if is_token_pool_empty uniswap then
+    Error UniswapEmptyTokenPool
   else if (tez <= Tez.zero) then
     Error UniswapNonPositiveInput
-  else if now > deadline then
+  else if now >= deadline then
     Error UniswapTooLate
   else
     let price = Q.(Kit.to_q uniswap.kit / Tez.to_q uniswap.tez) in
@@ -57,11 +77,13 @@ let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
    * currency. It will presumably be started with some amount of tez, and
    * the first minting fee will initialize the kit amount.
   *)
-  if not (uniswap_non_empty uniswap) then
-    Error EmptyUniswap
+  if is_tez_pool_empty uniswap then
+    Error UniswapEmptyTezPool
+  else if is_token_pool_empty uniswap then
+    Error UniswapEmptyTokenPool
   else if (kit <= Kit.zero) then
     Error UniswapNonPositiveInput
-  else if now > deadline then
+  else if now >= deadline then
     Error UniswapTooLate
   else
     let price = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit) in
@@ -89,57 +111,71 @@ let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders.
 *)
-let buy_liquidity (uniswap: t) (tez: Tez.t) (kit: Kit.t)
-  : liquidity * Tez.t * Kit.t * t =
-  (* Adding liquidity always succeeds, if the exchange has non-zero amount. *)
-  assert (uniswap_non_empty uniswap);
-  let ratio = kit_in_tez uniswap in
-  (* There is a chance that the given tez and kit have the wrong ratio,
-   * so we liquidate as much as we can and return the leftovers. NOTE:
-   * Alternatively, the LP can use the uniswap contract to get the right
-   * ratio beforehand.
-   * Invariant here is that (tez', kit') should have the correct ratio.
-  *)
-  let (tez', kit') =
-    if Q.(Tez.to_q tez * Kit.to_q uniswap.kit > Kit.to_q kit * Tez.to_q uniswap.tez)
-    then (Tez.of_q_floor Q.(Kit.to_q kit * ratio), kit) (* TODO: floor or ceil? *)
-    else if Q.(Tez.to_q tez * Kit.to_q uniswap.kit < Kit.to_q kit * Tez.to_q uniswap.tez)
-    then (tez, Kit.of_q_floor Q.(Tez.to_q tez / ratio)) (* TODO: floor or ceil? *)
-    else (tez, kit)
-  in
-  let liquidity =
-    if uniswap.total_liquidity_tokens = 0
-    then 1
-    else Q.(
-        to_int ( (* floors it *)
-          of_int uniswap.total_liquidity_tokens
-          * Tez.to_q tez'
-          / Tez.to_q uniswap.tez)
-      ) in
-  let updated =
-    { kit = Kit.(uniswap.kit + kit');
-      tez = Tez.(uniswap.tez + tez');
-      total_liquidity_tokens =
-        uniswap.total_liquidity_tokens + liquidity } in
-  (liquidity, Tez.(tez - tez'), Kit.(kit - kit'), updated)
+
+let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline =
+  if is_tez_pool_empty uniswap then
+    Error UniswapEmptyTezPool
+  else if now >= deadline then
+    Error UniswapTooLate
+  else if amount = Tez.zero then
+    Error UniswapNoTezGiven
+  else if min_lqt_minted = 0 then
+    Error UniswapNoLiquidityToBeAdded
+  else
+    let lqt_minted = Q.(to_int (of_int uniswap.total_liquidity_tokens * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
+    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
+
+    if lqt_minted < min_lqt_minted then
+      Error UniswapTooLowLiquidityMinted
+    else if max_kit_deposited < kit_deposited then
+      Error UniswapTooManyTokensRequired
+    else if kit_deposited = Kit.zero then
+      Error UniswapZeroTokensDeposited
+    else
+      let updated =
+        { kit = Kit.(uniswap.kit + kit_deposited);
+          tez = Tez.(uniswap.tez + amount);
+          total_liquidity_tokens = uniswap.total_liquidity_tokens + lqt_minted
+        } in
+      Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees.
 *)
-let sell_liquidity (uniswap: t) (liquidity: liquidity)
-  : Tez.t * Kit.t * t =
-  (* Since this requires a liquidity token, contract can not be empty *)
-  assert(uniswap_non_empty(uniswap));
-  let ratio = Q.(of_int liquidity / of_int uniswap.total_liquidity_tokens) in
-  let tez = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
-  let kit = Kit.of_q_floor Q.(Kit.to_q uniswap.kit * ratio) in
-  let updated = {
-    tez = Tez.(uniswap.tez - tez);
-    kit = Kit.(uniswap.kit - kit);
-    total_liquidity_tokens = uniswap.total_liquidity_tokens - liquidity } in
-  (tez, kit, updated)
+(* TODO: Allowance checks *)
+(* TODO: amount = 0 check *)
+let remove_liquidity (uniswap: t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline
+  : (Tez.t * Kit.t * t, Error.error) result =
+  if is_liquidity_token_pool_empty uniswap then
+    (* Since this requires a liquidity token, contract cannot be empty *)
+    Error UniswapEmptyLiquidityTokenPool
+  else if now >= deadline then
+    Error UniswapTooLate
+  else if lqt_burned <= 0 then
+    Error UniswapNoLiquidityBurned
+  else
+    let ratio = Q.(of_int lqt_burned / of_int uniswap.total_liquidity_tokens) in
+    let tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
+    let kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q uniswap.kit * ratio) in
+
+    if tez_withdrawn < min_tez_withdrawn then
+      Error UniswapCantWithdrawEnoughTez
+    else if tez_withdrawn > uniswap.tez then
+      Error UniswapTooManyTezWithdrawn
+    else if kit_withdrawn < min_kit_withdrawn then
+      Error UniswapCantWithdrawEnoughTokens
+    else if kit_withdrawn > uniswap.kit then
+      Error UniswapTooManyTokensWithdrawn
+    else if lqt_burned > uniswap.total_liquidity_tokens then
+      Error UniswapTooMuchLiquidityBurned
+    else
+      let updated = {
+        tez = Tez.(uniswap.tez - tez_withdrawn);
+        kit = Kit.(uniswap.kit - kit_withdrawn);
+        total_liquidity_tokens = uniswap.total_liquidity_tokens - lqt_burned } in
+      Ok (tez_withdrawn, kit_withdrawn, updated)
 
 let add_accrued_kit (uniswap: t) (accrual: Kit.t) : t =
   { uniswap with kit = Kit.(uniswap.kit + accrual) }
