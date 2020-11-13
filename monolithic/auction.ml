@@ -122,7 +122,7 @@ type auction_outcome = {
   winning_bid: bid;
 }
 
-module PtrMap =
+module AvlPtrMap =
   Map.Make(struct
     type t = avl_ptr
     let compare (AVLPtr a) (AVLPtr b) = Ptr.compare a b end)
@@ -132,7 +132,7 @@ type auctions = {
 
   queued_slices: avl_ptr;
   current_auction: current_auction option;
-  completed_auctions: auction_outcome PtrMap.t;
+  completed_auctions: auction_outcome AvlPtrMap.t;
 }
 
 let empty : auctions =
@@ -141,7 +141,7 @@ let empty : auctions =
   { storage = storage;
     queued_slices = queued_slices;
     current_auction = None;
-    completed_auctions = PtrMap.empty;
+    completed_auctions = AvlPtrMap.empty;
   }
 
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
@@ -177,7 +177,7 @@ let liquidation_outcome
     (leaf_ptr: leaf_ptr)
   : (auctions * Kit.t) option =
   let root = find_root auctions.storage leaf_ptr in
-  match PtrMap.find_opt root auctions.completed_auctions with
+  match AvlPtrMap.find_opt root auctions.completed_auctions with
   | None -> None (* slice does not correspond to a completed auction *)
   | Some outcome ->
     let (slice, _) = read_leaf auctions.storage leaf_ptr in
@@ -317,7 +317,7 @@ let is_leading_current_auction
 
 let completed_auction_won_by
     (auctions: auctions) (bid_details: bid_details): auction_outcome option =
-  match PtrMap.find_opt bid_details.auction_id auctions.completed_auctions with
+  match AvlPtrMap.find_opt bid_details.auction_id auctions.completed_auctions with
   | Some outcome when outcome.winning_bid = bid_details.bid -> Some outcome
   | _ -> None
 

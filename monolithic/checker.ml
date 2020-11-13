@@ -308,7 +308,7 @@ struct
     List.fold_left
       (fun st leaf_ptr ->
         let root = Avl.find_root st.auctions.storage leaf_ptr in
-        match Auction.PtrMap.find_opt root st.auctions.completed_auctions with
+        match Auction.AvlPtrMap.find_opt root st.auctions.completed_auctions with
           (* The slice is not belong to a completed auction, so we skip it. *)
           | None -> st
           (* If it belongs to a completed auction, we delete the slice *)
