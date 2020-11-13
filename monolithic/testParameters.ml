@@ -1,4 +1,3 @@
-open Parameters
 open OUnit2
 
 let suite =

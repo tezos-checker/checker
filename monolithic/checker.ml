@@ -1,5 +1,4 @@
 open Burrow
-open Parameters
 
 (* TODO: Things to consider / action items:
  *

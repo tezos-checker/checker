@@ -1,4 +1,3 @@
-open Parameters
 open Burrow
 open OUnit2
 
