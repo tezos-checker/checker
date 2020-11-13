@@ -16,6 +16,7 @@ let suite =
          Auction.send_to_auction auctions {
            burrow = burrow_id_1;
            tez = Tez.of_mutez 2_000_000;
+           min_kit_for_unwarranted = Kit.of_mukit 4_000_000; (* note: randomly chosen *)
            younger = None; older = None;
          } in
        let start_time = (Timestamp.of_seconds 0) in
@@ -38,16 +39,19 @@ let suite =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Tez.of_mutez 5_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_001; (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Tez.of_mutez 5_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_002; (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Tez.of_mutez 5_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_003; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
@@ -62,16 +66,19 @@ let suite =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Tez.of_mutez 4_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_004; (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Tez.of_mutez 5_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_005; (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Tez.of_mutez 3_000_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 9_000_006; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in
@@ -86,6 +93,7 @@ let suite =
          Auction.send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Tez.of_mutez 2_000_000;
+             min_kit_for_unwarranted = Kit.of_mukit 4_000_007; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
        let start_price = Kit.one in

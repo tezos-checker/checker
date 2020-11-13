@@ -259,6 +259,7 @@ struct
             Auction.{
               burrow = burrow_id;
               tez = details.tez_to_auction;
+              min_kit_for_unwarranted = details.min_kit_for_unwarranted;
               older = Option.map
                   Burrow.(fun i -> i.youngest)
                   burrow.liquidation_slices;

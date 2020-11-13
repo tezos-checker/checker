@@ -98,6 +98,7 @@ type 'a ticket = 'a
 type liquidation_slice = {
   burrow: Ptr.t;
   tez: Tez.t;
+  min_kit_for_unwarranted: Kit.t;
   older: leaf_ptr option;
   younger: leaf_ptr option;
 }
@@ -197,10 +198,28 @@ let liquidation_outcome
       } in
     Some (auctions, kit)
 
+(** Split a liquidation slice into two. We also have to split the
+  * min_kit_for_unwarranted so that we can evaluate the two auctions separately
+  * (and see if the liquidation was warranted, retroactively). Perhaps a bit
+  * harshly, for both slices we round up. NOTE: Alternatively, we can calculate
+  * min_kit_for_unwarranted_1 and then calculate min_kit_for_unwarranted_2 =
+  * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
 let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
   assert (amount > Tez.zero);
   assert (amount < slice.tez);
-  ( { slice with tez = amount }, { slice with tez = Tez.(slice.tez - amount); })
+  (* left slice *)
+  let ltez = amount in
+  let lkit = Kit.of_q_ceil Q.(
+    Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q ltez / Tez.to_q slice.tez
+  ) in
+  (* right slice *)
+  let rtez = Tez.(slice.tez - amount) in
+  let rkit = Kit.of_q_ceil Q.(
+    Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q rtez / Tez.to_q slice.tez
+  ) in
+  ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
+    { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
+  )
 
 let take_with_splitting storage queued_slices split_threshold =
   let (storage, new_auction) = take storage queued_slices split_threshold in

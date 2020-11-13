@@ -147,13 +147,6 @@ module Burrow : sig
   val show_liquidation_result : liquidation_result -> string
   val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
-  val was_slice_liquidation_unwarranted :
-    tez_to_auction:Tez.t ->
-    min_kit_for_unwarranted:Kit.t ->
-    liquidation_slice:Tez.t ->
-    liquidation_earning:Kit.t ->
-    bool
-
   val request_liquidation : Parameters.t -> t -> liquidation_result
 
 end = struct
@@ -374,21 +367,6 @@ end = struct
     let collateral = Tez.to_q b.collateral in
     Kit.of_q_ceil (* Round up here; safer for the system, less so for the burrow *)
       Q.(Tez.to_q tez_to_auction * (Constants.fliquidation * optimistic_outstanding) / collateral)
-
-  (** Compute whether the liquidation of an auction slice was (retroactively)
-    * unwarranted or not. *)
-  let was_slice_liquidation_unwarranted
-      (* Original amount of tez sent to liquidation queue *)
-      ~(tez_to_auction: Tez.t)
-      (* Pre-calculated minimum amount of kit required to receive when selling
-       * tez_to_auction to consider the liquidation unwarranted *)
-      ~(min_kit_for_unwarranted: Kit.t)
-      (* The slice of tez_to_auction that we have sold *)
-      ~(liquidation_slice: Tez.t)
-      (* The amount of kit we received for liquidation_slice *)
-      ~(liquidation_earning: Kit.t)
-    : bool =
-    FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_kit_for_unwarranted * Tez.to_fp liquidation_slice)
 
   let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     assert (p.last_touched = b.last_touched);
