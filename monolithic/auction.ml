@@ -291,7 +291,7 @@ let complete_auction_if_possible
   * auction this amounts to the reserve price (which is exponentially
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
-let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) : Kit.t =
+let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
     let decay =
@@ -303,10 +303,10 @@ let current_auction_bid_threshold (now: Timestamp.t) (auction: current_auction) 
     Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
-  * least as much as the current_auction_bid_threshold. *)
+  * least as much as the current_auction_minimum_bid. *)
 let place_bid (now: Timestamp.t) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket ticket, Error.error) result =
-  if bid.kit >= current_auction_bid_threshold now auction
+  if bid.kit >= current_auction_minimum_bid now auction
   then
     Ok (
       { auction with state = Ascending (bid, now); },
