@@ -33,8 +33,6 @@ let minting_price (p: t) : Q.t =
 let liquidation_price (p: t) : Q.t =
   Q.(FixedPoint.to_q p.q * Tez.to_q (tz_liquidation p))
 
-let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_string "100.0")
-
 (** Given the amount of kit necessary to close all existing burrows
   * (burrowed) and the amount of kit that are currently in circulation,
   * compute the current imbalance adjustment (can be either a fee or a
@@ -50,7 +48,7 @@ let cnp (i: FixedPoint.t) : FixedPoint.t = FixedPoint.(i / of_string "100.0")
 let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
   assert (burrowed >= Kit.zero); (* Invariant *)
   assert (circulating >= Kit.zero); (* Invariant *)
-  let centinepers = cnp (FixedPoint.of_string "0.1") in (* TODO: per year! *)
+  let centinepers = FixedPoint.(of_string "1" / of_string "100.0") in (* TODO: per year! *)
   let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_string "5.0") in
   (* No kit in burrows or in circulation means no imbalance adjustment *)
   if burrowed = Kit.zero then
@@ -96,8 +94,8 @@ let compute_adjustment_index (p: t) : Q.t =
 let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   assert (target > FixedPoint.zero);
   FixedPoint.(
-    let cnp_001 = cnp (of_string "0.01") in
-    let cnp_005 = cnp (of_string "0.05") in
+    let cnp_001 = of_string "0.01" / of_string "100.0" in
+    let cnp_005 = of_string "0.05" / of_string "100.0" in
     let secs_in_a_day = of_int Stdlib.(24 * 3600) in
     match () with
     (* No acceleration (0) *)
