@@ -225,18 +225,6 @@ let start_auction_if_possible
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
-    (* TODO: The maximum lot size will be decided by the queue size.
-     * It should be the greater of 10,000 tez or 5% of the total amount
-     * in the auction queue. This is to avoid the auction queue being
-     * too slow to liquidate if there’s a lot of tez to auction.
-    *)
-    (* TODO: When we did not get enough tez for a lot, we should
-     * look at the next element and split it to fill up our lot,
-     * and insert the leftover back in front of the queue.
-     *
-     * When this happens, we should also update the burrow of the
-     * split item to make sure that the references are correct.
-    *)
     let queued_amount = Avl.avl_tez auctions.storage auctions.queued_slices in
     let split_threshold =
       max
