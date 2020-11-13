@@ -70,7 +70,7 @@ let suite =
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
                tez_to_auction = Tez.of_mutez 7_142_472;
                expected_kit = Kit.of_mukit 17_592_296;
-               min_received_kit_for_unwarranted = Kit.of_mukit 27_141_394;
+               min_kit_for_unwarranted = Kit.of_mukit 27_141_394;
                burrow_state =
                  { burrow with
                    collateral = Tez.of_mutez 1_847_528;
@@ -124,7 +124,7 @@ let suite =
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
                tez_to_auction = Tez.of_mutez 8_990_000;
                expected_kit = Kit.of_mukit 22_142_858;
-               min_received_kit_for_unwarranted = Kit.of_mukit 170_810_000;
+               min_kit_for_unwarranted = Kit.of_mukit 170_810_000;
                burrow_state =
                  { burrow with
                    collateral = Tez.zero;
@@ -163,7 +163,7 @@ let suite =
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 1000);
                tez_to_auction = Tez.of_mutez 999_000;
                expected_kit = Kit.of_mukit 2_460_592;
-               min_received_kit_for_unwarranted = Kit.of_mukit 189_810_000;
+               min_kit_for_unwarranted = Kit.of_mukit 189_810_000;
                burrow_state =
                  { burrow with
                    active = false;

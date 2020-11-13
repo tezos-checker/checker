@@ -29,13 +29,11 @@ module Burrow : sig
       (* Collateral that has been sent off to auctions. For all intents and
        * purposes, this collateral can be considered gone, but depending on the
        * outcome of the auctions we expect some kit in return. *)
-      (* TODO: We also need a leaf_ptr here, pointing to the head of the list
-       * of pending auctions (regarding this burrow only) currently going on. *)
       collateral_at_auction : Tez.t;
+      (* Pointer to liquidation slices in auction queue. *)
+      liquidation_slices : burrow_liquidation_slices option;
       (* The last time the burrow was touched. *)
       last_touched : Timestamp.t;
-      (* Pointers to liquidation slices in auction queue *)
-      liquidation_slices : burrow_liquidation_slices option
     }
 
   val show : t -> string
@@ -129,7 +127,7 @@ module Burrow : sig
     { liquidation_reward : Tez.t;
       tez_to_auction : Tez.t;
       expected_kit : Kit.t;
-      min_received_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
+      min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
       burrow_state : t;
     }
 
@@ -151,7 +149,7 @@ module Burrow : sig
 
   val was_slice_liquidation_unwarranted :
     tez_to_auction:Tez.t ->
-    min_received_kit_for_unwarranted:Kit.t ->
+    min_kit_for_unwarranted:Kit.t ->
     liquidation_slice:Tez.t ->
     liquidation_earning:Kit.t ->
     bool
@@ -171,10 +169,9 @@ end = struct
       outstanding_kit : Kit.t;
       excess_kit : Kit.t;
       adjustment_index : FixedPoint.t;
-      (* TODO: use this field in some calculations *)
       collateral_at_auction : Tez.t;
-      last_touched : Timestamp.t;
       liquidation_slices : burrow_liquidation_slices option;
+      last_touched : Timestamp.t;
     }
   [@@deriving show]
 
@@ -200,7 +197,6 @@ end = struct
     let outstanding_kit = Kit.to_q b.outstanding_kit in
     Q.(collateral < Constants.fminting * outstanding_kit * minting_price)
 
-  (** Check if the owner matches. TODO: implement permissions properly. *)
   let is_owned_by (b: t) (address: Address.t) = b.owner = address
 
   (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
@@ -354,7 +350,7 @@ end = struct
     { liquidation_reward : Tez.t;
       tez_to_auction : Tez.t;
       expected_kit : Kit.t;
-      min_received_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
+      min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
       burrow_state : t;
     }
   [@@deriving show]
@@ -370,7 +366,7 @@ end = struct
     | Close of liquidation_details
   [@@deriving show]
 
-  let compute_min_received_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Tez.t) : Kit.t =
+  let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Tez.t) : Kit.t =
     assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
     assert (p.last_touched = b.last_touched);
     let expected_kit = compute_expected_kit p b.collateral_at_auction in
@@ -386,13 +382,13 @@ end = struct
       ~(tez_to_auction: Tez.t)
       (* Pre-calculated minimum amount of kit required to receive when selling
        * tez_to_auction to consider the liquidation unwarranted *)
-      ~(min_received_kit_for_unwarranted: Kit.t)
+      ~(min_kit_for_unwarranted: Kit.t)
       (* The slice of tez_to_auction that we have sold *)
       ~(liquidation_slice: Tez.t)
       (* The amount of kit we received for liquidation_slice *)
       ~(liquidation_earning: Kit.t)
     : bool =
-    FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_received_kit_for_unwarranted * Tez.to_fp liquidation_slice)
+    FixedPoint.(Tez.to_fp tez_to_auction * Kit.to_fp liquidation_earning >= Kit.to_fp min_kit_for_unwarranted * Tez.to_fp liquidation_slice)
 
   let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     assert (p.last_touched = b.last_touched);
@@ -419,7 +415,7 @@ end = struct
         liquidation_reward = liquidation_reward;
         tez_to_auction = tez_to_auction;
         expected_kit = expected_kit;
-        min_received_kit_for_unwarranted = compute_min_received_kit_for_unwarranted p b tez_to_auction;
+        min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
         burrow_state = final_burrow }
     else
       (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
@@ -444,7 +440,7 @@ end = struct
           liquidation_reward = liquidation_reward;
           tez_to_auction = tez_to_auction;
           expected_kit = expected_kit;
-          min_received_kit_for_unwarranted = compute_min_received_kit_for_unwarranted p b tez_to_auction;
+          min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
           burrow_state = final_burrow }
       else
         (* Case 2b.2: Recovery is possible; pay the liquidation reward, stash away the
@@ -465,6 +461,6 @@ end = struct
           liquidation_reward = liquidation_reward;
           tez_to_auction = tez_to_auction;
           expected_kit = expected_kit;
-          min_received_kit_for_unwarranted = compute_min_received_kit_for_unwarranted p b tez_to_auction;
+          min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
           burrow_state = final_burrow }
 end

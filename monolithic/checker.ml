@@ -309,7 +309,7 @@ struct
       (fun st leaf_ptr ->
         let root = Avl.find_root st.auctions.storage leaf_ptr in
         match Auction.AvlPtrMap.find_opt root st.auctions.completed_auctions with
-          (* The slice is not belong to a completed auction, so we skip it. *)
+          (* The slice does not belong to a completed auction, so we skip it. *)
           | None -> st
           (* If it belongs to a completed auction, we delete the slice *)
           | Some _outcome ->
@@ -324,7 +324,7 @@ struct
              * the burrow pointers accordingly.
              *
              * TODO: We might not actually need to store this information, since
-             * on every operation we might expect ti get the first and last
+             * on every operation we might expect to get the first and last
              * elements of the linked list off-chain. However, this means that
              * the client would have to do a costly search across all the auction
              * queue to find at least one slice for the burrow.
