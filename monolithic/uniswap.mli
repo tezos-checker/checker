@@ -58,7 +58,7 @@ val kit_in_tez : t -> Q.t
 
 (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)
-val buy_kit : t -> Tez.t -> min_kit_expected:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+val buy_kit : t -> amount:Tez.t -> min_kit_expected:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
