@@ -20,12 +20,38 @@
  * This can be implemented by popping the smallest leftover, splitting and
  * re-inserting the pieces to both trees. And we might have some small
  * functions helping this, but it shouldn't be too hard to implement them.
+ * For efficiency purposes, we might also end up writing a dedicated function.
  *
  * There are some amount of property tests on major code paths, but there
  * might be other issues.
-*)
+ *
+ * Also, currently all of the operations keep the tree balanced, but we might
+ * not want to pay that cost for all operations. For example, when we split
+ * a prefix, it might be okay if the new trees are left unbalanced.
+ *)
 
 open BigMap
+
+(* The AVL tree double-ended queue backed by a doubly-linked balanced
+ * tree where the leaves contain the liquidation elements, and the
+ * branches contain the amount of tez on their left and right children.
+ *
+ * It acts as a mutable data structure implemented on top of a bigmap
+ * (just a Map in Ocaml prototype), acting as a "memory". So, the caller
+ * should thread the memory across function calls. Returned objects from
+ * AVL operations are only valid on the returned `mem` objects.
+ *
+ * The tree consists of three different nodes, where two of them, "root"
+ * and "leaf" has dedicated pointer types called `avl_ptr` and `leaf_ptr`.
+ * These pointers are "stable" references, where the operations on the
+ * tree does not move them. (This is not the case with branches, where
+ * any operation can create/update/delete any branches, so you can not
+ * refer to them safely).
+ *
+ * This structure has an efficient (log(n)) `append` function (ergo,
+ * `push_back` and `push_front` functions. Also, given a reference
+ * to a leaf, it is possible to delete it `efficiently`.
+ *)
 
 type avl_ptr = AVLPtr of ptr
 [@@deriving show]
@@ -34,13 +60,6 @@ type leaf_ptr = LeafPtr of ptr
 [@@deriving show]
 
 let ptr_of_leaf_ptr (LeafPtr ptr) = ptr
-
-(*
- * A double-ended queue backed by a doubly-linked balanced tree where
- * the leaves contain the liquidation elements, and the branches contain
- * the amount of tez on their left and
- * right children.
- *)
 
 type 't leaf = {
   value: 't;
@@ -125,10 +144,17 @@ let update_matching_child
  *
  * The resulting 'ptr' and 'mem' should always be used together. They are
  * not as part of a product type, because a 'mem' can carry multiple trees,
- * in case of 'split'.
+ * in case of 'take'.
  *
- * The operations do not move leaves, so pointers to the leaves are stable
+ * The operations do not move leaves or the root, so pointers to them are stable
  * (unless a leaf is deleted with 'del').
+ *
+ * Implementation detail: The functions prefixed by `ref_` work on untyped
+ * `ptr` pointers, and usually are only passed branches (not root). There
+ * are usually wrappers around them which makes them work on `avl_ptr`'s
+ * via doing the necessary unwrapping. The reason of this distinction is
+ * that tree operations are usually called recursively and they don't have
+ * a concept of a `Root` node.
  *)
 
 let mk_empty (mem: 't mem): 't mem * avl_ptr =

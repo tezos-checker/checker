@@ -5,9 +5,13 @@ Utku: Lifecycle of liquidation slices.
    added to the 'queued_slices' queue. This is backed by an AVL
    tree.
 
-   Adding something to the tree returns a 'leaf_ptr'.  This needs to
-   be stored in a FIFO queue inside the burrow. This queue needs to have an
-   efficient prepend and append methods.
+   Every 'liquidation_slice' has pointers to the older and younger
+   slice for that burrow. This forms a double-linked list of slices
+   overlaying the AVL tree.
+
+   Every burrow has pointers to the first and the last element of
+   that linked list, so adding/popping elements both  from the front
+   and the back is efficient.
 
 2. When checker is touched, and there is no existing auction
    going on, a prefix of the 'queued_slices' is split, and inserted
@@ -23,19 +27,8 @@ Utku: Lifecycle of liquidation slices.
    'queued_slices'. If there is no more slices, we still start the
    auction.
 
-   While doing this, we also need to pass this information to the
-   burrow. And make sure that it references the new slices rather
-   than the original.
-
-   (NOTE, an idea for efficiently handling splits on burrow side:
-    We can do that by maintaining another 'split_slices' queue
-    storing a FIFO queue of (original_leaf, first_half, second_half) triplets
-    within the burrow. When a burrow is traversing it's liquidation slices,
-    it has to check it against the head of the 'split_slices' queue, and
-    replace it by the split counterparts if it matches.)
-
-   Alternatively, we should store burrows slices within an AVL tree, then
-   we can efficiently replace a slice with two new slices eagerly.
+   While doing this, we also need to make sure that the pointers on
+   liquidation slices are still correct.
 
 3. Then an auction starts:
 
@@ -54,8 +47,9 @@ Utku: Lifecycle of liquidation slices.
    At any time, the owner of a bid can claim an bid if it is in 'unclaimed_bid'
    set. If it is, it is removed and the amount of kit is given back.
 
-   When an auction expires, the current auction is both moved to 'completed_auctions'
-   FIFO queue, and to another map from tree_ptr to auction_outcome called `outcomes`.
+   When an auction expires, the current auction is both moved to
+   'completed_auctions' FIFO queue, and to another map from tree_ptr to
+   auction_outcome called `outcomes`.
 
 4. When a burrow is touched, it checks if the head of its slices belongs to
    a completed auction or not. This can be checked via the 'find_root'
@@ -351,6 +345,9 @@ let reclaim_bid
     (* TODO: punch tickets *)
     Ok bid_details.bid.kit
 
+(* TODO Winners can only reclaim when all the liquidation slices of an
+ * auction is propagated back to the burrows.
+ *)
 let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
