@@ -1,15 +1,11 @@
 open Burrow
 
-(* TODO: Things to consider / action items:
+(* TODO: Things to consider:
  *
  * * What if compute_tez_to_auction returns something positive?
  *   => Create a kit UTXO for the burrow owner.
  *
- * * Implement auctioning logic.
- *
- * * George: Do we need >>= for type result?
- *
- * * TODO: George: I think that all operations should return something like (X
+ * * George: I think that all operations should return something like (X
  *   result * Checker.t) and not ((X * Checker.t) result); even if the operation
  *   fails for some reason, I'd assume that we wish to keep the updated state of
  *   the contract, right?
