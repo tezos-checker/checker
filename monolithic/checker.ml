@@ -57,35 +57,30 @@ module Checker : sig
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     * someone else owns the burrow, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too.
-    * NOTE: Call Burrow.touch too. *)
+    * NOTE: Call Checker.touch too. *)
   val deposit_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
     * does not exist.
-    * NOTE: Call Checker.touch too.
-    * NOTE: Call Burrow.touch too. *)
+    * NOTE: Call Checker.touch too. *)
   val withdraw_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (Tez.t * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
     * if the burrow owner does not match, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too.
-    * NOTE: Call Burrow.touch too. *)
+    * NOTE: Call Checker.touch too. *)
   val mint_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow owner
     * does not match, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too.
-    * NOTE: Call Burrow.touch too. *)
+    * NOTE: Call Checker.touch too. *)
   val burn_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator.
-    * NOTE: Call Checker.touch too.
-    * NOTE: Call Burrow.touch too. *)
+    * NOTE: Call Checker.touch too. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (** Process the liquidation slices on completed auctions. Invalid leaf_ptr's
@@ -231,12 +226,11 @@ struct
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | None -> Error (NonExistentBurrow burrow_id)
 
-
   let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
-    (* TODO: Call Burrow.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
+      assert (state.parameters.last_touched = burrow.last_touched);
       let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
@@ -244,9 +238,9 @@ struct
 
   let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
-    (* TODO: Call Burrow.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
+        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.mint_kit state.parameters amount burrow with
         | Ok (updated_burrow, minted) ->
           assert (amount = minted);
@@ -263,9 +257,9 @@ struct
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
-    (* TODO: Call Burrow.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
+        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (updated_burrow, withdrawn) ->
           assert (amount = withdrawn);
@@ -277,9 +271,9 @@ struct
 
   let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     (* TODO: Call Checker.touch. *)
-    (* TODO: Call Burrow.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
+      assert (state.parameters.last_touched = burrow.last_touched);
       let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= amount);
@@ -293,9 +287,9 @@ struct
   (* TODO: the liquidator's address must be used, eventually. *)
   let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =
     (* TODO: Call Checker.touch. *)
-    (* TODO: Call Burrow.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
+        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.request_liquidation state.parameters burrow with
         | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
         | Partial details | Complete details | Close details ->
