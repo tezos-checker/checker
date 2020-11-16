@@ -18,7 +18,7 @@ let suite =
            younger = None; older = None;
          } in
        let start_time = (Timestamp.of_seconds 0) in
-       let start_price = Kit.one in
+       let start_price = FixedPoint.one in
        let auctions = Auction.touch auctions start_time start_price in
        let current = Option.get auctions.current_auction in
        assert_equal (Some (Tez.of_mutez 2_000_000)) (Auction.current_auction_tez auctions);
@@ -53,7 +53,7 @@ let suite =
              min_kit_for_unwarranted = Kit.of_mukit 9_000_003; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
-       let start_price = Kit.one in
+       let start_price = FixedPoint.one in
        let auctions = Auction.touch auctions start_time start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
@@ -80,7 +80,7 @@ let suite =
              min_kit_for_unwarranted = Kit.of_mukit 9_000_006; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
-       let start_price = Kit.one in
+       let start_price = FixedPoint.one in
        let auctions = Auction.touch auctions start_time start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
@@ -95,7 +95,7 @@ let suite =
              min_kit_for_unwarranted = Kit.of_mukit 4_000_007; (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = (Timestamp.of_seconds 0) in
-       let start_price = Kit.one in
+       let start_price = FixedPoint.one in
        let auctions = Auction.touch auctions start_time start_price in
        let bidder = Address.of_string "23456" in
        let current = Option.get auctions.current_auction in
