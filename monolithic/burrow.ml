@@ -232,12 +232,12 @@ end = struct
 
   (** Return some kit that we have received from an auction to the burrow. *)
   let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (burrow: t) : t =
-  assert (kit >= Kit.zero);
-  rebalance_kit
-    { burrow with
-      excess_kit = Kit.(burrow.excess_kit + kit);
-      collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
-    }
+    assert (kit >= Kit.zero);
+    rebalance_kit
+      { burrow with
+        excess_kit = Kit.(burrow.excess_kit + kit);
+        collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
+      }
 
   let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
     if tez < Constants.creation_deposit

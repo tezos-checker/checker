@@ -28,7 +28,7 @@
  * Also, currently all of the operations keep the tree balanced, but we might
  * not want to pay that cost for all operations. For example, when we split
  * a prefix, it might be okay if the new trees are left unbalanced.
- *)
+*)
 
 open BigMap
 
@@ -51,7 +51,7 @@ open BigMap
  * This structure has an efficient (log(n)) `append` function (ergo,
  * `push_back` and `push_front` functions. Also, given a reference
  * to a leaf, it is possible to delete it `efficiently`.
- *)
+*)
 
 type avl_ptr = AVLPtr of ptr
 [@@deriving show]

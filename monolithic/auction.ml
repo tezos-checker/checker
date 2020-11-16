@@ -186,13 +186,13 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
   (* left slice *)
   let ltez = amount in
   let lkit = Kit.of_q_ceil Q.(
-    Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q ltez / Tez.to_q slice.tez
-  ) in
+      Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q ltez / Tez.to_q slice.tez
+    ) in
   (* right slice *)
   let rtez = Tez.(slice.tez - amount) in
   let rkit = Kit.of_q_ceil Q.(
-    Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q rtez / Tez.to_q slice.tez
-  ) in
+      Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q rtez / Tez.to_q slice.tez
+    ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
   )
@@ -277,9 +277,9 @@ let is_auction_complete
     None
   | Ascending (b, t, h) ->
     if Timestamp.seconds_elapsed ~start:t ~finish:now
-          > Constants.max_bid_interval_in_seconds
-       && height - h
-           > Constants.max_bid_interval_in_blocks
+       > Constants.max_bid_interval_in_seconds
+    && height - h
+       > Constants.max_bid_interval_in_blocks
     then Some b
     else None
 
@@ -291,16 +291,16 @@ let complete_auction_if_possible
     match is_auction_complete curr ~now ~height with
     | None -> auctions
     | Some winning_bid ->
-        { auctions with
-          current_auction = None;
-          completed_auctions =
-            AvlPtrMap.add
-              curr.contents
-              { winning_bid;
-                sold_tez=avl_tez auctions.storage curr.contents;
-              }
-              auctions.completed_auctions;
-        }
+      { auctions with
+        current_auction = None;
+        completed_auctions =
+          AvlPtrMap.add
+            curr.contents
+            { winning_bid;
+              sold_tez=avl_tez auctions.storage curr.contents;
+            }
+            auctions.completed_auctions;
+      }
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
@@ -354,7 +354,7 @@ let reclaim_bid
 
 (* TODO Winners can only reclaim when all the liquidation slices of an
  * auction is propagated back to the burrows.
- *)
+*)
 let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)

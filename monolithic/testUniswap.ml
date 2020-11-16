@@ -102,9 +102,9 @@ let suite =
        with
        | Error _err -> failwith "buy liquidity: the impossible happened!"
        | Ok (returned_liquidity, returned_tez, returned_kit, updated_uniswap) ->
-           assert_equal ~printer:show_lq expected_returned_liquidity returned_liquidity;
-           assert_equal ~printer:show_tz expected_returned_tez returned_tez;
-           assert_equal ~printer:show_kt expected_returned_kit returned_kit;
-           assert_equal ~printer:show_us expected_updated_uniswap updated_uniswap
+         assert_equal ~printer:show_lq expected_returned_liquidity returned_liquidity;
+         assert_equal ~printer:show_tz expected_returned_tez returned_tez;
+         assert_equal ~printer:show_kt expected_returned_kit returned_kit;
+         assert_equal ~printer:show_us expected_updated_uniswap updated_uniswap
     );
   ]

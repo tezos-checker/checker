@@ -17,7 +17,7 @@ type t =
     circulating_kit: Kit.t;
     last_touched: Timestamp.t;
   }
-  [@@deriving show]
+[@@deriving show]
 
 (* tez. To get tez/kit must multiply with q. *)
 let tz_minting (p: t) : Tez.t = max p.index p.protected_index

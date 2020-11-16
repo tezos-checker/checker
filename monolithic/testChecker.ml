@@ -7,15 +7,15 @@ let alice = Address.of_string "alice"
 
 let assert_ok (r: ('a, Error.error) result) : 'a =
   match r with
-    | Ok a -> a
-    | Error Auction.BidTooLow -> assert_failure "BidTooLow"
-    | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
-    | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
-    | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
-    | Error Checker.OwnershipMismatch _ -> assert_failure "OwnershipMismatch"
-    | Error Checker.NonExistentBurrow _ -> assert_failure "NonExistentBurrow"
-    | Error Checker.NotLiquidationCandidate _ -> assert_failure "NotLiquidationCandidate"
-    | Error _ -> assert_failure "Unknown Error"
+  | Ok a -> a
+  | Error Auction.BidTooLow -> assert_failure "BidTooLow"
+  | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
+  | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
+  | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
+  | Error Checker.OwnershipMismatch _ -> assert_failure "OwnershipMismatch"
+  | Error Checker.NonExistentBurrow _ -> assert_failure "NonExistentBurrow"
+  | Error Checker.NotLiquidationCandidate _ -> assert_failure "NotLiquidationCandidate"
+  | Error _ -> assert_failure "Unknown Error"
 
 let suite =
   "Checker tests" >::: [
@@ -79,11 +79,11 @@ let suite =
            ~index:(FixedPoint.of_string "1.2") in
 
        let (_bid, checker) = assert_ok @@
-        Checker.place_bid
-          checker
-          ~now ~height
-          ~sender:alice
-          ~amount:(Kit.of_mukit 4_200_000) in
+         Checker.place_bid
+           checker
+           ~now ~height
+           ~sender:alice
+           ~amount:(Kit.of_mukit 4_200_000) in
 
        let height = 45 in
        let now = Timestamp.of_seconds @@ height * 60 in
@@ -99,9 +99,9 @@ let suite =
 
        let slice =
          (PtrMap.find burrow_id checker.burrows)
-           .liquidation_slices
-           |> Option.get
-           |> fun i -> i.youngest in
+         .liquidation_slices
+         |> Option.get
+         |> fun i -> i.youngest in
 
        let checker =
          Checker.touch_liquidation_slices
