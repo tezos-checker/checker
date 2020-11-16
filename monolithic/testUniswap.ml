@@ -61,19 +61,19 @@ let suite =
          } in
 
        (* Low expectations and on time (lax): pass *)
-       let result_1 = Result.to_option (Uniswap.sell_kit uniswap Kit.one ~min_tez_expected:(Tez.of_mutez 1) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 10)) in
+       let result_1 = Result.to_option (Uniswap.sell_kit uniswap ~amount:Tez.zero Kit.one ~min_tez_expected:(Tez.of_mutez 1) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 10)) in
        assert_equal ~printer:show_sell_kit_res (Some (expected_returned_tez, expected_updated_uniswap)) result_1;
 
        (* Low expectations and on time (tight): pass *)
-       let result_2 = Result.to_option (Uniswap.sell_kit uniswap Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_333) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 1)) in
+       let result_2 = Result.to_option (Uniswap.sell_kit uniswap ~amount:Tez.zero Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_333) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 1)) in
        assert_equal ~printer:show_sell_kit_res (Some (expected_returned_tez, expected_updated_uniswap)) result_2;
 
        (* High expectations but on time (tight): fail *)
-       let result_3 = Result.to_option (Uniswap.sell_kit uniswap Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_334) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 1)) in
+       let result_3 = Result.to_option (Uniswap.sell_kit uniswap ~amount:Tez.zero Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_334) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 1)) in
        assert_equal ~printer:show_sell_kit_res None result_3;
 
        (* Low expectations but too late (tight): fail *)
-       let result_4 = Result.to_option (Uniswap.sell_kit uniswap Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_333) ~now:(Timestamp.of_seconds 1) ~deadline:(Timestamp.of_seconds 1)) in
+       let result_4 = Result.to_option (Uniswap.sell_kit uniswap ~amount:Tez.zero Kit.one ~min_tez_expected:(Tez.of_mutez 1_663_333) ~now:(Timestamp.of_seconds 1) ~deadline:(Timestamp.of_seconds 1)) in
        assert_equal ~printer:show_sell_kit_res None result_4;
     );
 

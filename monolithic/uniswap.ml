@@ -46,6 +46,7 @@ type Error.error +=
   | BuyKitPriceFailure
   | BuyKitTooLowExpectedKit
   | BuyKitTooMuchKitBought
+  | SellKitNonEmptyAmount
   | SellKitPriceFailure
   | SellKitTooLowExpectedTez
   | SellKitTooMuchTezBought
@@ -78,8 +79,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~now ~deadline =
              tez = Tez.(uniswap.tez + amount) }
          )
 
-(* TODO: amount = 0 check *)
-let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
+let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~now ~deadline =
   if is_tez_pool_empty uniswap then
     Error UniswapEmptyTezPool
   else if is_token_pool_empty uniswap then
@@ -88,6 +88,8 @@ let sell_kit (uniswap: t) (kit: Kit.t) ~min_tez_expected ~now ~deadline =
     Error UniswapNonPositiveInput
   else if now >= deadline then
     Error UniswapTooLate
+  else if amount <> Tez.zero then
+    Error SellKitNonEmptyAmount
   else if (min_tez_expected <= Tez.zero) then
     Error SellKitTooLowExpectedTez
   else
@@ -150,7 +152,6 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
 (* TODO: Allowance checks *)
-(* TODO: amount = 0 check *)
 let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline
   : (Tez.t * Kit.t * t, Error.error) result =
   if is_liquidity_token_pool_empty uniswap then

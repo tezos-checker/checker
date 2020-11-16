@@ -99,7 +99,7 @@ module Checker : sig
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> now:Timestamp.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit : t -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
@@ -476,8 +476,8 @@ struct
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) ~now kit ~min_tez_expected ~deadline =
-    match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now ~deadline with
+  let sell_kit (state:t) ~now ~amount kit ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~now ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
