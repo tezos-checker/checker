@@ -248,26 +248,6 @@ let start_auction_if_possible
       current_auction = current_auction;
     }
 
-(** Check if an auction is complete. A descending auction declines
-  * exponentially over time, so it is effectively never complete (George: I
-  * guess when it reaches zero it is, but I'd expect someone to buy before
-  * that?). If the auction is ascending, then every bid adds the longer of 20
-  * minutes or 20 blocks to the time before the auction expires. *)
-(* TODO also check if 20 blocks have passed *)
-let is_auction_complete (now: Timestamp.t) (auction: current_auction) : bool =
-  match auction.state with
-  | Descending _ -> false
-  | Ascending (_, t) -> Timestamp.seconds_elapsed ~start:t ~finish:now > Constants.max_bid_interval_in_seconds
-
-let complete_auction_if_possible
-    (now: Timestamp.t) (auctions: auctions): auctions =
-  match auctions.current_auction with
-  | None ->
-    auctions
-  | Some curr when not (is_auction_complete now curr) ->
-    auctions
-  | _ -> failwith "not_implemented"
-
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
   * dropping). For a descending auction we should improve upon the last bid
@@ -282,6 +262,26 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
     Kit.scale start_value decay
   | Ascending (leading_bid, _) ->
     Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
+
+(** Check if an auction is complete. A descending auction declines
+  * exponentially over time, so it is effectively never complete (George: I
+  * guess when it reaches zero it is, but I'd expect someone to buy before
+  * that?). If the auction is ascending, then every bid adds the longer of 20
+  * minutes or 20 blocks to the time before the auction expires. *)
+(* TODO also check if 20 blocks have passed *)
+let is_auction_complete (now: Timestamp.t) (auction: current_auction) : bool =
+  match auction.state with
+  | Descending _ -> if current_auction_minimum_bid now auction = Kit.zero then true else false
+  | Ascending (_, t) -> Timestamp.seconds_elapsed ~start:t ~finish:now > Constants.max_bid_interval_in_seconds
+
+let complete_auction_if_possible
+    (now: Timestamp.t) (auctions: auctions): auctions =
+  match auctions.current_auction with
+  | None ->
+    auctions
+  | Some curr when not (is_auction_complete now curr) ->
+    auctions
+  | _ -> failwith "not_implemented"
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
