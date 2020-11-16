@@ -104,6 +104,7 @@ type liquidation_slice = {
 }
 
 type bid = { address: Address.t; kit: Kit.t }
+[@@deriving show]
 
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
@@ -112,6 +113,7 @@ type bid_ticket = bid_details Ticket.ticket
 type auction_state =
   | Descending of Kit.t * Timestamp.t
   | Ascending of bid * Timestamp.t
+[@@deriving show]
 
 type current_auction = {
   contents: avl_ptr;
@@ -240,7 +242,7 @@ let take_with_splitting storage queued_slices split_threshold =
     (storage, new_auction)
 
 let start_auction_if_possible
-    (now: Timestamp.t) (start_price: Kit.t) (auctions: auctions): auctions =
+    (now: Timestamp.t) (start_price: FixedPoint.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
@@ -258,7 +260,12 @@ let start_auction_if_possible
       if is_empty storage new_auction
       then None
       else
-        let start_value = Kit.scale start_price (Tez.to_fp (Avl.avl_tez storage new_auction))  in
+        let start_value =
+          Kit.scale
+            Kit.one
+            FixedPoint.(
+              Tez.to_fp (Avl.avl_tez storage new_auction)
+              * start_price)  in
         Some
           { contents = new_auction;
             state = Descending (start_value, now); } in
@@ -365,7 +372,7 @@ let reclaim_winning_bid
   | _ -> Error NotAWinningBid
 
 
-let touch (auctions: auctions) (now: Timestamp.t) (price: Kit.t) : auctions =
+let touch (auctions: auctions) (now: Timestamp.t) (price: FixedPoint.t) : auctions =
   auctions
   |> complete_auction_if_possible now
   |> start_auction_if_possible now price

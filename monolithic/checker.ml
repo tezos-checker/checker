@@ -31,6 +31,13 @@ module Checker : sig
       auctions : Auction.auctions;
     }
 
+  type Error.error +=
+    | OwnershipMismatch of Address.t * Burrow.t
+    | NonExistentBurrow of burrow_id
+    | NotLiquidationCandidate of burrow_id
+
+  val empty_checker_state : Timestamp.t -> t
+
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the parameters. TODO: We have to find a way to represent
     *   external inputs here; the inputs that Parameters.step requires.
@@ -82,9 +89,13 @@ module Checker : sig
   val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (** Process the liquidation slices on completed auctions. Invalid leaf_ptr's
-    * fails, and slices that correspond to incomplete liquidations are ignored.
+    * fail, and slices that correspond to incomplete liquidations are ignored.
     *)
   val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
+
+  (** Perform maintainance tasks for the burrow.
+    *)
+  val touch_burrow : t -> burrow_id -> (t, Error.error) result
 
   (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
@@ -139,6 +150,29 @@ struct
       auctions : Auction.auctions;
     }
 
+  let empty_checker_state ts =
+    { burrows = PtrMap.empty;
+      uniswap =
+        Uniswap.{ tez = Tez.one; kit = Kit.one;
+                  total_liquidity_tokens = Uniswap.liquidity_of_int 1; };
+      parameters =
+        Parameters.{ q = FixedPoint.one;
+          index = Tez.one;
+          protected_index = Tez.one;
+          target = FixedPoint.one;
+          drift = FixedPoint.zero;
+          drift' = FixedPoint.zero;
+          burrow_fee_index = FixedPoint.one;
+          imbalance_index = FixedPoint.one;
+          outstanding_kit = Kit.of_mukit 1_000_000;
+          circulating_kit = Kit.of_mukit 1_000_000;
+          last_touched = ts;
+        };
+
+      auctions =
+        Auction.empty;
+    }
+
   type Error.error +=
     | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of burrow_id
@@ -165,11 +199,18 @@ struct
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+      let updated_auctions =
+        Auction.touch
+          state.auctions
+          now
+          (* TODO: This has unit kit / tez, but the docs only pass tz, so we
+             multiply it with q here. Check if this is correct. *)
+          FixedPoint.(Tez.to_fp updated_parameters.index * updated_parameters.q) in
       (* TODO: Add more tasks here *)
       { burrows = state.burrows; (* leave as-is *)
         parameters = updated_parameters;
         uniswap = updated_uniswap;
-        auctions = state.auctions; (* TODO: this definitely needs to be updated! *)
+        auctions = updated_auctions;
       }
 
   (* ************************************************************************* *)
@@ -182,6 +223,14 @@ struct
     match Burrow.create state.parameters owner amount with
     | Ok burrow -> Ok (address, {state with burrows = PtrMap.add address burrow state.burrows})
     | Error err -> Error err
+
+  let touch_burrow (state: t) (burrow_id: burrow_id) =
+    match PtrMap.find_opt burrow_id state.burrows with
+    | Some burrow ->
+      let updated_burrow = Burrow.touch state.parameters burrow in
+      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    | None -> Error (NonExistentBurrow burrow_id)
+
 
   let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     (* TODO: Call Checker.touch. *)
@@ -278,7 +327,7 @@ struct
               ~some:
                 (fun older_ptr ->
                    BigMap.mem_update
-                     state.auctions.storage
+                     updated_auctions.storage
                      (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
                    match older with
                    | Leaf l -> Leaf

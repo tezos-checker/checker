@@ -33,6 +33,11 @@ module Burrow : sig
       last_touched : Timestamp.t;
     }
 
+  type Error.error +=
+    | InsufficientFunds of Tez.t
+    | WithdrawTezFailure
+    | MintKitFailure
+
   val show : t -> string
   val pp : Format.formatter -> t -> unit
 
