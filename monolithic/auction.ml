@@ -268,21 +268,39 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
   * guess when it reaches zero it is, but I'd expect someone to buy before
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
-let is_auction_complete (now: Timestamp.t) (height: int) (auction: current_auction) : bool =
+let is_auction_complete
+    ~(now: Timestamp.t)
+    ~(height: int)
+    (auction: current_auction) : bid option =
   match auction.state with
-  | Descending _ -> if current_auction_minimum_bid now auction = Kit.zero then true else false
-  | Ascending (_, t, h) ->
-    Timestamp.seconds_elapsed ~start:t ~finish:now > Constants.max_bid_interval_in_seconds
-    && height - h > Constants.max_bid_interval_in_blocks
+  | Descending _ ->
+    None
+  | Ascending (b, t, h) ->
+    if Timestamp.seconds_elapsed ~start:t ~finish:now
+          > Constants.max_bid_interval_in_seconds
+       && height - h
+           > Constants.max_bid_interval_in_blocks
+    then Some b
+    else None
 
 let complete_auction_if_possible
     (now: Timestamp.t) (height: int) (auctions: auctions): auctions =
   match auctions.current_auction with
-  | None ->
-    auctions
-  | Some curr when not (is_auction_complete now height curr) ->
-    auctions
-  | _ -> failwith "not_implemented"
+  | None -> auctions
+  | Some curr ->
+    match is_auction_complete curr ~now ~height with
+    | None -> auctions
+    | Some winning_bid ->
+        { auctions with
+          current_auction = None;
+          completed_auctions =
+            AvlPtrMap.add
+              curr.contents
+              { winning_bid;
+                sold_tez=avl_tez auctions.storage curr.contents;
+              }
+              auctions.completed_auctions;
+        }
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
