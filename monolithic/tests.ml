@@ -4,6 +4,7 @@ let suite =
   "HuxianTests" >::: [
     TestFixedPoint.suite;
     TestTez.suite;
+    TestKit.suite;
     TestAvl.suite;
     TestParameters.suite;
     TestLiquidation.suite;

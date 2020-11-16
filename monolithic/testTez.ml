@@ -12,6 +12,8 @@ let suite =
        let tz3 = Tez.of_mutez 5_123_400 in
        let tz4 = Tez.of_mutez 5_001_000_000 in
        let tz5 = Tez.of_mutez 40_000_000 in
+       let tz6 = Tez.of_mutez (-50_309_951) in
+       let tz7 = Tez.of_mutez 50_309_951 in
        let fp1 = FixedPoint.of_string "3.0" in
        assert_equal ~printer:show_tz (Tez.of_mutez 8_000_000) Tez.(tz1 + tz2);
        assert_equal ~printer:show_tz (Tez.of_mutez 2_000_000) Tez.(tz1 - tz2);
@@ -20,6 +22,8 @@ let suite =
        assert_equal ~printer:show_fp (FixedPoint.of_string "1.7078")  Tez.(tz3 / tz2);
        assert_equal ~printer:show_fp (FixedPoint.of_string "125.025") Tez.(tz4 / tz5);
        assert_equal ~printer:show_tz (Tez.of_mutez 15_370_200) (Tez.scale tz3 fp1);
-       assert_equal ~printer:show_tz tz1 (max tz1 tz2)
+       assert_equal ~printer:show_tz tz1 (max tz1 tz2);
+       assert_equal ~printer:(fun x -> x) "-50.309951" (show_tz tz6);
+       assert_equal ~printer:(fun x -> x) "50.309951" (show_tz tz7);
     )
   ]

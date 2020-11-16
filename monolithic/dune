@@ -13,7 +13,7 @@
 
 (test
  (name tests)
- (modules Tests TestAvl TestFixedPoint TestTez TestParameters TestLiquidation
+ (modules Tests TestAvl TestFixedPoint TestTez TestKit TestParameters TestLiquidation
    TestUniswap TestAuction TestChecker)
  (libraries huxian ounit2 qcheck)
  (preprocess

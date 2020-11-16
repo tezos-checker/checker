@@ -39,8 +39,10 @@ let show amount =
     then s
     else (String.make to_fill '0') ^ s in
 
-  let (upper, lower) = Z.div_rem amount scaling_factor in
-  Format.sprintf "%s.%s"
+  let sign = if amount < Z.zero then "-" else "" in
+  let (upper, lower) = Z.div_rem (Z.abs amount) scaling_factor in
+  Format.sprintf "%s%s.%s"
+    sign
     (Z.to_string upper)
     (zfill (Z.to_string lower) scaling_exponent)
 
