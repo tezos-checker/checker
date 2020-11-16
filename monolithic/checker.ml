@@ -316,19 +316,18 @@ struct
            * This is hacky, but couldn't figure out a nicer way, please do
            * refactor if you do.
           *)
-          let updated_storage = Option.fold
-              ~none:updated_auctions.storage
-              ~some:
-                (fun older_ptr ->
-                   BigMap.mem_update
-                     updated_auctions.storage
-                     (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
-                   match older with
-                   | Leaf l -> Leaf
-                                 { l with value = { l.value with younger = Some leaf_ptr; }; }
-                   | _ -> failwith "impossible"
-                )
-              liquidation_slice.older in
+          let updated_storage = (
+            match liquidation_slice.older with
+            | None -> updated_auctions.storage
+            | Some older_ptr ->
+                BigMap.mem_update
+                  updated_auctions.storage
+                  (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+                match older with
+                | Leaf l -> Leaf
+                              { l with value = { l.value with younger = Some leaf_ptr; }; }
+                | _ -> failwith "impossible"
+          ) in
 
           (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
           let updated_burrow =
@@ -347,102 +346,100 @@ struct
       )
     | None -> Error (NonExistentBurrow burrow_id)
 
-  let touch_liquidation_slices (state: t) (slices: Avl.leaf_ptr list): t =
-    List.fold_left
-      (fun st leaf_ptr ->
-        let root = Avl.find_root st.auctions.storage leaf_ptr in
-        match Auction.AvlPtrMap.find_opt root st.auctions.completed_auctions with
-          (* The slice does not belong to a completed auction, so we skip it. *)
-          | None -> st
-          (* If it belongs to a completed auction, we delete the slice *)
-          | Some _outcome ->
-            (* TODO: Check if leaf_ptr's are valid *)
-            let (leaf, _) = Avl.read_leaf st.auctions.storage leaf_ptr in
-            let st =
-              { st with auctions = { st.auctions with
-                storage = Avl.del st.auctions.storage leaf_ptr
-              }} in
+  let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
+    let root = Avl.find_root state.auctions.storage leaf_ptr in
+    match Auction.AvlPtrMap.find_opt root state.auctions.completed_auctions with
+      (* The slice does not belong to a completed auction, so we skip it. *)
+      | None -> state
+      (* If it belongs to a completed auction, we delete the slice *)
+      | Some _outcome ->
+        (* TODO: Check if leaf_ptr's are valid *)
+        let (leaf, _) = Avl.read_leaf state.auctions.storage leaf_ptr in
+        let state =
+          { state with auctions = { state.auctions with
+            storage = Avl.del state.auctions.storage leaf_ptr
+          }} in
 
-            (* When we delete the youngest or the oldest slice, we have to adjust
-             * the burrow pointers accordingly.
-             *
-             * TODO: We might not actually need to store this information, since
-             * on every operation we might expect to get the first and last
-             * elements of the linked list off-chain. However, this means that
-             * the client would have to do a costly search across all the auction
-             * queue to find at least one slice for the burrow.
-             *)
-            let st =
-              { st with burrows =
-                (* TODO: Also update burrow using the auction_outcome *)
-                PtrMap.update
-                  leaf.burrow
-                  (fun b -> match b with
-                   | None -> failwith "TODO: Check if this case can happen."
-                   | Some burrow ->
-                     let slices = Option.get Burrow.(burrow.liquidation_slices) in
-                     match (leaf.younger, leaf.older) with
-                       | (None, None) ->
-                         assert (slices.youngest = leaf_ptr);
-                         assert (slices.oldest = leaf_ptr);
-                         Some { burrow with
-                           liquidation_slices = None
-                         }
-                       | (None, Some older) ->
-                         assert (slices.youngest = leaf_ptr);
-                         Some { burrow with
-                           liquidation_slices = Some
-                             Burrow.{ slices with youngest = older }
-                         }
-                       | (Some younger, None) ->
-                         assert (slices.oldest = leaf_ptr);
-                         Some { burrow with
-                           liquidation_slices = Some
-                             Burrow.{ slices with oldest = younger }
-                         }
-                       | (Some _, Some _) ->
-                         assert (slices.oldest <> leaf_ptr);
-                         assert (slices.youngest <> leaf_ptr);
-                         Some burrow
-                  )
-                  st.burrows
-              } in
+        (* When we delete the youngest or the oldest slice, we have to adjust
+         * the burrow pointers accordingly.
+         *
+         * TODO: We might not actually need to store this information, since
+         * on every operation we might expect to get the first and last
+         * elements of the linked list off-chain. However, this means that
+         * the client would have to do a costly search across all the auction
+         * queue to find at least one slice for the burrow.
+         *)
+        let state =
+          { state with burrows =
+            (* TODO: Also update burrow using the auction_outcome *)
+            PtrMap.update
+              leaf.burrow
+              (fun b -> match b with
+               | None -> failwith "TODO: Check if this case can happen."
+               | Some burrow ->
+                 let slices = Option.get Burrow.(burrow.liquidation_slices) in
+                 match (leaf.younger, leaf.older) with
+                   | (None, None) ->
+                     assert (slices.youngest = leaf_ptr);
+                     assert (slices.oldest = leaf_ptr);
+                     Some { burrow with
+                       liquidation_slices = None
+                     }
+                   | (None, Some older) ->
+                     assert (slices.youngest = leaf_ptr);
+                     Some { burrow with
+                       liquidation_slices = Some
+                         Burrow.{ slices with youngest = older }
+                     }
+                   | (Some younger, None) ->
+                     assert (slices.oldest = leaf_ptr);
+                     Some { burrow with
+                       liquidation_slices = Some
+                         Burrow.{ slices with oldest = younger }
+                     }
+                   | (Some _, Some _) ->
+                     assert (slices.oldest <> leaf_ptr);
+                     assert (slices.youngest <> leaf_ptr);
+                     Some burrow
+              )
+              state.burrows
+          } in
 
-            (* And we update the slices around it *)
-            let st =
-              Option.fold
-                ~none: st
-                ~some: (fun younger_ptr ->
-                  { st with auctions = { st.auctions with
-                    storage =
-                      Avl.update_leaf
-                        st.auctions.storage
-                        younger_ptr
-                        (fun younger ->
-                          assert (younger.older = Some leaf_ptr);
-                          { younger with older = leaf.older }
-                        )
-                  }})
-                leaf.younger in
-            let st =
-              Option.fold
-                ~none: st
-                ~some: (fun older_ptr ->
-                  { st with auctions = { st.auctions with
-                    storage =
-                      Avl.update_leaf
-                        st.auctions.storage
-                        older_ptr
-                        (fun older ->
-                          assert (older.younger = Some leaf_ptr);
-                          { older with younger = leaf.younger }
-                        )
-                  }})
-                leaf.older in
-            st
-      )
-      state
-      slices
+        (* And we update the slices around it *)
+        let state = (
+          match leaf.younger with
+          | None -> state
+          | Some younger_ptr ->
+              { state with auctions = { state.auctions with
+                storage =
+                  Avl.update_leaf
+                    state.auctions.storage
+                    younger_ptr
+                    (fun younger ->
+                      assert (younger.older = Some leaf_ptr);
+                      { younger with older = leaf.older }
+                    )
+              }}
+        ) in
+        let state = (
+          match leaf.older with
+          | None -> state
+          | Some older_ptr ->
+              { state with auctions = { state.auctions with
+                storage =
+                  Avl.update_leaf
+                    state.auctions.storage
+                    older_ptr
+                    (fun older ->
+                      assert (older.younger = Some leaf_ptr);
+                      { older with younger = leaf.younger }
+                    )
+              }}
+        ) in
+        state
+
+  let touch_liquidation_slices (state: t) (slices: Avl.leaf_ptr list) : t =
+    List.fold_left touch_liquidation_slice state slices
 
   (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
