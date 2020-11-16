@@ -114,7 +114,7 @@ module Checker : sig
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val remove_liquidity : t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+  val remove_liquidity : t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
@@ -493,8 +493,8 @@ struct
         Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
 
   (* NOTE: an address is needed too, eventually. *)
-  let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
-    match Uniswap.remove_liquidity state.uniswap ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline with
+  let remove_liquidity (state:t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
+    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
         Ok (tez, kit, {state with uniswap = updated_uniswap})

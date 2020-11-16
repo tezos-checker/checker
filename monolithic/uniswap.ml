@@ -36,6 +36,7 @@ type Error.error +=
   | AddLiquidityTooLowLiquidityMinted
   | AddLiquidityTooMuchKitRequired
   | AddLiquidityZeroKitDeposited
+  | RemoveLiquidityNonEmptyAmount
   | RemoveLiquidityCantWithdrawEnoughTez
   | RemoveLiquidityCantWithdrawEnoughKit
   | RemoveLiquidityTooMuchTezWithdrawn
@@ -150,11 +151,13 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~
  * want to lose the burrow fees. *)
 (* TODO: Allowance checks *)
 (* TODO: amount = 0 check *)
-let remove_liquidity (uniswap: t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline
+let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline
   : (Tez.t * Kit.t * t, Error.error) result =
   if is_liquidity_token_pool_empty uniswap then
     (* Since this requires a liquidity token, contract cannot be empty *)
     Error UniswapEmptyLiquidityTokenPool
+  else if amount <> Tez.zero then
+    Error RemoveLiquidityNonEmptyAmount
   else if now >= deadline then
     Error UniswapTooLate
   else if lqt_burned <= 0 then

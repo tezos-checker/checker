@@ -86,7 +86,7 @@ val add_liquidity : t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_mint
   * sells their liquidity. I think it is unlikely to happen, since the last
   * liquidity holders wouldn't want to lose the burrow fees.
 *)
-val remove_liquidity : t -> lqt_burned:liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+val remove_liquidity : t -> amount:Tez.t -> lqt_burned:liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
 val add_accrued_kit : t -> Kit.t -> t
