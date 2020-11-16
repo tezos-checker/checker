@@ -174,32 +174,6 @@ let cancel_liquidation
      * or completed, so we can not cancel it. *)
     None
 
-(* TODO: Use precice calculations here (Z, Q) for precision, not FixedPoint. *)
-let liquidation_outcome
-    (auctions: auctions)
-    (leaf_ptr: leaf_ptr)
-  : (auctions * Kit.t) option =
-  let root = find_root auctions.storage leaf_ptr in
-  match AvlPtrMap.find_opt root auctions.completed_auctions with
-  | None -> None (* slice does not correspond to a completed auction *)
-  | Some outcome ->
-    let (slice, _) = read_leaf auctions.storage leaf_ptr in
-    let kit = Kit.scale Kit.one FixedPoint.(
-        (Tez.to_fp slice.tez) * (Kit.to_fp outcome.winning_bid.kit)
-        / (Tez.to_fp outcome.sold_tez)) in
-
-    (* Now we delete the slice from the lot, so it can not be
-     * withdrawn twice, also to save storage. This might cause
-     * the lot root to change, so we also update completed_auctions
-     * to reflect that.
-    *)
-    let storage = del auctions.storage leaf_ptr in
-    let auctions =
-      { auctions with
-        storage = storage;
-      } in
-    Some (auctions, kit)
-
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
   * (and see if the liquidation was warranted, retroactively). Perhaps a bit

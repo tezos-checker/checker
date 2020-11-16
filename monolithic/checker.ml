@@ -374,6 +374,10 @@ struct
 
         let state =
           { state with auctions = { state.auctions with
+            (* Now we delete the slice from the lot, so it cannot be
+             * withdrawn twice, also to save storage. This might cause
+             * the lot root to change, so we also update completed_auctions
+             * to reflect that. *)
             (* TODO: When all slices that were included in a finished auction
              * have been deleted, the entry for the auction itself must also be
              * deleted. *)
@@ -475,7 +479,7 @@ struct
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) ~now (kit:Kit.t) ~min_tez_expected ~deadline =
+  let sell_kit (state:t) ~now kit ~min_tez_expected ~deadline =
     match Uniswap.sell_kit state.uniswap kit ~min_tez_expected ~now ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
