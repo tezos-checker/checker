@@ -352,11 +352,31 @@ struct
       (* The slice does not belong to a completed auction, so we skip it. *)
       | None -> state
       (* If it belongs to a completed auction, we delete the slice *)
-      | Some _outcome ->
+      | Some outcome ->
         (* TODO: Check if leaf_ptr's are valid *)
         let (leaf, _) = Avl.read_leaf state.auctions.storage leaf_ptr in
+
+        (* How much kit should be given to the burrow and how much should be burned. *)
+        (* TODO: Kit repaying and kit burning might have to adjust the
+         * parameters here I think. Less kit is in circulation now. *)
+        let kit_to_repay, _kit_to_burn =
+          let corresponding_kit = Kit.of_q_floor Q.(
+            (Tez.to_q leaf.tez / Tez.to_q outcome.sold_tez) * Kit.to_q outcome.winning_bid.kit
+          ) in
+          let penalty =
+            if corresponding_kit < leaf.min_kit_for_unwarranted then
+              Kit.of_q_ceil Q.(Kit.to_q corresponding_kit * Constants.liquidation_penalty)
+            else
+              Kit.zero
+          in
+          (Kit.(corresponding_kit - penalty), penalty)
+        in
+
         let state =
           { state with auctions = { state.auctions with
+            (* TODO: When all slices that were included in a finished auction
+             * have been deleted, the entry for the auction itself must also be
+             * deleted. *)
             storage = Avl.del state.auctions.storage leaf_ptr
           }} in
 
@@ -371,12 +391,15 @@ struct
          *)
         let state =
           { state with burrows =
-            (* TODO: Also update burrow using the auction_outcome *)
             PtrMap.update
               leaf.burrow
-              (fun b -> match b with
+              (fun b ->
+               match b with
                | None -> failwith "TODO: Check if this case can happen."
                | Some burrow ->
+                 (* NOTE: We should touch the burrow here I think, before we
+                  * do anything else. *)
+                 let burrow = Burrow.return_kit_from_auction kit_to_repay burrow in
                  let slices = Option.get Burrow.(burrow.liquidation_slices) in
                  match (leaf.younger, leaf.older) with
                    | (None, None) ->

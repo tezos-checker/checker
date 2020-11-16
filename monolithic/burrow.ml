@@ -86,6 +86,12 @@ module Burrow : sig
   *)
   val touch : Parameters.t -> t -> t
 
+  (** Return some kit that we have received from an auction to the burrow.
+    * NOTE: We should really find a way to hide the internal representation of
+    * the burrow. Especially because we do not have negative kit, but instead
+    * we keep two balances. *)
+  val return_kit_from_auction : Kit.t -> t -> t
+
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
     * Fail if the tez given is less than the creation deposit. *)
@@ -223,6 +229,11 @@ end = struct
         adjustment_index = FixedPoint.of_q_floor current_adjustment_index; (* TODO: round up or down here? *)
         last_touched = p.last_touched;
       }
+
+  (** Return some kit that we have received from an auction to the burrow. *)
+  let return_kit_from_auction (kit: Kit.t) (burrow: t) : t =
+  assert (kit >= Kit.zero);
+  rebalance_kit { burrow with excess_kit = Kit.(burrow.excess_kit + kit); }
 
   let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
     if tez < Constants.creation_deposit
