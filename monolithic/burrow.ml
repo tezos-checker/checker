@@ -90,7 +90,7 @@ module Burrow : sig
     * NOTE: We should really find a way to hide the internal representation of
     * the burrow. Especially because we do not have negative kit, but instead
     * we keep two balances. *)
-  val return_kit_from_auction : Kit.t -> t -> t
+  val return_kit_from_auction : Tez.t -> Kit.t -> t -> t
 
   (** Given an address (owner) and amount of tez as collateral (including a
     * creation deposit, not counting towards that collateral), create a burrow.
@@ -231,9 +231,13 @@ end = struct
       }
 
   (** Return some kit that we have received from an auction to the burrow. *)
-  let return_kit_from_auction (kit: Kit.t) (burrow: t) : t =
+  let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (burrow: t) : t =
   assert (kit >= Kit.zero);
-  rebalance_kit { burrow with excess_kit = Kit.(burrow.excess_kit + kit); }
+  rebalance_kit
+    { burrow with
+      excess_kit = Kit.(burrow.excess_kit + kit);
+      collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
+    }
 
   let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
     if tez < Constants.creation_deposit

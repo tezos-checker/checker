@@ -387,7 +387,9 @@ struct
                | Some burrow ->
                  (* NOTE: We should touch the burrow here I think, before we
                   * do anything else. *)
-                 let burrow = Burrow.return_kit_from_auction kit_to_repay burrow in
+                 let burrow =
+                   Burrow.return_kit_from_auction
+                     leaf.tez kit_to_repay burrow in
                  let slices = Option.get Burrow.(burrow.liquidation_slices) in
                  match (leaf.younger, leaf.older) with
                    | (None, None) ->
