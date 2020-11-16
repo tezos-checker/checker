@@ -152,6 +152,7 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
 (* TODO: Allowance checks *)
+(* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline
   : (Tez.t * Kit.t * t, Error.error) result =
   if is_liquidity_token_pool_empty uniswap then
