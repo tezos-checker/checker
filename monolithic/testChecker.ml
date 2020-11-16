@@ -28,21 +28,23 @@ let suite =
          Checker.create_burrow
            checker
            ~owner:bob
-           ~amount:(Tez.of_mutez 2_000_000) in
+           ~amount:(Tez.of_mutez 10_000_000) in
 
        let (kit, checker) = assert_ok @@
          Checker.mint_kit
            checker
            ~owner:bob
            ~burrow_id:burrow_id
-           ~amount:(Kit.of_mukit 476_190) in
-       assert_equal kit (Kit.of_mukit 476_190);
+           ~amount:(Kit.of_mukit 4_285_714) in
+       assert_equal kit (Kit.of_mukit 4_285_714);
 
-       let t1 = Timestamp.of_seconds 300 in
+       let height = 5 in
+       let now = Timestamp.of_seconds @@ height * 60 in
+
        let checker =
          Checker.touch
            checker
-           ~now:t1
+           ~now ~height
            ~index:(FixedPoint.of_string "1.2") in
 
        let checker = assert_ok @@
@@ -53,22 +55,66 @@ let suite =
            checker
            ~liquidator:alice
            ~burrow_id:burrow_id in
-       assert_equal reward (Tez.of_mutez 1_001_000) ~printer:Tez.show;
+       assert_equal reward (Tez.of_mutez 1_009_000) ~printer:Tez.show;
 
-       let t2 = Timestamp.of_seconds 600 in
+       let height = 10 in
+       let now = Timestamp.of_seconds @@ height * 60 in
 
        let checker =
          Checker.touch
            checker
-           ~now:t2
+           ~now ~height
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "should start an auction"
          (Option.is_some checker.auctions.current_auction);
 
-       (* Now we should make a bid to the auction, let it finish,
-        * touch the liquidation slice and see if it propagates
-        * to the burrow correctly. *)
-       assert_bool "TODO" true
+       let height = 15 in
+       let now = Timestamp.of_seconds @@ height * 60 in
+
+       let checker =
+         Checker.touch
+           checker
+           ~now ~height
+           ~index:(FixedPoint.of_string "1.2") in
+
+       let (_bid, checker) = assert_ok @@
+        Checker.place_bid
+          checker
+          ~now ~height
+          ~sender:alice
+          ~amount:(Kit.of_mukit 4_200_000) in
+
+       let height = 45 in
+       let now = Timestamp.of_seconds @@ height * 60 in
+
+       let checker =
+         Checker.touch
+           checker
+           ~now ~height
+           ~index:(FixedPoint.of_string "1.2") in
+
+       assert_bool "auction should be completed"
+         (Option.is_none checker.auctions.current_auction);
+
+       let slice =
+         (PtrMap.find burrow_id checker.burrows)
+           .liquidation_slices
+           |> Option.get
+           |> fun i -> i.youngest in
+
+       let checker =
+         Checker.touch_liquidation_slices
+           checker
+           [slice] in
+
+       let result = PtrMap.find burrow_id checker.burrows in
+       assert_bool "burrow should have no liquidation slices"
+         (Option.is_none result.liquidation_slices);
+
+       assert_equal
+         Tez.zero
+         result.collateral_at_auction
+         ~printer:Tez.show;
     );
   ]
