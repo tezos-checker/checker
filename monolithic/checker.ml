@@ -35,8 +35,9 @@ module Checker : sig
   val empty_checker_state : Timestamp.t -> t
 
   (** Perform housekeeping tasks on the contract state. This includes:
-    * - Updating the parameters. TODO: We have to find a way to represent
-    *   external inputs here; the inputs that Parameters.step requires.
+    * - Updating the system parameters
+    * - Updating uniswap parameters (e.g. adding accrued burrowing fees to it)
+    * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
   val touch : t -> now:Timestamp.t -> height:int -> index:FixedPoint.t -> t
@@ -190,6 +191,7 @@ struct
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+      (* 3: Update auction-related info (e.g. start a new auction) *)
       let updated_auctions =
         Auction.touch
           state.auctions
@@ -210,7 +212,6 @@ struct
   (* ************************************************************************* *)
 
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
-    (* TODO: Call Checker.touch. *)
     let address = mk_next_burrow_id state.burrows in
     match Burrow.create state.parameters owner amount with
     | Ok burrow -> Ok (address, {state with burrows = PtrMap.add address burrow state.burrows})
@@ -224,20 +225,16 @@ struct
     | None -> Error (NonExistentBurrow burrow_id)
 
   let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    (* TODO: Call Checker.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
-      assert (state.parameters.last_touched = burrow.last_touched);
       let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | Some burrow -> Error (OwnershipMismatch (owner, burrow))
     | None -> Error (NonExistentBurrow burrow_id)
 
   let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    (* TODO: Call Checker.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
-        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.mint_kit state.parameters amount burrow with
         | Ok (updated_burrow, minted) ->
           assert (amount = minted);
@@ -253,10 +250,8 @@ struct
     | None -> Error (NonExistentBurrow burrow_id)
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    (* TODO: Call Checker.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner -> (
-        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.withdraw_tez state.parameters amount burrow with
         | Ok (updated_burrow, withdrawn) ->
           assert (amount = withdrawn);
@@ -267,10 +262,8 @@ struct
     | None -> Error (NonExistentBurrow burrow_id)
 
   let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    (* TODO: Call Checker.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow when Burrow.is_owned_by burrow owner ->
-      assert (state.parameters.last_touched = burrow.last_touched);
       let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= amount);
@@ -283,17 +276,11 @@ struct
 
   (* TODO: the liquidator's address must be used, eventually. *)
   let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =
-    (* TODO: Call Checker.touch. *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
-        assert (state.parameters.last_touched = burrow.last_touched);
         match Burrow.request_liquidation state.parameters burrow with
         | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
         | Partial details | Complete details | Close details ->
-          (* TODO: At the moment the auction machinery and representation do
-           * not have support for the min_received_kit_for_unwarranted field
-           * (used to determine what to return to the burrow, once an auction
-           * is over), but they should.  *)
           let liquidation_slice =
             Auction.{
               burrow = burrow_id;
