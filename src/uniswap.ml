@@ -15,6 +15,18 @@ type t =
   }
 [@@deriving show]
 
+let make_for_test ~tez ~kit ~total_liquidity_tokens =
+  { tez = tez;
+    kit = kit;
+    total_liquidity_tokens = total_liquidity_tokens;
+  }
+
+let initial =
+  { tez = Tez.one;
+    kit = Kit.one;
+    total_liquidity_tokens = liquidity_of_int 1;
+  }
+
 let is_tez_pool_empty (u: t) = assert (u.tez >= Tez.zero); u.tez = Tez.zero
 
 let is_token_pool_empty (u: t) = assert (u.kit >= Kit.zero); u.kit = Kit.zero

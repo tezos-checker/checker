@@ -17,17 +17,19 @@ let suite =
     "buy kit" >::
     (fun _ ->
        let uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 10_000_000;
-           kit = Kit.of_mukit 5_000_000;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 1;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 10_000_000)
+           ~kit:(Kit.of_mukit 5_000_000)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+       in
 
        let expected_returned_kit = Kit.of_mukit 453_636 in
        let expected_updated_uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 11_000_000;
-           kit = Kit.of_mukit 4_546_364;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 1;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 11_000_000)
+           ~kit:(Kit.of_mukit 4_546_364)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+       in
 
        (* Low expectations and on time (lax): pass *)
        let result_1 = Result.to_option (Uniswap.buy_kit uniswap ~amount:Tez.one ~min_kit_expected:(Kit.of_mukit 1) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 10)) in
@@ -49,16 +51,18 @@ let suite =
     "sell kit" >::
     (fun _ ->
        let uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 10_000_000;
-           kit = Kit.of_mukit 5_000_000;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 1;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 10_000_000)
+           ~kit:(Kit.of_mukit 5_000_000)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1);
+       in
        let expected_returned_tez = Tez.of_mutez 1_663_333 in
        let expected_updated_uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 8_336_667;
-           kit = Kit.of_mukit 6_000_000;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 1;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 8_336_667)
+           ~kit:(Kit.of_mukit 6_000_000)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+       in
 
        (* Low expectations and on time (lax): pass *)
        let result_1 = Result.to_option (Uniswap.sell_kit uniswap ~amount:Tez.zero Kit.one ~min_tez_expected:(Tez.of_mutez 1) ~now:(Timestamp.of_seconds 0) ~deadline:(Timestamp.of_seconds 10)) in
@@ -80,18 +84,20 @@ let suite =
     "add liquidity" >::
     (fun _ ->
        let uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 8_336_667;
-           kit = Kit.of_mukit 6_000_000;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 1;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 8_336_667)
+           ~kit:(Kit.of_mukit 6_000_000)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+       in
        let expected_returned_liquidity = Uniswap.liquidity_of_int 2 in
        let expected_returned_tez = Tez.zero in
        let expected_returned_kit = Kit.of_mukit 5_605_758 in
        let expected_updated_uniswap : Uniswap.t =
-         { tez = Tez.of_mutez 28_336_667;
-           kit = Kit.of_mukit 20_394_242;
-           total_liquidity_tokens = Uniswap.liquidity_of_int 3;
-         } in
+         Uniswap.make_for_test
+           ~tez:(Tez.of_mutez 28_336_667)
+           ~kit:(Kit.of_mukit 20_394_242)
+           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 3)
+       in
        match Uniswap.add_liquidity
                uniswap
                ~amount:(Tez.of_mutez 20_000_000)

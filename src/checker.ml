@@ -145,9 +145,7 @@ struct
 
   let initialize ts =
     { burrows = PtrMap.empty;
-      uniswap =
-        Uniswap.{ tez = Tez.one; kit = Kit.one;
-                  total_liquidity_tokens = Uniswap.liquidity_of_int 1; };
+      uniswap = Uniswap.initial;
       parameters =
         Parameters.{ q = FixedPoint.one;
                      index = Tez.one;

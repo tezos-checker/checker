@@ -33,15 +33,15 @@ val liquidity_of_int : int -> liquidity
 (* TODO: The state of uniswap should also (in the future) include an ongoing
  * auction to decide who to delegate to, possibly multiple tez balances, etc.
  * Just leaving this note here lest we forget. *)
-(* TODO: Would be sweet if we didn't have to expose the definition here *)
-type t =
-  { tez: Tez.t;
-    kit: Kit.t;
-    total_liquidity_tokens: liquidity;
-  }
+type t
 
 val show : t -> string
 val pp : Format.formatter -> t -> unit
+
+val make_for_test : tez:Tez.t -> kit:Kit.t -> total_liquidity_tokens:liquidity -> t
+
+(** The initial state of the uniswap contract. TODO: Contents TBD. *)
+val initial : t
 
 (** Check whether the uniswap contract contains zero tez. *)
 val is_tez_pool_empty : t -> bool
