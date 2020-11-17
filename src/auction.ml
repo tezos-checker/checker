@@ -112,7 +112,7 @@ type bid_ticket = bid_details Ticket.ticket
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
-  | Ascending of bid * Timestamp.t * int
+  | Ascending of bid * Timestamp.t * Level.t
 [@@deriving show]
 
 type current_auction = {
@@ -270,7 +270,7 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
     ~(now: Timestamp.t)
-    ~(level: int)
+    ~(level: Level.t)
     (auction: current_auction) : bid option =
   match auction.state with
   | Descending _ ->
@@ -278,13 +278,13 @@ let is_auction_complete
   | Ascending (b, t, h) ->
     if Timestamp.seconds_elapsed ~start:t ~finish:now
        > Constants.max_bid_interval_in_seconds
-    && level - h
+    && Level.blocks_elapsed ~start:h ~finish:level
        > Constants.max_bid_interval_in_blocks
     then Some b
     else None
 
 let complete_auction_if_possible
-    (now: Timestamp.t) (level: int) (auctions: auctions): auctions =
+    (now: Timestamp.t) (level: Level.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | None -> auctions
   | Some curr ->
@@ -304,7 +304,7 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (now: Timestamp.t) (level: int) (auction: current_auction) (bid: bid)
+let place_bid (now: Timestamp.t) (level: Level.t) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket ticket, Error.error) result =
   if bid.kit >= current_auction_minimum_bid now auction
   then
@@ -365,7 +365,7 @@ let reclaim_winning_bid
   | _ -> Error NotAWinningBid
 
 
-let touch (auctions: auctions) (now: Timestamp.t) (level: int) (price: FixedPoint.t) : auctions =
+let touch (auctions: auctions) (now: Timestamp.t) (level: Level.t) (price: FixedPoint.t) : auctions =
   auctions
   |> complete_auction_if_possible now level
   |> start_auction_if_possible now price

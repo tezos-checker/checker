@@ -22,7 +22,7 @@ let suite =
     ("can complete an auction" >::
      fun _ ->
        let t0 = Timestamp.of_seconds 0 in
-       let l0 = 0 in
+       let l0 = Level.of_int 0 in
        let checker = Checker.initialize t0 l0 in
 
        let (burrow_id, checker) = assert_ok @@
@@ -39,8 +39,9 @@ let suite =
            ~amount:(Kit.of_mukit 4_285_714) in
        assert_equal kit (Kit.of_mukit 4_285_714);
 
-       let level = 5 in
-       let now = Timestamp.of_seconds @@ level * 60 in
+       let int_level = 5 in
+       let level = Level.of_int int_level in
+       let now = Timestamp.of_seconds @@ int_level * 60 in
 
        let checker =
          Checker.touch
@@ -58,8 +59,9 @@ let suite =
            ~burrow_id:burrow_id in
        assert_equal reward (Tez.of_mutez 1_009_000) ~printer:Tez.show;
 
-       let level = 10 in
-       let now = Timestamp.of_seconds @@ level * 60 in
+       let int_level = 10 in
+       let level = Level.of_int int_level in
+       let now = Timestamp.of_seconds @@ int_level * 60 in
 
        let checker =
          Checker.touch
@@ -70,8 +72,9 @@ let suite =
        assert_bool "should start an auction"
          (Option.is_some checker.auctions.current_auction);
 
-       let level = 15 in
-       let now = Timestamp.of_seconds @@ level * 60 in
+       let int_level = 15 in
+       let level = Level.of_int int_level in
+       let now = Timestamp.of_seconds @@ int_level * 60 in
 
        let checker =
          Checker.touch
@@ -86,8 +89,9 @@ let suite =
            ~sender:alice
            ~amount:(Kit.of_mukit 4_200_000) in
 
-       let level = 45 in
-       let now = Timestamp.of_seconds @@ level * 60 in
+       let int_level = 45 in
+       let level = Level.of_int int_level in
+       let now = Timestamp.of_seconds @@ int_level * 60 in
 
        let checker =
          Checker.touch

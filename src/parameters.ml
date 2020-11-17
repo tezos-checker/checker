@@ -63,7 +63,7 @@ let liquidation_price (p: t) : Q.t =
 let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
   assert (burrowed >= Kit.zero); (* Invariant *)
   assert (circulating >= Kit.zero); (* Invariant *)
-  let centinepers = FixedPoint.(of_string "1" / of_string "100.0") in (* TODO: per year! *)
+  let centinepers = FixedPoint.(of_string "1" / of_string "100.0") in
   let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_string "5.0") in
   (* No kit in burrows or in circulation means no imbalance adjustment *)
   if burrowed = Kit.zero then

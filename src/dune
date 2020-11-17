@@ -4,7 +4,7 @@
 
 (library
  (name huxian)
- (modules Checker Constants Timestamp BigMap Avl Kit Tez FixedPoint
+ (modules Checker Constants Timestamp Level BigMap Avl Kit Tez FixedPoint
    Parameters Burrow Uniswap Error Address Auction Ticket Ptr)
  (libraries str zarith)
  (wrapped false)

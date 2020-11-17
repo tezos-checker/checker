@@ -16,7 +16,7 @@ type t =
      * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
      * are relatively prime, we are OK). *)
     kit_in_tez_in_prev_block: Q.t [@printer Q.pp_print];
-    last_level: int;
+    last_level: Level.t;
   }
 [@@deriving show]
 
@@ -24,11 +24,11 @@ let make_for_test ~tez ~kit ~total_liquidity_tokens ~kit_in_tez_in_prev_block ~l
   { tez = tez;
     kit = kit;
     total_liquidity_tokens = total_liquidity_tokens;
-    kit_in_tez_in_prev_block: Q.t [@printer Q.pp_print];
-    last_level: int;
+    kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
+    last_level = last_level;
   }
 
-let make_initial (level: int) =
+let make_initial (level: Level.t) =
   { tez = Tez.one;
     kit = Kit.one;
     total_liquidity_tokens = liquidity_of_int 1;
@@ -53,7 +53,7 @@ let kit_in_tez_in_prev_block (uniswap: t) = uniswap.kit_in_tez_in_prev_block
  * don't lose the last kit_in_tez at the end of the last block. NOTE: George:
  * this might not be the previous block, but the last block in which the
  * uniswap contract was touched. *)
-let sync_last_observed (uniswap: t) (level: int) =
+let sync_last_observed (uniswap: t) (level: Level.t) =
   assert (level >= uniswap.last_level); (* TODO: can it be later?? *)
   if uniswap.last_level = level then
     uniswap (* do nothing if it's been touched already in this block *)

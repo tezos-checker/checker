@@ -33,7 +33,7 @@ module Checker : sig
     | NotLiquidationCandidate of burrow_id
 
   (** Make a fresh state, initialized at the given time. *)
-  val initialize : Timestamp.t -> int -> t
+  val initialize : Timestamp.t -> Level.t -> t
 
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the system parameters
@@ -41,7 +41,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> now:Timestamp.t -> level:int -> index:FixedPoint.t -> t
+  val touch : t -> now:Timestamp.t -> level:Level.t -> index:FixedPoint.t -> t
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -97,22 +97,22 @@ module Checker : sig
   (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
     * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
-  val buy_kit : t -> level:int -> now:Timestamp.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+  val buy_kit : t -> level:Level.t -> now:Timestamp.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> level:int -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit : t -> level:Level.t -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
     * right ratio, the uniswap contract keeps as much of the given tez and kit
     * as possible with the right ratio, and returns the leftovers, along with
     * the liquidity tokens. *)
-  val add_liquidity : t -> level:int -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
+  val add_liquidity : t -> level:Level.t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val remove_liquidity : t -> level:int -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+  val remove_liquidity : t -> level:Level.t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
@@ -121,7 +121,7 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> now:Timestamp.t -> level:int -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
+  val place_bid : t -> now:Timestamp.t -> level:Level.t -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
   val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
@@ -161,7 +161,7 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
-  let touch (state:t) ~(now:Timestamp.t) ~(level:int) ~(index:FixedPoint.t) : t =
+  let touch (state:t) ~(now:Timestamp.t) ~(level:Level.t) ~(index:FixedPoint.t) : t =
     if state.parameters.last_touched = now then
       (* Do nothing if up-to-date (idempotence) *)
       state

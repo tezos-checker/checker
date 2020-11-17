@@ -25,9 +25,6 @@ let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
 let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
-let ( / ) x y = (* TODO: lossy *)
-  FixedPoint.(to_fp x / to_fp y)
-
 let scale amount fp = (* TODO: Over/Under- flow checks *)
   Z.(FixedPoint.(to_rep (to_fp amount * fp)) * scaling_factor / FixedPoint.scaling_factor)
 

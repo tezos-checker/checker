@@ -8,7 +8,6 @@ val scaling_factor : Z.t
 (* Basic arithmetic operations. *)
 val ( + ) : t -> t -> t
 val ( - ) : t -> t -> t
-val ( / ) : t -> t -> FixedPoint.t
 
 val zero : t
 val one : t

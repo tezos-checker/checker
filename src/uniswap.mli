@@ -40,11 +40,11 @@ val make_for_test :
   kit:Kit.t ->
   total_liquidity_tokens:liquidity ->
   kit_in_tez_in_prev_block:Q.t ->
-  last_level:int ->
+  last_level:Level.t ->
   t
 
 (** The initial state of the uniswap contract. TODO: Contents TBD. *)
-val make_initial : int -> t
+val make_initial : Level.t -> t
 
 (** Check whether the uniswap contract contains zero tez. *)
 val is_tez_pool_empty : t -> bool
@@ -73,7 +73,7 @@ val buy_kit :
   t ->
   amount:Tez.t ->
   min_kit_expected:Kit.t ->
-  level:int ->
+  level:Level.t ->
   now:Timestamp.t ->
   deadline:Timestamp.t ->
   (Kit.t * t, Error.error) result
@@ -85,7 +85,7 @@ val sell_kit :
   amount:Tez.t ->
   Kit.t ->
   min_tez_expected:Tez.t ->
-  level:int ->
+  level:Level.t ->
   now:Timestamp.t ->
   deadline:Timestamp.t ->
   (Tez.t * t, Error.error) result
@@ -110,7 +110,7 @@ val add_liquidity :
   amount:Tez.t ->
   max_kit_deposited:Kit.t ->
   min_lqt_minted:liquidity ->
-  level:int ->
+  level:Level.t ->
   now:Timestamp.t ->
   deadline:Timestamp.t ->
   (liquidity * Tez.t * Kit.t * t, Error.error) result
@@ -126,7 +126,7 @@ val remove_liquidity :
   lqt_burned:liquidity ->
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
-  level:int ->
+  level:Level.t ->
   now:Timestamp.t ->
   deadline:Timestamp.t ->
   (Tez.t * Kit.t * t, Error.error) result
@@ -134,6 +134,6 @@ val remove_liquidity :
 (** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
 val add_accrued_kit :
   t ->
-  level:int ->
+  level:Level.t ->
   Kit.t ->
   t

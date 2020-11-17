@@ -17,10 +17,10 @@ let suite =
            min_kit_for_unwarranted = Kit.of_mukit 4_000_000; (* note: randomly chosen *)
            younger = None; older = None;
          } in
-       let start_time = (Timestamp.of_seconds 0) in
-       let start_height = 0 in
+       let start_time = Timestamp.of_seconds 0 in
+       let start_level = Level.of_int 0 in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_height start_price in
+       let auctions = Auction.touch auctions start_time start_level start_price in
        let current = Option.get auctions.current_auction in
        assert_equal (Some (Tez.of_mutez 2_000_000)) (Auction.current_auction_tez auctions);
        assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
@@ -57,10 +57,10 @@ let suite =
            { burrow = burrow_id_3; tez = Tez.of_mutez 5_000_000_000;
              min_kit_for_unwarranted = Kit.of_mukit 9_000_003; (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = (Timestamp.of_seconds 0) in
-       let start_height = 0 in
+       let start_time = Timestamp.of_seconds 0 in
+       let start_level = Level.of_int 0 in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_height start_price in
+       let auctions = Auction.touch auctions start_time start_level start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
 
@@ -85,10 +85,10 @@ let suite =
            { burrow = burrow_id_3; tez = Tez.of_mutez 3_000_000_000;
              min_kit_for_unwarranted = Kit.of_mukit 9_000_006; (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = (Timestamp.of_seconds 0) in
-       let start_height = 0 in
+       let start_time = Timestamp.of_seconds 0 in
+       let start_level = Level.of_int 0 in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_height start_price in
+       let auctions = Auction.touch auctions start_time start_level start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
 
@@ -101,19 +101,19 @@ let suite =
            { burrow = burrow_id_1; tez = Tez.of_mutez 2_000_000;
              min_kit_for_unwarranted = Kit.of_mukit 4_000_007; (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = (Timestamp.of_seconds 0) in
-       let start_height = 0 in
+       let start_time = Timestamp.of_seconds 0 in
+       let start_level = Level.of_int 0 in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_height start_price in
+       let auctions = Auction.touch auctions start_time start_level start_price in
        let bidder = Address.of_string "23456" in
        let current = Option.get auctions.current_auction in
 
        (* Below minimum bid *)
-       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_height current { address = bidder; kit = Kit.of_mukit 1_000_000; });
+       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 1_000_000; });
        (* Right below minimum bid *)
-       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_height current { address = bidder; kit = Kit.of_mukit 1_999_999; });
+       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 1_999_999; });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
-       let (current, _ticket) = Result.get_ok (Auction.place_bid start_time start_height current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
+       let (current, _ticket) = Result.get_ok (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
        assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
        (* Minimum bid does not drop over time *)
        assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_minimum_bid (Timestamp.add_seconds start_time 10) current) ~printer:Kit.show;
