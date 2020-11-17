@@ -19,6 +19,21 @@ type t =
   }
 [@@deriving show]
 
+(** Initial state of the parameters. TODO: Contents TBD. *)
+let make_initial (ts: Timestamp.t) : t =
+  { q = FixedPoint.one;
+    index = Tez.one;
+    protected_index = Tez.one;
+    target = FixedPoint.one;
+    drift = FixedPoint.zero;
+    drift' = FixedPoint.zero;
+    burrow_fee_index = FixedPoint.one;
+    imbalance_index = FixedPoint.one;
+    outstanding_kit = Kit.of_mukit 1_000_000;
+    circulating_kit = Kit.of_mukit 1_000_000;
+    last_touched = ts;
+  }
+
 (* tez. To get tez/kit must multiply with q. *)
 let tz_minting (p: t) : Tez.t = max p.index p.protected_index
 

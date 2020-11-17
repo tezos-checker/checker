@@ -146,22 +146,8 @@ struct
   let initialize ts =
     { burrows = PtrMap.empty;
       uniswap = Uniswap.initial;
-      parameters =
-        Parameters.{ q = FixedPoint.one;
-                     index = Tez.one;
-                     protected_index = Tez.one;
-                     target = FixedPoint.one;
-                     drift = FixedPoint.zero;
-                     drift' = FixedPoint.zero;
-                     burrow_fee_index = FixedPoint.one;
-                     imbalance_index = FixedPoint.one;
-                     outstanding_kit = Kit.of_mukit 1_000_000;
-                     circulating_kit = Kit.of_mukit 1_000_000;
-                     last_touched = ts;
-                   };
-
-      auctions =
-        Auction.empty;
+      parameters = Parameters.make_initial ts;
+      auctions = Auction.empty;
     }
 
   type Error.error +=
