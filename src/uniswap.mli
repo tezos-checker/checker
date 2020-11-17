@@ -55,9 +55,11 @@ val is_token_pool_empty : t -> bool
 (** Check whether the uniswap contract contains zero liquidity tokens. *)
 val is_liquidity_token_pool_empty : t -> bool
 
+(* NOTE: Let's keep internal for now, for safety.
 (** Compute the current price of kit in tez, as estimated using the ratio of
   * tez and kit currently in the uniswap contract. *)
 val kit_in_tez : t -> Q.t
+*)
 
 (** Compute the price of kit in tez (ration of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
