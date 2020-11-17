@@ -68,29 +68,11 @@ let compute_adjustment_index (p: t) : Q.t =
   let imbalance_index = FixedPoint.to_q p.imbalance_index in
   Q.(burrow_fee_index * imbalance_index)
 
-(** Given the current target p, calculate the rate of change of the drift d'. *)
-(*
-  (* Utku: Thresholds here are cnp / day^2, we should convert them to cnp /
-   * second^2, assuming we're measuring time in seconds. My calculations might be
-   * incorrect. *)
-  let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
-    assert (target > FixedPoint.zero);
-    let cnp_001 = cnp (FixedPoint.of_float 0.01) in
-    let cnp_005 = cnp (FixedPoint.of_float 0.05) in
-
-    let log_target = log target in
-    let abs_log_target = Float.abs log_target in
-    if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 0.5)) then
-      0.
-    else if abs_log_target < FixedPoint.to_float (cnp (FixedPoint.of_float 5.0)) then
-      sign log_target *. (cnp_001 /. (24. *. 3600.) ** 2.)
-    else
-      sign log_target *. (cnp_005 /. (24. *. 3600.) ** 2.)
-*)
-
-(* George: Note that we don't really need to calculate the logs here (which can
- * be lossy); we can instead exponentiate the whole equation (exp is monotonic)
- * and win some precision, like this. My calculations might be incorrect. *)
+(** Given the current target, calculate the rate of change of the drift (drift
+  * derivative). Thresholds were given in cnp / day^2, so we convert them to
+  * cnp / second^2, assuming we're measuring time in seconds. Also, since exp
+  * is monotonic, we exponentiate the whole equation to avoid using log. TODO:
+  * double-check these calculations. *)
 let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   assert (target > FixedPoint.zero);
   FixedPoint.(
@@ -113,20 +95,24 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   assert (lower <= upper);
   min upper (max v lower)
 
+(** Update the checker's parameters, given (a) the current timestamp
+  * (Tezos.now), (b) the current index (the median of the oracles right now),
+  * and (c) the current price of kit in tez, as given by the uniswap
+  * sub-contract. *)
+(* TODO: George: I think that we should use Q everywhere for the calculations,
+and only cast to FixedPoint.t before storing it. Otherwise we can have
+signigicant precision loss. *)
 let step
     (now: Timestamp.t)
     (current_index: FixedPoint.t)
     (current_kit_in_tez: FixedPoint.t)
     (parameters: t)
   : Kit.t * t =
-  (* Compute the new protected index, using the time interval, the current
-   * index (given by the oracles right now), and the protected index of the
-   * previous timestamp. *)
   let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:now) in
   let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
-  let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
-  let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
   let current_protected_index =
+    let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
+    let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
     FixedPoint.(
       Tez.to_fp parameters.protected_index
       * clamp
