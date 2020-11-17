@@ -41,7 +41,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> now:Timestamp.t -> height:int -> index:FixedPoint.t -> t
+  val touch : t -> now:Timestamp.t -> level:int -> index:FixedPoint.t -> t
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -121,7 +121,7 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> now:Timestamp.t -> height:int -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
+  val place_bid : t -> now:Timestamp.t -> level:int -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
   val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
@@ -161,7 +161,7 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
-  let touch (state:t) ~(now:Timestamp.t) ~(height:int) ~(index:FixedPoint.t) : t =
+  let touch (state:t) ~(now:Timestamp.t) ~(level:int) ~(index:FixedPoint.t) : t =
     if state.parameters.last_touched = now then
       (* Do nothing if up-to-date (idempotence) *)
       state
@@ -181,7 +181,7 @@ struct
         Auction.touch
           state.auctions
           now
-          height
+          level
           (* Start the auction using the current liquidation price. We could
            * also have calculated the price right now directly using the oracle
            * feed as (tz_t * q_t), or use the current minting price, but using
@@ -468,11 +468,11 @@ struct
   (**                               AUCTIONS                                   *)
   (* ************************************************************************* *)
 
-  let place_bid state ~now ~height ~sender ~amount =
+  let place_bid state ~now ~level ~sender ~amount =
     let bid = { Auction.address=sender; kit=amount; } in
     match
       Auction.with_current_auction state.auctions @@
-      fun auction -> Auction.place_bid now height auction bid with
+      fun auction -> Auction.place_bid now level auction bid with
     | Error err -> Error err
     | Ok (new_auctions, bid_ticket) ->
       Ok (

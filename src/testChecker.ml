@@ -38,13 +38,13 @@ let suite =
            ~amount:(Kit.of_mukit 4_285_714) in
        assert_equal kit (Kit.of_mukit 4_285_714);
 
-       let height = 5 in
-       let now = Timestamp.of_seconds @@ height * 60 in
+       let level = 5 in
+       let now = Timestamp.of_seconds @@ level * 60 in
 
        let checker =
          Checker.touch
            checker
-           ~now ~height
+           ~now ~level
            ~index:(FixedPoint.of_string "1.2") in
 
        let checker = assert_ok @@
@@ -57,41 +57,41 @@ let suite =
            ~burrow_id:burrow_id in
        assert_equal reward (Tez.of_mutez 1_009_000) ~printer:Tez.show;
 
-       let height = 10 in
-       let now = Timestamp.of_seconds @@ height * 60 in
+       let level = 10 in
+       let now = Timestamp.of_seconds @@ level * 60 in
 
        let checker =
          Checker.touch
            checker
-           ~now ~height
+           ~now ~level
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "should start an auction"
          (Option.is_some checker.auctions.current_auction);
 
-       let height = 15 in
-       let now = Timestamp.of_seconds @@ height * 60 in
+       let level = 15 in
+       let now = Timestamp.of_seconds @@ level * 60 in
 
        let checker =
          Checker.touch
            checker
-           ~now ~height
+           ~now ~level
            ~index:(FixedPoint.of_string "1.2") in
 
        let (bid, checker) = assert_ok @@
          Checker.place_bid
            checker
-           ~now ~height
+           ~now ~level
            ~sender:alice
            ~amount:(Kit.of_mukit 4_200_000) in
 
-       let height = 45 in
-       let now = Timestamp.of_seconds @@ height * 60 in
+       let level = 45 in
+       let now = Timestamp.of_seconds @@ level * 60 in
 
        let checker =
          Checker.touch
            checker
-           ~now ~height
+           ~now ~level
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "auction should be completed"

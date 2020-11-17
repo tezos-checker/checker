@@ -260,7 +260,7 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
         FixedPoint.(one - Constants.auction_decay_rate)
         (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
     Kit.scale start_value decay
-  | Ascending (leading_bid, _timestamp, _height) ->
+  | Ascending (leading_bid, _timestamp, _level) ->
     Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
 
 (** Check if an auction is complete. A descending auction declines
@@ -270,7 +270,7 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
     ~(now: Timestamp.t)
-    ~(height: int)
+    ~(level: int)
     (auction: current_auction) : bid option =
   match auction.state with
   | Descending _ ->
@@ -278,17 +278,17 @@ let is_auction_complete
   | Ascending (b, t, h) ->
     if Timestamp.seconds_elapsed ~start:t ~finish:now
        > Constants.max_bid_interval_in_seconds
-    && height - h
+    && level - h
        > Constants.max_bid_interval_in_blocks
     then Some b
     else None
 
 let complete_auction_if_possible
-    (now: Timestamp.t) (height: int) (auctions: auctions): auctions =
+    (now: Timestamp.t) (level: int) (auctions: auctions): auctions =
   match auctions.current_auction with
   | None -> auctions
   | Some curr ->
-    match is_auction_complete curr ~now ~height with
+    match is_auction_complete curr ~now ~level with
     | None -> auctions
     | Some winning_bid ->
       { auctions with
@@ -304,12 +304,12 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (now: Timestamp.t) (height: int) (auction: current_auction) (bid: bid)
+let place_bid (now: Timestamp.t) (level: int) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket ticket, Error.error) result =
   if bid.kit >= current_auction_minimum_bid now auction
   then
     Ok (
-      { auction with state = Ascending (bid, now, height); },
+      { auction with state = Ascending (bid, now, level); },
       Ticket.create { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
@@ -330,7 +330,7 @@ let is_leading_current_auction
   match auctions.current_auction with
   | Some auction when auction.contents = bid_details.auction_id ->
     (match auction.state with
-     | Ascending (bid, _timestamp, _height) -> bid = bid_details.bid
+     | Ascending (bid, _timestamp, _level) -> bid = bid_details.bid
      | Descending _ -> false)
   | _ -> false
 
@@ -365,9 +365,9 @@ let reclaim_winning_bid
   | _ -> Error NotAWinningBid
 
 
-let touch (auctions: auctions) (now: Timestamp.t) (height: int) (price: FixedPoint.t) : auctions =
+let touch (auctions: auctions) (now: Timestamp.t) (level: int) (price: FixedPoint.t) : auctions =
   auctions
-  |> complete_auction_if_possible now height
+  |> complete_auction_if_possible now level
   |> start_auction_if_possible now price
 
 let current_auction_tez (auctions: auctions) : Tez.t option =
