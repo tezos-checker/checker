@@ -182,9 +182,12 @@ struct
           state.auctions
           now
           height
-          (* TODO: This has unit kit / tez, but the docs only pass tz, so we
-             multiply it with q here. Check if this is correct. *)
-          FixedPoint.(Tez.to_fp updated_parameters.index * updated_parameters.q) in
+          (* Start the auction using the current liquidation price. We could
+           * also have calculated the price right now directly using the oracle
+           * feed as (tz_t * q_t), or use the current minting price, but using
+           * the liquidation price is the safest option. *)
+          (* George: I use ceil, to stay on the safe side (higher-price) *)
+          (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
       (* TODO: Add more tasks here *)
       { burrows = state.burrows; (* leave as-is *)
         parameters = updated_parameters;
