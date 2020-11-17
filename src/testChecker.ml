@@ -22,7 +22,8 @@ let suite =
     ("can complete an auction" >::
      fun _ ->
        let t0 = Timestamp.of_seconds 0 in
-       let checker = Checker.initialize t0 in
+       let l0 = 0 in
+       let checker = Checker.initialize t0 l0 in
 
        let (burrow_id, checker) = assert_ok @@
          Checker.create_burrow

@@ -30,18 +30,21 @@ val pp_liquidity : Format.formatter -> liquidity -> unit
 
 val liquidity_of_int : int -> liquidity
 
-(* TODO: The state of uniswap should also (in the future) include an ongoing
- * auction to decide who to delegate to, possibly multiple tez balances, etc.
- * Just leaving this note here lest we forget. *)
 type t
 
 val show : t -> string
 val pp : Format.formatter -> t -> unit
 
-val make_for_test : tez:Tez.t -> kit:Kit.t -> total_liquidity_tokens:liquidity -> t
+val make_for_test :
+  tez:Tez.t ->
+  kit:Kit.t ->
+  total_liquidity_tokens:liquidity ->
+  kit_in_tez_in_prev_block:Q.t ->
+  last_level:int ->
+  t
 
 (** The initial state of the uniswap contract. TODO: Contents TBD. *)
-val initial : t
+val make_initial : int -> t
 
 (** Check whether the uniswap contract contains zero tez. *)
 val is_tez_pool_empty : t -> bool
@@ -56,13 +59,34 @@ val is_liquidity_token_pool_empty : t -> bool
   * tez and kit currently in the uniswap contract. *)
 val kit_in_tez : t -> Q.t
 
+(** Compute the price of kit in tez (ration of tez and kit in the uniswap
+  * contract), as it was at the end of the last block. This is to be used when
+  * required for the calculation of the drift derivative instead of up-to-date
+  * kit_in_tez, because it is a little harder to manipulate. *)
+val kit_in_tez_in_prev_block : t -> Q.t
+
 (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)
-val buy_kit : t -> amount:Tez.t -> min_kit_expected:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+val buy_kit :
+  t ->
+  amount:Tez.t ->
+  min_kit_expected:Kit.t ->
+  level:int ->
+  now:Timestamp.t ->
+  deadline:Timestamp.t ->
+  (Kit.t * t, Error.error) result
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
-val sell_kit : t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+val sell_kit :
+  t ->
+  amount:Tez.t ->
+  Kit.t ->
+  min_tez_expected:Tez.t ->
+  level:int ->
+  now:Timestamp.t ->
+  deadline:Timestamp.t ->
+  (Tez.t * t, Error.error) result
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
   * some kit. If the given amounts does not have the right ratio, we
@@ -79,14 +103,35 @@ val sell_kit : t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> now:Times
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders.
 *)
-val add_liquidity : t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (liquidity * Tez.t * Kit.t * t, Error.error) result
+val add_liquidity :
+  t ->
+  amount:Tez.t ->
+  max_kit_deposited:Kit.t ->
+  min_lqt_minted:liquidity ->
+  level:int ->
+  now:Timestamp.t ->
+  deadline:Timestamp.t ->
+  (liquidity * Tez.t * Kit.t * t, Error.error) result
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
   * sells their liquidity. I think it is unlikely to happen, since the last
   * liquidity holders wouldn't want to lose the burrow fees.
 *)
-val remove_liquidity : t -> amount:Tez.t -> lqt_burned:liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+val remove_liquidity :
+  t ->
+  amount:Tez.t ->
+  lqt_burned:liquidity ->
+  min_tez_withdrawn:Tez.t ->
+  min_kit_withdrawn:Kit.t ->
+  level:int ->
+  now:Timestamp.t ->
+  deadline:Timestamp.t ->
+  (Tez.t * Kit.t * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
-val add_accrued_kit : t -> Kit.t -> t
+val add_accrued_kit :
+  t ->
+  level:int ->
+  Kit.t ->
+  t

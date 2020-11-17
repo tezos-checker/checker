@@ -33,7 +33,7 @@ module Checker : sig
     | NotLiquidationCandidate of burrow_id
 
   (** Make a fresh state, initialized at the given time. *)
-  val initialize : Timestamp.t -> t
+  val initialize : Timestamp.t -> int -> t
 
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the system parameters
@@ -97,22 +97,22 @@ module Checker : sig
   (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
     * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
-  val buy_kit : t -> now:Timestamp.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+  val buy_kit : t -> level:int -> now:Timestamp.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit : t -> level:int -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
     * right ratio, the uniswap contract keeps as much of the given tez and kit
     * as possible with the right ratio, and returns the leftovers, along with
     * the liquidity tokens. *)
-  val add_liquidity : t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
+  val add_liquidity : t -> level:int -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val remove_liquidity : t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+  val remove_liquidity : t -> level:int -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
@@ -143,9 +143,9 @@ struct
       auctions : Auction.auctions;
     }
 
-  let initialize ts =
+  let initialize ts level =
     { burrows = PtrMap.empty;
-      uniswap = Uniswap.initial;
+      uniswap = Uniswap.make_initial level;
       parameters = Parameters.make_initial ts;
       auctions = Auction.empty;
     }
@@ -175,7 +175,7 @@ struct
         Parameters.step now index (FixedPoint.of_q_floor (Uniswap.kit_in_tez state.uniswap)) state.parameters (* TODO: Should stick with Q.t here I think *)
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
-      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap ~level total_accrual_to_uniswap in
       (* 3: Update auction-related info (e.g. start a new auction) *)
       let updated_auctions =
         Auction.touch
@@ -439,27 +439,27 @@ struct
   (* ************************************************************************* *)
 
   (* NOTE: an address is needed too, eventually. *)
-  let buy_kit (state:t) ~now ~amount ~min_kit_expected ~deadline =
-    match Uniswap.buy_kit state.uniswap ~amount ~min_kit_expected ~now ~deadline with
+  let buy_kit (state:t) ~level ~now ~amount ~min_kit_expected ~deadline =
+    match Uniswap.buy_kit state.uniswap ~amount ~min_kit_expected ~level ~now ~deadline with
     | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) ~now ~amount kit ~min_tez_expected ~deadline =
-    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~now ~deadline with
+  let sell_kit (state:t) ~level ~now ~amount kit ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~level ~now ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let add_liquidity (state:t) ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline =
-    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline with
+  let add_liquidity (state:t) ~level ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline =
+    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~level ~now ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
       Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
 
   (* NOTE: an address is needed too, eventually. *)
-  let remove_liquidity (state:t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
-    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline with
+  let remove_liquidity (state:t) ~level ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
+    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~level ~now ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
       Ok (tez, kit, {state with uniswap = updated_uniswap})
