@@ -32,7 +32,8 @@ module Checker : sig
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
 
-  val empty_checker_state : Timestamp.t -> t
+  (** Make a fresh state, initialized at the given time. *)
+  val initialize : Timestamp.t -> t
 
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the system parameters
@@ -142,7 +143,7 @@ struct
       auctions : Auction.auctions;
     }
 
-  let empty_checker_state ts =
+  let initialize ts =
     { burrows = PtrMap.empty;
       uniswap =
         Uniswap.{ tez = Tez.one; kit = Kit.one;
@@ -507,4 +508,3 @@ struct
     Auction.reclaim_winning_bid state.auctions bid_ticket
 
 end
-
