@@ -257,7 +257,7 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
   | Descending (start_value, start_time) ->
     let decay =
       FixedPoint.pow
-        Constants.auction_decay_rate
+        FixedPoint.(one - Constants.auction_decay_rate)
         (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _height) ->

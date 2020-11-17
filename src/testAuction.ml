@@ -27,9 +27,13 @@ let suite =
        assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
        (* Price of descending auction should go down... *)
        let one_second_later = Timestamp.add_seconds start_time 1 in
-       assert_equal (Kit.of_mukit 1_998_000) (Auction.current_auction_minimum_bid one_second_later current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 1_999_666) (Auction.current_auction_minimum_bid one_second_later current) ~printer:Kit.show;
        let two_seconds_later = Timestamp.add_seconds start_time 2 in
-       assert_equal (Kit.of_mukit 1_996_002) (Auction.current_auction_minimum_bid two_seconds_later current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 1_999_333) (Auction.current_auction_minimum_bid two_seconds_later current) ~printer:Kit.show;
+       let one_minute_later = Timestamp.add_seconds start_time 60 in
+       assert_equal (Kit.of_mukit 1_980_097) (Auction.current_auction_minimum_bid one_minute_later current) ~printer:Kit.show;
+       let two_minutes_later = Timestamp.add_seconds start_time (2 * 60) in
+       assert_equal (Kit.of_mukit 1_960_393) (Auction.current_auction_minimum_bid two_minutes_later current) ~printer:Kit.show;
     );
 
     ("test batches up auction lots" >::

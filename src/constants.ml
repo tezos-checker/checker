@@ -46,8 +46,10 @@ let target_low_bracket : FixedPoint.t = FixedPoint.of_string "0.005"
 (** High bracket used for the calculation of the drift derivative. *)
 let target_high_bracket : FixedPoint.t = FixedPoint.of_string "0.05"
 
-(** How fast a descending option price drops. *)
-let auction_decay_rate : FixedPoint.t = FixedPoint.of_string "0.999"
+(** How fast a descending option price drops per second. Currently we want it
+  * to drop by around 1cNp per minute, so we just divide by 60 to get roughly
+  * how much it should be per second. *)
+let auction_decay_rate : FixedPoint.t = FixedPoint.of_string "0.00016667"
 
 (** The maximum number of seconds that can pass between two (ascending) bids
   * during an auction. The auction should expire if more than this many seconds
