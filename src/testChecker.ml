@@ -108,7 +108,7 @@ let suite =
 
        let slice =
          (PtrMap.find burrow_id checker.burrows)
-         .liquidation_slices
+         |> Burrow.liquidation_slices
          |> Option.get
          |> fun i -> i.youngest in
 
@@ -119,11 +119,11 @@ let suite =
 
        let result = PtrMap.find burrow_id checker.burrows in
        assert_bool "burrow should have no liquidation slices"
-         (Option.is_none result.liquidation_slices);
+         (Option.is_none (Burrow.liquidation_slices result));
 
        assert_equal
          Tez.zero
-         result.collateral_at_auction
+         (Burrow.collateral_at_auction result)
          ~printer:Tez.show;
     );
   ]

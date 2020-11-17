@@ -289,7 +289,7 @@ struct
               min_kit_for_unwarranted = details.min_kit_for_unwarranted;
               older = Option.map
                   Burrow.(fun i -> i.youngest)
-                  burrow.liquidation_slices;
+                  (Burrow.liquidation_slices burrow);
               younger = None;
             } in
           let updated_auctions, leaf_ptr =
@@ -316,12 +316,12 @@ struct
 
           (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
           let updated_burrow =
-            { details.burrow_state with
-              liquidation_slices =
-                match details.burrow_state.liquidation_slices with
+            Burrow.set_liquidation_slices
+              details.burrow_state
+              (match Burrow.liquidation_slices details.burrow_state with
                 | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
-                | Some s -> Some { s with youngest=leaf_ptr; };
-            } in
+                | Some s -> Some { s with youngest=leaf_ptr; })
+          in
           Ok ( details.liquidation_reward,
                {state with
                 burrows = PtrMap.add burrow_id updated_burrow state.burrows;
@@ -391,26 +391,18 @@ struct
                               let burrow =
                                 Burrow.return_kit_from_auction
                                   leaf.tez kit_to_repay burrow in
-                              let slices = Option.get Burrow.(burrow.liquidation_slices) in
+                              let slices = Option.get (Burrow.liquidation_slices burrow) in
                               match (leaf.younger, leaf.older) with
                               | (None, None) ->
                                 assert (slices.youngest = leaf_ptr);
                                 assert (slices.oldest = leaf_ptr);
-                                Some { burrow with
-                                       liquidation_slices = None
-                                     }
+                                Some Burrow.(set_liquidation_slices burrow None)
                               | (None, Some older) ->
                                 assert (slices.youngest = leaf_ptr);
-                                Some { burrow with
-                                       liquidation_slices = Some
-                                           Burrow.{ slices with youngest = older }
-                                     }
+                                Some Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
                               | (Some younger, None) ->
                                 assert (slices.oldest = leaf_ptr);
-                                Some { burrow with
-                                       liquidation_slices = Some
-                                           Burrow.{ slices with oldest = younger }
-                                     }
+                                Some Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
                               | (Some _, Some _) ->
                                 assert (slices.oldest <> leaf_ptr);
                                 assert (slices.youngest <> leaf_ptr);
