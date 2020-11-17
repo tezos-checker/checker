@@ -78,7 +78,7 @@ let suite =
            ~now ~height
            ~index:(FixedPoint.of_string "1.2") in
 
-       let (_bid, checker) = assert_ok @@
+       let (bid, checker) = assert_ok @@
          Checker.place_bid
            checker
            ~now ~height
@@ -96,6 +96,15 @@ let suite =
 
        assert_bool "auction should be completed"
          (Option.is_none checker.auctions.current_auction);
+
+       let tez_from_bid = assert_ok @@
+         Checker.reclaim_winning_bid
+           checker
+           ~address:alice
+           ~bid_ticket:bid in
+
+       assert_equal (Tez.of_mutez 3_156_177) tez_from_bid
+         ~printer:Tez.show;
 
        let slice =
          (PtrMap.find burrow_id checker.burrows)
