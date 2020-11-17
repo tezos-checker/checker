@@ -73,8 +73,7 @@ val buy_kit :
   t ->
   amount:Tez.t ->
   min_kit_expected:Kit.t ->
-  level:Level.t ->
-  now:Timestamp.t ->
+  tezos:Tezos.t ->
   deadline:Timestamp.t ->
   (Kit.t * t, Error.error) result
 
@@ -85,8 +84,7 @@ val sell_kit :
   amount:Tez.t ->
   Kit.t ->
   min_tez_expected:Tez.t ->
-  level:Level.t ->
-  now:Timestamp.t ->
+  tezos:Tezos.t ->
   deadline:Timestamp.t ->
   (Tez.t * t, Error.error) result
 
@@ -110,8 +108,7 @@ val add_liquidity :
   amount:Tez.t ->
   max_kit_deposited:Kit.t ->
   min_lqt_minted:liquidity ->
-  level:Level.t ->
-  now:Timestamp.t ->
+  tezos:Tezos.t ->
   deadline:Timestamp.t ->
   (liquidity * Tez.t * Kit.t * t, Error.error) result
 
@@ -126,14 +123,13 @@ val remove_liquidity :
   lqt_burned:liquidity ->
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
-  level:Level.t ->
-  now:Timestamp.t ->
+  tezos:Tezos.t ->
   deadline:Timestamp.t ->
   (Tez.t * Kit.t * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
 val add_accrued_kit :
   t ->
-  level:Level.t ->
+  Tezos.t ->
   Kit.t ->
   t

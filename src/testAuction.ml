@@ -19,20 +19,21 @@ let suite =
          } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
+       let start_tezos = Tezos.{now = start_time; level = start_level;} in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_level start_price in
+       let auctions = Auction.touch auctions start_tezos start_price in
        let current = Option.get auctions.current_auction in
        assert_equal (Some (Tez.of_mutez 2_000_000)) (Auction.current_auction_tez auctions);
-       assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
-       assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_tezos current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 2_000_000) (Auction.current_auction_minimum_bid start_tezos current) ~printer:Kit.show;
        (* Price of descending auction should go down... *)
-       let one_second_later = Timestamp.add_seconds start_time 1 in
+       let one_second_later = Tezos.{now = Timestamp.add_seconds start_time 1; level = Level.of_int 0;} in
        assert_equal (Kit.of_mukit 1_999_666) (Auction.current_auction_minimum_bid one_second_later current) ~printer:Kit.show;
-       let two_seconds_later = Timestamp.add_seconds start_time 2 in
+       let two_seconds_later = Tezos.{now = Timestamp.add_seconds start_time 2; level = Level.of_int 0;} in
        assert_equal (Kit.of_mukit 1_999_333) (Auction.current_auction_minimum_bid two_seconds_later current) ~printer:Kit.show;
-       let one_minute_later = Timestamp.add_seconds start_time 60 in
+       let one_minute_later = Tezos.{now = Timestamp.add_seconds start_time 60; level = Level.of_int 1;} in
        assert_equal (Kit.of_mukit 1_980_097) (Auction.current_auction_minimum_bid one_minute_later current) ~printer:Kit.show;
-       let two_minutes_later = Timestamp.add_seconds start_time (2 * 60) in
+       let two_minutes_later = Tezos.{now = Timestamp.add_seconds start_time (2 * 60); level = Level.of_int 2;} in
        assert_equal (Kit.of_mukit 1_960_393) (Auction.current_auction_minimum_bid two_minutes_later current) ~printer:Kit.show;
     );
 
@@ -59,8 +60,9 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
+       let start_tezos = Tezos.{now = start_time; level = start_level;} in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_level start_price in
+       let auctions = Auction.touch auctions start_tezos start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
 
@@ -87,8 +89,9 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
+       let start_tezos = Tezos.{now = start_time; level = start_level;} in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_level start_price in
+       let auctions = Auction.touch auctions start_tezos start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (Auction.current_auction_tez auctions);
     );
 
@@ -103,19 +106,33 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
+       let start_tezos = Tezos.{now = start_time; level = start_level;} in
        let start_price = FixedPoint.one in
-       let auctions = Auction.touch auctions start_time start_level start_price in
+       let auctions = Auction.touch auctions start_tezos start_price in
        let bidder = Address.of_string "23456" in
        let current = Option.get auctions.current_auction in
 
        (* Below minimum bid *)
-       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 1_000_000; });
+       assert_equal
+         (Error Auction.BidTooLow)
+         (Auction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 1_000_000; });
        (* Right below minimum bid *)
-       assert_equal (Error Auction.BidTooLow) (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 1_999_999; });
+       assert_equal
+         (Error Auction.BidTooLow)
+         (Auction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 1_999_999; });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
-       let (current, _ticket) = Result.get_ok (Auction.place_bid start_time start_level current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
-       assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_minimum_bid start_time current) ~printer:Kit.show;
+       let (current, _ticket) = Result.get_ok (Auction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
+       assert_equal
+         (Kit.of_mukit 2_006_600)
+         (Auction.current_auction_minimum_bid start_tezos current)
+         ~printer:Kit.show;
        (* Minimum bid does not drop over time *)
-       assert_equal (Kit.of_mukit 2_006_600) (Auction.current_auction_minimum_bid (Timestamp.add_seconds start_time 10) current) ~printer:Kit.show;
+       let ten_seconds_later = {
+         start_tezos with now = Timestamp.add_seconds start_tezos.now 10
+       } in
+       assert_equal
+         (Kit.of_mukit 2_006_600)
+         (Auction.current_auction_minimum_bid ten_seconds_later current)
+         ~printer:Kit.show;
     );
   ]

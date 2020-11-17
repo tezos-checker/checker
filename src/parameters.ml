@@ -118,12 +118,12 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
 and only cast to FixedPoint.t before storing it. Otherwise we can have
 signigicant precision loss. *)
 let step
-    (now: Timestamp.t)
+    (tezos: Tezos.t)
     (current_index: FixedPoint.t)
     (current_kit_in_tez: FixedPoint.t)
     (parameters: t)
   : Kit.t * t =
-  let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:now) in
+  let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:tezos.now) in
   let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
   let current_protected_index =
     let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
@@ -179,7 +179,7 @@ let step
     imbalance_index = current_imbalance_index;
     outstanding_kit = current_outstanding_kit;
     circulating_kit = current_circulating_kit;
-    last_touched = now;
+    last_touched = tezos.now;
   }
   )
 

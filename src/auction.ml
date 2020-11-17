@@ -216,7 +216,7 @@ let take_with_splitting storage queued_slices split_threshold =
     (storage, new_auction)
 
 let start_auction_if_possible
-    (now: Timestamp.t) (start_price: FixedPoint.t) (auctions: auctions): auctions =
+    (tezos: Tezos.t) (start_price: FixedPoint.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
@@ -242,7 +242,7 @@ let start_auction_if_possible
               * start_price)  in
         Some
           { contents = new_auction;
-            state = Descending (start_value, now); } in
+            state = Descending (start_value, tezos.now); } in
     { auctions with
       storage = storage;
       current_auction = current_auction;
@@ -252,13 +252,13 @@ let start_auction_if_possible
   * auction this amounts to the reserve price (which is exponentially
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
-let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : Kit.t =
+let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
     let decay =
       FixedPoint.pow
         FixedPoint.(one - Constants.auction_decay_rate)
-        (Timestamp.seconds_elapsed ~start:start_time ~finish:now) in
+        (Timestamp.seconds_elapsed ~start:start_time ~finish:tezos.now) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
     Kit.scale leading_bid.kit FixedPoint.(one + Constants.bid_improvement_factor)
@@ -269,26 +269,25 @@ let current_auction_minimum_bid (now: Timestamp.t) (auction: current_auction) : 
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
-    ~(now: Timestamp.t)
-    ~(level: Level.t)
+    (tezos: Tezos.t)
     (auction: current_auction) : bid option =
   match auction.state with
   | Descending _ ->
     None
   | Ascending (b, t, h) ->
-    if Timestamp.seconds_elapsed ~start:t ~finish:now
+    if Timestamp.seconds_elapsed ~start:t ~finish:tezos.now
        > Constants.max_bid_interval_in_seconds
-    && Level.blocks_elapsed ~start:h ~finish:level
+    && Level.blocks_elapsed ~start:h ~finish:tezos.level
        > Constants.max_bid_interval_in_blocks
     then Some b
     else None
 
 let complete_auction_if_possible
-    (now: Timestamp.t) (level: Level.t) (auctions: auctions): auctions =
+    (tezos: Tezos.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | None -> auctions
   | Some curr ->
-    match is_auction_complete curr ~now ~level with
+    match is_auction_complete tezos curr with
     | None -> auctions
     | Some winning_bid ->
       { auctions with
@@ -304,12 +303,12 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (now: Timestamp.t) (level: Level.t) (auction: current_auction) (bid: bid)
+let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket ticket, Error.error) result =
-  if bid.kit >= current_auction_minimum_bid now auction
+  if bid.kit >= current_auction_minimum_bid tezos auction
   then
     Ok (
-      { auction with state = Ascending (bid, now, level); },
+      { auction with state = Ascending (bid, tezos.now, tezos.level); },
       Ticket.create { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
@@ -365,10 +364,10 @@ let reclaim_winning_bid
   | _ -> Error NotAWinningBid
 
 
-let touch (auctions: auctions) (now: Timestamp.t) (level: Level.t) (price: FixedPoint.t) : auctions =
+let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions =
   auctions
-  |> complete_auction_if_possible now level
-  |> start_auction_if_possible now price
+  |> complete_auction_if_possible tezos
+  |> start_auction_if_possible tezos price
 
 let current_auction_tez (auctions: auctions) : Tez.t option =
   Option.map

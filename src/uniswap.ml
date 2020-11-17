@@ -53,14 +53,14 @@ let kit_in_tez_in_prev_block (uniswap: t) = uniswap.kit_in_tez_in_prev_block
  * don't lose the last kit_in_tez at the end of the last block. NOTE: George:
  * this might not be the previous block, but the last block in which the
  * uniswap contract was touched. *)
-let sync_last_observed (uniswap: t) (level: Level.t) =
-  assert (level >= uniswap.last_level); (* TODO: can it be later?? *)
-  if uniswap.last_level = level then
+let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
+  assert (tezos.level >= uniswap.last_level); (* TODO: can it be later?? *)
+  if uniswap.last_level = tezos.level then
     uniswap (* do nothing if it's been touched already in this block *)
   else
     { uniswap with
         kit_in_tez_in_prev_block = kit_in_tez uniswap;
-        last_level = level;
+        last_level = tezos.level;
     }
 
 type Error.error +=
@@ -89,15 +89,15 @@ type Error.error +=
   | SellKitTooLowExpectedTez
   | SellKitTooMuchTezBought
 
-let buy_kit (uniswap: t) ~amount ~min_kit_expected ~level ~now ~deadline =
-  let uniswap = sync_last_observed uniswap level in
+let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
+  let uniswap = sync_last_observed uniswap tezos in
   if (is_tez_pool_empty uniswap) then
     Error UniswapEmptyTezPool
   else if (is_token_pool_empty uniswap) then
     Error UniswapEmptyKitPool
   else if (amount <= Tez.zero) then
     Error UniswapNonPositiveInput
-  else if (now >= deadline) then
+  else if (tezos.now >= deadline) then
     Error UniswapTooLate
   else if (min_kit_expected <= Kit.zero) then
     Error BuyKitTooLowExpectedKit
@@ -118,15 +118,15 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~level ~now ~deadline =
              tez = Tez.(uniswap.tez + amount) }
          )
 
-let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~level ~now ~deadline =
-  let uniswap = sync_last_observed uniswap level in
+let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~tezos ~deadline =
+  let uniswap = sync_last_observed uniswap tezos in
   if is_tez_pool_empty uniswap then
     Error UniswapEmptyTezPool
   else if is_token_pool_empty uniswap then
     Error UniswapEmptyKitPool
   else if (kit <= Kit.zero) then
     Error UniswapNonPositiveInput
-  else if now >= deadline then
+  else if tezos.now >= deadline then
     Error UniswapTooLate
   else if amount <> Tez.zero then
     Error SellKitNonEmptyAmount
@@ -160,11 +160,11 @@ let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~level ~now ~de
  * grow the balance of the assets in the contract. An additional reason
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders. *)
-let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~level ~now ~deadline =
-  let uniswap = sync_last_observed uniswap level in
+let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline =
+  let uniswap = sync_last_observed uniswap tezos in
   if is_tez_pool_empty uniswap then
     Error UniswapEmptyTezPool
-  else if now >= deadline then
+  else if tezos.now >= deadline then
     Error UniswapTooLate
   else if amount = Tez.zero then
     Error AddLiquidityNoTezGiven
@@ -193,15 +193,15 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~level
  * want to lose the burrow fees. *)
 (* TODO: Allowance checks *)
 (* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
-let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~level ~now ~deadline
+let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline
   : (Tez.t * Kit.t * t, Error.error) result =
-  let uniswap = sync_last_observed uniswap level in
+  let uniswap = sync_last_observed uniswap tezos in
   if is_liquidity_token_pool_empty uniswap then
     (* Since this requires a liquidity token, contract cannot be empty *)
     Error UniswapEmptyLiquidityTokenPool
   else if amount <> Tez.zero then
     Error RemoveLiquidityNonEmptyAmount
-  else if now >= deadline then
+  else if tezos.now >= deadline then
     Error UniswapTooLate
   else if lqt_burned <= 0 then
     Error RemoveLiquidityNoLiquidityBurned
@@ -227,6 +227,6 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
         total_liquidity_tokens = uniswap.total_liquidity_tokens - lqt_burned } in
       Ok (tez_withdrawn, kit_withdrawn, updated)
 
-let add_accrued_kit (uniswap: t) ~level (accrual: Kit.t) : t =
-  let uniswap = sync_last_observed uniswap level in
+let add_accrued_kit (uniswap: t) tezos (accrual: Kit.t) : t =
+  let uniswap = sync_last_observed uniswap tezos in
   { uniswap with kit = Kit.(uniswap.kit + accrual) }

@@ -41,7 +41,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> now:Timestamp.t -> level:Level.t -> index:FixedPoint.t -> t
+  val touch : t -> tezos:Tezos.t -> index:FixedPoint.t -> t
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -97,22 +97,22 @@ module Checker : sig
   (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
     * cannot be bought or if the deadline has passed. *)
   (* NOTE: an address is needed too, eventually. *)
-  val buy_kit : t -> level:Level.t -> now:Timestamp.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+  val buy_kit : t -> tezos:Tezos.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> level:Level.t -> now:Timestamp.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit : t -> tezos:Tezos.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
     * right ratio, the uniswap contract keeps as much of the given tez and kit
     * as possible with the right ratio, and returns the leftovers, along with
     * the liquidity tokens. *)
-  val add_liquidity : t -> level:Level.t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> now:Timestamp.t -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
+  val add_liquidity : t -> tezos:Tezos.t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val remove_liquidity : t -> level:Level.t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> now:Timestamp.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+  val remove_liquidity : t -> tezos:Tezos.t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                               AUCTIONS                                   *)
@@ -121,7 +121,7 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> now:Timestamp.t -> level:Level.t -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
+  val place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
   val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
@@ -161,8 +161,8 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
-  let touch (state:t) ~(now:Timestamp.t) ~(level:Level.t) ~(index:FixedPoint.t) : t =
-    if state.parameters.last_touched = now then
+  let touch (state:t) ~tezos ~(index:FixedPoint.t) : t =
+    if state.parameters.last_touched = Tezos.(tezos.now) then
       (* Do nothing if up-to-date (idempotence) *)
       state
     else
@@ -172,16 +172,15 @@ struct
        * do things in the right order here. *)
       (* 1: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
-        Parameters.step now index (FixedPoint.of_q_floor (Uniswap.kit_in_tez_in_prev_block state.uniswap)) state.parameters (* TODO: Should stick with Q.t here I think *)
+        Parameters.step tezos index (FixedPoint.of_q_floor (Uniswap.kit_in_tez_in_prev_block state.uniswap)) state.parameters (* TODO: Should stick with Q.t here I think *)
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
-      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap ~level total_accrual_to_uniswap in
+      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
       (* 3: Update auction-related info (e.g. start a new auction) *)
       let updated_auctions =
         Auction.touch
           state.auctions
-          now
-          level
+          tezos
           (* Start the auction using the current liquidation price. We could
            * also have calculated the price right now directly using the oracle
            * feed as (tz_t * q_t), or use the current minting price, but using
@@ -439,27 +438,27 @@ struct
   (* ************************************************************************* *)
 
   (* NOTE: an address is needed too, eventually. *)
-  let buy_kit (state:t) ~level ~now ~amount ~min_kit_expected ~deadline =
-    match Uniswap.buy_kit state.uniswap ~amount ~min_kit_expected ~level ~now ~deadline with
+  let buy_kit (state:t) ~tezos ~amount ~min_kit_expected ~deadline =
+    match Uniswap.buy_kit state.uniswap ~amount ~min_kit_expected ~tezos ~deadline with
     | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) ~level ~now ~amount kit ~min_tez_expected ~deadline =
-    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~level ~now ~deadline with
+  let sell_kit (state:t) ~tezos ~amount kit ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~tezos ~deadline with
     | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
     | Error err -> Error err
 
   (* NOTE: an address is needed too, eventually. *)
-  let add_liquidity (state:t) ~level ~amount ~max_kit_deposited ~min_lqt_minted ~now ~deadline =
-    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~level ~now ~deadline with
+  let add_liquidity (state:t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted ~deadline =
+    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
       Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
 
   (* NOTE: an address is needed too, eventually. *)
-  let remove_liquidity (state:t) ~level ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~now ~deadline =
-    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~level ~now ~deadline with
+  let remove_liquidity (state:t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
+    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
       Ok (tez, kit, {state with uniswap = updated_uniswap})
@@ -468,11 +467,11 @@ struct
   (**                               AUCTIONS                                   *)
   (* ************************************************************************* *)
 
-  let place_bid state ~now ~level ~sender ~amount =
+  let place_bid state ~tezos ~sender ~amount =
     let bid = { Auction.address=sender; kit=amount; } in
     match
       Auction.with_current_auction state.auctions @@
-      fun auction -> Auction.place_bid now level auction bid with
+      fun auction -> Auction.place_bid tezos auction bid with
     | Error err -> Error err
     | Ok (new_auctions, bid_ticket) ->
       Ok (

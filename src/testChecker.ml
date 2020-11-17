@@ -40,13 +40,15 @@ let suite =
        assert_equal kit (Kit.of_mukit 4_285_714);
 
        let int_level = 5 in
-       let level = Level.of_int int_level in
-       let now = Timestamp.of_seconds @@ int_level * 60 in
+       let tezos = Tezos.{
+         now = Timestamp.of_seconds @@ int_level * 60;
+         level = Level.of_int int_level;
+       } in
 
        let checker =
          Checker.touch
            checker
-           ~now ~level
+           ~tezos
            ~index:(FixedPoint.of_string "1.2") in
 
        let checker = assert_ok @@
@@ -60,43 +62,49 @@ let suite =
        assert_equal reward (Tez.of_mutez 1_009_000) ~printer:Tez.show;
 
        let int_level = 10 in
-       let level = Level.of_int int_level in
-       let now = Timestamp.of_seconds @@ int_level * 60 in
+       let tezos = Tezos.{
+         now = Timestamp.of_seconds @@ int_level * 60;
+         level = Level.of_int int_level;
+       } in
 
        let checker =
          Checker.touch
            checker
-           ~now ~level
+           ~tezos
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "should start an auction"
          (Option.is_some checker.auctions.current_auction);
 
        let int_level = 15 in
-       let level = Level.of_int int_level in
-       let now = Timestamp.of_seconds @@ int_level * 60 in
+       let tezos = Tezos.{
+         now = Timestamp.of_seconds @@ int_level * 60;
+         level = Level.of_int int_level;
+       } in
 
        let checker =
          Checker.touch
            checker
-           ~now ~level
+           ~tezos
            ~index:(FixedPoint.of_string "1.2") in
 
        let (bid, checker) = assert_ok @@
          Checker.place_bid
            checker
-           ~now ~level
+           ~tezos
            ~sender:alice
            ~amount:(Kit.of_mukit 4_200_000) in
 
        let int_level = 45 in
-       let level = Level.of_int int_level in
-       let now = Timestamp.of_seconds @@ int_level * 60 in
+       let tezos = Tezos.{
+         now = Timestamp.of_seconds @@ int_level * 60;
+         level = Level.of_int int_level;
+       } in
 
        let checker =
          Checker.touch
            checker
-           ~now ~level
+           ~tezos
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "auction should be completed"
