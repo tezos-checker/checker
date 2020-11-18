@@ -9,6 +9,8 @@ let assert_ok (r: ('a, Error.error) result) : 'a =
   match r with
   | Ok a -> a
   | Error Auction.BidTooLow -> assert_failure "BidTooLow"
+  | Error Auction.NotAWinningBid -> assert_failure "NotAWinningBid"
+  | Error Auction.NotAllSlicesClaimed -> assert_failure "NotAllSlicesClaimed"
   | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
   | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
   | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
@@ -110,15 +112,6 @@ let suite =
        assert_bool "auction should be completed"
          (Option.is_none checker.auctions.current_auction);
 
-       let tez_from_bid = assert_ok @@
-         Checker.reclaim_winning_bid
-           checker
-           ~address:alice
-           ~bid_ticket:bid in
-
-       assert_equal (Tez.of_mutez 3_156_177) tez_from_bid
-         ~printer:Tez.show;
-
        let slice =
          (PtrMap.find burrow_id checker.burrows)
          |> Burrow.liquidation_slices
@@ -138,5 +131,15 @@ let suite =
          Tez.zero
          (Burrow.collateral_at_auction result)
          ~printer:Tez.show;
+
+       let tez_from_bid = assert_ok @@
+         Checker.reclaim_winning_bid
+           checker
+           ~address:alice
+           ~bid_ticket:bid in
+
+       assert_equal (Tez.of_mutez 3_156_177) tez_from_bid
+         ~printer:Tez.show;
+
     );
   ]

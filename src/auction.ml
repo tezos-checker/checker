@@ -90,6 +90,7 @@ type Error.error +=
   | BidTooLow
   | CannotReclaimLeadingBid
   | NotAWinningBid
+  | NotAllSlicesClaimed
 
 (* Stub types *)
 type burrow_id = unit
@@ -361,8 +362,11 @@ let reclaim_winning_bid
   : (Tez.t, Error.error) result =
   let bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
-  | Some outcome -> Ok outcome.sold_tez
-  | _ -> Error NotAWinningBid
+  | Some outcome ->
+     if Avl.is_empty auctions.storage bid_details.auction_id
+     then Ok outcome.sold_tez
+     else Error NotAllSlicesClaimed
+  | None -> Error NotAWinningBid
 
 
 let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions =
