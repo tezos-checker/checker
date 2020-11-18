@@ -115,8 +115,8 @@ let touch (p: Parameters.t) (burrow: t) : t =
     let last_adjustment_index = FixedPoint.to_q b.adjustment_index in
     let kit_outstanding = Kit.to_q b.outstanding_kit in
     { b with
-      outstanding_kit = Kit.of_q_ceil Q.(kit_outstanding * current_adjustment_index / last_adjustment_index);
-      adjustment_index = FixedPoint.of_q_floor current_adjustment_index; (* TODO: round up or down here? *)
+      outstanding_kit = Kit.of_q_ceil Q.(kit_outstanding * FixedPoint.to_q current_adjustment_index / last_adjustment_index);
+      adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
     }
 
@@ -139,7 +139,7 @@ let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error
         collateral = Tez.(tez - Constants.creation_deposit);
         outstanding_kit = Kit.zero;
         excess_kit = Kit.zero;
-        adjustment_index = FixedPoint.of_q_floor (Parameters.compute_adjustment_index p); (* TODO: round up or down here? *)
+        adjustment_index = Parameters.compute_adjustment_index p;
         collateral_at_auction = Tez.zero;
         last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
         liquidation_slices = None;

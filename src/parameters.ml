@@ -81,10 +81,10 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
-let compute_adjustment_index (p: t) : Q.t =
+let compute_adjustment_index (p: t) : FixedPoint.t =
   let burrow_fee_index = FixedPoint.to_q p.burrow_fee_index in
   let imbalance_index = FixedPoint.to_q p.imbalance_index in
-  Q.(burrow_fee_index * imbalance_index)
+  FixedPoint.of_q_floor Q.(burrow_fee_index * imbalance_index) (* TODO: round up or down here? *)
 
 (** Given the current target, calculate the rate of change of the drift (drift
   * derivative). Thresholds were given in cnp / day^2, so we convert them to

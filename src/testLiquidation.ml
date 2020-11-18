@@ -48,7 +48,7 @@ let initial_burrow =
     ~collateral:(Tez.of_mutez 10_000_000)
     ~outstanding_kit:(Kit.of_mukit 20_000_000)
     ~excess_kit:Kit.zero
-    ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+    ~adjustment_index:(Parameters.compute_adjustment_index params)
     ~collateral_at_auction:Tez.zero
     ~last_touched:(Timestamp.of_seconds 0)
     ~liquidation_slices:None
@@ -78,7 +78,7 @@ let suite =
                    ~collateral:(Tez.of_mutez 1_847_528)
                    ~outstanding_kit:(Kit.of_mukit 20_000_000)
                    ~excess_kit:Kit.zero
-                   ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+                   ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 7_142_472)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
@@ -106,7 +106,7 @@ let suite =
             ~collateral:(Tez.of_mutez 10_000_000)
             ~outstanding_kit:(Kit.of_mukit 10_000_000)
             ~excess_kit:Kit.zero
-            ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+            ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
             ~last_touched:(Timestamp.of_seconds 0)
             ~liquidation_slices:None
@@ -130,7 +130,7 @@ let suite =
             ~collateral:(Tez.of_mutez 10_000_000)
             ~outstanding_kit:(Kit.of_mukit 100_000_000)
             ~excess_kit:Kit.zero
-            ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+            ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
             ~last_touched:(Timestamp.of_seconds 0)
             ~liquidation_slices:None
@@ -156,7 +156,7 @@ let suite =
                    ~collateral:Tez.zero
                    ~outstanding_kit:(Kit.of_mukit 100_000_000)
                    ~excess_kit:Kit.zero
-                   ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+                   ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 8_990_000)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
@@ -184,7 +184,7 @@ let suite =
             ~collateral:(Tez.of_mutez 1_000_000)
             ~outstanding_kit:(Kit.of_mukit 100_000_000)
             ~excess_kit:Kit.zero
-            ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+            ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
             ~last_touched:(Timestamp.of_seconds 0)
             ~liquidation_slices:None
@@ -210,7 +210,7 @@ let suite =
                    ~collateral:Tez.zero
                    ~outstanding_kit:(Kit.of_mukit 100_000_000)
                    ~excess_kit:Kit.zero
-                   ~adjustment_index:(FixedPoint.of_q_floor (Parameters.compute_adjustment_index params)) (* TODO: round up or down here? *)
+                   ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 999_000)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
