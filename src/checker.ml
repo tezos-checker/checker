@@ -270,6 +270,7 @@ struct
       Ok ( minted,
            {state with
             burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+            (* TODO: George: I think we should also update the outstanding_kit here? *)
             parameters = Parameters.add_circulating_kit state.parameters minted;
            }
          )
@@ -290,9 +291,16 @@ struct
     assert (state.parameters.circulating_kit >= amount);
     Ok {state with
         burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+        (* TODO: George: I think we should also update the outstanding_kit here? *)
         parameters = Parameters.remove_circulating_kit state.parameters amount;
        }
 
+  (* TODO: Arthur: one time we might want to trigger garbage collection of
+   * slices is during a liquidation. a liquidation creates one slice, so if we
+   * clear one pending slice when that happens it won't grow unbounded (yes,
+   * there are degenerate cases where the queue starts growing much faster that
+   * the auctions are happening and in those instances it could grow unbounded,
+   * but roughly speaking in most cases it should average out) *)
   (* TODO: the liquidator's address must be used, eventually. *)
   let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =
     match PtrMap.find_opt burrow_id state.burrows with
