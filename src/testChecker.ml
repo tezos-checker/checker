@@ -47,7 +47,7 @@ let suite =
            level = Level.of_int int_level;
          } in
 
-       let checker =
+       let touch_reward, checker =
          Checker.touch
            checker
            ~tezos
@@ -55,6 +55,8 @@ let suite =
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
+
+       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
 
        let (reward, checker) = assert_ok @@
          Checker.mark_for_liquidation
@@ -69,7 +71,7 @@ let suite =
            level = Level.of_int int_level;
          } in
 
-       let checker =
+       let touch_reward, checker =
          Checker.touch
            checker
            ~tezos
@@ -78,13 +80,15 @@ let suite =
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
 
+       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
+
        let int_level = 15 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
          } in
 
-       let checker =
+       let touch_reward, checker =
          Checker.touch
            checker
            ~tezos
@@ -97,13 +101,15 @@ let suite =
            ~sender:alice
            ~amount:(Kit.of_mukit 4_200_000) in
 
+       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
+
        let int_level = 45 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
          } in
 
-       let checker =
+       let touch_reward, checker =
          Checker.touch
            checker
            ~tezos
@@ -111,6 +117,8 @@ let suite =
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
+
+       assert_equal (Kit.of_mukit 21_000_006) touch_reward ~printer:Kit.show;
 
        let slice =
          (PtrMap.find burrow_id checker.burrows)

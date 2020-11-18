@@ -31,7 +31,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> tezos:Tezos.t -> index:FixedPoint.t -> t
+  val touch : t -> tezos:Tezos.t -> index:FixedPoint.t -> (Kit.t * t)
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -152,22 +152,49 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
-  let touch (state:t) ~tezos ~(index:FixedPoint.t) : t =
+  (** Calculate how much is right now the reward for touching the main checker
+    * contract. We use a bracketed calculation, where for the first
+    * touch_reward_low_bracket seconds the reward increases by touch_low_reward
+    * per second, and after that by touch_high_reward per second. *)
+  let calculate_touch_reward (state:t) ~tezos : Kit.t =
+    assert (state.parameters.last_touched <= Tezos.(tezos.now));
+    let duration_in_seconds =
+      Timestamp.seconds_elapsed
+        ~start:state.parameters.last_touched
+        ~finish:tezos.now in
+    let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
+    let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
+    Kit.scale
+      Kit.one
+      FixedPoint.(
+        of_int low_duration * Constants.touch_low_reward
+        + of_int high_duration * Constants.touch_high_reward
+      )
+
+  let touch (state:t) ~tezos ~(index:FixedPoint.t) : (Kit.t * t) =
     if state.parameters.last_touched = Tezos.(tezos.now) then
       (* Do nothing if up-to-date (idempotence) *)
-      state
+      (Kit.zero, state)
     else
       (* TODO: What is the right order in which to do things here? We use the
        * last observed kit_in_tez price from uniswap to update the parameters,
        * which return kit to be added to the uniswap contract. Gotta make sure we
        * do things in the right order here. *)
-      (* 1: Update the system parameters *)
+
+      (* 1: Calculate the reward that we should create out of thin air to give
+       * to the contract toucher, and update the circulating kit accordingly.*)
+      let reward = calculate_touch_reward state ~tezos in
+      let state = { state with parameters = { state.parameters with
+        circulating_kit = Kit.(state.parameters.circulating_kit + reward);
+      }} in
+
+      (* 2: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
         Parameters.step tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
       in
-      (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
+      (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
-      (* 3: Update auction-related info (e.g. start a new auction) *)
+      (* 4: Update auction-related info (e.g. start a new auction) *)
       let updated_auctions =
         LiquidationAuction.touch
           state.liquidation_auctions
@@ -179,11 +206,13 @@ struct
           (* George: I use ceil, to stay on the safe side (higher-price) *)
           (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
       (* TODO: Add more tasks here *)
-      { burrows = state.burrows; (* leave as-is *)
-        parameters = updated_parameters;
-        uniswap = updated_uniswap;
-        liquidation_auctions = updated_auctions;
-      }
+      ( reward,
+        { burrows = state.burrows; (* leave as-is *)
+          parameters = updated_parameters;
+          uniswap = updated_uniswap;
+          liquidation_auctions = updated_auctions;
+        }
+      )
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)

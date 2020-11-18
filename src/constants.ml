@@ -64,3 +64,15 @@ let max_bid_interval_in_blocks : int = 20
 (** Every bid in an ascending auction needs to improve over the previous bid by
   * at least 0.33 cNp. *)
 let bid_improvement_factor : FixedPoint.t = FixedPoint.of_string "0.0033"
+
+(** Parameter used for calculating the current reward for touching the checker
+  * contract. See calculate_touch_reward for their use. *)
+let touch_reward_low_bracket : int = 600 (* = 60 * 10 = 10 minutes *)
+
+(** We want the reward in the first bracket to be 0.1 kit / minute, so we just
+  * divide by 60 to get roughly how much should it be per second. *)
+let touch_low_reward  : FixedPoint.t = FixedPoint.of_string "0.00166667"
+
+(** We want the reward in the first bracket to be 1 kit / minute, so we just
+  * divide by 60 to get roughly how much should it be per second. *)
+let touch_high_reward : FixedPoint.t = FixedPoint.of_string "0.01666667"
