@@ -102,6 +102,7 @@ type liquidation_slice = {
   older: leaf_ptr option;
   younger: leaf_ptr option;
 }
+[@@deriving show]
 
 type bid = { address: Address.t; kit: Kit.t }
 [@@deriving show]
