@@ -24,7 +24,7 @@ module Checker : sig
     { burrows : Burrow.t PtrMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
-      auctions : Auction.auctions;
+      liquidation_auctions : LiquidationAuction.auctions;
     }
 
   type Error.error +=
@@ -81,7 +81,7 @@ module Checker : sig
     * NOTE: Call Checker.touch too. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
-  (** Process the liquidation slices on completed auctions. Invalid leaf_ptr's
+  (** Process the liquidation slices on completed liquidation auctions. Invalid leaf_ptr's
     * fail, and slices that correspond to incomplete liquidations are ignored.
   *)
   val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
@@ -115,39 +115,39 @@ module Checker : sig
   val remove_liquidity : t -> tezos:Tezos.t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
-  (**                               AUCTIONS                                   *)
+  (**                          LIQUIDATION AUCTIONS                            *)
   (* ************************************************************************* *)
 
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the kit when overbid, or claim the auction result. *)
-  val place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Kit.t -> (Auction.bid_ticket * t, Error.error) result
+  val liquidation_auction_place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
-  val reclaim_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
+  val liquidation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Kit.t, Error.error) result
 
   (** Reclaim a winning bid for the current or a completed auction. *)
-  val reclaim_winning_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
+  val liquidation_auction_reclaim_winning_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Tez.t * t, Error.error) result
 
   (* (\** Increase a failed bid for the current auction. *\)
-   * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:Auction.bid_ticket
-   *   -> (Auction.bid_ticket, Error.error) result *)
+   * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
+   *   -> (LiquidationAuction.bid_ticket, Error.error) result *)
 end =
 struct
   type t =
     { burrows : Burrow.t PtrMap.t;
       uniswap : Uniswap.t;
       parameters : Parameters.t;
-      auctions : Auction.auctions;
+      liquidation_auctions : LiquidationAuction.auctions;
     }
 
   let initialize ts level =
     { burrows = PtrMap.empty;
       uniswap = Uniswap.make_initial level;
       parameters = Parameters.make_initial ts;
-      auctions = Auction.empty;
+      liquidation_auctions = LiquidationAuction.empty;
     }
 
   type Error.error +=
@@ -178,8 +178,8 @@ struct
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
       (* 3: Update auction-related info (e.g. start a new auction) *)
       let updated_auctions =
-        Auction.touch
-          state.auctions
+        LiquidationAuction.touch
+          state.liquidation_auctions
           tezos
           (* Start the auction using the current liquidation price. We could
            * also have calculated the price right now directly using the oracle
@@ -191,7 +191,7 @@ struct
       { burrows = state.burrows; (* leave as-is *)
         parameters = updated_parameters;
         uniswap = updated_uniswap;
-        auctions = updated_auctions;
+        liquidation_auctions = updated_auctions;
       }
 
   (* ************************************************************************* *)
@@ -269,7 +269,7 @@ struct
         | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
         | Partial details | Complete details | Close details ->
           let liquidation_slice =
-            Auction.{
+            LiquidationAuction.{
               burrow = burrow_id;
               tez = details.tez_to_auction;
               min_kit_for_unwarranted = details.min_kit_for_unwarranted;
@@ -279,7 +279,7 @@ struct
               younger = None;
             } in
           let updated_auctions, leaf_ptr =
-            Auction.send_to_auction state.auctions liquidation_slice in
+            LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice in
 
           (* Fixup the previous youngest pointer since the newly added slice
            * is even younger.
@@ -305,27 +305,27 @@ struct
             Burrow.set_liquidation_slices
               details.burrow_state
               (match Burrow.liquidation_slices details.burrow_state with
-                | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
-                | Some s -> Some { s with youngest=leaf_ptr; })
+               | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
+               | Some s -> Some { s with youngest=leaf_ptr; })
           in
           Ok ( details.liquidation_reward,
                {state with
                 burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                auctions = { updated_auctions with storage = updated_storage; };
+                liquidation_auctions = { updated_auctions with storage = updated_storage; };
                }
              )
       )
     | None -> Error (NonExistentBurrow burrow_id)
 
   let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
-    let root = Avl.find_root state.auctions.storage leaf_ptr in
-    match Auction.AvlPtrMap.find_opt root state.auctions.completed_auctions with
+    let root = Avl.find_root state.liquidation_auctions.storage leaf_ptr in
+    match LiquidationAuction.AvlPtrMap.find_opt root state.liquidation_auctions.completed_auctions with
     (* The slice does not belong to a completed auction, so we skip it. *)
     | None -> state
     (* If it belongs to a completed auction, we delete the slice *)
     | Some outcome ->
       (* TODO: Check if leaf_ptr's are valid *)
-      let (leaf, _) = Avl.read_leaf state.auctions.storage leaf_ptr in
+      let (leaf, _) = Avl.read_leaf state.liquidation_auctions.storage leaf_ptr in
 
       (* How much kit should be given to the burrow and how much should be burned. *)
       (* TODO: Kit repaying and kit burning might have to adjust the
@@ -344,13 +344,13 @@ struct
       in
 
       let state =
-        { state with auctions = { state.auctions with
-                                  (* Now we delete the slice from the lot, so it cannot be
-                                   * withdrawn twice, also to save storage. This might cause
-                                   * the lot root to change, so we also update completed_auctions
-                                   * to reflect that. *)
-                                  storage = Avl.del state.auctions.storage leaf_ptr
-                                }} in
+        { state with liquidation_auctions = { state.liquidation_auctions with
+                                              (* Now we delete the slice from the lot, so it cannot be
+                                               * withdrawn twice, also to save storage. This might cause
+                                               * the lot root to change, so we also update completed_auctions
+                                               * to reflect that. *)
+                                              storage = Avl.del state.liquidation_auctions.storage leaf_ptr
+                                            }} in
 
       (* When we delete the youngest or the oldest slice, we have to adjust
        * the burrow pointers accordingly.
@@ -399,31 +399,31 @@ struct
         match leaf.younger with
         | None -> state
         | Some younger_ptr ->
-          { state with auctions = { state.auctions with
-                                    storage =
-                                      Avl.update_leaf
-                                        state.auctions.storage
-                                        younger_ptr
-                                        (fun younger ->
-                                           assert (younger.older = Some leaf_ptr);
-                                           { younger with older = leaf.older }
-                                        )
-                                  }}
+          { state with liquidation_auctions = { state.liquidation_auctions with
+                                                storage =
+                                                  Avl.update_leaf
+                                                    state.liquidation_auctions.storage
+                                                    younger_ptr
+                                                    (fun younger ->
+                                                       assert (younger.older = Some leaf_ptr);
+                                                       { younger with older = leaf.older }
+                                                    )
+                                              }}
       ) in
       let state = (
         match leaf.older with
         | None -> state
         | Some older_ptr ->
-          { state with auctions = { state.auctions with
-                                    storage =
-                                      Avl.update_leaf
-                                        state.auctions.storage
-                                        older_ptr
-                                        (fun older ->
-                                           assert (older.younger = Some leaf_ptr);
-                                           { older with younger = leaf.younger }
-                                        )
-                                  }}
+          { state with liquidation_auctions = { state.liquidation_auctions with
+                                                storage =
+                                                  Avl.update_leaf
+                                                    state.liquidation_auctions.storage
+                                                    older_ptr
+                                                    (fun older ->
+                                                       assert (older.younger = Some leaf_ptr);
+                                                       { older with younger = leaf.younger }
+                                                    )
+                                              }}
       ) in
       state
 
@@ -464,24 +464,24 @@ struct
   (**                               AUCTIONS                                   *)
   (* ************************************************************************* *)
 
-  let place_bid state ~tezos ~sender ~amount =
-    let bid = { Auction.address=sender; kit=amount; } in
+  let liquidation_auction_place_bid state ~tezos ~sender ~amount =
+    let bid = { LiquidationAuction.address=sender; kit=amount; } in
     match
-      Auction.with_current_auction state.auctions @@
-      fun auction -> Auction.place_bid tezos auction bid with
+      LiquidationAuction.with_current_auction state.liquidation_auctions @@
+      fun auction -> LiquidationAuction.place_bid tezos auction bid with
     | Error err -> Error err
     | Ok (new_auctions, bid_ticket) ->
       Ok (
         bid_ticket,
-        {state with auctions=new_auctions;}
+        {state with liquidation_auctions=new_auctions;}
       )
 
-  let reclaim_bid state ~address:_ ~bid_ticket =
-    Auction.reclaim_bid state.auctions bid_ticket
+  let liquidation_auction_reclaim_bid state ~address:_ ~bid_ticket =
+    LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket
 
-  let reclaim_winning_bid state ~address:_ ~bid_ticket =
-    match Auction.reclaim_winning_bid state.auctions bid_ticket with
+  let liquidation_auction_reclaim_winning_bid state ~address:_ ~bid_ticket =
+    match LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket with
     | Error err -> Error err
-    | Ok (ret, auctions) -> Ok (ret, { state with auctions })
+    | Ok (ret, liquidation_auctions) -> Ok (ret, { state with liquidation_auctions })
 
 end

@@ -8,9 +8,9 @@ let alice = Address.of_string "alice"
 let assert_ok (r: ('a, Error.error) result) : 'a =
   match r with
   | Ok a -> a
-  | Error Auction.BidTooLow -> assert_failure "BidTooLow"
-  | Error Auction.NotAWinningBid -> assert_failure "NotAWinningBid"
-  | Error Auction.NotAllSlicesClaimed -> assert_failure "NotAllSlicesClaimed"
+  | Error LiquidationAuction.BidTooLow -> assert_failure "BidTooLow"
+  | Error LiquidationAuction.NotAWinningBid -> assert_failure "NotAWinningBid"
+  | Error LiquidationAuction.NotAllSlicesClaimed -> assert_failure "NotAllSlicesClaimed"
   | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
   | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
   | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
@@ -43,9 +43,9 @@ let suite =
 
        let int_level = 5 in
        let tezos = Tezos.{
-         now = Timestamp.of_seconds @@ int_level * 60;
-         level = Level.of_int int_level;
-       } in
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+         } in
 
        let checker =
          Checker.touch
@@ -65,9 +65,9 @@ let suite =
 
        let int_level = 10 in
        let tezos = Tezos.{
-         now = Timestamp.of_seconds @@ int_level * 60;
-         level = Level.of_int int_level;
-       } in
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+         } in
 
        let checker =
          Checker.touch
@@ -76,13 +76,13 @@ let suite =
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "should start an auction"
-         (Option.is_some checker.auctions.current_auction);
+         (Option.is_some checker.liquidation_auctions.current_auction);
 
        let int_level = 15 in
        let tezos = Tezos.{
-         now = Timestamp.of_seconds @@ int_level * 60;
-         level = Level.of_int int_level;
-       } in
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+         } in
 
        let checker =
          Checker.touch
@@ -91,7 +91,7 @@ let suite =
            ~index:(FixedPoint.of_string "1.2") in
 
        let (bid, checker) = assert_ok @@
-         Checker.place_bid
+         Checker.liquidation_auction_place_bid
            checker
            ~tezos
            ~sender:alice
@@ -99,9 +99,9 @@ let suite =
 
        let int_level = 45 in
        let tezos = Tezos.{
-         now = Timestamp.of_seconds @@ int_level * 60;
-         level = Level.of_int int_level;
-       } in
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+         } in
 
        let checker =
          Checker.touch
@@ -110,7 +110,7 @@ let suite =
            ~index:(FixedPoint.of_string "1.2") in
 
        assert_bool "auction should be completed"
-         (Option.is_none checker.auctions.current_auction);
+         (Option.is_none checker.liquidation_auctions.current_auction);
 
        let slice =
          (PtrMap.find burrow_id checker.burrows)
@@ -133,7 +133,7 @@ let suite =
          ~printer:Tez.show;
 
        let (tez_from_bid, _checker) = assert_ok @@
-         Checker.reclaim_winning_bid
+         Checker.liquidation_auction_reclaim_winning_bid
            checker
            ~address:alice
            ~bid_ticket:bid in
