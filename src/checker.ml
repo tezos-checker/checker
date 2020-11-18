@@ -1,5 +1,3 @@
-open Burrow
-
 module PtrMap = Map.Make(Ptr)
 
 (* ************************************************************************* *)
@@ -184,13 +182,12 @@ struct
       (* 1: Calculate the reward that we should create out of thin air to give
        * to the contract toucher, and update the circulating kit accordingly.*)
       let reward = calculate_touch_reward state ~tezos in
-      let state = { state with parameters = { state.parameters with
-        circulating_kit = Kit.(state.parameters.circulating_kit + reward);
-      }} in
+      let state = { state with parameters =
+                                 Parameters.add_circulating_kit state.parameters reward } in
 
       (* 2: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
-        Parameters.step tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
+        Parameters.touch tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
       in
       (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
@@ -224,10 +221,10 @@ struct
        before any operation.
   *)
   let with_owned_burrow
-    (state: t)
-    (burrow_id: burrow_id)
-    ~(owner: Address.t)
-    (f: Burrow.t -> ('a, Error.error) result)
+      (state: t)
+      (burrow_id: burrow_id)
+      ~(owner: Address.t)
+      (f: Burrow.t -> ('a, Error.error) result)
     : ('a, Error.error) result =
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow ->
@@ -239,8 +236,8 @@ struct
           | Some ls ->
             let root = Avl.find_root state.liquidation_auctions.storage ls in
             not (LiquidationAuction.AvlPtrMap.mem
-              root
-              state.liquidation_auctions.completed_auctions) in
+                   root
+                   state.liquidation_auctions.completed_auctions) in
         if is_ready
         then f burrow
         else Error BurrowHasCompletedLiquidation
@@ -262,39 +259,39 @@ struct
 
   let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-      let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
-      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
+    Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
 
   let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-      match Burrow.mint_kit state.parameters amount burrow with
-      | Ok (updated_burrow, minted) ->
-        assert (amount = minted);
-        Ok ( minted,
-             {state with
-              burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-              parameters = Parameters.add_circulating_kit state.parameters minted;
-             }
-           )
-      | Error err -> Error err
+    match Burrow.mint_kit state.parameters amount burrow with
+    | Ok (updated_burrow, minted) ->
+      assert (amount = minted);
+      Ok ( minted,
+           {state with
+            burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+            parameters = Parameters.add_circulating_kit state.parameters minted;
+           }
+         )
+    | Error err -> Error err
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
     with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-      match Burrow.withdraw_tez state.parameters amount burrow with
-      | Ok (updated_burrow, withdrawn) ->
-        assert (amount = withdrawn);
-        Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
-      | Error err -> Error err
+    match Burrow.withdraw_tez state.parameters amount burrow with
+    | Ok (updated_burrow, withdrawn) ->
+      assert (amount = withdrawn);
+      Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
+    | Error err -> Error err
 
   let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
     with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-      let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
-      (* TODO: What should happen if the following is violated? *)
-      assert (state.parameters.circulating_kit >= amount);
-      Ok {state with
-          burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-          parameters = Parameters.remove_circulating_kit state.parameters amount;
-         }
+    let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
+    (* TODO: What should happen if the following is violated? *)
+    assert (state.parameters.circulating_kit >= amount);
+    Ok {state with
+        burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+        parameters = Parameters.remove_circulating_kit state.parameters amount;
+       }
 
   (* TODO: the liquidator's address must be used, eventually. *)
   let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =

@@ -62,8 +62,8 @@ let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
     uniswap (* do nothing if it's been touched already in this block *)
   else
     { uniswap with
-        kit_in_tez_in_prev_block = kit_in_tez uniswap;
-        last_level = tezos.level;
+      kit_in_tez_in_prev_block = kit_in_tez uniswap;
+      last_level = tezos.level;
     }
 
 type Error.error +=
@@ -185,9 +185,9 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
       Error AddLiquidityZeroKitDeposited
     else
       let updated = { uniswap with
-        kit = Kit.(uniswap.kit + kit_deposited);
-        tez = Tez.(uniswap.tez + amount);
-        lqt = uniswap.lqt + lqt_minted } in
+                      kit = Kit.(uniswap.kit + kit_deposited);
+                      tez = Tez.(uniswap.tez + amount);
+                      lqt = uniswap.lqt + lqt_minted } in
       Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
@@ -225,9 +225,9 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
       Error RemoveLiquidityTooMuchLiquidityBurned
     else
       let updated = { uniswap with
-        tez = Tez.(uniswap.tez - tez_withdrawn);
-        kit = Kit.(uniswap.kit - kit_withdrawn);
-        lqt = uniswap.lqt - lqt_burned } in
+                      tez = Tez.(uniswap.tez - tez_withdrawn);
+                      kit = Kit.(uniswap.kit - kit_withdrawn);
+                      lqt = uniswap.lqt - lqt_burned } in
       Ok (tez_withdrawn, kit_withdrawn, updated)
 
 let add_accrued_kit (uniswap: t) tezos (accrual: Kit.t) : t =

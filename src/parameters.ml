@@ -61,10 +61,8 @@ let liquidation_price (p: t) : Q.t =
   *   max( - 5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , otherwise
 *)
 let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
-  assert (burrowed >= Kit.zero); (* Invariant *)
-  assert (circulating >= Kit.zero); (* Invariant *)
-  let centinepers = FixedPoint.(of_string "1" / of_string "100.0") in
-  let burrowed_fivefold = Kit.scale burrowed (FixedPoint.of_string "5.0") in
+  assert (burrowed >= Kit.zero);
+  assert (circulating >= Kit.zero);
   (* No kit in burrows or in circulation means no imbalance adjustment *)
   if burrowed = Kit.zero then
     (* TODO: George: though unlikely, it is possible to have kit in
@@ -75,8 +73,11 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
     FixedPoint.zero (* George: I add this special case, to avoid rounding issues *)
   else
     FixedPoint.(
-      Kit.(to_fp (scale (min burrowed_fivefold (burrowed - circulating)) centinepers))
-      / Kit.to_fp burrowed
+      Kit.(to_fp
+             (scale
+                (min (scale burrowed (of_string "5.0")) (burrowed - circulating))
+                (of_string "0.01"))
+          ) / Kit.to_fp burrowed
     )
 
 (** Compute the current adjustment index. Basically this is the product of
@@ -117,7 +118,7 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
   * sub-contract. *)
-let step
+let touch
     (tezos: Tezos.t)
     (current_index: FixedPoint.t)
     (current_kit_in_tez: Q.t)
