@@ -349,3 +349,5 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
         min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
         burrow_state = final_burrow }
 
+let oldest_liquidation_ptr (b: t) : Avl.leaf_ptr option =
+  Option.map (fun i -> i.oldest) b.liquidation_slices

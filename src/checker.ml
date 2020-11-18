@@ -31,6 +31,7 @@ module Checker : sig
     | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
+    | BurrowHasCompletedLiquidation
 
   (** Make a fresh state, initialized at the given time. *)
   val initialize : Timestamp.t -> Level.t -> t
@@ -154,6 +155,7 @@ struct
     | OwnershipMismatch of Address.t * Burrow.t
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
+    | BurrowHasCompletedLiquidation
 
   (* Utility function to give us burrow addresses *)
   let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
@@ -198,6 +200,35 @@ struct
   (**                               BURROWS                                    *)
   (* ************************************************************************* *)
 
+  (* Looks up a burrow_id from state, and checks the resulting burrow if:
+     * It has the given owner
+     * It does not have any completed liquidation slices that needs to be claimed
+       before any operation.
+  *)
+  let with_owned_burrow
+    (state: t)
+    (burrow_id: burrow_id)
+    ~(owner: Address.t)
+    (f: Burrow.t -> ('a, Error.error) result)
+    : ('a, Error.error) result =
+    match PtrMap.find_opt burrow_id state.burrows with
+    | Some burrow ->
+      if Burrow.is_owned_by burrow owner
+      then
+        let is_ready =
+          match Burrow.oldest_liquidation_ptr burrow with
+          | None -> true
+          | Some ls ->
+            let root = Avl.find_root state.liquidation_auctions.storage ls in
+            not (LiquidationAuction.AvlPtrMap.mem
+              root
+              state.liquidation_auctions.completed_auctions) in
+        if is_ready
+        then f burrow
+        else Error BurrowHasCompletedLiquidation
+      else Error (OwnershipMismatch (owner, burrow))
+    | None -> Error (NonExistentBurrow burrow_id)
+
   let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
     let address = mk_next_burrow_id state.burrows in
     match Burrow.create state.parameters owner amount with
@@ -212,45 +243,33 @@ struct
     | None -> Error (NonExistentBurrow burrow_id)
 
   let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow when Burrow.is_owned_by burrow owner ->
+    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
       let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow burrow_id)
 
   let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow when Burrow.is_owned_by burrow owner -> (
-        match Burrow.mint_kit state.parameters amount burrow with
-        | Ok (updated_burrow, minted) ->
-          assert (amount = minted);
-          Ok ( minted,
-               {state with
-                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                parameters = Parameters.add_circulating_kit state.parameters minted;
-               }
-             )
-        | Error err -> Error err
-      )
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow burrow_id)
+    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
+      match Burrow.mint_kit state.parameters amount burrow with
+      | Ok (updated_burrow, minted) ->
+        assert (amount = minted);
+        Ok ( minted,
+             {state with
+              burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+              parameters = Parameters.add_circulating_kit state.parameters minted;
+             }
+           )
+      | Error err -> Error err
 
   let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow when Burrow.is_owned_by burrow owner -> (
-        match Burrow.withdraw_tez state.parameters amount burrow with
-        | Ok (updated_burrow, withdrawn) ->
-          assert (amount = withdrawn);
-          Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
-        | Error err -> Error err
-      )
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow burrow_id)
+    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
+      match Burrow.withdraw_tez state.parameters amount burrow with
+      | Ok (updated_burrow, withdrawn) ->
+        assert (amount = withdrawn);
+        Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
+      | Error err -> Error err
 
   let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow when Burrow.is_owned_by burrow owner ->
+    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
       let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= amount);
@@ -258,8 +277,6 @@ struct
           burrows = PtrMap.add burrow_id updated_burrow state.burrows;
           parameters = Parameters.remove_circulating_kit state.parameters amount;
          }
-    | Some burrow -> Error (OwnershipMismatch (owner, burrow))
-    | None -> Error (NonExistentBurrow burrow_id)
 
   (* TODO: the liquidator's address must be used, eventually. *)
   let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =

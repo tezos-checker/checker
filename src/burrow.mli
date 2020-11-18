@@ -149,4 +149,4 @@ val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
 val request_liquidation : Parameters.t -> t -> liquidation_result
-
+val oldest_liquidation_ptr : t -> Avl.leaf_ptr option
