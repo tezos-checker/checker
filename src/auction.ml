@@ -359,12 +359,29 @@ let reclaim_bid
 let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
-  : (Tez.t, Error.error) result =
+  : (Tez.t * auctions, Error.error) result =
   let bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
      if Avl.is_empty auctions.storage bid_details.auction_id
-     then Ok outcome.sold_tez
+     then
+       let auctions =
+         { auctions with
+           (* When the winner reclaims their bid, we remove
+              every reference to the auction. This is just to
+              save storage, what's forbidding double-claiming
+              is the ticket mechanism, not this.
+            *)
+           completed_auctions =
+             AvlPtrMap.remove
+               bid_details.auction_id
+               auctions.completed_auctions;
+           storage =
+             Avl.delete_tree
+               auctions.storage
+               bid_details.auction_id;
+         } in
+       Ok (outcome.sold_tez, auctions)
      else Error NotAllSlicesClaimed
   | None -> Error NotAWinningBid
 

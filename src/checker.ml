@@ -129,7 +129,7 @@ module Checker : sig
 
   (** Reclaim a winning bid for the current or a completed auction. *)
   val reclaim_winning_bid : t -> address:Address.t -> bid_ticket:Auction.bid_ticket
-    -> (Tez.t, Error.error) result
+    -> (Tez.t * t, Error.error) result
 
   (* (\** Increase a failed bid for the current auction. *\)
    * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:Auction.bid_ticket
@@ -349,9 +349,6 @@ struct
                                    * withdrawn twice, also to save storage. This might cause
                                    * the lot root to change, so we also update completed_auctions
                                    * to reflect that. *)
-                                  (* TODO: When all slices that were included in a finished auction
-                                   * have been deleted, the entry for the auction itself must also be
-                                   * deleted. *)
                                   storage = Avl.del state.auctions.storage leaf_ptr
                                 }} in
 
@@ -483,6 +480,8 @@ struct
     Auction.reclaim_bid state.auctions bid_ticket
 
   let reclaim_winning_bid state ~address:_ ~bid_ticket =
-    Auction.reclaim_winning_bid state.auctions bid_ticket
+    match Auction.reclaim_winning_bid state.auctions bid_ticket with
+    | Error err -> Error err
+    | Ok (ret, auctions) -> Ok (ret, { state with auctions })
 
 end

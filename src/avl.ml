@@ -463,6 +463,21 @@ let is_empty (mem: 't mem) (AVLPtr ptr) : bool =
   | Root (Some _) -> false
   | _ -> failwith "is_empty: avl_ptr does not point to a Root"
 
+let rec ref_delete_tree (mem: 't mem) (ptr: ptr): 't mem =
+  let root = mem_get mem ptr in
+  let mem = mem_del mem ptr in
+  match root with
+  | Root None -> mem
+  | Leaf _ -> mem
+  | Root (Some p) -> ref_delete_tree mem p
+  | Branch branch ->
+    let mem = ref_delete_tree mem branch.left in
+    let mem = ref_delete_tree mem branch.right in
+    mem
+
+let delete_tree (mem: 't mem) (AVLPtr ptr): 't mem =
+  ref_delete_tree mem ptr
+
 let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
   let rec go (ptr: ptr) : avl_ptr =
     match mem_get mem ptr with

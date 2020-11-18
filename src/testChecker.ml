@@ -132,7 +132,7 @@ let suite =
          (Burrow.collateral_at_auction result)
          ~printer:Tez.show;
 
-       let tez_from_bid = assert_ok @@
+       let (tez_from_bid, _checker) = assert_ok @@
          Checker.reclaim_winning_bid
            checker
            ~address:alice
@@ -140,6 +140,5 @@ let suite =
 
        assert_equal (Tez.of_mutez 3_156_177) tez_from_bid
          ~printer:Tez.show;
-
     );
   ]
