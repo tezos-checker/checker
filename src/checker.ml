@@ -360,9 +360,7 @@ struct
       let (leaf, _) = Avl.read_leaf state.liquidation_auctions.storage leaf_ptr in
 
       (* How much kit should be given to the burrow and how much should be burned. *)
-      (* TODO: Kit repaying and kit burning might have to adjust the
-       * parameters here I think. Less kit is in circulation now. *)
-      let kit_to_repay, _kit_to_burn =
+      let kit_to_repay, kit_to_burn =
         let corresponding_kit = Kit.of_q_floor Q.(
             (Tez.to_q leaf.tez / Tez.to_q outcome.sold_tez) * Kit.to_q outcome.winning_bid.kit
           ) in
@@ -374,6 +372,11 @@ struct
         in
         (Kit.(corresponding_kit - penalty), penalty)
       in
+
+      (* Burn the kit by removing it from circulation. *)
+      let state =
+        { state with
+          parameters = Parameters.remove_circulating_kit state.parameters kit_to_burn } in
 
       let state =
         { state with liquidation_auctions = { state.liquidation_auctions with
