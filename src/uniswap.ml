@@ -11,7 +11,7 @@ let liquidity_of_int i = assert (i > 0); i
 type t =
   { tez: Tez.t;
     kit: Kit.t;
-    total_liquidity_tokens: liquidity;
+    lqt: liquidity;
     (* NOTE: George: I don't expect this to get really big in size cause it's
      * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
      * are relatively prime, we are OK). *)
@@ -20,19 +20,22 @@ type t =
   }
 [@@deriving show]
 
-let make_for_test ~tez ~kit ~total_liquidity_tokens ~kit_in_tez_in_prev_block ~last_level =
+let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
   { tez = tez;
     kit = kit;
-    total_liquidity_tokens = total_liquidity_tokens;
+    lqt = lqt;
     kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
     last_level = last_level;
   }
 
 let make_initial (level: Level.t) =
-  { tez = Tez.one;
-    kit = Kit.one;
-    total_liquidity_tokens = liquidity_of_int 1;
-    kit_in_tez_in_prev_block = Q.one; (* TODO: same as tez/kit now *)
+  let tez = Tez.one in
+  let kit = Kit.one in
+  let lqt = liquidity_of_int 1 in
+  { tez = tez;
+    kit = kit;
+    lqt = lqt;
+    kit_in_tez_in_prev_block = Q.(Tez.to_q tez / Kit.to_q kit); (* Same as tez/kit now *)
     last_level = level;
   }
 
@@ -41,8 +44,8 @@ let is_tez_pool_empty (u: t) = assert (u.tez >= Tez.zero); u.tez = Tez.zero
 let is_token_pool_empty (u: t) = assert (u.kit >= Kit.zero); u.kit = Kit.zero
 
 let is_liquidity_token_pool_empty (u: t) =
-  assert (u.total_liquidity_tokens >= 0);
-  u.total_liquidity_tokens = 0
+  assert (u.lqt >= 0);
+  u.lqt = 0
 
 let kit_in_tez (uniswap: t) = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit)
 
@@ -171,7 +174,7 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
   else if min_lqt_minted = 0 then
     Error AddLiquidityNoLiquidityToBeAdded
   else
-    let lqt_minted = Q.(to_int (of_int uniswap.total_liquidity_tokens * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
+    let lqt_minted = Q.(to_int (of_int uniswap.lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
     let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
 
     if lqt_minted < min_lqt_minted then
@@ -184,7 +187,7 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
       let updated = { uniswap with
         kit = Kit.(uniswap.kit + kit_deposited);
         tez = Tez.(uniswap.tez + amount);
-        total_liquidity_tokens = uniswap.total_liquidity_tokens + lqt_minted } in
+        lqt = uniswap.lqt + lqt_minted } in
       Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
@@ -206,7 +209,7 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
   else if lqt_burned <= 0 then
     Error RemoveLiquidityNoLiquidityBurned
   else
-    let ratio = Q.(of_int lqt_burned / of_int uniswap.total_liquidity_tokens) in
+    let ratio = Q.(of_int lqt_burned / of_int uniswap.lqt) in
     let tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
     let kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q uniswap.kit * ratio) in
 
@@ -218,13 +221,13 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
       Error RemoveLiquidityCantWithdrawEnoughKit
     else if kit_withdrawn > uniswap.kit then
       Error RemoveLiquidityTooMuchKitWithdrawn
-    else if lqt_burned > uniswap.total_liquidity_tokens then
+    else if lqt_burned > uniswap.lqt then
       Error RemoveLiquidityTooMuchLiquidityBurned
     else
       let updated = { uniswap with
         tez = Tez.(uniswap.tez - tez_withdrawn);
         kit = Kit.(uniswap.kit - kit_withdrawn);
-        total_liquidity_tokens = uniswap.total_liquidity_tokens - lqt_burned } in
+        lqt = uniswap.lqt - lqt_burned } in
       Ok (tez_withdrawn, kit_withdrawn, updated)
 
 let add_accrued_kit (uniswap: t) tezos (accrual: Kit.t) : t =

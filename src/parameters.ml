@@ -74,7 +74,10 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : FixedPoint.t =
   else if burrowed = circulating then
     FixedPoint.zero (* George: I add this special case, to avoid rounding issues *)
   else
-    Kit.((scale (min burrowed_fivefold (burrowed - circulating)) centinepers) / burrowed)
+    FixedPoint.(
+      Kit.(to_fp (scale (min burrowed_fivefold (burrowed - circulating)) centinepers))
+      / Kit.to_fp burrowed
+    )
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)

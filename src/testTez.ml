@@ -7,18 +7,58 @@ let suite =
   "TezTests" >::: [
     "tez arithmetic" >::
     (fun _ ->
-       let tz1 = Tez.of_mutez 5_000_000 in
-       let tz2 = Tez.of_mutez 3_000_000 in
-       let tz3 = Tez.of_mutez 5_123_400 in
-       let tz6 = Tez.of_mutez (-50_309_951) in
-       let tz7 = Tez.of_mutez 50_309_951 in
-       let fp1 = FixedPoint.of_string "3.0" in
-       assert_equal ~printer:show_tz (Tez.of_mutez 8_000_000) Tez.(tz1 + tz2);
-       assert_equal ~printer:show_tz (Tez.of_mutez 2_000_000) Tez.(tz1 - tz2);
-       (* TODO: negative numbers? *)
-       assert_equal ~printer:show_tz (Tez.of_mutez 15_370_200) (Tez.scale tz3 fp1);
-       assert_equal ~printer:show_tz tz1 (max tz1 tz2);
-       assert_equal ~printer:(fun x -> x) "-50.309951" (show_tz tz6);
-       assert_equal ~printer:(fun x -> x) "50.309951" (show_tz tz7);
+       (* add *)
+       assert_equal ~printer:show_tz
+         (Tez.of_mutez 8_000_000)
+         Tez.(of_mutez 5_000_000 + of_mutez 3_000_000);
+       assert_equal ~printer:show_tz
+         (Tez.of_mutez 2_000_000)
+         Tez.(of_mutez 5_000_000 + of_mutez (-3_000_000));
+
+       (* subtract *)
+       assert_equal ~printer:show_tz
+         (Tez.of_mutez 2_000_000)
+         Tez.(of_mutez 5_000_000 - of_mutez 3_000_000);
+       assert_equal ~printer:show_tz
+         (Tez.of_mutez 8_000_000)
+         Tez.(of_mutez 5_000_000 - of_mutez (-3_000_000));
+
+       (* scale *)
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez 15_370_401)
+         (Tez.scale (Tez.of_mutez 5_123_467) (FixedPoint.of_string "3.0"));
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez (-15_370_401))
+         (Tez.scale (Tez.of_mutez 5_123_467) (FixedPoint.of_string "-3.0"));
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez (-15_370_401))
+         (Tez.scale (Tez.of_mutez (-5_123_467)) (FixedPoint.of_string "3.0"));
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez 15_370_401)
+         (Tez.scale (Tez.of_mutez (-5_123_467)) (FixedPoint.of_string "-3.0"));
+
+       (* compare *)
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez 5_000_000)
+         (max (Tez.of_mutez 5_000_000) (Tez.of_mutez 3_000_000));
+       assert_equal
+         ~printer:show_tz
+         (Tez.of_mutez (-3_000_000))
+         (max (Tez.of_mutez (-5_000_000)) (Tez.of_mutez (-3_000_000)));
+
+       (* show *)
+       assert_equal
+         ~printer:(fun x -> x)
+         "-50.309951"
+         (show_tz (Tez.of_mutez (-50_309_951)));
+       assert_equal
+         ~printer:(fun x -> x)
+         "50.309951"
+         (show_tz (Tez.of_mutez 50_309_951));
     )
   ]

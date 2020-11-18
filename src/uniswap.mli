@@ -38,7 +38,7 @@ val pp : Format.formatter -> t -> unit
 val make_for_test :
   tez:Tez.t ->
   kit:Kit.t ->
-  total_liquidity_tokens:liquidity ->
+  lqt:liquidity ->
   kit_in_tez_in_prev_block:Q.t ->
   last_level:Level.t ->
   t

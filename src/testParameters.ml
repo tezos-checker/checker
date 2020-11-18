@@ -24,7 +24,7 @@ let suite =
 
       let new_index = FixedPoint.of_string "0.34" in
       let tez_per_kit = FixedPoint.of_string "0.305" in
-      let _total_accrual_to_uniswap, new_parameters = Parameters.step tezos new_index tez_per_kit initial_parameters in
+      let total_accrual_to_uniswap, new_parameters = Parameters.step tezos new_index tez_per_kit initial_parameters in
       assert_equal
         { q = FixedPoint.of_string "0.900000";
           index = Tez.of_mutez 340_000;
@@ -39,5 +39,9 @@ let suite =
           last_touched = tezos.now;
         }
         new_parameters
-        ~printer:Parameters.show
+        ~printer:Parameters.show;
+      assert_equal
+        Kit.zero (* NOTE: I'd expect this to be higher I think. *)
+        total_accrual_to_uniswap
+        ~printer:Kit.show;
   ]

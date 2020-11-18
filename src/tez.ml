@@ -17,7 +17,7 @@ let one = scaling_factor
 (* Conversions to/from other types. *)
 let of_mutez = Z.of_int
 
-let to_fp t = (* TODO: overflow check? *)
+let to_fp t =
   FixedPoint.of_rep Z.(t * (FixedPoint.scaling_factor / scaling_factor))
 
 let to_q amount = Q.make amount scaling_factor

@@ -23,7 +23,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 10_000_000)
            ~kit:(Kit.of_mukit 5_000_000)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+           ~lqt:(Uniswap.liquidity_of_int 1)
            ~kit_in_tez_in_prev_block:Q.one
            ~last_level:level0
        in
@@ -33,7 +33,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 11_000_000)
            ~kit:(Kit.of_mukit 4_546_364)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+           ~lqt:(Uniswap.liquidity_of_int 1)
            ~kit_in_tez_in_prev_block:(Q.of_int 2)
            ~last_level:level1
        in
@@ -89,7 +89,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 10_000_000)
            ~kit:(Kit.of_mukit 5_000_000)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+           ~lqt:(Uniswap.liquidity_of_int 1)
            ~kit_in_tez_in_prev_block:Q.one
            ~last_level:level0
        in
@@ -98,7 +98,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 8_336_667)
            ~kit:(Kit.of_mukit 6_000_000)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+           ~lqt:(Uniswap.liquidity_of_int 1)
            ~kit_in_tez_in_prev_block:(Q.of_int 2)
            ~last_level:level1
        in
@@ -158,7 +158,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 8_336_667)
            ~kit:(Kit.of_mukit 6_000_000)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 1)
+           ~lqt:(Uniswap.liquidity_of_int 1)
            ~kit_in_tez_in_prev_block:Q.one
            ~last_level:level0
        in
@@ -169,7 +169,7 @@ let suite =
          Uniswap.make_for_test
            ~tez:(Tez.of_mutez 28_336_667)
            ~kit:(Kit.of_mukit 20_394_242)
-           ~total_liquidity_tokens:(Uniswap.liquidity_of_int 3)
+           ~lqt:(Uniswap.liquidity_of_int 3)
            ~kit_in_tez_in_prev_block:Q.one
            ~last_level:level0
        in
