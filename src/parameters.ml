@@ -188,14 +188,24 @@ let touch
   }
   )
 
-(** Add some kit to the kit in circulation. *)
+(** Add some kit to the total amount of kit in circulation. *)
 let add_circulating_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
   { parameters with circulating_kit = Kit.(parameters.circulating_kit + kit); }
 
-(** Remove some kit from circulation. *)
+(** Remove some kit from the total amount of kit in circulation. *)
 let remove_circulating_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = Kit.(parameters.circulating_kit - kit); }
 
+(** Add some kit to the total amount of kit required to close all burrows. *)
+let add_outstanding_kit (parameters: t) (kit: Kit.t) : t =
+  assert (kit >= Kit.zero);
+  { parameters with outstanding_kit = Kit.(parameters.outstanding_kit + kit); }
+
+(** Remove some kit from the total amount of kit required to close all burrows. *)
+let remove_outstanding_kit (parameters: t) (kit: Kit.t) : t =
+  assert (kit >= Kit.zero);
+  assert (parameters.outstanding_kit >= kit);
+  { parameters with outstanding_kit = Kit.(parameters.outstanding_kit - kit); }

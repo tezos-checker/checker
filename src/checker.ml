@@ -264,8 +264,10 @@ struct
       Ok ( minted,
            {state with
             burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-            (* TODO: George: I think we should also update the outstanding_kit here? *)
-            parameters = Parameters.add_circulating_kit state.parameters minted;
+            parameters =
+              Parameters.add_outstanding_kit
+                (Parameters.add_circulating_kit state.parameters minted)
+                minted;
            }
          )
     | Error err -> Error err
@@ -285,8 +287,10 @@ struct
     assert (state.parameters.circulating_kit >= amount);
     Ok {state with
         burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-        (* TODO: George: I think we should also update the outstanding_kit here? *)
-        parameters = Parameters.remove_circulating_kit state.parameters amount;
+        parameters =
+          Parameters.remove_outstanding_kit
+            (Parameters.remove_circulating_kit state.parameters amount)
+            amount;
        }
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
