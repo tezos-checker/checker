@@ -508,7 +508,7 @@ struct
   (* ************************************************************************* *)
 
   let liquidation_auction_place_bid state ~tezos ~sender ~amount =
-    let bid = { LiquidationAuction.address=sender; kit=amount; } in
+    let bid = Bid.{ address=sender; kit=amount; } in
     match
       LiquidationAuction.with_current_auction state.liquidation_auctions @@
       fun auction -> LiquidationAuction.place_bid tezos auction bid with

@@ -6,7 +6,7 @@
  (name huxian)
  (modules Checker Constants Timestamp Level BigMap Avl Kit Tez FixedPoint
    Parameters Burrow Uniswap Error Address LiquidationAuction Ticket Ptr
-   Tezos)
+   Tezos Bid)
  (libraries str zarith)
  (wrapped false)
  (preprocess

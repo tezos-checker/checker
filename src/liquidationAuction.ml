@@ -105,16 +105,13 @@ type liquidation_slice = {
 }
 [@@deriving show]
 
-type bid = { address: Address.t; kit: Kit.t }
-[@@deriving show]
-
 type auction_id = avl_ptr
-type bid_details = { auction_id: auction_id; bid: bid; }
+type bid_details = { auction_id: auction_id; bid: Bid.t; }
 type bid_ticket = bid_details Ticket.ticket
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
-  | Ascending of bid * Timestamp.t * Level.t
+  | Ascending of Bid.t * Timestamp.t * Level.t
 [@@deriving show]
 
 type current_auction = {
@@ -124,7 +121,7 @@ type current_auction = {
 
 type auction_outcome = {
   sold_tez: Tez.t;
-  winning_bid: bid;
+  winning_bid: Bid.t;
 }
 
 module AvlPtrMap =
@@ -272,7 +269,7 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
     (tezos: Tezos.t)
-    (auction: current_auction) : bid option =
+    (auction: current_auction) : Bid.t option =
   match auction.state with
   | Descending _ ->
     None
@@ -305,7 +302,7 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: bid)
+let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: Bid.t)
   : (current_auction * bid_ticket ticket, Error.error) result =
   if bid.kit >= current_auction_minimum_bid tezos auction
   then
