@@ -6,7 +6,7 @@ pkgs.mkShell {
   name = "huxian";
   buildInputs = with pkgs.ocamlPackages; [
     ocaml
-    dune
+    dune_2
     findlib # Lets merlin see packages like ounit
     ocp-indent
     merlin
