@@ -73,21 +73,7 @@ let assert_invariants (mem: int mem) (AVLPtr root) : unit =
   | _ -> failwith "assert_invariants needs a root."
 
 let assert_dangling_pointers (mem: int mem) (roots: avl_ptr list) : unit =
-  let rec delete_tree (mem: int mem) (root_ptr: ptr) : int mem =
-    let root = mem_get mem root_ptr in
-    let mem = mem_del mem root_ptr in
-    match root with
-    | Root None -> mem
-    | Leaf _ -> mem
-    | Root (Some p) -> delete_tree mem p
-    | Branch branch ->
-      let mem = delete_tree mem branch.left in
-      let mem = delete_tree mem branch.right in
-      mem in
-  let mem = List.fold_left
-      (fun mem (AVLPtr t) -> delete_tree mem t)
-      mem
-      roots in
+  let mem = List.fold_left delete_tree mem roots in
   assert (BigMap.is_empty mem)
 
 let add_all_debug (mem: 't mem) (root: avl_ptr) (xs: element_list)
