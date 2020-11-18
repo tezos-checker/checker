@@ -37,36 +37,30 @@ module Checker : sig
 
   (** Create and return a new burrow owned by the given owner, containing the
     * given tez as collateral, minus the creation deposit. Fail if the tez is
-    * not enough to cover the creation deposit.
-    * NOTE: Call Checker.touch too. *)
+    * not enough to cover the creation deposit. *)
   val create_burrow : t -> owner:Address.t -> amount:Tez.t -> (burrow_id * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
-    * someone else owns the burrow, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too. *)
+    * someone else owns the burrow, or if the burrow does not exist. *)
   val deposit_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
-    * does not exist.
-    * NOTE: Call Checker.touch too. *)
+    * does not exist. *)
   val withdraw_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (Tez.t * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
-    * if the burrow owner does not match, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too. *)
+    * if the burrow owner does not match, or if the burrow does not exist. *)
   val mint_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow owner
-    * does not match, or if the burrow does not exist.
-    * NOTE: Call Checker.touch too. *)
+    * does not match, or if the burrow does not exist. *)
   val burn_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
-    * reward, to be credited to the liquidator.
-    * NOTE: Call Checker.touch too. *)
+    * reward, to be credited to the liquidator. *)
   val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (** Process the liquidation slices on completed liquidation auctions. Invalid leaf_ptr's
