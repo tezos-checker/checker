@@ -1,16 +1,5 @@
 open Burrow
 
-(* TODO: Things to consider:
- *
- * * What if compute_tez_to_auction returns something positive?
- *   => Create a kit UTXO for the burrow owner.
- *
- * * George: I think that all operations should return something like (X
- *   result * Checker.t) and not ((X * Checker.t) result); even if the operation
- *   fails for some reason, I'd assume that we wish to keep the updated state of
- *   the contract, right?
-*)
-
 module PtrMap = Map.Make(Ptr)
 
 (* ************************************************************************* *)
@@ -174,7 +163,7 @@ struct
        * do things in the right order here. *)
       (* 1: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
-        Parameters.step tezos index (FixedPoint.of_q_floor (Uniswap.kit_in_tez_in_prev_block state.uniswap)) state.parameters (* TODO: Should stick with Q.t here I think *)
+        Parameters.step tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
       in
       (* 2: Add accrued burrowing fees to the uniswap sub-contract *)
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in

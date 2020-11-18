@@ -117,15 +117,16 @@ let clamp (v: 'a) (lower: 'a) (upper: 'a) : 'a =
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
   * sub-contract. *)
-(* TODO: George: I think that we should use Q everywhere for the calculations,
-and only cast to FixedPoint.t before storing it. Otherwise we can have
-signigicant precision loss. *)
 let step
     (tezos: Tezos.t)
     (current_index: FixedPoint.t)
-    (current_kit_in_tez: FixedPoint.t)
+    (current_kit_in_tez: Q.t)
     (parameters: t)
   : Kit.t * t =
+  (* TODO: George: I think that we should use Q everywhere for the
+   * calculations, and only cast to FixedPoint.t before storing it. Otherwise
+   * we can have signigicant precision loss. *)
+  let current_kit_in_tez = FixedPoint.of_q_floor current_kit_in_tez in
   let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:tezos.now) in
   let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
   let current_protected_index =
@@ -194,5 +195,6 @@ let add_circulating_kit (parameters: t) (kit: Kit.t) : t =
 (** Remove some kit from circulation. *)
 let remove_circulating_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
+  assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = Kit.(parameters.circulating_kit - kit); }
 
