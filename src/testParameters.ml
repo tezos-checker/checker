@@ -28,7 +28,7 @@ let suite =
       assert_equal
         { q = FixedPoint.of_string "0.900000";
           index = Tez.of_mutez 340_000;
-          protected_index = Tez.of_mutez 339_999;
+          protected_index = Tez.of_mutez 340_000;
           target = FixedPoint.of_string "1.00327868";
           drift' = FixedPoint.of_string "0.0";
           drift = FixedPoint.of_string "0.0";
