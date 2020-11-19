@@ -3,10 +3,10 @@
 (* ************************************************************************* *)
 
 (** Dimensionless. Factor used for setting the minting limit. *)
-let fminting : Q.t = FixedPoint.(to_q (of_string "2.1"))
+let fminting : Q.t = Q.of_string "21/10" (* 2.1 *)
 
 (** Dimensionless. Factor used for setting the liquidation limit. *)
-let fliquidation : Q.t = FixedPoint.(to_q (of_string "1.9"))
+let fliquidation : Q.t = Q.of_string "19/10" (* 1.9 *)
 
 (** Number of tez needed to be given for the creation of a burrow; it does
   * not count towards the burrow's collateral. *)
@@ -20,7 +20,7 @@ let burrow_fee_percentage : FixedPoint.t = FixedPoint.of_string "0.005"
 let liquidation_reward_percentage : FixedPoint.t = FixedPoint.of_string "0.001"
 
 (** Percentage kept by the uniswap contract from the return asset. *)
-let uniswap_fee = FixedPoint.(to_q (of_string "0.002"))
+let uniswap_fee : Q.t = Q.of_string "2/1000" (* 0.002 *)
 
 (** Protected index epsilon. The higher this value is, the faster the protected
   * index catches up with the actual index. *)
@@ -34,7 +34,7 @@ let min_lot_auction_queue_fraction : FixedPoint.t = FixedPoint.of_string "0.05"
 
 (** The percentage of additional collateral that we charge when liquidating
   * a burrow, to penalize it for liquidation. *)
-let liquidation_penalty : Q.t = FixedPoint.(to_q (of_string "0.10"))
+let liquidation_penalty : Q.t = Q.of_string "1/10" (* 0.1 *)
 
 (** For convenience. The number of seconds in a year, taking into account
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
