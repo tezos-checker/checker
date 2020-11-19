@@ -4,6 +4,10 @@ module PtrMap = Map.Make(Ptr)
 (**                               CHECKER                                    *)
 (* ************************************************************************* *)
 
+(* TODO: At the very end, inline all numeric operations, flatten all Q.t so
+ * that we mainly deal with integers directly. Hardwire the constants too,
+ * where possible. *)
+
 type burrow_id = Ptr.t
 
 module Checker : sig
