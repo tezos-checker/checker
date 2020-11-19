@@ -21,7 +21,7 @@ let assert_ok (r: ('a, Error.error) result) : 'a =
 
 let suite =
   "Checker tests" >::: [
-    ("can complete an auction" >::
+    ("can complete a liquidation auction" >::
      fun _ ->
        let t0 = Timestamp.of_seconds 0 in
        let l0 = Level.of_int 0 in
