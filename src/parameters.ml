@@ -95,18 +95,20 @@ let compute_adjustment_index (p: t) : FixedPoint.t =
 let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   assert (target > FixedPoint.zero);
   FixedPoint.(
+    let target_low_bracket = FixedPoint.of_q_floor Constants.target_low_bracket in (* FLOOR-or-CEIL *)
+    let target_high_bracket = FixedPoint.of_q_floor Constants.target_high_bracket in (* FLOOR-or-CEIL *)
     let cnp_001 = of_string "0.01" / of_string "100.0" in
     let cnp_005 = of_string "0.05" / of_string "100.0" in
     let secs_in_a_day = of_int Stdlib.(24 * 3600) in
     match () with
     (* No acceleration (0) *)
-    | () when exp (neg Constants.target_low_bracket) < target && target < exp Constants.target_low_bracket -> zero
+    | () when exp (neg target_low_bracket) < target && target < exp target_low_bracket -> zero
     (* Low acceleration (-/+) *)
-    | () when exp (neg Constants.target_high_bracket) < target && target <= exp (neg Constants.target_low_bracket) -> neg (cnp_001 / pow secs_in_a_day 2)
-    | () when exp      Constants.target_high_bracket  > target && target >= exp      Constants.target_low_bracket  ->     (cnp_001 / pow secs_in_a_day 2)
+    | () when exp (neg target_high_bracket) < target && target <= exp (neg target_low_bracket) -> neg (cnp_001 / pow secs_in_a_day 2)
+    | () when exp      target_high_bracket  > target && target >= exp      target_low_bracket  ->     (cnp_001 / pow secs_in_a_day 2)
     (* High acceleration (-/+) *)
-    | () when target <= exp (neg Constants.target_high_bracket) -> neg (cnp_005 / pow secs_in_a_day 2)
-    | () when target >= exp      Constants.target_high_bracket  ->     (cnp_005 / pow secs_in_a_day 2)
+    | () when target <= exp (neg target_high_bracket) -> neg (cnp_005 / pow secs_in_a_day 2)
+    | () when target >= exp      target_high_bracket  ->     (cnp_005 / pow secs_in_a_day 2)
     | _ -> failwith "impossible"
   )
 
@@ -131,8 +133,9 @@ let touch
   let duration_in_seconds = FixedPoint.of_int (Timestamp.seconds_elapsed ~start:parameters.last_touched ~finish:tezos.now) in
   let seconds_in_a_year = FixedPoint.of_int Constants.seconds_in_a_year in
   let current_protected_index =
-    let upper_lim = FixedPoint.(exp     (Constants.protected_index_epsilon * duration_in_seconds)) in
-    let lower_lim = FixedPoint.(exp (neg Constants.protected_index_epsilon * duration_in_seconds)) in
+    let protected_index_epsilon = FixedPoint.of_q_floor Constants.protected_index_epsilon in (* FLOOR-or-CEIL *)
+    let upper_lim = FixedPoint.(exp     (protected_index_epsilon * duration_in_seconds)) in
+    let lower_lim = FixedPoint.(exp (neg protected_index_epsilon * duration_in_seconds)) in
     FixedPoint.(
       Tez.to_fp parameters.protected_index
       * clamp
@@ -161,8 +164,10 @@ let touch
   let current_target = FixedPoint.(current_q * current_index / current_kit_in_tez) in
 
   (* Update the indices *)
+  let burrow_fee_percentage = FixedPoint.of_q_floor Constants.burrow_fee_percentage in (* FLOOR-or-CEIL *)
+
   let current_burrow_fee_index = FixedPoint.(
-      parameters.burrow_fee_index * (one + Constants.burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
+      parameters.burrow_fee_index * (one + burrow_fee_percentage * duration_in_seconds / seconds_in_a_year)
     ) in
   let imbalance_percentage = compute_imbalance ~burrowed:parameters.outstanding_kit ~circulating:parameters.circulating_kit in
   let current_imbalance_index = FixedPoint.(

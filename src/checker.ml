@@ -160,11 +160,14 @@ struct
         ~finish:tezos.now in
     let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
     let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
+
+    let touch_low_reward = FixedPoint.of_q_ceil Constants.touch_low_reward in (* FLOOR-or-CEIL *)
+    let touch_high_reward = FixedPoint.of_q_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
     Kit.scale
       Kit.one
       FixedPoint.(
-        of_int low_duration * Constants.touch_low_reward
-        + of_int high_duration * Constants.touch_high_reward
+        of_int low_duration * touch_low_reward
+        + of_int high_duration * touch_high_reward
       )
 
   let touch (state:t) ~tezos ~(index:FixedPoint.t) : (Kit.t * t) =

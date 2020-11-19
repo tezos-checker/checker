@@ -13,18 +13,18 @@ let fliquidation : Q.t = Q.of_string "19/10" (* 1.9 *)
 let creation_deposit : Tez.t = Tez.one
 
 (** Yearly burrow fee percentage. *)
-let burrow_fee_percentage : FixedPoint.t = FixedPoint.of_string "0.005"
+let burrow_fee_percentage : Q.t = Q.of_string "5/1000" (* 0.005 *)
 
 (** The percentage of a burrow's collateral that we offer to whoever triggers
   * the burrow's liquidation. *)
-let liquidation_reward_percentage : FixedPoint.t = FixedPoint.of_string "0.001"
+let liquidation_reward_percentage : Q.t = Q.of_string "1/1000" (* 0.001 *)
 
 (** Percentage kept by the uniswap contract from the return asset. *)
 let uniswap_fee : Q.t = Q.of_string "2/1000" (* 0.002 *)
 
 (** Protected index epsilon. The higher this value is, the faster the protected
   * index catches up with the actual index. *)
-let protected_index_epsilon : FixedPoint.t = FixedPoint.of_string "0.0005"
+let protected_index_epsilon : Q.t = Q.of_string "5/10000" (* 0.0005 *)
 
 (** The maximum number of tez that can be in an auction lot. *)
 let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000
@@ -41,15 +41,15 @@ let liquidation_penalty : Q.t = Q.of_string "1/10" (* 0.1 *)
 let seconds_in_a_year : int = 31556952
 
 (** Low bracket used for the calculation of the drift derivative. *)
-let target_low_bracket : FixedPoint.t = FixedPoint.of_string "0.005"
+let target_low_bracket : Q.t = Q.of_string "5/1000" (* 0.005 *)
 
 (** High bracket used for the calculation of the drift derivative. *)
-let target_high_bracket : FixedPoint.t = FixedPoint.of_string "0.05"
+let target_high_bracket : Q.t = Q.of_string "5/100" (* 0.05 *)
 
 (** How fast a descending option price drops per second. Currently we want it
   * to drop by around 1cNp per minute, so we just divide by 60 to get roughly
   * how much it should be per second. *)
-let auction_decay_rate : FixedPoint.t = FixedPoint.of_string "0.00016667"
+let auction_decay_rate : Q.t = Q.of_string "1/6000" (* 0.01/60 *)
 
 (** The maximum number of seconds that can pass between two (ascending) bids
   * during an auction. The auction should expire if more than this many seconds
@@ -63,7 +63,7 @@ let max_bid_interval_in_blocks : int = 20
 
 (** Every bid in an ascending auction needs to improve over the previous bid by
   * at least 0.33 cNp. *)
-let bid_improvement_factor : FixedPoint.t = FixedPoint.of_string "0.0033"
+let bid_improvement_factor : Q.t = Q.of_string "33/10000" (* 0.33/100 *)
 
 (** Parameter used for calculating the current reward for touching the checker
   * contract. See calculate_touch_reward for their use. *)
@@ -71,8 +71,8 @@ let touch_reward_low_bracket : int = 600 (* = 60 * 10 = 10 minutes *)
 
 (** We want the reward in the first bracket to be 0.1 kit / minute, so we just
   * divide by 60 to get roughly how much should it be per second. *)
-let touch_low_reward  : FixedPoint.t = FixedPoint.of_string "0.00166667"
+let touch_low_reward : Q.t = Q.of_string "1/600" (* 0.1/60 *)
 
 (** We want the reward in the first bracket to be 1 kit / minute, so we just
   * divide by 60 to get roughly how much should it be per second. *)
-let touch_high_reward : FixedPoint.t = FixedPoint.of_string "0.01666667"
+let touch_high_reward : Q.t = Q.of_string "1/60" (* 1/60 *)

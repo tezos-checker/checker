@@ -277,7 +277,8 @@ let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Te
 
 let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
   assert (p.last_touched = b.last_touched);
-  let partial_reward = Tez.scale b.collateral Constants.liquidation_reward_percentage in
+  let liquidation_reward_percentage = FixedPoint.of_q_floor Constants.liquidation_reward_percentage in (* FLOOR-or-CEIL *)
+  let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
