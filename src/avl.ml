@@ -486,10 +486,10 @@ let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
     | Leaf l -> go l.parent in
   go leaf
 
-let rec ref_peek_front (mem: 't mem) (ptr: ptr) : leaf_ptr =
+let rec ref_peek_front (mem: 't mem) (ptr: ptr) : leaf_ptr * 't leaf =
   let self = mem_get mem ptr in
   match self with
-  | Leaf _ -> LeafPtr ptr
+  | Leaf l -> (LeafPtr ptr, l)
   | Branch b -> ref_peek_front mem b.left
   | _ -> failwith "node is not leaf or branch"
 
@@ -498,10 +498,9 @@ let pop_front (mem: 't mem) (AVLPtr root_ptr) : 't mem * 't option =
   match mem_get mem root_ptr with
   | Root None -> (mem, None)
   | Root (Some r) ->
-    let leafptr = ref_peek_front mem r in
-    let (x, _) = read_leaf mem leafptr in
+    let (leafptr, leaf) = ref_peek_front mem r in
     let mem = del mem leafptr in
-    (mem, Some x)
+    (mem, Some leaf.value)
   | _ -> failwith "pop_front: avl_ptr does not point to a Root"
 
 let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
