@@ -81,13 +81,13 @@ type branch = {
 }
 [@@deriving show]
 
-type 't node =
-  | Leaf of 't leaf
+type ('l, 'r) node =
+  | Leaf of 'l leaf
   | Branch of branch
-  | Root of ptr option
+  | Root of (ptr option * 'r)
 [@@deriving show]
 
-type 't mem = ('t node) BigMap.t
+type ('l, 'r) mem = (('l, 'r) node) BigMap.t
 
 let node_tez n =
   match n with
@@ -107,18 +107,18 @@ let node_parent n =
   | Branch branch -> branch.parent
   | Root _ -> failwith "node_parent found Root"
 
-let node_set_parent (p: ptr) (n: 't node) =
+let node_set_parent (p: ptr) (n: ('l, 'r) node) =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
   | Branch branch -> Branch { branch with parent = p; }
   | Root _ -> failwith "node_set_parent found Root"
 
 let update_matching_child
-    (mem: 't mem) (ptr: ptr) (from_ptr: ptr) (to_ptr: ptr) : 't mem =
+    (mem: ('l, 'r) mem) (ptr: ptr) (from_ptr: ptr) (to_ptr: ptr) : ('l, 'r) mem =
   match mem_get mem ptr with
-  | Root b ->
+  | Root (b, r) ->
     assert (b = Some from_ptr);
-    mem_set mem ptr (Root (Some to_ptr))
+    mem_set mem ptr (Root ((Some to_ptr), r))
   | Leaf _ ->
     failwith "update_matching_child: got a leaf"
   | Branch old_branch ->
@@ -159,8 +159,8 @@ let update_matching_child
  * a concept of a `Root` node.
  *)
 
-let mk_empty (mem: 't mem): 't mem * avl_ptr =
-  let (mem, ptr) = mem_new mem (Root None) in
+let mk_empty (mem: ('l, 'r) mem) (r: 'r): ('l, 'r) mem * avl_ptr =
+  let (mem, ptr) = mem_new mem (Root (None, r)) in
   (mem, AVLPtr ptr)
 
 (* Before:
@@ -183,7 +183,7 @@ let mk_empty (mem: 't mem): 't mem * avl_ptr =
  *       /     \
  *     left  right_left
 *)
-let ref_rotate_left (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+let ref_rotate_left (mem: ('l, 'r) mem) (curr_ptr: ptr) : ('l, 'r) mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
     | Root _ -> failwith "rotate_left: curr_ptr is Root"
@@ -230,7 +230,7 @@ let ref_rotate_left (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
  *              /      \
  *        left_right   right
 *)
-let ref_rotate_right (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+let ref_rotate_right (mem: ('l, 'r) mem) (curr_ptr: ptr) : ('l, 'r) mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
     | Root _ -> failwith "rotate_right: curr_ptr is Root"
@@ -271,7 +271,7 @@ let ref_rotate_right (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
  * The case Dir1 <> Dir2 is repaired by
  *   a double rotation: rotate_Dir1Dir2
 *)
-let balance (mem: 't mem) (curr_ptr: ptr) : 't mem * ptr =
+let balance (mem: ('l, 'r) mem) (curr_ptr: ptr) : ('l, 'r) mem * ptr =
   match mem_get mem curr_ptr with
   | Branch branch
     when abs (branch.left_height - branch.right_height) > 1 ->
@@ -316,8 +316,8 @@ type join_direction =
   | Right
 
 let rec ref_join
-    (mem: 't mem) (direction: join_direction)
-    (left_ptr: ptr) (right_ptr: ptr) : 't mem * ptr =
+    (mem: ('l, 'r) mem) (direction: join_direction)
+    (left_ptr: ptr) (right_ptr: ptr) : ('l, 'r) mem * ptr =
   let left = mem_get mem left_ptr in
   let right = mem_get mem right_ptr in
 
@@ -354,24 +354,25 @@ let rec ref_join
     (mem, new_)
 
 let push_back
-    (mem: 't mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
-  : 't mem * leaf_ptr =
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+  : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = mem_new mem node in
   match mem_get mem root_ptr with
   (* When the tree is empty, create the initial leaf. *)
-  | Root None ->
-    let mem = mem_set mem root_ptr (Root (Some leaf_ptr)) in
+  | Root (None, r) ->
+    let mem = mem_set mem root_ptr (Root (Some leaf_ptr, r)) in
     (mem, LeafPtr leaf_ptr)
   (* When there is already an element, join with the new leaf. *)
-  | Root (Some r) ->
-    let (mem, ret) = ref_join mem Left r leaf_ptr in
-    let mem = mem_set mem root_ptr (Root (Some ret)) in
+  | Root (Some ptr, r) ->
+    let (mem, ret) = ref_join mem Left ptr leaf_ptr in
+    let mem = mem_set mem root_ptr (Root (Some ret, r)) in
     (mem, LeafPtr leaf_ptr)
   | _ ->
     failwith "push_back is passed a non-root pointer."
 
-let append (mem: 't mem) (AVLPtr left_ptr) (AVLPtr right_ptr): 't mem =
+(*
+let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) mem =
   let mem = match (mem_get mem left_ptr, mem_get mem right_ptr) with
     | (Root _, Root None) ->
       mem
@@ -384,38 +385,39 @@ let append (mem: 't mem) (AVLPtr left_ptr) (AVLPtr right_ptr): 't mem =
     | _ ->
       failwith "avlptr is not root" in
   mem_del mem right_ptr
+*)
 
 (* The only implementation difference between this and push_back
  * is the order of parameters on 'join'. We should probably combine
  * these.
 *)
 let push_front
-    (mem: 't mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
-  : 't mem * leaf_ptr =
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+  : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = mem_new mem node in
   match mem_get mem root_ptr with
   (* When the tree is empty, create the initial leaf. *)
-  | Root None ->
-    let mem = mem_set mem root_ptr (Root (Some leaf_ptr)) in
+  | Root (None, m) ->
+    let mem = mem_set mem root_ptr (Root (Some leaf_ptr, m)) in
     (mem, LeafPtr leaf_ptr)
   (* When there is already an element, join with the new leaf. *)
-  | Root (Some r) ->
+  | Root (Some r, m) ->
     let (mem, ret) = ref_join mem Right leaf_ptr r in
-    let mem = mem_set mem root_ptr (Root (Some ret)) in
+    let mem = mem_set mem root_ptr (Root (Some ret, m)) in
     (mem, LeafPtr leaf_ptr)
   | _ ->
     failwith "push_front is passed a non-root pointer."
 
-let ref_del (mem: 't mem) (ptr: ptr): 't mem =
+let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem =
   let self = mem_get mem ptr in
   let parent_ptr = node_parent self in
   let mem = mem_del mem ptr in
   match mem_get mem parent_ptr with
   | Leaf _ -> failwith "del: parent is a leaf"
   (* when deleting the sole element, we return an empty tree *)
-  | Root _ ->
-    mem_set mem parent_ptr (Root None)
+  | Root (_, m) ->
+    mem_set mem parent_ptr (Root (None, m))
   (* otherwise, the parent of the deleted element is redundant since it
    * only has a single child, so we delete the parent and the orphan sibling
    * is adopted by the grandparent who have lost its child. *)
@@ -444,41 +446,41 @@ let ref_del (mem: 't mem) (ptr: ptr): 't mem =
         balance_bottom_up mem b.parent in
     balance_bottom_up mem grandparent_ptr
 
-let del (mem: 't mem) (LeafPtr ptr): 't mem = ref_del mem ptr
+let del (mem: ('l, 'r) mem) (LeafPtr ptr): ('l, 'r) mem = ref_del mem ptr
 
-let read_leaf (mem: 't mem) (LeafPtr ptr): 't * Tez.t =
+let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 't * Tez.t =
   match mem_get mem ptr with
   | Leaf l -> (l.value, l.tez)
   | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
 
-let update_leaf (mem: 't mem) (LeafPtr ptr) (f: 't -> 't): 't mem =
+let update_leaf (mem: ('l, 'r) mem) (LeafPtr ptr) (f: 't -> 't): ('l, 'r) mem =
   match mem_get mem ptr with
   | Leaf l ->
     mem_set mem ptr (Leaf { l with value = f l.value })
   | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
 
-let is_empty (mem: 't mem) (AVLPtr ptr) : bool =
+let is_empty (mem: ('l, 'r) mem) (AVLPtr ptr) : bool =
   match mem_get mem ptr with
-  | Root None -> true
-  | Root (Some _) -> false
+  | Root (None, _) -> true
+  | Root (Some _, _) -> false
   | _ -> failwith "is_empty: avl_ptr does not point to a Root"
 
-let rec ref_delete_tree (mem: 't mem) (ptr: ptr): 't mem =
+let rec ref_delete_tree (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem =
   let root = mem_get mem ptr in
   let mem = mem_del mem ptr in
   match root with
-  | Root None -> mem
+  | Root (None, _) -> mem
   | Leaf _ -> mem
-  | Root (Some p) -> ref_delete_tree mem p
+  | Root (Some p, _) -> ref_delete_tree mem p
   | Branch branch ->
     let mem = ref_delete_tree mem branch.left in
     let mem = ref_delete_tree mem branch.right in
     mem
 
-let delete_tree (mem: 't mem) (AVLPtr ptr): 't mem =
+let delete_tree (mem: ('l, 'r) mem) (AVLPtr ptr): ('l, 'r) mem =
   ref_delete_tree mem ptr
 
-let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
+let find_root (mem: ('l, 'r) mem) (LeafPtr leaf) : avl_ptr =
   let rec go (ptr: ptr) : avl_ptr =
     match mem_get mem ptr with
     | Root _ -> AVLPtr ptr
@@ -486,7 +488,7 @@ let find_root (mem: 't mem) (LeafPtr leaf) : avl_ptr =
     | Leaf l -> go l.parent in
   go leaf
 
-let rec ref_peek_front (mem: 't mem) (ptr: ptr) : leaf_ptr * 't leaf =
+let rec ref_peek_front (mem: ('l, 'r) mem) (ptr: ptr) : leaf_ptr * 't leaf =
   let self = mem_get mem ptr in
   match self with
   | Leaf l -> (LeafPtr ptr, l)
@@ -494,17 +496,17 @@ let rec ref_peek_front (mem: 't mem) (ptr: ptr) : leaf_ptr * 't leaf =
   | _ -> failwith "node is not leaf or branch"
 
 (* FIXME: needs an efficient reimplementation *)
-let pop_front (mem: 't mem) (AVLPtr root_ptr) : 't mem * 't option =
+let pop_front (mem: ('l, 'r) mem) (AVLPtr root_ptr) : ('l, 'r) mem * 't option =
   match mem_get mem root_ptr with
-  | Root None -> (mem, None)
-  | Root (Some r) ->
+  | Root (None, _) -> (mem, None)
+  | Root (Some r, _) ->
     let (leafptr, leaf) = ref_peek_front mem r in
     let mem = del mem leafptr in
     (mem, Some leaf.value)
   | _ -> failwith "pop_front: avl_ptr does not point to a Root"
 
-let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
-  : 't mem * ptr option * ptr option =
+let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: ptr) (limit: Tez.t)
+  : ('l, 'r) mem * ptr option * ptr option =
   match mem_get mem curr_ptr with
   | Root _ -> failwith "ref_split found Root"
   | Leaf leaf ->
@@ -552,24 +554,24 @@ let rec ref_split (mem: 't mem) (curr_ptr: ptr) (limit: Tez.t)
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let take (mem: 't mem) (AVLPtr root_ptr) (limit: Tez.t)
-  : 't mem * avl_ptr =
+let take (mem: ('l, 'r) mem) (AVLPtr root_ptr) (limit: Tez.t) (root_data: 'r)
+  : ('l, 'r) mem * avl_ptr =
   match mem_get mem root_ptr with
-  | Root (Some r) ->
+  | Root (Some r, r') ->
     let (mem, l, r) = ref_split mem r limit in
-    let (mem, new_root) = mem_new mem (Root l) in
+    let (mem, new_root) = mem_new mem (Root (l, root_data)) in
     let mem = match l with
       | Some l -> mem_update mem l (node_set_parent new_root)
       | None -> mem in
-    let mem = mem_set mem root_ptr (Root r) in
+    let mem = mem_set mem root_ptr (Root (r, r')) in
     (mem, AVLPtr new_root)
-  | Root None ->
-    let (mem, new_root) = mem_new mem (Root None) in
+  | Root (None, _) ->
+    let (mem, new_root) = mem_new mem (Root (None, root_data)) in
     (mem, AVLPtr new_root)
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
 
-let avl_tez (mem: 't mem) (AVLPtr ptr) =
+let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) =
   match mem_get mem ptr with
-  | Root (Some ptr) -> node_tez (mem_get mem ptr)
-  | Root None -> Tez.zero
+  | Root (Some ptr, _) -> node_tez (mem_get mem ptr)
+  | Root (None, _) -> Tez.zero
   | _ -> failwith "impossible"

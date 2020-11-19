@@ -83,8 +83,6 @@ more generically, and also much slower than the above method. So I don't think
 we should do this.
 *)
 
-open Avl
-
 type Error.error +=
   | NoOpenAuction
   | BidTooLow
@@ -100,12 +98,12 @@ type liquidation_slice = {
   burrow: Ptr.t;
   tez: Tez.t;
   min_kit_for_unwarranted: Kit.t;
-  older: leaf_ptr option;
-  younger: leaf_ptr option;
+  older: Avl.leaf_ptr option;
+  younger: Avl.leaf_ptr option;
 }
 [@@deriving show]
 
-type auction_id = avl_ptr
+type auction_id = Avl.avl_ptr
 type bid_details = { auction_id: auction_id; bid: Bid.t; }
 type bid_ticket = bid_details Ticket.ticket
 
@@ -115,7 +113,7 @@ type auction_state =
 [@@deriving show]
 
 type current_auction = {
-  contents: avl_ptr;
+  contents: Avl.avl_ptr;
   state: auction_state;
 }
 
@@ -126,21 +124,21 @@ type auction_outcome = {
 
 module AvlPtrMap =
   Map.Make(struct
-    type t = avl_ptr
-    let compare (AVLPtr a) (AVLPtr b) = Ptr.compare a b end)
+    type t = Avl.avl_ptr
+    let compare (Avl.AVLPtr a) (Avl.AVLPtr b) = Ptr.compare a b end)
 
 type auctions = {
-  storage: liquidation_slice mem;
+  avl_storage: (liquidation_slice, auction_outcome option) Avl.mem;
 
-  queued_slices: avl_ptr;
+  queued_slices: Avl.avl_ptr;
   current_auction: current_auction option;
   completed_auctions: auction_outcome AvlPtrMap.t;
 }
 
 let empty : auctions =
-  let storage = BigMap.BigMap.empty in
-  let (storage, queued_slices) = Avl.mk_empty storage in
-  { storage = storage;
+  let avl_storage = BigMap.BigMap.empty in
+  let (avl_storage, queued_slices) = Avl.mk_empty avl_storage None in
+  { avl_storage = avl_storage;
     queued_slices = queued_slices;
     current_auction = None;
     completed_auctions = AvlPtrMap.empty;
@@ -153,21 +151,21 @@ let empty : auctions =
 let send_to_auction
     (auctions: auctions)
     (slice: liquidation_slice)
-  : auctions * leaf_ptr =
+  : auctions * Avl.leaf_ptr =
   let (new_storage, ret) =
-    push_back auctions.storage auctions.queued_slices slice slice.tez in
-  let new_state = { auctions with storage = new_storage; } in
+    Avl.push_back auctions.avl_storage auctions.queued_slices slice slice.tez in
+  let new_state = { auctions with avl_storage = new_storage; } in
   (new_state, ret)
 
 let cancel_liquidation
     (auctions: auctions)
-    (slice: leaf_ptr)
+    (slice: Avl.leaf_ptr)
   : auctions option =
-  if find_root auctions.storage slice = auctions.queued_slices
+  if Avl.find_root auctions.avl_storage slice = auctions.queued_slices
   then
     (* if the slice belongs to queued_slices tree, we can cancel it *)
-    let new_storage = del auctions.storage slice in
-    Some { auctions with storage = new_storage; }
+    let new_storage = Avl.del auctions.avl_storage slice in
+    Some { auctions with avl_storage = new_storage; }
   else
     (* otherwise, it means that the auction is either in progress
      * or completed, so we can not cancel it. *)
@@ -197,7 +195,7 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
   )
 
 let take_with_splitting storage queued_slices split_threshold =
-  let (storage, new_auction) = take storage queued_slices split_threshold in
+  let (storage, new_auction) = Avl.take storage queued_slices split_threshold None in
   let queued_amount = Avl.avl_tez storage new_auction in
   if queued_amount < split_threshold
   then
@@ -219,18 +217,18 @@ let start_auction_if_possible
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
-    let queued_amount = Avl.avl_tez auctions.storage auctions.queued_slices in
+    let queued_amount = Avl.avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
       max
         Constants.max_lot_size
         (Tez.scale queued_amount Constants.min_lot_auction_queue_fraction) in
     let (storage, new_auction) =
       take_with_splitting
-        auctions.storage
+        auctions.avl_storage
         auctions.queued_slices
         split_threshold in
     let current_auction =
-      if is_empty storage new_auction
+      if Avl.is_empty storage new_auction
       then None
       else
         let start_value =
@@ -243,7 +241,7 @@ let start_auction_if_possible
           { contents = new_auction;
             state = Descending (start_value, tezos.now); } in
     { auctions with
-      storage = storage;
+      avl_storage = storage;
       current_auction = current_auction;
     }
 
@@ -295,7 +293,7 @@ let complete_auction_if_possible
           AvlPtrMap.add
             curr.contents
             { winning_bid;
-              sold_tez=avl_tez auctions.storage curr.contents;
+              sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
             }
             auctions.completed_auctions;
       }
@@ -360,26 +358,26 @@ let reclaim_winning_bid
   let bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
-    if Avl.is_empty auctions.storage bid_details.auction_id
-    then
-      let auctions =
-        { auctions with
-          (* When the winner reclaims their bid, we remove
-             every reference to the auction. This is just to
-             save storage, what's forbidding double-claiming
-             is the ticket mechanism, not this.
-          *)
-          completed_auctions =
-            AvlPtrMap.remove
-              bid_details.auction_id
-              auctions.completed_auctions;
-          storage =
-            Avl.delete_tree
-              auctions.storage
-              bid_details.auction_id;
-        } in
-      Ok (outcome.sold_tez, auctions)
-    else Error NotAllSlicesClaimed
+     if Avl.is_empty auctions.avl_storage bid_details.auction_id
+     then
+       let auctions =
+         { auctions with
+           (* When the winner reclaims their bid, we remove
+              every reference to the auction. This is just to
+              save storage, what's forbidding double-claiming
+              is the ticket mechanism, not this.
+            *)
+           completed_auctions =
+             AvlPtrMap.remove
+               bid_details.auction_id
+               auctions.completed_auctions;
+           avl_storage =
+             Avl.delete_tree
+               auctions.avl_storage
+               bid_details.auction_id;
+         } in
+       Ok (outcome.sold_tez, auctions)
+     else Error NotAllSlicesClaimed
   | None -> Error NotAWinningBid
 
 
@@ -390,7 +388,7 @@ let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions
 
 let current_auction_tez (auctions: auctions) : Tez.t option =
   Option.map
-    (fun auction -> avl_tez auctions.storage auction.contents)
+    (fun auction -> Avl.avl_tez auctions.avl_storage auction.contents)
     auctions.current_auction
 
 (*

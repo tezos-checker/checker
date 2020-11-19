@@ -8,9 +8,6 @@
  *
  * We always increase the memory addresses, even after removals. But
  * int64 is big enough that it shouldn't be an issue.
- *
- * TODO: Maybe we should use something like [int8] as a variable
- * width address.
  *)
 
 module BigMap = Map.Make(Ptr)
@@ -40,3 +37,5 @@ let mem_update (m: 'a BigMap.t) (k: ptr) (f: 'a -> 'a) : 'a BigMap.t =
 let mem_del (m: 'a BigMap.t) (k: ptr) : 'a BigMap.t =
   assert (BigMap.mem k m);
   BigMap.remove k m
+
+type node = ..

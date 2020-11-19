@@ -228,7 +228,7 @@ struct
           match Burrow.oldest_liquidation_ptr burrow with
           | None -> true
           | Some ls ->
-            let root = Avl.find_root state.liquidation_auctions.storage ls in
+            let root = Avl.find_root state.liquidation_auctions.avl_storage ls in
             not (LiquidationAuction.AvlPtrMap.mem
                    root
                    state.liquidation_auctions.completed_auctions) in
@@ -327,10 +327,10 @@ struct
           *)
           let updated_storage = (
             match liquidation_slice.older with
-            | None -> updated_auctions.storage
+            | None -> updated_auctions.avl_storage
             | Some older_ptr ->
               BigMap.mem_update
-                updated_auctions.storage
+                updated_auctions.avl_storage
                 (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
               match older with
               | Leaf l -> Leaf
@@ -349,21 +349,21 @@ struct
           Ok ( details.liquidation_reward,
                {state with
                 burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                liquidation_auctions = { updated_auctions with storage = updated_storage; };
+                liquidation_auctions = { updated_auctions with avl_storage = updated_storage; };
                }
              )
       )
     | None -> Error (NonExistentBurrow burrow_id)
 
   let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
-    let root = Avl.find_root state.liquidation_auctions.storage leaf_ptr in
+    let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
     match LiquidationAuction.AvlPtrMap.find_opt root state.liquidation_auctions.completed_auctions with
     (* The slice does not belong to a completed auction, so we skip it. *)
     | None -> state
     (* If it belongs to a completed auction, we delete the slice *)
     | Some outcome ->
       (* TODO: Check if leaf_ptr's are valid *)
-      let (leaf, _) = Avl.read_leaf state.liquidation_auctions.storage leaf_ptr in
+      let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       (* How much kit should be given to the burrow and how much should be burned. *)
       let kit_to_repay, kit_to_burn =
@@ -390,7 +390,7 @@ struct
                                                * withdrawn twice, also to save storage. This might cause
                                                * the lot root to change, so we also update completed_auctions
                                                * to reflect that. *)
-                                              storage = Avl.del state.liquidation_auctions.storage leaf_ptr
+                                              avl_storage = Avl.del state.liquidation_auctions.avl_storage leaf_ptr
                                             }} in
 
       (* When we delete the youngest or the oldest slice, we have to adjust
@@ -441,9 +441,9 @@ struct
         | None -> state
         | Some younger_ptr ->
           { state with liquidation_auctions = { state.liquidation_auctions with
-                                                storage =
+                                                avl_storage =
                                                   Avl.update_leaf
-                                                    state.liquidation_auctions.storage
+                                                    state.liquidation_auctions.avl_storage
                                                     younger_ptr
                                                     (fun younger ->
                                                        assert (younger.older = Some leaf_ptr);
@@ -456,9 +456,9 @@ struct
         | None -> state
         | Some older_ptr ->
           { state with liquidation_auctions = { state.liquidation_auctions with
-                                                storage =
+                                                avl_storage =
                                                   Avl.update_leaf
-                                                    state.liquidation_auctions.storage
+                                                    state.liquidation_auctions.avl_storage
                                                     older_ptr
                                                     (fun older ->
                                                        assert (older.younger = Some leaf_ptr);
