@@ -236,9 +236,8 @@ struct
           | None -> true
           | Some ls ->
             let root = Avl.find_root state.liquidation_auctions.avl_storage ls in
-            not (LiquidationAuction.AvlPtrMap.mem
-                   root
-                   state.liquidation_auctions.completed_auctions) in
+            let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
+            Option.is_none outcome in
         if is_ready
         then f burrow
         else Error BurrowHasCompletedLiquidation
@@ -364,7 +363,7 @@ struct
 
   let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
     let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
-    match LiquidationAuction.AvlPtrMap.find_opt root state.liquidation_auctions.completed_auctions with
+    match Avl.root_data state.liquidation_auctions.avl_storage root with
     (* The slice does not belong to a completed auction, so we skip it. *)
     | None -> state
     (* If it belongs to a completed auction, we delete the slice *)

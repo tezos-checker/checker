@@ -574,4 +574,14 @@ let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) =
   match mem_get mem ptr with
   | Root (Some ptr, _) -> node_tez (mem_get mem ptr)
   | Root (None, _) -> Tez.zero
-  | _ -> failwith "impossible"
+  | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
+
+let root_data (mem: ('l, 'r) mem) (AVLPtr ptr) : 'r =
+  match mem_get mem ptr with
+  | Root (_, d) -> d
+  | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
+
+let modify_root_data (mem: ('l, 'r) mem) (AVLPtr ptr) (f: 'r -> 'r)  =
+  match mem_get mem ptr with
+  | Root (p, r) -> mem_set mem ptr (Root (p, f r))
+  | _ -> failwith "invariant violation: avl_ptr does not point to a Root"

@@ -120,7 +120,14 @@ type current_auction = {
 type auction_outcome = {
   sold_tez: Tez.t;
   winning_bid: Bid.t;
+  younger_auction: Avl.avl_ptr option;
+  older_auction: Avl.avl_ptr option;
 }
+
+type completed_auctions =
+  { youngest: Avl.avl_ptr
+  ; oldest: Avl.avl_ptr
+  }
 
 module AvlPtrMap =
   Map.Make(struct
@@ -132,7 +139,7 @@ type auctions = {
 
   queued_slices: Avl.avl_ptr;
   current_auction: current_auction option;
-  completed_auctions: auction_outcome AvlPtrMap.t;
+  completed_auctions: completed_auctions option;
 }
 
 let empty : auctions =
@@ -141,7 +148,7 @@ let empty : auctions =
   { avl_storage = avl_storage;
     queued_slices = queued_slices;
     current_auction = None;
-    completed_auctions = AvlPtrMap.empty;
+    completed_auctions = None;
   }
 
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
@@ -289,15 +296,46 @@ let complete_auction_if_possible
     match is_auction_complete tezos curr with
     | None -> auctions
     | Some winning_bid ->
+      let (storage, completed_auctions) = match auctions.completed_auctions with
+        | None ->
+            let outcome =
+                  { winning_bid;
+                    sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
+                    younger_auction=None;
+                    older_auction=None;
+                  } in
+            let storage =
+                 Avl.modify_root_data
+                   auctions.avl_storage
+                   curr.contents
+                   (fun prev -> assert (Option.is_none prev); Some outcome) in
+             (storage, {youngest=curr.contents;oldest=curr.contents})
+        | Some {youngest; oldest} ->
+            let outcome =
+              { winning_bid;
+                sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
+                younger_auction=Some youngest;
+                older_auction=None;
+              } in
+            let storage =
+              Avl.modify_root_data
+                auctions.avl_storage
+                curr.contents
+                (fun prev -> assert (Option.is_none prev); Some outcome) in
+            let storage =
+              Avl.modify_root_data
+                storage
+                youngest
+                (fun prev ->
+                  match prev with
+                  | None -> failwith "completed auction without outcome"
+                  | Some xs -> Some ({xs with younger_auction=Some curr.contents})
+                ) in
+            (storage, {youngest=curr.contents; oldest}) in
       { auctions with
-        current_auction = None;
-        completed_auctions =
-          AvlPtrMap.add
-            curr.contents
-            { winning_bid;
-              sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
-            }
-            auctions.completed_auctions;
+        avl_storage = storage;
+        current_auction=None;
+        completed_auctions=Some completed_auctions;
       }
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
@@ -334,7 +372,7 @@ let is_leading_current_auction
 
 let completed_auction_won_by
     (auctions: auctions) (bid_details: bid_details): auction_outcome option =
-  match AvlPtrMap.find_opt bid_details.auction_id auctions.completed_auctions with
+  match Avl.root_data auctions.avl_storage bid_details.auction_id with
   | Some outcome when outcome.winning_bid = bid_details.bid -> Some outcome
   | _ -> None
 
@@ -350,9 +388,65 @@ let reclaim_bid
     (* TODO: punch tickets *)
     Ok bid_details.bid.kit
 
-(* TODO Winners can only reclaim when all the liquidation slices of an
- * auction is propagated back to the burrows.
-*)
+(* When we delete a completed auction, we need to fixup the pointers
+ * in the older and younger lots, as well as the oldest and youngest
+ * fields in auctions if necessary. *)
+let delete_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
+  let storage = auctions.avl_storage in
+
+  let outcome = match Avl.root_data storage tree with
+  | None -> failwith "auction is not completed"
+  | Some r -> r in
+  let completed_auctions = match auctions.completed_auctions with
+  | None -> failwith "invariant violation"
+  | Some r -> r in
+
+  (* First, fixup the completed auctions if we're dropping the
+   * youngest or the oldest lot. *)
+  let completed_auctions =
+    match (outcome.younger_auction, outcome.older_auction) with
+    | (None, None) ->
+      assert (completed_auctions.youngest = tree);
+      assert (completed_auctions.oldest = tree);
+      None
+    | (None, Some older) ->
+      assert (completed_auctions.youngest = tree);
+      assert (completed_auctions.oldest <> tree);
+      Some {completed_auctions with youngest = older }
+    | (Some younger, None) ->
+      assert (completed_auctions.youngest <> tree);
+      assert (completed_auctions.oldest = tree);
+      Some {completed_auctions with oldest = younger }
+    | (Some _, Some _) ->
+      Some completed_auctions in
+
+  (* Then, fixup the pointers within the list.*)
+  let storage =
+    match outcome.younger_auction with
+    | None -> storage
+    | Some younger ->
+        Avl.modify_root_data storage younger @@
+          fun i ->
+            let i = Option.get i in
+            assert (i.older_auction = Some tree);
+            Some {i with older_auction=outcome.older_auction} in
+  let storage =
+    match outcome.older_auction with
+    | None -> storage
+    | Some older ->
+        Avl.modify_root_data storage older @@
+          fun i ->
+            let i = Option.get i in
+            assert (i.younger_auction = Some tree);
+            Some {i with younger_auction=outcome.younger_auction} in
+
+  let storage = Avl.delete_tree storage tree in
+  { auctions with
+    completed_auctions;
+    avl_storage = storage
+  }
+
+
 let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
@@ -360,26 +454,20 @@ let reclaim_winning_bid
   let bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
-     if Avl.is_empty auctions.avl_storage bid_details.auction_id
-     then
+     (* A winning bid can only be claimed when all the liquidation slices
+      * for that lot is cleaned. *)
+     if not (Avl.is_empty auctions.avl_storage bid_details.auction_id)
+     then Error NotAllSlicesClaimed
+     else
+       (* When the winner reclaims their bid, we remove
+          every reference to the auction. This is just to
+          save storage, what's forbidding double-claiming
+          is the ticket mechanism, not this.
+        *)
        let auctions =
-         { auctions with
-           (* When the winner reclaims their bid, we remove
-              every reference to the auction. This is just to
-              save storage, what's forbidding double-claiming
-              is the ticket mechanism, not this.
-            *)
-           completed_auctions =
-             AvlPtrMap.remove
-               bid_details.auction_id
-               auctions.completed_auctions;
-           avl_storage =
-             Avl.delete_tree
-               auctions.avl_storage
-               bid_details.auction_id;
-         } in
+         delete_completed_auction auctions bid_details.auction_id in
+
        Ok (outcome.sold_tez, auctions)
-     else Error NotAllSlicesClaimed
   | None -> Error NotAWinningBid
 
 
