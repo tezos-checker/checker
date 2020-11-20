@@ -39,17 +39,12 @@ Utku: Lifecycle of liquidation slices.
    > previous bid by at least 0.33 cNp and adds the longer of 20 blocks or
    > 20 minutes, to the time before the auction expires.
 
-   TODO: Figure out how a `bid` should be represented as.
-
-   Every bid here is either ends as a 'leading_bid' in 'current_auction', or in
-   'unclaimed_bids' set when overbid.
-
-   At any time, the owner of a bid can claim an bid if it is in 'unclaimed_bid'
-   set. If it is, it is removed and the amount of kit is given back.
+   All bids can be claimed, unless they are the winning bid of the current
+   or any of the past auctions.
 
    When an auction expires, the current auction is both moved to
-   'completed_auctions' FIFO queue, and to another map from tree_ptr to
-   auction_outcome called `outcomes`.
+   'completed_auctions' FIFO queue. This FIFO queue is implemented as a doubly
+   linked list at tree roots.
 
 4. When a burrow is touched, it checks if the head of its slices belongs to
    a completed auction or not. This can be checked via the 'find_root'
@@ -57,30 +52,11 @@ Utku: Lifecycle of liquidation slices.
    it is not complete, if not, it means that we're in 'completed_auctions'.
 
    If the slice is completed, then the burrows outstanding kit balance is
-   adjusted (FIXME, clarify, quite a bit of stuff to do on burrow side,
-   but AFAIK they are already implemented) and the leaf is deleted from
-   the tree.
-
-   If the deletion causes the tree to become empty, then the tree is popped from
-   `outcomes` map, and the leading bid is moved to `unclaimed_bid` set.
+   adjusted and the leaf is deleted from the tree.
 
 5. When checker is touched, it fetches the oldest auction from `completed_auctions`
-   queue, and processes a few of oldest liquidations via touching their burrows. This
-   is to clean-up the slices that haven't been claimed for some reason.
-
-NOTE: !!! Below code does not yet completely reflect the above process.
-
-Notes on data structures:
-
-* When we need a queue we can prepend and append, we can simply use a
-((int, 't) bigmap, int, int) triplet, where the bigmap contains consecutive
-integer keys, and we also store the bounds of the keys of the map. Prepending
-and appending (and maybe updating) can be done efficiently.
-
-* If we use an AVL tree as a queue, then we also have the ability to delete or
-insert elements in the middle. However, this requires us to write our AVL tree
-more generically, and also much slower than the above method. So I don't think
-we should do this.
+   queue, and processes a few of oldest liquidations. This is to clean-up the slices
+   that haven't been claimed for some reason.
 *)
 
 type Error.error +=
