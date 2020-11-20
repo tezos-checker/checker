@@ -154,6 +154,8 @@ imbalance_rate =
   max(-5 * outstanding, (outstanding - circulating)) * 0.01 / outstanding , if outstanding <  circulating
 ```
 
+Q4: What if the current `outstanding_kit` is zero? In this case the above formula fails. This also relates to the initialization and subsequent calculation of `outstanding_kit` (if it ever becomes zero, it stays zero forever).
+
 ###  Intermediate `outstanding_kit`
 In order to compute the updates for the two remaining fields (`outstanding_kit` and `circulating_kit`), we first need to calculate the current amount of kit outstanding, taking into account the accrued burrowing fee, thus
 ```
