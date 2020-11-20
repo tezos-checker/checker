@@ -21,8 +21,14 @@
 (* Check out dexter for technical details:
      https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
 *)
-(* TODO: At some point we should also specify how things should work for the
- * first liquidity provider, when the total liquidity is zero. *)
+(* Remaining TODO for uniswap.mli:
+ * - Specify how things should work for the first liquidity provider, when the
+ *   total liquidity is zero.
+ * - Ensure that the balances and prices in uniswap do not go too far off.
+ * - Implement the auction for deciding who to delegate to.
+ * - Add mapping from accounts to allowances, and in general finish
+ *   implementing all the LP-related functionality.
+*)
 type liquidity
 
 val show_liquidity : liquidity -> string

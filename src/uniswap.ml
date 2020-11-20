@@ -5,9 +5,6 @@ type liquidity = int [@@deriving show]
 
 let liquidity_of_int i = assert (i > 0); i
 
-(* TODO: The state of uniswap should also (in the future) include an ongoing
- * auction to decide who to delegate to, possibly multiple tez balances, etc.
- * Just leaving this note here lest we forget. *)
 type t =
   { tez: Tez.t;
     kit: Kit.t;

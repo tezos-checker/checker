@@ -141,7 +141,7 @@ tez_to_auction = ceil (
   ((1 - liquidation_penalty) * fminting - 1)
 )
 ```
-* If `tez_to_auction < 0` or `tez_to_auction > collateral`, then restoration is impossible: liquidate the entire remaining collateral:
+* If `tez_to_auction < 0` or `tez_to_auction > collateral`, then restoration is impossible: liquidate the entire remaining collateral (Note that the resulting burrow can be targeted for liquidation one last time (with the creation deposit being the only reward). Alternatively, we could (rather harshly) liquidate the deposit too and close the burrow.):
 
   ```
   active                = true
