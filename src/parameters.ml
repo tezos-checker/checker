@@ -104,16 +104,18 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   let cnp_001 = FixedPoint.(of_string "0.0001") in
   let cnp_005 = FixedPoint.(of_string "0.0005") in
   let secs_in_a_day = FixedPoint.of_int (24 * 3600) in
-  match () with
-  (* No acceleration (0) *)
-  | () when qexp (Q.neg target_low_bracket) < target && target < qexp target_low_bracket -> FixedPoint.zero
-  (* Low acceleration (-/+) *)
-  | () when qexp (Q.neg target_high_bracket) < target && target <= qexp (Q.neg target_low_bracket) -> FixedPoint.(neg (cnp_001 / pow secs_in_a_day 2))
-  | () when qexp        target_high_bracket  > target && target >= qexp        target_low_bracket  -> FixedPoint.(    (cnp_001 / pow secs_in_a_day 2))
-  (* High acceleration (-/+) *)
-  | () when target <= qexp (Q.neg target_high_bracket) -> FixedPoint.(neg (cnp_005 / pow secs_in_a_day 2))
-  | () when target >= qexp        target_high_bracket  -> FixedPoint.(    (cnp_005 / pow secs_in_a_day 2))
-  | _ -> failwith "impossible"
+  Q.(
+    match () with
+    (* No acceleration (0) *)
+    | () when qexp (neg target_low_bracket) < target && target < qexp target_low_bracket -> FixedPoint.zero
+    (* Low acceleration (-/+) *)
+    | () when qexp (neg target_high_bracket) < target && target <= qexp (neg target_low_bracket) -> FixedPoint.(neg (cnp_001 / pow secs_in_a_day 2))
+    | () when qexp      target_high_bracket  > target && target >= qexp      target_low_bracket  -> FixedPoint.(    (cnp_001 / pow secs_in_a_day 2))
+    (* High acceleration (-/+) *)
+    | () when target <= qexp (neg target_high_bracket) -> FixedPoint.(neg (cnp_005 / pow secs_in_a_day 2))
+    | () when target >= qexp      target_high_bracket  -> FixedPoint.(    (cnp_005 / pow secs_in_a_day 2))
+    | _ -> failwith "impossible"
+  )
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
@@ -174,35 +176,34 @@ let touch
            * duration_in_seconds / Q.of_int Constants.seconds_in_a_year)
     ) in
 
-  let imbalance_percentage =
-    compute_imbalance
-      ~burrowed:parameters.outstanding_kit
-      ~circulating:parameters.circulating_kit in
-
   let current_imbalance_index = FixedPoint.of_q_floor Q.( (* FLOOR-or-CEIL *)
+      let imbalance_rate =
+        compute_imbalance
+          ~burrowed:parameters.outstanding_kit
+          ~circulating:parameters.circulating_kit in
       FixedPoint.to_q parameters.imbalance_index
       * (one
-         + imbalance_percentage
+         + imbalance_rate
            * duration_in_seconds / Q.of_int Constants.seconds_in_a_year)
     ) in
 
-  let with_burrow_fee = Kit.of_q_floor Q.( (* FLOOR-or-CEIL *)
+  let outstanding_with_fees = Kit.of_q_floor Q.( (* FLOOR-or-CEIL *)
       Kit.to_q parameters.outstanding_kit
       * FixedPoint.to_q current_burrow_fee_index
       / FixedPoint.to_q parameters.burrow_fee_index
     ) in
 
-  let total_accrual_to_uniswap = Kit.(with_burrow_fee - parameters.outstanding_kit) in
+  let accrual_to_uniswap = Kit.(outstanding_with_fees - parameters.outstanding_kit) in
 
   let current_outstanding_kit = Kit.of_q_floor Q.( (* FLOOR-or-CEIL *)
-      Kit.to_q with_burrow_fee
+      Kit.to_q outstanding_with_fees
       * FixedPoint.to_q current_imbalance_index
       / FixedPoint.to_q parameters.imbalance_index
     ) in
 
-  let current_circulating_kit = Kit.(parameters.circulating_kit + total_accrual_to_uniswap) in
+  let current_circulating_kit = Kit.(parameters.circulating_kit + accrual_to_uniswap) in
 
-  ( total_accrual_to_uniswap
+  ( accrual_to_uniswap
   , {
     index = current_index;
     protected_index = current_protected_index;
