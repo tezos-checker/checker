@@ -1,7 +1,7 @@
 
 # Burrow State & Liquidation
 
-George's operational interpretation of the burrow state and operations on it.
+An operational interpretation of the burrow state and operations on it.
 
 ## State
 
@@ -9,10 +9,11 @@ George's operational interpretation of the burrow state and operations on it.
 * `excess_kit`: additional kit stored in the burrow.
 * `collateral`: the amount of tez stored in the burrow. Collateral that has been sent to auctions **does not** count towards this amount; for all we know, it's gone forever.
 * `collateral_at_auction`: the total amount of tez that has been sent to auctions from this burrow, to be sold for kit.
+* `liquidation_slices`: a pointer to liquidation slices that have been sent off to auctions.
 
 Additional fields:
-* `timestamp`: the last time the burrow was touched.
-* `adjustment_index`: the last observed adjustment index (at time `timestamp`).
+* `last_touched`: the last time the burrow was touched.
+* `adjustment_index`: the last observed adjustment index (at time `last_touched`).
 * `active`: whether the burrow is supported by a creation deposit. If not, it's considered "inactive".
 
 ## Touching
@@ -20,7 +21,7 @@ Additional fields:
 First thing to do before considering any of the things below is to update the state of the burrow, by touching it. The effect of this is to
 * Update the timestamp in the burrow to reflect the last time it was touched
   ```
-  new_timestamp   = now()
+  new_last_touched    = now()
   ```
 * Re-balance `outstanding_kit` and `excess_kit`: either `outstanding_kit` or `excess_kit` is zero
   ```
@@ -29,7 +30,7 @@ First thing to do before considering any of the things below is to update the st
   ```
 * To add accrued burrow and adjustment fee to its outstanding kit
   ```
-  new_outstanding = old_outstanding * (new_adjustment_index / old_adjustment_index)
+  new_outstanding     = old_outstanding * (new_adjustment_index / old_adjustment_index)
   ```
 
 Note that if the current timestamp is identical to that stored in the burrow, we do not perform any of the above.
@@ -46,7 +47,7 @@ collateral >= outstanding * fminting * current_minting_price      (1)
 
 `outstanding_kit` here refers to the accrued amount of kit that is outstanding from the burrow (kit we expect to receive from pending auctions **is not** considered burned here, but still outstanding).
 
-## Is a burrow not a candidate for liquidation
+## Is a burrow a candidate for liquidation
 The burrow cannot be marked for liquidation if the following holds:
 ```
 collateral >= optimistic_outstanding * fliquidation * liquidation_price      (2)
@@ -199,7 +200,6 @@ tez_to_auction * kit_i >= min_received_kit_for_unwarranted * tez_i
 
 ## Misc
 
-* I have replaced `fplus` with `fminting` and `fminus` with `fliquidation`; I think they are more descriptive.
 * `fminting > fliquidation`
 * `minting_price >= liquidation_price`
 * `liquidation_penalty = 10%`
