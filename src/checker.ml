@@ -33,7 +33,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> tezos:Tezos.t -> index:FixedPoint.t -> (Kit.t * t)
+  val touch : t -> tezos:Tezos.t -> index:Tez.t -> (Kit.t * t)
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -170,7 +170,7 @@ struct
         + of_int high_duration * touch_high_reward
       )
 
-  let touch (state:t) ~tezos ~(index:FixedPoint.t) : (Kit.t * t) =
+  let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.t * t) =
     if state.parameters.last_touched = Tezos.(tezos.now) then
       (* Do nothing if up-to-date (idempotence) *)
       (Kit.zero, state)

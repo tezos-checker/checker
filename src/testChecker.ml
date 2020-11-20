@@ -51,7 +51,7 @@ let suite =
          Checker.touch
            checker
            ~tezos
-           ~index:(FixedPoint.of_string "1.2") in
+           ~index:(Tez.of_mutez 1_200_000) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -75,7 +75,7 @@ let suite =
          Checker.touch
            checker
            ~tezos
-           ~index:(FixedPoint.of_string "1.2") in
+           ~index:(Tez.of_mutez 1_200_000) in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
@@ -92,7 +92,7 @@ let suite =
          Checker.touch
            checker
            ~tezos
-           ~index:(FixedPoint.of_string "1.2") in
+           ~index:(Tez.of_mutez 1_200_000) in
 
        let (bid, checker) = assert_ok @@
          Checker.liquidation_auction_place_bid
@@ -113,7 +113,7 @@ let suite =
          Checker.touch
            checker
            ~tezos
-           ~index:(FixedPoint.of_string "1.2") in
+           ~index:(Tez.of_mutez 1_200_000) in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);

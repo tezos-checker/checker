@@ -121,7 +121,7 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   * sub-contract. *)
 let touch
     (tezos: Tezos.t)
-    (current_index: FixedPoint.t) (* TODO: George: shouldn't this be in Tez.t instead? *)
+    (current_index: Tez.t)
     (current_kit_in_tez: Q.t)
     (parameters: t)
   : Kit.t * t =
@@ -139,7 +139,7 @@ let touch
     Tez.of_q_floor Q.( (* FLOOR-or-CEIL *)
         Tez.to_q parameters.protected_index
         * clamp
-          (FixedPoint.to_q current_index / Tez.to_q parameters.protected_index)
+          (Tez.to_q current_index / Tez.to_q parameters.protected_index)
           lower_lim
           upper_lim
       ) in
@@ -163,7 +163,7 @@ let touch
       ) in
 
   let current_target = FixedPoint.of_q_floor Q.( (* FLOOR-or-CEIL *)
-      FixedPoint.to_q current_q * FixedPoint.to_q current_index / current_kit_in_tez
+      FixedPoint.to_q current_q * Tez.to_q current_index / current_kit_in_tez
     ) in
 
   (* Update the indices *)
@@ -204,7 +204,7 @@ let touch
 
   ( total_accrual_to_uniswap
   , {
-    index = Tez.(scale one current_index);
+    index = current_index;
     protected_index = current_protected_index;
     target = current_target;
     drift = current_drift;

@@ -22,7 +22,7 @@ let suite =
           level = Level.of_int 60;
         } in
 
-      let new_index = FixedPoint.of_string "0.34" in
+      let new_index = Tez.of_mutez 340_000 in
       let kit_in_tez = FixedPoint.(to_q (of_string "0.305")) in
       let total_accrual_to_uniswap, new_parameters = Parameters.touch tezos new_index kit_in_tez initial_parameters in
       assert_equal
