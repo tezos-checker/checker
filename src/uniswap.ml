@@ -9,7 +9,7 @@ type t =
   { tez: Tez.t;
     kit: Kit.t;
     lqt: liquidity;
-    (* NOTE: George: I don't expect this to get really big in size cause it's
+    (* George: I don't expect this to get really big in size cause it's
      * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
      * are relatively prime, we are OK). *)
     kit_in_tez_in_prev_block: Q.t [@printer Q.pp_print];
@@ -29,23 +29,29 @@ let make_initial (level: Level.t) =
   { tez = Tez.zero;
     kit = Kit.zero;
     lqt = liquidity_of_int 0;
-    kit_in_tez_in_prev_block = Q.undef; (* Same as tez/kit now. TODO: undef! *)
+    kit_in_tez_in_prev_block = Q.undef; (* Same as tez/kit now. NOTE: undef! *)
     last_level = level;
   }
 
 (* When the uniswap is uninitialized, we should not be able to query prices
- * and/or do other things. I assume that the only thing we should allow is
- * adding liquidity, to kick things off. George: I assume that they should
- * either all be true, or all false? TODO. *)
+ * and/or do other things. George: I assume that the only thing we should allow
+ * is adding liquidity, to kick things off. I would also like to assume that
+ * all the conditions below should be either all true or all false, but the
+ * implementation of remove_liquidity currently allows liquidity to reach zero.
+ * *)
 let is_uniswap_uninitialized (u: t) =
      u.tez = Tez.zero
   || u.kit = Kit.zero
   || u.lqt = 0
   || compare u.kit_in_tez_in_prev_block Q.undef = 0
 
-let is_tez_pool_empty (u: t) = assert (u.tez >= Tez.zero); u.tez = Tez.zero
+let is_tez_pool_empty (u: t) =
+  assert (u.tez >= Tez.zero);
+  u.tez = Tez.zero
 
-let is_token_pool_empty (u: t) = assert (u.kit >= Kit.zero); u.kit = Kit.zero
+let is_token_pool_empty (u: t) =
+  assert (u.kit >= Kit.zero);
+  u.kit = Kit.zero
 
 let is_liquidity_token_pool_empty (u: t) =
   assert (u.lqt >= 0);
@@ -57,13 +63,14 @@ let kit_in_tez_in_prev_block (uniswap: t) =
 
 (* Update the kit_in_tez cached and last_level, if we just entered a new block.
  * This should be called before we many any changes to the contract so that we
- * don't lose the last kit_in_tez at the end of the last block. NOTE: George:
- * this might not be the previous block, but the last block in which the
+ * don't lose the last kit_in_tez at the end of the last block. George: Note
+ * that this is not be the previous block, but the last block in which the
  * uniswap contract was touched. *)
 let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
   assert (tezos.level >= uniswap.last_level); (* TODO: can it be later?? *)
   if uniswap.last_level = tezos.level then
-    uniswap (* do nothing if it's been touched already in this block *)
+    (* do nothing if it's been touched already in this block *)
+    uniswap
   else
     { uniswap with
       kit_in_tez_in_prev_block = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit);

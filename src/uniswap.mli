@@ -24,8 +24,7 @@
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
  * - Implement the auction for deciding who to delegate to.
- * - Add mapping from accounts to allowances, and in general finish
- *   implementing all the LP-related functionality.
+ * - How should we transfer liquidity shares?
 *)
 type liquidity
 
@@ -132,7 +131,7 @@ val remove_liquidity :
   deadline:Timestamp.t ->
   (Tez.t * Kit.t * t, Error.error) result
 
-(** Add accrued burrowing fees to the uniswap contract. NOTE: non-negative? *)
+(** Add accrued burrowing fees to the uniswap contract. *)
 val add_accrued_kit :
   t ->
   Tezos.t ->

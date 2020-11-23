@@ -1,12 +1,6 @@
 
 open OUnit2
 
-type lq = Uniswap.liquidity [@@deriving show]
-type us = Uniswap.t [@@deriving show]
-type kt = Kit.t [@@deriving show]
-type tz = Tez.t [@@deriving show]
-type fp = FixedPoint.t [@@deriving show]
-
 (* It is unfortunate (but reasonable): but we cannot derive show for open
  * types. Turn the result into an option so that we can print it. *)
 type buy_kit_res  = (Kit.t * Uniswap.t) option [@@deriving show]
@@ -183,9 +177,9 @@ let suite =
        with
        | Error _err -> failwith "buy liquidity: the impossible happened!"
        | Ok (returned_liquidity, returned_tez, returned_kit, updated_uniswap) ->
-         assert_equal ~printer:show_lq expected_returned_liquidity returned_liquidity;
-         assert_equal ~printer:show_tz expected_returned_tez returned_tez;
-         assert_equal ~printer:show_kt expected_returned_kit returned_kit;
-         assert_equal ~printer:show_us expected_updated_uniswap updated_uniswap
+         assert_equal ~printer:Uniswap.show_liquidity expected_returned_liquidity returned_liquidity;
+         assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
+         assert_equal ~printer:Kit.show expected_returned_kit returned_kit;
+         assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap
     );
   ]
