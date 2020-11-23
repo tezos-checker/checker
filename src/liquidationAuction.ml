@@ -46,17 +46,25 @@ Utku: Lifecycle of liquidation slices.
    'completed_auctions' FIFO queue. This FIFO queue is implemented as a doubly
    linked list at tree roots.
 
-4. When a burrow is touched, it checks if the head of its slices belongs to
-   a completed auction or not. This can be checked via the 'find_root'
+4. When 'touch_liquidation_slice' is called the slice is checked if it belongs
+   to a completed auction or not. This can be checked via the 'find_root'
    function of AVL trees. If we end up in 'queued_slices' or 'curent_auction',
    it is not complete, if not, it means that we're in 'completed_auctions'.
 
    If the slice is completed, then the burrows outstanding kit balance is
-   adjusted and the leaf is deleted from the tree.
+   adjusted and the leaf is deleted from the tree. If it was the last remaining
+   slice of the relevant auction (in other words, if the auction's tree becomes
+   empty after the removal), the auctions is popped from the 'completed_auctions'
+   linked list.
 
 5. When checker is touched, it fetches the oldest auction from `completed_auctions`
    queue, and processes a few of oldest liquidations. This is to clean-up the slices
    that haven't been claimed for some reason.
+
+6. When the winner of an auction tries to claim the result, we check if its auction
+   has no liquidation_slice's left. If all the slices are already touched, this
+   means that the tree is already popped out of the completed_auctions list. In
+   this case, we transfer the result to the callee, and remove the auction alltogether.
 *)
 
 type Error.error +=
