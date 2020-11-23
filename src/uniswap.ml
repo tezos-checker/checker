@@ -70,6 +70,7 @@ type Error.error +=
   | UniswapNonPositiveInput
   | UniswapTooLate
   | AddLiquidityNoTezGiven
+  | AddLiquidityNoKitGiven
   | AddLiquidityNoLiquidityToBeAdded
   | AddLiquidityTooLowLiquidityMinted
   | AddLiquidityTooMuchKitRequired
@@ -168,6 +169,8 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
     Error UniswapTooLate
   else if amount = Tez.zero then
     Error AddLiquidityNoTezGiven
+  else if max_kit_deposited = Kit.zero then
+    Error AddLiquidityNoKitGiven
   else if min_lqt_minted = 0 then
     Error AddLiquidityNoLiquidityToBeAdded
   else
