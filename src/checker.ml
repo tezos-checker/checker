@@ -540,6 +540,8 @@ struct
           (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
 
       (* 5: Touch oldest liquidation slices *)
+      (* TODO: Touch only runs at most once per block. But it might be benefical to run this step
+       * without that restriction. *)
       let new_state =
         { burrows = state.burrows; (* leave as-is *)
           parameters = updated_parameters;
@@ -553,6 +555,8 @@ struct
           match LiquidationAuction.oldest_completed_liquidation_slice st.liquidation_auctions with
           | None -> st
           | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (max-1) in
+
+      (* TODO: Figure out how many slices we can process per checker touch.*)
       let new_state = touch_oldest 5 new_state in
 
       (* TODO: Add more tasks here *)
