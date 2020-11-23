@@ -47,7 +47,8 @@ val make_for_test :
   last_level:Level.t ->
   t
 
-(** The initial state of the uniswap contract. TODO: Contents TBD. *)
+(** The initial state of the uniswap contract. All amounts are set to zero, and
+  * the last-observed kit-in-tez price is undefined (0/0). *)
 val make_initial : Level.t -> t
 
 (** Check whether the uniswap contract contains zero tez. *)

@@ -3,7 +3,7 @@
 (* ************************************************************************* *)
 type liquidity = int [@@deriving show]
 
-let liquidity_of_int i = assert (i > 0); i
+let liquidity_of_int i = assert (i >= 0); i
 
 type t =
   { tez: Tez.t;
@@ -26,15 +26,22 @@ let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
   }
 
 let make_initial (level: Level.t) =
-  let tez = Tez.one in
-  let kit = Kit.one in
-  let lqt = liquidity_of_int 1 in
-  { tez = tez;
-    kit = kit;
-    lqt = lqt;
-    kit_in_tez_in_prev_block = Q.(Tez.to_q tez / Kit.to_q kit); (* Same as tez/kit now *)
+  { tez = Tez.zero;
+    kit = Kit.zero;
+    lqt = liquidity_of_int 0;
+    kit_in_tez_in_prev_block = Q.undef; (* Same as tez/kit now. TODO: undef! *)
     last_level = level;
   }
+
+(* When the uniswap is uninitialized, we should not be able to query prices
+ * and/or do other things. I assume that the only thing we should allow is
+ * adding liquidity, to kick things off. George: I assume that they should
+ * either all be true, or all false? TODO. *)
+let is_uniswap_uninitialized (u: t) =
+     u.tez = Tez.zero
+  || u.kit = Kit.zero
+  || u.lqt = 0
+  || compare u.kit_in_tez_in_prev_block Q.undef = 0
 
 let is_tez_pool_empty (u: t) = assert (u.tez >= Tez.zero); u.tez = Tez.zero
 
@@ -44,9 +51,9 @@ let is_liquidity_token_pool_empty (u: t) =
   assert (u.lqt >= 0);
   u.lqt = 0
 
-let kit_in_tez (uniswap: t) = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit)
-
-let kit_in_tez_in_prev_block (uniswap: t) = uniswap.kit_in_tez_in_prev_block
+let kit_in_tez_in_prev_block (uniswap: t) =
+  assert (not (is_uniswap_uninitialized uniswap));
+  uniswap.kit_in_tez_in_prev_block
 
 (* Update the kit_in_tez cached and last_level, if we just entered a new block.
  * This should be called before we many any changes to the contract so that we
@@ -59,7 +66,7 @@ let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
     uniswap (* do nothing if it's been touched already in this block *)
   else
     { uniswap with
-      kit_in_tez_in_prev_block = kit_in_tez uniswap;
+      kit_in_tez_in_prev_block = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap.kit);
       last_level = tezos.level;
     }
 
@@ -93,6 +100,7 @@ type Error.error +=
 
 let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
+  assert (not (is_uniswap_uninitialized uniswap));
   if (is_tez_pool_empty uniswap) then
     Error UniswapEmptyTezPool
   else if (is_token_pool_empty uniswap) then
@@ -122,6 +130,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
 
 let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~tezos ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
+  assert (not (is_uniswap_uninitialized uniswap));
   if is_tez_pool_empty uniswap then
     Error UniswapEmptyTezPool
   else if is_token_pool_empty uniswap then
@@ -164,9 +173,7 @@ let sell_kit (uniswap: t) ~amount (kit: Kit.t) ~min_tez_expected ~tezos ~deadlin
  * continuously credited with the burrow fee taken from burrow holders. *)
 let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
-  if is_tez_pool_empty uniswap then
-    Error UniswapEmptyTezPool
-  else if tezos.now >= deadline then
+  if tezos.now >= deadline then
     Error UniswapTooLate
   else if amount = Tez.zero then
     Error AddLiquidityNoTezGiven
@@ -183,29 +190,39 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
         Error AddLiquidityLessThanOneTez
       else
         let lqt_minted = Q.to_int (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
-        let updated = { uniswap with
-                        kit = max_kit_deposited;
-                        tez = amount;
-                        lqt = Q.to_int (Tez.to_q amount); } in
+        (* TODO: I think that if lqt_minted is less than min_lqt_minted then we
+         * should fail. Dexter's API doesn't show this, but I would assume so? *)
+        let updated =
+          { kit = max_kit_deposited;
+            tez = amount;
+            lqt = Q.to_int (Tez.to_q amount);
+            (* George: when the contract is initialized, the "prev" data
+             * coincide with the current data, otherwise we keep uniswap
+             * useless for longer than needed. *)
+            kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
+            last_level = tezos.level; } in
         Ok (lqt_minted, Tez.zero, Kit.zero, updated)
       )
     else
       (* Non-first Liquidity Provider *)
-      let lqt_minted = Q.(to_int (of_int uniswap.lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
-      let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
-
-      if lqt_minted < min_lqt_minted then
-        Error AddLiquidityTooLowLiquidityMinted
-      else if max_kit_deposited < kit_deposited then
-        Error AddLiquidityTooMuchKitRequired
-      else if kit_deposited = Kit.zero then
-        Error AddLiquidityZeroKitDeposited
+      if is_tez_pool_empty uniswap then
+        Error UniswapEmptyTezPool
       else
-        let updated = { uniswap with
-                        kit = Kit.(uniswap.kit + kit_deposited);
-                        tez = Tez.(uniswap.tez + amount);
-                        lqt = uniswap.lqt + lqt_minted } in
-        Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
+        let lqt_minted = Q.(to_int (of_int uniswap.lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
+        let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
+
+        if lqt_minted < min_lqt_minted then
+          Error AddLiquidityTooLowLiquidityMinted
+        else if max_kit_deposited < kit_deposited then
+          Error AddLiquidityTooMuchKitRequired
+        else if kit_deposited = Kit.zero then
+          Error AddLiquidityZeroKitDeposited
+        else
+          let updated = { uniswap with
+                          kit = Kit.(uniswap.kit + kit_deposited);
+                          tez = Tez.(uniswap.tez + amount);
+                          lqt = uniswap.lqt + lqt_minted } in
+          Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think
@@ -216,6 +233,7 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
 let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline
   : (Tez.t * Kit.t * t, Error.error) result =
   let uniswap = sync_last_observed uniswap tezos in
+  assert (not (is_uniswap_uninitialized uniswap));
   if is_liquidity_token_pool_empty uniswap then
     (* Since this requires a liquidity token, contract cannot be empty *)
     Error UniswapEmptyLiquidityTokenPool

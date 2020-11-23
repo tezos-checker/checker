@@ -26,6 +26,21 @@ let suite =
        let l0 = Level.of_int 0 in
        let checker = Checker.initialize t0 l0 in
 
+       let int_level = 0 in
+       let tezos = Tezos.{
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+         } in
+
+       let (_lqt_minted, _ret_tez, _ret_kit, checker) = assert_ok @@
+         Checker.add_liquidity
+           checker
+           ~tezos
+           ~amount:Tez.one
+           ~max_kit_deposited:Kit.one
+           ~min_lqt_minted:(Uniswap.liquidity_of_int 1)
+           ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
+
        let (burrow_id, checker) = assert_ok @@
          Checker.create_burrow
            checker
