@@ -70,6 +70,10 @@ type 't leaf = {
 }
 [@@deriving show]
 
+(* TODO Instead of storing left_height and right_height, we could just
+ * store the sum type LeftHeavy | Balanced | RightHeavy. However, I think
+ * we might want to leave some trees unbalanced, and I think this approach
+ * might work better in that case. *)
 type branch = {
   left: ptr;
   left_height: int;
@@ -409,7 +413,9 @@ let push_front
   | _ ->
     failwith "push_front is passed a non-root pointer."
 
-let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem =
+(* Deletes a leaf pointer. Note that this does not require the tree root
+ * to be passed. Returns the root of the tree as an extra information. *)
+let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem * avl_ptr =
   let self = mem_get mem ptr in
   let parent_ptr = node_parent self in
   let mem = mem_del mem ptr in
@@ -417,7 +423,8 @@ let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem =
   | Leaf _ -> failwith "del: parent is a leaf"
   (* when deleting the sole element, we return an empty tree *)
   | Root (_, m) ->
-    mem_set mem parent_ptr (Root (None, m))
+    let mem = mem_set mem parent_ptr (Root (None, m)) in
+    (mem, AVLPtr parent_ptr)
   (* otherwise, the parent of the deleted element is redundant since it
    * only has a single child, so we delete the parent and the orphan sibling
    * is adopted by the grandparent who have lost its child. *)
@@ -437,16 +444,17 @@ let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem =
     let rec balance_bottom_up mem curr_ptr =
       let curr = mem_get mem curr_ptr in
       match curr with
-      | Root _ -> mem
+      | Root _ -> (mem, AVLPtr curr_ptr)
       | Leaf _ -> failwith "impossible"
       | Branch b ->
+        (* TODO we can stop recursing up when node height does not change. *)
         let (mem, new_curr) = balance mem curr_ptr in
         assert (node_parent (mem_get mem new_curr) = b.parent);
         let mem = update_matching_child mem b.parent curr_ptr new_curr in
         balance_bottom_up mem b.parent in
     balance_bottom_up mem grandparent_ptr
 
-let del (mem: ('l, 'r) mem) (LeafPtr ptr): ('l, 'r) mem = ref_del mem ptr
+let del (mem: ('l, 'r) mem) (LeafPtr ptr): ('l, 'r) mem * avl_ptr = ref_del mem ptr
 
 let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 't * Tez.t =
   match mem_get mem ptr with
@@ -495,13 +503,19 @@ let rec ref_peek_front (mem: ('l, 'r) mem) (ptr: ptr) : leaf_ptr * 't leaf =
   | Branch b -> ref_peek_front mem b.left
   | _ -> failwith "node is not leaf or branch"
 
+let peek_front (mem: ('l, 'r) mem) (AVLPtr ptr) : (leaf_ptr * 't leaf) option =
+  match mem_get mem ptr with
+  | Root (None, _) -> None
+  | Root (Some r, _) -> Some (ref_peek_front mem r)
+  | _ -> failwith "peek_front: avl_ptr does not point to a Root"
+
 (* FIXME: needs an efficient reimplementation *)
 let pop_front (mem: ('l, 'r) mem) (AVLPtr root_ptr) : ('l, 'r) mem * 't option =
   match mem_get mem root_ptr with
   | Root (None, _) -> (mem, None)
   | Root (Some r, _) ->
     let (leafptr, leaf) = ref_peek_front mem r in
-    let mem = del mem leafptr in
+    let (mem, _) = del mem leafptr in
     (mem, Some leaf.value)
   | _ -> failwith "pop_front: avl_ptr does not point to a Root"
 
@@ -585,3 +599,16 @@ let modify_root_data (mem: ('l, 'r) mem) (AVLPtr ptr) (f: 'r -> 'r)  =
   match mem_get mem ptr with
   | Root (p, r) -> mem_set mem ptr (Root (p, f r))
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
+
+
+(* Debugging utilities *)
+
+let debug_mem (mem: ('l, 'r) mem) (show_l: Format.formatter -> 'l -> unit) (show_r: Format.formatter -> 'r -> unit) : unit =
+  BigMap.iter
+    (fun k v ->
+       Format.printf
+         "%s -> %s\n"
+         (Ptr.to_string k)
+         (show_node show_l show_r v);
+    )
+    mem

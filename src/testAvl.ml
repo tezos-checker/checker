@@ -17,16 +17,6 @@ let add_all (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
     mem
     xs
 
-let debug_mem (mem: (int, int) mem) : unit =
-  BigMap.iter
-    (fun k v ->
-       printf
-         "%s -> %s\n"
-         (Ptr.to_string k)
-         (show_node pp_print_int pp_print_int v);
-    )
-    mem
-
 let debug_avl (mem: (int, int) mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
@@ -175,7 +165,8 @@ let suite =
     (fun _ ->
        let (mem, root) = mk_empty BigMap.empty 0 in
        let (mem, elem) = push_back mem root 1 (nTez 5) in
-       let mem = del mem elem in
+       let (mem, root_) = del mem elem in
+       assert_equal root root_;
        assert_equal [] (to_list mem root);
        assert_equal 1 (BigMap.cardinal mem));
 
@@ -196,7 +187,8 @@ let suite =
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
 
-       let mem = del mem elem in
+       let (mem, root_) = del mem elem in
+       assert_equal root root_;
 
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
@@ -239,7 +231,8 @@ let suite =
      let mem = add_all mem root right_items in
      assert_invariants mem root;
 
-     let mem = del mem to_del in
+     let (mem, root_) = del mem to_del in
+     assert_equal root root_;
      (*
      printf "- %s %s %s ----------\n"
        (show_element_list left_items)

@@ -1,6 +1,5 @@
 open OUnit2
 open Checker
-open Burrow
 
 let bob = Address.of_string "bob"
 let alice = Address.of_string "alice"
@@ -120,6 +119,9 @@ let suite =
 
        assert_equal (Kit.of_mukit 21_000_006) touch_reward ~printer:Kit.show;
 
+       (* We don't need to touch the slice on this test case since Checker.touch
+        * already touches the oldest 5 slices. *)
+       (*
        let slice =
          (PtrMap.find burrow_id checker.burrows)
          |> Burrow.liquidation_slices
@@ -130,6 +132,7 @@ let suite =
          Checker.touch_liquidation_slices
            checker
            [slice] in
+       *)
 
        let result = PtrMap.find burrow_id checker.burrows in
        assert_bool "burrow should have no liquidation slices"

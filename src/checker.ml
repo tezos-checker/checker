@@ -148,70 +148,6 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
-  (** Calculate how much is right now the reward for touching the main checker
-    * contract. We use a bracketed calculation, where for the first
-    * touch_reward_low_bracket seconds the reward increases by touch_low_reward
-    * per second, and after that by touch_high_reward per second. *)
-  let calculate_touch_reward (state:t) ~tezos : Kit.t =
-    assert (state.parameters.last_touched <= Tezos.(tezos.now));
-    let duration_in_seconds =
-      Timestamp.seconds_elapsed
-        ~start:state.parameters.last_touched
-        ~finish:tezos.now in
-    let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
-    let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
-
-    let touch_low_reward = FixedPoint.of_q_ceil Constants.touch_low_reward in (* FLOOR-or-CEIL *)
-    let touch_high_reward = FixedPoint.of_q_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
-    Kit.scale
-      Kit.one
-      FixedPoint.(
-        of_int low_duration * touch_low_reward
-        + of_int high_duration * touch_high_reward
-      )
-
-  let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.t * t) =
-    if state.parameters.last_touched = Tezos.(tezos.now) then
-      (* Do nothing if up-to-date (idempotence) *)
-      (Kit.zero, state)
-    else
-      (* TODO: What is the right order in which to do things here? We use the
-       * last observed kit_in_tez price from uniswap to update the parameters,
-       * which return kit to be added to the uniswap contract. Gotta make sure we
-       * do things in the right order here. *)
-
-      (* 1: Calculate the reward that we should create out of thin air to give
-       * to the contract toucher, and update the circulating kit accordingly.*)
-      let reward = calculate_touch_reward state ~tezos in
-      let state = { state with parameters =
-                                 Parameters.add_circulating_kit state.parameters reward } in
-
-      (* 2: Update the system parameters *)
-      let total_accrual_to_uniswap, updated_parameters =
-        Parameters.touch tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
-      in
-      (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
-      (* 4: Update auction-related info (e.g. start a new auction) *)
-      let updated_auctions =
-        LiquidationAuction.touch
-          state.liquidation_auctions
-          tezos
-          (* Start the auction using the current liquidation price. We could
-           * also have calculated the price right now directly using the oracle
-           * feed as (tz_t * q_t), or use the current minting price, but using
-           * the liquidation price is the safest option. *)
-          (* George: I use ceil, to stay on the safe side (higher-price) *)
-          (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
-      (* TODO: Add more tasks here *)
-      ( reward,
-        { burrows = state.burrows; (* leave as-is *)
-          parameters = updated_parameters;
-          uniswap = updated_uniswap;
-          liquidation_auctions = updated_auctions;
-        }
-      )
-
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
   (* ************************************************************************* *)
@@ -390,14 +326,26 @@ struct
         { state with
           parameters = Parameters.remove_circulating_kit state.parameters kit_to_burn } in
 
+      (* Now we delete the slice from the lot, so it cannot be
+       * withdrawn twice, also to save storage. This might cause
+       * the lot root to change, so we also update completed_auctions
+       * to reflect that.
+       *
+       * Deletion process also returns the tree root. *)
+      let (state, auction) =
+        let (new_storage, auction) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+        let new_state = { state with liquidation_auctions = { state.liquidation_auctions with avl_storage = new_storage }} in
+        (new_state, auction) in
+
+      (* When the auction has no slices left, we pop it from the linked list of lots. We do not
+       * delete the auction itself from the storage, since we still want the winner to be able
+       * to claim its result. *)
       let state =
-        { state with liquidation_auctions = { state.liquidation_auctions with
-                                              (* Now we delete the slice from the lot, so it cannot be
-                                               * withdrawn twice, also to save storage. This might cause
-                                               * the lot root to change, so we also update completed_auctions
-                                               * to reflect that. *)
-                                              avl_storage = Avl.del state.liquidation_auctions.avl_storage leaf_ptr
-                                            }} in
+        if Avl.is_empty state.liquidation_auctions.avl_storage auction then
+        { state with
+          liquidation_auctions = LiquidationAuction.pop_completed_auction state.liquidation_auctions auction;
+        }
+        else state in
 
       (* When we delete the youngest or the oldest slice, we have to adjust
        * the burrow pointers accordingly.
@@ -531,4 +479,82 @@ struct
     | Error err -> Error err
     | Ok (ret, liquidation_auctions) -> Ok (ret, { state with liquidation_auctions })
 
+  (* ************************************************************************* *)
+  (**                              TOUCHING                                    *)
+  (* ************************************************************************* *)
+
+  (** Calculate how much is right now the reward for touching the main checker
+    * contract. We use a bracketed calculation, where for the first
+    * touch_reward_low_bracket seconds the reward increases by touch_low_reward
+    * per second, and after that by touch_high_reward per second. *)
+  let calculate_touch_reward (state:t) ~tezos : Kit.t =
+    assert (state.parameters.last_touched <= Tezos.(tezos.now));
+    let duration_in_seconds =
+      Timestamp.seconds_elapsed
+        ~start:state.parameters.last_touched
+        ~finish:tezos.now in
+    let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
+    let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
+
+    let touch_low_reward = FixedPoint.of_q_ceil Constants.touch_low_reward in (* FLOOR-or-CEIL *)
+    let touch_high_reward = FixedPoint.of_q_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
+    Kit.scale
+      Kit.one
+      FixedPoint.(
+        of_int low_duration * touch_low_reward
+        + of_int high_duration * touch_high_reward
+      )
+
+  let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.t * t) =
+    if state.parameters.last_touched = Tezos.(tezos.now) then
+      (* Do nothing if up-to-date (idempotence) *)
+      (Kit.zero, state)
+    else
+      (* TODO: What is the right order in which to do things here? We use the
+       * last observed kit_in_tez price from uniswap to update the parameters,
+       * which return kit to be added to the uniswap contract. Gotta make sure we
+       * do things in the right order here. *)
+
+      (* 1: Calculate the reward that we should create out of thin air to give
+       * to the contract toucher, and update the circulating kit accordingly.*)
+      let reward = calculate_touch_reward state ~tezos in
+      let state = { state with parameters =
+                                 Parameters.add_circulating_kit state.parameters reward } in
+
+      (* 2: Update the system parameters *)
+      let total_accrual_to_uniswap, updated_parameters =
+        Parameters.touch tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
+      in
+      (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
+      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
+      (* 4: Update auction-related info (e.g. start a new auction) *)
+      let updated_auctions =
+        LiquidationAuction.touch
+          state.liquidation_auctions
+          tezos
+          (* Start the auction using the current liquidation price. We could
+           * also have calculated the price right now directly using the oracle
+           * feed as (tz_t * q_t), or use the current minting price, but using
+           * the liquidation price is the safest option. *)
+          (* George: I use ceil, to stay on the safe side (higher-price) *)
+          (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
+
+      (* 5: Touch oldest liquidation slices *)
+      let new_state =
+        { burrows = state.burrows; (* leave as-is *)
+          parameters = updated_parameters;
+          uniswap = updated_uniswap;
+          liquidation_auctions = updated_auctions;
+        } in
+
+      let rec touch_oldest max st =
+        if max <= 0 then st
+        else
+          match LiquidationAuction.oldest_completed_liquidation_slice st.liquidation_auctions with
+          | None -> st
+          | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (max-1) in
+      let new_state = touch_oldest 5 new_state in
+
+      (* TODO: Add more tasks here *)
+      (reward, new_state)
 end

@@ -92,6 +92,7 @@ type current_auction = {
   contents: Avl.avl_ptr;
   state: auction_state;
 }
+[@@deriving show]
 
 type auction_outcome = {
   sold_tez: Tez.t;
@@ -99,11 +100,13 @@ type auction_outcome = {
   younger_auction: Avl.avl_ptr option;
   older_auction: Avl.avl_ptr option;
 }
+[@@deriving show]
 
 type completed_auctions =
   { youngest: Avl.avl_ptr
   ; oldest: Avl.avl_ptr
   }
+[@@deriving show]
 
 module AvlPtrMap =
   Map.Make(struct
@@ -147,7 +150,7 @@ let cancel_liquidation
   if Avl.find_root auctions.avl_storage slice = auctions.queued_slices
   then
     (* if the slice belongs to queued_slices tree, we can cancel it *)
-    let new_storage = Avl.del auctions.avl_storage slice in
+    let (new_storage, _) = Avl.del auctions.avl_storage slice in
     Some { auctions with avl_storage = new_storage; }
   else
     (* otherwise, it means that the auction is either in progress
@@ -364,10 +367,8 @@ let reclaim_bid
     (* TODO: punch tickets *)
     Ok bid_details.bid.kit
 
-(* When we delete a completed auction, we need to fixup the pointers
- * in the older and younger lots, as well as the oldest and youngest
- * fields in auctions if necessary. *)
-let delete_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
+(* Removes the auction from completed lots list, while preserving the auction itself. *)
+let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
   let storage = auctions.avl_storage in
 
   let outcome = match Avl.root_data storage tree with
@@ -416,12 +417,12 @@ let delete_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions
             assert (i.younger_auction = Some tree);
             Some {i with younger_auction=outcome.younger_auction} in
 
-  let storage = Avl.delete_tree storage tree in
+  let storage = Avl.modify_root_data storage tree @@ fun _ ->
+    Some { outcome with younger_auction = None; older_auction = None } in
   { auctions with
     completed_auctions;
     avl_storage = storage
   }
-
 
 let reclaim_winning_bid
     (auctions: auctions)
@@ -434,16 +435,20 @@ let reclaim_winning_bid
       * for that lot is cleaned. *)
      if not (Avl.is_empty auctions.avl_storage bid_details.auction_id)
      then Error NotAllSlicesClaimed
-     else
-       (* When the winner reclaims their bid, we remove
+     else (
+       (* When the winner reclaims their bid, we finally remove
           every reference to the auction. This is just to
           save storage, what's forbidding double-claiming
           is the ticket mechanism, not this.
         *)
+       assert (outcome.younger_auction = None);
+       assert (outcome.older_auction = None);
        let auctions =
-         delete_completed_auction auctions bid_details.auction_id in
-
+         { auctions with
+           avl_storage =
+             Avl.delete_tree auctions.avl_storage bid_details.auction_id } in
        Ok (outcome.sold_tez, auctions)
+     )
   | None -> Error NotAWinningBid
 
 
@@ -476,3 +481,11 @@ let current_auction_tez (auctions: auctions) : Tez.t option =
  * TODO: return kit to losing bidders
  * TODO: when liquidation result was "close", what happens after the tez is sold? Might we find that we didn't need to close it after all?
  *)
+
+let oldest_completed_liquidation_slice (auctions: auctions) : Avl.leaf_ptr option =
+  match auctions.completed_auctions with
+  | None -> None
+  | Some completed_auctions ->
+  match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
+  | None -> failwith "invariant violation: empty auction in completed_auctions"
+  | Some (leaf_ptr, _) -> Some leaf_ptr
