@@ -72,6 +72,7 @@ type Error.error +=
   | AddLiquidityNoTezGiven
   | AddLiquidityNoKitGiven
   | AddLiquidityNoLiquidityToBeAdded
+  | AddLiquidityLessThanOneTez
   | AddLiquidityTooLowLiquidityMinted
   | AddLiquidityTooMuchKitRequired
   | AddLiquidityZeroKitDeposited
@@ -174,21 +175,37 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
   else if min_lqt_minted = 0 then
     Error AddLiquidityNoLiquidityToBeAdded
   else
-    let lqt_minted = Q.(to_int (of_int uniswap.lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
-    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
-
-    if lqt_minted < min_lqt_minted then
-      Error AddLiquidityTooLowLiquidityMinted
-    else if max_kit_deposited < kit_deposited then
-      Error AddLiquidityTooMuchKitRequired
-    else if kit_deposited = Kit.zero then
-      Error AddLiquidityZeroKitDeposited
+    if uniswap.lqt = 0 then (
+      (* First Liquidity Provider *)
+      assert (uniswap.kit = Kit.zero);
+      assert (uniswap.tez = Tez.zero);
+      if amount < Tez.one then
+        Error AddLiquidityLessThanOneTez
+      else
+        let lqt_minted = Q.to_int (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
+        let updated = { uniswap with
+                        kit = max_kit_deposited;
+                        tez = amount;
+                        lqt = Q.to_int (Tez.to_q amount); } in
+        Ok (lqt_minted, Tez.zero, Kit.zero, updated)
+      )
     else
-      let updated = { uniswap with
-                      kit = Kit.(uniswap.kit + kit_deposited);
-                      tez = Tez.(uniswap.tez + amount);
-                      lqt = uniswap.lqt + lqt_minted } in
-      Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
+      (* Non-first Liquidity Provider *)
+      let lqt_minted = Q.(to_int (of_int uniswap.lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
+      let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap.kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
+
+      if lqt_minted < min_lqt_minted then
+        Error AddLiquidityTooLowLiquidityMinted
+      else if max_kit_deposited < kit_deposited then
+        Error AddLiquidityTooMuchKitRequired
+      else if kit_deposited = Kit.zero then
+        Error AddLiquidityZeroKitDeposited
+      else
+        let updated = { uniswap with
+                        kit = Kit.(uniswap.kit + kit_deposited);
+                        tez = Tez.(uniswap.tez + amount);
+                        lqt = uniswap.lqt + lqt_minted } in
+        Ok (lqt_minted, Tez.zero, Kit.(max_kit_deposited - kit_deposited), updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think
