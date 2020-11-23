@@ -197,18 +197,19 @@ let add_liquidity (uniswap: t) ~amount ~max_kit_deposited ~min_lqt_minted ~tezos
         Error AddLiquidityLessThanOneTez
       else
         let lqt_minted = Q.to_int (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
-        (* TODO: I think that if lqt_minted is less than min_lqt_minted then we
-         * should fail. Dexter's API doesn't show this, but I would assume so? *)
-        let updated =
-          { kit = max_kit_deposited;
-            tez = amount;
-            lqt = Q.to_int (Tez.to_q amount);
-            (* George: when the contract is initialized, the "prev" data
-             * coincide with the current data, otherwise we keep uniswap
-             * useless for longer than needed. *)
-            kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
-            last_level = tezos.level; } in
-        Ok (lqt_minted, Tez.zero, Kit.zero, updated)
+        if lqt_minted < min_lqt_minted then
+          Error AddLiquidityTooLowLiquidityMinted
+        else
+          let updated =
+            { kit = max_kit_deposited;
+              tez = amount;
+              lqt = lqt_minted;
+              (* George: when the contract is initialized, the "prev" data
+               * coincide with the current data, otherwise we keep uniswap
+               * useless for longer than needed. *)
+              kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
+              last_level = tezos.level; } in
+          Ok (lqt_minted, Tez.zero, Kit.zero, updated)
       )
     else
       (* Non-first Liquidity Provider *)
