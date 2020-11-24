@@ -1,4 +1,4 @@
-type 'a ticket = 'a
+type 'a t = 'a
 
 let create info = info
 

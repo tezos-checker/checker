@@ -74,9 +74,6 @@ type Error.error +=
   | NotAWinningBid
   | NotAllSlicesClaimed
 
-(* Stub types *)
-type 'a ticket = 'a
-
 type liquidation_slice = {
   burrow: Ptr.t;
   tez: Tez.t;
@@ -88,7 +85,7 @@ type liquidation_slice = {
 
 type auction_id = Avl.avl_ptr
 type bid_details = { auction_id: auction_id; bid: Bid.t; }
-type bid_ticket = bid_details Ticket.ticket
+type bid_ticket = bid_details Ticket.t
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
@@ -327,7 +324,7 @@ let complete_auction_if_possible
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
 let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: Bid.t)
-  : (current_auction * bid_ticket ticket, Error.error) result =
+  : (current_auction * bid_ticket, Error.error) result =
   if bid.kit >= current_auction_minimum_bid tezos auction
   then
     Ok (

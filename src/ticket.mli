@@ -45,8 +45,8 @@ NFT contract, simplifying the code.
   different ticketer or content.
 *)
 
-type 'a ticket
+type 'a t
 
-val read : 'a ticket -> 'a
+val read : 'a t -> 'a
 
-val create : 'a -> 'a ticket
+val create : 'a -> 'a t
