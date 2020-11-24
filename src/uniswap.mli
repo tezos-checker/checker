@@ -25,7 +25,6 @@
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
  * - Implement the auction for deciding who to delegate to.
- * - How should we transfer liquidity shares?
 *)
 type liquidity
 

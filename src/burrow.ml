@@ -1,7 +1,7 @@
 (* ************************************************************************* *)
 (*                                Burrows                                    *)
 (* ************************************************************************* *)
-type burrow_liquidation_slices =
+type liquidation_slices =
   { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
 [@@deriving show]
 
@@ -28,7 +28,7 @@ type t =
      * outcome of the auctions we expect some kit in return. *)
     collateral_at_auction : Tez.t;
     (* Pointer to liquidation slices in auction queue. *)
-    liquidation_slices : burrow_liquidation_slices option;
+    liquidation_slices : liquidation_slices option;
     (* The last time the burrow was touched. *)
     last_touched : Timestamp.t;
   }
@@ -41,7 +41,7 @@ type Error.error +=
 
 let liquidation_slices (b: t) = b.liquidation_slices
 
-let set_liquidation_slices (b: t) (s: burrow_liquidation_slices option) =
+let set_liquidation_slices (b: t) (s: liquidation_slices option) =
   {b with liquidation_slices = s}
 
 let collateral_at_auction (b: t) = b.collateral_at_auction

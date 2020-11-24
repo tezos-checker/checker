@@ -1,13 +1,11 @@
 (* ************************************************************************* *)
 (*                                Burrows                                    *)
 (* ************************************************************************* *)
-type burrow_liquidation_slices =
+type liquidation_slices =
   { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
 
-val show_burrow_liquidation_slices
-  : burrow_liquidation_slices -> string
-val pp_burrow_liquidation_slices
-  : Format.formatter -> burrow_liquidation_slices -> unit
+val show_liquidation_slices : liquidation_slices -> string
+val pp_liquidation_slices : Format.formatter -> liquidation_slices -> unit
 
 (** Representation of a burrow contract. *)
 type t
@@ -16,8 +14,8 @@ val show : t -> string
 val pp : Format.formatter -> t -> unit
 
 (* Burrow API *)
-val liquidation_slices : t -> burrow_liquidation_slices option
-val set_liquidation_slices : t -> burrow_liquidation_slices option -> t
+val liquidation_slices : t -> liquidation_slices option
+val set_liquidation_slices : t -> liquidation_slices option -> t
 val collateral_at_auction : t -> Tez.t
 val active : t -> bool
 
@@ -30,7 +28,7 @@ val make_for_test :
     excess_kit:Kit.t ->
     adjustment_index:FixedPoint.t ->
     collateral_at_auction:Tez.t ->
-    liquidation_slices:(burrow_liquidation_slices option) ->
+    liquidation_slices:(liquidation_slices option) ->
     last_touched:Timestamp.t ->
     t
 
@@ -104,6 +102,14 @@ val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t, Error.error) result
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
 val burn_kit : Parameters.t -> Kit.t -> t -> t
+
+(* TODO: Add entrypoint for cancelling the liquidation of a slice. This should
+ * only be possible when
+ * - The liquidation slice is still at the auction queue (not at the current
+ *   auction or any of the completed auctions).
+ * - The burrow is UNDER-burrowed. To be precise, is_overburrowed should return
+ *   false.
+ *)
 
 (** Compute the least number of tez that needs to be auctioned off (given the
   * current expected minting price) so that the burrow can return to a state
