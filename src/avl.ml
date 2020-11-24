@@ -601,7 +601,7 @@ let modify_root_data (mem: ('l, 'r) mem) (AVLPtr ptr) (f: 'r -> 'r)  =
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
 
 
-(* Debugging utilities *)
+(* Test utilities *)
 
 let debug_mem (mem: ('l, 'r) mem) (show_l: Format.formatter -> 'l -> unit) (show_r: Format.formatter -> 'r -> unit) : unit =
   BigMap.iter
@@ -612,3 +612,31 @@ let debug_mem (mem: ('l, 'r) mem) (show_l: Format.formatter -> 'l -> unit) (show
          (show_node show_l show_r v);
     )
     mem
+
+let assert_invariants (mem: ('l, 'r) mem) (AVLPtr root) : unit =
+  let rec go (parent: ptr) (curr: ptr) =
+    match mem_get mem curr with
+    | Root _ ->
+      failwith "assert_invariants: tree root in unexpected location."
+    | Leaf leaf ->
+      assert (leaf.parent = parent)
+    | Branch branch ->
+      let left = mem_get mem branch.left in
+      let right = mem_get mem branch.right in
+      assert (branch.parent = parent);
+      assert (branch.left_height = node_height left);
+      assert (branch.left_tez = node_tez left);
+      assert (branch.right_height = node_height right);
+      assert (branch.right_tez = node_tez right);
+      assert (abs (branch.left_height - branch.right_height) < 2);
+      go curr branch.left;
+      go curr branch.right
+  in match mem_get mem root with
+  | Root (None, _) -> ()
+  | Root (Some r, _) -> go root r
+  | _ -> failwith "assert_invariants needs a root."
+
+let assert_dangling_pointers (mem: ('l, 'r) mem) (roots: avl_ptr list) : unit =
+  let mem = List.fold_left delete_tree mem roots in
+  assert (BigMap.is_empty mem)
+

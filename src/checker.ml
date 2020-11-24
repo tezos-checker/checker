@@ -420,6 +420,7 @@ struct
                                                     )
                                               }}
       ) in
+      LiquidationAuction.assert_invariants state.liquidation_auctions;
       state
 
   let touch_liquidation_slices (state: t) (slices: Avl.leaf_ptr list) : t =

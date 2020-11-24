@@ -75,7 +75,6 @@ type Error.error +=
   | NotAllSlicesClaimed
 
 (* Stub types *)
-type burrow_id = unit
 type 'a ticket = 'a
 
 type liquidation_slice = {
@@ -471,18 +470,6 @@ let current_auction_tez (auctions: auctions) : Tez.t option =
     auctions.current_auction
 
 (*
- * - Decrease / increase price gradually
- * - Close an auction if complete
- * - Called from Checker contract's "touch" operation
- * touch   auctions -> auctions
- *
- * - Check token is not the leading bid for the current lot
- * claim_failed_bid   auctions -> bid_ticket -> auctions * kit.utxo option
- *
- * claim_winning_bid  auctions -> bid_ticket -> auctions * kit.tez option
- *
- * claim_sold   auctions -> burrow_id -> auctions * tez
- *
  * - Cancel auction
  *
  * TODO: how to see current leading bid? FA2?
@@ -497,3 +484,35 @@ let oldest_completed_liquidation_slice (auctions: auctions) : Avl.leaf_ptr optio
   match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
   | None -> failwith "invariant violation: empty auction in completed_auctions"
   | Some (leaf_ptr, _) -> Some leaf_ptr
+
+(* Test utilities *)
+
+(* Checks if some invariants of auctions structure holds. *)
+let assert_invariants (auctions: auctions) : unit =
+
+  (* All AVL trees in the storage are valid. *)
+  let mem = auctions.avl_storage in
+  let roots = BigMap.BigMap.bindings mem
+               |> List.filter (fun (_, n) -> match n with | Avl.Root _ -> true; | _ -> false)
+               |> List.map (fun (p, _) -> Avl.AVLPtr p) in
+  List.iter (Avl.assert_invariants mem) roots;
+
+  (* There are no dangling pointers in the storage. *)
+  Avl.assert_dangling_pointers mem roots;
+
+  (* Completed_auctions linked list is correct. *)
+  auctions.completed_auctions
+    |> Option.iter (fun completed_auctions ->
+      let rec go (curr: Avl.avl_ptr) (prev: Avl.avl_ptr option) =
+        let curr_data = Option.get (Avl.root_data mem curr) in
+        assert (curr_data.younger_auction = prev);
+        match curr_data.older_auction with
+        | Some next -> go next (Some curr)
+        | None ->  assert (curr = completed_auctions.oldest) in
+      go (completed_auctions.youngest) None
+    );
+
+  (* TODO: Check if per-burrow linked lists are correct. *)
+  (* TODO: Check if all dangling auctions are empty. *)
+
+  ()
