@@ -1,4 +1,3 @@
-
 # Uniswap sub-contract
 
 An operational interpretation of the uniswap API inside the checker contract, and operations on it.
@@ -52,7 +51,7 @@ If any of the following holds, the transaction fails
 
 If `lqt = 0` is zero---which means that there is no liquidity in the contract---then this provider is the first "First Liquidity Provider". Otherwise, it is the "Non-first Liquidity Provider". After we perform all the above checks thus, we operate differently based on whether we have a first or a non-first liquidity provider.
 
-Q1: When `lqt = 0`, it means that the uniswap contract is deprived of all its liquidity tokens. The obvious case is when it is in its initial state, but I think it can also get there if every Liquidity Provider remove all liquidity. How should we deal with that case?
+QQ: When `lqt = 0`, it means that the uniswap contract is deprived of all its liquidity tokens. The obvious case is when it is in its initial state, but I think it can also get there if every Liquidity Provider remove all liquidity. How should we deal with that case?
 
 ### First Liquidity Provider
 
@@ -118,7 +117,7 @@ TODO: FIRST THINGS FIRST, CALL sync_last_observed.
 If any of the following holds, the transaction fails
 * If there are no liquidity tokens available (`lqt = 0`), the transaction fails.
 * If the amount of tez given is non-zero (`amount <> 0`), the transaction fails.
-* If we are on or past the deadline (`now >= dealine`), the transaction fails.
+* If we are on or past the deadline (`now >= deadline`), the transaction fails.
 * If no liquidity tokens are to be removed (`lqt_burned = 0`), the transaction fails.
 
 Otherwise, we compute how much tez and kit should be returned, using the ratio of the provided liquidity tokens vs. the number of liquidity tokens currently in the uniswap contract:
@@ -139,15 +138,92 @@ kit = kit - kit_withdrawn
 tez = tez - tez_withdrawn
 lqt = lqt - lqt_burned
 ```
-and returned the withdrawn amounts:
+and return the withdrawn amounts:
 ```
 tez_to_return = tez_withdrawn
 kit_to_return = kit_withdrawn
 ```
 
-Q2: Do we allow the removal of liquidity, even if it means that the uniswap contract will remain with zero liquidity? The checks above ensure that we don't get below zero, but allow zero just fine.
+QQ: Do we allow the removal of liquidity, even if it means that the uniswap contract will remain with zero liquidity? The checks above ensure that we don't get below zero, but allow zero just fine.
 
 ## Buying Kit
 
-TODO: GEORGE STOPPED HERE.
+TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+
+**Inputs**
+* `min_kit_expected`: The minimum amount of kit to be bought.
+* `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
+
+If any of the following holds, the transaction fails
+* If the pool of tez is empty (`tez = 0`), the transaction fails.
+* If the pool of kit is empty (`kit = 0`), the transaction fails.
+* If the amount of tez given is zero (`amount = 0`), the transaction fails.
+* If we are on or past the deadline (`now >= dealine`), the transaction fails.
+* If no amount of kit is expected (`min_kit_expected = 0`), the transaction fails.
+
+Otherwise, we compute how much kit can be bought for the `amount` of tez as follows:
+```
+price      = kit / tez
+slippage   = tez / (tez + amount)
+kit_bought = amount * price * slippage * (1 - uniswap_fee)   # floor, in mukit
+```
+Also, we check that the bounds are respected:
+* If `kit_bought < min_kit_expected`, the transaction fails.
+* If `kit_bought> kit`, the transaction fails.
+
+If all is good, we proceed with updating the parameters
+```
+kit = kit - kit_bought
+tez = tez + amount
+```
+and return the bought amount of kit:
+```
+kit_to_return = kit_bought
+```
+**NOTE**: TODO: Discuss the alternative calculation. One can compute first and then scale, or scale initially.
+
+QQ: Are we OK with this operation leaving the contract without any kit? Is that even possible or is that prevented in a way I am missing?
+
+## Selling Kit
+
+TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+
+**Inputs**
+* `kit_given`: The amount of kit to be sold to the uniswap contract.
+* `min_tez_expected`: The minimum amount of tez to be bought.
+* `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
+
+If any of the following holds, the transaction fails
+* If the pool of tez is empty (`tez = 0`), the transaction fails.
+* If the pool of kit is empty (`kit = 0`), the transaction fails.
+* If the amount of kit given is zero (`kit_given = 0`), the transaction fails.
+* If we are on or past the deadline (`now >= dealine`), the transaction fails.
+* If no amount of tez is expected (`min_tez_expected = 0`), the transaction fails.
+
+Otherwise, we compute how much tez can be bought for the `kit_given` as follows:
+```
+price      = tez / kit
+slippage   = kit / (kit + kit_given)
+tez_bought = kit * price * slippage * (1 - uniswap_fee)   # floor, in mutez
+```
+Also, we check that the bounds are respected:
+* If `tez_bought < min_tez_expected`, the transaction fails.
+* If `tez_bought> tez`, the transaction fails.
+
+If all is good, we proceed with updating the parameters
+```
+kit = kit + kit_given
+tez = tez - tez_bought
+```
+and return the bought amount of tez:
+```
+tez_to_return = tez_bought
+```
+**NOTE**: TODO: Discuss the alternative calculation. One can compute first and then scale, or scale initially.
+
+QQ: Are we OK with this operation leaving the contract without any tez? Is that even possible or is that prevented in a way I am missing?
+
+## Misc
+
+* `uniswap_fee = 0.002`
 
