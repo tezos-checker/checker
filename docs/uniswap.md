@@ -10,7 +10,7 @@ An operational interpretation of the uniswap API inside the checker contract, an
 
 Additional fields:
 * `kit_in_tez_in_prev_block`: the price of kit in tez (`kit / tez`) at the end of the previous block block (as a rational).
-* `last_level`: the previous block that uniswap was touched on (e.g. the one that `kit_in_tez_in_prev_block` refers to).
+* `last_level`: the last block that the uniswap contract was touched on.
 
 **NOTE 1**: The reason we store `kit_in_tez_in_prev_block` and `last_level` in the state of uniswap is security. When the price implied by uniswap is queried to compute the drift derivative (see system-parameters.md), we don't want to give the current price, but instead return the last price at the end of the previous block. This makes it just a little harder to manipulate these small price fluctuations.
 
@@ -32,11 +32,18 @@ Effectively this means that initially we cannot use uniswap for more-or-less any
 
 * None of the interfaces below refers to prices. Instead, we pass inputs, and minimum and maximum expected values for things (e.g. kit, tez, liquidity tokens, or time). If the criteria cannot be met the operations fail. This agrees with e.g. the API offered by Dexter.
 
-* All the following happen within the smart contract, which means that in the calculations below we often refer to `amount` (the amount of tez), `level` (the current block height), as well as `now` (the timestamp of the current block, as provided by this block's baker).
+* All the following happen within the smart contract, which means that in the calculations below we often refer to `amount` (the amount of tez given), `level` (the current block height), as well as `now` (the timestamp of the current block, as provided by this block's baker).
 
 ## Adding liquidity
 
-TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
+```
+kit_in_tez_in_prev_block = tez/ kit
+last_level               = level
+```
+If `last_level = now`, then we don't perform the update; this is not the first time we've touched the uniswap contract in this block.
+
+QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how do we handle it?
 
 **Inputs**
 * `max_kit_deposited`: The maximum amount of kit to be added to the uniswap contract
@@ -46,18 +53,18 @@ TODO: FIRST THINGS FIRST, CALL sync_last_observed.
 If any of the following holds, the transaction fails
 * If we are on or past the deadline (`now >= dealine`), the transaction fails.
 * If no tez is given (`amount = 0`), then no liquidity will be provided (see calculations below), so the transaction fails.
-* If no kit is offered (`max_kit_deposited = 0`), TODO why, the transaction fails.
+* If no kit is offered (`max_kit_deposited = 0`), the transaction fails.
 * If no liquidity is to be added (`min_lqt_minted = 0`), the transaction fails.
 
 If `lqt = 0` is zero---which means that there is no liquidity in the contract---then this provider is the first "First Liquidity Provider". Otherwise, it is the "Non-first Liquidity Provider". After we perform all the above checks thus, we operate differently based on whether we have a first or a non-first liquidity provider.
 
-QQ: When `lqt = 0`, it means that the uniswap contract is deprived of all its liquidity tokens. The obvious case is when it is in its initial state, but I think it can also get there if every Liquidity Provider remove all liquidity. How should we deal with that case?
+QQ: When `lqt = 0`, it means that the uniswap contract is deprived of all its liquidity tokens. The obvious case is when it is in its initial state, but I think it can also get there if all Liquidity Providers remove all liquidity. How should we deal with that case?
 
 ### First Liquidity Provider
 
 For the first liquidity provider, we require (`amount >= 1`), to agree with Dexter's interface. If that's not the case, the transaction fails.
 
-The liquidity to be created is equal to the amount of tez given (floored, actually):
+We calculate the liquidity to be created as the amount of tez given, floored:
 ```
 lqt_minted = floor(amount)
 ```
@@ -106,7 +113,14 @@ kit_to_return = max_kit_deposited - kit_deposited
 
 ## Removing liquidity
 
-TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
+```
+kit_in_tez_in_prev_block = tez/ kit
+last_level               = level
+```
+If `last_level = now`, then we don't perform the update; this is not the first time we've touched the uniswap contract in this block.
+
+QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how do we handle it?
 
 **Inputs**
 * `lqt_burned`: The number of liquidity tokens to be removed from the uniswap contract.
@@ -148,7 +162,14 @@ QQ: Do we allow the removal of liquidity, even if it means that the uniswap cont
 
 ## Buying Kit
 
-TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
+```
+kit_in_tez_in_prev_block = tez/ kit
+last_level               = level
+```
+If `last_level = now`, then we don't perform the update; this is not the first time we've touched the uniswap contract in this block.
+
+QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how do we handle it?
 
 **Inputs**
 * `min_kit_expected`: The minimum amount of kit to be bought.
@@ -180,13 +201,19 @@ and return the bought amount of kit:
 ```
 kit_to_return = kit_bought
 ```
-**NOTE**: TODO: Discuss the alternative calculation. One can compute first and then scale, or scale initially.
 
 QQ: Are we OK with this operation leaving the contract without any kit? Is that even possible or is that prevented in a way I am missing?
 
 ## Selling Kit
 
-TODO: FIRST THINGS FIRST, CALL sync_last_observed.
+First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
+```
+kit_in_tez_in_prev_block = tez/ kit
+last_level               = level
+```
+If `last_level = now`, then we don't perform the update; this is not the first time we've touched the uniswap contract in this block.
+
+QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how do we handle it?
 
 **Inputs**
 * `kit_given`: The amount of kit to be sold to the uniswap contract.
@@ -219,7 +246,23 @@ and return the bought amount of tez:
 ```
 tez_to_return = tez_bought
 ```
-**NOTE**: TODO: Discuss the alternative calculation. One can compute first and then scale, or scale initially.
+**NOTE**: There are more than one ways to calculate things when buying and selling kit. Given that `da` amount of one quantity is given, what we do essentially computes first what should the return be for the product of quantities kept by uniswap to stay the same:
+```
+db = da * (b / (a + da))
+```
+and then keeps `fee` of that, thus returning `db` calculated instead like this:
+```
+db = da * (b / (a + da)) * (1 - fee)
+```
+Dexter takes an alternative approach, where the fee is (conceptually, at least) on the amount given. That is, the returned amount is
+```
+db = da' * (b / (a + da'))
+```
+where
+```
+da' = da * (1 - fee)
+```
+The two calculations give slightly different results, but hopefully that is not a problem.
 
 QQ: Are we OK with this operation leaving the contract without any tez? Is that even possible or is that prevented in a way I am missing?
 
