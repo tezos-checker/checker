@@ -20,6 +20,7 @@ let suite =
       let tezos = Tezos.{
           now = Timestamp.of_seconds 3600;
           level = Level.of_int 60;
+          self = Address.of_string "checker";
         } in
 
       let new_index = Tez.of_mutez 340_000 in

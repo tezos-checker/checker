@@ -9,6 +9,8 @@ type sell_kit_res = (Tez.t * Uniswap.t) option [@@deriving show]
 let level0 = Level.of_int 0
 let level1 = Level.of_int 1
 
+let checker_address = Address.of_string "checker"
+
 let suite =
   "Uniswap tests" >::: [
     "buy kit" >::
@@ -39,7 +41,7 @@ let suite =
            uniswap
            ~amount:Tez.one
            ~min_kit_expected:(Kit.of_mukit 1)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 10) in
        assert_equal ~printer:show_buy_kit_res (Some (expected_returned_kit, expected_updated_uniswap)) result_1;
 
@@ -50,7 +52,7 @@ let suite =
            uniswap
            ~amount:Tez.one
            ~min_kit_expected:(Kit.of_mukit 453_636)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_buy_kit_res (Some (expected_returned_kit, expected_updated_uniswap)) result_2;
 
@@ -61,7 +63,7 @@ let suite =
            uniswap
            ~amount:Tez.one
            ~min_kit_expected:(Kit.of_mukit 453_637)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_buy_kit_res None result_3;
 
@@ -72,7 +74,7 @@ let suite =
            uniswap
            ~amount:Tez.one
            ~min_kit_expected:(Kit.of_mukit 453_636)
-           ~tezos:{now = Timestamp.of_seconds 1; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_buy_kit_res None result_4;
     );
@@ -105,7 +107,7 @@ let suite =
            ~amount:Tez.zero
            Kit.one
            ~min_tez_expected:(Tez.of_mutez 1)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 10) in
        assert_equal ~printer:show_sell_kit_res (Some (expected_returned_tez, expected_updated_uniswap)) result_1;
 
@@ -117,7 +119,7 @@ let suite =
            ~amount:Tez.zero
            Kit.one
            ~min_tez_expected:(Tez.of_mutez 1_663_333)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_sell_kit_res (Some (expected_returned_tez, expected_updated_uniswap)) result_2;
 
@@ -129,7 +131,7 @@ let suite =
            ~amount:Tez.zero
            Kit.one
            ~min_tez_expected:(Tez.of_mutez 1_663_334)
-           ~tezos:{now = Timestamp.of_seconds 0; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_sell_kit_res None result_3;
 
@@ -141,7 +143,7 @@ let suite =
            ~amount:Tez.zero
            Kit.one
            ~min_tez_expected:(Tez.of_mutez 1_663_333)
-           ~tezos:{now = Timestamp.of_seconds 1; level = level1;}
+           ~tezos:{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
            ~deadline:(Timestamp.of_seconds 1) in
        assert_equal ~printer:show_sell_kit_res None result_4;
     );
@@ -172,7 +174,7 @@ let suite =
                ~amount:(Tez.of_mutez 20_000_000)
                ~max_kit_deposited:(Kit.of_mukit 20_000_000)
                ~min_lqt_minted:(Uniswap.liquidity_of_int 2)
-               ~tezos:{now = Timestamp.of_seconds 0; level = level0;}
+               ~tezos:{now = Timestamp.of_seconds 0; level = level0; self = checker_address;}
                ~deadline:(Timestamp.of_seconds 1)
        with
        | Error _err -> failwith "buy liquidity: the impossible happened!"

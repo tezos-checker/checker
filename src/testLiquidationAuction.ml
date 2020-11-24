@@ -1,5 +1,6 @@
 open OUnit2
 
+let checker_address = Address.of_string "checker"
 
 let suite =
   let burrow_id_1 = Ptr.init in
@@ -19,7 +20,7 @@ let suite =
          } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        let current = Option.get auctions.current_auction in
@@ -27,13 +28,13 @@ let suite =
        assert_equal (Kit.of_mukit 2_000_000) (LiquidationAuction.current_auction_minimum_bid start_tezos current) ~printer:Kit.show;
        assert_equal (Kit.of_mukit 2_000_000) (LiquidationAuction.current_auction_minimum_bid start_tezos current) ~printer:Kit.show;
        (* Price of descending auction should go down... *)
-       let one_second_later = Tezos.{now = Timestamp.add_seconds start_time 1; level = Level.of_int 0;} in
+       let one_second_later = Tezos.{now = Timestamp.add_seconds start_time 1; level = Level.of_int 0; self = checker_address;} in
        assert_equal (Kit.of_mukit 1_999_666) (LiquidationAuction.current_auction_minimum_bid one_second_later current) ~printer:Kit.show;
-       let two_seconds_later = Tezos.{now = Timestamp.add_seconds start_time 2; level = Level.of_int 0;} in
+       let two_seconds_later = Tezos.{now = Timestamp.add_seconds start_time 2; level = Level.of_int 0; self = checker_address;} in
        assert_equal (Kit.of_mukit 1_999_333) (LiquidationAuction.current_auction_minimum_bid two_seconds_later current) ~printer:Kit.show;
-       let one_minute_later = Tezos.{now = Timestamp.add_seconds start_time 60; level = Level.of_int 1;} in
+       let one_minute_later = Tezos.{now = Timestamp.add_seconds start_time 60; level = Level.of_int 1; self = checker_address;} in
        assert_equal (Kit.of_mukit 1_980_097) (LiquidationAuction.current_auction_minimum_bid one_minute_later current) ~printer:Kit.show;
-       let two_minutes_later = Tezos.{now = Timestamp.add_seconds start_time (2 * 60); level = Level.of_int 2;} in
+       let two_minutes_later = Tezos.{now = Timestamp.add_seconds start_time (2 * 60); level = Level.of_int 2; self = checker_address;} in
        assert_equal (Kit.of_mukit 1_960_393) (LiquidationAuction.current_auction_minimum_bid two_minutes_later current) ~printer:Kit.show;
     );
 
@@ -60,7 +61,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
@@ -89,7 +90,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
@@ -106,7 +107,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        let bidder = Address.of_string "23456" in

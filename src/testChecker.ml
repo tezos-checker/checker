@@ -4,6 +4,8 @@ open Checker
 let bob = Address.of_string "bob"
 let alice = Address.of_string "alice"
 
+let checker_address = Address.of_string "checker"
+
 let assert_ok (r: ('a, Error.error) result) : 'a =
   match r with
   | Ok a -> a
@@ -30,6 +32,7 @@ let suite =
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
+           self = checker_address;
          } in
 
        let (_lqt_minted, _ret_tez, _ret_kit, checker) = assert_ok @@
@@ -59,6 +62,7 @@ let suite =
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
+           self = checker_address;
          } in
 
        let touch_reward, checker =
@@ -83,6 +87,7 @@ let suite =
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
+           self = checker_address;
          } in
 
        let touch_reward, checker =
@@ -100,6 +105,7 @@ let suite =
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
+           self = checker_address;
          } in
 
        let touch_reward, checker =
@@ -121,6 +127,7 @@ let suite =
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
+           self = checker_address;
          } in
 
        let touch_reward, checker =
