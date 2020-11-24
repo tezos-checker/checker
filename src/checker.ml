@@ -480,6 +480,9 @@ struct
     | Error err -> Error err
     | Ok (ret, liquidation_auctions) -> Ok (ret, { state with liquidation_auctions })
 
+  (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
+   * *)
+
   (* ************************************************************************* *)
   (**                              TOUCHING                                    *)
   (* ************************************************************************* *)
