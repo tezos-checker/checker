@@ -47,6 +47,10 @@ NFT contract, simplifying the code.
 
 type 'a t
 
-val read : 'a t -> 'a
+val create : issuer:Address.t -> amount:int -> content:'a -> 'a t
 
-val create : 'a -> 'a t
+val read : 'a t -> Address.t * int * 'a
+
+val split : 'a t -> int -> int -> ('a t * 'a t) option
+
+val join : 'a t -> 'a t -> ('a t) option

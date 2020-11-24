@@ -87,6 +87,9 @@ type auction_id = Avl.avl_ptr
 type bid_details = { auction_id: auction_id; bid: Bid.t; }
 type bid_ticket = bid_details Ticket.t
 
+let create_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
+  Ticket.create ~issuer:tezos.self ~amount:1 ~content:bid_details
+
 type auction_state =
   | Descending of Kit.t * Timestamp.t
   | Ascending of Bid.t * Timestamp.t * Level.t
@@ -329,7 +332,7 @@ let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: Bid.t)
   then
     Ok (
       { auction with state = Ascending (bid, tezos.now, tezos.level); },
-      Ticket.create { auction_id = auction.contents; bid = bid; }
+      create_bid_ticket tezos { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
 
@@ -363,7 +366,7 @@ let reclaim_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
-  let bid_details = Ticket.read bid_ticket in
+  let _, _, bid_details = Ticket.read bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
@@ -432,7 +435,7 @@ let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Tez.t * auctions, Error.error) result =
-  let bid_details = Ticket.read bid_ticket in
+  let _, _, bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
      (* A winning bid can only be claimed when all the liquidation slices
