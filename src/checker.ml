@@ -550,15 +550,15 @@ struct
           liquidation_auctions = updated_auctions;
         } in
 
-      let rec touch_oldest max st =
-        if max <= 0 then st
+      let rec touch_oldest (maximum: int) (st: t) : t =
+        if maximum <= 0 then st
         else
           match LiquidationAuction.oldest_completed_liquidation_slice st.liquidation_auctions with
           | None -> st
-          | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (max-1) in
+          | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (maximum - 1) in
 
       (* TODO: Figure out how many slices we can process per checker touch.*)
-      let new_state = touch_oldest 5 new_state in
+      let new_state = touch_oldest Constants.number_of_slices_to_process new_state in
 
       (* TODO: Add more tasks here *)
       (reward, new_state)
