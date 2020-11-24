@@ -270,3 +270,5 @@ QQ: Are we OK with this operation leaving the contract without any tez? Is that 
 
 * `uniswap_fee = 0.002`
 
+QQ: In Dexter the uniswap fee is 0.003 instead of 0.002. Which one shall we choose?
+

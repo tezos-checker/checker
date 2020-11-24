@@ -19,6 +19,7 @@
  * difference is far smaller than typical fees or any amount we care about.
 *)
 (* Check out dexter for technical details:
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/ligo/dexter.ligo
      https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
 *)
 (* Remaining TODO for uniswap.mli:
