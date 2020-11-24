@@ -168,6 +168,8 @@ The accrued burrowing fees are to be given to the uniswap sub-contract. The tota
 accrual_to_uniswap = outstanding_with_fees - old_outstanding
 ```
 
+Q5: If I understand this correctly, there are cases where `accrual_to_uniswap` would be negative, which means that we are reducing the amount of kit in the uniswap contract. I wonder whether this is desirable or not.
+
 ### `outstanding_kit`
 To obtain the updated `outstanding_kit`, we need to account for both the accrued burrowing fees, and the imbalance adjustment
 ```
