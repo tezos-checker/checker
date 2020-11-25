@@ -92,10 +92,38 @@ let compute_adjustment_index (p: t) : FixedPoint.t =
   FixedPoint.of_q_floor Q.(burrow_fee_index * imbalance_index) (* FLOOR-or-CEIL *)
 
 (** Given the current target, calculate the rate of change of the drift (drift
-  * derivative). Thresholds were given in cnp / day^2, so we convert them to
-  * cnp / second^2, assuming we're measuring time in seconds. Also, since exp
-  * is monotonic, we exponentiate the whole equation to avoid using log. TODO:
-  * double-check these calculations. *)
+  * derivative). That's how the following calculations came to be:
+  *
+  *   let X = log (p_t) be the "measure of imbalance". The original doc gave:
+  *
+  *   d_t' = 0                             if 0       <= |X| < 0.5 cNp
+  *   d_t' = sign(X) * 0.01 cNp / day^2    if 0.5 cNp <= |X| <   5 cNp
+  *   d_t' = sign(X) * 0.05 cNp / day^2    if   5 cNp <= |X| < infinity
+  *
+  *   1. Inline the numbers: cNp ~= 1/100, day ~= 24 * 60 * 60 = 86400 seconds
+  *
+  *   d_t' = 0                             if 0     <= |X| < 0.005
+  *   d_t' = sign(X) * 0.0001 / 86400^2    if 0.005 <= |X| < 0.05
+  *   d_t' = sign(X) * 0.0005 / 86400^2    if 0.05  <= |X| < infinity
+  *
+  *   2. Remove absolute values
+  *
+  *   d_t' =  0                   if -0.005 <  X <  0.005
+  *   d_t' = +0.0001 / 86400^2    if +0.005 <= X < +0.05
+  *   d_t' = -0.0001 / 86400^2    if -0.005 >= X > -0.05
+  *   d_t' = +0.0005 / 86400^2    if +0.05  <= X < +infinity
+  *   d_t' = -0.0005 / 86400^2    if -0.05  >= X > -infinity
+  *
+  *   3. Exponentiate the inequalities
+  *
+  *   d_t' =  0                   if exp(-0.005) <  p_t < exp(+0.005)
+  *   d_t' = +0.0001 / 86400^2    if exp(+0.005) <= p_t < exp(+0.05)
+  *   d_t' = -0.0001 / 86400^2    if exp(-0.005) >= p_t > exp(-0.05)
+  *   d_t' = +0.0005 / 86400^2    if exp(+0.05)  <= p_t < +infinity
+  *   d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
+  *
+  * I've left these calculations here so that others could double-check them too.
+*)
 let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   assert (target > FixedPoint.zero);
   let target = FixedPoint.to_q target in
