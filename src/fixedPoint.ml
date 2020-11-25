@@ -35,9 +35,6 @@ let exp amount = one + amount
 let of_int amount = Z.(of_int amount * scaling_factor)
 let to_int amount = Z.(to_int (amount / scaling_factor))
 
-let of_rep t = t
-let to_rep t = t
-
 let of_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
