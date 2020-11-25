@@ -284,40 +284,40 @@ let complete_auction_if_possible
     | Some winning_bid ->
       let (storage, completed_auctions) = match auctions.completed_auctions with
         | None ->
-            let outcome =
-                  { winning_bid;
-                    sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
-                    younger_auction=None;
-                    older_auction=None;
-                  } in
-            let storage =
-                 Avl.modify_root_data
-                   auctions.avl_storage
-                   curr.contents
-                   (fun prev -> assert (Option.is_none prev); Some outcome) in
-             (storage, {youngest=curr.contents;oldest=curr.contents})
+          let outcome =
+            { winning_bid;
+              sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
+              younger_auction=None;
+              older_auction=None;
+            } in
+          let storage =
+            Avl.modify_root_data
+              auctions.avl_storage
+              curr.contents
+              (fun prev -> assert (Option.is_none prev); Some outcome) in
+          (storage, {youngest=curr.contents;oldest=curr.contents})
         | Some {youngest; oldest} ->
-            let outcome =
-              { winning_bid;
-                sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
-                younger_auction=Some youngest;
-                older_auction=None;
-              } in
-            let storage =
-              Avl.modify_root_data
-                auctions.avl_storage
-                curr.contents
-                (fun prev -> assert (Option.is_none prev); Some outcome) in
-            let storage =
-              Avl.modify_root_data
-                storage
-                youngest
-                (fun prev ->
-                  match prev with
-                  | None -> failwith "completed auction without outcome"
-                  | Some xs -> Some ({xs with younger_auction=Some curr.contents})
-                ) in
-            (storage, {youngest=curr.contents; oldest}) in
+          let outcome =
+            { winning_bid;
+              sold_tez=Avl.avl_tez auctions.avl_storage curr.contents;
+              younger_auction=Some youngest;
+              older_auction=None;
+            } in
+          let storage =
+            Avl.modify_root_data
+              auctions.avl_storage
+              curr.contents
+              (fun prev -> assert (Option.is_none prev); Some outcome) in
+          let storage =
+            Avl.modify_root_data
+              storage
+              youngest
+              (fun prev ->
+                 match prev with
+                 | None -> failwith "completed auction without outcome"
+                 | Some xs -> Some ({xs with younger_auction=Some curr.contents})
+              ) in
+          (storage, {youngest=curr.contents; oldest}) in
       { auctions with
         avl_storage = storage;
         current_auction=None;
@@ -379,11 +379,11 @@ let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
   let storage = auctions.avl_storage in
 
   let outcome = match Avl.root_data storage tree with
-  | None -> failwith "auction is not completed"
-  | Some r -> r in
+    | None -> failwith "auction is not completed"
+    | Some r -> r in
   let completed_auctions = match auctions.completed_auctions with
-  | None -> failwith "invariant violation"
-  | Some r -> r in
+    | None -> failwith "invariant violation"
+    | Some r -> r in
 
   (* First, fixup the completed auctions if we're dropping the
    * youngest or the oldest lot. *)
@@ -409,20 +409,20 @@ let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
     match outcome.younger_auction with
     | None -> storage
     | Some younger ->
-        Avl.modify_root_data storage younger @@
-          fun i ->
-            let i = Option.get i in
-            assert (i.older_auction = Some tree);
-            Some {i with older_auction=outcome.older_auction} in
+      Avl.modify_root_data storage younger @@
+      fun i ->
+      let i = Option.get i in
+      assert (i.older_auction = Some tree);
+      Some {i with older_auction=outcome.older_auction} in
   let storage =
     match outcome.older_auction with
     | None -> storage
     | Some older ->
-        Avl.modify_root_data storage older @@
-          fun i ->
-            let i = Option.get i in
-            assert (i.younger_auction = Some tree);
-            Some {i with younger_auction=outcome.younger_auction} in
+      Avl.modify_root_data storage older @@
+      fun i ->
+      let i = Option.get i in
+      assert (i.younger_auction = Some tree);
+      Some {i with younger_auction=outcome.younger_auction} in
 
   let storage = Avl.modify_root_data storage tree @@ fun _ ->
     Some { outcome with younger_auction = None; older_auction = None } in
@@ -438,24 +438,24 @@ let reclaim_winning_bid
   let _, _, bid_details = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
-     (* A winning bid can only be claimed when all the liquidation slices
-      * for that lot is cleaned. *)
-     if not (Avl.is_empty auctions.avl_storage bid_details.auction_id)
-     then Error NotAllSlicesClaimed
-     else (
-       (* When the winner reclaims their bid, we finally remove
-          every reference to the auction. This is just to
-          save storage, what's forbidding double-claiming
-          is the ticket mechanism, not this.
-        *)
-       assert (outcome.younger_auction = None);
-       assert (outcome.older_auction = None);
-       let auctions =
-         { auctions with
-           avl_storage =
-             Avl.delete_tree auctions.avl_storage bid_details.auction_id } in
-       Ok (outcome.sold_tez, auctions)
-     )
+    (* A winning bid can only be claimed when all the liquidation slices
+     * for that lot is cleaned. *)
+    if not (Avl.is_empty auctions.avl_storage bid_details.auction_id)
+    then Error NotAllSlicesClaimed
+    else (
+      (* When the winner reclaims their bid, we finally remove
+         every reference to the auction. This is just to
+         save storage, what's forbidding double-claiming
+         is the ticket mechanism, not this.
+      *)
+      assert (outcome.younger_auction = None);
+      assert (outcome.older_auction = None);
+      let auctions =
+        { auctions with
+          avl_storage =
+            Avl.delete_tree auctions.avl_storage bid_details.auction_id } in
+      Ok (outcome.sold_tez, auctions)
+    )
   | None -> Error NotAWinningBid
 
 
@@ -481,9 +481,9 @@ let oldest_completed_liquidation_slice (auctions: auctions) : Avl.leaf_ptr optio
   match auctions.completed_auctions with
   | None -> None
   | Some completed_auctions ->
-  match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
-  | None -> failwith "invariant violation: empty auction in completed_auctions"
-  | Some (leaf_ptr, _) -> Some leaf_ptr
+    match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
+    | None -> failwith "invariant violation: empty auction in completed_auctions"
+    | Some (leaf_ptr, _) -> Some leaf_ptr
 
 (* Test utilities *)
 
@@ -493,8 +493,8 @@ let assert_invariants (auctions: auctions) : unit =
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
   let roots = BigMap.BigMap.bindings mem
-               |> List.filter (fun (_, n) -> match n with | Avl.Root _ -> true; | _ -> false)
-               |> List.map (fun (p, _) -> Avl.AVLPtr p) in
+              |> List.filter (fun (_, n) -> match n with | Avl.Root _ -> true; | _ -> false)
+              |> List.map (fun (p, _) -> Avl.AVLPtr p) in
   List.iter (Avl.assert_invariants mem) roots;
 
   (* There are no dangling pointers in the storage. *)
@@ -502,7 +502,7 @@ let assert_invariants (auctions: auctions) : unit =
 
   (* Completed_auctions linked list is correct. *)
   auctions.completed_auctions
-    |> Option.iter (fun completed_auctions ->
+  |> Option.iter (fun completed_auctions ->
       let rec go (curr: Avl.avl_ptr) (prev: Avl.avl_ptr option) =
         let curr_data = Option.get (Avl.root_data mem curr) in
         assert (curr_data.younger_auction = prev);

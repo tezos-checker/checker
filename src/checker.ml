@@ -342,9 +342,9 @@ struct
        * to claim its result. *)
       let state =
         if Avl.is_empty state.liquidation_auctions.avl_storage auction then
-        { state with
-          liquidation_auctions = LiquidationAuction.pop_completed_auction state.liquidation_auctions auction;
-        }
+          { state with
+            liquidation_auctions = LiquidationAuction.pop_completed_auction state.liquidation_auctions auction;
+          }
         else state in
 
       (* When we delete the youngest or the oldest slice, we have to adjust
