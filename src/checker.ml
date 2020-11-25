@@ -104,16 +104,16 @@ module Checker : sig
   (**                          LIQUIDATION AUCTIONS                            *)
   (* ************************************************************************* *)
 
-  (** Bid in current auction. Fail if the auction is closed, or if the bid is
-    * too low. If successful, return a token which can be used to either
-    * reclaim the kit when outbid, or claim the auction result. *)
+  (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
+    * too low. If successful, return a ticket which can be used to
+    * reclaim the kit when outbid. *)
   val liquidation_auction_place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
 
-  (** Reclaim a failed bid for the current or a completed auction. *)
+  (** Reclaim a failed bid for the current or a completed liquidation auction. *)
   val liquidation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Kit.t, Error.error) result
 
-  (** Reclaim a winning bid for the current or a completed auction. *)
+  (** Reclaim a winning bid for the current or a completed liquidation auction. *)
   val liquidation_auction_reclaim_winning_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Tez.t * t, Error.error) result
 
