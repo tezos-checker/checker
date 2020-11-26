@@ -14,13 +14,13 @@ let one = scaling_factor
 (* Arithmetic operations. *)
 let ( + ) x y = Z.(x + y)
 let ( - ) x y = Z.(x - y)
-let ( * ) x y = Z.((x * y) / scaling_factor)
+let ( * ) x y = Z.(shift_right_trunc (x * y) scaling_exponent)
 
 (* We round towards 0, for fixedpoint calculation, measuring things which are
  * inherently noisy, this is ok. Greater care must be excercised when doing
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
-let ( / ) x y = Z.(x * scaling_factor / y)
+let ( / ) x y = Z.(shift_left x scaling_exponent / y)
 let neg x = Z.neg x
 
 let pow x y =
@@ -34,7 +34,7 @@ let pow x y =
 let exp amount = one + amount
 
 (* Conversions to/from other types. *)
-let of_int amount = Z.(of_int amount * scaling_factor)
+let of_int amount = Z.(shift_left (of_int amount) scaling_exponent)
 
 let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
@@ -42,11 +42,11 @@ let of_hex_string str =
   let mantissa = match dotpos with
     | None -> Z.one
     | Some pos -> Z.pow (Z.of_int 16) Stdlib.(String.length str - pos - 1) in
-  Z.((Z.of_string_base 16 without_dot * scaling_factor) / mantissa)
+  Z.(shift_left (of_string_base 16 without_dot) scaling_exponent / mantissa)
 
 let to_q amount = Q.make amount scaling_factor
-let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
-let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
+let of_q_ceil amount = Z.(cdiv (shift_left (Q.num amount) scaling_exponent) (Q.den amount))
+let of_q_floor amount = Z.(fdiv (shift_left (Q.num amount) scaling_exponent) (Q.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* Pretty printing functions (in hex, otherwise it's massive) *)
