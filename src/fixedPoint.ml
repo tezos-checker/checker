@@ -2,8 +2,10 @@
 (*                               FixedPoint                                  *)
 (* ************************************************************************* *)
 type t = Z.t
-let scaling_factor = Z.of_int64 100000000L
-let scaling_exponent = 8
+
+let scaling_base = Z.of_int64 2L
+let scaling_exponent = 64
+let scaling_factor = Z.pow scaling_base scaling_exponent
 
 (* Predefined values. *)
 let zero = Z.zero
@@ -35,20 +37,20 @@ let exp amount = one + amount
 let of_int amount = Z.(of_int amount * scaling_factor)
 let to_int amount = Z.(to_int (amount / scaling_factor))
 
-let of_string str =
+let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
   let mantissa = match dotpos with
     | None -> Z.one
-    | Some pos -> Z.pow (Z.of_int 10) Stdlib.(String.length str - pos - 1) in
-  Z.((Z.of_string_base 10 without_dot * scaling_factor) / mantissa)
+    | Some pos -> Z.pow (Z.of_int 16) Stdlib.(String.length str - pos - 1) in
+  Z.((Z.of_string_base 16 without_dot * scaling_factor) / mantissa)
 
 let to_q amount = Q.make amount scaling_factor
 let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
 let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
-(* Pretty printing functions *)
+(* Pretty printing functions (in hex, otherwise it's massive) *)
 let show amount =
   let zfill s width =
     let to_fill = Stdlib.(width - (String.length s)) in
@@ -56,12 +58,13 @@ let show amount =
     then s
     else (String.make to_fill '0') ^ s in
 
-  let abs_amount = Z.abs amount in
+  let sign = if amount < Z.zero then "-" else "" in
+  let (upper, lower) = Z.div_rem (Z.abs amount) scaling_factor in
 
   Format.sprintf "%s%s.%s"
-    (if amount >= Z.zero then "" else "-")
-    (Z.to_string (Z.div abs_amount scaling_factor))
-    (zfill (Z.to_string (Z.rem abs_amount scaling_factor)) scaling_exponent)
+    sign
+    (Z.format "%X" upper)
+    (zfill (Z.format "%X" lower) Stdlib.(scaling_exponent / 4))
 
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 

@@ -27,14 +27,14 @@ If a liquidation was deemed Close:
 *)
 
 let params : Parameters.t =
-  { q = FixedPoint.of_string "1.015";
+  { q = FixedPoint.of_q_floor (Q.of_string "1015/1000");
     index = Tez.of_mutez 320_000;
     protected_index = Tez.of_mutez 360_000;
-    target = FixedPoint.of_string "1.08";
-    drift = FixedPoint.of_string "0.0";
-    drift' = FixedPoint.of_string "0.0";
-    burrow_fee_index = FixedPoint.of_string "1.0";
-    imbalance_index = FixedPoint.of_string "1.0";
+    target = FixedPoint.of_q_floor (Q.of_string "108/100");
+    drift = FixedPoint.zero;
+    drift' = FixedPoint.zero;
+    burrow_fee_index = FixedPoint.one;
+    imbalance_index = FixedPoint.one;
     outstanding_kit = Kit.one; (* TODO: What should that be? *)
     circulating_kit = Kit.zero; (* TODO: What should that be? *)
     last_touched = Timestamp.of_seconds 0;
@@ -66,20 +66,20 @@ let suite =
 
         assert_equal
           (Partial
-             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
-               tez_to_auction = Tez.of_mutez 7_142_472;
-               expected_kit = Kit.of_mukit 17_592_296;
-               min_kit_for_unwarranted = Kit.of_mukit 27_141_394;
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
+               tez_to_auction = Tez.of_mutez 7_142_471;
+               expected_kit = Kit.of_mukit 17_592_294;
+               min_kit_for_unwarranted = Kit.of_mukit 27_141_390;
                burrow_state =
                  Burrow.make_for_test
                    ~owner:(Address.of_string "192837")
                    ~delegate:None
                    ~active:true
-                   ~collateral:(Tez.of_mutez 1_847_528)
+                   ~collateral:(Tez.of_mutez 1_847_530)
                    ~outstanding_kit:(Kit.of_mukit 20_000_000)
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
-                   ~collateral_at_auction:(Tez.of_mutez 7_142_472)
+                   ~collateral_at_auction:(Tez.of_mutez 7_142_471)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
              }
@@ -144,10 +144,10 @@ let suite =
 
         assert_equal
           (Complete
-             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 10_000);
-               tez_to_auction = Tez.of_mutez 8_990_000;
-               expected_kit = Kit.of_mukit 22_142_858;
-               min_kit_for_unwarranted = Kit.of_mukit 170_810_000;
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
+               tez_to_auction = Tez.of_mutez 8_990_001;
+               expected_kit = Kit.of_mukit 22_142_860;
+               min_kit_for_unwarranted = Kit.of_mukit 170_810_019;
                burrow_state =
                  Burrow.make_for_test
                    ~owner:(Address.of_string "192837")
@@ -157,7 +157,7 @@ let suite =
                    ~outstanding_kit:(Kit.of_mukit 100_000_000)
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
-                   ~collateral_at_auction:(Tez.of_mutez 8_990_000)
+                   ~collateral_at_auction:(Tez.of_mutez 8_990_001)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
              }
@@ -198,10 +198,10 @@ let suite =
 
         assert_equal
           (Close
-             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 1000);
-               tez_to_auction = Tez.of_mutez 999_000;
-               expected_kit = Kit.of_mukit 2_460_592;
-               min_kit_for_unwarranted = Kit.of_mukit 189_810_000;
+             { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 999);
+               tez_to_auction = Tez.of_mutez 999_001;
+               expected_kit = Kit.of_mukit 2_460_594;
+               min_kit_for_unwarranted = Kit.of_mukit 189_810_190;
                burrow_state =
                  Burrow.make_for_test
                    ~owner:(Address.of_string "192837")
@@ -211,7 +211,7 @@ let suite =
                    ~outstanding_kit:(Kit.of_mukit 100_000_000)
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
-                   ~collateral_at_auction:(Tez.of_mutez 999_000)
+                   ~collateral_at_auction:(Tez.of_mutez 999_001)
                    ~last_touched:(Timestamp.of_seconds 0)
                    ~liquidation_slices:None
              }

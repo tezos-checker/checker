@@ -18,7 +18,7 @@ val pow : t -> int -> t
 (* Conversions to/from other types. *)
 val of_int : int -> t
 val to_int : t -> int
-val of_string : string -> t
+val of_hex_string : string -> t
 
 val to_q : t -> Q.t (* NOTE: For precision. *)
 val of_q_ceil : Q.t -> t (* NOTE: For precision. *)

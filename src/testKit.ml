@@ -27,19 +27,19 @@ let suite =
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit 15_370_401)
-         (Kit.scale (Kit.of_mukit 5_123_467) (FixedPoint.of_string "3.0"));
+         (Kit.scale (Kit.of_mukit 5_123_467) (FixedPoint.of_q_floor (Q.of_string "3")));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (-15_370_401))
-         (Kit.scale (Kit.of_mukit 5_123_467) (FixedPoint.of_string "-3.0"));
+         (Kit.scale (Kit.of_mukit 5_123_467) (FixedPoint.of_q_floor (Q.of_string "-3")));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (-15_370_401))
-         (Kit.scale (Kit.of_mukit (-5_123_467)) (FixedPoint.of_string "3.0"));
+         (Kit.scale (Kit.of_mukit (-5_123_467)) (FixedPoint.of_q_floor (Q.of_string "3")));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit 15_370_401)
-         (Kit.scale (Kit.of_mukit (-5_123_467)) (FixedPoint.of_string "-3.0"));
+         (Kit.scale (Kit.of_mukit (-5_123_467)) (FixedPoint.of_q_floor (Q.of_string "-3")));
 
        (* compare *)
        assert_equal

@@ -56,7 +56,7 @@ let suite =
            ~owner:bob
            ~burrow_id:burrow_id
            ~amount:(Kit.of_mukit 4_285_714) in
-       assert_equal kit (Kit.of_mukit 4_285_714);
+       assert_equal (Kit.of_mukit 4_285_714) kit;
 
        let int_level = 5 in
        let tezos = Tezos.{
@@ -74,14 +74,14 @@ let suite =
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
 
-       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
 
        let (reward, checker) = assert_ok @@
          Checker.mark_for_liquidation
            checker
            ~liquidator:alice
            ~burrow_id:burrow_id in
-       assert_equal reward (Tez.of_mutez 1_009_000) ~printer:Tez.show;
+       assert_equal (Tez.of_mutez 1_008_999) reward ~printer:Tez.show;
 
        let int_level = 10 in
        let tezos = Tezos.{
@@ -103,7 +103,7 @@ let suite =
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
 
-       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
 
        let int_level = 15 in
        let tezos = Tezos.{
@@ -125,7 +125,7 @@ let suite =
            ~sender:alice
            ~amount:(Kit.of_mukit 4_200_000) in
 
-       assert_equal (Kit.of_mukit 500_001) touch_reward ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
 
        let int_level = 45 in
        let tezos = Tezos.{
@@ -143,7 +143,7 @@ let suite =
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
 
-       assert_equal (Kit.of_mukit 21_000_006) touch_reward ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 21_000_000) touch_reward ~printer:Kit.show;
 
        (* We don't need to touch the slice on this test case since Checker.touch
         * already touches the oldest 5 slices. *)
@@ -175,7 +175,7 @@ let suite =
            ~address:alice
            ~bid_ticket:bid in
 
-       assert_equal (Tez.of_mutez 3_156_182) tez_from_bid
+       assert_equal (Tez.of_mutez 3_156_181) tez_from_bid
          ~printer:Tez.show;
     );
   ]

@@ -30,7 +30,8 @@ let protected_index_epsilon : Q.t = Q.of_string "5/10000" (* 0.0005 *)
 let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
-let min_lot_auction_queue_fraction : FixedPoint.t = FixedPoint.of_string "0.05"
+let min_lot_auction_queue_fraction : FixedPoint.t =
+  FixedPoint.of_q_floor (Q.of_string "5/100")
 
 (** The percentage of additional collateral that we charge when liquidating
   * a burrow, to penalize it for liquidation. *)

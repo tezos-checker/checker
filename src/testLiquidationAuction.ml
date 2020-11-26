@@ -33,9 +33,9 @@ let suite =
        let two_seconds_later = Tezos.{now = Timestamp.add_seconds start_time 2; level = Level.of_int 0; self = checker_address;} in
        assert_equal (Kit.of_mukit 1_999_333) (LiquidationAuction.current_auction_minimum_bid two_seconds_later current) ~printer:Kit.show;
        let one_minute_later = Tezos.{now = Timestamp.add_seconds start_time 60; level = Level.of_int 1; self = checker_address;} in
-       assert_equal (Kit.of_mukit 1_980_097) (LiquidationAuction.current_auction_minimum_bid one_minute_later current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 1_980_098) (LiquidationAuction.current_auction_minimum_bid one_minute_later current) ~printer:Kit.show;
        let two_minutes_later = Tezos.{now = Timestamp.add_seconds start_time (2 * 60); level = Level.of_int 2; self = checker_address;} in
-       assert_equal (Kit.of_mukit 1_960_393) (LiquidationAuction.current_auction_minimum_bid two_minutes_later current) ~printer:Kit.show;
+       assert_equal (Kit.of_mukit 1_960_394) (LiquidationAuction.current_auction_minimum_bid two_minutes_later current) ~printer:Kit.show;
     );
 
     ("test batches up auction lots" >::
@@ -124,7 +124,7 @@ let suite =
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
        let (current, _) = Result.get_ok (LiquidationAuction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
        assert_equal
-         (Kit.of_mukit 2_006_600)
+         (Kit.of_mukit 2_006_599)
          (LiquidationAuction.current_auction_minimum_bid start_tezos current)
          ~printer:Kit.show;
        (* Minimum bid does not drop over time *)

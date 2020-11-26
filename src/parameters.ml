@@ -129,8 +129,8 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   let target = FixedPoint.to_q target in
   let target_low_bracket  = Constants.target_low_bracket in
   let target_high_bracket = Constants.target_high_bracket in
-  let cnp_001 = FixedPoint.(of_string "0.0001") in
-  let cnp_005 = FixedPoint.(of_string "0.0005") in
+  let cnp_001 = FixedPoint.of_q_floor (Q.of_string "1/10000") in
+  let cnp_005 = FixedPoint.of_q_floor (Q.of_string "5/10000") in
   let secs_in_a_day = FixedPoint.of_int (24 * 3600) in
   Q.(
     match () with
