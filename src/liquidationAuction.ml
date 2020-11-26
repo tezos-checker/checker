@@ -214,7 +214,7 @@ let start_auction_if_possible
           Kit.scale
             Kit.one
             FixedPoint.(
-              Tez.to_fp (Avl.avl_tez storage new_auction)
+              FixedPoint.of_q_floor (Tez.to_q (Avl.avl_tez storage new_auction))
               * start_price)  in
         Some
           { contents = new_auction;

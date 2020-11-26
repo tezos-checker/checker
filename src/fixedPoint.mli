@@ -14,17 +14,14 @@ val ( * ) : t -> t -> t
 val ( / ) : t -> t -> t
 val neg : t -> t
 val pow : t -> int -> t
+val exp : t -> t
 
 (* Conversions to/from other types. *)
 val of_int : int -> t
-val to_int : t -> int
 val of_hex_string : string -> t
-
-val to_q : t -> Q.t (* NOTE: For precision. *)
-val of_q_ceil : Q.t -> t (* NOTE: For precision. *)
-val of_q_floor : Q.t -> t (* NOTE: For precision. *)
-
-val exp : t -> t
+val to_q : t -> Q.t
+val of_q_ceil : Q.t -> t
+val of_q_floor : Q.t -> t
 
 (* Pretty printing functions *)
 val pp : Format.formatter -> t -> unit

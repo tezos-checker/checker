@@ -1,6 +1,5 @@
 open Avl
 open OUnit2
-module Q = QCheck
 open BigMap
 open Format
 
@@ -67,14 +66,14 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
 
-let arb_tez = Q.(
+let arb_tez = QCheck.(
     map
-      ~rev:(fun i -> FixedPoint.to_int (Tez.to_fp i))
+      ~rev:(fun i -> Q.to_int (Tez.to_q i))
       (fun i -> nTez i)
       small_int
   )
 
-let arb_item = Q.(pair small_int arb_tez)
+let arb_item = QCheck.(pair small_int arb_tez)
 
 let property_test_count = 1000
 
@@ -172,7 +171,7 @@ let suite =
        let expected = [] in
        assert_equal expected actual);
     (qcheck_to_ounit
-     @@ Q.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (Q.list arb_item)
+     @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list arb_item)
      @@ fun xs ->
      let (mem, root) = from_list BigMap.empty 0 xs in
      assert_invariants mem root;
@@ -185,8 +184,8 @@ let suite =
     );
 
     (qcheck_to_ounit
-     @@ Q.Test.make ~name:"prop_del" ~count:property_test_count
-       Q.(triple (list arb_item) arb_item (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_del" ~count:property_test_count
+       QCheck.(triple (list arb_item) arb_item (list arb_item))
      @@ fun (left_items, mid_item, right_items) ->
 
      let (mem, root) = from_list BigMap.empty 0 left_items in
@@ -219,7 +218,7 @@ let suite =
     (*
     (qcheck_to_ounit
 
-     @@ Q.Test.make ~name:"prop_append" ~count:property_test_count Q.(pair (list arb_item) (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_append" ~count:property_test_count QCheck.(pair (list arb_item) (list arb_item))
      @@ fun (ls, rs) ->
 
      let (mem, left_tree) = from_list BigMap.empty 0 ls in
@@ -238,11 +237,11 @@ let suite =
     *)
 
     (qcheck_to_ounit
-     @@ Q.Test.make ~name:"prop_take" ~count:property_test_count Q.(pair arb_tez (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     Q.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
-     Q.assume (limit > Tez.zero);
+     QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
+     QCheck.assume (limit > Tez.zero);
 
      let (mem, right) = from_list BigMap.empty 0 xs in
      let (mem, left) = take mem right limit 0 in
@@ -282,11 +281,11 @@ let suite =
     );
     (*
     (qcheck_to_ounit
-     @@ Q.Test.make ~name:"prop_take_append" ~count:property_test_count Q.(pair arb_tez (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     Q.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
-     Q.assume (limit > Tez.zero);
+     QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
+     QCheck.assume (limit > Tez.zero);
 
      let (mem, right) = from_list BigMap.empty 0 xs in
      let (mem, left) = take mem right limit 0 in

@@ -35,7 +35,6 @@ let exp amount = one + amount
 
 (* Conversions to/from other types. *)
 let of_int amount = Z.(of_int amount * scaling_factor)
-let to_int amount = Z.(to_int (amount / scaling_factor))
 
 let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in

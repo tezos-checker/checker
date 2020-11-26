@@ -41,6 +41,10 @@ let liquidation_penalty : Q.t = Q.of_string "1/10" (* 0.1 *)
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
 let seconds_in_a_year : int = 31556952
 
+(** For convenience. The number of seconds in a day. Basically
+  * 24h * 60min/h * 60sec/min = 86400. *)
+let seconds_in_a_day : int = 86400
+
 (** Low bracket used for the calculation of the drift derivative. *)
 let target_low_bracket : Q.t = Q.of_string "5/1000" (* 0.005 *)
 

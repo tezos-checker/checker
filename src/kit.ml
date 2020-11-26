@@ -22,8 +22,6 @@ let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
 let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
-let to_fp t = FixedPoint.of_q_floor (to_q t) (* NOTE: IT FLOORS *)
-
 let scale amount fp = (* NOTE: IT FLOORS *)
   of_q_floor Q.(FixedPoint.to_q fp * to_q amount)
 
