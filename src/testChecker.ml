@@ -90,6 +90,10 @@ let suite =
            self = checker_address;
          } in
 
+       assert_equal
+         (Error LiquidationAuction.NoOpenAuction)
+         (Checker.liquidation_auction_place_bid checker ~tezos:tezos ~sender:bob ~amount:(Kit.of_mukit 1_000));
+
        let touch_reward, checker =
          Checker.touch
            checker

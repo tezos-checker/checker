@@ -96,7 +96,7 @@ let suite =
        assert_equal (Some (Tez.of_mutez 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
     );
 
-    ("test initial bidding" >::
+    ("test bidding" >::
      fun _ ->
        let auctions = LiquidationAuction.empty in
        let (auctions, _) =
@@ -122,7 +122,7 @@ let suite =
          (Error LiquidationAuction.BidTooLow)
          (LiquidationAuction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 1_999_999; });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
-       let (current, _ticket) = Result.get_ok (LiquidationAuction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
+       let (current, _) = Result.get_ok (LiquidationAuction.place_bid start_tezos current { address = bidder; kit = Kit.of_mukit 2_000_000; }) in
        assert_equal
          (Kit.of_mukit 2_006_600)
          (LiquidationAuction.current_auction_minimum_bid start_tezos current)
@@ -131,9 +131,14 @@ let suite =
        let ten_seconds_later = {
          start_tezos with now = Timestamp.add_seconds start_tezos.now 10
        } in
+       (* Can increase the bid.*)
+       let (current, _) = Result.get_ok @@
+         (LiquidationAuction.place_bid ten_seconds_later current {address=bidder; kit=Kit.of_mukit 4_000_000}) in
+       (* Does not allow a lower bid.*)
        assert_equal
-         (Kit.of_mukit 2_006_600)
-         (LiquidationAuction.current_auction_minimum_bid ten_seconds_later current)
-         ~printer:Kit.show;
+         (Error LiquidationAuction.BidTooLow)
+         (LiquidationAuction.place_bid ten_seconds_later current {address=bidder; kit=Kit.of_mukit 3_000_000});
+
+       ()
     );
   ]
