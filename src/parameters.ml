@@ -13,6 +13,10 @@ type t =
     imbalance_index: FixedPoint.t;
     (* TODO: What would be a good starting value for this? Cannot be zero
      * because then it stays zero forever (only multiplications occur). *)
+    (* TODO: Test that this value does not drift too far from the real value
+     * (the total amount of kit needed to close all burrows). Errors of a few
+     * percents per year are NOT acceptable. Errors of 0.1% or so per year
+     * would be tolerable. *)
     outstanding_kit: Kit.t;
     circulating_kit: Kit.t;
     last_touched: Timestamp.t;
