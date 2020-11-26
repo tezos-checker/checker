@@ -65,16 +65,23 @@ let clamp (v: Q.t) (lower: Q.t) (upper: Q.t) : 'a =
   *
   *   min(   5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , if burrowed >= circulating
   *   max( - 5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , otherwise
-*)
+  *
+  * Edge cases:
+  * - burrowed = 0, circulating = 0
+  *     The imbalance fee/bonus is 0.
+  * - burrowed = 0, circulating > 0
+  *     Well, burrowed is "infinitely" smaller than circulating so let's
+  *     saturate the imbalance to -5 cNp.
+  * NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
+  *   doing conditionals and save gas costs. Messes only slightly with the
+  *   computations, but can save quite some gas. *)
 let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Q.t =
   assert (burrowed >= Kit.zero);
   assert (circulating >= Kit.zero);
-  (* No kit in burrows or in circulation means no imbalance adjustment *)
-  if burrowed = Kit.zero then
-    (* TODO: George: though unlikely, it is possible to have kit in
-     * circulation, even when nothing is burrowed. How can we compute the
-     * imbalance in this edge case? *)
-    (assert (circulating = Kit.zero); Q.zero) (* George: the assert is just as a reminder *)
+  if burrowed = Kit.zero && circulating = Kit.zero then
+    Q.zero
+  else if burrowed = Kit.zero && circulating <> Kit.zero then
+    Q.(of_int (-5) * of_string "1/100")
   else if burrowed >= circulating then
     Q.(min (Kit.to_q burrowed * of_int 5) Kit.(to_q (burrowed - circulating))
        * of_string "1/100"
