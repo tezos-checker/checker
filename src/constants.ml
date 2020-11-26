@@ -77,6 +77,6 @@ let touch_low_reward : Q.t = Q.of_string "1/600" (* 0.1/60 *)
   * divide by 60 to get roughly how much should it be per second. *)
 let touch_high_reward : Q.t = Q.of_string "1/60" (* 1/60 *)
 
-(** The nunmber of liquidation slices to process every time the checker
+(** The number of liquidation slices to process every time the checker
   * contract is touched. *)
 let number_of_slices_to_process : int = 5
