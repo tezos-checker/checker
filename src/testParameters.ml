@@ -90,6 +90,83 @@ let test_compute_drift_derivative_high_negative_acceleration =
       (Parameters.compute_drift_derivative target)
 
 (* ************************************************************************* *)
+(*                           compute_imbalance                               *)
+(* ************************************************************************* *)
+
+(* TODO:
+ * 1. Finish the test_compute_imbalance_positive_small and
+ *    test_compute_imbalance_positive_capped tests below. I'm not convinced yet
+ *    that the current calculation is correct.
+ * 2. Ensure that the kit that should be burned (due to imbalance alone) is
+ *    actually burned (in checker.touch or parameters.touch).
+ * 3. Would be nice to have some property-based random tests about the
+ *    following (I've been bitten by this before, due to the difference between
+ *    Q.compare and Stdlib.compare):
+ *    - The result of compute_imbalance NEVER goes beyond ±0.05
+ *    - If burrowed > circulating then (compute_imbalance burrowed circulating) > 0
+ *    - If burrowed < circulating then (compute_imbalance burrowed circulating) < 0
+ *    - If burrowed1 > burrowed2 > circulating
+ *      then (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating)
+ *    - If circulating1 > circulating2 > burrowed
+ *      then (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2)
+*)
+
+let test_compute_imbalance_all_zero =
+  "test_compute_imbalance_all_zero" >:: fun _ ->
+    let burrowed    = Kit.zero in
+    let circulating = Kit.zero in
+    assert_equal
+      ~printer:(Q.sprint ())
+      Q.zero
+      (Parameters.compute_imbalance ~burrowed ~circulating)
+
+let test_compute_imbalance_zero_burrowed =
+  "test_compute_imbalance_zero_burrowed" >:: fun _ ->
+    let burrowed    = Kit.zero in
+    let circulating = Kit.one in
+    assert_equal
+      ~printer:(Q.sprint ())
+      (Q.of_string "-5/100")
+      (Parameters.compute_imbalance ~burrowed ~circulating)
+
+let test_compute_imbalance_equal =
+  "test_compute_imbalance_equal" >:: fun _ ->
+    let burrowed    = Kit.of_mukit 1_000_000_000 in
+    let circulating = Kit.of_mukit 1_000_000_000 in
+    assert_equal
+      ~printer:(Q.sprint ())
+      Q.zero
+      (Parameters.compute_imbalance ~burrowed ~circulating)
+
+let test_compute_imbalance_positive_small =
+  "test_compute_imbalance_positive_small" >:: fun _ ->
+    ()
+    (* TODO *)
+
+let test_compute_imbalance_positive_capped =
+  "test_compute_imbalance_positive_capped" >:: fun _ ->
+    ()
+    (* TODO *)
+
+let test_compute_imbalance_negative_small =
+  "test_compute_imbalance_negative_small" >:: fun _ ->
+    let burrowed    = Kit.of_mukit   166_666_667 in
+    let circulating = Kit.of_mukit 1_000_000_000 in
+    assert_equal
+      ~printer:(Q.sprint ())
+      (Q.of_string "-833333333/16666666700") (* JUST BELOW SATURATION *)
+      (Parameters.compute_imbalance ~burrowed ~circulating)
+
+let test_compute_imbalance_negative_capped =
+  "test_compute_imbalance_negative_capped" >:: fun _ ->
+    let burrowed    = Kit.of_mukit             1 in
+    let circulating = Kit.of_mukit 1_000_000_000 in
+    assert_equal
+      ~printer:(Q.sprint ())
+      (Q.of_string "-5/100") (* SATURATED *)
+      (Parameters.compute_imbalance ~burrowed ~circulating)
+
+(* ************************************************************************* *)
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
@@ -144,6 +221,14 @@ let suite =
     test_compute_drift_derivative_low_negative_acceleration;
     test_compute_drift_derivative_high_positive_acceleration;
     test_compute_drift_derivative_high_negative_acceleration;
+
+    test_compute_imbalance_all_zero;
+    test_compute_imbalance_zero_burrowed;
+    test_compute_imbalance_equal;
+    test_compute_imbalance_positive_small;
+    test_compute_imbalance_positive_capped;
+    test_compute_imbalance_negative_small;
+    test_compute_imbalance_negative_capped;
 
     test_touch;
   ]
