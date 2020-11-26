@@ -2,6 +2,91 @@ open OUnit2
 
 let suite =
   "Parameters tests" >::: [
+    (*
+    exp( low ): 201/200 = 1.005 = 1.0147AE147AE147AE147B
+    exp(-low ): 199/200 = 0.995 = 0.FEB851EB851EB851EB85
+    exp( high): 21/20   = 1.05  = 1.0CCCCCCCCCCCCCCCCCCD
+    exp(-high): 19/20   = 0.95  = 0.F3333333333333333333
+
+    d_t' =  0                   if exp(-0.005) <  p_t < exp(+0.005)
+    d_t' = +0.0001 / 86400^2    if exp(+0.005) <= p_t < exp(+0.05)
+    d_t' = -0.0001 / 86400^2    if exp(-0.005) >= p_t > exp(-0.05)
+    d_t' = +0.0005 / 86400^2    if exp(+0.05)  <= p_t < +infinity
+    d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
+    *)
+    ("test_compute_drift_derivative_no_acceleration" >:: fun _ ->
+        (* exp( 0 ): 1 *)
+        let target = FixedPoint.one in
+        assert_equal
+          ~printer:FixedPoint.show
+          FixedPoint.zero
+          (Parameters.compute_drift_derivative target);
+
+        (* exp( low ): 201/200 = 1.005 (rounded DOWN) *)
+        let target = FixedPoint.of_hex_string "1.0147AE147AE147AE" in
+        assert_equal
+          ~printer:FixedPoint.show
+          FixedPoint.zero
+          (Parameters.compute_drift_derivative target);
+
+        (* exp(-low ): 199/200 = 0.995 (rounded UP) *)
+        let target = FixedPoint.of_hex_string "0.FEB851EB851EB852" in
+        assert_equal
+          ~printer:FixedPoint.show
+          FixedPoint.zero
+          (Parameters.compute_drift_derivative target);
+    );
+
+    ("test_compute_drift_derivative_low_positive_acceleration" >:: fun _ ->
+        (* exp( low ): 201/200 = 1.005 (rounded UP) *)
+        let target = FixedPoint.of_hex_string "1.0147AE147AE147AF" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "0.000000000003C547")
+          (Parameters.compute_drift_derivative target);
+
+        (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
+        let target = FixedPoint.of_hex_string "1.0CCCCCCCCCCCCCCC" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "0.000000000003C547")
+          (Parameters.compute_drift_derivative target);
+    );
+
+    ("test_compute_drift_derivative_low_negative_acceleration" >:: fun _ ->
+        (* exp(-low ): 199/200 = 0.995 (rounded DOWN) *)
+        let target = FixedPoint.of_hex_string "0.FEB851EB851EB851" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "-0.000000000003C547")
+          (Parameters.compute_drift_derivative target);
+
+        (* exp(-high): 19/20   = 0.95 (rounded UP) *)
+        let target = FixedPoint.of_hex_string "0.F333333333333334" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "-0.000000000003C547")
+          (Parameters.compute_drift_derivative target);
+    );
+
+    ("test_compute_drift_derivative_high_positive_acceleration" >:: fun _ ->
+        (* exp( high): 21/20   = 1.05 (rounded UP) *)
+        let target = FixedPoint.of_hex_string "1.0CCCCCCCCCCCCCCD" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "0.000000000012DA63")
+          (Parameters.compute_drift_derivative target);
+    );
+
+    ("test_compute_drift_derivative_high_negative_acceleration" >:: fun _ ->
+        (* exp(-high): 19/20   = 0.95 (rounded DOWN) *)
+        let target = FixedPoint.of_hex_string "0.F333333333333333" in
+        assert_equal
+          ~printer:FixedPoint.show
+          (FixedPoint.of_hex_string "-0.000000000012DA63")
+          (Parameters.compute_drift_derivative target);
+    );
+
     ("test_touch" >:: fun _ ->
         let initial_parameters : Parameters.t =
           { q = FixedPoint.of_hex_string "0.E666666666666666"; (* 0.9 *)
