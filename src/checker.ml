@@ -23,6 +23,7 @@ module Checker : sig
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
     | BurrowHasCompletedLiquidation
+    | UnwarrantedCancellation
 
   (** Make a fresh state, initialized at the given time. *)
   val initialize : Timestamp.t -> Level.t -> t
@@ -71,6 +72,8 @@ module Checker : sig
     * fail, and slices that correspond to incomplete liquidations are ignored.
   *)
   val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
+
+  val cancel_liquidation_slice : t -> Avl.leaf_ptr -> (t, Error.error) result
 
   (** Perform maintainance tasks for the burrow.
   *)
@@ -141,6 +144,7 @@ struct
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
     | BurrowHasCompletedLiquidation
+    | UnwarrantedCancellation
 
   (* Utility function to give us burrow addresses *)
   let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
@@ -296,6 +300,88 @@ struct
              )
       )
     | None -> Error (NonExistentBurrow burrow_id)
+
+  let cancel_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
+    let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
+    if root <> state.liquidation_auctions.queued_slices
+    then Error UnwarrantedCancellation
+    else
+      let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+
+      match PtrMap.find_opt leaf.burrow state.burrows with
+      | None -> failwith "invariant violation"
+      | Some burrow when Burrow.is_overburrowed state.parameters burrow
+         -> Error UnwarrantedCancellation
+      | Some burrow ->
+        let state =
+          let (new_storage, _) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+          { state with
+            liquidation_auctions = {
+              state.liquidation_auctions with
+              avl_storage = new_storage }} in
+        let burrow =
+          Burrow.return_tez_from_auction leaf.tez burrow in
+
+        (* When we delete the youngest or the oldest slice, we have to adjust
+         * the burrow pointers accordingly.
+        *)
+        let burrow =
+          let slices = Option.get (Burrow.liquidation_slices burrow) in
+          match (leaf.younger, leaf.older) with
+          | (None, None) ->
+            assert (slices.youngest = leaf_ptr);
+            assert (slices.oldest = leaf_ptr);
+            Burrow.(set_liquidation_slices burrow None)
+          | (None, Some older) ->
+            assert (slices.youngest = leaf_ptr);
+            Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
+          | (Some younger, None) ->
+            assert (slices.oldest = leaf_ptr);
+            Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
+          | (Some _, Some _) ->
+            assert (slices.oldest <> leaf_ptr);
+            assert (slices.youngest <> leaf_ptr);
+            burrow in
+
+        let state =
+          { state with
+            burrows = PtrMap.add leaf.burrow burrow state.burrows } in
+        (* And we update the slices around it *)
+        let state = (
+          match leaf.younger with
+          | None -> state
+          | Some younger_ptr ->
+            { state with
+              liquidation_auctions = { state.liquidation_auctions with
+                                      avl_storage =
+                                        Avl.update_leaf
+                                          state.liquidation_auctions.avl_storage
+                                          younger_ptr
+                                          (fun younger ->
+                                             assert (younger.older = Some leaf_ptr);
+                                             { younger with older = leaf.older }
+                                          )
+                                    }}
+        ) in
+        let state = (
+          match leaf.older with
+          | None -> state
+          | Some older_ptr ->
+            { state with
+              liquidation_auctions = { state.liquidation_auctions with
+                                      avl_storage =
+                                        Avl.update_leaf
+                                          state.liquidation_auctions.avl_storage
+                                          older_ptr
+                                          (fun older ->
+                                             assert (older.younger = Some leaf_ptr);
+                                             { older with younger = leaf.younger }
+                                          )
+                                    }}
+        ) in
+        LiquidationAuction.assert_invariants state.liquidation_auctions;
+        Ok state
+
 
   let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
     let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in

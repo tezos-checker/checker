@@ -150,20 +150,6 @@ let send_to_auction
   let new_state = { auctions with avl_storage = new_storage; } in
   (new_state, ret)
 
-let cancel_liquidation
-    (auctions: auctions)
-    (slice: Avl.leaf_ptr)
-  : auctions option =
-  if Avl.find_root auctions.avl_storage slice = auctions.queued_slices
-  then
-    (* if the slice belongs to queued_slices tree, we can cancel it *)
-    let (new_storage, _) = Avl.del auctions.avl_storage slice in
-    Some { auctions with avl_storage = new_storage; }
-  else
-    (* otherwise, it means that the auction is either in progress
-     * or completed, so we can not cancel it. *)
-    None
-
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
   * (and see if the liquidation was warranted, retroactively). Perhaps a bit

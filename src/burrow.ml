@@ -120,6 +120,13 @@ let touch (p: Parameters.t) (burrow: t) : t =
       last_touched = p.last_touched;
     }
 
+let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
+  assert (tez >= Tez.zero);
+  { burrow with
+    collateral = Tez.(burrow.collateral + tez);
+    collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
+  }
+
 (** Return some kit that we have received from an auction to the burrow. *)
 let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (burrow: t) : t =
   assert (kit >= Kit.zero);

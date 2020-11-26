@@ -83,6 +83,9 @@ val touch : Parameters.t -> t -> t
   * we keep two balances. *)
 val return_kit_from_auction : Tez.t -> Kit.t -> t -> t
 
+(** TODO *)
+val return_tez_from_auction : Tez.t -> t -> t
+
 (** Given an address (owner) and amount of tez as collateral (including a
   * creation deposit, not counting towards that collateral), create a burrow.
   * Fail if the tez given is less than the creation deposit. *)
