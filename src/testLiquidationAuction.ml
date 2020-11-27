@@ -7,7 +7,7 @@ let suite =
   let burrow_id_2 = Ptr.next burrow_id_1 in
   let burrow_id_3 = Ptr.next burrow_id_2 in
 
-  "Auction tests" >::: [
+  "Liquidation auction tests" >::: [
     ("test starts descending auction" >::
      fun _ ->
        let auctions = LiquidationAuction.empty in

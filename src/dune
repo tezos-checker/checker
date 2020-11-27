@@ -6,7 +6,7 @@
  (name huxian)
  (modules Checker Constants Timestamp Level BigMap Avl Kit Tez FixedPoint
    Parameters Burrow Uniswap Error Address LiquidationAuction Ticket Ptr
-   Tezos Bid)
+   DelegationAuction Tezos Bid)
  (libraries str zarith)
  (wrapped false)
  (preprocess
@@ -15,7 +15,8 @@
 (test
  (name tests)
  (modules Tests TestAvl TestFixedPoint TestTez TestKit TestParameters
-   TestLiquidation TestUniswap TestLiquidationAuction TestChecker)
+   TestLiquidation TestUniswap TestDelegationAuction TestLiquidationAuction
+   TestChecker)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

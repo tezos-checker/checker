@@ -10,6 +10,7 @@ let suite =
     TestParameters.suite;
     TestLiquidation.suite;
     TestUniswap.suite;
+    TestDelegationAuction.suite;
     TestLiquidationAuction.suite;
   ]
 
