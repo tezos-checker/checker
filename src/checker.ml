@@ -25,8 +25,8 @@ module Checker : sig
     | BurrowHasCompletedLiquidation
     | UnwarrantedCancellation
 
-  (** Make a fresh state, initialized at the given time. *)
-  val initialize : Timestamp.t -> Level.t -> t
+  (** Make a fresh state. *)
+  val initialize : Tezos.t -> t
 
   (** Perform housekeeping tasks on the contract state. This includes:
     * - Updating the system parameters
@@ -132,10 +132,10 @@ struct
       liquidation_auctions : LiquidationAuction.auctions;
     }
 
-  let initialize ts level =
+  let initialize (tezos: Tezos.t) =
     { burrows = PtrMap.empty;
-      uniswap = Uniswap.make_initial level;
-      parameters = Parameters.make_initial ts;
+      uniswap = Uniswap.make_initial tezos.level;
+      parameters = Parameters.make_initial tezos.now;
       liquidation_auctions = LiquidationAuction.empty;
     }
 

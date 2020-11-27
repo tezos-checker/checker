@@ -24,16 +24,12 @@ let suite =
   "Checker tests" >::: [
     ("can complete a liquidation auction" >::
      fun _ ->
-       let t0 = Timestamp.of_seconds 0 in
-       let l0 = Level.of_int 0 in
-       let checker = Checker.initialize t0 l0 in
-
-       let int_level = 0 in
        let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
+           now = Timestamp.of_seconds @@ 0;
+           level = Level.of_int 0;
            self = checker_address;
          } in
+       let checker = Checker.initialize tezos in
 
        let (_lqt_minted, _ret_tez, _ret_kit, checker) = assert_ok @@
          Checker.add_liquidity
