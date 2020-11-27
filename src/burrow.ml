@@ -39,14 +39,29 @@ type Error.error +=
   | WithdrawTezFailure
   | MintKitFailure
 
-let liquidation_slices (b: t) = b.liquidation_slices
+let assert_invariants (b: t) : unit =
+  assert (b.collateral >= Tez.zero);
+  assert (b.collateral_at_auction >= Tez.zero);
+  assert (b.outstanding_kit >= Kit.zero);
+  assert (b.excess_kit >= Kit.zero);
+  assert (b.outstanding_kit = Kit.zero || b.excess_kit = Kit.zero);
+  ()
+
+let liquidation_slices (b: t) =
+  assert_invariants b;
+  b.liquidation_slices
 
 let set_liquidation_slices (b: t) (s: liquidation_slices option) =
+  assert_invariants b;
   {b with liquidation_slices = s}
 
-let collateral_at_auction (b: t) = b.collateral_at_auction
+let collateral_at_auction (b: t) =
+  assert_invariants b;
+  b.collateral_at_auction
 
-let active (b: t) = b.active
+let active (b: t) =
+  assert_invariants b;
+  b.active
 
 let make_for_test
     ~active
@@ -82,13 +97,16 @@ let make_for_test
   * be lost forever.
 *)
 let is_overburrowed (p : Parameters.t) (b : t) : bool =
+  assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let collateral = Tez.to_q b.collateral in
   let minting_price = Parameters.minting_price p in
   let outstanding_kit = Kit.to_q b.outstanding_kit in
   Q.(collateral < Constants.fminting * outstanding_kit * minting_price)
 
-let is_owned_by (b: t) (address: Address.t) = b.owner = address
+let is_owned_by (b: t) (address: Address.t) =
+  assert_invariants b;
+  b.owner = address
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -106,6 +124,7 @@ let rebalance_kit (b: t) : t =
   * avoid someone touching their burrow all the time to prevent the fee from
   * accumulating. *)
 let touch (p: Parameters.t) (burrow: t) : t =
+  assert_invariants burrow;
   if p.last_touched = burrow.last_touched
   then
     burrow
@@ -121,6 +140,7 @@ let touch (p: Parameters.t) (burrow: t) : t =
     }
 
 let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
+  assert_invariants burrow;
   assert (tez >= Tez.zero);
   { burrow with
     collateral = Tez.(burrow.collateral + tez);
@@ -128,12 +148,13 @@ let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
   }
 
 (** Return some kit that we have received from an auction to the burrow. *)
-let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (burrow: t) : t =
+let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (b: t) : t =
+  assert_invariants b;
   assert (kit >= Kit.zero);
   rebalance_kit
-    { burrow with
-      excess_kit = Kit.(burrow.excess_kit + kit);
-      collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
+    { b with
+      excess_kit = Kit.(b.excess_kit + kit);
+      collateral_at_auction = Tez.(b.collateral_at_auction - tez);
     }
 
 let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
@@ -154,6 +175,7 @@ let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error
 
 (** Add non-negative collateral to a burrow. *)
 let deposit_tez (p: Parameters.t) (t: Tez.t) (b: t) : t =
+  assert_invariants b;
   assert (t >= Tez.zero);
   assert (p.last_touched = b.last_touched);
   { b with collateral = Tez.(b.collateral + t) }
@@ -161,6 +183,7 @@ let deposit_tez (p: Parameters.t) (t: Tez.t) (b: t) : t =
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
 let withdraw_tez (p: Parameters.t) (t: Tez.t) (b: t) : (t * Tez.t, Error.error) result =
+  assert_invariants b;
   assert (t >= Tez.zero);
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
@@ -171,6 +194,7 @@ let withdraw_tez (p: Parameters.t) (t: Tez.t) (b: t) : (t * Tez.t, Error.error) 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
 let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t, Error.error) result =
+  assert_invariants b;
   assert (kit >= Kit.zero);
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit + kit) } in
@@ -181,6 +205,7 @@ let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t, Error.error) re
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
 let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
+  assert_invariants b;
   assert (k >= Kit.zero);
   assert (p.last_touched = b.last_touched);
   let kit_to_burn = min b.outstanding_kit k in
@@ -200,7 +225,8 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
   * Note that it's skewed on the safe side (overapproximation). This ensures
   * that after a partial liquidation we are no longer "optimistically
   * overburrowed" *)
-let compute_tez_to_auction (p : Parameters.t) (b : t) : Tez.t =
+let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
+  assert_invariants b;
   let oustanding_kit = Kit.to_q b.outstanding_kit in
   let collateral = Tez.to_q b.collateral in
   let collateral_at_auction = Tez.to_q b.collateral_at_auction in
@@ -233,7 +259,8 @@ let compute_expected_kit (p: Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
   * price) when computing the outstanding kit. Note that only active burrows
   * can be liquidated; inactive ones are dormant, until either all pending
   * auctions finish or if their creation deposit is restored. *)
-let is_liquidatable (p : Parameters.t) (b : t) : bool =
+let is_liquidatable (p: Parameters.t) (b: t) : bool =
+  assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.(to_q (b.outstanding_kit - expected_kit)) in
@@ -246,6 +273,7 @@ let is_liquidatable (p : Parameters.t) (b : t) : bool =
   * current minting price, and that all these liquidations were warranted
   * (i.e. liquidation penalties have been paid). *)
 let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
+  assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.(to_q (b.outstanding_kit - expected_kit)) in
@@ -283,6 +311,7 @@ let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Te
     Q.(Tez.to_q tez_to_auction * (Constants.fliquidation * optimistic_outstanding) / collateral)
 
 let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
+  assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let liquidation_reward_percentage = FixedPoint.of_q_floor Constants.liquidation_reward_percentage in (* FLOOR-or-CEIL *)
   let partial_reward = Tez.scale b.collateral liquidation_reward_percentage in
@@ -290,8 +319,9 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
    * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
   if not (is_liquidatable p b) then
-    (* Case 1: The outstanding kit does not exceed the liquidation limit; we
-     * shouldn't liquidate the burrow, it's solid. *)
+    (* Case 1: The outstanding kit does not exceed the liquidation limit, or
+     * the burrow is already without its creation deposit, inactive; we
+     * shouldn't liquidate the burrow. *)
     Unnecessary
   else if Tez.(b.collateral - partial_reward) < Constants.creation_deposit then
     (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
@@ -358,4 +388,5 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
         burrow_state = final_burrow }
 
 let oldest_liquidation_ptr (b: t) : Avl.leaf_ptr option =
+  assert_invariants b;
   Option.map (fun i -> i.oldest) b.liquidation_slices
