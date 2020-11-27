@@ -498,7 +498,6 @@ let assert_invariants (auctions: auctions) : unit =
       go (completed_auctions.youngest) None
     );
 
-  (* TODO: Check if per-burrow linked lists are correct. *)
   (* TODO: Check if all dangling auctions are empty. *)
 
   ()

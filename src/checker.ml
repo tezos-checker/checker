@@ -152,6 +152,40 @@ struct
     | None -> Ptr.init
     | Some (id, _) -> Ptr.next id
 
+  let assert_invariants (state: 't) : unit =
+    (* Check if the auction pointerfest kind of make sense. *)
+    LiquidationAuction.assert_invariants state.liquidation_auctions;
+    (* Per-burrow assertions *)
+    List.iter
+      (fun (burrow_address, burrow) ->
+        match Burrow.liquidation_slices burrow with
+        | None ->
+            assert (Burrow.collateral_at_auction burrow = Tez.zero);
+        | Some slices ->
+            (* Check if the linked list of slices are correct, and the amount of
+             * tez inside is consistent with collateral_at_auction.
+             *)
+            let rec go
+              (curr: Avl.leaf_ptr)
+              (prev: Avl.leaf_ptr option) : Tez.t =
+              let (slice, tez) =
+                Avl.read_leaf
+                  (state.liquidation_auctions.avl_storage)
+                  curr in
+              assert (slice.burrow = burrow_address);
+              assert (slice.tez = tez);
+              assert (slice.younger = prev);
+              match slice.older with
+              | Some next ->
+                Tez.(slice.tez + go next (Some curr))
+              | None ->
+                assert (curr = slices.oldest);
+                slice.tez in
+            let actual_collateral = go slices.youngest None in
+            assert (Burrow.collateral_at_auction burrow = actual_collateral)
+)
+      (PtrMap.bindings state.burrows)
+
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
   (* ************************************************************************* *)
@@ -379,7 +413,7 @@ struct
                                           )
                                     }}
         ) in
-        LiquidationAuction.assert_invariants state.liquidation_auctions;
+        assert_invariants state;
         Ok state
 
 
@@ -506,7 +540,7 @@ struct
                                                     )
                                               }}
       ) in
-      LiquidationAuction.assert_invariants state.liquidation_auctions;
+      assert_invariants state;
       state
 
   let touch_liquidation_slices (state: t) (slices: Avl.leaf_ptr list) : t =
@@ -632,7 +666,7 @@ struct
       (* 5: Touch oldest liquidation slices *)
       (* TODO: Touch only runs at most once per block. But it might be benefical to run this step
        * without that restriction. *)
-      let new_state =
+      let state =
         { burrows = state.burrows; (* leave as-is *)
           parameters = updated_parameters;
           uniswap = updated_uniswap;
@@ -647,8 +681,9 @@ struct
           | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (maximum - 1) in
 
       (* TODO: Figure out how many slices we can process per checker touch.*)
-      let new_state = touch_oldest Constants.number_of_slices_to_process new_state in
+      let state = touch_oldest Constants.number_of_slices_to_process state in
+      assert_invariants state;
 
       (* TODO: Add more tasks here *)
-      (reward, new_state)
+      (reward, state)
 end
