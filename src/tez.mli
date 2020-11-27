@@ -22,3 +22,9 @@ val of_q_floor : Q.t -> t
 val pp : Format.formatter -> t -> unit
 val show : t -> string
 
+(* Tez payments *)
+type payment = {destination: Address.t ; amount: t;}
+
+val pp_payment : Format.formatter -> payment -> unit
+val show_payment : payment -> string
+

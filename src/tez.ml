@@ -42,3 +42,7 @@ let show amount =
 
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
+(* Tez payments *)
+type payment = {destination: Address.t ; amount: t;}
+[@@deriving show]
+

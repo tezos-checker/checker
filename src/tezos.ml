@@ -1,4 +1,3 @@
-
 type t =
   { now: Timestamp.t;
     level: Level.t;

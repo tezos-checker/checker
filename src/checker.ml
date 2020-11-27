@@ -45,30 +45,30 @@ module Checker : sig
   (** Create and return a new burrow owned by the given owner, containing the
     * given tez as collateral, minus the creation deposit. Fail if the tez is
     * not enough to cover the creation deposit. *)
-  val create_burrow : t -> owner:Address.t -> amount:Tez.t -> (burrow_id * t, Error.error) result
+  val create_burrow : t -> call:Call.t -> (burrow_id * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     * someone else owns the burrow, or if the burrow does not exist. *)
-  val deposit_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (t, Error.error) result
+  val deposit_tez : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
     * does not exist. *)
-  val withdraw_tez : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Tez.t -> (Tez.t * t, Error.error) result
+  val withdraw_tez : t -> call:Call.t -> tez:Tez.t -> burrow_id:burrow_id -> (Tez.payment * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
     * if the burrow owner does not match, or if the burrow does not exist. *)
-  val mint_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (Kit.t * t, Error.error) result
+  val mint_kit : t -> call:Call.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow owner
     * does not match, or if the burrow does not exist. *)
-  val burn_kit : t -> owner:Address.t -> burrow_id:burrow_id -> amount:Kit.t -> (t, Error.error) result
+  val burn_kit : t -> call:Call.t -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator. *)
-  val mark_for_liquidation : t -> liquidator:Address.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
+  val mark_for_liquidation : t -> call:Call.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (** Process the liquidation slices on completed liquidation auctions. Invalid leaf_ptr's
     * fail, and slices that correspond to incomplete liquidations are ignored.
@@ -87,23 +87,50 @@ module Checker : sig
 
   (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
     * cannot be bought or if the deadline has passed. *)
-  (* NOTE: an address is needed too, eventually. *)
-  val buy_kit : t -> tezos:Tezos.t -> amount:Tez.t -> min_kit_expected:Kit.t -> deadline:Timestamp.t -> (Kit.t * t, Error.error) result
+  val buy_kit :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    min_kit_expected:Kit.t ->
+    deadline:Timestamp.t ->
+    (Kit.t * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
-  val sell_kit : t -> tezos:Tezos.t -> amount:Tez.t -> Kit.t -> min_tez_expected:Tez.t -> deadline:Timestamp.t -> (Tez.t * t, Error.error) result
+  val sell_kit :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    kit:Kit.t ->
+    min_tez_expected:Tez.t ->
+    deadline:Timestamp.t ->
+    (Tez.payment * t, Error.error) result
 
   (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
     * giving it some tez and some kit. If the given amounts do not have the
     * right ratio, the uniswap contract keeps as much of the given tez and kit
     * as possible with the right ratio, and returns the leftovers, along with
     * the liquidity tokens. *)
-  val add_liquidity : t -> tezos:Tezos.t -> amount:Tez.t -> max_kit_deposited:Kit.t -> min_lqt_minted:Uniswap.liquidity -> deadline:Timestamp.t -> (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
+  val add_liquidity :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    max_kit_deposited:Kit.t ->
+    min_lqt_minted:Uniswap.liquidity ->
+    deadline:Timestamp.t ->
+    (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
-  val remove_liquidity : t -> tezos:Tezos.t -> amount:Tez.t -> lqt_burned:Uniswap.liquidity -> min_tez_withdrawn:Tez.t -> min_kit_withdrawn:Kit.t -> deadline:Timestamp.t -> (Tez.t * Kit.t * t, Error.error) result
+  val remove_liquidity :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    lqt_burned:Uniswap.liquidity ->
+    min_tez_withdrawn:Tez.t ->
+    min_kit_withdrawn:Kit.t ->
+    deadline:Timestamp.t ->
+    (Tez.payment * Kit.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                          LIQUIDATION AUCTIONS                            *)
@@ -112,7 +139,7 @@ module Checker : sig
   (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a ticket which can be used to
     * reclaim the kit when outbid. *)
-  val liquidation_auction_place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
+  val liquidation_auction_place_bid : t -> tezos:Tezos.t -> call:Call.t -> kit:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed liquidation auction. *)
   val liquidation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
@@ -133,7 +160,7 @@ module Checker : sig
   (** Bid in current auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a token which can be used to either
     * reclaim the tez when outbid, or claim the auction result. *)
-  val delegation_auction_place_bid : t -> tezos:Tezos.t -> sender:Address.t -> amount:Tez.t -> (DelegationAuction.bid_ticket * t, Error.error) result
+  val delegation_auction_place_bid : t -> tezos:Tezos.t -> call:Call.t -> (DelegationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed auction. *)
   val delegation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:DelegationAuction.bid_ticket
@@ -218,12 +245,12 @@ struct
   let with_owned_burrow
       (state: t)
       (burrow_id: burrow_id)
-      ~(owner: Address.t)
+      ~(sender: Address.t)
       (f: Burrow.t -> ('a, Error.error) result)
     : ('a, Error.error) result =
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow ->
-      if Burrow.is_owned_by burrow owner
+      if Burrow.is_owned_by burrow sender
       then
         let is_ready =
           match Burrow.oldest_liquidation_ptr burrow with
@@ -235,12 +262,12 @@ struct
         if is_ready
         then f burrow
         else Error BurrowHasCompletedLiquidation
-      else Error (OwnershipMismatch (owner, burrow))
+      else Error (OwnershipMismatch (sender, burrow))
     | None -> Error (NonExistentBurrow burrow_id)
 
-  let create_burrow (state:t) ~(owner:Address.t) ~(amount:Tez.t) =
+  let create_burrow (state:t) ~(call:Call.t) =
     let address = mk_next_burrow_id state.burrows in
-    match Burrow.create state.parameters owner amount with
+    match Burrow.create state.parameters call.sender call.amount with
     | Ok burrow -> Ok (address, {state with burrows = PtrMap.add address burrow state.burrows})
     | Error err -> Error err
 
@@ -251,16 +278,17 @@ struct
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | None -> Error (NonExistentBurrow burrow_id)
 
-  let deposit_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-    let updated_burrow = Burrow.deposit_tez state.parameters amount burrow in
+  let deposit_tez (state:t) ~(call:Call.t) ~burrow_id =
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
     Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
 
-  let mint_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-    match Burrow.mint_kit state.parameters amount burrow with
+  let mint_kit (state:t) ~(call:Call.t) ~burrow_id ~kit =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    match Burrow.mint_kit state.parameters kit burrow with
     | Ok (updated_burrow, minted) ->
-      assert (amount = minted);
+      assert (kit = minted);
       Ok ( minted,
            {state with
             burrows = PtrMap.add burrow_id updated_burrow state.burrows;
@@ -272,25 +300,28 @@ struct
          )
     | Error err -> Error err
 
-  let withdraw_tez (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Tez.t) =
-    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-    match Burrow.withdraw_tez state.parameters amount burrow with
+  let withdraw_tez (state:t) ~(call:Call.t) ~tez ~burrow_id =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    match Burrow.withdraw_tez state.parameters tez burrow with
     | Ok (updated_burrow, withdrawn) ->
-      assert (amount = withdrawn);
-      Ok (withdrawn, {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows})
+      assert (tez = withdrawn);
+      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+      let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
+      Ok (tez_payment, updated_state)
     | Error err -> Error err
 
-  let burn_kit (state:t) ~(owner:Address.t) ~burrow_id ~(amount:Kit.t) =
-    with_owned_burrow state burrow_id ~owner @@ fun burrow ->
-    let updated_burrow = Burrow.burn_kit state.parameters amount burrow in
+  let burn_kit (state:t) ~(call:Call.t) ~burrow_id ~kit =
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
-    assert (state.parameters.circulating_kit >= amount);
+    assert (state.parameters.circulating_kit >= kit);
     Ok {state with
         burrows = PtrMap.add burrow_id updated_burrow state.burrows;
         parameters =
           Parameters.remove_outstanding_kit
-            (Parameters.remove_circulating_kit state.parameters amount)
-            amount;
+            (Parameters.remove_circulating_kit state.parameters kit)
+            kit;
        }
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
@@ -300,7 +331,8 @@ struct
    * the auctions are happening and in those instances it could grow unbounded,
    * but roughly speaking in most cases it should average out) *)
   (* TODO: the liquidator's address must be used, eventually. *)
-  let mark_for_liquidation (state:t) ~liquidator:_ ~burrow_id =
+  let mark_for_liquidation (state:t) ~call:_ ~burrow_id =
+    (* NOTE: do we have to assert that call.amount = 0? *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
         match Burrow.request_liquidation state.parameters burrow with
@@ -320,39 +352,39 @@ struct
           | Error err -> Error err
           | Ok (updated_liquidation_auctions, leaf_ptr) ->
 
-          (* Fixup the previous youngest pointer since the newly added slice
-           * is even younger.
-           *
-           * This is hacky, but couldn't figure out a nicer way, please do
-           * refactor if you do.
-          *)
-          let updated_storage = (
-            match liquidation_slice.older with
-            | None -> updated_liquidation_auctions.avl_storage
-            | Some older_ptr ->
-              BigMap.mem_update
-                updated_liquidation_auctions.avl_storage
-                (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
-              match older with
-              | Leaf l -> Leaf
-                            { l with value = { l.value with younger = Some leaf_ptr; }; }
-              | _ -> failwith "impossible"
-          ) in
+            (* Fixup the previous youngest pointer since the newly added slice
+             * is even younger.
+             *
+             * This is hacky, but couldn't figure out a nicer way, please do
+             * refactor if you do.
+            *)
+            let updated_storage = (
+              match liquidation_slice.older with
+              | None -> updated_liquidation_auctions.avl_storage
+              | Some older_ptr ->
+                BigMap.mem_update
+                  updated_liquidation_auctions.avl_storage
+                  (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+                match older with
+                | Leaf l -> Leaf
+                              { l with value = { l.value with younger = Some leaf_ptr; }; }
+                | _ -> failwith "impossible"
+            ) in
 
-          (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
-          let updated_burrow =
-            Burrow.set_liquidation_slices
-              details.burrow_state
-              (match Burrow.liquidation_slices details.burrow_state with
-               | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
-               | Some s -> Some { s with youngest=leaf_ptr; })
-          in
-          Ok ( details.liquidation_reward,
-               {state with
-                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
-               }
-             )
+            (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
+            let updated_burrow =
+              Burrow.set_liquidation_slices
+                details.burrow_state
+                (match Burrow.liquidation_slices details.burrow_state with
+                 | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
+                 | Some s -> Some { s with youngest=leaf_ptr; })
+            in
+            Ok ( details.liquidation_reward, (* TODO: kit must be given to call.sender (liquidator) *)
+                 {state with
+                  burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+                  liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
+                 }
+               )
       )
     | None -> Error (NonExistentBurrow burrow_id)
 
@@ -571,38 +603,39 @@ struct
   (**                                UNISWAP                                   *)
   (* ************************************************************************* *)
 
-  (* NOTE: an address is needed too, eventually. *)
-  let buy_kit (state:t) ~tezos ~amount ~min_kit_expected ~deadline =
-    match Uniswap.buy_kit state.uniswap ~amount ~min_kit_expected ~tezos ~deadline with
-    | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap})
+  let buy_kit (state:t) ~tezos ~(call:Call.t) ~min_kit_expected ~deadline =
+    match Uniswap.buy_kit state.uniswap ~amount:call.amount ~min_kit_expected ~tezos ~deadline with
+    | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to call.sender *)
     | Error err -> Error err
 
-  (* NOTE: an address is needed too, eventually. *)
-  let sell_kit (state:t) ~tezos ~amount kit ~min_tez_expected ~deadline =
-    match Uniswap.sell_kit state.uniswap ~amount kit ~min_tez_expected ~tezos ~deadline with
-    | Ok (tez, updated_uniswap) -> Ok (tez, {state with uniswap = updated_uniswap})
+  let sell_kit (state:t) ~tezos ~(call:Call.t) ~kit ~min_tez_expected ~deadline =
+    match Uniswap.sell_kit state.uniswap ~amount:call.amount kit ~min_tez_expected ~tezos ~deadline with
+    | Ok (tez, updated_uniswap) ->
+      let tez_payment = Tez.{destination = call.sender; amount = tez;} in
+      let updated_state = {state with uniswap = updated_uniswap} in
+      Ok (tez_payment, updated_state)
     | Error err -> Error err
 
-  (* NOTE: an address is needed too, eventually. *)
-  let add_liquidity (state:t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted ~deadline =
-    match Uniswap.add_liquidity state.uniswap ~amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline with
+  let add_liquidity (state:t) ~tezos ~(call:Call.t) ~max_kit_deposited ~min_lqt_minted ~deadline =
+    match Uniswap.add_liquidity state.uniswap ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
-      Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap})
+      Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to call.sender *)
 
-  (* NOTE: an address is needed too, eventually. *)
-  let remove_liquidity (state:t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
-    match Uniswap.remove_liquidity state.uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline with
+  let remove_liquidity (state:t) ~tezos ~(call:Call.t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
+    match Uniswap.remove_liquidity state.uniswap ~amount:call.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
-      Ok (tez, kit, {state with uniswap = updated_uniswap})
+      let tez_payment = Tez.{destination = call.sender; amount = tez;} in
+      let updated_state = {state with uniswap = updated_uniswap} in
+      Ok (tez_payment, kit, updated_state) (* TODO: kit must be given to call.sender *)
 
   (* ************************************************************************* *)
   (**                          LIQUIDATION AUCTIONS                            *)
   (* ************************************************************************* *)
 
-  let liquidation_auction_place_bid state ~tezos ~sender ~amount =
-    let bid = Bid.{ address=sender; kit=amount; } in
+  let liquidation_auction_place_bid state ~tezos ~(call:Call.t) ~kit =
+    let bid = Bid.{ address=call.sender; kit=kit; } in
     match
       LiquidationAuction.with_current_auction state.liquidation_auctions @@
       fun auction -> LiquidationAuction.place_bid tezos auction bid with
@@ -630,10 +663,10 @@ struct
   (**                          DELEGATION AUCTIONS                             *)
   (* ************************************************************************* *)
 
-  let delegation_auction_place_bid state ~tezos ~sender ~amount =
+  let delegation_auction_place_bid state ~tezos ~(call:Call.t) =
     Result.map
       (fun (ticket, auction) -> (ticket, {state with delegation_auction = auction;}) )
-      (DelegationAuction.place_bid state.delegation_auction tezos ~sender:sender ~amount:amount)
+      (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
 
   let delegation_auction_reclaim_bid state ~address ~bid_ticket =
     DelegationAuction.reclaim_bid state.delegation_auction ~address:address ~bid_ticket:bid_ticket

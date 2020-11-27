@@ -35,7 +35,7 @@ let suite =
          Checker.add_liquidity
            checker
            ~tezos
-           ~amount:Tez.one
+           ~call:{sender=alice; amount=Tez.one;}
            ~max_kit_deposited:Kit.one
            ~min_lqt_minted:(Uniswap.liquidity_of_int 1)
            ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
@@ -43,15 +43,14 @@ let suite =
        let (burrow_id, checker) = assert_ok @@
          Checker.create_burrow
            checker
-           ~owner:bob
-           ~amount:(Tez.of_mutez 10_000_000) in
+           ~call:{sender = bob; amount = Tez.of_mutez 10_000_000;} in
 
        let (kit, checker) = assert_ok @@
          Checker.mint_kit
            checker
-           ~owner:bob
+           ~call:{sender=bob; amount=Tez.zero;}
            ~burrow_id:burrow_id
-           ~amount:(Kit.of_mukit 4_285_714) in
+           ~kit:(Kit.of_mukit 4_285_714) in
        assert_equal (Kit.of_mukit 4_285_714) kit;
 
        let int_level = 5 in
@@ -75,7 +74,7 @@ let suite =
        let (reward, checker) = assert_ok @@
          Checker.mark_for_liquidation
            checker
-           ~liquidator:alice
+           ~call:{sender=alice; amount=Tez.zero;}
            ~burrow_id:burrow_id in
        assert_equal (Tez.of_mutez 1_008_999) reward ~printer:Tez.show;
 
@@ -88,7 +87,11 @@ let suite =
 
        assert_equal
          (Error LiquidationAuction.NoOpenAuction)
-         (Checker.liquidation_auction_place_bid checker ~tezos:tezos ~sender:bob ~amount:(Kit.of_mukit 1_000));
+         (Checker.liquidation_auction_place_bid
+           checker
+           ~tezos:tezos
+           ~call:{sender=bob; amount = Tez.zero;}
+           ~kit:(Kit.of_mukit 1_000));
 
        let touch_reward, checker =
          Checker.touch
@@ -118,8 +121,8 @@ let suite =
          Checker.liquidation_auction_place_bid
            checker
            ~tezos
-           ~sender:alice
-           ~amount:(Kit.of_mukit 4_200_000) in
+           ~call:{sender=alice; amount=Tez.zero;}
+           ~kit:(Kit.of_mukit 4_200_000) in
 
        assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
 
