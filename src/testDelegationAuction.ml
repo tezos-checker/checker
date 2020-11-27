@@ -58,5 +58,17 @@ let suite =
        (* And they become the delegate in the next round *)
        let (delegate, _auction) = DelegationAuction.delegate auction {start_tezos with level = Level.of_int 4096} in
        assert_equal (Some bidder2) delegate ~printer:show_address_option;
+    );
+
+    ("test sanity when skipping multiple levels" >::
+     fun _ ->
+       let auction = DelegationAuction.empty start_tezos in
+       let bidder = Address.of_string "5678" in
+       let amount = Tez.of_mutez 1 in
+       let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
+       (* And in the subsequent cycle they cease to be the delegate again *)
+       let (delegate, _auction) = DelegationAuction.delegate auction {start_tezos with level = Level.of_int (3 * 4096)} in
+       assert_equal None delegate ~printer:show_address_option;
+       assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction ~address:bidder ~bid_ticket:ticket));
     )
   ]
