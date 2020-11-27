@@ -95,31 +95,31 @@ type ('l, 'r) node =
 
 type ('l, 'r) mem = (('l, 'r) node) BigMap.t
 
-let node_tez n =
+let node_tez (n: ('l, 'r) node) : Tez.t =
   match n with
   | Leaf leaf -> leaf.tez
   | Branch branch -> Tez.(branch.left_tez + branch.right_tez)
   | Root _ -> failwith "node_tez found Root"
 
-let node_height n =
+let node_height (n: ('l, 'r) node) : int =
   match n with
   | Leaf _ -> 1
   | Branch branch -> max branch.left_height branch.right_height + 1
   | Root _ -> failwith "node_height found Root"
 
-let node_count n =
+let node_count (n: ('l, 'r) node) : int =
   match n with
   | Leaf _ -> 1
   | Branch branch -> branch.left_count + branch.right_count
   | Root _ -> failwith "node_height found Root"
 
-let node_parent n =
+let node_parent (n: ('l, 'r) node) : ptr =
   match n with
   | Leaf leaf -> leaf.parent
   | Branch branch -> branch.parent
   | Root _ -> failwith "node_parent found Root"
 
-let node_set_parent (p: ptr) (n: ('l, 'r) node) =
+let node_set_parent (p: ptr) (n: ('l, 'r) node) : ('l, 'r) node =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
   | Branch branch -> Branch { branch with parent = p; }
@@ -370,7 +370,7 @@ let rec ref_join
     (mem, new_)
 
 let push_back
-    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
   : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = mem_new mem node in
@@ -408,7 +408,7 @@ let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) me
  * these.
 *)
 let push_front
-    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 't) (tez: 'tez)
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
   : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = mem_new mem node in
@@ -468,12 +468,12 @@ let ref_del (mem: ('l, 'r) mem) (ptr: ptr): ('l, 'r) mem * avl_ptr =
 
 let del (mem: ('l, 'r) mem) (LeafPtr ptr): ('l, 'r) mem * avl_ptr = ref_del mem ptr
 
-let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 't * Tez.t =
+let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 'l * Tez.t =
   match mem_get mem ptr with
   | Leaf l -> (l.value, l.tez)
   | _ -> failwith "read_leaf: leaf_ptr does not point to a leaf"
 
-let update_leaf (mem: ('l, 'r) mem) (LeafPtr ptr) (f: 't -> 't): ('l, 'r) mem =
+let update_leaf (mem: ('l, 'r) mem) (LeafPtr ptr) (f: 'l -> 'l): ('l, 'r) mem =
   match mem_get mem ptr with
   | Leaf l ->
     mem_set mem ptr (Leaf { l with value = f l.value })
@@ -508,21 +508,21 @@ let find_root (mem: ('l, 'r) mem) (LeafPtr leaf) : avl_ptr =
     | Leaf l -> go l.parent in
   go leaf
 
-let rec ref_peek_front (mem: ('l, 'r) mem) (ptr: ptr) : leaf_ptr * 't leaf =
+let rec ref_peek_front (mem: ('l, 'r) mem) (ptr: ptr) : leaf_ptr * 'l leaf =
   let self = mem_get mem ptr in
   match self with
   | Leaf l -> (LeafPtr ptr, l)
   | Branch b -> ref_peek_front mem b.left
   | _ -> failwith "node is not leaf or branch"
 
-let peek_front (mem: ('l, 'r) mem) (AVLPtr ptr) : (leaf_ptr * 't leaf) option =
+let peek_front (mem: ('l, 'r) mem) (AVLPtr ptr) : (leaf_ptr * 'l leaf) option =
   match mem_get mem ptr with
   | Root (None, _) -> None
   | Root (Some r, _) -> Some (ref_peek_front mem r)
   | _ -> failwith "peek_front: avl_ptr does not point to a Root"
 
 (* FIXME: needs an efficient reimplementation *)
-let pop_front (mem: ('l, 'r) mem) (AVLPtr root_ptr) : ('l, 'r) mem * 't option =
+let pop_front (mem: ('l, 'r) mem) (AVLPtr root_ptr) : ('l, 'r) mem * 'l option =
   match mem_get mem root_ptr with
   | Root (None, _) -> (mem, None)
   | Root (Some r, _) ->
@@ -596,7 +596,7 @@ let take (mem: ('l, 'r) mem) (AVLPtr root_ptr) (limit: Tez.t) (root_data: 'r)
     (mem, AVLPtr new_root)
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
 
-let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) =
+let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) : Tez.t =
   match mem_get mem ptr with
   | Root (Some ptr, _) -> node_tez (mem_get mem ptr)
   | Root (None, _) -> Tez.zero
