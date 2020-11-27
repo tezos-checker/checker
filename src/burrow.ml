@@ -141,6 +141,7 @@ let touch (p: Parameters.t) (burrow: t) : t =
 
 let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
   assert_invariants burrow;
+  assert burrow.active;
   assert (tez >= Tez.zero);
   { burrow with
     collateral = Tez.(burrow.collateral + tez);
