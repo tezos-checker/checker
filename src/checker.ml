@@ -316,8 +316,9 @@ struct
                   (Burrow.liquidation_slices burrow);
               younger = None;
             } in
-          let updated_liquidation_auctions, leaf_ptr =
-            LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice in
+          match LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice with
+          | Error err -> Error err
+          | Ok (updated_liquidation_auctions, leaf_ptr) ->
 
           (* Fixup the previous youngest pointer since the newly added slice
            * is even younger.

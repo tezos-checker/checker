@@ -73,6 +73,7 @@ type Error.error +=
   | CannotReclaimLeadingBid
   | NotAWinningBid
   | NotAllSlicesClaimed
+  | LiquidationQueueTooLong
 
 type liquidation_slice = {
   burrow: Ptr.t;
@@ -144,11 +145,15 @@ let empty : auctions =
 let send_to_auction
     (auctions: auctions)
     (slice: liquidation_slice)
-  : auctions * Avl.leaf_ptr =
-  let (new_storage, ret) =
-    Avl.push_back auctions.avl_storage auctions.queued_slices slice slice.tez in
-  let new_state = { auctions with avl_storage = new_storage; } in
-  (new_state, ret)
+  : (auctions * Avl.leaf_ptr, Error.error) result =
+  if Avl.avl_count auctions.avl_storage auctions.queued_slices
+       >= Constants.max_liquidation_slices_in_auction_queue then
+    Error LiquidationQueueTooLong
+  else
+    let (new_storage, ret) =
+      Avl.push_back auctions.avl_storage auctions.queued_slices slice slice.tez in
+    let new_state = { auctions with avl_storage = new_storage; } in
+    Ok (new_state, ret)
 
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
