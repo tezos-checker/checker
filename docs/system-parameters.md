@@ -1,4 +1,5 @@
 
+
 # System Parameters
 
 A operational description of Checker's internal parameters, and operations on them.
@@ -150,8 +151,8 @@ new_imbalance_index = old_imbalance_index
 but `imbalance_rate` varies, depending on the difference between `old_outstanding_kit` and `old_circulating_kit`:
 ```
 imbalance_rate =
-  min( 5 * outstanding, (outstanding - circulating)) * 0.01 / outstanding , if outstanding >= circulating
-  max(-5 * outstanding, (outstanding - circulating)) * 0.01 / outstanding , if outstanding <  circulating
+  min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
+  max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
 ```
 
 Q4: What if the current `outstanding_kit` is zero? In this case the above formula fails. This also relates to the initialization and subsequent calculation of `outstanding_kit` (if it ever becomes zero, it stays zero forever).

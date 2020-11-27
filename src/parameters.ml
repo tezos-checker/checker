@@ -67,8 +67,13 @@ let clamp (v: Q.t) (lower: Q.t) (upper: Q.t) : 'a =
   * existing burrows, and "circulating" the total amount of kit in circulation,
   * then the imbalance fee/bonus is calculated as follows (per year):
   *
-  *   min(   5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , if burrowed >= circulating
-  *   max( - 5 * burrowed, (burrowed - circulating) ) * 1.0 cNp / burrowed , otherwise
+  *   min((burrowed - circulating) / burrowed,   0.20) * (1/0.20) * 0.05 , if burrowed >= circulating
+  *   max((burrowed - circulating) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
+  *
+  * or, equivalently,
+  *
+  *   min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
+  *   max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
   *
   * Edge cases:
   * - burrowed = 0, circulating = 0
@@ -87,13 +92,11 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Q.t =
   else if burrowed = Kit.zero && circulating <> Kit.zero then
     Q.(of_int (-5) * of_string "1/100")
   else if burrowed >= circulating then
-    Q.(min (Kit.to_q burrowed * of_int 5) Kit.(to_q (burrowed - circulating))
-       * of_string "1/100"
-       / Kit.to_q burrowed)
+    Q.(min Kit.(of_int 5 * to_q (burrowed - circulating)) (    (Kit.to_q burrowed))
+       / (of_int 20 * Kit.to_q burrowed))
   else (* burrowed < circulating *)
-    Q.(max (Kit.to_q burrowed * of_int (-5)) Kit.(to_q (burrowed - circulating))
-       * of_string "1/100"
-       / Kit.to_q burrowed)
+    Q.(max Kit.(of_int 5 * to_q (burrowed - circulating)) (neg (Kit.to_q burrowed))
+       / (of_int 20 * Kit.to_q burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)

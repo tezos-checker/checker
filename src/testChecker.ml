@@ -174,7 +174,7 @@ let suite =
            ~address:alice
            ~bid_ticket:bid in
 
-       assert_equal (Tez.of_mutez 3_156_181) tez_from_bid
+       assert_equal (Tez.of_mutez 3_156_178) tez_from_bid
          ~printer:Tez.show;
     );
   ]
