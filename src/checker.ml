@@ -65,6 +65,11 @@ module Checker : sig
     * does not match, or if the burrow does not exist. *)
   val burn_kit : t -> call:Call.t -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
 
+  (** Activate a currently inactive burrow. Fail if the burrow does not exist,
+    * if the burrow is already active, or if the amount of tez given is less
+    * than the creation deposit. *)
+  val activate : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
+
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator. *)
@@ -325,6 +330,13 @@ struct
             (Parameters.remove_circulating_kit state.parameters kit)
             kit;
        }
+
+  let activate (state:t) ~(call:Call.t) ~burrow_id =
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    match Burrow.activate state.parameters call.amount burrow with
+    | Ok updated_burrow ->
+      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    | Error err -> Error err
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
    * slices is during a liquidation. a liquidation creates one slice, so if we
