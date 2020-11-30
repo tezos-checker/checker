@@ -36,6 +36,7 @@ type Error.error +=
   | InsufficientFunds of Tez.t
   | WithdrawTezFailure
   | MintKitFailure
+  | BurrowIsAlreadyActive
 
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
@@ -113,6 +114,11 @@ val burn_kit : Parameters.t -> Kit.t -> t -> t
  * - The burrow is UNDER-burrowed. To be precise, is_overburrowed should return
  *   false.
  *)
+
+(** Activate a currently inactive burrow. This operation will fail if either
+  * the burrow is already active, or if the amount of tez given is less than
+  * the creation deposit. *)
+val activate : Parameters.t -> Tez.t -> t -> (t, Error.error) result
 
 (** Compute the least number of tez that needs to be auctioned off (given the
   * current expected minting price) so that the burrow can return to a state

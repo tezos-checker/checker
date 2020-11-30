@@ -38,6 +38,7 @@ type Error.error +=
   | InsufficientFunds of Tez.t
   | WithdrawTezFailure
   | MintKitFailure
+  | BurrowIsAlreadyActive
 
 let assert_invariants (b: t) : unit =
   assert (b.collateral >= Tez.zero);
@@ -215,6 +216,23 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
     outstanding_kit = Kit.(b.outstanding_kit - kit_to_burn);
     excess_kit = Kit.(b.excess_kit + kit_to_store);
   }
+
+(** Activate a currently inactive burrow. This operation will fail if either
+  * the burrow is already active, or if the amount of tez given is less than
+  * the creation deposit. *)
+let activate (p: Parameters.t) (tez: Tez.t) (b: t) : (t, Error.error) result =
+  assert_invariants b;
+  assert (tez >= Tez.zero);
+  assert (p.last_touched = b.last_touched);
+  if tez < Constants.creation_deposit then
+    Error (InsufficientFunds tez)
+  else if b.active then
+    Error BurrowIsAlreadyActive
+  else
+    Ok { b with
+         active = true;
+         collateral = Tez.(tez - Constants.creation_deposit);
+       }
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
