@@ -68,13 +68,13 @@ module Checker : sig
   (** Activate a currently inactive burrow. Fail if the burrow does not exist,
     * if the burrow is already active, or if the amount of tez given is less
     * than the creation deposit. *)
-  val activate : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
+  val activate_burrow : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
 
   (** Deativate a currently active burrow. Fail if the burrow does not exist,
     * or if it is already inactive, or if it is overburrowed, or if it has kit
     * outstanding, or if it has collateral sent off to auctions. If
     * deactivation is successful, make a tez payment to the given address. *)
-  val deactivate : t -> call:Call.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
+  val deactivate_burrow : t -> call:Call.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
@@ -337,14 +337,14 @@ struct
             kit;
        }
 
-  let activate (state:t) ~(call:Call.t) ~burrow_id =
+  let activate_burrow (state:t) ~(call:Call.t) ~burrow_id =
     with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
     match Burrow.activate state.parameters call.amount burrow with
     | Ok updated_burrow ->
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | Error err -> Error err
 
-  let deactivate (state:t) ~(call:Call.t) ~burrow_id ~recipient =
+  let deactivate_burrow (state:t) ~(call:Call.t) ~burrow_id ~recipient =
     (* NOTE: do we have to assert that call.amount = 0? *)
     with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
     match Burrow.deactivate state.parameters burrow with
