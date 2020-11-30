@@ -39,6 +39,10 @@ type Error.error +=
   | WithdrawTezFailure
   | MintKitFailure
   | BurrowIsAlreadyActive
+  | DeactivatingAnOverburrowedBurrow
+  | DeactivatingAnInactiveBurrow
+  | DeactivatingWithOutstandingKit
+  | DeactivatingWithCollateralAtAuctions
 
 let assert_invariants (b: t) : unit =
   assert (b.collateral >= Tez.zero);
@@ -233,6 +237,29 @@ let activate (p: Parameters.t) (tez: Tez.t) (b: t) : (t, Error.error) result =
          active = true;
          collateral = Tez.(tez - Constants.creation_deposit);
        }
+
+(** Deativate a currently active burrow. This operation will fail if the burrow
+  * (a) is already inactive, or (b) is overburrowed, or (c) has kit
+  * outstanding, or (d) has collateral sent off to auctions. *)
+let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
+  assert_invariants b;
+  assert (p.last_touched = b.last_touched);
+  if (is_overburrowed p b) then
+    Error DeactivatingAnOverburrowedBurrow
+  else if (not b.active) then
+    Error DeactivatingAnInactiveBurrow
+  else if (b.outstanding_kit > Kit.zero) then
+    Error DeactivatingWithOutstandingKit
+  else if (b.collateral_at_auction > Tez.zero) then
+    Error DeactivatingWithCollateralAtAuctions
+  else
+    let return = Tez.(b.collateral + Constants.creation_deposit) in
+    let updated_burrow =
+      { b with
+        active = false;
+        collateral = Tez.zero;
+      } in
+    Ok (updated_burrow, return)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
