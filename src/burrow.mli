@@ -159,3 +159,5 @@ val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
 val request_liquidation : Parameters.t -> t -> liquidation_result
 val oldest_liquidation_ptr : t -> Avl.leaf_ptr option
+
+val assert_invariants : t -> unit

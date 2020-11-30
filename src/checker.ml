@@ -205,6 +205,8 @@ struct
     (* Per-burrow assertions *)
     List.iter
       (fun (burrow_address, burrow) ->
+         Burrow.assert_invariants burrow;
+
          match Burrow.liquidation_slices burrow with
          | None ->
            assert (Burrow.collateral_at_auction burrow = Tez.zero);
