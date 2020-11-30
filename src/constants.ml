@@ -86,8 +86,8 @@ let touch_high_reward : Q.t = Q.of_string "1/60" (* 1/60 *)
   * contract is touched. *)
 let number_of_slices_to_process : int = 5
 
-(** Maximum number of items allowed in the liquidation queue.
+(** Maximum height of the tree used as liquidation queue.
+  * The maximum number of elements will be between 2**(n-1) and 2**(n-2).
   * TODO: Decide on the number here.
-  * TODO: We might want to check the height of an AVL tree
-  * instead of an absolute number of slices. *)
-let max_liquidation_slices_in_auction_queue: int = 1_000_000
+  *)
+let max_liquidation_queue_height: int = 12

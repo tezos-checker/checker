@@ -76,12 +76,10 @@ type 't leaf = {
  * might work better in that case. *)
 type branch = {
   left: ptr;
-  left_count: int;
   left_height: int;
   left_tez: Tez.t;
   right_tez: Tez.t;
   right_height: int;
-  right_count: int;
   right: ptr;
   parent: ptr;
 }
@@ -105,12 +103,6 @@ let node_height (n: ('l, 'r) node) : int =
   match n with
   | Leaf _ -> 1
   | Branch branch -> max branch.left_height branch.right_height + 1
-  | Root _ -> failwith "node_height found Root"
-
-let node_count (n: ('l, 'r) node) : int =
-  match n with
-  | Leaf _ -> 1
-  | Branch branch -> branch.left_count + branch.right_count
   | Root _ -> failwith "node_height found Root"
 
 let node_parent (n: ('l, 'r) node) : ptr =
@@ -142,7 +134,6 @@ let update_matching_child
           left = to_ptr;
           left_tez = node_tez to_;
           left_height = node_height to_;
-          left_count = node_count to_;
         }
       else (
         assert (old_branch.right = from_ptr);
@@ -151,7 +142,6 @@ let update_matching_child
           right = to_ptr;
           right_tez = node_tez to_;
           right_height = node_height to_;
-          right_count = node_count to_;
         }) in
     mem_set mem ptr new_branch
 
@@ -341,12 +331,10 @@ let rec ref_join
   if abs (node_height left - node_height right) < 2 then
     let new_branch = Branch {
         left = left_ptr;
-        left_count = node_count left;
         left_height = node_height left;
         left_tez = node_tez left;
         right_tez = node_tez right;
         right_height = node_height right;
-        right_count = node_count right;
         right = right_ptr;
         parent = parent_ptr;
       } in
@@ -602,9 +590,9 @@ let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) : Tez.t =
   | Root (None, _) -> Tez.zero
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
 
-let avl_count (mem: ('l, 'r) mem) (AVLPtr ptr): int =
+let avl_height (mem: ('l, 'r) mem) (AVLPtr ptr): int =
   match mem_get mem ptr with
-  | Root (Some ptr, _) -> node_count (mem_get mem ptr)
+  | Root (Some ptr, _) -> node_height (mem_get mem ptr)
   | Root (None, _) -> 0
   | _ -> failwith "invariant violation: avl_ptr does not point to a Root"
 
@@ -642,12 +630,10 @@ let assert_invariants (mem: ('l, 'r) mem) (AVLPtr root) : unit =
       let left = mem_get mem branch.left in
       let right = mem_get mem branch.right in
       assert (branch.parent = parent);
-      assert (branch.left_count = node_count left);
       assert (branch.left_height = node_height left);
       assert (branch.left_tez = node_tez left);
       assert (branch.right_height = node_height right);
       assert (branch.right_tez = node_tez right);
-      assert (branch.right_count = node_count right);
       assert (abs (branch.left_height - branch.right_height) < 2);
       go curr branch.left;
       go curr branch.right

@@ -146,8 +146,8 @@ let send_to_auction
     (auctions: auctions)
     (slice: liquidation_slice)
   : (auctions * Avl.leaf_ptr, Error.error) result =
-  if Avl.avl_count auctions.avl_storage auctions.queued_slices
-       >= Constants.max_liquidation_slices_in_auction_queue then
+  if Avl.avl_height auctions.avl_storage auctions.queued_slices
+       >= Constants.max_liquidation_queue_height then
     Error LiquidationQueueTooLong
   else
     let (new_storage, ret) =
