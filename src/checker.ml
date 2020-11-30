@@ -70,6 +70,12 @@ module Checker : sig
     * than the creation deposit. *)
   val activate : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
 
+  (** Deativate a currently active burrow. Fail if the burrow does not exist,
+    * or if it is already inactive, or if it is overburrowed, or if it has kit
+    * outstanding, or if it has collateral sent off to auctions. If
+    * deactivation is successful, make a tez payment to the given address. *)
+  val deactivate : t -> call:Call.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
+
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator. *)
@@ -336,6 +342,16 @@ struct
     match Burrow.activate state.parameters call.amount burrow with
     | Ok updated_burrow ->
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    | Error err -> Error err
+
+  let deactivate (state:t) ~(call:Call.t) ~burrow_id ~recipient =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
+    match Burrow.deactivate state.parameters burrow with
+    | Ok (updated_burrow, returned_tez) ->
+      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+      let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+      Ok (tez_payment, updated_state)
     | Error err -> Error err
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
