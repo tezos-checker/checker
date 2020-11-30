@@ -40,6 +40,21 @@ let suite =
            ~min_lqt_minted:(Uniswap.liquidity_of_int 1)
            ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
 
+       (* Activation/deactivation tests *)
+       let () =
+         (* Creation/deactivation does not incur any costs. *)
+         let tez = Tez.of_mutez 12_345_678 in
+         let (burrow_id, checker0) = assert_ok @@
+           Checker.create_burrow checker ~call:{sender = bob; amount = tez;} in
+         let (payment, checker1) = assert_ok @@
+           Checker.deactivate_burrow checker0 ~call:{sender = bob; amount = Tez.zero;} ~burrow_id ~recipient:bob in
+         assert_equal tez payment.amount ~printer:Tez.show;
+         (* deactivation/activation = identity (if conditions are met ofc). *)
+         let checker2 = assert_ok @@
+           Checker.activate_burrow checker1 ~call:{sender = bob; amount = tez;} ~burrow_id in
+         assert_equal checker0 checker2;
+         () in
+
        let (burrow_id, checker) = assert_ok @@
          Checker.create_burrow
            checker
