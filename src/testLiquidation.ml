@@ -42,7 +42,9 @@ let params : Parameters.t =
 
 let initial_burrow =
   Burrow.make_for_test
-    ~owner:(Address.of_string "192837")
+    ~permission_version:0
+    ~allow_all_tez_deposits:false
+    ~allow_all_kit_burnings:false
     ~delegate:None
     ~active:true
     ~collateral:(Tez.of_mutez 10_000_000)
@@ -72,7 +74,9 @@ let suite =
                min_kit_for_unwarranted = Kit.of_mukit 27_141_390;
                burrow_state =
                  Burrow.make_for_test
-                   ~owner:(Address.of_string "192837")
+                   ~permission_version:0
+                   ~allow_all_tez_deposits:false
+                   ~allow_all_kit_burnings:false
                    ~delegate:None
                    ~active:true
                    ~collateral:(Tez.of_mutez 1_847_530)
@@ -100,7 +104,9 @@ let suite =
     ("unwarranted liquidation test" >:: fun _ ->
         let burrow =
           Burrow.make_for_test
-            ~owner:(Address.of_string "192837")
+            ~permission_version:0
+            ~allow_all_tez_deposits:false
+            ~allow_all_kit_burnings:false
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 10_000_000)
@@ -124,7 +130,9 @@ let suite =
     ("complete liquidation test" >:: fun _ ->
         let burrow =
           Burrow.make_for_test
-            ~owner:(Address.of_string "192837")
+            ~permission_version:0
+            ~allow_all_tez_deposits:false
+            ~allow_all_kit_burnings:false
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 10_000_000)
@@ -150,7 +158,9 @@ let suite =
                min_kit_for_unwarranted = Kit.of_mukit 170_810_019;
                burrow_state =
                  Burrow.make_for_test
-                   ~owner:(Address.of_string "192837")
+                   ~permission_version:0
+                   ~allow_all_tez_deposits:false
+                   ~allow_all_kit_burnings:false
                    ~delegate:None
                    ~active:true
                    ~collateral:Tez.zero
@@ -178,7 +188,9 @@ let suite =
     ("complete and close liquidation test" >:: fun _ ->
         let burrow =
           Burrow.make_for_test
-            ~owner:(Address.of_string "192837")
+            ~permission_version:0
+            ~allow_all_tez_deposits:false
+            ~allow_all_kit_burnings:false
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 1_000_000)
@@ -204,7 +216,9 @@ let suite =
                min_kit_for_unwarranted = Kit.of_mukit 189_810_190;
                burrow_state =
                  Burrow.make_for_test
-                   ~owner:(Address.of_string "192837")
+                   ~permission_version:0
+                   ~allow_all_tez_deposits:false
+                   ~allow_all_kit_burnings:false
                    ~delegate:None
                    ~active:false
                    ~collateral:Tez.zero

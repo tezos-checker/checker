@@ -19,9 +19,15 @@ val set_liquidation_slices : t -> liquidation_slices option -> t
 val collateral_at_auction : t -> Tez.t
 val active : t -> bool
 
+val permission_version : t -> int
+val allow_all_tez_deposits : t -> bool
+val allow_all_kit_burnings : t -> bool
+
 val make_for_test :
     active:bool ->
-    owner:Address.t ->
+    permission_version:int ->
+    allow_all_tez_deposits:bool ->
+    allow_all_kit_burnings:bool ->
     delegate:(Address.t option) ->
     collateral:Tez.t ->
     outstanding_kit:Kit.t ->
@@ -50,9 +56,6 @@ type Error.error +=
   * limit (normally kit_outstanding <= burrowing_limit).
 *)
 val is_overburrowed : Parameters.t -> t -> bool
-
-(** Check if the owner matches. TODO: implement permissions properly. *)
-val is_owned_by : t -> Address.t -> bool
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
@@ -91,10 +94,10 @@ val return_kit_from_auction : Tez.t -> Kit.t -> t -> t
 (** TODO *)
 val return_tez_from_auction : Tez.t -> t -> t
 
-(** Given an address (owner) and amount of tez as collateral (including a
-  * creation deposit, not counting towards that collateral), create a burrow.
-  * Fail if the tez given is less than the creation deposit. *)
-val create : Parameters.t -> Address.t -> Tez.t -> (t, Error.error) result
+(** Given an amount of tez as collateral (including a creation deposit, not
+  * counting towards that collateral), create a burrow. Fail if the tez given
+  * is less than the creation deposit. *)
+val create : Parameters.t -> Tez.t -> (t, Error.error) result
 
 (** Add non-negative collateral to a burrow. *)
 val deposit_tez : Parameters.t -> Tez.t -> t -> t
@@ -138,6 +141,26 @@ val compute_tez_to_auction : Parameters.t -> t -> Tez.t
   * in kit, given the current minting price. Assume that the liquidation was
   * warranted, so the liquidation penalty is subtracted *)
 val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
+
+(* ************************************************************************* *)
+(*                           Permission-related                              *)
+(* ************************************************************************* *)
+
+(** Requires admin. Sets whether or not to accept all tez deposits without
+  * permissions. *)
+val set_allow_all_tez_deposits : Parameters.t -> t -> bool -> t
+
+(** Requires admin. Sets whether or not to accept all kit burns without
+  * permissions. *)
+val set_allow_all_kit_burns : Parameters.t -> t -> bool -> t
+
+(** Requires admin. Creates a new permission. *)
+val make_permission : t -> Permission.t -> Permission.rights -> (Permission.t * t)
+
+(** Requires admin. Increments a counter so that all previous permissions are
+  * now invalid and returns a new admin permission. This makes it easy to
+  * transfer an admin permission to another party. *)
+val invalidate_all_permissions : t -> Permission.t -> (Permission.t * t)
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)

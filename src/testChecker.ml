@@ -15,7 +15,6 @@ let assert_ok (r: ('a, Error.error) result) : 'a =
   | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
   | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
   | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
-  | Error Checker.OwnershipMismatch _ -> assert_failure "OwnershipMismatch"
   | Error Checker.NonExistentBurrow _ -> assert_failure "NonExistentBurrow"
   | Error Checker.NotLiquidationCandidate _ -> assert_failure "NotLiquidationCandidate"
   | Error _ -> assert_failure "Unknown Error"
@@ -44,26 +43,38 @@ let suite =
        let () =
          (* Creation/deactivation does not incur any costs. *)
          let tez = Tez.of_mutez 12_345_678 in
-         let (burrow_id, checker0) = assert_ok @@
-           Checker.create_burrow checker ~call:{sender = bob; amount = tez;} in
+         let (burrow_id, admin_permission, checker0) = assert_ok @@
+           Checker.create_burrow checker ~tezos ~call:{sender = bob; amount = tez;} in
          let (payment, checker1) = assert_ok @@
-           Checker.deactivate_burrow checker0 ~call:{sender = bob; amount = Tez.zero;} ~burrow_id ~recipient:bob in
+           Checker.deactivate_burrow
+             checker0
+             ~permission:admin_permission
+             ~tezos ~call:{sender = bob; amount = Tez.zero;}
+             ~burrow_id
+             ~recipient:bob in
          assert_equal tez payment.amount ~printer:Tez.show;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          let checker2 = assert_ok @@
-           Checker.activate_burrow checker1 ~call:{sender = bob; amount = tez;} ~burrow_id in
+           Checker.activate_burrow
+             checker1
+             ~permission:admin_permission
+             ~tezos ~call:{sender = bob; amount = tez;}
+             ~burrow_id in
          assert_equal checker0 checker2;
          () in
 
-       let (burrow_id, checker) = assert_ok @@
+       let (burrow_id, admin_permission, checker) = assert_ok @@
          Checker.create_burrow
            checker
+           ~tezos
            ~call:{sender = bob; amount = Tez.of_mutez 10_000_000;} in
 
        let (kit, checker) = assert_ok @@
          Checker.mint_kit
            checker
+           ~tezos
            ~call:{sender=bob; amount=Tez.zero;}
+           ~permission:admin_permission
            ~burrow_id:burrow_id
            ~kit:(Kit.of_mukit 4_285_714) in
        assert_equal (Kit.of_mukit 4_285_714) kit;

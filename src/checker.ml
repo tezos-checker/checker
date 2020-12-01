@@ -21,7 +21,9 @@ module Checker : sig
     }
 
   type Error.error +=
-    | OwnershipMismatch of Address.t * Burrow.t
+    | InvalidPermission
+    | MissingPermission
+    | InsufficientPermission
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
     | BurrowHasCompletedLiquidation
@@ -45,36 +47,36 @@ module Checker : sig
   (** Create and return a new burrow owned by the given owner, containing the
     * given tez as collateral, minus the creation deposit. Fail if the tez is
     * not enough to cover the creation deposit. *)
-  val create_burrow : t -> call:Call.t -> (burrow_id * t, Error.error) result
+  val create_burrow : t -> tezos:Tezos.t -> call:Call.t -> (burrow_id * Permission.t * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     * someone else owns the burrow, or if the burrow does not exist. *)
-  val deposit_tez : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
+  val deposit_tez : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> (t, Error.error) result
 
   (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
     * owns this burrow, if this action would overburrow it, or if the burrow
     * does not exist. *)
-  val withdraw_tez : t -> call:Call.t -> tez:Tez.t -> burrow_id:burrow_id -> (Tez.payment * t, Error.error) result
+  val withdraw_tez : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> tez:Tez.t -> burrow_id:burrow_id -> (Tez.payment * t, Error.error) result
 
   (** Mint kits from a specific burrow. Fail if there is not enough collateral,
     * if the burrow owner does not match, or if the burrow does not exist. *)
-  val mint_kit : t -> call:Call.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.t * t, Error.error) result
+  val mint_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow owner
     * does not match, or if the burrow does not exist. *)
-  val burn_kit : t -> call:Call.t -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
+  val burn_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
 
   (** Activate a currently inactive burrow. Fail if the burrow does not exist,
     * if the burrow is already active, or if the amount of tez given is less
     * than the creation deposit. *)
-  val activate_burrow : t -> call:Call.t -> burrow_id:burrow_id -> (t, Error.error) result
+  val activate_burrow : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> (t, Error.error) result
 
   (** Deativate a currently active burrow. Fail if the burrow does not exist,
     * or if it is already inactive, or if it is overburrowed, or if it has kit
     * outstanding, or if it has collateral sent off to auctions. If
     * deactivation is successful, make a tez payment to the given address. *)
-  val deactivate_burrow : t -> call:Call.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
+  val deactivate_burrow : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
@@ -185,7 +187,6 @@ struct
       liquidation_auctions : LiquidationAuction.auctions;
       delegation_auction : DelegationAuction.t;
       delegate : Address.t option;
-
     }
 
   let initialize (tezos: Tezos.t) =
@@ -198,7 +199,9 @@ struct
     }
 
   type Error.error +=
-    | OwnershipMismatch of Address.t * Burrow.t
+    | InvalidPermission
+    | MissingPermission
+    | InsufficientPermission
     | NonExistentBurrow of burrow_id
     | NotLiquidationCandidate of burrow_id
     | BurrowHasCompletedLiquidation
@@ -250,38 +253,51 @@ struct
   (**                               BURROWS                                    *)
   (* ************************************************************************* *)
 
-  (* Looks up a burrow_id from state, and checks the resulting burrow if:
-     * It has the given owner
-     * It does not have any completed liquidation slices that needs to be claimed
-       before any operation.
-  *)
-  let with_owned_burrow
+  let is_burrow_done_with_liquidations (state: t) (burrow: Burrow.t) =
+    match Burrow.oldest_liquidation_ptr burrow with
+    | None -> true
+    | Some ls ->
+      let root = Avl.find_root state.liquidation_auctions.avl_storage ls in
+      let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
+      Option.is_none outcome
+
+  (* Looks up a burrow_id from state, and checks if the resulting burrow does
+   * not have any completed liquidation slices that need to be claimed before
+   * any operation. *)
+  let with_no_unclaimed_slices
       (state: t)
       (burrow_id: burrow_id)
-      ~(sender: Address.t)
       (f: Burrow.t -> ('a, Error.error) result)
     : ('a, Error.error) result =
     match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow ->
-      if Burrow.is_owned_by burrow sender
-      then
-        let is_ready =
-          match Burrow.oldest_liquidation_ptr burrow with
-          | None -> true
-          | Some ls ->
-            let root = Avl.find_root state.liquidation_auctions.avl_storage ls in
-            let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
-            Option.is_none outcome in
-        if is_ready
-        then f burrow
-        else Error BurrowHasCompletedLiquidation
-      else Error (OwnershipMismatch (sender, burrow))
     | None -> Error (NonExistentBurrow burrow_id)
+    | Some burrow ->
+      if not (is_burrow_done_with_liquidations state burrow)
+      then Error BurrowHasCompletedLiquidation
+      else f burrow
 
-  let create_burrow (state:t) ~(call:Call.t) =
-    let address = mk_next_burrow_id state.burrows in
-    match Burrow.create state.parameters call.sender call.amount with
-    | Ok burrow -> Ok (address, {state with burrows = PtrMap.add address burrow state.burrows})
+  (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
+   * replicate the permission ticket if they don't want to lose it. *)
+  let is_permission_valid ~(tezos:Tezos.t) ~(permission: Permission.t) ~(burrow_id:burrow_id) ~(burrow: Burrow.t) : Permission.rights option =
+    let issuer, amount, (rights, id, version), _ = Ticket.read permission in
+    let validity_condition =
+         issuer = tezos.self
+      && amount = 0
+      && version = Burrow.permission_version burrow
+      && id = burrow_id in
+    if validity_condition then Some rights else None
+
+  let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
+    let burrow_id = mk_next_burrow_id state.burrows in
+    match Burrow.create state.parameters call.amount with
+    | Ok burrow ->
+      let admin_ticket =
+        Ticket.create
+          ~issuer:tezos.self
+          ~amount:0
+          ~content:(Permission.Admin, burrow_id, 0) in
+      let updated_state = {state with burrows = PtrMap.add burrow_id burrow state.burrows} in
+      Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
     | Error err -> Error err
 
   let touch_burrow (state: t) (burrow_id: burrow_id) =
@@ -291,68 +307,125 @@ struct
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     | None -> Error (NonExistentBurrow burrow_id)
 
-  let deposit_tez (state:t) ~(call:Call.t) ~burrow_id =
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
-    Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-
-  let mint_kit (state:t) ~(call:Call.t) ~burrow_id ~kit =
-    (* NOTE: do we have to assert that call.amount = 0? *)
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    match Burrow.mint_kit state.parameters kit burrow with
-    | Ok (updated_burrow, minted) ->
-      assert (kit = minted);
-      Ok ( minted,
-           {state with
-            burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-            parameters =
-              Parameters.add_outstanding_kit
-                (Parameters.add_circulating_kit state.parameters minted)
-                minted;
-           }
-         )
-    | Error err -> Error err
-
-  let withdraw_tez (state:t) ~(call:Call.t) ~tez ~burrow_id =
-    (* NOTE: do we have to assert that call.amount = 0? *)
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    match Burrow.withdraw_tez state.parameters tez burrow with
-    | Ok (updated_burrow, withdrawn) ->
-      assert (tez = withdrawn);
-      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-      let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
-      Ok (tez_payment, updated_state)
-    | Error err -> Error err
-
-  let burn_kit (state:t) ~(call:Call.t) ~burrow_id ~kit =
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
-    (* TODO: What should happen if the following is violated? *)
-    assert (state.parameters.circulating_kit >= kit);
-    Ok {state with
-        burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-        parameters =
-          Parameters.remove_outstanding_kit
-            (Parameters.remove_circulating_kit state.parameters kit)
-            kit;
-       }
-
-  let activate_burrow (state:t) ~(call:Call.t) ~burrow_id =
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    match Burrow.activate state.parameters call.amount burrow with
-    | Ok updated_burrow ->
+  let deposit_tez (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    if Burrow.allow_all_tez_deposits burrow then
+      (* no need to check the permission argument at all *)
+      let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-    | Error err -> Error err
+    else
+      match permission with
+      | None -> Error MissingPermission
+      | Some permission ->
+        (* the permission should support depositing tez. *)
+        match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+        | None -> Error InvalidPermission
+        | Some r ->
+          if Permission.does_right_allow_tez_deposits r then
+            let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
+            Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+          else
+            Error InsufficientPermission
 
-  let deactivate_burrow (state:t) ~(call:Call.t) ~burrow_id ~recipient =
+  let mint_kit (state:t) ~tezos ~call:_ ~permission ~burrow_id ~kit =
     (* NOTE: do we have to assert that call.amount = 0? *)
-    with_owned_burrow state burrow_id ~sender:call.sender @@ fun burrow ->
-    match Burrow.deactivate state.parameters burrow with
-    | Ok (updated_burrow, returned_tez) ->
-      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-      let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
-      Ok (tez_payment, updated_state)
-    | Error err -> Error err
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some r ->
+      if Permission.does_right_allow_kit_minting r then
+        match Burrow.mint_kit state.parameters kit burrow with
+        | Ok (updated_burrow, minted) ->
+          assert (kit = minted);
+          Ok ( minted, (* TODO: kit must be given to call.sender *)
+               {state with
+                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+                parameters =
+                  Parameters.add_outstanding_kit
+                    (Parameters.add_circulating_kit state.parameters minted)
+                    minted;
+               }
+             )
+        | Error err -> Error err
+      else
+        Error InsufficientPermission
+
+  let withdraw_tez (state:t) ~tezos ~(call:Call.t) ~permission ~tez ~burrow_id =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some r ->
+      if Permission.does_right_allow_tez_withdrawals r then
+        match Burrow.withdraw_tez state.parameters tez burrow with
+        | Ok (updated_burrow, withdrawn) ->
+          assert (tez = withdrawn);
+          let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+          let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
+          Ok (tez_payment, updated_state)
+        | Error err -> Error err
+      else
+        Error InsufficientPermission
+
+  let burn_kit (state:t) ~tezos ~call:_ ~permission ~burrow_id ~kit =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    if Burrow.allow_all_kit_burnings burrow then
+      (* no need to check the permission argument at all *)
+      let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
+      (* TODO: What should happen if the following is violated? *)
+      assert (state.parameters.circulating_kit >= kit);
+      Ok {state with
+          burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+          parameters =
+            Parameters.remove_outstanding_kit
+              (Parameters.remove_circulating_kit state.parameters kit)
+              kit;
+         }
+    else
+      match permission with
+      | None -> Error MissingPermission
+      | Some permission ->
+        (* the permission should support burning kit. *)
+        match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+        | None -> Error InvalidPermission
+        | Some r ->
+          if Permission.does_right_allow_kit_burning r then
+            let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
+            (* TODO: What should happen if the following is violated? *)
+            assert (state.parameters.circulating_kit >= kit);
+            Ok {state with
+                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+                parameters =
+                  Parameters.remove_outstanding_kit
+                    (Parameters.remove_circulating_kit state.parameters kit)
+                    kit;
+               }
+          else
+            Error InsufficientPermission
+
+  let activate_burrow (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some _ -> (* TODO: shall we extend the right datatype for this? *)
+      match Burrow.activate state.parameters call.amount burrow with
+      | Ok updated_burrow ->
+        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+      | Error err -> Error err
+
+  let deactivate_burrow (state:t) ~tezos ~call:_ ~permission ~burrow_id ~recipient =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some _ -> (* TODO: shall we extend the right datatype for this? *)
+      match Burrow.deactivate state.parameters burrow with
+      | Ok (updated_burrow, returned_tez) ->
+        let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+        let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+        Ok (tez_payment, updated_state)
+      | Error err -> Error err
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
    * slices is during a liquidation. a liquidation creates one slice, so if we

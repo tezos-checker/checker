@@ -11,8 +11,10 @@ type t =
      * "closed"/inactive otherwise. Paying the creation deposit re-activates
      * a "closed" burrow. *)
     active : bool;
-    (* The owner of the burrow. Set once during creation. *)
-    owner : Address.t;
+    (* Permission-related *)
+    permission_version : int;
+    allow_all_tez_deposits : bool;
+    allow_all_kit_burnings : bool;
     delegate : Address.t option;
     (* Collateral currently stored in the burrow. *)
     collateral : Tez.t;
@@ -68,9 +70,23 @@ let active (b: t) =
   assert_invariants b;
   b.active
 
+let permission_version (b: t) =
+  assert_invariants b;
+  b.permission_version
+
+let allow_all_tez_deposits (b: t) =
+  assert_invariants b;
+  b.allow_all_tez_deposits
+
+let allow_all_kit_burnings (b: t) =
+  assert_invariants b;
+  b.allow_all_kit_burnings
+
 let make_for_test
     ~active
-    ~owner
+    ~permission_version
+    ~allow_all_tez_deposits
+    ~allow_all_kit_burnings
     ~delegate
     ~collateral
     ~outstanding_kit
@@ -79,7 +95,9 @@ let make_for_test
     ~collateral_at_auction
     ~liquidation_slices
     ~last_touched =
-  { owner = owner;
+  { permission_version = permission_version;
+    allow_all_tez_deposits = allow_all_tez_deposits;
+    allow_all_kit_burnings = allow_all_kit_burnings;
     delegate = delegate;
     active = active;
     collateral = collateral;
@@ -108,10 +126,6 @@ let is_overburrowed (p : Parameters.t) (b : t) : bool =
   let minting_price = Parameters.minting_price p in
   let outstanding_kit = Kit.to_q b.outstanding_kit in
   Q.(collateral < Constants.fminting * outstanding_kit * minting_price)
-
-let is_owned_by (b: t) (address: Address.t) =
-  assert_invariants b;
-  b.owner = address
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -163,12 +177,14 @@ let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (b: t) : t =
       collateral_at_auction = Tez.(b.collateral_at_auction - tez);
     }
 
-let create (p: Parameters.t) (address: Address.t) (tez: Tez.t) : (t, Error.error) result =
+let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
   if tez < Constants.creation_deposit
   then Error (InsufficientFunds tez)
   else Ok
       { active = true;
-        owner = address;
+        permission_version = 0;
+        allow_all_tez_deposits = false;
+        allow_all_kit_burnings = false;
         delegate = None;
         collateral = Tez.(tez - Constants.creation_deposit);
         outstanding_kit = Kit.zero;
@@ -260,6 +276,30 @@ let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
         collateral = Tez.zero;
       } in
     Ok (updated_burrow, return)
+
+(* ************************************************************************* *)
+(*                           PERMISSION-RELATED                              *)
+(* ************************************************************************* *)
+
+let set_allow_all_tez_deposits (p: Parameters.t) (b: t) (on: bool) =
+  assert_invariants b;
+  assert (p.last_touched = b.last_touched);
+  { b with allow_all_tez_deposits = on; }
+
+let set_allow_all_kit_burns (p: Parameters.t) (b: t) (on: bool) =
+  assert_invariants b;
+  assert (p.last_touched = b.last_touched);
+  { b with allow_all_kit_burnings = on; }
+
+(** Requires admin. Sets whether or not to accept all tez deposits without
+  * permissions. *)
+(* val set_allow_all_tez_deposits : Parameters.t -> t -> permission -> bool -> t *)
+let make_permission _ = failwith "TODO"
+
+(** Requires admin. Sets whether or not to accept all kit burns without
+  * permissions. *)
+(* val set_allow_all_kit_burns : Parameters.t -> t -> permission -> bool -> t *)
+let invalidate_all_permissions _ = failwith "TODO"
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
