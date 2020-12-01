@@ -357,7 +357,7 @@ let reclaim_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
-  let _, _, bid_details = Ticket.read bid_ticket in
+  let _, _, bid_details, _ = Ticket.read bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
@@ -426,7 +426,7 @@ let reclaim_winning_bid
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Tez.t * auctions, Error.error) result =
-  let _, _, bid_details = Ticket.read bid_ticket in
+  let _, _, bid_details, _ = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices

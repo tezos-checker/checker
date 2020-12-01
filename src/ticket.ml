@@ -12,7 +12,7 @@ let create ~issuer ~amount ~content =
     content = content;
   }
 
-let read ticket = (ticket.issuer, ticket.amount, ticket.content)
+let read ticket = (ticket.issuer, ticket.amount, ticket.content, ticket)
 
 let split ticket left right =
   if left + right <> ticket.amount

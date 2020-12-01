@@ -39,7 +39,7 @@ let place_bid t (tezos:Tezos.t) ~sender ~amount =
 
 (* TODO use address *)
 let reclaim_bid t ~address:_ ~bid_ticket =
-  let (_, _, bid) = Ticket.read bid_ticket in
+  let (_, _, bid, _) = Ticket.read bid_ticket in
   if Some bid = t.leading_bid then
     Error CannotReclaimLeadingBid
   else if Some bid = t.winner then

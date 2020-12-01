@@ -52,7 +52,7 @@ val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
 val create : issuer:Address.t -> amount:int -> content:'a -> 'a t
 
-val read : 'a t -> Address.t * int * 'a
+val read : 'a t -> Address.t * int * 'a * 'a t
 
 val split : 'a t -> int -> int -> ('a t * 'a t) option
 
