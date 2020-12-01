@@ -47,6 +47,9 @@ NFT contract, simplifying the code.
 
 type 'a t
 
+val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+
 val create : issuer:Address.t -> amount:int -> content:'a -> 'a t
 
 val read : 'a t -> Address.t * int * 'a

@@ -3,6 +3,7 @@ type 'a t =
     amount : int; (* INVARIANT: NON-NEGATIVE *)
     content : 'a;
   }
+[@@deriving show]
 
 let create ~issuer ~amount ~content =
   assert (amount >= 0);
