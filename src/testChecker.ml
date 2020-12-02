@@ -97,12 +97,12 @@ let suite =
 
        assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
 
-       let (reward, checker) = assert_ok @@
+       let (reward_payment, checker) = assert_ok @@
          Checker.mark_for_liquidation
            checker
            ~call:{sender=alice; amount=Tez.zero;}
            ~burrow_id:burrow_id in
-       assert_equal (Tez.of_mutez 1_008_999) reward ~printer:Tez.show;
+       assert_equal (Tez.of_mutez 1_008_999) reward_payment.amount ~printer:Tez.show;
 
        let int_level = 10 in
        let tezos = Tezos.{

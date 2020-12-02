@@ -87,7 +87,7 @@ module Checker : sig
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     * liquidation or if the burrow does not exist. If successful, return the
     * reward, to be credited to the liquidator. *)
-  val mark_for_liquidation : t -> call:Call.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
+  val mark_for_liquidation : t -> call:Call.t -> burrow_id:burrow_id -> (Tez.payment * t, Error.error) result
 
   (** Process the liquidation slices on completed liquidation auctions. Invalid leaf_ptr's
     * fail, and slices that correspond to incomplete liquidations are ignored. *)
@@ -500,8 +500,7 @@ struct
    * there are degenerate cases where the queue starts growing much faster that
    * the auctions are happening and in those instances it could grow unbounded,
    * but roughly speaking in most cases it should average out) *)
-  (* TODO: the liquidator's address must be used, eventually. *)
-  let mark_for_liquidation (state:t) ~call:_ ~burrow_id =
+  let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
     (* NOTE: do we have to assert that call.amount = 0? *)
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
@@ -549,7 +548,7 @@ struct
                  | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
                  | Some s -> Some { s with youngest=leaf_ptr; })
             in
-            Ok ( details.liquidation_reward, (* TODO: kit must be given to call.sender (liquidator) *)
+            Ok ( Tez.{destination = call.sender; amount = details.liquidation_reward},
                  {state with
                   burrows = PtrMap.add burrow_id updated_burrow state.burrows;
                   liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
