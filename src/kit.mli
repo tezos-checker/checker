@@ -14,6 +14,7 @@ val one : t
 
 (* Conversions to/from other types. *)
 val of_mukit : int -> t
+val to_mukit : t -> int (* NOTE: lossy; for shrinking only *)
 val to_q : t -> Q.t
 val of_q_ceil : Q.t -> t
 val of_q_floor : Q.t -> t

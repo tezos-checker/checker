@@ -16,6 +16,7 @@ let one = scaling_factor
 
 (* Conversions to/from other types. *)
 let of_mukit = Z.of_int
+let to_mukit = Z.to_int
 
 let to_q amount = Q.make amount scaling_factor
 let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
