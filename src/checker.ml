@@ -29,6 +29,7 @@ module Checker : sig
     | BurrowHasCompletedLiquidation
     | UnwarrantedCancellation
     | SlicePointsToDifferentBurrow
+    | UnwantedTezGiven
 
   (** Make a fresh state. *)
   val initialize : Tezos.t -> t
@@ -94,7 +95,7 @@ module Checker : sig
     * fail, and slices that correspond to incomplete liquidations are ignored. *)
   val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
 
-  val cancel_liquidation_slice : t -> tezos:Tezos.t -> permission:Permission.t -> burrow_id:burrow_id -> Avl.leaf_ptr -> (t, Error.error) result
+  val cancel_liquidation_slice : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> Avl.leaf_ptr -> (t, Error.error) result
 
   (** Perform maintainance tasks for the burrow. *)
   val touch_burrow : t -> burrow_id -> (t, Error.error) result
@@ -223,6 +224,7 @@ struct
     | BurrowHasCompletedLiquidation
     | UnwarrantedCancellation
     | SlicePointsToDifferentBurrow
+    | UnwantedTezGiven
 
   (* Utility function to give us burrow addresses *)
   let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
@@ -293,6 +295,13 @@ struct
       then f burrow
       else Error BurrowHasCompletedLiquidation
 
+  (* Ensure that there is no tez given. To prevent accidental fund loss. *)
+  let with_no_tez_given (call: Call.t) (f: unit -> ('a, Error.error) result)
+    : ('a, Error.error) result =
+    if call.amount <> Tez.zero
+    then Error UnwantedTezGiven
+    else f ()
+
   (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
    * replicate the permission ticket if they don't want to lose it. *)
   let is_permission_valid ~(tezos:Tezos.t) ~(permission: Permission.t) ~(burrow_id:burrow_id) ~(burrow: Burrow.t) : Permission.rights option =
@@ -344,8 +353,8 @@ struct
           else
             Error InsufficientPermission
 
-  let mint_kit (state:t) ~tezos ~call:_ ~permission ~burrow_id ~kit =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let mint_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -368,7 +377,7 @@ struct
         Error InsufficientPermission
 
   let withdraw_tez (state:t) ~tezos ~(call:Call.t) ~permission ~tez ~burrow_id =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -384,8 +393,8 @@ struct
       else
         Error InsufficientPermission
 
-  let burn_kit (state:t) ~tezos ~call:_ ~permission ~burrow_id ~kit =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     if Burrow.allow_all_kit_burnings burrow then
       (* no need to check the permission argument at all *)
@@ -434,8 +443,8 @@ struct
       else
         Error InsufficientPermission
 
-  let deactivate_burrow (state:t) ~tezos ~call:_ ~permission ~burrow_id ~recipient =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let deactivate_burrow (state:t) ~tezos ~call ~permission ~burrow_id ~recipient =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -450,8 +459,8 @@ struct
       else
         Error InsufficientPermission
 
-  let set_burrow_delegate (state:t) ~tezos ~call:_ ~permission ~burrow_id ~delegate =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let set_burrow_delegate (state:t) ~tezos ~call ~permission ~burrow_id ~delegate =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -462,8 +471,8 @@ struct
       else
         Error InsufficientPermission
 
-  let make_permission (state:t) ~tezos ~call:_ ~permission ~burrow_id ~rights =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let make_permission (state:t) ~tezos ~call ~permission ~burrow_id ~rights =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -478,8 +487,8 @@ struct
       else
         Error InsufficientPermission
 
-  let invalidate_all_permissions (state:t) ~tezos ~call:_ ~permission ~burrow_id =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let invalidate_all_permissions (state:t) ~tezos ~call ~permission ~burrow_id =
+    with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
@@ -503,7 +512,7 @@ struct
    * the auctions are happening and in those instances it could grow unbounded,
    * but roughly speaking in most cases it should average out) *)
   let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_tez_given call @@ fun () ->
     match PtrMap.find_opt burrow_id state.burrows with
     | Some burrow -> (
         match Burrow.request_liquidation state.parameters burrow with
@@ -561,8 +570,8 @@ struct
 
   (* NOTE: The burden is on the caller to provide both the burrow_id and the
    * leaf_ptr, and the leaf_ptr should refer to burrow_id (checked). *)
-  let cancel_liquidation_slice (state: t) ~tezos ~permission ~burrow_id (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
-    (* NOTE: do we have to assert that call.amount = 0? *)
+  let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
+    with_no_tez_given call @@ fun () ->
     match PtrMap.find_opt burrow_id state.burrows with
     | None -> Error (NonExistentBurrow burrow_id)
     | Some burrow ->
