@@ -291,15 +291,11 @@ let set_allow_all_kit_burns (p: Parameters.t) (b: t) (on: bool) =
   assert (p.last_touched = b.last_touched);
   { b with allow_all_kit_burnings = on; }
 
-(** Requires admin. Sets whether or not to accept all tez deposits without
-  * permissions. *)
-(* val set_allow_all_tez_deposits : Parameters.t -> t -> permission -> bool -> t *)
-let make_permission _ = failwith "TODO"
-
-(** Requires admin. Sets whether or not to accept all kit burns without
-  * permissions. *)
-(* val set_allow_all_kit_burns : Parameters.t -> t -> permission -> bool -> t *)
-let invalidate_all_permissions _ = failwith "TODO"
+let increase_permission_version (p: Parameters.t) (b: t) =
+  assert_invariants b;
+  assert (p.last_touched = b.last_touched);
+  let new_version = b.permission_version + 1 in
+  (new_version, {b with permission_version = new_version;})
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)

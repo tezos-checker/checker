@@ -44,38 +44,44 @@ module Checker : sig
   (**                               BURROWS                                    *)
   (* ************************************************************************* *)
 
-  (** Create and return a new burrow owned by the given owner, containing the
-    * given tez as collateral, minus the creation deposit. Fail if the tez is
-    * not enough to cover the creation deposit. *)
+  (** Create and return a new burrow containing the given tez as collateral,
+    * minus the creation deposit. Fail if the tez is not enough to cover the
+    * creation deposit. Additionally, return an Admin permission ticket to the
+    * sender. *)
   val create_burrow : t -> tezos:Tezos.t -> call:Call.t -> (burrow_id * Permission.t * t, Error.error) result
 
   (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
-    * someone else owns the burrow, or if the burrow does not exist. *)
+    * the burrow does not exist, or if the burrow does not allow deposits from
+    * anyone and the permission ticket given is insufficient. *)
   val deposit_tez : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> (t, Error.error) result
 
-  (** Withdraw a non-negative amount of tez from a burrow. Fail if someone else
-    * owns this burrow, if this action would overburrow it, or if the burrow
-    * does not exist. *)
+  (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
+    * does not exist, if this action would overburrow it, or if the permission
+    * ticket given is insufficient. *)
   val withdraw_tez : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> tez:Tez.t -> burrow_id:burrow_id -> (Tez.payment * t, Error.error) result
 
-  (** Mint kits from a specific burrow. Fail if there is not enough collateral,
-    * if the burrow owner does not match, or if the burrow does not exist. *)
+  (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
+    * there is not enough collateral, or if the permission ticket given is
+    * insufficient. *)
   val mint_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.t * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
-    * excess kit, simply store it into the burrow. Fail if the burrow owner
-    * does not match, or if the burrow does not exist. *)
+    * excess kit, simply store it into the burrow. Fail if the burrow does not
+    * exist, or if the burrow does not allow kit burnings from anyone and the
+    * permission ticket given is insufficient. *)
   val burn_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
 
   (** Activate a currently inactive burrow. Fail if the burrow does not exist,
-    * if the burrow is already active, or if the amount of tez given is less
-    * than the creation deposit. *)
+    * if the burrow is already active, if the amount of tez given is less than
+    * the creation deposit, or if the permission ticket given is not an admin
+    * ticket. *)
   val activate_burrow : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> (t, Error.error) result
 
   (** Deativate a currently active burrow. Fail if the burrow does not exist,
-    * or if it is already inactive, or if it is overburrowed, or if it has kit
-    * outstanding, or if it has collateral sent off to auctions. If
-    * deactivation is successful, make a tez payment to the given address. *)
+    * if it is already inactive, if it is overburrowed, if it has kit
+    * outstanding, if it has collateral sent off to auctions, or if the
+    * permission ticket given is not an admin ticket. If deactivation is
+    * successful, make a tez payment to the given address. *)
   val deactivate_burrow : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> recipient:Address.t -> (Tez.payment * t, Error.error) result
 
   (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
@@ -84,15 +90,21 @@ module Checker : sig
   val mark_for_liquidation : t -> call:Call.t -> burrow_id:burrow_id -> (Tez.t * t, Error.error) result
 
   (** Process the liquidation slices on completed liquidation auctions. Invalid leaf_ptr's
-    * fail, and slices that correspond to incomplete liquidations are ignored.
-  *)
+    * fail, and slices that correspond to incomplete liquidations are ignored. *)
   val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
 
   val cancel_liquidation_slice : t -> Avl.leaf_ptr -> (t, Error.error) result
 
-  (** Perform maintainance tasks for the burrow.
-  *)
+  (** Perform maintainance tasks for the burrow. *)
   val touch_burrow : t -> burrow_id -> (t, Error.error) result
+
+  (** Requires admin. Create a new permission for a burrow. *)
+  val make_permission : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> rights:Permission.rights -> (Permission.t, Error.error) result
+
+  (** Requires admin. Increments a counter so that all previous permissions are
+    * now invalid and returns a new admin permission. This makes it easy to
+    * transfer an admin permission to another party. *)
+  val invalidate_all_permissions : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> (Permission.t * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
@@ -272,9 +284,9 @@ struct
     match PtrMap.find_opt burrow_id state.burrows with
     | None -> Error (NonExistentBurrow burrow_id)
     | Some burrow ->
-      if not (is_burrow_done_with_liquidations state burrow)
-      then Error BurrowHasCompletedLiquidation
-      else f burrow
+      if is_burrow_done_with_liquidations state burrow
+      then f burrow
+      else Error BurrowHasCompletedLiquidation
 
   (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
    * replicate the permission ticket if they don't want to lose it. *)
@@ -408,24 +420,64 @@ struct
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
-    | Some _ -> (* TODO: shall we extend the right datatype for this? *)
-      match Burrow.activate state.parameters call.amount burrow with
-      | Ok updated_burrow ->
-        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-      | Error err -> Error err
+    | Some r -> (* TODO: shall we extend the right datatype for this? *)
+      if Permission.is_admin_right r then
+        match Burrow.activate state.parameters call.amount burrow with
+        | Ok updated_burrow ->
+          Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+        | Error err -> Error err
+      else
+        Error InsufficientPermission
 
   let deactivate_burrow (state:t) ~tezos ~call:_ ~permission ~burrow_id ~recipient =
     (* NOTE: do we have to assert that call.amount = 0? *)
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
     match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
     | None -> Error InvalidPermission
-    | Some _ -> (* TODO: shall we extend the right datatype for this? *)
-      match Burrow.deactivate state.parameters burrow with
-      | Ok (updated_burrow, returned_tez) ->
+    | Some r -> (* TODO: shall we extend the right datatype for this? *)
+      if Permission.is_admin_right r then
+        match Burrow.deactivate state.parameters burrow with
+        | Ok (updated_burrow, returned_tez) ->
+          let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+          let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+          Ok (tez_payment, updated_state)
+        | Error err -> Error err
+      else
+        Error InsufficientPermission
+
+  let make_permission (state:t) ~tezos ~call:_ ~permission ~burrow_id ~rights =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some r ->
+      if Permission.is_admin_right r then
+        let permission_ticket =
+          Ticket.create
+            ~issuer:tezos.self
+            ~amount:0
+            ~content:(rights, burrow_id, 0) in
+        Ok permission_ticket
+      else
+        Error InsufficientPermission
+
+  let invalidate_all_permissions (state:t) ~tezos ~call:_ ~permission ~burrow_id =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some r ->
+      if Permission.is_admin_right r then
+        let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
         let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-        let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
-        Ok (tez_payment, updated_state)
-      | Error err -> Error err
+        let admin_ticket =
+          Ticket.create
+            ~issuer:tezos.self
+            ~amount:0
+            ~content:(Permission.Admin, burrow_id, updated_version) in
+        Ok (admin_ticket, updated_state)
+      else
+        Error InsufficientPermission
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
    * slices is during a liquidation. a liquidation creates one slice, so if we

@@ -154,13 +154,9 @@ val set_allow_all_tez_deposits : Parameters.t -> t -> bool -> t
   * permissions. *)
 val set_allow_all_kit_burns : Parameters.t -> t -> bool -> t
 
-(** Requires admin. Creates a new permission. *)
-val make_permission : t -> Permission.t -> Permission.rights -> (Permission.t * t)
-
-(** Requires admin. Increments a counter so that all previous permissions are
-  * now invalid and returns a new admin permission. This makes it easy to
-  * transfer an admin permission to another party. *)
-val invalidate_all_permissions : t -> Permission.t -> (Permission.t * t)
+(** Requires admin. Increases the permission version so that all previous
+  * permissions are now invalid. Returns the new permission version. *)
+val increase_permission_version : Parameters.t -> t -> (int * t)
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)
