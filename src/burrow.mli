@@ -142,6 +142,9 @@ val compute_tez_to_auction : Parameters.t -> t -> Tez.t
   * warranted, so the liquidation penalty is subtracted *)
 val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
 
+(** Set the delegate of a burrow. *)
+val set_delegate : Parameters.t -> Address.t -> t -> t
+
 (* ************************************************************************* *)
 (*                           Permission-related                              *)
 (* ************************************************************************* *)

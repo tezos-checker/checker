@@ -277,6 +277,11 @@ let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
       } in
     Ok (updated_burrow, return)
 
+let set_delegate (p: Parameters.t) (new_delegate: Address.t) (b: t) : t =
+  assert_invariants b;
+  assert (p.last_touched = b.last_touched);
+  { b with delegate = Some new_delegate; }
+
 (* ************************************************************************* *)
 (*                           PERMISSION-RELATED                              *)
 (* ************************************************************************* *)

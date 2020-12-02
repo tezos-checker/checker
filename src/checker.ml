@@ -98,6 +98,9 @@ module Checker : sig
   (** Perform maintainance tasks for the burrow. *)
   val touch_burrow : t -> burrow_id -> (t, Error.error) result
 
+  (** Set the delegate of a burrow. *)
+  val set_burrow_delegate : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> delegate:Address.t -> (t, Error.error) result
+
   (** Requires admin. Create a new permission for a burrow. *)
   val make_permission : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> rights:Permission.rights -> (Permission.t, Error.error) result
 
@@ -442,6 +445,18 @@ struct
           let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
           Ok (tez_payment, updated_state)
         | Error err -> Error err
+      else
+        Error InsufficientPermission
+
+  let set_burrow_delegate (state:t) ~tezos ~call:_ ~permission ~burrow_id ~delegate =
+    (* NOTE: do we have to assert that call.amount = 0? *)
+    with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
+    | None -> Error InvalidPermission
+    | Some r ->
+      if Permission.does_right_allow_setting_delegate r then
+        let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
+        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
       else
         Error InsufficientPermission
 
