@@ -1,3 +1,14 @@
+(*
+Ticket-based entitities in checker and their expected value/mechanics:
+
+| Ticket           | Multiplicity | (Usably) Splittable              |
+|------------------|--------------|----------------------------------|
+| liquidity        | non-negative | Yes (finitely, zero is useless)  |
+| kit              | non-negative | Yes (finitely, zero is useless)  |
+| permission       | always zero  | Yes (infinitely, always zero)    |
+| del. auction bid | always one   | No  (zero is useless)            |
+| col. auction bid | always one   | No  (zero is useless)            |
+*)
 
 (* Tickets are a way for smart-contracts to authenticate data with respect to a
  * Tezos address. This authentication can then be used to build composable
