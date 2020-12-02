@@ -10,6 +10,7 @@ type rights =
         mint_kit: bool;
         burn_kit: bool;
         set_delegate: bool;
+        cancel_liquidation: bool;
       }
 [@@deriving show]
 
@@ -40,6 +41,11 @@ let does_right_allow_setting_delegate (rights: rights) : bool =
   match rights with
   | Admin -> true
   | User r -> r.set_delegate
+
+let does_right_allow_cancelling_liquidations (rights: rights) : bool =
+  match rights with
+  | Admin -> true
+  | User r -> r.cancel_liquidation
 
 let is_admin_right (rights: rights) : bool =
   match rights with
