@@ -192,9 +192,13 @@ module Checker : sig
     * reclaim the tez when outbid, or claim the auction result. *)
   val delegation_auction_place_bid : t -> tezos:Tezos.t -> call:Call.t -> (DelegationAuction.bid_ticket * t, Error.error) result
 
+  (** Claim a win in the last cycle in order to become the delegate for this one. *)
+  val delegation_auction_claim_win : t -> tezos:Tezos.t -> bid_ticket:DelegationAuction.bid_ticket
+    -> (t, Error.error) result
+
   (** Reclaim a failed bid for the current or a completed auction. *)
-  val delegation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:DelegationAuction.bid_ticket
-    -> (Tez.t, Error.error) result
+  val delegation_auction_reclaim_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:DelegationAuction.bid_ticket
+    -> (Tez.t * t, Error.error) result
 end =
 struct
   type t =
@@ -307,7 +311,7 @@ struct
   let is_permission_valid ~(tezos:Tezos.t) ~(permission: Permission.t) ~(burrow_id:burrow_id) ~(burrow: Burrow.t) : Permission.rights option =
     let issuer, amount, (rights, id, version), _ = Ticket.read permission in
     let validity_condition =
-         issuer = tezos.self
+      issuer = tezos.self
       && amount = 0
       && version = Burrow.permission_version burrow
       && id = burrow_id in
@@ -860,8 +864,15 @@ struct
       (fun (ticket, auction) -> (ticket, {state with delegation_auction = auction;}) )
       (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
 
-  let delegation_auction_reclaim_bid state ~address ~bid_ticket =
-    DelegationAuction.reclaim_bid state.delegation_auction ~address:address ~bid_ticket:bid_ticket
+  let delegation_auction_claim_win state ~tezos ~bid_ticket =
+    Result.map
+      (fun auction -> {state with delegation_auction = auction;})
+      (DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket)
+
+  let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
+    Result.map
+      (fun (tez, auction) -> (tez, {state with delegation_auction = auction;}))
+      (DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket)
 
   (* ************************************************************************* *)
   (**                              TOUCHING                                    *)

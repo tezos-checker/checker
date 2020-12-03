@@ -1,49 +1,66 @@
-type bid = { bidder: Address.t; amount: Tez.t }
+type bid = { bidder: Address.t; cycle: int; amount: Tez.t }
 [@@deriving show]
 
 type bid_ticket = bid Ticket.t
 
 type Error.error +=
   | BidTooLow
+  | BidTicketExpired
   | CannotReclaimLeadingBid
   | CannotReclaimWinningBid
+  | NotAWinningBid
 
-type t = { level: Level.t; winner: bid option; leading_bid: bid option }
+type t = { cycle: int; winner: bid option; leading_bid: bid option; delegate: Address.t option; }
 [@@deriving show]
 
-let empty (tezos: Tezos.t) = { level = tezos.level; winner = None; leading_bid = None }
+let empty (tezos: Tezos.t) = { cycle = Level.cycle tezos.level; winner = None; leading_bid = None; delegate = None; }
 
 let touch (t: t) (tezos: Tezos.t) =
-  let cycles_elapsed = Level.cycle tezos.level - Level.cycle t.level in
+  let current_cycle = Level.cycle tezos.level in
+  let cycles_elapsed = current_cycle - t.cycle in
   if cycles_elapsed = 1 then
-    (* TODO punch ticket *)
-    { level = tezos.level; winner = t.leading_bid; leading_bid = None; }
+    (* We're on a new cycle, so reset state, and save the winner pending their claim. *)
+    { cycle = current_cycle; winner = t.leading_bid; leading_bid = None; delegate = None; }
     (* TODO what if we somehow skip a level? *)
   else
-    { t with level = tezos.level; }
+    { t with cycle = current_cycle; }
 
 let delegate t tezos =
   let t = touch t tezos in
-  (Option.map (fun x -> x.bidder) t.winner, t)
+  (t.delegate, t)
 
-let place_bid t (tezos:Tezos.t) ~sender ~amount =
+let place_bid t (tezos: Tezos.t) ~sender ~amount =
   let t = touch t tezos in
   match t.leading_bid with
   | Some current when Tez.compare amount current.amount <= 0 ->
     Error BidTooLow
   | _ ->
     (* Either there is no bid or this is the highest *)
-    let bid = {bidder=sender; amount=amount} in
+    let bid = {bidder=sender; cycle=t.cycle; amount=amount} in
     let ticket = Ticket.create ~issuer:tezos.self ~amount:1 ~content:bid in
     Ok (ticket, {t with leading_bid = Some bid;})
 
+(* TODO: allow winner to nominate a different address as the delegate? *)
+let claim_win t tezos ~bid_ticket =
+  let t = touch t tezos in
+  let (_, _, bid, _) = Ticket.read bid_ticket in
+  if Some bid = t.winner then
+    Ok { t with delegate = Some bid.bidder }
+  else
+    Error NotAWinningBid
+
 (* TODO use address *)
-let reclaim_bid t ~address:_ ~bid_ticket =
+let reclaim_bid t tezos ~address:_ ~bid_ticket =
+  let t = touch t tezos in
   let (_, _, bid, _) = Ticket.read bid_ticket in
   if Some bid = t.leading_bid then
     Error CannotReclaimLeadingBid
   else if Some bid = t.winner then
     Error CannotReclaimWinningBid
+  else if t.cycle - bid.cycle > 1 then
+    Error BidTicketExpired
   else
-    (* TODO punch ticket *)
-    Ok bid.amount
+    Ok (bid.amount, t)
+
+(* TODO check ticket amount *)
+(* TODO check ticket issuer *)
