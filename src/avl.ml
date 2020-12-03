@@ -310,6 +310,7 @@ let balance (mem: ('l, 'r) mem) (curr_ptr: ptr) : ('l, 'r) mem * ptr =
     else
       failwith "invariant violation: balance predicates partial"
   | _ -> (mem, curr_ptr)
+
 (* (match mem_get mem ptr with
    | Branch b -> assert (abs (b.left_height - b.right_height) <= 1); ()
    | Root _ -> ()

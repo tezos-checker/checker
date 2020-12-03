@@ -34,7 +34,7 @@ type node =
 (* mem *)
 
 type mem = {
-  mem: (ptr, node) big_map;
+  mem: (ptr, node) map;
   max_id: int;
 }
 
@@ -95,7 +95,7 @@ let node_height (n: node) : int =
 
 let mk_empty (mem: mem) (root_data: int): mem * avl_ptr =
   let mem = {
-    mem = (Big_map.empty: (ptr, node) big_map);
+    mem = (Map.empty: (ptr, node) map);
     max_id = 0;
   } in
   let (mem, ptr) = mem_new mem (Root ((None: ptr option), root_data)) in
@@ -229,6 +229,7 @@ type join_direction =
 let rec ref_join
   (params: mem * join_direction * ptr * ptr * (mem -> ptr -> (mem * ptr)))
   : mem * ptr =
+
   let (mem, direction, left_ptr, right_ptr, callback) = params in
 
   let left = mem_get mem left_ptr in
@@ -279,4 +280,27 @@ let rec ref_join
       )
 
 let avl_push_back (mem: mem) (root_ptr: avl_ptr) (value: int) (tez: tez): mem * leaf_ptr =
-  failwith "???"
+  let root_ptr = match root_ptr with AvlPtr p -> p in
+  let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
+  let (mem, leaf_ptr) = mem_new mem node in
+  match mem_get mem root_ptr with
+  | Root r ->
+    let (ptr, r) = r in
+    (match ptr with
+    | None ->
+      let mem = mem_set mem root_ptr (Root (Some leaf_ptr, r)) in
+      (mem, LeafPtr leaf_ptr)
+    | Some ptr ->
+      let (mem, ret) = ref_join
+             (mem
+             , (Left)
+             , ptr
+             , leaf_ptr
+             , (fun (m: mem) (r: ptr) -> (m, r))
+             ) in
+      let mem = mem_set mem root_ptr (Root (Some ret, r)) in
+      (mem, LeafPtr leaf_ptr))
+  | Leaf ign ->
+    (failwith "push_back is passed a non-root pointer.": mem * leaf_ptr)
+  | Branch ign ->
+    (failwith "push_back is passed a non-root pointer.": mem * leaf_ptr)
