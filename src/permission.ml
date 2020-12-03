@@ -14,8 +14,10 @@ type rights =
       }
 [@@deriving show]
 
+type permission_content = rights * Ptr.t * int [@@deriving show]
+
 (** A permission is a ticket containing a right. *)
-type t = (rights * Ptr.t * int) Ticket.t [@@deriving show]
+type t = permission_content Ticket.t [@@deriving show]
 
 let does_right_allow_tez_deposits (rights: rights) : bool =
   match rights with

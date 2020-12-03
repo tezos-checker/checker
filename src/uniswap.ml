@@ -31,18 +31,19 @@ type Error.error +=
   | SellKitTooMuchTezBought
   | InvalidLiquidityToken
 
-type liquidity = unit Ticket.t [@@deriving show]
+(* To be used as the content in liquidity tokens for disambiguation. *)
+type liquidity_token_content = Lqt [@@deriving show]
+
+type liquidity = liquidity_token_content Ticket.t [@@deriving show]
 
 let issue_liquidity_tokens ~(tezos: Tezos.t) (i: int) =
   assert (i >= 0);
-  Ticket.create ~issuer:tezos.self ~amount:i ~content:()
+  Ticket.create ~issuer:tezos.self ~amount:i ~content:Lqt
 
 (** Check whether a liquidity token is valid. A liquidity token is valid if (a)
   * it is issued by checker, its amount is non-negative (George: I assume that
   * the ticket mechanism gives us that for free, by using nat?), and (c) is
-  * tagged appropriately. TODO: (c) is not implemented yet. Perhaps it can be
-  * avoided, if all checker-issued tickets end up having contents clearly
-  * distinguished by type. *)
+  * tagged appropriately (this is already enforced by its type). *)
 let is_liquidity_token_valid
     ~(tezos:Tezos.t)
     ~(liquidity: liquidity)

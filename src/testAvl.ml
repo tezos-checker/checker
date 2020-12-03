@@ -66,14 +66,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
 
-let arb_tez = QCheck.(
-    map
-      ~rev:(fun i -> Q.to_int (Tez.to_q i))
-      (fun i -> nTez i)
-      small_int
-  )
-
-let arb_item = QCheck.(pair small_int arb_tez)
+let arb_item = QCheck.(pair small_int TestArbitrary.arb_tez)
 
 let property_test_count = 1000
 
@@ -237,7 +230,7 @@ let suite =
     *)
 
     (qcheck_to_ounit
-     @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair arb_tez (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
      QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
@@ -281,7 +274,7 @@ let suite =
     );
     (*
     (qcheck_to_ounit
-     @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair arb_tez (list arb_item))
+     @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
      QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
