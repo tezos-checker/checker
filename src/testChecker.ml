@@ -36,7 +36,7 @@ let suite =
            ~tezos
            ~call:{sender=alice; amount=Tez.one;}
            ~max_kit_deposited:Kit.one
-           ~min_lqt_minted:(Uniswap.liquidity_of_int 1)
+           ~min_lqt_minted:1
            ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
 
        (* Activation/deactivation tests *)

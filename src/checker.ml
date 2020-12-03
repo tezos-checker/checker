@@ -146,7 +146,7 @@ module Checker : sig
     tezos:Tezos.t ->
     call:Call.t ->
     max_kit_deposited:Kit.t ->
-    min_lqt_minted:Uniswap.liquidity ->
+    min_lqt_minted:int ->
     deadline:Timestamp.t ->
     (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
 
@@ -208,7 +208,7 @@ struct
 
   let initialize (tezos: Tezos.t) =
     { burrows = PtrMap.empty;
-      uniswap = Uniswap.make_initial tezos.level;
+      uniswap = Uniswap.make_initial ~tezos;
       parameters = Parameters.make_initial tezos.now;
       liquidation_auctions = LiquidationAuction.empty;
       delegation_auction = DelegationAuction.empty tezos;
@@ -809,13 +809,13 @@ struct
     | Error err -> Error err
 
   let add_liquidity (state:t) ~tezos ~(call:Call.t) ~max_kit_deposited ~min_lqt_minted ~deadline =
-    match Uniswap.add_liquidity state.uniswap ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~tezos ~deadline with
+    match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
       Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to call.sender *)
 
   let remove_liquidity (state:t) ~tezos ~(call:Call.t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
-    match Uniswap.remove_liquidity state.uniswap ~amount:call.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~tezos ~deadline with
+    match Uniswap.remove_liquidity state.uniswap ~tezos ~amount:call.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
       let tez_payment = Tez.{destination = call.sender; amount = tez;} in

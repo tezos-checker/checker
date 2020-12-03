@@ -31,7 +31,7 @@ type liquidity
 val show_liquidity : liquidity -> string
 val pp_liquidity : Format.formatter -> liquidity -> unit
 
-val liquidity_of_int : int -> liquidity
+val issue_liquidity_tokens : tezos:Tezos.t -> int -> liquidity
 
 type t
 
@@ -48,13 +48,13 @@ val make_for_test :
 
 (** The initial state of the uniswap contract. All amounts are set to zero, and
   * the last-observed kit-in-tez price is undefined (0/0). *)
-val make_initial : Level.t -> t
+val make_initial : tezos:Tezos.t -> t
 
 (** Check whether the uniswap contract contains zero tez. *)
 val is_tez_pool_empty : t -> bool
 
 (** Check whether the uniswap contract contains zero kit. *)
-val is_token_pool_empty : t -> bool
+val is_kit_pool_empty : t -> bool
 
 (** Check whether the uniswap contract contains zero liquidity tokens. *)
 val is_liquidity_token_pool_empty : t -> bool
@@ -109,10 +109,10 @@ val sell_kit :
 *)
 val add_liquidity :
   t ->
+  tezos:Tezos.t ->
   amount:Tez.t ->
   max_kit_deposited:Kit.t ->
-  min_lqt_minted:liquidity ->
-  tezos:Tezos.t ->
+  min_lqt_minted:int ->
   deadline:Timestamp.t ->
   (liquidity * Tez.t * Kit.t * t, Error.error) result
 
@@ -123,11 +123,11 @@ val add_liquidity :
 *)
 val remove_liquidity :
   t ->
+  tezos:Tezos.t ->
   amount:Tez.t ->
   lqt_burned:liquidity ->
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
-  tezos:Tezos.t ->
   deadline:Timestamp.t ->
   (Tez.t * Kit.t * t, Error.error) result
 
