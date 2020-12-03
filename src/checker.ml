@@ -172,11 +172,11 @@ module Checker : sig
   val liquidation_auction_place_bid : t -> tezos:Tezos.t -> call:Call.t -> kit:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-  val liquidation_auction_reclaim_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
+  val liquidation_auction_reclaim_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Kit.t, Error.error) result
 
   (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-  val liquidation_auction_reclaim_winning_bid : t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
+  val liquidation_auction_reclaim_winning_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
     -> (Tez.t * t, Error.error) result
 
   (* (\** Increase a failed bid for the current auction. *\)
@@ -838,13 +838,13 @@ struct
         {state with liquidation_auctions=new_auctions;}
       )
 
-  let liquidation_auction_reclaim_bid state ~address:_ ~bid_ticket =
+  let liquidation_auction_reclaim_bid state ~tezos ~address:_ ~bid_ticket =
     (* TODO use address to authenticate ticket? Or is that the destination? *)
-    LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket
+    LiquidationAuction.reclaim_bid ~tezos state.liquidation_auctions bid_ticket
 
-  let liquidation_auction_reclaim_winning_bid state ~address:_ ~bid_ticket =
+  let liquidation_auction_reclaim_winning_bid state ~tezos ~address:_ ~bid_ticket =
     (* TODO use address to authenticate ticket? Or is that the destination? *)
-    match LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket with
+    match LiquidationAuction.reclaim_winning_bid ~tezos state.liquidation_auctions bid_ticket with
     | Error err -> Error err
     | Ok (ret, liquidation_auctions) -> Ok (ret, { state with liquidation_auctions })
 

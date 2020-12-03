@@ -74,6 +74,7 @@ type Error.error +=
   | NotAWinningBid
   | NotAllSlicesClaimed
   | LiquidationQueueTooLong
+  | InvalidLiquidationAuctionTicket
 
 type liquidation_slice = {
   burrow: Ptr.t;
@@ -88,8 +89,30 @@ type auction_id = Avl.avl_ptr
 type bid_details = { auction_id: auction_id; bid: Bid.t; }
 type bid_ticket = bid_details Ticket.t
 
-let create_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
+let issue_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
   Ticket.create ~issuer:tezos.self ~amount:1 ~content:bid_details
+
+(** Check whether a liquidation auction bid ticket is valid. An auction bid
+  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
+  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
+  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
+  * end up having contents clearly distinguished by type. *)
+let is_bid_ticket_valid
+    ~(tezos:Tezos.t)
+    ~(bid_ticket: bid_ticket)
+  : (bid_ticket, Error.error) result =
+  let issuer, amount, _bid_details, same_ticket = Ticket.read bid_ticket in
+  let is_valid = issuer = tezos.self && amount = 1 in
+  if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
+
+let with_valid_bid_ticket
+    ~(tezos:Tezos.t)
+    ~(bid_ticket: bid_ticket)
+    (f: bid_ticket -> ('a, Error.error) result)
+  : ('a, Error.error) result =
+  match is_bid_ticket_valid ~tezos ~bid_ticket with
+  | Error err -> Error err
+  | Ok ticket -> f ticket
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
@@ -323,7 +346,7 @@ let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: Bid.t)
   then
     Ok (
       { auction with state = Ascending (bid, tezos.now, tezos.level); },
-      create_bid_ticket tezos { auction_id = auction.contents; bid = bid; }
+      issue_bid_ticket tezos { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
 
@@ -353,10 +376,13 @@ let completed_auction_won_by
   | Some outcome when outcome.winning_bid = bid_details.bid -> Some outcome
   | _ -> None
 
+(* NOTE: If successful, it consumes the ticket. *)
 let reclaim_bid
+    ~(tezos:Tezos.t)
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
+  with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
   let _, _, bid_details, _ = Ticket.read bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
@@ -423,9 +449,11 @@ let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
   }
 
 let reclaim_winning_bid
+    ~(tezos:Tezos.t)
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Tez.t * auctions, Error.error) result =
+  with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
   let _, _, bid_details, _ = Ticket.read bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->

@@ -197,6 +197,7 @@ let suite =
        let (tez_from_bid, _checker) = assert_ok @@
          Checker.liquidation_auction_reclaim_winning_bid
            checker
+           ~tezos
            ~address:alice
            ~bid_ticket:bid in
 
