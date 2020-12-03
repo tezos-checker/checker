@@ -1,5 +1,8 @@
 open OUnit2
 
+let property_test_count = 100
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+
 (* ************************************************************************* *)
 (*                        compute_drift_derivative                           *)
 (* ************************************************************************* *)
@@ -90,23 +93,8 @@ let test_compute_drift_derivative_high_negative_acceleration =
       (Parameters.compute_drift_derivative target)
 
 (* ************************************************************************* *)
-(*                           compute_imbalance                               *)
+(*                     compute_imbalance (unit tests)                        *)
 (* ************************************************************************* *)
-
-(* TODO:
- * 1. Ensure that the kit that should be burned (due to imbalance alone) is
- *    actually burned (in checker.touch or parameters.touch).
- * 2. Would be nice to have some property-based random tests about the
- *    following (I've been bitten by this before, due to the difference between
- *    Q.compare and Stdlib.compare):
- *    - The result of compute_imbalance NEVER goes beyond ±0.05
- *    - If burrowed > circulating then (compute_imbalance burrowed circulating) > 0
- *    - If burrowed < circulating then (compute_imbalance burrowed circulating) < 0
- *    - If burrowed1 > burrowed2 > circulating
- *      then (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating)
- *    - If circulating1 > circulating2 > burrowed
- *      then (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2)
-*)
 
 let test_compute_imbalance_all_zero =
   "test_compute_imbalance_all_zero" >:: fun _ ->
@@ -190,6 +178,103 @@ let test_compute_imbalance_negative_capped =
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 (* ************************************************************************* *)
+(*                compute_imbalance (property-based tests)                   *)
+(* ************************************************************************* *)
+
+(* Imbalance can never go above 5% *)
+let test_imbalance_upper_bound =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_upper_bound"
+       ~count:property_test_count
+       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (burrowed, circulating) ->
+       Q.leq
+         (Parameters.compute_imbalance ~burrowed ~circulating)
+         (Q.of_string "5/100")
+
+(* Imbalance can never go below -5% *)
+let test_imbalance_lower_bound =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_lower_bound"
+       ~count:property_test_count
+       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (burrowed, circulating) ->
+       Q.geq
+         (Parameters.compute_imbalance ~burrowed ~circulating)
+         (Q.of_string "-5/100")
+
+(* The sign of imbalance is the same as of (burrowed - circulating).
+ * If burrowed > circulating then imbalance > 0
+ * If burrowed < circulating then imbalance < 0
+ * If burrowed = circulating then imbalance = 0 (NOTE: rarely checked, I guess)
+ *)
+let test_imbalance_sign_preservation =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_sign_preservation"
+       ~count:property_test_count
+       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (burrowed, circulating) ->
+       Q.sign (Parameters.compute_imbalance ~burrowed ~circulating)
+       = Q.sign Kit.(to_q (burrowed - circulating))
+
+(* If burrowed = circulating then imbalance = 0. *)
+let test_imbalance_is_zero_when_equal =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_is_zero_when_equal"
+       ~count:property_test_count
+       TestArbitrary.arb_kit
+  @@ fun kit ->
+       Q.equal
+         (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
+         Q.zero
+
+(* For a fixed amount of kit in circulation, increasing the burrowed kit
+ * increases the imbalance. *)
+let test_imbalance_positive_tendencies =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_positive_tendencies"
+       ~count:property_test_count
+       (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (kit1, kit2, kit3) ->
+       (* If burrowed1 > burrowed2 > circulating then
+        * (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating) *)
+       let (circulating, burrowed2, burrowed1) = (
+         (* Just using sorting, to avoid expensive assume-conditionals. *)
+         match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+         | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
+         | _ -> failwith "impossible"
+       ) in
+       Q.geq
+          (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
+          (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
+
+(* For a fixed amount of burrowed kit, increasing the kit in circulation
+ * decreases the imbalance. *)
+let test_imbalance_negative_tendencies =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_imbalance_negative_tendencies"
+       ~count:property_test_count
+       (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (kit1, kit2, kit3) ->
+       (* If circulating1 > circulating2 > burrowed then
+        * (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2) *)
+       let (burrowed, circulating2, circulating1) = (
+         (* Just using sorting, to avoid expensive assume-conditionals. *)
+         match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+         | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
+         | _ -> failwith "impossible"
+       ) in
+       Q.leq
+          (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
+          (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
+
+(* ************************************************************************* *)
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
@@ -246,7 +331,7 @@ let suite =
     test_compute_drift_derivative_high_positive_acceleration;
     test_compute_drift_derivative_high_negative_acceleration;
 
-    (* compute_imbalance *)
+    (* compute_imbalance (unit tests) *)
     test_compute_imbalance_all_zero;
     test_compute_imbalance_zero_burrowed;
     test_compute_imbalance_equal;
@@ -258,6 +343,14 @@ let suite =
     test_compute_imbalance_negative_small;
     test_compute_imbalance_negative_big;
     test_compute_imbalance_negative_capped;
+
+    (* compute_imbalance (property-based random tests) *)
+    test_imbalance_upper_bound;
+    test_imbalance_lower_bound;
+    test_imbalance_sign_preservation;
+    test_imbalance_is_zero_when_equal;
+    test_imbalance_positive_tendencies;
+    test_imbalance_negative_tendencies;
 
     (* touch *)
     test_touch;
