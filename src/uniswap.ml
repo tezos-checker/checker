@@ -169,7 +169,6 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
          )
 
 let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~deadline =
-  Kit.with_valid_kit_token ~tezos token @@ fun token ->
   let uniswap = sync_last_observed uniswap tezos in
   let kit, token = Kit.read_kit token in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
@@ -216,7 +215,6 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders. *)
 let add_liquidity (uniswap: t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted ~deadline =
-  Kit.with_valid_kit_token ~tezos max_kit_deposited @@ fun max_kit_deposited ->
   let uniswap = sync_last_observed uniswap tezos in
   let max_kit_deposited, all_kit_deposited = Kit.read_kit max_kit_deposited in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in

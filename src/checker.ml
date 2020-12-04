@@ -428,6 +428,7 @@ struct
   let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    Kit.with_valid_kit_token ~tezos kit @@ fun kit ->
     let kit, _ (* destroyed *) = Kit.read_kit kit in
     if Burrow.allow_all_kit_burnings burrow then
       (* no need to check the permission argument at all *)
@@ -819,6 +820,7 @@ struct
     | Error err -> Error err
 
   let sell_kit (state:t) ~tezos ~(call:Call.t) ~kit ~min_tez_expected ~deadline =
+    Kit.with_valid_kit_token ~tezos kit @@ fun kit ->
     match Uniswap.sell_kit state.uniswap ~amount:call.amount kit ~min_tez_expected ~tezos ~deadline with
     | Ok (tez, updated_uniswap) ->
       let tez_payment = Tez.{destination = call.sender; amount = tez;} in
@@ -827,6 +829,7 @@ struct
     | Error err -> Error err
 
   let add_liquidity (state:t) ~tezos ~(call:Call.t) ~max_kit_deposited ~min_lqt_minted ~deadline =
+    Kit.with_valid_kit_token ~tezos max_kit_deposited @@ fun max_kit_deposited ->
     match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
@@ -846,6 +849,8 @@ struct
   (* ************************************************************************* *)
 
   let liquidation_auction_place_bid state ~tezos ~(call:Call.t) ~kit =
+    with_no_tez_given call @@ fun () ->
+    Kit.with_valid_kit_token ~tezos kit @@ fun kit ->
     let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
     let bid = LiquidationAuction.{ address=call.sender; kit=kit; } in
     match
@@ -887,11 +892,13 @@ struct
       (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
 
   let delegation_auction_claim_win state ~tezos ~bid_ticket =
+    (* TODO: Ensure the validity of the given bid_ticket *)
     Result.map
       (fun auction -> {state with delegation_auction = auction;})
       (DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket)
 
   let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
+    (* TODO: Ensure the validity of the given bid_ticket *)
     Result.map
       (fun (tez, auction) -> (tez, {state with delegation_auction = auction;}))
       (DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket)
