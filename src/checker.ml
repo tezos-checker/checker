@@ -177,8 +177,12 @@ module Checker : sig
     (LiquidationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-  val liquidation_auction_reclaim_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
-    -> (Kit.t, Error.error) result
+  val liquidation_auction_reclaim_bid :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    bid_ticket:LiquidationAuction.bid_ticket ->
+    (Kit.token, Error.error) result
 
   (** Reclaim a winning bid for the current or a completed liquidation auction. *)
   val liquidation_auction_reclaim_winning_bid :
@@ -854,9 +858,12 @@ struct
         {state with liquidation_auctions=new_auctions;}
       )
 
-  let liquidation_auction_reclaim_bid state ~tezos ~address:_ ~bid_ticket =
-    (* TODO use address to authenticate ticket? Or is that the destination? *)
-    LiquidationAuction.reclaim_bid ~tezos state.liquidation_auctions bid_ticket
+  let liquidation_auction_reclaim_bid state ~tezos ~call ~bid_ticket =
+    with_no_tez_given call @@ fun () ->
+    LiquidationAuction.with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
+    match LiquidationAuction.reclaim_bid ~tezos state.liquidation_auctions bid_ticket with
+    | Error err -> Error err
+    | Ok kit -> Ok (Kit.issue ~tezos kit) (* TODO: should not issue; should change the auction logic instead! *)
 
   let liquidation_auction_reclaim_winning_bid state ~tezos ~(call:Call.t) ~bid_ticket =
     with_no_tez_given call @@ fun () ->
