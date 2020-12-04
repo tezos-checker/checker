@@ -211,10 +211,12 @@ let suite =
          Checker.liquidation_auction_reclaim_winning_bid
            checker
            ~tezos
-           ~address:alice
+           ~call:{sender=alice; amount=Tez.zero;}
            ~bid_ticket:bid in
 
-       assert_equal (Tez.of_mutez 3_156_178) tez_from_bid
-         ~printer:Tez.show;
+       assert_equal
+         (Tez.{destination = alice; amount = Tez.of_mutez 3_156_178;})
+         tez_from_bid
+         ~printer:Tez.show_payment;
     );
   ]

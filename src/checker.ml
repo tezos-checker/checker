@@ -176,8 +176,12 @@ module Checker : sig
     -> (Kit.t, Error.error) result
 
   (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-  val liquidation_auction_reclaim_winning_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
-    -> (Tez.t * t, Error.error) result
+  val liquidation_auction_reclaim_winning_bid :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    bid_ticket:LiquidationAuction.bid_ticket ->
+    (Tez.payment * t, Error.error) result
 
   (* (\** Increase a failed bid for the current auction. *\)
    * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
@@ -848,11 +852,14 @@ struct
     (* TODO use address to authenticate ticket? Or is that the destination? *)
     LiquidationAuction.reclaim_bid ~tezos state.liquidation_auctions bid_ticket
 
-  let liquidation_auction_reclaim_winning_bid state ~tezos ~address:_ ~bid_ticket =
-    (* TODO use address to authenticate ticket? Or is that the destination? *)
+  let liquidation_auction_reclaim_winning_bid state ~tezos ~(call:Call.t) ~bid_ticket =
+    with_no_tez_given call @@ fun () ->
+    LiquidationAuction.with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
     match LiquidationAuction.reclaim_winning_bid ~tezos state.liquidation_auctions bid_ticket with
     | Error err -> Error err
-    | Ok (ret, liquidation_auctions) -> Ok (ret, { state with liquidation_auctions })
+    | Ok (tez, liquidation_auctions) ->
+      let tez_payment = Tez.{destination = call.sender; amount = tez;} in
+      Ok (tez_payment, { state with liquidation_auctions })
 
   (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
    * *)
