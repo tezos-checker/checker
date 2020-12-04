@@ -40,7 +40,7 @@ val pp : Format.formatter -> t -> unit
 
 val make_for_test :
   tez:Tez.t ->
-  kit:Kit.t ->
+  kit:Kit.token ->
   lqt:liquidity ->
   kit_in_tez_in_prev_block:Q.t ->
   last_level:Level.t ->
@@ -79,14 +79,14 @@ val buy_kit :
   min_kit_expected:Kit.t ->
   tezos:Tezos.t ->
   deadline:Timestamp.t ->
-  (Kit.t * t, Error.error) result
+  (Kit.token * t, Error.error) result
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
 val sell_kit :
   t ->
   amount:Tez.t ->
-  Kit.t ->
+  Kit.token ->
   min_tez_expected:Tez.t ->
   tezos:Tezos.t ->
   deadline:Timestamp.t ->
@@ -111,10 +111,10 @@ val add_liquidity :
   t ->
   tezos:Tezos.t ->
   amount:Tez.t ->
-  max_kit_deposited:Kit.t ->
+  max_kit_deposited:Kit.token ->
   min_lqt_minted:int ->
   deadline:Timestamp.t ->
-  (liquidity * Tez.t * Kit.t * t, Error.error) result
+  (liquidity * Tez.t * Kit.token * t, Error.error) result
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
@@ -129,11 +129,11 @@ val remove_liquidity :
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
   deadline:Timestamp.t ->
-  (Tez.t * Kit.t * t, Error.error) result
+  (Tez.t * Kit.token * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. *)
 val add_accrued_kit :
   t ->
-  Tezos.t ->
-  Kit.t ->
+  tezos:Tezos.t ->
+  Kit.token ->
   t

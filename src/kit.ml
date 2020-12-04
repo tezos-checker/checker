@@ -43,3 +43,45 @@ let show amount =
 
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
+(* Kit are really tickets. *)
+type kit_token_content = Kit [@@deriving show]
+type token = kit_token_content Ticket.t [@@deriving show]
+
+let issue ~(tezos: Tezos.t) (kit: t) : token =
+  assert (kit = of_mukit (to_mukit kit));
+  Ticket.create ~issuer:tezos.self ~amount:(to_mukit kit) ~content:Kit
+
+type Error.error +=
+  | InvalidKitToken
+
+(** Check whether a kit token is valid. A kit token is valid if (a) it is
+  * issued by checker, and (b) is tagged appropriately (this is already
+  * enforced by its type). *)
+let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
+  let issuer, amount, _content, same_ticket = Ticket.read token in
+  let is_valid = issuer = tezos.self && amount >= 0 in
+  if is_valid then Ok same_ticket else Error InvalidKitToken
+
+let with_valid_kit_token
+    ~(tezos: Tezos.t)
+    (token: token)
+    (f: token -> ('a, Error.error) result)
+  : ('a, Error.error) result =
+  match is_token_valid ~tezos token with
+  | Error err -> Error err
+  | Ok token -> f token
+
+let read_kit (token: token) : t * token =
+  let _issuer, mukit, _content, same_token = Ticket.read token in
+  (of_mukit mukit, same_token)
+
+let split_or_fail (token: token) (left: t) (right: t) : token * token =
+  assert (left  = of_mukit (to_mukit left ));
+  assert (right = of_mukit (to_mukit right));
+  Option.get (
+    Ticket.split token (to_mukit left) (to_mukit right)
+  )
+
+let join_or_fail (left: token) (right: token) : token =
+  Option.get (Ticket.join left right)
+

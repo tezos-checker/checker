@@ -35,7 +35,7 @@ let suite =
            checker
            ~tezos
            ~call:{sender=alice; amount=Tez.one;}
-           ~max_kit_deposited:Kit.one
+           ~max_kit_deposited:(Kit.issue ~tezos Kit.one)
            ~min_lqt_minted:1
            ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
 
@@ -69,7 +69,7 @@ let suite =
            ~tezos
            ~call:{sender = bob; amount = Tez.of_mutez 10_000_000;} in
 
-       let (kit, checker) = assert_ok @@
+       let (kit_token, checker) = assert_ok @@
          Checker.mint_kit
            checker
            ~tezos
@@ -77,6 +77,7 @@ let suite =
            ~permission:admin_permission
            ~burrow_id:burrow_id
            ~kit:(Kit.of_mukit 4_285_714) in
+       let kit, _same_token = Kit.read_kit kit_token in
        assert_equal (Kit.of_mukit 4_285_714) kit;
 
        let int_level = 5 in
@@ -95,7 +96,10 @@ let suite =
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
 
-       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
+       assert_equal
+         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         touch_reward
+         ~printer:Kit.show_token;
 
        let (reward_payment, checker) = assert_ok @@
          Checker.mark_for_liquidation
@@ -128,7 +132,10 @@ let suite =
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
 
-       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
+       assert_equal
+         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         touch_reward
+         ~printer:Kit.show_token;
 
        let int_level = 15 in
        let tezos = Tezos.{
@@ -150,7 +157,10 @@ let suite =
            ~call:{sender=alice; amount=Tez.zero;}
            ~kit:(Kit.of_mukit 4_200_000) in
 
-       assert_equal (Kit.of_mukit 500_000) touch_reward ~printer:Kit.show;
+       assert_equal
+         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         touch_reward
+         ~printer:Kit.show_token;
 
        let int_level = 45 in
        let tezos = Tezos.{
@@ -168,7 +178,10 @@ let suite =
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
 
-       assert_equal (Kit.of_mukit 21_000_000) touch_reward ~printer:Kit.show;
+       assert_equal
+         (Kit.issue ~tezos (Kit.of_mukit 21_000_000))
+         touch_reward
+         ~printer:Kit.show_token;
 
        (* We don't need to touch the slice on this test case since Checker.touch
         * already touches the oldest 5 slices. *)

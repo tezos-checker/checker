@@ -40,7 +40,7 @@ module Checker : sig
     * - Update auction-related info (e.g. start a new auction)
     * - NOTE: Are there any other tasks to put in this list?
   *)
-  val touch : t -> tezos:Tezos.t -> index:Tez.t -> (Kit.t * t)
+  val touch : t -> tezos:Tezos.t -> index:Tez.t -> (Kit.token * t)
 
   (* ************************************************************************* *)
   (**                               BURROWS                                    *)
@@ -65,13 +65,13 @@ module Checker : sig
   (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
     * there is not enough collateral, or if the permission ticket given is
     * insufficient. *)
-  val mint_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.t * t, Error.error) result
+  val mint_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:Permission.t -> burrow_id:burrow_id -> kit:Kit.t -> (Kit.token * t, Error.error) result
 
   (** Deposit/burn a non-negative amount of kit to a burrow. If there is
     * excess kit, simply store it into the burrow. Fail if the burrow does not
     * exist, or if the burrow does not allow kit burnings from anyone and the
     * permission ticket given is insufficient. *)
-  val burn_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> kit:Kit.t -> (t, Error.error) result
+  val burn_kit : t -> tezos:Tezos.t -> call:Call.t -> permission:(Permission.t option) -> burrow_id:burrow_id -> kit:Kit.token -> (t, Error.error) result
 
   (** Activate a currently inactive burrow. Fail if the burrow does not exist,
     * if the burrow is already active, if the amount of tez given is less than
@@ -123,7 +123,7 @@ module Checker : sig
     call:Call.t ->
     min_kit_expected:Kit.t ->
     deadline:Timestamp.t ->
-    (Kit.t * t, Error.error) result
+    (Kit.token * t, Error.error) result
 
   (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
     * cannot be bought or if the deadline has passed. *)
@@ -131,7 +131,7 @@ module Checker : sig
     t ->
     tezos:Tezos.t ->
     call:Call.t ->
-    kit:Kit.t ->
+    kit:Kit.token ->
     min_tez_expected:Tez.t ->
     deadline:Timestamp.t ->
     (Tez.payment * t, Error.error) result
@@ -145,10 +145,10 @@ module Checker : sig
     t ->
     tezos:Tezos.t ->
     call:Call.t ->
-    max_kit_deposited:Kit.t ->
+    max_kit_deposited:Kit.token ->
     min_lqt_minted:int ->
     deadline:Timestamp.t ->
-    (Uniswap.liquidity * Tez.t * Kit.t * t, Error.error) result
+    (Uniswap.liquidity * Tez.t * Kit.token * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
@@ -160,7 +160,7 @@ module Checker : sig
     min_tez_withdrawn:Tez.t ->
     min_kit_withdrawn:Kit.t ->
     deadline:Timestamp.t ->
-    (Tez.payment * Kit.t * t, Error.error) result
+    (Tez.payment * Kit.token * t, Error.error) result
 
   (* ************************************************************************* *)
   (**                          LIQUIDATION AUCTIONS                            *)
@@ -367,7 +367,7 @@ struct
         match Burrow.mint_kit state.parameters kit burrow with
         | Ok (updated_burrow, minted) ->
           assert (kit = minted);
-          Ok ( minted, (* TODO: kit must be given to call.sender *)
+          Ok ( Kit.issue ~tezos minted,
                {state with
                 burrows = PtrMap.add burrow_id updated_burrow state.burrows;
                 parameters =
@@ -400,6 +400,7 @@ struct
   let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+    let kit, _ (* destroyed *) = Kit.read_kit kit in
     if Burrow.allow_all_kit_burnings burrow then
       (* no need to check the permission argument at all *)
       let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
@@ -900,10 +901,10 @@ struct
         + of_int high_duration * touch_high_reward
       )
 
-  let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.t * t) =
+  let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.token * t) =
     if state.parameters.last_touched = Tezos.(tezos.now) then
       (* Do nothing if up-to-date (idempotence) *)
-      (Kit.zero, state)
+      (Kit.issue ~tezos Kit.zero, state)
     else
       (* TODO: What is the right order in which to do things here? We use the
        * last observed kit_in_tez price from uniswap to update the parameters,
@@ -921,7 +922,8 @@ struct
         Parameters.touch tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
       in
       (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap tezos total_accrual_to_uniswap in
+      let total_accrual_to_uniswap = Kit.issue ~tezos total_accrual_to_uniswap in
+      let updated_uniswap = Uniswap.add_accrued_kit state.uniswap ~tezos total_accrual_to_uniswap in
       (* 4: Update delegation auction and possibly the baker delegate for Checker *)
       let (updated_delegate, updated_delegation_auction) =
         DelegationAuction.delegate state.delegation_auction tezos; in
@@ -961,5 +963,5 @@ struct
       assert_invariants state;
 
       (* TODO: Add more tasks here *)
-      (reward, state)
+      (Kit.issue ~tezos reward, state)
 end
