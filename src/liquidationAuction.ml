@@ -86,7 +86,8 @@ type liquidation_slice = {
 [@@deriving show]
 
 type auction_id = Avl.avl_ptr
-type bid_details = { auction_id: auction_id; bid: Bid.t; }
+type bid = { address: Address.t; kit: Kit.t } [@@deriving show]
+type bid_details = { auction_id: auction_id; bid: bid; }
 type bid_ticket = bid_details Ticket.t
 
 let issue_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
@@ -116,7 +117,7 @@ let with_valid_bid_ticket
 
 type auction_state =
   | Descending of Kit.t * Timestamp.t
-  | Ascending of Bid.t * Timestamp.t * Level.t
+  | Ascending of bid * Timestamp.t * Level.t
 [@@deriving show]
 
 type current_auction = {
@@ -127,7 +128,7 @@ type current_auction = {
 
 type auction_outcome = {
   sold_tez: Tez.t;
-  winning_bid: Bid.t;
+  winning_bid: bid;
   younger_auction: Avl.avl_ptr option;
   older_auction: Avl.avl_ptr option;
 }
@@ -276,7 +277,7 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
     (tezos: Tezos.t)
-    (auction: current_auction) : Bid.t option =
+    (auction: current_auction) : bid option =
   match auction.state with
   | Descending _ ->
     None
@@ -340,7 +341,7 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: Bid.t)
+let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket, Error.error) result =
   if bid.kit >= current_auction_minimum_bid tezos auction
   then
