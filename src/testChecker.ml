@@ -121,7 +121,7 @@ let suite =
            checker
            ~tezos:tezos
            ~call:{sender=bob; amount = Tez.zero;}
-           ~kit:(Kit.of_mukit 1_000));
+           ~kit:(Kit.issue ~tezos (Kit.of_mukit 1_000)));
 
        let touch_reward, checker =
          Checker.touch
@@ -155,7 +155,7 @@ let suite =
            checker
            ~tezos
            ~call:{sender=alice; amount=Tez.zero;}
-           ~kit:(Kit.of_mukit 4_200_000) in
+           ~kit:(Kit.issue ~tezos (Kit.of_mukit 4_200_000)) in
 
        assert_equal
          (Kit.issue ~tezos (Kit.of_mukit 500_000))

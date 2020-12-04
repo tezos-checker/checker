@@ -169,7 +169,12 @@ module Checker : sig
   (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
     * too low. If successful, return a ticket which can be used to
     * reclaim the kit when outbid. *)
-  val liquidation_auction_place_bid : t -> tezos:Tezos.t -> call:Call.t -> kit:Kit.t -> (LiquidationAuction.bid_ticket * t, Error.error) result
+  val liquidation_auction_place_bid :
+    t ->
+    tezos:Tezos.t ->
+    call:Call.t ->
+    kit:Kit.token ->
+    (LiquidationAuction.bid_ticket * t, Error.error) result
 
   (** Reclaim a failed bid for the current or a completed liquidation auction. *)
   val liquidation_auction_reclaim_bid : t -> tezos:Tezos.t -> address:Address.t -> bid_ticket:LiquidationAuction.bid_ticket
@@ -837,6 +842,7 @@ struct
   (* ************************************************************************* *)
 
   let liquidation_auction_place_bid state ~tezos ~(call:Call.t) ~kit =
+    let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
     let bid = LiquidationAuction.{ address=call.sender; kit=kit; } in
     match
       LiquidationAuction.with_current_auction state.liquidation_auctions @@
