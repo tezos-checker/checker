@@ -54,21 +54,35 @@ let suite =
        let auction = DelegationAuction.empty start_tezos in
        let bidder1 = Address.of_string "1111" in
        let bidder2 = Address.of_string "2222" in
+       let bidder3 = Address.of_string "3333" in
+       let bidder4 = Address.of_string "4444" in
        let amount1 = Tez.of_mutez 1 in
        let amount2 = Tez.of_mutez 2 in
+       let amount3 = Tez.of_mutez 3 in
+       let amount4 = Tez.of_mutez 4 in
        let (ticket1, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder1 ~amount:amount1) in
        assert_bool "must match bid" (Result.is_error (DelegationAuction.place_bid auction start_tezos ~sender:bidder2 ~amount:amount1));
        let (ticket2, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder2 ~amount:amount2) in
+       let (ticket3, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder3 ~amount:amount3) in
+       let (ticket4, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder4 ~amount:amount4) in
        (* First bidder can now reclaim their bid *)
        let (refund, auction) = Result.get_ok (DelegationAuction.reclaim_bid auction start_tezos ~address:bidder1 ~bid_ticket:ticket1) in
        assert_equal amount1 refund;
        (* But new leading bidder cannot reclaim their bid *)
-       assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction start_tezos ~address:bidder2 ~bid_ticket:ticket2));
-       (* And they can claim their win in the next round *)
+       assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction start_tezos ~address:bidder4 ~bid_ticket:ticket4));
+       (* Then in the next cycle... *)
        let tezos = {start_tezos with level = Level.of_int 4096} in
-       let auction = Result.get_ok (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket2) in
+       (* Refunds can still be claimed *)
+       let (refund, auction) = Result.get_ok (DelegationAuction.reclaim_bid auction tezos ~address:bidder2 ~bid_ticket:ticket2) in
+       assert_equal amount2 refund;
+       (* And the winner can claim their win *)
+       let auction = Result.get_ok (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket4) in
        let (delegate, _auction) = DelegationAuction.delegate auction tezos in
-       assert_equal (Some bidder2) delegate ~printer:show_address_option;
+       assert_equal (Some bidder4) delegate ~printer:show_address_option;
+       (* But in the following cycle... *)
+       let tezos = {start_tezos with level = Level.of_int 8200} in
+       (* Refunds can no longer be claimed *)
+       assert_bool "too late to reclaim losing bid" (Result.is_error (DelegationAuction.reclaim_bid auction tezos ~address:bidder3 ~bid_ticket:ticket3));
     );
 
     ("test sanity when skipping multiple levels" >::
