@@ -284,6 +284,23 @@ struct
       let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
       Option.is_none outcome
 
+  let with_existing_burrow
+      (state: t)
+      (burrow_id: burrow_id)
+      (f: Burrow.t -> ('a, Error.error) result)
+    : ('a, Error.error) result =
+    match PtrMap.find_opt burrow_id state.burrows with
+    | None -> Error (NonExistentBurrow burrow_id)
+    | Some burrow -> f burrow
+
+  let with_permission_present
+      (permission: Permission.t option)
+      (f: Permission.t -> ('a, Error.error) result)
+    : ('a, Error.error) result =
+    match permission with
+    | None -> Error MissingPermission
+    | Some permission -> f permission
+
   (* Looks up a burrow_id from state, and checks if the resulting burrow does
    * not have any completed liquidation slices that need to be claimed before
    * any operation. *)
@@ -292,12 +309,10 @@ struct
       (burrow_id: burrow_id)
       (f: Burrow.t -> ('a, Error.error) result)
     : ('a, Error.error) result =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | None -> Error (NonExistentBurrow burrow_id)
-    | Some burrow ->
-      if is_burrow_done_with_liquidations state burrow
-      then f burrow
-      else Error BurrowHasCompletedLiquidation
+    with_existing_burrow state burrow_id @@ fun burrow ->
+    if is_burrow_done_with_liquidations state burrow
+    then f burrow
+    else Error BurrowHasCompletedLiquidation
 
   (* Ensure that there is no tez given. To prevent accidental fund loss. *)
   let with_no_tez_given (call: Call.t) (f: unit -> ('a, Error.error) result)
@@ -308,14 +323,22 @@ struct
 
   (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
    * replicate the permission ticket if they don't want to lose it. *)
-  let is_permission_valid ~(tezos:Tezos.t) ~(permission: Permission.t) ~(burrow_id:burrow_id) ~(burrow: Burrow.t) : Permission.rights option =
+  let with_valid_permission
+      ~(tezos:Tezos.t)
+      ~(permission: Permission.t)
+      ~(burrow_id:burrow_id)
+      ~(burrow: Burrow.t)
+      (f: Permission.rights -> ('a, Error.error) result)
+    : ('a, Error.error) result =
     let issuer, amount, (rights, id, version), _ = Ticket.read permission in
     let validity_condition =
       issuer = tezos.self
       && amount = 0
       && version = Burrow.permission_version burrow
       && id = burrow_id in
-    if validity_condition then Some rights else None
+    if validity_condition
+    then f rights
+    else Error InvalidPermission
 
   let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
     let burrow_id = mk_next_burrow_id state.burrows in
@@ -331,11 +354,9 @@ struct
     | Error err -> Error err
 
   let touch_burrow (state: t) (burrow_id: burrow_id) =
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow ->
-      let updated_burrow = Burrow.touch state.parameters burrow in
-      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-    | None -> Error (NonExistentBurrow burrow_id)
+    with_existing_burrow state burrow_id @@ fun burrow ->
+    let updated_burrow = Burrow.touch state.parameters burrow in
+    Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
 
   let deposit_tez (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
@@ -344,58 +365,52 @@ struct
       let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
       Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
     else
-      match permission with
-      | None -> Error MissingPermission
-      | Some permission ->
+      with_permission_present permission @@ fun permission ->
+      with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+      if Permission.does_right_allow_tez_deposits r then
         (* the permission should support depositing tez. *)
-        match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-        | None -> Error InvalidPermission
-        | Some r ->
-          if Permission.does_right_allow_tez_deposits r then
-            let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
-            Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-          else
-            Error InsufficientPermission
+        let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
+        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+      else
+        Error InsufficientPermission
 
   let mint_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r ->
-      if Permission.does_right_allow_kit_minting r then
-        match Burrow.mint_kit state.parameters kit burrow with
-        | Ok (updated_burrow, minted) ->
-          assert (kit = minted);
-          Ok ( Kit.issue ~tezos minted,
-               {state with
-                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                parameters =
-                  Parameters.add_outstanding_kit
-                    (Parameters.add_circulating_kit state.parameters minted)
-                    minted;
-               }
-             )
-        | Error err -> Error err
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.does_right_allow_kit_minting r then
+      (* the permission should support minting kit. *)
+      match Burrow.mint_kit state.parameters kit burrow with
+      | Ok (updated_burrow, minted) ->
+        assert (kit = minted);
+        Ok ( Kit.issue ~tezos minted,
+             {state with
+              burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+              parameters =
+                Parameters.add_outstanding_kit
+                  (Parameters.add_circulating_kit state.parameters minted)
+                  minted;
+             }
+           )
+      | Error err -> Error err
+    else
+      Error InsufficientPermission
 
   let withdraw_tez (state:t) ~tezos ~(call:Call.t) ~permission ~tez ~burrow_id =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r ->
-      if Permission.does_right_allow_tez_withdrawals r then
-        match Burrow.withdraw_tez state.parameters tez burrow with
-        | Ok (updated_burrow, withdrawn) ->
-          assert (tez = withdrawn);
-          let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-          let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
-          Ok (tez_payment, updated_state)
-        | Error err -> Error err
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.does_right_allow_tez_withdrawals r then
+      (* the permission should support withdrawing tez. *)
+      match Burrow.withdraw_tez state.parameters tez burrow with
+      | Ok (updated_burrow, withdrawn) ->
+        assert (tez = withdrawn);
+        let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+        let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
+        Ok (tez_payment, updated_state)
+      | Error err -> Error err
+    else
+      Error InsufficientPermission
 
   let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
     with_no_tez_given call @@ fun () ->
@@ -414,101 +429,92 @@ struct
               kit;
          }
     else
-      match permission with
-      | None -> Error MissingPermission
-      | Some permission ->
+      with_permission_present permission @@ fun permission ->
+      with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+      if Permission.does_right_allow_kit_burning r then
         (* the permission should support burning kit. *)
-        match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-        | None -> Error InvalidPermission
-        | Some r ->
-          if Permission.does_right_allow_kit_burning r then
-            let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
-            (* TODO: What should happen if the following is violated? *)
-            assert (state.parameters.circulating_kit >= kit);
-            Ok {state with
-                burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                parameters =
-                  Parameters.remove_outstanding_kit
-                    (Parameters.remove_circulating_kit state.parameters kit)
-                    kit;
-               }
-          else
-            Error InsufficientPermission
+        let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
+        (* TODO: What should happen if the following is violated? *)
+        assert (state.parameters.circulating_kit >= kit);
+        Ok {state with
+            burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+            parameters =
+              Parameters.remove_outstanding_kit
+                (Parameters.remove_circulating_kit state.parameters kit)
+                kit;
+           }
+      else
+        Error InsufficientPermission
 
   let activate_burrow (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r -> (* TODO: shall we extend the right datatype for this? *)
-      if Permission.is_admin_right r then
-        match Burrow.activate state.parameters call.amount burrow with
-        | Ok updated_burrow ->
-          Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-        | Error err -> Error err
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.is_admin_right r then
+      (* only admins can activate burrows. *)
+      match Burrow.activate state.parameters call.amount burrow with
+      | Ok updated_burrow ->
+        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+      | Error err -> Error err
+    else
+      Error InsufficientPermission
 
   let deactivate_burrow (state:t) ~tezos ~call ~permission ~burrow_id ~recipient =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r -> (* TODO: shall we extend the right datatype for this? *)
-      if Permission.is_admin_right r then
-        match Burrow.deactivate state.parameters burrow with
-        | Ok (updated_burrow, returned_tez) ->
-          let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-          let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
-          Ok (tez_payment, updated_state)
-        | Error err -> Error err
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.is_admin_right r then
+      (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
+      match Burrow.deactivate state.parameters burrow with
+      | Ok (updated_burrow, returned_tez) ->
+        let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+        let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+        Ok (tez_payment, updated_state)
+      | Error err -> Error err
+    else
+      Error InsufficientPermission
 
   let set_burrow_delegate (state:t) ~tezos ~call ~permission ~burrow_id ~delegate =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r ->
-      if Permission.does_right_allow_setting_delegate r then
-        let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
-        Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.does_right_allow_setting_delegate r then
+      (* the permission should support setting the delegate. *)
+      let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
+      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    else
+      Error InsufficientPermission
 
   let make_permission (state:t) ~tezos ~call ~permission ~burrow_id ~rights =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r ->
-      if Permission.is_admin_right r then
-        let permission_ticket =
-          Ticket.create
-            ~issuer:tezos.self
-            ~amount:0
-            ~content:(rights, burrow_id, 0) in
-        Ok permission_ticket
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.is_admin_right r then
+      (* only admins can create permissions. *)
+      let permission_ticket =
+        Ticket.create
+          ~issuer:tezos.self
+          ~amount:0
+          ~content:(rights, burrow_id, 0) in
+      Ok permission_ticket
+    else
+      Error InsufficientPermission
 
   let invalidate_all_permissions (state:t) ~tezos ~call ~permission ~burrow_id =
     with_no_tez_given call @@ fun () ->
     with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-    match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-    | None -> Error InvalidPermission
-    | Some r ->
-      if Permission.is_admin_right r then
-        let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
-        let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
-        let admin_ticket =
-          Ticket.create
-            ~issuer:tezos.self
-            ~amount:0
-            ~content:(Permission.Admin, burrow_id, updated_version) in
-        Ok (admin_ticket, updated_state)
-      else
-        Error InsufficientPermission
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if Permission.is_admin_right r then
+      (* only admins can invalidate all permissions. *)
+      let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
+      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+      let admin_ticket =
+        Ticket.create
+          ~issuer:tezos.self
+          ~amount:0
+          ~content:(Permission.Admin, burrow_id, updated_version) in
+      Ok (admin_ticket, updated_state)
+    else
+      Error InsufficientPermission
 
   (* TODO: Arthur: one time we might want to trigger garbage collection of
    * slices is during a liquidation. a liquidation creates one slice, so if we
@@ -518,154 +524,148 @@ struct
    * but roughly speaking in most cases it should average out) *)
   let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
     with_no_tez_given call @@ fun () ->
-    match PtrMap.find_opt burrow_id state.burrows with
-    | Some burrow -> (
-        match Burrow.request_liquidation state.parameters burrow with
-        | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
-        | Partial details | Complete details | Close details ->
-          let liquidation_slice =
-            LiquidationAuction.{
-              burrow = burrow_id;
-              tez = details.tez_to_auction;
-              min_kit_for_unwarranted = details.min_kit_for_unwarranted;
-              older = Option.map
-                  Burrow.(fun i -> i.youngest)
-                  (Burrow.liquidation_slices burrow);
-              younger = None;
-            } in
-          match LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice with
-          | Error err -> Error err
-          | Ok (updated_liquidation_auctions, leaf_ptr) ->
+    with_existing_burrow state burrow_id @@ fun burrow ->
+    match Burrow.request_liquidation state.parameters burrow with
+    | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
+    | Partial details | Complete details | Close details ->
+      let liquidation_slice =
+        LiquidationAuction.{
+          burrow = burrow_id;
+          tez = details.tez_to_auction;
+          min_kit_for_unwarranted = details.min_kit_for_unwarranted;
+          older = Option.map
+              Burrow.(fun i -> i.youngest)
+              (Burrow.liquidation_slices burrow);
+          younger = None;
+        } in
+      match LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice with
+      | Error err -> Error err
+      | Ok (updated_liquidation_auctions, leaf_ptr) ->
 
-            (* Fixup the previous youngest pointer since the newly added slice
-             * is even younger.
-             *
-             * This is hacky, but couldn't figure out a nicer way, please do
-             * refactor if you do.
-            *)
-            let updated_storage = (
-              match liquidation_slice.older with
-              | None -> updated_liquidation_auctions.avl_storage
-              | Some older_ptr ->
-                BigMap.mem_update
-                  updated_liquidation_auctions.avl_storage
-                  (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
-                match older with
-                | Leaf l -> Leaf
-                              { l with value = { l.value with younger = Some leaf_ptr; }; }
-                | _ -> failwith "impossible"
-            ) in
+        (* Fixup the previous youngest pointer since the newly added slice
+         * is even younger.
+         *
+         * This is hacky, but couldn't figure out a nicer way, please do
+         * refactor if you do.
+        *)
+        let updated_storage = (
+          match liquidation_slice.older with
+          | None -> updated_liquidation_auctions.avl_storage
+          | Some older_ptr ->
+            BigMap.mem_update
+              updated_liquidation_auctions.avl_storage
+              (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+            match older with
+            | Leaf l -> Leaf
+                          { l with value = { l.value with younger = Some leaf_ptr; }; }
+            | _ -> failwith "impossible"
+        ) in
 
-            (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
-            let updated_burrow =
-              Burrow.set_liquidation_slices
-                details.burrow_state
-                (match Burrow.liquidation_slices details.burrow_state with
-                 | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
-                 | Some s -> Some { s with youngest=leaf_ptr; })
-            in
-            Ok ( Tez.{destination = call.sender; amount = details.liquidation_reward},
-                 {state with
-                  burrows = PtrMap.add burrow_id updated_burrow state.burrows;
-                  liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
-                 }
-               )
-      )
-    | None -> Error (NonExistentBurrow burrow_id)
+        (* TODO: updated_burrow needs to keep track of (leaf_ptr, tez_to_auction) here! *)
+        let updated_burrow =
+          Burrow.set_liquidation_slices
+            details.burrow_state
+            (match Burrow.liquidation_slices details.burrow_state with
+             | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
+             | Some s -> Some { s with youngest=leaf_ptr; })
+        in
+        Ok ( Tez.{destination = call.sender; amount = details.liquidation_reward},
+             {state with
+              burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+              liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
+             }
+           )
 
   (* NOTE: The burden is on the caller to provide both the burrow_id and the
    * leaf_ptr, and the leaf_ptr should refer to burrow_id (checked). *)
   let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
     with_no_tez_given call @@ fun () ->
-    match PtrMap.find_opt burrow_id state.burrows with
-    | None -> Error (NonExistentBurrow burrow_id)
-    | Some burrow ->
-      match is_permission_valid ~tezos ~permission ~burrow_id ~burrow with
-      | None -> Error InvalidPermission
-      | Some r when not (Permission.does_right_allow_cancelling_liquidations r) ->
-        Error InsufficientPermission
-      | Some _ ->
-        let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
-        if root <> state.liquidation_auctions.queued_slices
-        then Error UnwarrantedCancellation
-        else
-          let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+    with_existing_burrow state burrow_id @@ fun burrow ->
+    with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
+    if not (Permission.does_right_allow_cancelling_liquidations r) then
+      Error InsufficientPermission
+    else
+      let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
+      if root <> state.liquidation_auctions.queued_slices
+      then Error UnwarrantedCancellation
+      else
+        let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
-          match PtrMap.find_opt leaf.burrow state.burrows with
-          | None -> failwith "invariant violation"
-          | Some b when b <> burrow ->
-            Error SlicePointsToDifferentBurrow
-          | Some _ when Burrow.is_overburrowed state.parameters burrow ->
-            Error UnwarrantedCancellation
-          | Some _ ->
-            let state =
-              let (new_storage, _) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+        match PtrMap.find_opt leaf.burrow state.burrows with
+        | None -> failwith "invariant violation"
+        | Some b when b <> burrow ->
+          Error SlicePointsToDifferentBurrow
+        | Some _ when Burrow.is_overburrowed state.parameters burrow ->
+          Error UnwarrantedCancellation
+        | Some _ ->
+          let state =
+            let (new_storage, _) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+            { state with
+              liquidation_auctions = {
+                state.liquidation_auctions with
+                avl_storage = new_storage }} in
+          let burrow =
+            Burrow.return_tez_from_auction leaf.tez burrow in
+
+          (* When we delete the youngest or the oldest slice, we have to adjust
+           * the burrow pointers accordingly.
+          *)
+          let burrow =
+            let slices = Option.get (Burrow.liquidation_slices burrow) in
+            match (leaf.younger, leaf.older) with
+            | (None, None) ->
+              assert (slices.youngest = leaf_ptr);
+              assert (slices.oldest = leaf_ptr);
+              Burrow.(set_liquidation_slices burrow None)
+            | (None, Some older) ->
+              assert (slices.youngest = leaf_ptr);
+              Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
+            | (Some younger, None) ->
+              assert (slices.oldest = leaf_ptr);
+              Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
+            | (Some _, Some _) ->
+              assert (slices.oldest <> leaf_ptr);
+              assert (slices.youngest <> leaf_ptr);
+              burrow in
+
+          let state =
+            { state with
+              burrows = PtrMap.add leaf.burrow burrow state.burrows } in
+          (* And we update the slices around it *)
+          let state = (
+            match leaf.younger with
+            | None -> state
+            | Some younger_ptr ->
               { state with
-                liquidation_auctions = {
-                  state.liquidation_auctions with
-                  avl_storage = new_storage }} in
-            let burrow =
-              Burrow.return_tez_from_auction leaf.tez burrow in
-
-            (* When we delete the youngest or the oldest slice, we have to adjust
-             * the burrow pointers accordingly.
-            *)
-            let burrow =
-              let slices = Option.get (Burrow.liquidation_slices burrow) in
-              match (leaf.younger, leaf.older) with
-              | (None, None) ->
-                assert (slices.youngest = leaf_ptr);
-                assert (slices.oldest = leaf_ptr);
-                Burrow.(set_liquidation_slices burrow None)
-              | (None, Some older) ->
-                assert (slices.youngest = leaf_ptr);
-                Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
-              | (Some younger, None) ->
-                assert (slices.oldest = leaf_ptr);
-                Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
-              | (Some _, Some _) ->
-                assert (slices.oldest <> leaf_ptr);
-                assert (slices.youngest <> leaf_ptr);
-                burrow in
-
-            let state =
+                liquidation_auctions = { state.liquidation_auctions with
+                                         avl_storage =
+                                           Avl.update_leaf
+                                             state.liquidation_auctions.avl_storage
+                                             younger_ptr
+                                             (fun younger ->
+                                                assert (younger.older = Some leaf_ptr);
+                                                { younger with older = leaf.older }
+                                             )
+                                       }}
+          ) in
+          let state = (
+            match leaf.older with
+            | None -> state
+            | Some older_ptr ->
               { state with
-                burrows = PtrMap.add leaf.burrow burrow state.burrows } in
-            (* And we update the slices around it *)
-            let state = (
-              match leaf.younger with
-              | None -> state
-              | Some younger_ptr ->
-                { state with
-                  liquidation_auctions = { state.liquidation_auctions with
-                                           avl_storage =
-                                             Avl.update_leaf
-                                               state.liquidation_auctions.avl_storage
-                                               younger_ptr
-                                               (fun younger ->
-                                                  assert (younger.older = Some leaf_ptr);
-                                                  { younger with older = leaf.older }
-                                               )
-                                         }}
-            ) in
-            let state = (
-              match leaf.older with
-              | None -> state
-              | Some older_ptr ->
-                { state with
-                  liquidation_auctions = { state.liquidation_auctions with
-                                           avl_storage =
-                                             Avl.update_leaf
-                                               state.liquidation_auctions.avl_storage
-                                               older_ptr
-                                               (fun older ->
-                                                  assert (older.younger = Some leaf_ptr);
-                                                  { older with younger = leaf.younger }
-                                               )
-                                         }}
-            ) in
-            assert_invariants state;
-            Ok state
+                liquidation_auctions = { state.liquidation_auctions with
+                                         avl_storage =
+                                           Avl.update_leaf
+                                             state.liquidation_auctions.avl_storage
+                                             older_ptr
+                                             (fun older ->
+                                                assert (older.younger = Some leaf_ptr);
+                                                { older with younger = leaf.younger }
+                                             )
+                                       }}
+          ) in
+          assert_invariants state;
+          Ok state
 
   let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
     let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
