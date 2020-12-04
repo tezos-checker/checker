@@ -148,7 +148,7 @@ module Checker : sig
     max_kit_deposited:Kit.token ->
     min_lqt_minted:int ->
     deadline:Timestamp.t ->
-    (Uniswap.liquidity * Tez.t * Kit.token * t, Error.error) result
+    (Uniswap.liquidity * Tez.payment * Kit.token * t, Error.error) result
 
   (** Sell some liquidity (liquidity tokens) to the uniswap contract in
     * exchange for the corresponding tez and kit of the right ratio. *)
@@ -817,7 +817,8 @@ struct
     match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
-      Ok (tokens, leftover_tez, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to call.sender *)
+      let tez_payment = Tez.{destination = call.sender; amount = leftover_tez;} in
+      Ok (tokens, tez_payment, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to call.sender *)
 
   let remove_liquidity (state:t) ~tezos ~(call:Call.t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
     match Uniswap.remove_liquidity state.uniswap ~tezos ~amount:call.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline with
