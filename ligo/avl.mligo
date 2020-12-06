@@ -93,7 +93,7 @@ let node_height (n: node) : int =
   | Branch branch -> max branch.left_height branch.right_height + 1
   | Root ign -> (failwith "node_height found Root" : int)
 
-let mk_empty (mem: mem) (root_data: int): mem * avl_ptr =
+let avl_mk_empty (mem: mem) (root_data: int): mem * avl_ptr =
   let mem = {
     mem = (Map.empty: (ptr, node) map);
     max_id = 0;

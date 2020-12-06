@@ -8,6 +8,11 @@ type storage = {
 type action =
   | Add of int
 
+let initial_storage: storage =
+  let mem = {max_id = 0;   mem = (Map.empty: (ptr, node) map); } in
+  let (mem, ptr) = avl_mk_empty mem 42 in
+  { mem = mem; root = ptr }
+
 let main ((p, storage): action * storage): operation list * storage =
  let storage =
    match p with

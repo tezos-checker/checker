@@ -2,6 +2,8 @@ let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
 
+
+  # This revision contain a fix to https://gitlab.com/ligolang/ligo/-/issues/1066#note_458556689
   ligoPkgs =
     let ligoSrc = pkgs.fetchgit {
       url = "https://gitlab.com/ligolang/ligo";
