@@ -7,7 +7,8 @@ let
   ligoPkgs =
     let ligoSrc = pkgs.fetchgit {
       url = "https://gitlab.com/ligolang/ligo";
-      sha256 = "sha256-VfqXbL8CZDDSqLmp9wOUSaszB1OcCj4N6QVf2VzoTiA="; };
+      rev = "6d68d6258566e398a321424f536d037be536cf96";
+      sha256 = "sha256-idlJ8yNSpAlDXgctsp0/no2/ozgLKoMwQrLae1WHp44="; };
     in (import "${ligoSrc}/nix/pkgs.nix" {});
 in
 pkgs.mkShell {
