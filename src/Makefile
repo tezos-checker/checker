@@ -4,11 +4,10 @@ tests:
 	dune runtest .
 
 clean:
-	$(RM) *.cmo *.cmi
+	$(RM) -r _build
 
 indent:
 	ocp-indent -i *.ml
 
 distclean: clean
-	$(RM) a.out
 
