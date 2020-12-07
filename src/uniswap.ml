@@ -109,11 +109,11 @@ let is_liquidity_token_pool_empty (u: t) =
  * all the conditions below should be either all true or all false, but the
  * implementation of remove_liquidity currently allows liquidity to reach zero.
  * *)
-let is_uniswap_uninitialized (u: t) =
-     is_tez_pool_empty u
-  || is_kit_pool_empty u
-  || is_liquidity_token_pool_empty u
-  || compare u.kit_in_tez_in_prev_block Q.undef = 0
+let assert_initialized (u: t) =
+  assert (not (is_tez_pool_empty u));
+  assert (not (is_kit_pool_empty u));
+  assert (not (is_liquidity_token_pool_empty u));
+  assert (compare u.kit_in_tez_in_prev_block Q.undef != 0)
 
 (* NOTE: FOR TESTING ONLY *)
 let kit_in_tez (u: t) =
@@ -126,7 +126,7 @@ let kit_times_tez (u: t) =
   Q.(Tez.to_q u.tez * Kit.to_q u_kit)
 
 let kit_in_tez_in_prev_block (uniswap: t) =
-  assert (not (is_uniswap_uninitialized uniswap));
+  assert_initialized uniswap;
   uniswap.kit_in_tez_in_prev_block
 
 (* Update the kit_in_tez cached and last_level, if we just entered a new block.
@@ -148,7 +148,7 @@ let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
 
 let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
-  assert (not (is_uniswap_uninitialized uniswap));
+  assert_initialized uniswap;
   if (is_tez_pool_empty uniswap) then
     Error UniswapEmptyTezPool
   else if (is_kit_pool_empty uniswap) then
@@ -182,7 +182,7 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
   let uniswap = sync_last_observed uniswap tezos in
   let kit, token = Kit.read_kit token in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
-  assert (not (is_uniswap_uninitialized uniswap));
+  assert_initialized uniswap;
   if is_tez_pool_empty uniswap then
     Error UniswapEmptyTezPool
   else if is_kit_pool_empty uniswap then
@@ -237,58 +237,58 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted
   else if min_lqt_minted <= 0 then
     Error AddLiquidityNoLiquidityToBeAdded
   else
-    if is_liquidity_token_pool_empty uniswap then (
-      (* First Liquidity Provider *)
-      assert (uniswap_kit = Kit.zero);
-      assert (uniswap.tez = Tez.zero);
-      if amount < Tez.one then
-        Error AddLiquidityLessThanOneTez
-      else
-        let lqt_minted = Q.to_int (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
-        if lqt_minted < min_lqt_minted then
-          Error AddLiquidityTooLowLiquidityMinted
-        else
-          let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
-          let updated =
-            { kit = all_kit_deposited;
-              tez = amount;
-              lqt = liq_tokens;
-              (* George: when the contract is initialized, the "prev" data
-               * coincide with the current data, otherwise we keep uniswap
-               * useless for longer than needed. *)
-              kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
-              last_level = tezos.level; } in
-          Ok (liq_tokens, Tez.zero, Kit.issue ~tezos Kit.zero, updated)
-      )
+  if is_liquidity_token_pool_empty uniswap then (
+    (* First Liquidity Provider *)
+    assert (uniswap_kit = Kit.zero);
+    assert (uniswap.tez = Tez.zero);
+    if amount < Tez.one then
+      Error AddLiquidityLessThanOneTez
     else
-      (* Non-first Liquidity Provider *)
-      if is_tez_pool_empty uniswap then
-        Error UniswapEmptyTezPool
+      let lqt_minted = Q.to_int (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
+      if lqt_minted < min_lqt_minted then
+        Error AddLiquidityTooLowLiquidityMinted
       else
-        let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
-        let lqt_minted = Q.(to_int (of_int uniswap_lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
-        let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
+        let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
+        let updated =
+          { kit = all_kit_deposited;
+            tez = amount;
+            lqt = liq_tokens;
+            (* George: when the contract is initialized, the "prev" data
+             * coincide with the current data, otherwise we keep uniswap
+             * useless for longer than needed. *)
+            kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
+            last_level = tezos.level; } in
+        Ok (liq_tokens, Tez.zero, Kit.issue ~tezos Kit.zero, updated)
+  )
+  else
+    (* Non-first Liquidity Provider *)
+  if is_tez_pool_empty uniswap then
+    Error UniswapEmptyTezPool
+  else
+    let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
+    let lqt_minted = Q.(to_int (of_int uniswap_lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
+    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
 
-        if lqt_minted < min_lqt_minted then
-          Error AddLiquidityTooLowLiquidityMinted
-        else if max_kit_deposited < kit_deposited then
-          Error AddLiquidityTooMuchKitRequired
-        else if kit_deposited = Kit.zero then
-          Error AddLiquidityZeroKitDeposited
-        else
-          let kit_deposited, kit_to_return =
-            Kit.split_or_fail
-              all_kit_deposited
-              kit_deposited
-              Kit.(max_kit_deposited - kit_deposited) in
-          let new_all_kit_in_uniswap = Kit.join_or_fail all_kit_in_uniswap kit_deposited in
-          let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
-          let updated = { uniswap with
-                          kit = new_all_kit_in_uniswap;
-                          tez = Tez.(uniswap.tez + amount);
-                          lqt = Option.get (Ticket.join uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
-          (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
-          Ok (liq_tokens, Tez.zero, kit_to_return, updated)
+    if lqt_minted < min_lqt_minted then
+      Error AddLiquidityTooLowLiquidityMinted
+    else if max_kit_deposited < kit_deposited then
+      Error AddLiquidityTooMuchKitRequired
+    else if kit_deposited = Kit.zero then
+      Error AddLiquidityZeroKitDeposited
+    else
+      let kit_deposited, kit_to_return =
+        Kit.split_or_fail
+          all_kit_deposited
+          kit_deposited
+          Kit.(max_kit_deposited - kit_deposited) in
+      let new_all_kit_in_uniswap = Kit.join_or_fail all_kit_in_uniswap kit_deposited in
+      let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
+      let updated = { uniswap with
+                      kit = new_all_kit_in_uniswap;
+                      tez = Tez.(uniswap.tez + amount);
+                      lqt = Option.get (Ticket.join uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
+      (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
+      Ok (liq_tokens, Tez.zero, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think
@@ -300,7 +300,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
   : (Tez.t * Kit.token * t, Error.error) result =
   with_valid_liquidity_token ~tezos ~liquidity:lqt_burned @@ fun lqt_burned ->
   let uniswap = sync_last_observed uniswap tezos in
-  assert (not (is_uniswap_uninitialized uniswap));
+  assert_initialized uniswap;
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   let _, lqt_burned, _, _ = Ticket.read lqt_burned in (* NOTE: consumed, right here. *)
   if is_liquidity_token_pool_empty uniswap then
@@ -330,8 +330,8 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
       Error RemoveLiquidityTooMuchLiquidityBurned
     else
       let remaining_lqt, _burned = Option.get ( (* NOTE: SHOULD NEVER FAIL!! *)
-        Ticket.split same_ticket (uniswap_lqt - lqt_burned) lqt_burned
-      ) in
+          Ticket.split same_ticket (uniswap_lqt - lqt_burned) lqt_burned
+        ) in
 
       let kit_withdrawn, remaining_kit = Kit.split_or_fail all_kit_in_uniswap kit_withdrawn Kit.(uniswap_kit - kit_withdrawn) in
       let updated = { uniswap with
