@@ -19,13 +19,19 @@ let assert_ok (r: ('a, Error.error) result) : 'a =
   | Error Checker.NotLiquidationCandidate _ -> assert_failure "NotLiquidationCandidate"
   | Error _ -> assert_failure "Unknown Error"
 
+let assert_failwith (e: Error.error) (r: ('a, Error.error) result) : unit =
+  match r with
+  | Ok _ -> assert_failure "Should have failed but didn't!"
+  | Error r -> assert (r = e)
+
 let suite =
   "Checker tests" >::: [
     ("can complete a liquidation auction" >::
      fun _ ->
+       let int_level = 0 in
        let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ 0;
-           level = Level.of_int 0;
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
            self = checker_address;
          } in
        let checker = Checker.initialize tezos in
@@ -69,6 +75,7 @@ let suite =
            ~tezos
            ~call:{sender = bob; amount = Tez.of_mutez 10_000_000;} in
 
+       (* Mint as much kit as possible *)
        let (kit_token, checker) = assert_ok @@
          Checker.mint_kit
            checker
@@ -80,7 +87,48 @@ let suite =
        let kit, _same_token = Kit.read_kit kit_token in
        assert_equal (Kit.of_mukit 4_285_714) kit;
 
-       let int_level = 211 in
+       assert_bool
+         "should not be overburrowed right after minting"
+         (not
+          @@ Burrow.is_overburrowed
+            checker.parameters
+            (PtrMap.find burrow_id checker.burrows)
+         );
+
+       (* Minting another kit should fail *)
+       let () = assert_failwith Burrow.MintKitFailure @@
+         Checker.mint_kit
+           checker
+           ~tezos
+           ~call:{sender=bob; amount=Tez.zero;}
+           ~permission:admin_permission
+           ~burrow_id:burrow_id
+           ~kit:(Kit.of_mukit 1) in
+
+       (* Over time the burrows with outstanding kit should be overburrowed
+        * (even if the index stays where it was before). *)
+       let int_level = 1 in
+       let tezos = Tezos.{
+           now = Timestamp.of_seconds @@ int_level * 60;
+           level = Level.of_int int_level;
+           self = checker_address;
+         } in
+
+       let _touch_reward, checker =
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_000_000) in
+
+       let checker = assert_ok @@
+         Checker.touch_burrow checker burrow_id in
+
+       assert_bool
+         "if the index goes up, then burrows should become overburrowed"
+         (Burrow.is_overburrowed
+            checker.parameters
+            (PtrMap.find burrow_id checker.burrows)
+         );
+
+       (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
+       let int_level = 212 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -108,7 +156,7 @@ let suite =
            ~burrow_id:burrow_id in
        assert_equal (Tez.of_mutez 1_008_999) reward_payment.amount ~printer:Tez.show;
 
-       let int_level = 216 in
+       let int_level = 217 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -137,7 +185,7 @@ let suite =
          touch_reward
          ~printer:Kit.show_token;
 
-       let int_level = 221 in
+       let int_level = 222 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -162,7 +210,7 @@ let suite =
          touch_reward
          ~printer:Kit.show_token;
 
-       let int_level = 251 in
+       let int_level = 252 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -215,7 +263,7 @@ let suite =
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_960;})
+         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_963;})
          tez_from_bid
          ~printer:Tez.show_payment;
     );
