@@ -23,8 +23,9 @@ let liquidation_reward_percentage : Q.t = Q.of_string "1/1000" (* 0.001 *)
 let uniswap_fee : Q.t = Q.of_string "2/1000" (* 0.002 *)
 
 (** Protected index epsilon. The higher this value is, the faster the protected
-  * index catches up with the actual index. *)
-let protected_index_epsilon : Q.t = Q.of_string "5/10000" (* 0.0005 *)
+  * index catches up with the actual index. Currently calculated as 0.05 cNp
+  * per minute. Basically (0.05 / 100) / 60 = 5/600000. *)
+let protected_index_epsilon : Q.t = Q.of_string "5/600000"
 
 (** The maximum number of tez that can be in an auction lot. *)
 let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000

@@ -80,7 +80,7 @@ let suite =
        let kit, _same_token = Kit.read_kit kit_token in
        assert_equal (Kit.of_mukit 4_285_714) kit;
 
-       let int_level = 5 in
+       let int_level = 211 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -97,7 +97,7 @@ let suite =
          Checker.touch_burrow checker burrow_id in
 
        assert_equal
-         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         (Kit.issue ~tezos (Kit.of_mukit 202_000_000)) (* wow, high reward, many blocks have passed. *)
          touch_reward
          ~printer:Kit.show_token;
 
@@ -108,7 +108,7 @@ let suite =
            ~burrow_id:burrow_id in
        assert_equal (Tez.of_mutez 1_008_999) reward_payment.amount ~printer:Tez.show;
 
-       let int_level = 10 in
+       let int_level = 216 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -137,7 +137,7 @@ let suite =
          touch_reward
          ~printer:Kit.show_token;
 
-       let int_level = 15 in
+       let int_level = 221 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -162,7 +162,7 @@ let suite =
          touch_reward
          ~printer:Kit.show_token;
 
-       let int_level = 45 in
+       let int_level = 251 in
        let tezos = Tezos.{
            now = Timestamp.of_seconds @@ int_level * 60;
            level = Level.of_int int_level;
@@ -215,7 +215,7 @@ let suite =
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice; amount = Tez.of_mutez 3_156_178;})
+         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_960;})
          tez_from_bid
          ~printer:Tez.show_payment;
     );
