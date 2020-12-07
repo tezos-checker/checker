@@ -968,7 +968,7 @@ struct
           (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
 
       (* 5: Touch oldest liquidation slices *)
-      (* TODO: Touch only runs at most once per block. But it might be benefical to run this step
+      (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step
        * without that restriction. *)
       let state =
         { burrows = state.burrows; (* leave as-is *)
