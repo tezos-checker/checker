@@ -4,7 +4,12 @@ open Checker
 let bob = Address.of_string "bob"
 let alice = Address.of_string "alice"
 
-let checker_address = Address.of_string "checker"
+let make_tezos int_level =
+  Tezos.{
+    now = Timestamp.of_seconds @@ int_level * 60;
+    level = Level.of_int int_level;
+    self = Address.of_string "checker";
+  }
 
 let assert_ok (r: ('a, Error.error) result) : 'a =
   match r with
@@ -29,11 +34,7 @@ let suite =
     ("can complete a liquidation auction" >::
      fun _ ->
        let int_level = 0 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
        let checker = Checker.initialize tezos in
 
        let (_lqt_minted, _ret_tez, _ret_kit, checker) = assert_ok @@
@@ -108,11 +109,7 @@ let suite =
        (* Over time the burrows with outstanding kit should be overburrowed
         * (even if the index stays where it was before). *)
        let int_level = 1 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
 
        let _touch_reward, checker =
          Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_000_000) in
@@ -129,17 +126,10 @@ let suite =
 
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        let int_level = 212 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch
-           checker
-           ~tezos
-           ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -157,11 +147,7 @@ let suite =
        assert_equal (Tez.of_mutez 1_008_999) reward_payment.amount ~printer:Tez.show;
 
        let int_level = 217 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
 
        assert_equal
          (Error LiquidationAuction.NoOpenAuction)
@@ -172,10 +158,7 @@ let suite =
            ~kit:(Kit.issue ~tezos (Kit.of_mukit 1_000)));
 
        let touch_reward, checker =
-         Checker.touch
-           checker
-           ~tezos
-           ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
@@ -186,17 +169,10 @@ let suite =
          ~printer:Kit.show_token;
 
        let int_level = 222 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch
-           checker
-           ~tezos
-           ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
 
        let (bid, checker) = assert_ok @@
          Checker.liquidation_auction_place_bid
@@ -211,17 +187,10 @@ let suite =
          ~printer:Kit.show_token;
 
        let int_level = 252 in
-       let tezos = Tezos.{
-           now = Timestamp.of_seconds @@ int_level * 60;
-           level = Level.of_int int_level;
-           self = checker_address;
-         } in
+       let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch
-           checker
-           ~tezos
-           ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
