@@ -1,33 +1,75 @@
 open OUnit2
 open TestCommon
 
+let property_test_count = 100
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+
 let level0 = Level.of_int 0
 let level1 = Level.of_int 1
 let checker_address = Address.of_string "checker"
 let tezos0 = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker_address;}
 
-(* Expected properties to check:
+(* Issue an arbitrary amount of kit (checker-issued) *)
+let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.arb_positive_kit
 
-   Uniswap.buy_kit:
-   - tez_out / kit_out > tez_in / kit_in: because we add tez and remove kit
-   - tez_out * kit_out > tez_in * kit_in: because of the fees, the product is not preserved, but increases.
-   - liquidity should remain as is
+(* Issue an arbitrary number of liquidity tokens (checker-issued) *)
+let arb_liquidity = QCheck.map (Uniswap.issue_liquidity_tokens ~tezos:tezos0) QCheck.(0 -- max_int)
 
-   Uniswap.sell_kit:
-   - tez_out / kit_out < tez_in / kit_in: because we add kit and remove tez
-   - tez_out * kit_out > tez_in * kit_in: because of the fees, the product is not preserved, but increases.
-   - liquidity should remain as is
+(* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
+let arbitrary_uniswap =
+  QCheck.map
+    (fun (tez, kit, lqt) ->
+       (tez, kit, lqt, Uniswap.make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block:Q.one ~last_level:level0)
+    )
+    (QCheck.triple TestArbitrary.arb_positive_tez arb_positive_kit_token arb_liquidity)
 
-   Uniswap.add_liquidity (non-first provider):
-   - tez_out / kit_out <= tez_in / kit_in: long story short: because we round up the kit we keep
-   - tez_out * kit_out >  tez_in * kit_in: because we add both kit and tez
-   - liquidity_out > liquidity_in: because we add liquidity
+(* amount > uniswap_tez * (1 - fee) / fee *)
+(* 1mukit < min_kit_expected < FLOOR{amount * (uniswap_kit / (uniswap_tez + amount)) * FACTOR} *)
+let make_inputs_for_buy_kit_to_succeed =
+  QCheck.map
+    (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
+    (fun (tez, _kit, _lqt, uniswap) ->
+       let amount = Tez.of_q_ceil Q.(Tez.to_q tez * (one - Constants.uniswap_fee) / Constants.uniswap_fee) in
+       let min_kit_expected = Kit.of_mukit 1 in (* absolute minimum *)
+       (uniswap, amount, min_kit_expected, tezos0, Timestamp.of_seconds 1)
+    )
+    arbitrary_uniswap
 
-   Uniswap.remove_liquidity:
-   - tez_out / kit_out ?? tez_in / kit_in: NO IDEA. FOR BOTH THE CONTRACT ROUNDS UP WHAT IT KEEPS.
-   - tez_out * kit_out <  tez_in * kit_in: because we remove both kit and tez
-   - liquidity_out < liquidity_in: because we remove liquidity
+(* Some more expected properties to check:
+   - Uniswap.buy_kit should not affect the number of liquidity tokens.
+   - Uniswap.sell_kit should not affect the number of liquidity tokens.
+   - TODO: Write down for which inputs are the uniswap functions to succeed.
 *)
+
+(* ************************************************************************* *)
+(*                     buy_kit (property-based tests)                        *)
+(* ************************************************************************* *)
+
+(* If successful, Uniswap.buy_kit always increases the ratio of
+ * total_tez/total_kit, since it adds tez and removes kit. *)
+let test_buy_kit_increases_price =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_increases_price"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, tezos, deadline) ->
+    let _bought_kit, new_uniswap = assert_ok @@
+      Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
+    Q.(Uniswap.kit_in_tez new_uniswap > Uniswap.kit_in_tez uniswap)
+
+(* If successful, Uniswap.buy_kit always increases the product
+ * total_tez * total_kit, because of the fees. *)
+let test_buy_kit_increases_product =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_increases_product"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, tezos, deadline) ->
+    let _bought_kit, new_uniswap = assert_ok @@
+      Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
+    Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
@@ -93,6 +135,32 @@ let buy_kit_unit_test =
       ~min_kit_expected:(Kit.of_mukit 453_636)
       ~tezos:Tezos.{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
       ~deadline:(Timestamp.of_seconds 1)
+
+(* ************************************************************************* *)
+(*                     sell_kit (property-based tests)                       *)
+(* ************************************************************************* *)
+
+(* If successful, Uniswap.sell_kit always decreases the ratio of
+ * total_tez/total_kit, since it removes tez and adds kit. *)
+let test_sell_kit_decreases_price =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_decreases_price"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* If successful, Uniswap.sell_kit always increases the product
+ * total_tez * total_kit, because of the fees. *)
+let test_sell_kit_increases_product =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_increases_product"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
 
 (* ************************************************************************* *)
 (*                          sell_kit (unit tests)                            *)
@@ -163,7 +231,45 @@ let sell_kit_unit_test =
       ~deadline:(Timestamp.of_seconds 1)
 
 (* ************************************************************************* *)
-(*                       add_liquidity (unit tests)                          *)
+(*             add_liquidity (non-first) (property-based tests)              *)
+(* ************************************************************************* *)
+
+(* If successful, Uniswap.add_liquidity never increases the ratio of
+ * total_tez/total_kit (might leave it where it is or decrease it), since it
+ * always rounds up the kit it keeps in the contract. *)
+let test_add_liquidity_might_decrease_price =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_might_decrease_price"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* If successful, Uniswap.add_liquidity always increases the product
+ * total_tez * total_kit, because we add both tez and kit. *)
+let test_add_liquidity_increases_product =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_increases_product"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* If successful, Uniswap.add_liquidity always increases the liquidity;
+ * that's what it's supposed to do. *)
+let test_add_liquidity_increases_liquidity =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_increases_liquidity"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* ************************************************************************* *)
+(*                 add_liquidity (non-first) (unit tests)                    *)
 (* ************************************************************************* *)
 
 let add_liquidity_unit_test =
@@ -202,10 +308,56 @@ let add_liquidity_unit_test =
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap
 
+(* ************************************************************************* *)
+(*                 remove_liquidity (property-based tests)                   *)
+(* ************************************************************************* *)
+
+(* If successful, Uniswap.remove_liquidity always decreases the product
+ * total_tez * total_kit, because we remove both tez and kit. *)
+let test_remove_liquidity_decreases_product =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_decreases_product"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* If successful, Uniswap.remove_liquidity always decreases the liquidity;
+ * that's what it's supposed to do. *)
+let test_remove_liquidity_decreases_liquidity =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_decreases_liquidity"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
 
 let suite =
   "Uniswap tests" >::: [
+    (* buy_kit *)
     buy_kit_unit_test;
+    test_buy_kit_increases_price;
+    test_buy_kit_increases_product;
+
+    (* sell_kit *)
     sell_kit_unit_test;
+    test_sell_kit_decreases_price;
+    test_sell_kit_increases_product;
+
+    (* add_liquidity (first) *)
+    (* TODO: add unit tests and property-based random tests *)
+
+    (* add_liquidity (non-first) *)
     add_liquidity_unit_test;
+    test_add_liquidity_might_decrease_price;
+    test_add_liquidity_increases_product;
+    test_add_liquidity_increases_liquidity;
+
+    (* remove liquidity *)
+    (* TODO: add unit tests *)
+    test_remove_liquidity_decreases_product;
+    test_remove_liquidity_decreases_liquidity;
   ]

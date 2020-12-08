@@ -88,6 +88,11 @@ val is_kit_pool_empty : t -> bool
 (** Check whether the uniswap contract contains zero liquidity tokens. *)
 val is_liquidity_token_pool_empty : t -> bool
 
+(** NOTE: FOR TESTING PURPOSES ONLY. NO NEED TO EXPORT REALLY. Check whether
+  * the uniswap contract is uninitialized (i.e. there has been no first
+  * liquidity provider yet). *)
+val is_uniswap_uninitialized : t -> bool
+
 (** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
   * current price of kit in tez, as estimated using the ratio of tez and kit
   * currently in the uniswap contract. *)
