@@ -13,6 +13,29 @@ let checker_address = Address.of_string "checker"
 
 let tezos0 = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker_address;}
 
+(* Expected properties to check:
+
+Uniswap.buy_kit:
+- tez_out / kit_out > tez_in / kit_in: because we add tez and remove kit
+- tez_out * kit_out > tez_in * kit_in: because of the fees, the product is not preserved, but increases.
+- liquidity should remain as is
+
+Uniswap.sell_kit:
+- tez_out / kit_out < tez_in / kit_in: because we add kit and remove tez
+- tez_out * kit_out > tez_in * kit_in: because of the fees, the product is not preserved, but increases.
+- liquidity should remain as is
+
+Uniswap.add_liquidity (non-first provider):
+- tez_out / kit_out <= tez_in / kit_in: long story short: because we round up the kit we keep
+- tez_out * kit_out >  tez_in * kit_in: because we add both kit and tez
+- liquidity_out > liquidity_in: because we add liquidity
+
+Uniswap.remove_liquidity:
+- tez_out / kit_out ?? tez_in / kit_in: NO IDEA. FOR BOTH THE CONTRACT ROUNDS UP WHAT IT KEEPS.
+- tez_out * kit_out <  tez_in * kit_in: because we remove both kit and tez
+- liquidity_out < liquidity_in: because we remove liquidity
+*)
+
 let suite =
   "Uniswap tests" >::: [
     "buy kit" >::

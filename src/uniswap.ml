@@ -115,6 +115,16 @@ let is_uniswap_uninitialized (u: t) =
   || is_liquidity_token_pool_empty u
   || compare u.kit_in_tez_in_prev_block Q.undef = 0
 
+(* NOTE: FOR TESTING ONLY *)
+let kit_in_tez (u: t) =
+  let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
+  Q.(Tez.to_q u.tez / Kit.to_q u_kit)
+
+(* NOTE: FOR TESTING ONLY *)
+let kit_times_tez (u: t) =
+  let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
+  Q.(Tez.to_q u.tez * Kit.to_q u_kit)
+
 let kit_in_tez_in_prev_block (uniswap: t) =
   assert (not (is_uniswap_uninitialized uniswap));
   uniswap.kit_in_tez_in_prev_block
@@ -277,6 +287,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted
                           kit = new_all_kit_in_uniswap;
                           tez = Tez.(uniswap.tez + amount);
                           lqt = Option.get (Ticket.join uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
+          (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
           Ok (liq_tokens, Tez.zero, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
