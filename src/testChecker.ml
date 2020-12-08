@@ -1,5 +1,6 @@
 open OUnit2
 open Checker
+open TestCommon
 
 let bob = Address.of_string "bob"
 let alice = Address.of_string "alice"
@@ -10,24 +11,6 @@ let make_tezos int_level =
     level = Level.of_int int_level;
     self = Address.of_string "checker";
   }
-
-let assert_ok (r: ('a, Error.error) result) : 'a =
-  match r with
-  | Ok a -> a
-  | Error LiquidationAuction.BidTooLow -> assert_failure "BidTooLow"
-  | Error LiquidationAuction.NotAWinningBid -> assert_failure "NotAWinningBid"
-  | Error LiquidationAuction.NotAllSlicesClaimed -> assert_failure "NotAllSlicesClaimed"
-  | Error (Burrow.InsufficientFunds _) -> assert_failure "InsufficientFunds"
-  | Error Burrow.WithdrawTezFailure -> assert_failure "WithdrawTezFailure"
-  | Error Burrow.MintKitFailure -> assert_failure "MintKitFailure"
-  | Error Checker.NonExistentBurrow _ -> assert_failure "NonExistentBurrow"
-  | Error Checker.NotLiquidationCandidate _ -> assert_failure "NotLiquidationCandidate"
-  | Error _ -> assert_failure "Unknown Error"
-
-let assert_failwith (e: Error.error) (r: ('a, Error.error) result) : unit =
-  match r with
-  | Ok _ -> assert_failure "Should have failed but didn't!"
-  | Error r -> assert (r = e)
 
 let suite =
   "Checker tests" >::: [
@@ -97,7 +80,7 @@ let suite =
          );
 
        (* Minting another kit should fail *)
-       let () = assert_failwith Burrow.MintKitFailure @@
+       let () = TestCommon.assert_failwith Burrow.MintKitFailure @@
          Checker.mint_kit
            checker
            ~tezos

@@ -2,6 +2,13 @@ type bid_ticket
 
 type t
 
+type Error.error +=
+  | BidTooLow
+  | BidTicketExpired
+  | CannotReclaimLeadingBid
+  | CannotReclaimWinningBid
+  | NotAWinningBid
+
 val empty : Tezos.t -> t
 
 (** Retrieve the delegate for this cycle *)

@@ -23,6 +23,9 @@ val of_q_floor : Q.t -> t
 val pp : Format.formatter -> t -> unit
 val show : t -> string
 
+type Error.error +=
+  | InvalidKitToken
+
 (* Kit are really tickets. *)
 type kit_token_content = Kit
 type token = kit_token_content Ticket.t

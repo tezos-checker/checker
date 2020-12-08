@@ -38,6 +38,35 @@ type t
 val show : t -> string
 val pp : Format.formatter -> t -> unit
 
+type Error.error +=
+  | UniswapEmptyTezPool
+  | UniswapEmptyKitPool
+  | UniswapEmptyLiquidityTokenPool
+  | UniswapNonPositiveInput
+  | UniswapTooLate
+  | AddLiquidityNoTezGiven
+  | AddLiquidityNoKitGiven
+  | AddLiquidityNoLiquidityToBeAdded
+  | AddLiquidityLessThanOneTez
+  | AddLiquidityTooLowLiquidityMinted
+  | AddLiquidityTooMuchKitRequired
+  | AddLiquidityZeroKitDeposited
+  | RemoveLiquidityNonEmptyAmount
+  | RemoveLiquidityCantWithdrawEnoughTez
+  | RemoveLiquidityCantWithdrawEnoughKit
+  | RemoveLiquidityTooMuchTezWithdrawn
+  | RemoveLiquidityTooMuchKitWithdrawn
+  | RemoveLiquidityNoLiquidityBurned
+  | RemoveLiquidityTooMuchLiquidityBurned
+  | BuyKitPriceFailure
+  | BuyKitTooLowExpectedKit
+  | BuyKitTooMuchKitBought
+  | SellKitNonEmptyAmount
+  | SellKitPriceFailure
+  | SellKitTooLowExpectedTez
+  | SellKitTooMuchTezBought
+  | InvalidLiquidityToken
+
 val make_for_test :
   tez:Tez.t ->
   kit:Kit.token ->
