@@ -26,7 +26,6 @@ let show_error (e: Error.error) : string =
   | Uniswap.RemoveLiquidityTooMuchTezWithdrawn         -> "Uniswap.RemoveLiquidityTooMuchTezWithdrawn"
   | Uniswap.RemoveLiquidityTooMuchKitWithdrawn         -> "Uniswap.RemoveLiquidityTooMuchKitWithdrawn"
   | Uniswap.RemoveLiquidityNoLiquidityBurned           -> "Uniswap.RemoveLiquidityNoLiquidityBurned"
-  | Uniswap.RemoveLiquidityTooMuchLiquidityBurned      -> "Uniswap.RemoveLiquidityTooMuchLiquidityBurned"
   | Uniswap.RemoveLiquidityNoTezWithdrawnExpected      -> "Uniswap.RemoveLiquidityNoTezWithdrawnExpected"
   | Uniswap.RemoveLiquidityNoKitWithdrawnExpected      -> "Uniswap.RemoveLiquidityNoKitWithdrawnExpected"
   | Uniswap.BuyKitPriceFailure                         -> "Uniswap.BuyKitPriceFailure"

@@ -21,7 +21,6 @@ type Error.error +=
   | RemoveLiquidityTooMuchTezWithdrawn
   | RemoveLiquidityTooMuchKitWithdrawn
   | RemoveLiquidityNoLiquidityBurned
-  | RemoveLiquidityTooMuchLiquidityBurned
   | RemoveLiquidityNoTezWithdrawnExpected
   | RemoveLiquidityNoKitWithdrawnExpected
   | BuyKitPriceFailure
@@ -300,7 +299,6 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
  * without tez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
-(* TODO: Allowance checks *)
 (* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline
   : (Tez.t * Kit.token * t, Error.error) result =
@@ -322,9 +320,10 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
     Error RemoveLiquidityNoTezWithdrawnExpected
   else if min_kit_withdrawn <= Kit.zero then
     Error RemoveLiquidityNoKitWithdrawnExpected
-  (* TODO: Check whether we have more edge cases to give a failure for. *)
+    (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _, uniswap_lqt, _, same_ticket = Ticket.read uniswap.lqt in
+    assert (lqt_burned <= uniswap_lqt); (* the ticket mechanism should enforce this *)
     let ratio = Q.make lqt_burned uniswap_lqt in
     let tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
     let kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q uniswap_kit * ratio) in
@@ -337,8 +336,6 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
       Error RemoveLiquidityCantWithdrawEnoughKit
     else if kit_withdrawn > uniswap_kit then
       Error RemoveLiquidityTooMuchKitWithdrawn
-    else if lqt_burned > uniswap_lqt then (* TODO: This should be an assertion actually. Tickets should enforce this. *)
-      Error RemoveLiquidityTooMuchLiquidityBurned
     else
       let remaining_lqt, _burned = Option.get ( (* NOTE: SHOULD NEVER FAIL!! *)
           Ticket.split same_ticket Z.(uniswap_lqt - lqt_burned) lqt_burned

@@ -58,7 +58,6 @@ type Error.error +=
   | RemoveLiquidityTooMuchTezWithdrawn
   | RemoveLiquidityTooMuchKitWithdrawn
   | RemoveLiquidityNoLiquidityBurned
-  | RemoveLiquidityTooMuchLiquidityBurned
   | RemoveLiquidityNoTezWithdrawnExpected
   | RemoveLiquidityNoKitWithdrawnExpected
   | BuyKitPriceFailure
