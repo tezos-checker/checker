@@ -146,7 +146,7 @@ module Checker : sig
     tezos:Tezos.t ->
     call:Call.t ->
     max_kit_deposited:Kit.token ->
-    min_lqt_minted:int ->
+    min_lqt_minted:Z.t ->
     deadline:Timestamp.t ->
     (Uniswap.liquidity * Tez.payment * Kit.token * t, Error.error) result
 

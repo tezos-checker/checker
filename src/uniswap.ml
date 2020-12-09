@@ -237,7 +237,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
     Error AddLiquidityNoTezGiven
   else if max_kit_deposited = Kit.zero then
     Error AddLiquidityNoKitGiven
-  else if min_lqt_minted <= 0 then
+  else if min_lqt_minted <= Z.zero then
     Error AddLiquidityNoLiquidityToBeAdded
   else
   if is_liquidity_token_pool_empty uniswap then (
@@ -248,7 +248,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
       Error AddLiquidityLessThanOneTez
     else
       let lqt_minted = Q.to_bigint (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
-      if lqt_minted < Z.of_int min_lqt_minted then
+      if lqt_minted < min_lqt_minted then
         Error AddLiquidityTooLowLiquidityMinted
       else
         let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
@@ -273,7 +273,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
     let lqt_minted = Q.(to_bigint (of_bigint uniswap_lqt * Tez.to_q amount / Tez.to_q effective_tez_balance)) in (* floor *)
     let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* ceil *)
 
-    if lqt_minted < Z.of_int min_lqt_minted then
+    if lqt_minted < min_lqt_minted then
       Error AddLiquidityTooLowLiquidityMinted
     else if max_kit_deposited < kit_deposited then
       Error AddLiquidityTooMuchKitRequired

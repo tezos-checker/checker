@@ -348,7 +348,7 @@ let add_liquidity_unit_test =
         ~amount:(Tez.of_mutez 20_000_000)
         ~pending_accrual:Tez.zero
         ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 20_000_000)))
-        ~min_lqt_minted:2
+        ~min_lqt_minted:(Z.of_int 2)
         ~deadline:(Timestamp.of_seconds 1) in
     assert_equal ~printer:Uniswap.show_liquidity expected_returned_liquidity returned_liquidity;
     assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
@@ -403,7 +403,7 @@ let pending_tez_deposit_test =
              ~amount:(Tez.of_mutez 101_000_000)
              ~pending_accrual:(Tez.of_mutez 10_000_000)
              ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 500_000_000)))
-             ~min_lqt_minted:1
+             ~min_lqt_minted:Z.one
              ~deadline:(Timestamp.of_seconds 1)
      with
      | Error _ -> assert_string "adding liquidity failed"

@@ -151,7 +151,7 @@ val add_liquidity :
   (** This amount is temporarily treated as if it is part of the tez balance *)
   pending_accrual:Tez.t ->
   max_kit_deposited:Kit.token ->
-  min_lqt_minted:int ->
+  min_lqt_minted:Z.t ->
   deadline:Timestamp.t ->
   (liquidity * Tez.t * Kit.token * t, Error.error) result
 
