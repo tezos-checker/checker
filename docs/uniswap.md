@@ -1,3 +1,4 @@
+
 # Uniswap sub-contract
 
 An operational interpretation of the uniswap API inside the checker contract, and operations on it.
@@ -133,6 +134,8 @@ If any of the following holds, the transaction fails
 * If the amount of tez given is non-zero (`amount <> 0`), the transaction fails.
 * If we are on or past the deadline (`now >= deadline`), the transaction fails.
 * If no liquidity tokens are to be removed (`lqt_burned = 0`), the transaction fails.
+* If no tez is expected to be received from this transaction (`min_tez_withdrawn = 0`), the transaction fails.
+* If no kit is expected to be received from this transaction (`min_kit_withdrawn = 0`), the transaction fails.
 
 Otherwise, we compute how much tez and kit should be returned, using the ratio of the provided liquidity tokens vs. the number of liquidity tokens currently in the uniswap contract:
 ```
