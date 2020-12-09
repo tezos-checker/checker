@@ -77,6 +77,48 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
     )
     (QCheck.pair (arbitrary_non_empty_uniswap Q.one tezos.level) TestArbitrary.arb_positive_tez)
 
+(* NB: some values are fixed *)
+let make_inputs_for_remove_liquidity_to_succeed =
+  let tezos = tezos0 in
+  QCheck.map
+    (* NOTE: this could still give us tough numbers I think. *)
+    (fun ((tez, kit, lqt, uniswap), factor) ->
+       let amount = Tez.zero in
+
+       let kit, _same_kit_ticket = Kit.read_kit kit in
+       let _, lqt, _, _same_lqt_ticket = Ticket.read lqt in
+       let lqt_to_burn = Q.(to_bigint (of_bigint lqt / of_int factor)) in
+       (* let lqt_to_burn = if lqt_to_burn = Z.zero then Z.one else lqt_to_burn in *)
+
+       let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
+       let min_tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q tez * of_bigint lqt_to_burn / of_bigint lqt) in
+       let min_kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q kit * of_bigint lqt_to_burn / of_bigint lqt) in
+
+       (* NOTE: We cannot just factor down the number of liquidity tokens
+        * extant for this operation. When we remove liquidity we round the
+        * amounts of kit and tez to return towards zero; they might end up
+        * being zero because of this, which would make remove_liquidity fail.
+        * We make the generator thus ensure that at least 1mukit and 1mutez
+        * will be returned. *)
+       let lqt_burned, min_tez_withdrawn, min_kit_withdrawn =
+         if lqt_to_burn = Z.zero || min_tez_withdrawn = Tez.zero || min_kit_withdrawn = Kit.zero then
+           let lqt_to_burn =
+             let least_kit_percentage = Q.(Kit.(to_q (of_mukit (Z.of_int 1))) / (Kit.to_q kit)) in
+             let least_tez_percentage = Q.(Tez.(to_q (of_mutez 1)) / (Tez.to_q tez)) in
+             let as_q = Q.(of_bigint lqt * max least_kit_percentage least_tez_percentage) in
+             Z.cdiv (Q.num as_q) (Q.den as_q) in
+           let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
+           let min_tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q tez * of_bigint lqt_to_burn / of_bigint lqt) in
+           let min_kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q kit * of_bigint lqt_to_burn / of_bigint lqt) in
+           (lqt_burned, min_tez_withdrawn, min_kit_withdrawn)
+         else
+           lqt_burned, min_tez_withdrawn, min_kit_withdrawn in
+
+       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
+    )
+    (QCheck.pair (arbitrary_non_empty_uniswap Q.one tezos.level) QCheck.pos_int)
+
 (* TODO: Write down for which inputs are the uniswap functions to succeed and
  * test the corresponding edge cases. *)
 
@@ -392,14 +434,21 @@ let add_liquidity_unit_test =
 
 (* If successful, Uniswap.remove_liquidity always decreases the product
  * total_tez * total_kit, because we remove both tez and kit. *)
+(* NOTE: That is not entirely true, because when we remove liquidity we round
+ * the amounts of kit and tez to return towards zero; they might end up being
+ * zero because of this. BUT, in these cases Uniswap.remove_liquidity should
+ * thrown an error, so this property is expected to hold indeed, when
+ * remove_liquidity succeeds. *)
 let test_remove_liquidity_decreases_product =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_decreases_product"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+    let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+      Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+  Q.(Uniswap.kit_times_tez new_uniswap <= Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.remove_liquidity always decreases the liquidity;
  * that's what it's supposed to do. *)
@@ -408,9 +457,11 @@ let test_remove_liquidity_decreases_liquidity =
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_decreases_liquidity"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+    let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+      Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+  Uniswap.liquidity_tokens_extant new_uniswap < Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
 (*                 liquidity when accruals are pending                       *)
@@ -439,7 +490,15 @@ let pending_tez_deposit_test =
      with
      | Error _ -> assert_string "adding liquidity failed"
      | Ok (liq, _tez, _kit, uniswap) ->
-       match Uniswap.remove_liquidity uniswap ~tezos:tezos0 ~amount:Tez.zero ~lqt_burned:liq ~min_tez_withdrawn:Tez.zero ~min_kit_withdrawn:Kit.zero ~deadline:(Timestamp.of_seconds 100) with
+       match
+         Uniswap.remove_liquidity uniswap
+           ~tezos:tezos0
+           ~amount:Tez.zero
+           ~lqt_burned:liq
+           ~min_tez_withdrawn:(Tez.of_mutez 1)
+           ~min_kit_withdrawn:(Kit.of_mukit (Z.of_int 1))
+           ~deadline:(Timestamp.of_seconds 100)
+       with
        | Error _ -> assert_string "removing liquidity failed"
        | Ok (tez, kit, _) ->
          assert_equal ~printer:Kit.show_token (Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 500_000_000))) kit;

@@ -22,6 +22,8 @@ type Error.error +=
   | RemoveLiquidityTooMuchKitWithdrawn
   | RemoveLiquidityNoLiquidityBurned
   | RemoveLiquidityTooMuchLiquidityBurned
+  | RemoveLiquidityNoTezWithdrawnExpected
+  | RemoveLiquidityNoKitWithdrawnExpected
   | BuyKitPriceFailure
   | BuyKitTooLowExpectedKit
   | BuyKitTooMuchKitBought
@@ -316,6 +318,11 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
     Error UniswapTooLate
   else if lqt_burned <= Z.zero then
     Error RemoveLiquidityNoLiquidityBurned
+  else if min_tez_withdrawn <= Tez.zero then
+    Error RemoveLiquidityNoTezWithdrawnExpected
+  else if min_kit_withdrawn <= Kit.zero then
+    Error RemoveLiquidityNoKitWithdrawnExpected
+  (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _, uniswap_lqt, _, same_ticket = Ticket.read uniswap.lqt in
     let ratio = Q.make lqt_burned uniswap_lqt in
