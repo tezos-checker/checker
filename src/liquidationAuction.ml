@@ -154,7 +154,7 @@ type auctions = {
 }
 
 let empty : auctions =
-  let avl_storage = BigMap.BigMap.empty in
+  let avl_storage = BigMap.empty in
   let (avl_storage, queued_slices) = Avl.mk_empty avl_storage None in
   { avl_storage = avl_storage;
     queued_slices = queued_slices;
@@ -512,7 +512,7 @@ let assert_invariants (auctions: auctions) : unit =
 
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
-  let roots = BigMap.BigMap.bindings mem
+  let roots = BigMap.bindings mem
               |> List.filter (fun (_, n) -> match n with | Avl.Root _ -> true; | _ -> false)
               |> List.map (fun (p, _) -> Avl.AVLPtr p) in
   List.iter (Avl.assert_invariants mem) roots;

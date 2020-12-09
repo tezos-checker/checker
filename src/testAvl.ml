@@ -1,6 +1,5 @@
 open Avl
 open OUnit2
-open BigMap
 open Format
 
 type element_list = (int * Tez.t) list [@@deriving show]
@@ -20,7 +19,7 @@ let debug_avl (mem: (int, int) mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
     sprintf "%s: " (Ptr.to_string curr) ^
-    match mem_get mem curr with
+    match BigMap.mem_get mem curr with
     | Root (None, r) -> "Root(" ^ string_of_int r ^ ") Empty"
     | Root (Some r, r') -> "Root(" ^ string_of_int r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
@@ -48,7 +47,7 @@ let add_all_debug (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
 
 let to_list (mem: (int, int) mem) (AVLPtr ptr) : element_list =
   let rec go ptr: element_list =
-    match mem_get mem ptr with
+    match BigMap.mem_get mem ptr with
     | Root (None, _) -> []
     | Root (Some ptr, _) -> go ptr
     | Leaf leaf ->
@@ -122,12 +121,13 @@ let suite =
 
     "test_del_singleton" >::
     (fun _ ->
+       BigMap.reset_ops ();
        let (mem, root) = mk_empty BigMap.empty 0 in
        let (mem, elem) = push_back mem root 1 (nTez 5) in
        let (mem, root_) = del mem elem in
        assert_equal root root_;
        assert_equal [] (to_list mem root);
-       assert_equal 1 (BigMap.cardinal mem));
+       assert_equal 1 (BigMap.M.cardinal mem));
 
     "test_del" >::
     (fun _ ->
@@ -207,8 +207,6 @@ let suite =
      assert_equal expected actual ~printer:show_element_list;
      true
     );
-
-    (*
     (qcheck_to_ounit
 
      @@ QCheck.Test.make ~name:"prop_append" ~count:property_test_count QCheck.(pair (list arb_item) (list arb_item))
@@ -227,8 +225,6 @@ let suite =
      assert_equal expected actual ~printer:show_element_list;
      true
     );
-    *)
-
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
@@ -272,7 +268,6 @@ let suite =
 
      true
     );
-    (*
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
@@ -291,6 +286,28 @@ let suite =
      let expected = xs in
      assert_equal expected actual ~printer:show_element_list;
      true
-    )
-    *)
+    );
+    "bench_large_ops" >::
+    (fun _ ->
+       let (mem, root) = mk_empty BigMap.empty 0 in
+
+       let rec go i mem =
+           if i <= 0
+           then mem
+           else
+             let (mem, _) = push_back mem root i (Tez.of_mutez i) in
+             go (i-1) mem in
+
+       let mem = go 100_000 mem in
+       assert_invariants mem root;
+       assert_dangling_pointers mem [root];
+
+       BigMap.reset_ops ();
+       let _ = take mem root (Tez.of_mutez 50_000) 0 in
+
+       assert_equal
+         {reads=104; writes=87}
+         !BigMap.ops
+         ~printer:BigMap.show_ops;
+    );
   ]
