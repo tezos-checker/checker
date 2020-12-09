@@ -176,9 +176,11 @@ let test_sell_kit_decreases_price =
   @@ QCheck.Test.make
     ~name:"test_sell_kit_decreases_price"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
+  let _bought_tez, new_uniswap = assert_ok @@
+    Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
+  Q.(Uniswap.kit_in_tez new_uniswap < Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.sell_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
@@ -187,9 +189,11 @@ let test_sell_kit_increases_product =
   @@ QCheck.Test.make
     ~name:"test_sell_kit_increases_product"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+     make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
+  let _bought_tez, new_uniswap = assert_ok @@
+    Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
+ Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* Successful or not, Uniswap.sell_kit should never affect the number of
  * liquidity tokens extant. *)
@@ -198,9 +202,11 @@ let test_sell_kit_does_not_affect_liquidity =
   @@ QCheck.Test.make
     ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+     make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
+  let _bought_tez, new_uniswap = assert_ok @@
+    Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
+  Uniswap.liquidity_tokens_extant new_uniswap = Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
 (*                          sell_kit (unit tests)                            *)
