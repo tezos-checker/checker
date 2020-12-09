@@ -16,7 +16,7 @@ let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.
 let arb_liquidity = QCheck.map (fun x -> Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Z.of_int x)) QCheck.(0 -- max_int)
 
 (* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
-let arbitrary_uniswap (kit_in_tez_in_prev_block: Q.t) (last_level: Level.t) =
+let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: Q.t) (last_level: Level.t) =
   QCheck.map
     (fun (tez, kit, lqt) ->
        (tez, kit, lqt, Uniswap.make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level)
@@ -25,6 +25,7 @@ let arbitrary_uniswap (kit_in_tez_in_prev_block: Q.t) (last_level: Level.t) =
 
 (* amount >= uniswap_tez * (1 - fee) / fee *)
 (* 1mukit <= min_kit_expected < FLOOR{amount * (uniswap_kit / (uniswap_tez + amount)) * FACTOR} *)
+(* NB: some values are fixed *)
 let make_inputs_for_buy_kit_to_succeed =
   let tezos = tezos0 in
   QCheck.map
@@ -35,10 +36,11 @@ let make_inputs_for_buy_kit_to_succeed =
        let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
        (uniswap, amount, min_kit_expected, tezos, deadline)
     )
-    (arbitrary_uniswap Q.one tezos.level)
+    (arbitrary_non_empty_uniswap Q.one tezos.level)
 
 (* kit >= uniswap_kit * (1 - fee) / fee *)
 (* 1mutez <= min_tez_expected < FLOOR{kit * (uniswap_tez / (uniswap_kit + kit)) * FACTOR} *)
+(* NB: some values are fixed *)
 let make_inputs_for_sell_kit_to_succeed =
   let tezos = tezos0 in
   QCheck.map
@@ -52,7 +54,28 @@ let make_inputs_for_sell_kit_to_succeed =
        let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, tezos, deadline)
     )
-    (arbitrary_uniswap Q.one tezos.level)
+    (arbitrary_non_empty_uniswap Q.one tezos.level)
+
+(* amount > 0xtz *)
+(* max_kit_deposited = CEIL{kit * amount / tez} *)
+(* min_lqt_minted = FLOOR{lqt * amount / tez} *)
+(* NB: some values are fixed *)
+let make_inputs_for_add_liquidity_to_succeed_no_accrual =
+  let tezos = tezos0 in
+  QCheck.map
+    (* NOTE: this could still give us tough numbers I think. The liquidity created can be zero for example. *)
+    (fun ((tez, kit, lqt, uniswap), amount) ->
+       let pending_accrual = Tez.zero in
+       let max_kit_deposited =
+         let kit, _same_ticket = Kit.read_kit kit in
+         Kit.issue ~tezos (Kit.of_q_ceil Q.(Kit.to_q kit * Tez.to_q amount / Tez.to_q tez)) in
+       let min_lqt_minted =
+         let _, lqt, _, _same_ticket = Ticket.read lqt in
+         Q.(to_bigint (of_bigint lqt * Tez.to_q amount / Tez.to_q tez)) in
+       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
+    )
+    (QCheck.pair (arbitrary_non_empty_uniswap Q.one tezos.level) TestArbitrary.arb_positive_tez)
 
 (* TODO: Write down for which inputs are the uniswap functions to succeed and
  * test the corresponding edge cases. *)
@@ -193,7 +216,7 @@ let test_sell_kit_increases_product =
   @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
   let _bought_tez, new_uniswap = assert_ok @@
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
- Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
+  Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* Successful or not, Uniswap.sell_kit should never affect the number of
  * liquidity tokens extant. *)
@@ -282,15 +305,19 @@ let sell_kit_unit_test =
 
 (* If successful, Uniswap.add_liquidity never increases the ratio of
  * total_tez/total_kit (might leave it where it is or decrease it), since it
- * always rounds up the kit it keeps in the contract. *)
+ * always rounds up the kit it keeps in the contract. If amount is a multiple
+ * of the tez in the uniswap contract, then the price should remain the same,
+ * hence the lack of strict monotonicity. *)
 let test_add_liquidity_might_decrease_price =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_might_decrease_price"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  Q.(Uniswap.kit_in_tez new_uniswap <= Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the product
  * total_tez * total_kit, because we add both tez and kit. *)
@@ -299,9 +326,11 @@ let test_add_liquidity_increases_product =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_increases_product"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the liquidity;
  * that's what it's supposed to do. *)
@@ -310,9 +339,11 @@ let test_add_liquidity_increases_liquidity =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_increases_liquidity"
     ~count:property_test_count
-    QCheck.unit
-  @@ fun () ->
-  true (* TODO *)
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  Uniswap.liquidity_tokens_extant new_uniswap > Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
 (*                 add_liquidity (non-first) (unit tests)                    *)
