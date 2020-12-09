@@ -13,17 +13,26 @@
   winner of an auction.
 
 At any point in time, any liquidation slice is in only one of the above sets, and they always
-move from `queued_slices`, to `current_auction` and then to `completed_auctions`. Additionally,
-this move always happens in order, so an older liquidation_slice is always further in the
-process than a younger one.
+move from `queued_slices`, to `current_auction` and then to `completed_auctions`, (then they
+disappear). Additionally, this move always happens in order, so an older liquidation_slice is
+always further in the process than a younger one.
+
+NOTE: *Per-burrow liquidation_slices* We need to have access to the liquidation slices for a
+specific burrow; so slices for a burrow form a doubly-linked list, each burrow storing a pair
+of pointers called `liqudation_slices`, pointing to the first and the last liquidation slice
+of that burrow (if they exist).
+
+See <./avl_diagram.drawio> file for an illustration.
 
 ## Initiating a liquidation
 
-When liquidation of a burrow is triggered, the amount of tez to be liquidatied form a
+When liquidation of a burrow is triggered, the amount of tez to be liquidated form a
 `liquidation_slice`.
   * For details about this process, see <./burrow-state-liquidations.md>.
 
-This liquidation slice added to the back of the `liquidation_queue`.
+The new slice is added to the back of the `queued_slices`.
+
+* NOTE: This operation also updates the per-burrow linked list.
 
 ## Cancelling a liquidation slice
 
@@ -31,6 +40,7 @@ Burrows can cancel auctioning off their liquidation slices on certain conditions
 a slice, we check if the slice belongs to the `queued_slices`, if so, remove it from the
 set (returning contents back to the burrow). If not, the process fails.
 
+* NOTE: This operation also updates the per-burrow linked list.
 * NOTE: This requires a the queue to have an efficient membership test.
 * NOTE: This requires a the queue to support efficient random deletes.
 
@@ -93,6 +103,7 @@ back to the burrows.  When it is triggered, we:
 
 1. Check if the given slice belongs to a completed auction, ignore otherwise.
 2. Remove the slice from the contents of the relevant completed_auction.
+3. Remove the slice from the linked list at relevant burrows `liquidation_slices`.
 
 ## Claiming a winning bid
 
