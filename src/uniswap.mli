@@ -24,7 +24,6 @@
 *)
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
- * - Implement the auction for deciding who to delegate to.
 *)
 type liquidity_token_content
 type liquidity = liquidity_token_content Ticket.t (* George: didn't want to expose *)

@@ -85,13 +85,11 @@ val is_liquidatable : Parameters.t -> t -> bool
 *)
 val touch : Parameters.t -> t -> t
 
-(** Return some kit that we have received from an auction to the burrow.
-  * NOTE: We should really find a way to hide the internal representation of
-  * the burrow. Especially because we do not have negative kit, but instead
-  * we keep two balances. *)
+(** Return some kit that we have received from an auction to the burrow. *)
 val return_kit_from_auction : Tez.t -> Kit.t -> t -> t
 
-(** TODO *)
+(** Return some tez that was part of a liquidation slice back to the burrow
+  * (due to a liquidation cancellation). *)
 val return_tez_from_auction : Tez.t -> t -> t
 
 (** Given an amount of tez as collateral (including a creation deposit, not
@@ -113,14 +111,6 @@ val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t, Error.error) result
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
 val burn_kit : Parameters.t -> Kit.t -> t -> t
-
-(* TODO: Add entrypoint for cancelling the liquidation of a slice. This should
- * only be possible when
- * - The liquidation slice is still at the auction queue (not at the current
- *   auction or any of the completed auctions).
- * - The burrow is UNDER-burrowed. To be precise, is_overburrowed should return
- *   false.
- *)
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than

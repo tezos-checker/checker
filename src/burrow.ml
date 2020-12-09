@@ -158,6 +158,8 @@ let touch (p: Parameters.t) (burrow: t) : t =
       last_touched = p.last_touched;
     }
 
+(** Return some tez that was part of a liquidation slice back to the burrow
+  * (due to a liquidation cancellation). *)
 let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
   assert_invariants burrow;
   assert burrow.active;
@@ -167,7 +169,8 @@ let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
     collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
   }
 
-(** Return some kit that we have received from an auction to the burrow. *)
+(** Return some kit that we have received from a completed auction to the
+  * burrow. *)
 let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (b: t) : t =
   assert_invariants b;
   assert (kit >= Kit.zero);

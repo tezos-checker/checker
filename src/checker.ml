@@ -590,8 +590,15 @@ struct
              }
            )
 
-  (* NOTE: The burden is on the caller to provide both the burrow_id and the
-   * leaf_ptr, and the leaf_ptr should refer to burrow_id (checked). *)
+  (* Cancel the liquidation of a slice. The burden is on the caller to provide
+   * both the burrow_id and the leaf_ptr. This operation can fail for several
+   * reasons:
+   * - If the leaf_ptr does not refer to the burrow_id given,
+   * - if the permission given is insufficient for this operation,
+   * - if the slice is already at the current auction,
+   * - if the slice is part of an already completed auction,
+   * - if the burrow is overburrowed at the moment.
+  *)
   let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
     with_no_tez_given call @@ fun () ->
     with_existing_burrow state burrow_id @@ fun burrow ->
