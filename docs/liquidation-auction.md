@@ -19,7 +19,7 @@ always further in the process than a younger one.
 
 NOTE: *Per-burrow liquidation_slices* We need to have access to the liquidation slices for a
 specific burrow; so slices for a burrow form a doubly-linked list, each burrow storing a pair
-of pointers called `liqudation_slices`, pointing to the first and the last liquidation slice
+of pointers called `liquidation_slices`, pointing to the first and the last liquidation slice
 of that burrow (if they exist).
 
 See <./avl_diagram.drawio> file for an illustration.
@@ -37,8 +37,8 @@ The new slice is added to the back of the `queued_slices`.
 ## Cancelling a liquidation slice
 
 Burrows can cancel auctioning off their liquidation slices on certain conditions. When cancelling
-a slice, we check if the slice belongs to the `queued_slices`, if so, remove it from the
-set (returning contents back to the burrow). If not, the process fails.
+a slice, we check if the slice belongs to the `queued_slices`, if so, remove it from the set
+(returning contents back to the burrow). If not, the process fails.
 
 * NOTE: This operation also updates the per-burrow linked list.
 * NOTE: This requires a the queue to have an efficient membership test.
@@ -57,7 +57,7 @@ min
   total_queued_tez
   (max
     Constant.max_lot_size
-    (total_queued_tez * Contants.min_lot_auction_queue_fraction))
+    (total_queued_tez * Constants.min_lot_auction_queue_fraction))
 ```
 
 However, it is likely that in this process the slices will not add up to the exact amount. In
@@ -99,7 +99,7 @@ The auction finishes when the longer of 20 blocks or 20 minutes are passed after
 ## Touching a liquidation_slice
 
 "Touching the liquidation slice" is the process of propagating the result of a completed auction
-back to the burrows.  When it is triggered, we:
+back to the burrows. When it is triggered, we:
 
 1. Check if the given slice belongs to a completed auction, ignore otherwise.
 2. Remove the slice from the contents of the relevant completed_auction.
