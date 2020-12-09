@@ -154,7 +154,7 @@ val add_liquidity :
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Z.t ->
   deadline:Timestamp.t ->
-  (liquidity * Tez.t * Kit.token * t, Error.error) result
+  (liquidity * Tez.t * Kit.token * t, Error.error) result (* TODO: the Tez.t is always zero; remove it. *)
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody

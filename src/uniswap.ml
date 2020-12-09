@@ -330,7 +330,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
       Error RemoveLiquidityCantWithdrawEnoughKit
     else if kit_withdrawn > uniswap_kit then
       Error RemoveLiquidityTooMuchKitWithdrawn
-    else if lqt_burned > uniswap_lqt then
+    else if lqt_burned > uniswap_lqt then (* TODO: This should be an assertion actually. Tickets should enforce this. *)
       Error RemoveLiquidityTooMuchLiquidityBurned
     else
       let remaining_lqt, _burned = Option.get ( (* NOTE: SHOULD NEVER FAIL!! *)
