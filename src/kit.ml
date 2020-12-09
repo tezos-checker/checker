@@ -15,8 +15,8 @@ let zero = Z.zero
 let one = scaling_factor
 
 (* Conversions to/from other types. *)
-let of_mukit = Z.of_int
-let to_mukit = Z.to_int
+let of_mukit amount = amount
+let to_mukit amount = amount
 
 let to_q amount = Q.make amount scaling_factor
 let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
@@ -48,8 +48,7 @@ type kit_token_content = Kit [@@deriving show]
 type token = kit_token_content Ticket.t [@@deriving show]
 
 let issue ~(tezos: Tezos.t) (kit: t) : token =
-  assert (kit = of_mukit (to_mukit kit));
-  Ticket.create ~issuer:tezos.self ~amount:(to_mukit kit) ~content:Kit
+  Ticket.create ~issuer:tezos.self ~amount:kit ~content:Kit
 
 type Error.error +=
   | InvalidKitToken
@@ -59,7 +58,7 @@ type Error.error +=
   * enforced by its type). *)
 let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
   let issuer, amount, _content, same_ticket = Ticket.read token in
-  let is_valid = issuer = tezos.self && amount >= 0 in
+  let is_valid = issuer = tezos.self && amount >= Z.zero in
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token
@@ -73,14 +72,10 @@ let with_valid_kit_token
 
 let read_kit (token: token) : t * token =
   let _issuer, mukit, _content, same_token = Ticket.read token in
-  (of_mukit mukit, same_token)
+  (mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =
-  assert (left  = of_mukit (to_mukit left ));
-  assert (right = of_mukit (to_mukit right));
-  Option.get (
-    Ticket.split token (to_mukit left) (to_mukit right)
-  )
+  Option.get (Ticket.split token left right)
 
 let join_or_fail (left: token) (right: token) : token =
   Option.get (Ticket.join left right)

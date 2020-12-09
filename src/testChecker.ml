@@ -67,9 +67,9 @@ let suite =
            ~call:{sender=bob; amount=Tez.zero;}
            ~permission:admin_permission
            ~burrow_id:burrow_id
-           ~kit:(Kit.of_mukit 4_285_714) in
+           ~kit:(Kit.of_mukit (Z.of_int 4_285_714)) in
        let kit, _same_token = Kit.read_kit kit_token in
-       assert_equal (Kit.of_mukit 4_285_714) kit;
+       assert_equal (Kit.of_mukit (Z.of_int 4_285_714)) kit;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -87,7 +87,7 @@ let suite =
            ~call:{sender=bob; amount=Tez.zero;}
            ~permission:admin_permission
            ~burrow_id:burrow_id
-           ~kit:(Kit.of_mukit 1) in
+           ~kit:(Kit.of_mukit Z.one) in
 
        (* Over time the burrows with outstanding kit should be overburrowed
         * (even if the index stays where it was before). *)
@@ -118,7 +118,7 @@ let suite =
          Checker.touch_burrow checker burrow_id in
 
        assert_equal
-         (Kit.issue ~tezos (Kit.of_mukit 202_000_000)) (* wow, high reward, many blocks have passed. *)
+         (Kit.issue ~tezos (Kit.of_mukit (Z.of_int 202_000_000))) (* wow, high reward, many blocks have passed. *)
          touch_reward
          ~printer:Kit.show_token;
 
@@ -138,7 +138,7 @@ let suite =
            checker
            ~tezos:tezos
            ~call:{sender=bob; amount = Tez.zero;}
-           ~kit:(Kit.issue ~tezos (Kit.of_mukit 1_000)));
+           ~kit:(Kit.issue ~tezos (Kit.of_mukit (Z.of_int 1_000))));
 
        let touch_reward, checker =
          Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
@@ -147,7 +147,7 @@ let suite =
          (Option.is_some checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         (Kit.issue ~tezos (Kit.of_mukit (Z.of_int 500_000)))
          touch_reward
          ~printer:Kit.show_token;
 
@@ -162,10 +162,10 @@ let suite =
            checker
            ~tezos
            ~call:{sender=alice; amount=Tez.zero;}
-           ~kit:(Kit.issue ~tezos (Kit.of_mukit 4_200_000)) in
+           ~kit:(Kit.issue ~tezos (Kit.of_mukit (Z.of_int 4_200_000))) in
 
        assert_equal
-         (Kit.issue ~tezos (Kit.of_mukit 500_000))
+         (Kit.issue ~tezos (Kit.of_mukit (Z.of_int 500_000)))
          touch_reward
          ~printer:Kit.show_token;
 
@@ -179,7 +179,7 @@ let suite =
          (Option.is_none checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (Kit.issue ~tezos (Kit.of_mukit 21_000_000))
+         (Kit.issue ~tezos (Kit.of_mukit (Z.of_int 21_000_000)))
          touch_reward
          ~printer:Kit.show_token;
 

@@ -346,7 +346,7 @@ struct
     let issuer, amount, (rights, id, version), _ = Ticket.read permission in
     let validity_condition =
       issuer = tezos.self
-      && amount = 0
+      && amount = Z.zero
       && version = Burrow.permission_version burrow
       && id = burrow_id in
     if validity_condition
@@ -360,7 +360,7 @@ struct
       let admin_ticket =
         Ticket.create
           ~issuer:tezos.self
-          ~amount:0
+          ~amount:Z.zero
           ~content:(Permission.Admin, burrow_id, 0) in
       let updated_state = {state with burrows = PtrMap.add burrow_id burrow state.burrows} in
       Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
@@ -507,7 +507,7 @@ struct
       let permission_ticket =
         Ticket.create
           ~issuer:tezos.self
-          ~amount:0
+          ~amount:Z.zero
           ~content:(rights, burrow_id, 0) in
       Ok permission_ticket
     else
@@ -524,7 +524,7 @@ struct
       let admin_ticket =
         Ticket.create
           ~issuer:tezos.self
-          ~amount:0
+          ~amount:Z.zero
           ~content:(Permission.Admin, burrow_id, updated_version) in
       Ok (admin_ticket, updated_state)
     else

@@ -116,8 +116,8 @@ let test_compute_imbalance_zero_burrowed =
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
-    let burrowed    = Kit.of_mukit 1_000_000_000 in
-    let circulating = Kit.of_mukit 1_000_000_000 in
+    let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
+    let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
       ~printer:(Q.sprint ())
       Q.zero
@@ -125,8 +125,8 @@ let test_compute_imbalance_equal =
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let burrowed    = Kit.of_mukit 1_000_000_000 in
-    let circulating = Kit.of_mukit   800_000_001 in
+    let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
+    let circulating = Kit.of_mukit (Z.of_int   800_000_001) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "199999999/4000000000") (* JUST BELOW SATURATION *)
@@ -134,8 +134,8 @@ let test_compute_imbalance_positive_small =
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let burrowed    = Kit.of_mukit 1_000_000_000 in
-    let circulating = Kit.of_mukit   800_000_000 in
+    let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
+    let circulating = Kit.of_mukit (Z.of_int   800_000_000) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "5/100") (* JUST ABOVE SATURATION *)
@@ -143,8 +143,8 @@ let test_compute_imbalance_positive_big =
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
-    let burrowed    = Kit.of_mukit 1_000_000_000 in
-    let circulating = Kit.of_mukit             1 in
+    let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
+    let circulating = Kit.of_mukit (Z.of_int             1) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "5/100") (* SATURATED *)
@@ -152,8 +152,8 @@ let test_compute_imbalance_positive_capped =
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
-    let burrowed    = Kit.of_mukit   833_333_334 in
-    let circulating = Kit.of_mukit 1_000_000_000 in
+    let burrowed    = Kit.of_mukit (Z.of_int   833_333_334) in
+    let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "-83333333/1666666668") (* JUST BELOW SATURATION *)
@@ -161,8 +161,8 @@ let test_compute_imbalance_negative_small =
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
-    let burrowed    = Kit.of_mukit   833_333_333 in
-    let circulating = Kit.of_mukit 1_000_000_000 in
+    let burrowed    = Kit.of_mukit (Z.of_int   833_333_333) in
+    let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "-5/100") (* JUST ABOVE SATURATION *)
@@ -170,8 +170,8 @@ let test_compute_imbalance_negative_big =
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
-    let burrowed    = Kit.of_mukit             1 in
-    let circulating = Kit.of_mukit 1_000_000_000 in
+    let burrowed    = Kit.of_mukit (Z.of_int             1) in
+    let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
       ~printer:(Q.sprint ())
       (Q.of_string "-5/100") (* SATURATED *)
@@ -311,8 +311,8 @@ let test_touch =
         drift  = FixedPoint.of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
         burrow_fee_index = FixedPoint.of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
         imbalance_index = FixedPoint.of_hex_string "1.00005FB2608FF99D"; (* 1.000005703972931226 *)
-        outstanding_kit = Kit.of_mukit 1_000_005;
-        circulating_kit = Kit.of_mukit 0_000_000; (* NOTE that it ends up being identical to the one we started with *)
+        outstanding_kit = Kit.of_mukit (Z.of_int 1_000_005);
+        circulating_kit = Kit.of_mukit (Z.of_int 0_000_000); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = tezos.now;
       }
       new_parameters

@@ -48,7 +48,7 @@ let initial_burrow =
     ~delegate:None
     ~active:true
     ~collateral:(Tez.of_mutez 10_000_000)
-    ~outstanding_kit:(Kit.of_mukit 20_000_000)
+    ~outstanding_kit:(Kit.of_mukit (Z.of_int 20_000_000))
     ~excess_kit:Kit.zero
     ~adjustment_index:(Parameters.compute_adjustment_index params)
     ~collateral_at_auction:Tez.zero
@@ -70,8 +70,8 @@ let suite =
           (Partial
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
                tez_to_auction = Tez.of_mutez 7_142_471;
-               expected_kit = Kit.of_mukit 17_592_294;
-               min_kit_for_unwarranted = Kit.of_mukit 27_141_390;
+               expected_kit = Kit.of_mukit (Z.of_int 17_592_294);
+               min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 27_141_390);
                burrow_state =
                  Burrow.make_for_test
                    ~permission_version:0
@@ -80,7 +80,7 @@ let suite =
                    ~delegate:None
                    ~active:true
                    ~collateral:(Tez.of_mutez 1_847_530)
-                   ~outstanding_kit:(Kit.of_mukit 20_000_000)
+                   ~outstanding_kit:(Kit.of_mukit (Z.of_int 20_000_000))
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 7_142_471)
@@ -110,7 +110,7 @@ let suite =
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 10_000_000)
-            ~outstanding_kit:(Kit.of_mukit 10_000_000)
+            ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
             ~excess_kit:Kit.zero
             ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
@@ -136,7 +136,7 @@ let suite =
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 10_000_000)
-            ~outstanding_kit:(Kit.of_mukit 100_000_000)
+            ~outstanding_kit:(Kit.of_mukit (Z.of_int 100_000_000))
             ~excess_kit:Kit.zero
             ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
@@ -154,8 +154,8 @@ let suite =
           (Complete
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
                tez_to_auction = Tez.of_mutez 8_990_001;
-               expected_kit = Kit.of_mukit 22_142_860;
-               min_kit_for_unwarranted = Kit.of_mukit 170_810_019;
+               expected_kit = Kit.of_mukit (Z.of_int 22_142_860);
+               min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 170_810_019);
                burrow_state =
                  Burrow.make_for_test
                    ~permission_version:0
@@ -164,7 +164,7 @@ let suite =
                    ~delegate:None
                    ~active:true
                    ~collateral:Tez.zero
-                   ~outstanding_kit:(Kit.of_mukit 100_000_000)
+                   ~outstanding_kit:(Kit.of_mukit (Z.of_int 100_000_000))
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 8_990_001)
@@ -194,7 +194,7 @@ let suite =
             ~delegate:None
             ~active:true
             ~collateral:(Tez.of_mutez 1_000_000)
-            ~outstanding_kit:(Kit.of_mukit 100_000_000)
+            ~outstanding_kit:(Kit.of_mukit (Z.of_int 100_000_000))
             ~excess_kit:Kit.zero
             ~adjustment_index:(Parameters.compute_adjustment_index params)
             ~collateral_at_auction:Tez.zero
@@ -212,8 +212,8 @@ let suite =
           (Close
              { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 999);
                tez_to_auction = Tez.of_mutez 999_001;
-               expected_kit = Kit.of_mukit 2_460_594;
-               min_kit_for_unwarranted = Kit.of_mukit 189_810_190;
+               expected_kit = Kit.of_mukit (Z.of_int 2_460_594);
+               min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 189_810_190);
                burrow_state =
                  Burrow.make_for_test
                    ~permission_version:0
@@ -222,7 +222,7 @@ let suite =
                    ~delegate:None
                    ~active:false
                    ~collateral:Tez.zero
-                   ~outstanding_kit:(Kit.of_mukit 100_000_000)
+                   ~outstanding_kit:(Kit.of_mukit (Z.of_int 100_000_000))
                    ~excess_kit:Kit.zero
                    ~adjustment_index:(Parameters.compute_adjustment_index params)
                    ~collateral_at_auction:(Tez.of_mutez 999_001)

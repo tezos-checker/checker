@@ -41,7 +41,7 @@ let place_bid t (tezos: Tezos.t) ~sender ~amount =
   | _ ->
     (* Either there is no bid or this is the highest *)
     let bid = {bidder=sender; cycle=t.cycle; amount=amount} in
-    let ticket = Ticket.create ~issuer:tezos.self ~amount:1 ~content:bid in
+    let ticket = Ticket.create ~issuer:tezos.self ~amount:Z.one ~content:bid in
     Ok (ticket, {t with leading_bid = Some bid;})
 
 (* TODO: allow winner to nominate a different address as the delegate? *)

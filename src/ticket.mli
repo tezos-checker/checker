@@ -61,10 +61,10 @@ type 'a t
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
-val create : issuer:Address.t -> amount:int -> content:'a -> 'a t
+val create : issuer:Address.t -> amount:Z.t -> content:'a -> 'a t
 
-val read : 'a t -> Address.t * int * 'a * 'a t
+val read : 'a t -> Address.t * Z.t * 'a * 'a t
 
-val split : 'a t -> int -> int -> ('a t * 'a t) option
+val split : 'a t -> Z.t -> Z.t -> ('a t * 'a t) option
 
 val join : 'a t -> 'a t -> ('a t) option

@@ -33,8 +33,8 @@ let make_initial (ts: Timestamp.t) : t =
     drift' = FixedPoint.zero;
     burrow_fee_index = FixedPoint.one;
     imbalance_index = FixedPoint.one;
-    outstanding_kit = Kit.of_mukit 1_000_000;
-    circulating_kit = Kit.of_mukit 1_000_000;
+    outstanding_kit = Kit.of_mukit (Z.of_int 1_000_000);
+    circulating_kit = Kit.of_mukit (Z.of_int 1_000_000);
     last_touched = ts;
   }
 

@@ -31,7 +31,7 @@ type liquidity
 val show_liquidity : liquidity -> string
 val pp_liquidity : Format.formatter -> liquidity -> unit
 
-val issue_liquidity_tokens : tezos:Tezos.t -> int -> liquidity
+val issue_liquidity_tokens : tezos:Tezos.t -> Z.t -> liquidity
 
 type t
 
