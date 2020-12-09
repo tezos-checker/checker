@@ -54,9 +54,9 @@ let test_buy_kit_increases_price =
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, tezos, deadline) ->
-    let _bought_kit, new_uniswap = assert_ok @@
-      Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
-    Q.(Uniswap.kit_in_tez new_uniswap > Uniswap.kit_in_tez uniswap)
+  let _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
+  Q.(Uniswap.kit_in_tez new_uniswap > Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.buy_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
@@ -67,9 +67,9 @@ let test_buy_kit_increases_product =
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, tezos, deadline) ->
-    let _bought_kit, new_uniswap = assert_ok @@
-      Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
-    Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
+  let _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
+  Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
@@ -300,6 +300,7 @@ let add_liquidity_unit_test =
         uniswap
         ~tezos
         ~amount:(Tez.of_mutez 20_000_000)
+        ~pending_accrual:Tez.zero
         ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit 20_000_000))
         ~min_lqt_minted:2
         ~deadline:(Timestamp.of_seconds 1) in
@@ -334,6 +335,39 @@ let test_remove_liquidity_decreases_liquidity =
   @@ fun () ->
   true (* TODO *)
 
+(* ************************************************************************* *)
+(*                 liquidity when accruals are pending                       *)
+(* ************************************************************************* *)
+
+let pending_tez_deposit_test =
+  "set pending tez deposit" >::
+  (fun _ ->
+     let uniswap =
+       Uniswap.make_for_test
+         ~tez:(Tez.of_mutez 1000_000_000)
+         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit 5000_000_000))
+         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 1000)
+         ~kit_in_tez_in_prev_block:Q.one
+         ~last_level:level0 in
+     (* let uniswap = set_pending_accrued_tez uniswap (Tez.of_mutez 1_000_000) in *)
+
+     match Uniswap.add_liquidity
+             uniswap
+             ~tezos:tezos0
+             ~amount:(Tez.of_mutez 101_000_000)
+             ~pending_accrual:(Tez.of_mutez 10_000_000)
+             ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit 500_000_000))
+             ~min_lqt_minted:1
+             ~deadline:(Timestamp.of_seconds 1)
+     with
+     | Error _ -> assert_string "adding liquidity failed"
+     | Ok (liq, _tez, _kit, uniswap) ->
+       match Uniswap.remove_liquidity uniswap ~tezos:tezos0 ~amount:Tez.zero ~lqt_burned:liq ~min_tez_withdrawn:Tez.zero ~min_kit_withdrawn:Kit.zero ~deadline:(Timestamp.of_seconds 100) with
+       | Error _ -> assert_string "removing liquidity failed"
+       | Ok (tez, kit, _) -> 
+         assert_equal ~printer:Kit.show_token (Kit.issue ~tezos:tezos0 (Kit.of_mukit 500_000_000)) kit;
+         assert_equal ~printer:Tez.show (Tez.of_mutez 100_090_909) tez;
+  )
 
 let suite =
   "Uniswap tests" >::: [
@@ -360,4 +394,6 @@ let suite =
     (* TODO: add unit tests *)
     test_remove_liquidity_decreases_product;
     test_remove_liquidity_decreases_liquidity;
+
+    pending_tez_deposit_test;
   ]
