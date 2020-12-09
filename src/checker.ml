@@ -811,15 +811,53 @@ struct
     List.fold_left touch_liquidation_slice state slices
 
   (* ************************************************************************* *)
+  (**                          DELEGATION AUCTIONS                             *)
+  (* ************************************************************************* *)
+
+  let updated_delegation_auction state tezos new_auction =
+    let prev_auction = state.delegation_auction in
+    (* When we move to a new cycle, we accrue the amount that won delegation for
+       the previous cycle to uniswap. *)
+    let accrued_tez =
+      Option.value
+        (if DelegationAuction.cycle prev_auction != DelegationAuction.cycle new_auction
+         then DelegationAuction.winning_amount prev_auction else None)
+        ~default:Tez.zero in
+    { state with
+      delegation_auction = new_auction;
+      delegate = DelegationAuction.delegate new_auction;
+      uniswap = Uniswap.add_accrued_tez state.uniswap tezos accrued_tez;
+    }
+
+  let delegation_auction_place_bid (state: t) ~(tezos: Tezos.t) ~(call: Call.t) =
+    Result.map
+      (fun (ticket, auction) -> (ticket, updated_delegation_auction state tezos auction) )
+      (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
+
+  let delegation_auction_claim_win state ~tezos ~bid_ticket =
+    Result.map (updated_delegation_auction state tezos)
+      (DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket)
+
+  let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
+    Result.map
+      (fun (tez, auction) -> (tez, updated_delegation_auction state tezos auction))
+      (DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket)
+
+  let touch_delegation_auction state tezos =
+    updated_delegation_auction state tezos (DelegationAuction.touch state.delegation_auction tezos)
+
+  (* ************************************************************************* *)
   (**                                UNISWAP                                   *)
   (* ************************************************************************* *)
 
   let buy_kit (state:t) ~tezos ~(call:Call.t) ~min_kit_expected ~deadline =
+    let state = touch_delegation_auction state tezos in
     match Uniswap.buy_kit state.uniswap ~amount:call.amount ~min_kit_expected ~tezos ~deadline with
     | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to call.sender *)
     | Error err -> Error err
 
   let sell_kit (state:t) ~tezos ~(call:Call.t) ~kit ~min_tez_expected ~deadline =
+    let state = touch_delegation_auction state tezos in
     Kit.with_valid_kit_token ~tezos kit @@ fun kit ->
     match Uniswap.sell_kit state.uniswap ~amount:call.amount kit ~min_tez_expected ~tezos ~deadline with
     | Ok (tez, updated_uniswap) ->
@@ -829,14 +867,17 @@ struct
     | Error err -> Error err
 
   let add_liquidity (state:t) ~tezos ~(call:Call.t) ~max_kit_deposited ~min_lqt_minted ~deadline =
+    let state = touch_delegation_auction state tezos in
+    let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:Tez.zero in
     Kit.with_valid_kit_token ~tezos max_kit_deposited @@ fun max_kit_deposited ->
-    match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~max_kit_deposited ~min_lqt_minted ~deadline with
+    match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline with
     | Error err -> Error err
     | Ok (tokens, leftover_tez, leftover_kit, updated_uniswap) ->
       let tez_payment = Tez.{destination = call.sender; amount = leftover_tez;} in
       Ok (tokens, tez_payment, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to call.sender *)
 
   let remove_liquidity (state:t) ~tezos ~(call:Call.t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
+    let state = touch_delegation_auction state tezos in
     match Uniswap.remove_liquidity state.uniswap ~tezos ~amount:call.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline with
     | Error err -> Error err
     | Ok (tez, kit, updated_uniswap) ->
@@ -883,27 +924,6 @@ struct
    * *)
 
   (* ************************************************************************* *)
-  (**                          DELEGATION AUCTIONS                             *)
-  (* ************************************************************************* *)
-
-  let delegation_auction_place_bid state ~tezos ~(call:Call.t) =
-    Result.map
-      (fun (ticket, auction) -> (ticket, {state with delegation_auction = auction;}) )
-      (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
-
-  let delegation_auction_claim_win state ~tezos ~bid_ticket =
-    (* TODO: Ensure the validity of the given bid_ticket *)
-    Result.map
-      (fun auction -> {state with delegation_auction = auction;})
-      (DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket)
-
-  let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
-    (* TODO: Ensure the validity of the given bid_ticket *)
-    Result.map
-      (fun (tez, auction) -> (tez, {state with delegation_auction = auction;}))
-      (DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket)
-
-  (* ************************************************************************* *)
   (**                              TOUCHING                                    *)
   (* ************************************************************************* *)
 
@@ -945,6 +965,9 @@ struct
       let state = { state with parameters =
                                  Parameters.add_circulating_kit state.parameters reward } in
 
+      (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the uniswap *)
+      let state = touch_delegation_auction state tezos in
+
       (* 2: Update the system parameters *)
       let total_accrual_to_uniswap, updated_parameters =
         Parameters.touch tezos index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
@@ -952,10 +975,8 @@ struct
       (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
       let total_accrual_to_uniswap = Kit.issue ~tezos total_accrual_to_uniswap in
       let updated_uniswap = Uniswap.add_accrued_kit state.uniswap ~tezos total_accrual_to_uniswap in
-      (* 4: Update delegation auction and possibly the baker delegate for Checker *)
-      let (updated_delegate, updated_delegation_auction) =
-        DelegationAuction.delegate state.delegation_auction tezos; in
-      (* 4: Update auction-related info (e.g. start a new auction) *)
+
+      (* 5: Update auction-related info (e.g. start a new auction) *)
       let updated_liquidation_auctions =
         LiquidationAuction.touch
           state.liquidation_auctions
@@ -967,16 +988,15 @@ struct
           (* George: I use ceil, to stay on the safe side (higher-price) *)
           (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
 
-      (* 5: Touch oldest liquidation slices *)
+      (* 6: Touch oldest liquidation slices *)
       (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step
        * without that restriction. *)
       let state =
-        { burrows = state.burrows; (* leave as-is *)
+        { state with
+          burrows = state.burrows; (* leave as-is *)
           parameters = updated_parameters;
           uniswap = updated_uniswap;
           liquidation_auctions = updated_liquidation_auctions;
-          delegation_auction = updated_delegation_auction;
-          delegate = updated_delegate;
         } in
 
       let rec touch_oldest (maximum: int) (st: t) : t =

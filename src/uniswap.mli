@@ -88,11 +88,6 @@ val is_kit_pool_empty : t -> bool
 (** Check whether the uniswap contract contains zero liquidity tokens. *)
 val is_liquidity_token_pool_empty : t -> bool
 
-(** NOTE: FOR TESTING PURPOSES ONLY. NO NEED TO EXPORT REALLY. Check whether
-  * the uniswap contract is uninitialized (i.e. there has been no first
-  * liquidity provider yet). *)
-val is_uniswap_uninitialized : t -> bool
-
 (** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
   * current price of kit in tez, as estimated using the ratio of tez and kit
   * currently in the uniswap contract. *)
@@ -103,7 +98,7 @@ val kit_in_tez : t -> Q.t
   * contract. *)
 val kit_times_tez : t -> Q.t
 
-(** Compute the price of kit in tez (ration of tez and kit in the uniswap
+(** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
   * required for the calculation of the drift derivative instead of up-to-date
   * kit_in_tez, because it is a little harder to manipulate. *)
@@ -149,6 +144,8 @@ val add_liquidity :
   t ->
   tezos:Tezos.t ->
   amount:Tez.t ->
+  (** This amount is temporarily treated as if it is part of the tez balance *)
+  pending_accrual:Tez.t ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:int ->
   deadline:Timestamp.t ->
@@ -174,4 +171,11 @@ val add_accrued_kit :
   t ->
   tezos:Tezos.t ->
   Kit.token ->
+  t
+
+(** Add accrued tez to the uniswap contract. *)
+val add_accrued_tez :
+  t ->
+  Tezos.t ->
+  Tez.t ->
   t

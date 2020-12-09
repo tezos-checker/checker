@@ -11,8 +11,14 @@ type Error.error +=
 
 val empty : Tezos.t -> t
 
+val touch : t -> Tezos.t -> t
+
 (** Retrieve the delegate for this cycle *)
-val delegate : t -> Tezos.t -> Address.t option * t
+val delegate : t -> Address.t option
+
+val cycle : t -> int
+
+val winning_amount : t -> Tez.t option
 
 (* TODO: can we bid to nominate someone else as a baker? *)
 val place_bid : t -> Tezos.t -> sender:Address.t -> amount:Tez.t -> (bid_ticket * t, Error.error) result

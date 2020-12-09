@@ -224,7 +224,7 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
  * grow the balance of the assets in the contract. An additional reason
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders. *)
-let add_liquidity (uniswap: t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted ~deadline =
+let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
   let max_kit_deposited, all_kit_deposited = Kit.read_kit max_kit_deposited in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
@@ -266,8 +266,9 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~max_kit_deposited ~min_lqt_minted
     Error UniswapEmptyTezPool
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
-    let lqt_minted = Q.(to_int (of_int uniswap_lqt * Tez.to_q amount / Tez.to_q uniswap.tez)) in (* floor *)
-    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q uniswap.tez) in (* ceil *)
+    let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
+    let lqt_minted = Q.(to_int (of_int uniswap_lqt * Tez.to_q amount / Tez.to_q effective_tez_balance)) in (* floor *)
+    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* ceil *)
 
     if lqt_minted < min_lqt_minted then
       Error AddLiquidityTooLowLiquidityMinted
@@ -343,3 +344,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
 let add_accrued_kit (uniswap: t) ~tezos (accrual: Kit.token) : t =
   let uniswap = sync_last_observed uniswap tezos in
   { uniswap with kit = Kit.join_or_fail uniswap.kit accrual }
+
+let add_accrued_tez (uniswap: t) tezos (accrual: Tez.t) : t =
+  let uniswap = sync_last_observed uniswap tezos in
+  { uniswap with tez = Tez.(uniswap.tez + accrual) }

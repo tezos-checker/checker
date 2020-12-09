@@ -12,7 +12,7 @@ let suite =
     ("test initialisation" >::
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
-       let (delegate, _auction) = DelegationAuction.delegate auction start_tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option
     );
 
@@ -23,27 +23,31 @@ let suite =
        let amount = Tez.of_mutez 1 in
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* New bidder does not immediately become the delegate and cannot claim the win *)
-       let (delegate, auction) = DelegationAuction.delegate auction start_tezos in
+       let (delegate) = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option;
        assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction start_tezos ~address:bidder ~bid_ticket:ticket));
        assert_bool "cannot claim win" (Result.is_error (DelegationAuction.claim_win auction start_tezos ~bid_ticket:ticket));
        (* Nor at any time in the current cycle... *)
        let tezos = {start_tezos with level = Level.of_int 4095} in
-       let (delegate, auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option;
        assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction tezos ~address:bidder ~bid_ticket:ticket));
        assert_bool "cannot claim win" (Result.is_error (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket));
        (* But in the next cycle they can claim the win... *)
        let tezos = {start_tezos with level = Level.of_int 4096} in
-       let (delegate, auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option;
        assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction tezos ~address:bidder ~bid_ticket:ticket));
        let auction = Result.get_ok (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket) in
-       let (delegate, auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal (Some bidder) delegate ~printer:show_address_option;
        (* And in the subsequent cycle they cease to be the delegate again *)
        let tezos = {start_tezos with level = Level.of_int (2 * 4096)} in
-       let (delegate, _auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option;
        assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction tezos ~address:bidder ~bid_ticket:ticket));
        assert_bool "cannot claim win" (Result.is_error (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket));
@@ -77,7 +81,8 @@ let suite =
        assert_equal amount2 refund;
        (* And the winner can claim their win *)
        let auction = Result.get_ok (DelegationAuction.claim_win auction tezos ~bid_ticket:ticket4) in
-       let (delegate, _auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal (Some bidder4) delegate ~printer:show_address_option;
        (* But in the following cycle... *)
        let tezos = {start_tezos with level = Level.of_int 8200} in
@@ -93,7 +98,8 @@ let suite =
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* And in the subsequent cycle they cease to be the delegate again *)
        let tezos = {start_tezos with level = Level.of_int (3 * 4096)} in
-       let (delegate, _auction) = DelegationAuction.delegate auction tezos in
+       let auction = DelegationAuction.touch auction tezos in
+       let delegate = DelegationAuction.delegate auction in
        assert_equal None delegate ~printer:show_address_option;
        assert_bool "cannot reclaim leading bid" (Result.is_error (DelegationAuction.reclaim_bid auction tezos ~address:bidder ~bid_ticket:ticket));
     )

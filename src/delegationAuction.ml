@@ -15,6 +15,11 @@ type t = { cycle: int; winner: bid option; leading_bid: bid option; delegate: Ad
 
 let empty (tezos: Tezos.t) = { cycle = Level.cycle tezos.level; winner = None; leading_bid = None; delegate = None; }
 
+let cycle t = t.cycle
+
+let winning_amount t =
+  Option.map (fun bid -> bid.amount) t.winner
+
 let touch (t: t) (tezos: Tezos.t) =
   let current_cycle = Level.cycle tezos.level in
   let cycles_elapsed = current_cycle - t.cycle in
@@ -25,9 +30,8 @@ let touch (t: t) (tezos: Tezos.t) =
   else
     { t with cycle = current_cycle; }
 
-let delegate t tezos =
-  let t = touch t tezos in
-  (t.delegate, t)
+let delegate t  =
+  t.delegate
 
 let place_bid t (tezos: Tezos.t) ~sender ~amount =
   let t = touch t tezos in
