@@ -98,6 +98,10 @@ val kit_in_tez : t -> Q.t
   * contract. *)
 val kit_times_tez : t -> Q.t
 
+(** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
+  * current number of liquidity tokens extant. *)
+val liquidity_tokens_extant : t -> liquidity
+
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
   * required for the calculation of the drift derivative instead of up-to-date

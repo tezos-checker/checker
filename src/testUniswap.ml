@@ -16,30 +16,46 @@ let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.
 let arb_liquidity = QCheck.map (Uniswap.issue_liquidity_tokens ~tezos:tezos0) QCheck.(0 -- max_int)
 
 (* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
-let arbitrary_uniswap =
+let arbitrary_uniswap (kit_in_tez_in_prev_block: Q.t) (last_level: Level.t) =
   QCheck.map
     (fun (tez, kit, lqt) ->
-       (tez, kit, lqt, Uniswap.make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block:Q.one ~last_level:level0)
+       (tez, kit, lqt, Uniswap.make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level)
     )
     (QCheck.triple TestArbitrary.arb_positive_tez arb_positive_kit_token arb_liquidity)
 
-(* amount > uniswap_tez * (1 - fee) / fee *)
-(* 1mukit < min_kit_expected < FLOOR{amount * (uniswap_kit / (uniswap_tez + amount)) * FACTOR} *)
+(* amount >= uniswap_tez * (1 - fee) / fee *)
+(* 1mukit <= min_kit_expected < FLOOR{amount * (uniswap_kit / (uniswap_tez + amount)) * FACTOR} *)
 let make_inputs_for_buy_kit_to_succeed =
+  let tezos = tezos0 in
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
     (fun (tez, _kit, _lqt, uniswap) ->
        let amount = Tez.of_q_ceil Q.(Tez.to_q tez * (one - Constants.uniswap_fee) / Constants.uniswap_fee) in
        let min_kit_expected = Kit.of_mukit 1 in (* absolute minimum *)
-       (uniswap, amount, min_kit_expected, tezos0, Timestamp.of_seconds 1)
+       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       (uniswap, amount, min_kit_expected, tezos, deadline)
     )
-    arbitrary_uniswap
+    (arbitrary_uniswap Q.one tezos.level)
 
-(* Some more expected properties to check:
-   - Uniswap.buy_kit should not affect the number of liquidity tokens.
-   - Uniswap.sell_kit should not affect the number of liquidity tokens.
-   - TODO: Write down for which inputs are the uniswap functions to succeed.
-*)
+(* kit >= uniswap_kit * (1 - fee) / fee *)
+(* 1mutez <= min_tez_expected < FLOOR{kit * (uniswap_tez / (uniswap_kit + kit)) * FACTOR} *)
+let make_inputs_for_sell_kit_to_succeed =
+  let tezos = tezos0 in
+  QCheck.map
+    (* NOTE: this could still give us tough numbers I think. Due to _tez being ignored. *)
+    (fun (_tez, kit, _lqt, uniswap) ->
+       let amount = Tez.zero in
+       let token =
+         let kit, _same_ticket = Kit.read_kit kit in
+         Kit.issue ~tezos (Kit.of_q_ceil Q.(Kit.to_q kit * (one - Constants.uniswap_fee) / Constants.uniswap_fee)) in
+       let min_tez_expected = Tez.of_mutez 1 in (* absolute minimum *)
+       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       (uniswap, amount, token, min_tez_expected, tezos, deadline)
+    )
+    (arbitrary_uniswap Q.one tezos.level)
+
+(* TODO: Write down for which inputs are the uniswap functions to succeed and
+ * test the corresponding edge cases. *)
 
 (* ************************************************************************* *)
 (*                     buy_kit (property-based tests)                        *)
@@ -70,6 +86,19 @@ let test_buy_kit_increases_product =
   let _bought_kit, new_uniswap = assert_ok @@
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
   Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
+
+(* Successful or not, Uniswap.buy_kit should never affect the number of
+ * liquidity tokens extant. *)
+let test_buy_kit_does_not_affect_liquidity =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_does_not_affect_liquidity"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, tezos, deadline) ->
+  let _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~tezos ~deadline in
+  Uniswap.liquidity_tokens_extant new_uniswap = Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
@@ -157,6 +186,17 @@ let test_sell_kit_increases_product =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_sell_kit_increases_product"
+    ~count:property_test_count
+    QCheck.unit
+  @@ fun () ->
+  true (* TODO *)
+
+(* Successful or not, Uniswap.sell_kit should never affect the number of
+ * liquidity tokens extant. *)
+let test_sell_kit_does_not_affect_liquidity =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
     QCheck.unit
   @@ fun () ->
@@ -364,7 +404,7 @@ let pending_tez_deposit_test =
      | Ok (liq, _tez, _kit, uniswap) ->
        match Uniswap.remove_liquidity uniswap ~tezos:tezos0 ~amount:Tez.zero ~lqt_burned:liq ~min_tez_withdrawn:Tez.zero ~min_kit_withdrawn:Kit.zero ~deadline:(Timestamp.of_seconds 100) with
        | Error _ -> assert_string "removing liquidity failed"
-       | Ok (tez, kit, _) -> 
+       | Ok (tez, kit, _) ->
          assert_equal ~printer:Kit.show_token (Kit.issue ~tezos:tezos0 (Kit.of_mukit 500_000_000)) kit;
          assert_equal ~printer:Tez.show (Tez.of_mutez 100_090_909) tez;
   )
@@ -375,11 +415,13 @@ let suite =
     buy_kit_unit_test;
     test_buy_kit_increases_price;
     test_buy_kit_increases_product;
+    test_buy_kit_does_not_affect_liquidity;
 
     (* sell_kit *)
     sell_kit_unit_test;
     test_sell_kit_decreases_price;
     test_sell_kit_increases_product;
+    test_sell_kit_does_not_affect_liquidity;
 
     (* add_liquidity (first) *)
     (* TODO: add unit tests and property-based random tests *)
