@@ -263,7 +263,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
              * useless for longer than needed. *)
             kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
             last_level = tezos.level; } in
-        Ok (liq_tokens, Tez.zero, Kit.issue ~tezos Kit.zero, updated)
+        Ok (liq_tokens, Kit.issue ~tezos Kit.zero, updated)
   )
   else
     (* Non-first Liquidity Provider *)
@@ -294,7 +294,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
                       tez = Tez.(uniswap.tez + amount);
                       lqt = Option.get (Ticket.join uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
       (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
-      Ok (liq_tokens, Tez.zero, kit_to_return, updated)
+      Ok (liq_tokens, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think

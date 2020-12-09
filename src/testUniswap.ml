@@ -357,7 +357,7 @@ let test_add_liquidity_might_decrease_price =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
       Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Q.(Uniswap.kit_in_tez new_uniswap <= Uniswap.kit_in_tez uniswap)
 
@@ -370,7 +370,7 @@ let test_add_liquidity_increases_product =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
       Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
@@ -383,7 +383,7 @@ let test_add_liquidity_increases_liquidity =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_tez, _bought_kit, new_uniswap = assert_ok @@
+    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
       Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap > Uniswap.liquidity_tokens_extant uniswap
 
@@ -402,7 +402,6 @@ let add_liquidity_unit_test =
         ~last_level:level0
     in
     let expected_returned_liquidity = Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Z.of_int 2) in
-    let expected_returned_tez = Tez.zero in
     let expected_returned_kit = Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 5_605_758)) in
     let expected_updated_uniswap : Uniswap.t =
       Uniswap.make_for_test
@@ -414,7 +413,7 @@ let add_liquidity_unit_test =
     in
     let tezos = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker_address;} in
 
-    let returned_liquidity, returned_tez, returned_kit, updated_uniswap = assert_ok @@
+    let returned_liquidity, returned_kit, updated_uniswap = assert_ok @@
       Uniswap.add_liquidity
         uniswap
         ~tezos
@@ -424,7 +423,6 @@ let add_liquidity_unit_test =
         ~min_lqt_minted:(Z.of_int 2)
         ~deadline:(Timestamp.of_seconds 1) in
     assert_equal ~printer:Uniswap.show_liquidity expected_returned_liquidity returned_liquidity;
-    assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap
 
@@ -489,7 +487,7 @@ let pending_tez_deposit_test =
              ~deadline:(Timestamp.of_seconds 1)
      with
      | Error _ -> assert_string "adding liquidity failed"
-     | Ok (liq, _tez, _kit, uniswap) ->
+     | Ok (liq, _kit, uniswap) ->
        match
          Uniswap.remove_liquidity uniswap
            ~tezos:tezos0

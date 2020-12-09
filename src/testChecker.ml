@@ -20,7 +20,7 @@ let suite =
        let tezos = make_tezos int_level in
        let checker = Checker.initialize tezos in
 
-       let (_lqt_minted, _ret_tez, _ret_kit, checker) = assert_ok @@
+       let _lqt_minted, _ret_kit, checker = assert_ok @@
          Checker.add_liquidity
            checker
            ~tezos
