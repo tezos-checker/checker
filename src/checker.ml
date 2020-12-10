@@ -692,6 +692,8 @@ struct
     let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
     match Avl.root_data state.liquidation_auctions.avl_storage root with
     (* The slice does not belong to a completed auction, so we skip it. *)
+    (* NOTE: Perhaps failing would be better than silently doing nothing here?
+     * Not sure if there is any danger though. *)
     | None -> state
     (* If it belongs to a completed auction, we delete the slice *)
     | Some outcome ->
@@ -699,6 +701,10 @@ struct
       let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       (* How much kit should be given to the burrow and how much should be burned. *)
+      (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+       * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
+       * to truncation. That could be a problem; the extra kit, no matter how
+       * small, must be dealt with (e.g. be removed from the circulating kit). *)
       let kit_to_repay, kit_to_burn =
         let corresponding_kit = Kit.of_q_floor Q.(
             (Tez.to_q leaf.tez / Tez.to_q outcome.sold_tez) * Kit.to_q outcome.winning_bid.kit
