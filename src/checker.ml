@@ -590,6 +590,47 @@ struct
              }
            )
 
+  (* Update the immediate neighbors of a slice (i.e. the younger and the older)
+   * to point to each other instead of the slice in question, so that it can be
+   * removed. *)
+  (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
+  let update_immediate_neighbors state (leaf_ptr: Avl.leaf_ptr) (leaf : LiquidationAuction.liquidation_slice) =
+    (* update the younger *)
+    let state = (
+      match leaf.younger with
+      | None -> state
+      | Some younger_ptr ->
+        { state with
+          liquidation_auctions = { state.liquidation_auctions with
+                                   avl_storage =
+                                     Avl.update_leaf
+                                       state.liquidation_auctions.avl_storage
+                                       younger_ptr
+                                       (fun younger ->
+                                          assert (younger.older = Some leaf_ptr);
+                                          { younger with older = leaf.older }
+                                       )
+                                 }}
+    ) in
+    (* update the older *)
+    let state = (
+      match leaf.older with
+      | None -> state
+      | Some older_ptr ->
+        { state with
+          liquidation_auctions = { state.liquidation_auctions with
+                                   avl_storage =
+                                     Avl.update_leaf
+                                       state.liquidation_auctions.avl_storage
+                                       older_ptr
+                                       (fun older ->
+                                          assert (older.younger = Some leaf_ptr);
+                                          { older with younger = leaf.younger }
+                                       )
+                                 }}
+    ) in
+    state
+
   (* Cancel the liquidation of a slice. The burden is on the caller to provide
    * both the burrow_id and the leaf_ptr. This operation can fail for several
    * reasons:
@@ -628,43 +669,12 @@ struct
 
           (* Return the tez to the burrow and update its pointers to liq. slices. *)
           let burrow = Burrow.return_slice_from_auction leaf_ptr leaf burrow in
-
           let state =
             { state with
               burrows = PtrMap.add leaf.burrow burrow state.burrows } in
+
           (* And we update the slices around it *)
-          let state = (
-            match leaf.younger with
-            | None -> state
-            | Some younger_ptr ->
-              { state with
-                liquidation_auctions = { state.liquidation_auctions with
-                                         avl_storage =
-                                           Avl.update_leaf
-                                             state.liquidation_auctions.avl_storage
-                                             younger_ptr
-                                             (fun younger ->
-                                                assert (younger.older = Some leaf_ptr);
-                                                { younger with older = leaf.older }
-                                             )
-                                       }}
-          ) in
-          let state = (
-            match leaf.older with
-            | None -> state
-            | Some older_ptr ->
-              { state with
-                liquidation_auctions = { state.liquidation_auctions with
-                                         avl_storage =
-                                           Avl.update_leaf
-                                             state.liquidation_auctions.avl_storage
-                                             older_ptr
-                                             (fun older ->
-                                                assert (older.younger = Some leaf_ptr);
-                                                { older with younger = leaf.younger }
-                                             )
-                                       }}
-          ) in
+          let state = update_immediate_neighbors state leaf_ptr leaf in
           assert_invariants state;
           Ok state
 
@@ -748,36 +758,7 @@ struct
         } in
 
       (* And we update the slices around it *)
-      let state = (
-        match leaf.younger with
-        | None -> state
-        | Some younger_ptr ->
-          { state with liquidation_auctions = { state.liquidation_auctions with
-                                                avl_storage =
-                                                  Avl.update_leaf
-                                                    state.liquidation_auctions.avl_storage
-                                                    younger_ptr
-                                                    (fun younger ->
-                                                       assert (younger.older = Some leaf_ptr);
-                                                       { younger with older = leaf.older }
-                                                    )
-                                              }}
-      ) in
-      let state = (
-        match leaf.older with
-        | None -> state
-        | Some older_ptr ->
-          { state with liquidation_auctions = { state.liquidation_auctions with
-                                                avl_storage =
-                                                  Avl.update_leaf
-                                                    state.liquidation_auctions.avl_storage
-                                                    older_ptr
-                                                    (fun older ->
-                                                       assert (older.younger = Some leaf_ptr);
-                                                       { older with younger = leaf.younger }
-                                                    )
-                                              }}
-      ) in
+      let state = update_immediate_neighbors state leaf_ptr leaf in
       assert_invariants state;
       state
 
