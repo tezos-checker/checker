@@ -158,27 +158,67 @@ let touch (p: Parameters.t) (burrow: t) : t =
       last_touched = p.last_touched;
     }
 
-(** Return some tez that was part of a liquidation slice back to the burrow
-  * (due to a liquidation cancellation). *)
-let return_tez_from_auction (tez: Tez.t) (burrow: t) : t =
+(* Notify a burrow that one of its liquidation slices has been removed from
+ * auctions. This means that we have to (a) update the amount of
+ * tez living in auctions; it is less now, and (b) update the pointers to the
+ * youngest and the oldest liquidation slices that the burrow has. In most
+ * cases these pointers will remain unaltered, but if the slice being removed
+ * is the youngest or the oldest they won't. *)
+let remove_liquidation_slice
+    (burrow : t)
+    (leaf_ptr: Avl.leaf_ptr)
+    (leaf : LiquidationAuction.liquidation_slice) (* NOTE: derived from the leaf_ptr *)
+  : t =
+  assert (leaf.tez >= Tez.zero);
+  assert (burrow.collateral_at_auction >= leaf.tez);
+  (* (a) the slice's tez is no longer in auctions, subtract it. *)
+  let burrow = { burrow with
+    collateral_at_auction = Tez.(burrow.collateral_at_auction - leaf.tez);
+  } in
+  (* (b) adjust the pointers *)
+  match burrow.liquidation_slices with
+  | None -> failwith "the burrow must have at least leaf_ptr sent off to an auction"
+  | Some slices ->
+    match (leaf.younger, leaf.older) with
+    | (None, None) ->
+      assert (slices.youngest = leaf_ptr);
+      assert (slices.oldest = leaf_ptr);
+      { burrow with liquidation_slices = None }
+    | (None, Some older) ->
+      assert (slices.youngest = leaf_ptr);
+      { burrow with liquidation_slices = Some {slices with youngest = older} }
+    | (Some younger, None) ->
+      assert (slices.oldest = leaf_ptr);
+      { burrow with liquidation_slices = Some {slices with oldest = younger} }
+    | (Some _, Some _) ->
+      assert (slices.oldest <> leaf_ptr);
+      assert (slices.youngest <> leaf_ptr);
+      burrow
+
+let return_slice_from_auction
+    (leaf_ptr: Avl.leaf_ptr)
+    (leaf: LiquidationAuction.liquidation_slice)
+    (burrow: t)
+  : t =
   assert_invariants burrow;
   assert burrow.active;
-  assert (tez >= Tez.zero);
-  { burrow with
-    collateral = Tez.(burrow.collateral + tez);
-    collateral_at_auction = Tez.(burrow.collateral_at_auction - tez);
-  }
+  assert (leaf.tez >= Tez.zero);
+  (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
+  let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
+  (* (b) return the tez into the burrow's collateral *)
+  { burrow with collateral = Tez.(burrow.collateral + leaf.tez); }
 
-(** Return some kit that we have received from a completed auction to the
-  * burrow. *)
-let return_kit_from_auction (tez: Tez.t) (kit: Kit.t) (b: t) : t =
-  assert_invariants b;
+let return_kit_from_auction
+    (leaf_ptr: Avl.leaf_ptr)
+    (leaf: LiquidationAuction.liquidation_slice)
+    (kit: Kit.t)
+    (burrow: t) : t =
+  assert_invariants burrow;
   assert (kit >= Kit.zero);
-  rebalance_kit
-    { b with
-      excess_kit = Kit.(b.excess_kit + kit);
-      collateral_at_auction = Tez.(b.collateral_at_auction - tez);
-    }
+  (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
+  let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
+  (* (b) burn/deposit the kit received from auctioning the slice *)
+  rebalance_kit { burrow with excess_kit = Kit.(burrow.excess_kit + kit); }
 
 let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
   if tez < Constants.creation_deposit

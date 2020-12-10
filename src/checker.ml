@@ -625,29 +625,9 @@ struct
               liquidation_auctions = {
                 state.liquidation_auctions with
                 avl_storage = new_storage }} in
-          let burrow =
-            Burrow.return_tez_from_auction leaf.tez burrow in
 
-          (* When we delete the youngest or the oldest slice, we have to adjust
-           * the burrow pointers accordingly.
-          *)
-          let burrow =
-            let slices = Option.get (Burrow.liquidation_slices burrow) in
-            match (leaf.younger, leaf.older) with
-            | (None, None) ->
-              assert (slices.youngest = leaf_ptr);
-              assert (slices.oldest = leaf_ptr);
-              Burrow.(set_liquidation_slices burrow None)
-            | (None, Some older) ->
-              assert (slices.youngest = leaf_ptr);
-              Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
-            | (Some younger, None) ->
-              assert (slices.oldest = leaf_ptr);
-              Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
-            | (Some _, Some _) ->
-              assert (slices.oldest <> leaf_ptr);
-              assert (slices.youngest <> leaf_ptr);
-              burrow in
+          (* Return the tez to the burrow and update its pointers to liq. slices. *)
+          let burrow = Burrow.return_slice_from_auction leaf_ptr leaf burrow in
 
           let state =
             { state with
@@ -760,28 +740,9 @@ struct
                          (fun b ->
                             match b with
                             | None -> failwith "TODO: Check if this case can happen."
-                            | Some burrow ->
-                              (* NOTE: We should touch the burrow here I think, before we
-                               * do anything else. *)
-                              let burrow =
-                                Burrow.return_kit_from_auction
-                                  leaf.tez kit_to_repay burrow in
-                              let slices = Option.get (Burrow.liquidation_slices burrow) in
-                              match (leaf.younger, leaf.older) with
-                              | (None, None) ->
-                                assert (slices.youngest = leaf_ptr);
-                                assert (slices.oldest = leaf_ptr);
-                                Some Burrow.(set_liquidation_slices burrow None)
-                              | (None, Some older) ->
-                                assert (slices.youngest = leaf_ptr);
-                                Some Burrow.(set_liquidation_slices burrow (Some {slices with youngest = older}))
-                              | (Some younger, None) ->
-                                assert (slices.oldest = leaf_ptr);
-                                Some Burrow.(set_liquidation_slices burrow (Some {slices with oldest = younger}))
-                              | (Some _, Some _) ->
-                                assert (slices.oldest <> leaf_ptr);
-                                assert (slices.youngest <> leaf_ptr);
-                                Some burrow
+                            (* NOTE: We should touch the burrow here I think, before we
+                             * do anything else. *)
+                            | Some burrow -> Some (Burrow.return_kit_from_auction leaf_ptr leaf kit_to_repay burrow)
                          )
                          state.burrows
         } in

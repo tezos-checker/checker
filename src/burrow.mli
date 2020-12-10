@@ -85,12 +85,19 @@ val is_liquidatable : Parameters.t -> t -> bool
 *)
 val touch : Parameters.t -> t -> t
 
-(** Return some kit that we have received from an auction to the burrow. *)
-val return_kit_from_auction : Tez.t -> Kit.t -> t -> t
+(** Deposit the kit earnings from the liquidation of a slice into the burrow.
+  * That is, (a) update the outstanding kit, and (b) adjust the burrow's
+  * pointers to the liquidation queue accordingly (which is a no-op if we are
+  * not deleting the youngest or the oldest liquidation slice). *)
+(* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
+val return_kit_from_auction : Avl.leaf_ptr -> LiquidationAuction.liquidation_slice -> Kit.t -> t -> t
 
-(** Return some tez that was part of a liquidation slice back to the burrow
-  * (due to a liquidation cancellation). *)
-val return_tez_from_auction : Tez.t -> t -> t
+(** Cancel the liquidation of a slice. That is, (a) return the tez that is part
+  * of a liquidation slice back to the burrow and (b) adjust the burrow's
+  * pointers to the liquidation queue accordingly (which is a no-op if we are
+  * not deleting the youngest or the oldest liquidation slice). *)
+(* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
+val return_slice_from_auction : Avl.leaf_ptr -> LiquidationAuction.liquidation_slice -> t -> t
 
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
