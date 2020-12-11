@@ -1,14 +1,35 @@
+type branch = {
+  left: int;
+  left_height: int;
+  left_tez: tez;
+  right_tez: tez;
+  right_height: int;
+  right: int;
+  parent: int;
+}
+
+type leaf = {
+  value: int;
+  tez: tez;
+  parent: int;
+}
+
+type node =
+  | Leaf of leaf
+  | Branch of branch
+  | Root of (int * int)
+
 type storage = {
-   contents: (int, int) big_map ;
+   contents: (int, node) big_map ;
 }
 
 type action =
-  | Add of (int * int)
+  | Add of (int * node)
   | Lookup of int
   | Nop
 
 let initial_storage: storage =
-  { contents = (Big_map.empty: (int, int) big_map); }
+  { contents = (Big_map.empty: (int, node) big_map); }
 
 let main ((p, storage): action * storage): operation list * storage =
  let storage =
