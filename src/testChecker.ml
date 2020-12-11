@@ -1,6 +1,7 @@
 open OUnit2
-open Checker
 open TestCommon
+
+module PtrMap = Map.Make(Ptr)
 
 let bob = Address.of_string "bob"
 let alice = Address.of_string "alice"
