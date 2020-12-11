@@ -5,11 +5,31 @@ let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 (* Create an arbitrary burrow state, given the set of checker's parameters (NB:
- * most values are fixed). NOTE: Given that to get a "Close" we need the
- * collateral to be less than a tez, getting a "Close" for what
- * arbitrary_burrow generates is not very likely to happen. Write a smarter
- * generator for these cases. *)
+ * most values are fixed). *)
 let arbitrary_burrow (params: Parameters.t) =
+  (* More likely to give Close/Unnecessary ones *)
+  let arb_smart_tez_kit_1 =
+    let positive_int = QCheck.(1 -- max_int) in
+    QCheck.map
+      (fun (t, k, factor) ->
+         let tez = Tez.of_q_floor Q.(of_int t / (of_int factor * of_int 2)) in
+         let kit = Kit.of_q_floor Q.(of_int k /  of_int factor) in
+         (tez, kit)
+      )
+      (QCheck.triple positive_int positive_int positive_int) in
+  (* More likely to give Complete/Partial/Unnecessary ones *)
+  let arb_smart_tez_kit_2 =
+    QCheck.map
+      (fun (tez, kit) ->
+        let tez = Tez.of_q_floor Q.(Tez.to_q tez / of_int 2) in
+        (tez, kit)
+      )
+      (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
+  (* Chose one of the two. Not perfect, I know, but improves coverage *)
+  let arb_smart_tez_kit =
+    QCheck.map
+      (fun (x, y, num) -> if num mod 2 = 0 then x else y)
+    (QCheck.triple arb_smart_tez_kit_1 arb_smart_tez_kit_2 QCheck.int) in
   QCheck.map
     (fun (tez, kit) ->
        Burrow.make_for_test
@@ -26,7 +46,7 @@ let arbitrary_burrow (params: Parameters.t) =
          ~last_touched:(Timestamp.of_seconds 0)
          ~liquidation_slices:None
     )
-    (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit)
+    arb_smart_tez_kit
 
 (*
 Properties we expect to hold
@@ -103,8 +123,8 @@ let test_general_liquidation_properties =
     (arbitrary_burrow params)
   @@ fun burrow ->
     match Burrow.request_liquidation params burrow with
-      (* If a liquidation was deemed Unnecessary then is_liquidatable must be
-       * false for the input burrow. *)
+      (* If a liquidation was deemed Unnecessary then is_liquidatable
+       * must be false for the input burrow. *)
     | Unnecessary ->
       assert_bool
         "unnecessary liquidation means non-liquidatable input burrow"
@@ -114,8 +134,6 @@ let test_general_liquidation_properties =
       properties_of_partial_liquidation burrow details; true
     | Complete details ->
       properties_of_complete_liquidation burrow details; true
-      (* NOTE: according to my calculations, this almost never
-       * fires; we should add a separate test for these cases. *)
     | Close details ->
       properties_of_close_liquidation burrow details; true
 
