@@ -91,12 +91,13 @@ let suite =
            ~kit:(Kit.of_mukit Z.one) in
 
        (* Over time the burrows with outstanding kit should be overburrowed
-        * (even if the index stays where it was before). *)
+	* (NOTE: even if the index stays where it was before, but that would
+	* take more time I guess). *)
        let int_level = 1 in
        let tezos = make_tezos int_level in
 
        let _touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_000_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_000_001) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -216,7 +217,7 @@ let suite =
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_963;})
+         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_960;})
          tez_from_bid
          ~printer:Tez.show_payment;
     );
