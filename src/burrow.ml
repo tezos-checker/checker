@@ -54,6 +54,10 @@ let assert_invariants (b: t) : unit =
   assert (b.outstanding_kit = Kit.zero || b.excess_kit = Kit.zero);
   ()
 
+let collateral (b: t) =
+  assert_invariants b;
+  b.collateral
+
 let liquidation_slices (b: t) =
   assert_invariants b;
   b.liquidation_slices

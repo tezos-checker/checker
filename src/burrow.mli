@@ -14,6 +14,7 @@ val show : t -> string
 val pp : Format.formatter -> t -> unit
 
 (* Burrow API *)
+val collateral : t -> Tez.t (* NOTE: FOR TESTING PURPOSES ONLY *)
 val liquidation_slices : t -> liquidation_slices option
 val set_liquidation_slices : t -> liquidation_slices option -> t
 val collateral_at_auction : t -> Tez.t
