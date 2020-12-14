@@ -266,6 +266,397 @@ let initial_burrow =
     ~last_touched:(Timestamp.of_seconds 0)
     ~liquidation_slices:None
 
+(* Minimum amount of collateral for the burrow to be considered collateralized. *)
+let barely_not_overburrowed_test =
+  "barely_not_overburrowed_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 7_673_400)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
+    assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
+    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+
+    let expected_liquidation_result = Unnecessary in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result
+
+(* Maximum amount of collateral for the burrow to be considered
+ * under-collateralized, but not liquidatable. *)
+let barely_overburrowed_test =
+  "barely_overburrowed_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 7_673_399)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+
+    let expected_liquidation_result = Unnecessary in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result
+
+(* Minimum amount of collateral for the burrow to be considered
+ * under-collateralized, but not liquidatable. *)
+let barely_non_liquidatable_test =
+  "barely_non_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 6_171_200)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+
+    let expected_liquidation_result = Unnecessary in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result
+
+(* Maximum amount of collateral for the burrow to be considered partially
+ * liquidatable. *)
+let barely_liquidatable_test =
+  "barely_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 6_171_199)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+
+    let expected_liquidation_result =
+      Partial
+        { liquidation_reward = Tez.of_mutez 1_006_171;
+          tez_to_auction = Tez.of_mutez 2_818_396;
+          expected_kit = Kit.of_mukit (Z.of_int 6_941_863);
+          min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 8_677_329);
+          burrow_state =
+            Burrow.make_for_test
+              ~active:true
+              ~permission_version:0
+              ~allow_all_tez_deposits:false
+              ~allow_all_kit_burnings:false
+              ~delegate:None
+              ~collateral:(Tez.of_mutez 2_346_632)
+              ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+              ~excess_kit:Kit.zero
+              ~adjustment_index:FixedPoint.one
+              ~collateral_at_auction:(Tez.of_mutez 2_818_396)
+              ~liquidation_slices:None
+              ~last_touched:(Timestamp.of_seconds 0)
+        } in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result;
+
+    let details = match liquidation_result with
+      | Unnecessary | Complete _ | Close _ -> failwith "impossible"
+      | Partial details -> details in
+    assert_properties_of_partial_liquidation burrow details
+
+(* Minimum amount of collateral for the burrow to be considered partially
+ * liquidatable, but a candidate for collateral depletion (the collateral is
+ * depleted of course, but at least it looks like once kit is received from
+ * auctions things will return to normal). *)
+let barely_non_complete_liquidatable_test =
+  "barely_non_complete_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 5_065_065)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+
+    let expected_liquidation_result =
+      Partial
+        { liquidation_reward = Tez.of_mutez 1_005_065;
+          tez_to_auction = Tez.of_mutez 4_060_000;
+          expected_kit = Kit.of_mukit (Z.of_int 10_000_001);
+          min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 15_229_815);
+          burrow_state =
+            Burrow.make_for_test
+              ~active:true
+              ~permission_version:0
+              ~allow_all_tez_deposits:false
+              ~allow_all_kit_burnings:false
+              ~delegate:None
+              ~collateral:Tez.zero
+              ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+              ~excess_kit:Kit.zero
+              ~adjustment_index:FixedPoint.one
+              ~collateral_at_auction:(Tez.of_mutez 4_060_000)
+              ~liquidation_slices:None
+              ~last_touched:(Timestamp.of_seconds 0)
+        } in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result;
+
+    let details = match liquidation_result with
+      | Unnecessary | Complete _ | Close _ -> failwith "impossible"
+      | Partial details -> details in
+    assert_properties_of_partial_liquidation burrow details
+
+(* Maximum amount of collateral for the burrow to be liquidatable in a way thay
+ * recovery seems impossible. *)
+let barely_complete_liquidatable_test =
+  "barely_complete_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 5_065_064)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+
+    let expected_liquidation_result =
+      Complete
+        { liquidation_reward = Tez.of_mutez 1_005_065;
+          tez_to_auction = Tez.of_mutez 4_059_999;
+          expected_kit = Kit.of_mukit (Z.of_int 9_999_998);
+          min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 15_229_814);
+          burrow_state =
+            Burrow.make_for_test
+              ~active:true
+              ~permission_version:0
+              ~allow_all_tez_deposits:false
+              ~allow_all_kit_burnings:false
+              ~delegate:None
+              ~collateral:Tez.zero
+              ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+              ~excess_kit:Kit.zero
+              ~adjustment_index:FixedPoint.one
+              ~collateral_at_auction:(Tez.of_mutez 4_059_999)
+              ~liquidation_slices:None
+              ~last_touched:(Timestamp.of_seconds 0)
+        } in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result;
+
+    let details = match liquidation_result with
+      | Unnecessary | Partial _ | Close _ -> failwith "impossible"
+      | Complete details -> details in
+    assert_properties_of_complete_liquidation burrow details
+
+(* Minimum amount of collateral for the burrow to be liquidatable in a way thay
+ * recovery seems impossible, but without having to deactivate it. *)
+let barely_non_close_liquidatable_test =
+  "barely_non_close_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 1_001_000)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+
+    let expected_liquidation_result =
+      Complete
+        { liquidation_reward = Tez.of_mutez 1_001_000;
+          tez_to_auction = Tez.zero;
+          expected_kit = Kit.zero;
+          min_kit_for_unwarranted = Kit.zero;
+          burrow_state =
+            Burrow.make_for_test
+              ~active:true
+              ~permission_version:0
+              ~allow_all_tez_deposits:false
+              ~allow_all_kit_burnings:false
+              ~delegate:None
+              ~collateral:Tez.zero
+              ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+              ~excess_kit:Kit.zero
+              ~adjustment_index:FixedPoint.one
+              ~collateral_at_auction:Tez.zero
+              ~liquidation_slices:None
+              ~last_touched:(Timestamp.of_seconds 0)
+        } in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result;
+
+    let details = match liquidation_result with
+      | Unnecessary | Partial _ | Close _ -> failwith "impossible"
+      | Complete details -> details in
+    assert_properties_of_complete_liquidation burrow details
+
+(* Maximum amount of collateral for the burrow to be liquidatable and have to
+ * be deactivated. *)
+let barely_close_liquidatable_test =
+  "barely_close_liquidatable_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 1_000_999)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+
+    let expected_liquidation_result =
+      Close
+        { liquidation_reward = Tez.of_mutez 1_001_000;
+          tez_to_auction = Tez.of_mutez 999_999;
+          expected_kit = Kit.of_mukit (Z.of_int 2_463_052);
+          min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 18_981_019);
+          burrow_state =
+            Burrow.make_for_test
+              ~active:false
+              ~permission_version:0
+              ~allow_all_tez_deposits:false
+              ~allow_all_kit_burnings:false
+              ~delegate:None
+              ~collateral:Tez.zero
+              ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+              ~excess_kit:Kit.zero
+              ~adjustment_index:FixedPoint.one
+              ~collateral_at_auction:(Tez.of_mutez 999_999)
+              ~liquidation_slices:None
+              ~last_touched:(Timestamp.of_seconds 0)
+        } in
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal
+      expected_liquidation_result
+      liquidation_result
+      ~printer:Burrow.show_liquidation_result;
+
+    let details = match liquidation_result with
+      | Unnecessary | Partial _ | Complete _ -> failwith "impossible"
+      | Close details -> details in
+    assert_properties_of_close_liquidation burrow details
+
+let unwarranted_liquidation_unit_test =
+  "unwarranted_liquidation_unit_test" >:: fun _ ->
+    let burrow =
+      Burrow.make_for_test
+        ~permission_version:0
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~active:true
+        ~collateral:(Tez.of_mutez 7_673_400)
+        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
+        ~excess_kit:Kit.zero
+        ~adjustment_index:(Parameters.compute_adjustment_index params)
+        ~collateral_at_auction:Tez.zero
+        ~last_touched:(Timestamp.of_seconds 0)
+        ~liquidation_slices:None
+    in
+
+    assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
+    assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
+    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+
+    let liquidation_result = Burrow.request_liquidation params burrow in
+    assert_equal Unnecessary liquidation_result ~printer:Burrow.show_liquidation_result
+
 let partial_liquidation_unit_test =
   "partial_liquidation_unit_test" >:: fun _ ->
     let burrow = initial_burrow in
@@ -305,31 +696,6 @@ let partial_liquidation_unit_test =
 
     assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
     assert_properties_of_partial_liquidation burrow details
-
-let unwarranted_liquidation_unit_test =
-  "unwarranted_liquidation_unit_test" >:: fun _ ->
-    let burrow =
-      Burrow.make_for_test
-        ~permission_version:0
-        ~allow_all_tez_deposits:false
-        ~allow_all_kit_burnings:false
-        ~delegate:None
-        ~active:true
-        ~collateral:(Tez.of_mutez 10_000_000)
-        ~outstanding_kit:(Kit.of_mukit (Z.of_int 10_000_000))
-        ~excess_kit:Kit.zero
-        ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:Tez.zero
-        ~last_touched:(Timestamp.of_seconds 0)
-        ~liquidation_slices:None
-    in
-
-    assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
-    assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
-    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
-
-    let liquidation_result = Burrow.request_liquidation params burrow in
-    assert_equal Unnecessary liquidation_result ~printer:Burrow.show_liquidation_result
 
 let complete_liquidation_unit_test =
   "complete_liquidation_unit_test" >:: fun _ ->
@@ -452,6 +818,16 @@ let suite =
     unwarranted_liquidation_unit_test;
     complete_liquidation_unit_test;
     complete_and_close_liquidation_test;
+
+    (* Test the boundaries *)
+    barely_not_overburrowed_test;
+    barely_overburrowed_test;
+    barely_non_liquidatable_test;
+    barely_liquidatable_test;
+    barely_non_complete_liquidatable_test;
+    barely_complete_liquidatable_test;
+    barely_non_close_liquidatable_test;
+    barely_close_liquidatable_test;
 
     (* General, property-based random tests *)
     liquidatable_implies_overburrowed;
