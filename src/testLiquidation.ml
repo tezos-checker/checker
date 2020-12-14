@@ -21,15 +21,15 @@ let arbitrary_burrow (params: Parameters.t) =
   let arb_smart_tez_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
-        let tez = Tez.of_q_floor Q.(Tez.to_q tez / of_int 2) in
-        (tez, kit)
+         let tez = Tez.of_q_floor Q.(Tez.to_q tez / of_int 2) in
+         (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
   (* Chose one of the two. Not perfect, I know, but improves coverage *)
   let arb_smart_tez_kit =
     QCheck.map
       (fun (x, y, num) -> if num mod 2 = 0 then x else y)
-    (QCheck.triple arb_smart_tez_kit_1 arb_smart_tez_kit_2 QCheck.int) in
+      (QCheck.triple arb_smart_tez_kit_1 arb_smart_tez_kit_2 QCheck.int) in
   QCheck.map
     (fun (tez, kit) ->
        Burrow.make_for_test
@@ -49,12 +49,12 @@ let arbitrary_burrow (params: Parameters.t) =
     arb_smart_tez_kit
 
 (*
-Properties we expect to hold
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-General
-* is_liquidatable ==> is_overburrowed (not the other way around)
-* No interaction with the burrow has any effect if it's inactive.
-* Liquidation of an active burrow with collateral < creation_deposit should "close" it
+Other properties
+~~~~~~~~~~~~~~~~
+* What about the relation between liquidatable and optimistically overburrowed?
+* No interaction with the burrow has any effect if it's inactive. Actually, we
+  have to discuss exactly which operations we wish to allow when the burrow is
+  inactive.
 *)
 
 let params : Parameters.t =
@@ -71,49 +71,126 @@ let params : Parameters.t =
     last_touched = Timestamp.of_seconds 0;
   }
 
+(* If a burrow is liquidatable, then it is also overburrowed. *)
+let liquidatable_implies_overburrowed =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"liquidatable_implies_overburrowed"
+    ~count:property_test_count
+    (arbitrary_burrow params)
+  @@ fun burrow ->
+  (* several cases fail the premise but we we have quite some cases
+   * succeeding as well, so it should be okay. *)
+  QCheck.(
+    Burrow.is_liquidatable params burrow
+    ==> Burrow.is_overburrowed params burrow
+  )
+
+(* If a burrow is optimistically_overburrowed, then it is also overburrowed. *)
+let optimistically_overburrowed_implies_overburrowed =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"optimistically_overburrowed_implies_overburrowed"
+    ~count:property_test_count
+    (arbitrary_burrow params)
+  @@ fun burrow ->
+  QCheck.(
+    Burrow.is_optimistically_overburrowed params burrow
+    ==> Burrow.is_overburrowed params burrow
+  )
+
 (* If a liquidation was deemed Partial:
  * - is_liquidatable is true for the given burrow
+ * - is_overburrowed is true for the given burrow
+ * - is_liquidatable is false for the resulting burrow
+ * - is_overburrowed is true for the resulting burrow
  * - is_optimistically_overburrowed is false for the resulting burrow
+ * - TODO: If the auctioned tez gets sold with the current expected price, the
+ *         burrow would be non-overburrowed, non-liquidatable,
+ *         non-optimistically-overburrowed.
 *)
-let properties_of_partial_liquidation burrow details =
+let properties_of_partial_liquidation burrow_in burrow_out =
+  assert_bool
+    "partial liquidation means overburrowed input burrow"
+    (Burrow.is_overburrowed params burrow_in);
   assert_bool
     "partial liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow);
+    (Burrow.is_liquidatable params burrow_in);
+  assert_bool
+    "partial liquidation means non-liquidatable output burrow"
+    (not (Burrow.is_liquidatable params burrow_out));
+  assert_bool
+    "partial liquidation means overburrowed output burrow"
+    (Burrow.is_overburrowed params burrow_out);
   assert_bool
     "partial liquidation means non-optimistically-overburrowed output burrow"
-    (not (Burrow.is_optimistically_overburrowed params details.burrow_state))
+    (not (Burrow.is_optimistically_overburrowed params burrow_out))
 
 (* If a liquidation was deemed Complete:
  * - is_liquidatable is true for the given burrow
+ * - is_overburrowed is true for the given burrow
+ * - is_liquidatable is true for the resulting burrow
+ * - is_overburrowed is true for the resulting burrow
  * - is_optimistically_overburrowed is true for the resulting burrow
  * - the resulting burrow has no collateral
+ * - TODO: If the auctioned tez gets sold with the current expected price, the
+ *         burrow would be overburrowed. Would it be liquidatable and
+ *         optimistically-overburrowed though???
 *)
-let properties_of_complete_liquidation burrow details =
+let properties_of_complete_liquidation burrow_in burrow_out =
   assert_bool
     "complete liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow);
+    (Burrow.is_liquidatable params burrow_in);
+  assert_bool
+    "complete liquidation means overburrowed input burrow"
+    (Burrow.is_overburrowed params burrow_in);
+  assert_bool
+    "complete liquidation means liquidatable output burrow"
+    (Burrow.is_liquidatable params burrow_out);
+  assert_bool
+    "complete liquidation means overburrowed output burrow"
+    (Burrow.is_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means optimistically-overburrowed output burrow"
-    (Burrow.is_optimistically_overburrowed params details.burrow_state);
+    (Burrow.is_optimistically_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means no collateral in the output burrow"
-    (Burrow.collateral details.burrow_state = Tez.zero)
+    (Burrow.collateral burrow_out = Tez.zero)
 
 (* If a liquidation was deemed Close:
+ * - is_overburrowed is true for the given burrow
  * - is_liquidatable is true for the given burrow
+ * - the given burrow has less collateral than the creation deposit
+ * - the resulting burrow is overburrowed
+ * - the resulting burrow is not liquidatable (is inactive; no more rewards)
  * - the resulting burrow has no collateral
  * - the resulting burrow is inactive
+ * - TODO: What would happen if the auctioned tez got sold with the current
+ *         expected price? Would it be overburrowed?
+ *         optimistically-overburrowed? liquidatable?
 *)
-let properties_of_close_liquidation burrow details =
+let properties_of_close_liquidation burrow_in burrow_out =
+  assert_bool
+    "close liquidation means overburrowed input burrow"
+    (Burrow.is_overburrowed params burrow_in);
   assert_bool
     "close liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow);
+    (Burrow.is_liquidatable params burrow_in);
+  assert_bool
+    "close liquidation means input burrow's collateral is less than the creation deposit"
+    (Burrow.collateral burrow_in < Constants.creation_deposit);
+  assert_bool
+    "close liquidation means overburrowed output burrow"
+    (Burrow.is_overburrowed params burrow_out);
+  assert_bool
+    "close liquidation means non-liquidatable output burrow"
+    (not (Burrow.is_liquidatable params burrow_out));
   assert_bool
     "close liquidation means no collateral in the output burrow"
-    (Burrow.collateral details.burrow_state = Tez.zero);
+    (Burrow.collateral burrow_out = Tez.zero);
   assert_bool
     "close liquidation means inactive output burrow"
-    (not (Burrow.active details.burrow_state))
+    (not (Burrow.active burrow_out))
 
 let test_general_liquidation_properties =
   qcheck_to_ounit
@@ -122,20 +199,20 @@ let test_general_liquidation_properties =
     ~count:property_test_count
     (arbitrary_burrow params)
   @@ fun burrow ->
-    match Burrow.request_liquidation params burrow with
-      (* If a liquidation was deemed Unnecessary then is_liquidatable
-       * must be false for the input burrow. *)
-    | Unnecessary ->
-      assert_bool
-        "unnecessary liquidation means non-liquidatable input burrow"
-        (not (Burrow.is_liquidatable params burrow));
-      true
-    | Partial details ->
-      properties_of_partial_liquidation burrow details; true
-    | Complete details ->
-      properties_of_complete_liquidation burrow details; true
-    | Close details ->
-      properties_of_close_liquidation burrow details; true
+  match Burrow.request_liquidation params burrow with
+  (* If a liquidation was deemed Unnecessary then is_liquidatable
+   * must be false for the input burrow. *)
+  | Unnecessary ->
+    assert_bool
+      "unnecessary liquidation means non-liquidatable input burrow"
+      (not (Burrow.is_liquidatable params burrow));
+    true
+  | Partial details ->
+    properties_of_partial_liquidation burrow details.burrow_state; true
+  | Complete details ->
+    properties_of_complete_liquidation burrow details.burrow_state; true
+  | Close details ->
+    properties_of_close_liquidation burrow details.burrow_state; true
 
 let initial_burrow =
   Burrow.make_for_test
@@ -342,5 +419,9 @@ let suite =
     complete_and_close_liquidation_test;
 
     (* General, property-based random tests *)
+    liquidatable_implies_overburrowed;
+    optimistically_overburrowed_implies_overburrowed;
+
+    (* General, property-based randomg tests regarding liquidation calculations. *)
     test_general_liquidation_properties;
   ]
