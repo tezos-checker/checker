@@ -130,16 +130,6 @@ val activate : Parameters.t -> Tez.t -> t -> (t, Error.error) result
   * outstanding, or (d) has collateral sent off to auctions. *)
 val deactivate : Parameters.t -> t -> (t * Tez.t, Error.error) result
 
-(** Compute the least number of tez that needs to be auctioned off (given the
-  * current expected minting price) so that the burrow can return to a state
-  * when it is no longer overburrowed or having a risk of liquidation. *)
-val compute_tez_to_auction : Parameters.t -> t -> Tez.t
-
-(** Given the number of tez to be auctioned off, compute the expected return
-  * in kit, given the current minting price. Assume that the liquidation was
-  * warranted, so the liquidation penalty is subtracted *)
-val compute_expected_kit : Parameters.t -> Tez.t -> Kit.t
-
 (** Set the delegate of a burrow. *)
 val set_delegate : Parameters.t -> Address.t -> t -> t
 

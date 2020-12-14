@@ -355,10 +355,10 @@ let increase_permission_version (p: Parameters.t) (b: t) =
 
 (** Compute the number of tez that needs to be auctioned off so that the burrow
   * can return to a state when it is no longer overburrowed or having a risk of
-  * liquidation. For its calculation, see docs/burrow-state-liquidations.md.
-  * Note that it's skewed on the safe side (overapproximation). This ensures
-  * that after a partial liquidation we are no longer "optimistically
-  * overburrowed" *)
+  * liquidation (assuming the current expected minting price). For its
+  * calculation, see docs/burrow-state-liquidations.md.  Note that it's skewed
+  * on the safe side (overapproximation). This ensures that after a partial
+  * liquidation we are no longer "optimistically overburrowed" *)
 let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
   assert_invariants b;
   let oustanding_kit = Kit.to_q b.outstanding_kit in
@@ -375,9 +375,8 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
     )
 
 (** Compute the amount of kit we expect to receive from auctioning off an
-  * amount of tez, using the current minting price. Note that we being rather
-  * optimistic here (we overapproximate the expected kit). NOTE: Make sure
-  * this agrees with expectations. *)
+  * amount of tez, using the current minting price. Note that we are being
+  * rather optimistic here (we overapproximate the expected kit). *)
 let compute_expected_kit (p: Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
   Kit.of_q_ceil
     Q.(Tez.to_q tez_to_auction * (one - Constants.liquidation_penalty) / Parameters.minting_price p)
