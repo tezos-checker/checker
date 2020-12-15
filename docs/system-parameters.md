@@ -1,8 +1,9 @@
 
 
+
 # System Parameters
 
-A operational description of Checker's internal parameters, and operations on them.
+A operational description of Checker's internal parameters, and operations on them. NOTE: here we focus primarily on the specifics of the calculations; the meaning of the concepts is explained better the [original spec](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA).
 
 ## State
 
@@ -20,9 +21,9 @@ And two additional indices, one used in the calculation of _burrowing fees_ and 
 * `burrow_fee_index`
 * `imbalance_index`
 
-Q1: We discussed the possibility of storing `1/q` instead of `q` in Checker's state. Would that be beneficial in any way?
+QQ: We discussed the possibility of storing `1/q` instead of `q` in Checker's state. Would that be beneficial in any way?
 
-Q2: How much can `outstanding_kit` and `circulating_kit` deviate from reality? How big an issue can that be?
+QQ: How much can `outstanding_kit` and `circulating_kit` deviate from reality? How big an issue can that be?
 
 ## Initialization
 
@@ -35,14 +36,14 @@ protected_index = 1xtz
 target = 1
 drift = 0
 drift' = 0
-outstanding_kit = 1kit
-circulating_kit = 1kit
+outstanding_kit = 1mukit
+circulating_kit = 1mukit
 last_touched = now
 burrow_fee_index = 1
 imbalance_index  = 1
 ```
 
-Q3: What should the starting values for `outstanding_kit` and `circulating_kit` be? For their calculations we only use multiplication with factors (see below), so starting with honest zero values would pin them to zero forever.
+QQ: What should the starting values for `outstanding_kit` and `circulating_kit` be? For their calculations we only use multiplication with factors (see below), so starting with honest zero values would pin them to zero forever.
 
 
 ## Price API
@@ -58,7 +59,7 @@ liquidation_price = q * tz_liquidation
 ```
 
 ### Note
-The definition of `tz_minting` and `tz_liquidation` implies that at any given moment, `tz_minting >= tz_liquidation`. Combined with `fminting > fliquidation`, we have that
+The definition of `tz_minting` and `tz_liquidation` implies that at any given moment, `tz_minting >= tz_liquidation > 0`. Combined with `fminting > fliquidation`, we have that
 ```
 tz_minting * fminting > tz_liquidation * fliquidation
 ```
@@ -103,7 +104,7 @@ For the calculation of the derivative of `drift`, `drift'`, we only use the last
 new_drift' =
   -0.0005 / (secs_in_a_day ^ 2) , if                        target <= exp (-high_bracket)
   -0.0001 / (secs_in_a_day ^ 2) , if exp (-high_bracket) <  target <= exp (-low_bracket)
-   0                            , if exp (-low_bracket)  <  target <  exp (low_bracket)
+   0                            , if exp (-low_bracket)  <  target <  exp ( low_bracket)
    0.0001 / (secs_in_a_day ^ 2) , if exp ( low_bracket)  <= target <  exp ( high_bracket)
    0.0005 / (secs_in_a_day ^ 2) , if exp ( high_bracket) <= target
 ```
@@ -155,7 +156,7 @@ imbalance_rate =
   max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
 ```
 
-Q4: What if the current `outstanding_kit` is zero? In this case the above formula fails. This also relates to the initialization and subsequent calculation of `outstanding_kit` (if it ever becomes zero, it stays zero forever).
+QQ: What if the current `outstanding_kit` is zero? In this case the above formula fails. This also relates to the initialization and subsequent calculation of `outstanding_kit` (if it ever becomes zero, it stays zero forever).
 
 ###  Intermediate `outstanding_kit`
 In order to compute the updates for the two remaining fields (`outstanding_kit` and `circulating_kit`), we first need to calculate the current amount of kit outstanding, taking into account the accrued burrowing fee, thus
@@ -169,7 +170,7 @@ The accrued burrowing fees are to be given to the uniswap sub-contract. The tota
 accrual_to_uniswap = outstanding_with_fees - old_outstanding
 ```
 
-Q5: If I understand this correctly, there are cases where `accrual_to_uniswap` would be negative, which means that we are reducing the amount of kit in the uniswap contract. I wonder whether this is desirable or not.
+QQ: If I understand this correctly, there are cases where `accrual_to_uniswap` would be negative, which means that we are reducing the amount of kit in the uniswap contract. I wonder whether this is desirable or not.
 
 ### `outstanding_kit`
 To obtain the updated `outstanding_kit`, we need to account for both the accrued burrowing fees, and the imbalance adjustment
@@ -195,5 +196,5 @@ new_circulating_kit = old_circulating_kit + accrual_to_uniswap
 
 * `seconds_in_a_year = 31556952 (= (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60)`
 * `seconds_in_a_day  = 86400 (= 24 * 60 * 60)`
-* `low_bracket = 0.005`
+* `low_bracket  = 0.005`
 * `high_bracket = 0.05`
