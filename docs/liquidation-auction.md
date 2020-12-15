@@ -114,4 +114,4 @@ final step of an auction, and after that the auction itself is cleaned up.
 ## Maintenance
 
 Every time the main checker contract is touched, it touches `Constants.number_of_slices_to_process`
-amount of liquidation_slice's automatically.
+amount of oldest liquidation_slice's automatically.
