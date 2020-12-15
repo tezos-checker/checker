@@ -61,6 +61,51 @@ let from_list (mem: (int, int) mem) (root_data: int) (elements: element_list)
   let (mem, root) = mk_empty mem root_data in
   (add_all mem root elements, root)
 
+let rec range (f: int) (t: int) =
+  if f >= t
+  then []
+  else f :: range (f+1) t
+
+(* More straightforward recursive implementations tend to overflow stack on large inputs.
+ * So here's an iterative implementation which returns a lazy stream. I don't know how
+ * this works, I just translated below link to Ocaml.
+ * https://en.wikipedia.org/wiki/Heap%27s_algorithm#Details_of_the_algorithm *)
+let permutations (xs: 't list): ('t list) Stream.t =
+  let a = Array.of_list xs in
+  let n = Array.length a in
+  let c = Array.make n 0 in
+  let i = ref (-1) in
+
+  let swap i1 i2 =
+    let tmp = a.(i1) in
+    a.(i1) <- a.(i2);
+    a.(i2) <- tmp in
+
+  let rec loop () =
+    if !i < n
+    then (
+      if c.(!i) < !i
+      then (
+        (if !i mod 2 == 0
+         then swap 0 !i
+         else swap c.(!i) !i);
+        c.(!i) <- c.(!i) + 1;
+        i := 0;
+        Some (Array.to_list a)
+      ) else (
+        c.(!i) <- 0;
+        i := !i + 1;
+        loop ()
+      )
+    ) else None in
+
+  Stream.from (fun _ ->
+    if !i == -1
+    then (i := 0; Some (Array.to_list a))
+    else loop ())
+
+
+
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
@@ -309,5 +354,17 @@ let suite =
          {reads=104; writes=87}
          !BigMap.ops
          ~printer:BigMap.show_ops;
+    );
+    "test_all_permutations" >::
+    (fun _ ->
+       range 0 10
+         |> permutations
+         |> Stream.iter (fun xs ->
+           let xs = List.map (fun i -> (i, Tez.of_mutez i)) xs in
+           let (mem, root) = from_list BigMap.empty 0 xs in
+           assert_invariants mem root;
+           let actual = to_list mem root in
+           assert_equal actual xs
+         )
     );
   ]
