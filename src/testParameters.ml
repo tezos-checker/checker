@@ -290,21 +290,21 @@ let test_imbalance_negative_tendencies =
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
-(* just a convenient way to change levels. *)
-let make_tezos (level: int) : Tezos.t =
-  { now = Timestamp.of_seconds (level * 60);
-    level = Level.of_int level;
-    self = Address.of_string "checker";
-  }
-
 (* With the index staying at its initial value and the price of kit in tez
  * fixed at 1, most of the parameters should stay the same, even if a long time
  * passes. In fact, the only parameters that should change are (a) the
- * timestamp, naturally, and (b) the burrowing fee index, which is
- * always-increasing. *)
+ * timestamp, naturally, (b) the burrowing fee index, which is always
+ * increasing, and (c) the number of burrowed and circulating kit, due to the
+ * increased burrowing fee index. *)
 let test_touch_identity =
   (* initial *)
-  let tezos = make_tezos 0 in
+  let tezos =
+    Tezos.{
+      now = Timestamp.of_seconds 0;
+      level = Level.of_int 0;
+      self = Address.of_string "checker";
+    } in
+
   let params = Parameters.make_initial tezos.now in
 
   (* neutral arguments *)
@@ -315,9 +315,8 @@ let test_touch_identity =
   @@ QCheck.Test.make
        ~name:"test_touch_identity"
        ~count:property_test_count
-       QCheck.(0 -- 1_000_000)
-  @@ fun level ->
-    let new_tezos = make_tezos level in
+       TestArbitrary.arb_tezos
+  @@ fun new_tezos ->
     let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
 
     (* Most of the parameters remain the same *)
@@ -325,15 +324,37 @@ let test_touch_identity =
       { params with
         last_touched = new_params.last_touched;
         burrow_fee_index = new_params.burrow_fee_index;
+        outstanding_kit = new_params.outstanding_kit;
+        circulating_kit = new_params.circulating_kit;
       }
       new_params
       ~printer:Parameters.show;
 
     (* Burrow fee index though is ever increasing (if time passes!) *)
     assert_equal
-      (compare level 0)
+      (compare new_tezos.now tezos.now)
       (compare new_params.burrow_fee_index params.burrow_fee_index)
       ~printer:string_of_int;
+
+    (* Outstanding kit and circulating kit increase (imbalance starts at zero
+     * and stays there, so we only have burrowing fees). *)
+    assert_bool
+      "outstanding kit should increase over time"
+      (new_params.outstanding_kit >= params.outstanding_kit); (* most of the time equal, but over enough time greater-than *)
+    assert_bool
+      "circulating kit should increase over time"
+      (new_params.circulating_kit >= params.circulating_kit); (* most of the time equal, but over enough time greater-than *)
+    assert_bool
+      "imbalance should not increase or decrease over time"
+      (let new_imbalance =
+         Parameters.compute_imbalance
+           ~burrowed:new_params.outstanding_kit
+           ~circulating:new_params.circulating_kit in
+       let old_imbalance =
+         Parameters.compute_imbalance
+           ~burrowed:params.outstanding_kit
+           ~circulating:params.circulating_kit in
+       new_imbalance = old_imbalance);
     true
 
 (* Just a simple unit test, testing nothing specific, really. *)
