@@ -2,9 +2,6 @@ open OUnit2
 
 (*
 Parameter-related things we might want to add tests for:
-- The protected index follows the tendency of the current given index.
-- The protected index does not follow the given current index "too fast".
-  Calculate, to gain understanding and set explicit expectations.
 - Minting price is bounded on the low side.
 - Minting price is unbounded on the high side.
 - Liquidation price is bounded on the high side.
@@ -14,6 +11,13 @@ Parameter-related things we might want to add tests for:
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+
+let initial_tezos =
+  Tezos.{
+    now = Timestamp.of_seconds 0;
+    level = Level.of_int 0;
+    self = Address.of_string "checker";
+  }
 
 (* ************************************************************************* *)
 (*                        compute_drift_derivative                           *)
@@ -287,6 +291,98 @@ let test_imbalance_negative_tendencies =
           (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
 
 (* ************************************************************************* *)
+(*                          Index/Protected Index                            *)
+(* ************************************************************************* *)
+
+(* The protected index should always follow the tendency of the given index,
+ * independently of whether that happens fast or slowly. *)
+let test_protected_index_follows_index =
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_protected_index_follows_index"
+       ~count:property_test_count
+       (QCheck.pair TestArbitrary.arb_small_tez QCheck.small_nat)
+  @@ fun (index, lvl) ->
+    let lvl = lvl + 1 in (* let time pass, please *)
+    let new_tezos =
+      { tezos with
+        now = Timestamp.of_seconds (lvl * 60);
+        level = Level.of_int lvl;
+      } in
+
+    let _total_accrual_to_uniswap, new_params =
+      Parameters.touch new_tezos index kit_in_tez params in
+
+    assert_equal
+      (compare new_params.index params.index)
+      (compare new_params.protected_index params.protected_index)
+      ~printer:string_of_int;
+    true
+
+let rec call_touch_times
+    (index: Tez.t)
+    (kit_in_tez: Q.t)
+    (n: int)
+    (tezos: Tezos.t)
+    (params: Parameters.t)
+  : Parameters.t =
+  if n <= 0
+  then params
+  else
+    let new_tezos =
+      { tezos with
+        now = Timestamp.add_seconds tezos.now 60;
+        level = Level.(of_int (succ (to_int tezos.level)));
+      } in
+    let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
+    call_touch_times index kit_in_tez (pred n) new_tezos new_params
+
+(* The protected index should not follow the tendency of the given index "too
+ * fast". According to current expectations, the protected index should be able
+ * to catch up to a 2x or 0.5x move in 24 hours, and a 3% move in an hour. *)
+let test_protected_index_pace =
+  "test_protected_index_pace" >:: fun _ ->
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  (* UPWARD MOVES *)
+  let very_high_index = Tez.of_q_floor Q.(Q.of_string "1000" * Tez.to_q params.index) in
+  (* One hour, upward move, touched in every block *)
+  (* Initial : 1.000000 *)
+  (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
+  let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
+  assert_equal ~printer:Tez.show (Tez.of_mutez 1_030_420) new_params.protected_index;
+  (* One day, upward move, touched in every block *)
+  (* Initial : 1.000000 *)
+  (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
+  let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
+  assert_equal ~printer:Tez.show (Tez.of_mutez 2_053_031) new_params.protected_index;
+
+  (* DOWNWARD MOVES *)
+  let very_low_index = Tez.of_q_floor Q.(Q.of_string "1/1000" * Tez.to_q params.index) in
+  (* One hour, downward move, touched in every block *)
+  (* Initial : 1.000000 *)
+  (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
+  let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
+  assert_equal ~printer:Tez.show (Tez.of_mutez 970_407) new_params.protected_index;
+  (* One day, downward move, touched in every block *)
+  (* Initial : 1.000000 *)
+  (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
+  let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
+  assert_equal ~printer:Tez.show (Tez.of_mutez 486_151) new_params.protected_index
+
+(* ************************************************************************* *)
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
@@ -298,13 +394,7 @@ let test_imbalance_negative_tendencies =
  * increased burrowing fee index. *)
 let test_touch_identity =
   (* initial *)
-  let tezos =
-    Tezos.{
-      now = Timestamp.of_seconds 0;
-      level = Level.of_int 0;
-      self = Address.of_string "checker";
-    } in
-
+  let tezos = initial_tezos in
   let params = Parameters.make_initial tezos.now in
 
   (* neutral arguments *)
@@ -432,8 +522,11 @@ let suite =
     test_imbalance_positive_tendencies;
     test_imbalance_negative_tendencies;
 
+    (* protected index movements *)
+    test_protected_index_follows_index;
+    test_protected_index_pace;
+
     (* touch *)
     test_touch_identity;
-
     test_touch;
   ]
