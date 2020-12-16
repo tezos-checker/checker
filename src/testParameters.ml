@@ -1,5 +1,17 @@
 open OUnit2
 
+(*
+Parameter-related things we might want to add tests for:
+- The protected index follows the tendency of the current given index.
+- The protected index does not follow the given current index "too fast".
+  Calculate, to gain understanding and set explicit expectations.
+- Minting price is bounded on the low side.
+- Minting price is unbounded on the high side.
+- Liquidation price is bounded on the high side.
+- Liquidation price is unbounded on the low side.
+- TODO: add a gazillion things here.
+*)
+
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
@@ -278,6 +290,53 @@ let test_imbalance_negative_tendencies =
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
+(* just a convenient way to change levels. *)
+let make_tezos (level: int) : Tezos.t =
+  { now = Timestamp.of_seconds (level * 60);
+    level = Level.of_int level;
+    self = Address.of_string "checker";
+  }
+
+(* With the index staying at its initial value and the price of kit in tez
+ * fixed at 1, most of the parameters should stay the same, even if a long time
+ * passes. In fact, the only parameters that should change are (a) the
+ * timestamp, naturally, and (b) the burrowing fee index, which is
+ * always-increasing. *)
+let test_touch_identity =
+  (* initial *)
+  let tezos = make_tezos 0 in
+  let params = Parameters.make_initial tezos.now in
+
+  (* neutral arguments *)
+  let index = params.index in
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_touch_identity"
+       ~count:property_test_count
+       QCheck.(0 -- 1_000_000)
+  @@ fun level ->
+    let new_tezos = make_tezos level in
+    let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
+
+    (* Most of the parameters remain the same *)
+    assert_equal
+      { params with
+        last_touched = new_params.last_touched;
+        burrow_fee_index = new_params.burrow_fee_index;
+      }
+      new_params
+      ~printer:Parameters.show;
+
+    (* Burrow fee index though is ever increasing (if time passes!) *)
+    assert_equal
+      (compare level 0)
+      (compare new_params.burrow_fee_index params.burrow_fee_index)
+      ~printer:string_of_int;
+    true
+
+(* Just a simple unit test, testing nothing specific, really. *)
 let test_touch =
   "test_touch" >:: fun _ ->
     let initial_parameters : Parameters.t =
@@ -353,5 +412,7 @@ let suite =
     test_imbalance_negative_tendencies;
 
     (* touch *)
+    test_touch_identity;
+
     test_touch;
   ]

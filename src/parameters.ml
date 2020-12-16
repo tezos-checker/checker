@@ -212,6 +212,7 @@ let touch
 
   (* Update the indices *)
   let current_burrow_fee_index = FixedPoint.of_q_floor Q.( (* FLOOR-or-CEIL *)
+      (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
       FixedPoint.to_q parameters.burrow_fee_index
       * (one
          + Constants.burrow_fee_percentage
