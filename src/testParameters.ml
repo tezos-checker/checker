@@ -2,10 +2,7 @@ open OUnit2
 
 (*
 Parameter-related things we might want to add tests for:
-- Minting price is bounded on the low side.
-- Minting price is unbounded on the high side.
-- Liquidation price is bounded on the high side.
-- Liquidation price is unbounded on the low side.
+- What do the prices do? (we already have some data for the tz indices)
 - TODO: add a gazillion things here.
 *)
 
@@ -18,6 +15,24 @@ let initial_tezos =
     level = Level.of_int 0;
     self = Address.of_string "checker";
   }
+
+let rec call_touch_times
+    (index: Tez.t)
+    (kit_in_tez: Q.t)
+    (n: int)
+    (tezos: Tezos.t)
+    (params: Parameters.t)
+  : Parameters.t =
+  if n <= 0
+  then params
+  else
+    let new_tezos =
+      { tezos with
+        now = Timestamp.add_seconds tezos.now 60;
+        level = Level.(of_int (succ (to_int tezos.level)));
+      } in
+    let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
+    call_touch_times index kit_in_tez (pred n) new_tezos new_params
 
 (* ************************************************************************* *)
 (*                        compute_drift_derivative                           *)
@@ -326,24 +341,6 @@ let test_protected_index_follows_index =
       ~printer:string_of_int;
     true
 
-let rec call_touch_times
-    (index: Tez.t)
-    (kit_in_tez: Q.t)
-    (n: int)
-    (tezos: Tezos.t)
-    (params: Parameters.t)
-  : Parameters.t =
-  if n <= 0
-  then params
-  else
-    let new_tezos =
-      { tezos with
-        now = Timestamp.add_seconds tezos.now 60;
-        level = Level.(of_int (succ (to_int tezos.level)));
-      } in
-    let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
-    call_touch_times index kit_in_tez (pred n) new_tezos new_params
-
 (* The protected index should not follow the tendency of the given index "too
  * fast". According to current expectations, the protected index should be able
  * to catch up to a 2x or 0.5x move in 24 hours, and a 3% move in an hour. *)
@@ -381,6 +378,128 @@ let test_protected_index_pace =
   (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
   let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
   assert_equal ~printer:Tez.show (Tez.of_mutez 486_151) new_params.protected_index
+
+(* ************************************************************************* *)
+(*                                 Prices                                    *)
+(* ************************************************************************* *)
+
+(* The pace of change of the minting index is bounded on the low side. George:
+ * What about the pace of change of the minting price (affected also by the
+ * current quantity q)? *)
+let test_minting_index_low_bounded =
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_minting_index_low_bounded"
+       ~count:property_test_count
+       (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
+  @@ fun index ->
+    (* just the next block *)
+    let new_tezos =
+      { tezos with
+        now = Timestamp.of_seconds 60;
+        level = Level.of_int 1;
+      } in
+    let _total_accrual_to_uniswap, new_params =
+      Parameters.touch new_tezos index kit_in_tez params in
+    (Parameters.tz_minting new_params >= Tez.of_mutez 999_500) (* 0.05% down, at "best" *)
+
+(* The pace of change of the minting index is unbounded on the high side.
+ * George: What about the pace of change of the minting price (affected also by
+ * the current quantity q)? *)
+let test_minting_index_high_unbounded =
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_minting_index_high_unbounded"
+       ~count:property_test_count
+       (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
+  @@ fun index ->
+    (* just the next block *)
+    let new_tezos =
+      { tezos with
+        now = Timestamp.of_seconds 60;
+        level = Level.of_int 1;
+      } in
+    let _total_accrual_to_uniswap, new_params =
+      Parameters.touch new_tezos index kit_in_tez params in
+    assert_equal
+      index
+      (Parameters.tz_minting new_params)
+      ~printer:Tez.show;
+    true
+
+(* The pace of change of the liquidation index is bounded on the high side.
+ * George: What about the pace of change of the liquidation price (affected
+ * also by the current quantity q)? *)
+let test_liquidation_index_high_bounded =
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_liquidation_index_high_bounded"
+       ~count:property_test_count
+       (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
+  @@ fun index ->
+    (* just the next block *)
+    let new_tezos =
+      { tezos with
+        now = Timestamp.of_seconds 60;
+        level = Level.of_int 1;
+      } in
+    let _total_accrual_to_uniswap, new_params =
+      Parameters.touch new_tezos index kit_in_tez params in
+    (* not very likely to hit the < case here I think;
+     * perhaps we need a different generator *)
+    (Parameters.tz_liquidation new_params <= Tez.of_mutez 1_000_500) (* 0.05% up, at "best" *)
+
+(* The pace of change of the liquidation index is unbounded on the low side.
+ * George: What about the pace of change of the liquidation price (affected
+ * also by the current quantity q)? *)
+let test_liquidation_index_low_unbounded =
+  (* initial *)
+  let tezos = initial_tezos in
+  let params = Parameters.make_initial tezos.now in
+
+  (* Neutral kit_in_tez (same as initial) *)
+  let kit_in_tez = Q.one in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+       ~name:"test_liquidation_index_low_unbounded"
+       ~count:property_test_count
+       (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
+  @@ fun index ->
+    (* just the next block *)
+    let new_tezos =
+      { tezos with
+        now = Timestamp.of_seconds 60;
+        level = Level.of_int 1;
+      } in
+    let _total_accrual_to_uniswap, new_params =
+      Parameters.touch new_tezos index kit_in_tez params in
+    assert_equal
+      index
+      (Parameters.tz_liquidation new_params)
+      ~printer:Tez.show;
+    true
 
 (* ************************************************************************* *)
 (*                                  touch                                    *)
@@ -525,6 +644,13 @@ let suite =
     (* protected index movements *)
     test_protected_index_follows_index;
     test_protected_index_pace;
+
+    (* price movement *)
+    test_minting_index_low_bounded;
+    test_minting_index_high_unbounded;
+
+    test_liquidation_index_high_bounded;
+    test_liquidation_index_low_unbounded;
 
     (* touch *)
     test_touch_identity;
