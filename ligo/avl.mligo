@@ -34,7 +34,7 @@ type node =
 (* mem *)
 
 type mem = {
-  mem: (ptr, node) map;
+  mem: (ptr, node) big_map;
   max_id: int;
 }
 
@@ -95,7 +95,7 @@ let node_height (n: node) : int =
 
 let avl_mk_empty (mem: mem) (root_data: int): mem * avl_ptr =
   let mem = {
-    mem = (Map.empty: (ptr, node) map);
+    mem = (Big_map.empty: (ptr, node) big_map);
     max_id = 0;
   } in
   let (mem, ptr) = mem_new mem (Root ((None: ptr option), root_data)) in

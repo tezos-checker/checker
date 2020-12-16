@@ -3,3 +3,6 @@ checker.byte
 
 *.cmi
 *.cmo
+
+ligo/*.tz
+ligo/bench/*.tz
