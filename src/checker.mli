@@ -139,7 +139,15 @@ val mark_for_liquidation :
   * ignored. *)
 val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
 
-(* TODO: comment what is this supposed to do exactly. *)
+(** Cancel the liquidation of a slice. The burden is on the caller to provide
+  * both the burrow_id and the leaf_ptr. This operation can fail for several
+  * reasons:
+  * - If the leaf_ptr does not refer to the burrow_id given,
+  * - if the permission given is insufficient for this operation,
+  * - if the slice is already at the current auction,
+  * - if the slice is part of an already completed auction,
+  * - if the burrow is overburrowed at the moment.
+*)
 val cancel_liquidation_slice :
   t ->
   tezos:Tezos.t ->

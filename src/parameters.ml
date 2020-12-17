@@ -11,8 +11,6 @@ type t =
     drift: FixedPoint.t;
     burrow_fee_index: FixedPoint.t;
     imbalance_index: FixedPoint.t;
-    (* TODO: What would be a good starting value for this? Cannot be zero
-     * because then it stays zero forever (only multiplications occur). *)
     (* TODO: Test that this value does not drift too far from the real value
      * (the total amount of kit needed to close all burrows). Errors of a few
      * percents per year are NOT acceptable. Errors of 0.1% or so per year
@@ -33,6 +31,8 @@ let make_initial (ts: Timestamp.t) : t =
     drift' = FixedPoint.zero;
     burrow_fee_index = FixedPoint.one;
     imbalance_index = FixedPoint.one;
+    (* Cannot be zero because then it stays
+     * zero forever; only multiplications occur. *)
     outstanding_kit = Kit.of_mukit (Z.of_int 1);
     circulating_kit = Kit.of_mukit (Z.of_int 1);
     last_touched = ts;

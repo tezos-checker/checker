@@ -578,8 +578,8 @@ let test_touch =
         drift' = FixedPoint.zero;
         burrow_fee_index = FixedPoint.one;
         imbalance_index = FixedPoint.one;
-        outstanding_kit = Kit.one; (* TODO: What should that be? *)
-        circulating_kit = Kit.zero; (* TODO: What should that be? *)
+        outstanding_kit = Kit.one;
+        circulating_kit = Kit.zero;
         last_touched = Timestamp.of_seconds 0;
       } in
     let tezos = Tezos.{
