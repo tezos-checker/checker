@@ -15,5 +15,5 @@ tezos-client originate contract \
   running checker.tz \
   --init "$(cat storage.tz)" \
   --no-print-source \
-  --burn-cap 6
+  --burn-cap 8
 

@@ -8,10 +8,11 @@ type storage = {
 type action =
   | Nop
   | AddMany of int
+  | Take of tez
 
 let initial_storage: storage =
   let mem = {max_id = 0; mem = (Big_map.empty: (ptr, node) big_map); } in
-  let (mem, ptr) = avl_mk_empty mem 42 in
+  let (mem, ptr) = avl_mk_empty 42 mem in
   { mem = mem; root = ptr }
 
 let rec add_many (p: int * storage) : storage =
@@ -19,7 +20,7 @@ let rec add_many (p: int * storage) : storage =
   if count <= 0
   then storage
   else begin
-    let (mem, leaf) = avl_push_back storage.mem storage.root 1 1mutez in
+    let (mem, leaf) = avl_push_back storage.root 1 1mutez storage.mem in
     let storage = { storage with mem = mem; } in
     add_many (count-1, storage)
   end
@@ -30,6 +31,9 @@ let main ((p, storage): action * storage): operation list * storage =
    | Nop ->
      storage
    | AddMany count ->
-     add_many (count, storage) in
+     add_many (count, storage)
+   | Take limit ->
+     let (mem, ign) = avl_take storage.root limit 0 storage.mem in
+     { mem = mem; root = storage.root } in
  (([] : operation list), storage)
 
