@@ -9,5 +9,8 @@ clean:
 indent:
 	ocp-indent -i *.ml
 
+docs:
+	dune build @doc
+
 distclean: clean
 
