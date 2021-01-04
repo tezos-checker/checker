@@ -3,8 +3,8 @@ let
   pkgs = import sources.nixpkgs { };
   ligoPkgs =
     let ligoSrc = pkgs.fetchzip {
-      url = "https://gitlab.com/ligolang/ligo/-/archive/0.6.0/ligo-0.6.0.zip";
-      sha256 = "sha256-8apu4qIADhRTxjab8CuYPmwh8RPuoQ34kSfIk3VRE6k="; };
+      url = "https://gitlab.com/ligolang/ligo/-/archive/0.7.0/ligo-0.7.0.zip";
+      sha256 = "sha256-x0I1FW7zpaJ4IxLocFvQoEWd25xyYNZynqUZ9KhkvYY="; };
     in (import "${ligoSrc}/nix/pkgs.nix" {});
 in
 pkgs.mkShell {
