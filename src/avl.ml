@@ -289,7 +289,7 @@ let balance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.p
     let heavy_child_balance =
       heavy_child.right_height - heavy_child.left_height in
 
-    if balance < 0 && heavy_child_balance <= 0 then
+    let (mem, ptr) = if balance < 0 && heavy_child_balance <= 0 then
       (* Left, Left *)
       ref_rotate_right mem curr_ptr
     else if balance < 0 && heavy_child_balance > 0 then
@@ -306,7 +306,9 @@ let balance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.p
       let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
       ref_rotate_left mem curr_ptr
     else
-      failwith "invariant violation: balance predicates partial"
+      failwith "invariant violation: balance predicates partial" in
+    assert (branch.parent = node_parent (BigMap.mem_get mem ptr));
+    (mem, ptr)
   | _ -> (mem, curr_ptr)
 
 (* (match BigMap.mem_get mem ptr with
@@ -320,13 +322,16 @@ type join_direction =
 
 let rec ref_join
     (mem: ('l, 'r) mem) (direction: join_direction)
-    (left_ptr: BigMap.ptr) (right_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.ptr =
+    (left_ptr: BigMap.ptr) (right_ptr: BigMap.ptr)
+    : ('l, 'r) mem * BigMap.ptr =
   let left = BigMap.mem_get mem left_ptr in
   let right = BigMap.mem_get mem right_ptr in
 
   let focused = match direction with | Left -> left | Right -> right in
   let parent_ptr = node_parent focused in
 
+  (* If the left and right is of similar height, simply combining them
+   * as a branch gives a valid AVL. *)
   if abs (node_height left - node_height right) < 2 then
     let new_branch = Branch {
         left = left_ptr;
@@ -342,23 +347,36 @@ let rec ref_join
     let mem = BigMap.mem_update mem left_ptr (node_set_parent ptr) in
     let mem = BigMap.mem_update mem right_ptr (node_set_parent ptr) in
     (mem, ptr)
+  (* If the left is heavier, we can make left the parent and append the
+   * original right to left.right . *)
   else if node_height left > node_height right then
     let left = match left with Branch b -> b | _ -> failwith "impossible" in
     let (mem, new_) = ref_join mem Left left.right right_ptr in
     let mem = update_matching_child mem left_ptr left.right new_ in
     let (mem, new_) = balance mem left_ptr in
+    let mem =
+      if direction = Right
+      then BigMap.mem_update mem new_ (node_set_parent parent_ptr)
+      else mem in
+    assert (node_parent (BigMap.mem_get mem new_) = parent_ptr);
     (mem, new_)
+  (* Or vice versa. *)
   else (* node_height left < node_height right *)
     let right = match right with Branch b -> b | _ -> failwith "impossible" in
     let (mem, new_) = ref_join mem Right left_ptr right.left in
     let mem = update_matching_child mem right_ptr right.left new_ in
     let (mem, new_) = balance mem right_ptr in
-    let mem = BigMap.mem_update mem new_ (node_set_parent parent_ptr) in
+    let mem =
+      if direction = Left
+      then BigMap.mem_update mem new_ (node_set_parent parent_ptr)
+      else mem in
+    assert (node_parent (BigMap.mem_get mem new_) = parent_ptr);
+
     (mem, new_)
 
 let push_back
     (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
-  : ('l, 'r) mem * leaf_ptr =
+    : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = BigMap.mem_new mem node in
   match BigMap.mem_get mem root_ptr with
