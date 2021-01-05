@@ -329,7 +329,7 @@ let complete_auction_if_possible
               youngest
               (fun prev ->
                  match prev with
-                 | None -> failwith "completed auction without outcome"
+                 | None -> (failwith "completed auction without outcome" : auction_outcome option)
                  | Some xs -> Some ({xs with younger_auction=Some curr.contents})
               ) in
           (storage, {youngest=curr.contents; oldest}) in
@@ -397,10 +397,10 @@ let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
   let storage = auctions.avl_storage in
 
   let outcome = match Avl.root_data storage tree with
-    | None -> failwith "auction is not completed"
+    | None -> (failwith "auction is not completed" : auction_outcome)
     | Some r -> r in
   let completed_auctions = match auctions.completed_auctions with
-    | None -> failwith "invariant violation"
+    | None -> (failwith "invariant violation" : completed_auctions)
     | Some r -> r in
 
   (* First, fixup the completed auctions if we're dropping the
@@ -502,7 +502,7 @@ let oldest_completed_liquidation_slice (auctions: auctions) : Avl.leaf_ptr optio
   | None -> None
   | Some completed_auctions ->
     match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
-    | None -> failwith "invariant violation: empty auction in completed_auctions"
+    | None -> (failwith "invariant violation: empty auction in completed_auctions" : Avl.leaf_ptr option)
     | Some (leaf_ptr, _) -> Some leaf_ptr
 
 (* Test utilities *)

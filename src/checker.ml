@@ -368,7 +368,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
           match older with
           | Leaf l -> Leaf
                         { l with value = { l.value with younger = Some leaf_ptr; }; }
-          | _ -> failwith "impossible"
+          | _ -> (failwith "impossible" : (LiquidationAuction.liquidation_slice, LiquidationAuction.auction_outcome option) Avl.node)
       ) in
 
       (* Update the burrow's liquidation slices with the pointer to the newly
@@ -444,7 +444,7 @@ let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (lea
       let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       match PtrMap.find_opt leaf.burrow state.burrows with
-      | None -> failwith "invariant violation"
+      | None -> (failwith "invariant violation" : (t, Error.error) result)
       | Some b when b <> burrow ->
         Error SlicePointsToDifferentBurrow
       | Some _ when Burrow.is_overburrowed state.parameters burrow ->
@@ -539,7 +539,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
                        leaf.burrow
                        (fun b ->
                           match b with
-                          | None -> failwith "TODO: Check if this case can happen."
+                          | None -> (failwith "TODO: Check if this case can happen." : Burrow.t option)
                           (* NOTE: We should touch the burrow here I think, before we
                            * do anything else. *)
                           | Some burrow -> Some (Burrow.return_kit_from_auction leaf_ptr leaf kit_to_repay burrow)

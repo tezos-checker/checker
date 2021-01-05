@@ -156,7 +156,7 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     (* High acceleration (-/+) *)
     | () when target <= qexp (neg target_high_bracket) -> FixedPoint.(neg (cnp_005 / pow secs_in_a_day 2))
     | () when target >= qexp      target_high_bracket  -> FixedPoint.(    (cnp_005 / pow secs_in_a_day 2))
-    | _ -> failwith "impossible"
+    | _ -> (failwith "impossible" : FixedPoint.t)
   )
 
 (** Update the checker's parameters, given (a) the current timestamp

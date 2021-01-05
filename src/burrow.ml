@@ -181,7 +181,7 @@ let remove_liquidation_slice
   } in
   (* (b) adjust the pointers *)
   match burrow.liquidation_slices with
-  | None -> failwith "the burrow must have at least leaf_ptr sent off to an auction"
+  | None -> (failwith "the burrow must have at least leaf_ptr sent off to an auction" : t)
   | Some slices ->
     match (leaf.younger, leaf.older) with
     | (None, None) ->
