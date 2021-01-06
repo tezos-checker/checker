@@ -2,6 +2,16 @@
 ;; otherwise there will be warnings printed about an inaccurate
 ;; .merlin file being generated.
 
+;; ;; If one wishes to deactivate unused variable warnings (code 27) entirely
+;; (env
+;;  (dev
+;;   (flags (:standard -w -27))))
+
+;; If one wishes to make warnings non-fatal
+(env
+ (dev
+  (flags (:standard -warn-error -A))))
+
 (library
  (name huxian)
  (public_name src)
