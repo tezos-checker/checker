@@ -320,6 +320,8 @@ type join_direction =
   | Left
   | Right
 
+(* Appends left_ptr and right_ptr. The resulting node will inherit the
+ * parent of the "${join_direction}_ptr". *)
 let rec ref_join
     (mem: ('l, 'r) mem) (direction: join_direction)
     (left_ptr: BigMap.ptr) (right_ptr: BigMap.ptr)
@@ -351,28 +353,30 @@ let rec ref_join
    * original right to left.right . *)
   else if node_height left > node_height right then
     let left = match left with Branch b -> b | _ -> (failwith "impossible" : branch) in
-    let (mem, new_) = ref_join mem Left left.right right_ptr in
-    let mem = update_matching_child mem left_ptr left.right new_ in
-    let (mem, new_) = balance mem left_ptr in
+    let (mem, new_left_right) = ref_join mem Left left.right right_ptr in
+    let mem = update_matching_child mem left_ptr left.right new_left_right in
+    let (mem, new_left) = balance mem left_ptr in
+    (* If we are going to return the left one, but join_direction is right, we
+     * have to update left.parent. If the join_direction is left, we don't need
+     * to anything since it already has the correct parent. *)
     let mem =
       if direction = Right
-      then BigMap.mem_update mem new_ (node_set_parent parent_ptr)
+      then BigMap.mem_update mem new_left (node_set_parent parent_ptr)
       else mem in
-    assert (node_parent (BigMap.mem_get mem new_) = parent_ptr);
-    (mem, new_)
+    assert (node_parent (BigMap.mem_get mem new_left) = parent_ptr);
+    (mem, new_left)
   (* Or vice versa. *)
   else (* node_height left < node_height right *)
     let right = match right with Branch b -> b | _ -> (failwith "impossible" : branch) in
-    let (mem, new_) = ref_join mem Right left_ptr right.left in
-    let mem = update_matching_child mem right_ptr right.left new_ in
-    let (mem, new_) = balance mem right_ptr in
+    let (mem, new_right_left) = ref_join mem Right left_ptr right.left in
+    let mem = update_matching_child mem right_ptr right.left new_right_left in
+    let (mem, new_right) = balance mem right_ptr in
     let mem =
       if direction = Left
-      then BigMap.mem_update mem new_ (node_set_parent parent_ptr)
+      then BigMap.mem_update mem new_right (node_set_parent parent_ptr)
       else mem in
-    assert (node_parent (BigMap.mem_get mem new_) = parent_ptr);
-
-    (mem, new_)
+    assert (node_parent (BigMap.mem_get mem new_right) = parent_ptr);
+    (mem, new_right)
 
 let push_back
     (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
