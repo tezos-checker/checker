@@ -1,4 +1,5 @@
 
+
 # Uniswap sub-contract
 
 An operational interpretation of the uniswap API inside the checker contract, and operations on it.
@@ -19,15 +20,15 @@ Additional fields:
 
 ## Initialization
 
-When the system starts, all parameters are set to zero. Given that Checker get on the chain at level `lvl`, we initialize the parameters thus:
+When the system starts, all parameters are set to one. Given that Checker get on the chain at level `lvl`, we initialize the parameters thus:
 ```
-tez                      = 0
-kit                      = 0
-lqt                      = 0
-kit_in_tez_in_prev_block = 0/0     # same as kit/tez now: Undefined
+tez                      = 1mutez
+kit                      = 1mukit
+lqt                      = 1
+kit_in_tez_in_prev_block = 1     # same as kit/tez now
 last_level               = lvl
 ```
-Effectively this means that initially we cannot use uniswap for more-or-less anything (including querying the price of kit in tez). The only way to change this is by adding liquidity to it.
+Effectively, given that no one can remove the first liquidity token and how rounding works in the operations that follow, this means that the contract will never be completely out of tez, kit, or liquidity tokens. This removes the need for division-by-zero checks, and the first/non-first liquidity provider distinction. Of course, this price is only for the beginning, and hopefully through trading it will move closer to the *real* price eventually.
 
 ## General notes on the interfaces
 
@@ -57,45 +58,12 @@ If any of the following holds, the transaction fails
 * If no kit is offered (`max_kit_deposited = 0`), the transaction fails.
 * If no liquidity is to be added (`min_lqt_minted = 0`), the transaction fails.
 
-If `lqt = 0` is zero---which means that there is no liquidity in the contract---then this provider is the first "First Liquidity Provider". Otherwise, it is the "Non-first Liquidity Provider". After we perform all the above checks thus, we operate differently based on whether we have a first or a non-first liquidity provider.
-
-QQ: When `lqt = 0`, it means that the uniswap contract is deprived of all its liquidity tokens. The obvious case is when it is in its initial state, but I think it can also get there if all Liquidity Providers remove all liquidity. How should we deal with that case?
-
-### First Liquidity Provider
-
-For the first liquidity provider, we require (`amount >= 1`), to agree with Dexter's interface. If that's not the case, the transaction fails.
-
-We calculate the liquidity to be created as the amount of tez given, floored:
-```
-lqt_minted = floor(amount)
-```
-If `lqt_minted < min_lqt_minted`, then the transaction fails. Otherwise, we proceed with updating the parameters:
-```
-kit = max_kit_deposited
-tez = amount
-lqt = lqt_minted
-```
-For the contract to become immediately useful, we also set the remaining two fields as well, using **the current values**:
-```
-kit_in_tez_in_prev_block = amount / max_kit_deposited
-last_level = level
-```
-This means that `kit_in_tez_in_prev_block` does not refer to the "price of kit in tez at the end of the last block"; that would be `0/0`. That is exactly the reason we do this here: when we query the price of kit in tez we don't want to get `0/0`. Starting from the next block though, `kit_in_tez_in_prev_block` remains "one block behind", compared to the current `tez/kit` ratio, as expected.
-
-Note that the complete `amount` and `max_kit_deposited` are consumed; there are no leftovers:
-```
-tez_to_return = 0
-kit_to_return = 0
-```
-
-### Non-first Liquidity Provider
-
-For the non-first liquidity provider, we calculate the number of liquidity tokens to mint and the amount of kit that needs to be deposited using the ratio of the provided tez vs. the tez currently in the uniswap contract:
+So, we calculate the number of liquidity tokens to mint and the amount of kit that needs to be deposited using the ratio of the provided tez vs. the tez currently in the uniswap contract:
 ```
 lqt_minted    = lqt * (amount / tez)    # floor, as an integer
 kit_deposited = kit * (amount / tez)    # ceil, in mukit
 ```
-Because of this calculation, if the pool of tez is empty (`tez = 0`), the transaction fails. Also
+Because of this calculation, we need to know that the pool of tez is not empty, but this should be ensured by the initial setup of the uniswap sub-contract. Also
 * If `lqt_minted < min_lqt_minted` then the transaction fails.
 * If `max_kit_deposited < kit_deposited` then the transaction fails.
 * If `kit_deposited = Kit.zero` then the transaction fails.
@@ -130,7 +98,6 @@ QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how d
 * `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
 
 If any of the following holds, the transaction fails
-* If there are no liquidity tokens available (`lqt = 0`), the transaction fails.
 * If the amount of tez given is non-zero (`amount <> 0`), the transaction fails.
 * If we are on or past the deadline (`now >= deadline`), the transaction fails.
 * If no liquidity tokens are to be removed (`lqt_burned = 0`), the transaction fails.
@@ -161,8 +128,6 @@ tez_to_return = tez_withdrawn
 kit_to_return = kit_withdrawn
 ```
 
-QQ: Do we allow the removal of liquidity, even if it means that the uniswap contract will remain with zero liquidity? The checks above ensure that we don't get below zero, but allow zero just fine.
-
 ## Buying Kit
 
 First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
@@ -179,8 +144,6 @@ QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how d
 * `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
 
 If any of the following holds, the transaction fails
-* If the pool of tez is empty (`tez = 0`), the transaction fails.
-* If the pool of kit is empty (`kit = 0`), the transaction fails.
 * If the amount of tez given is zero (`amount = 0`), the transaction fails.
 * If we are on or past the deadline (`now >= dealine`), the transaction fails.
 * If no amount of kit is expected (`min_kit_expected = 0`), the transaction fails.
@@ -205,8 +168,6 @@ and return the bought amount of kit:
 kit_to_return = kit_bought
 ```
 
-QQ: Are we OK with this operation leaving the contract without any kit? Is that even possible or is that prevented in a way I am missing?
-
 ## Selling Kit
 
 First things first: if `last_level < now`, it means that this is the first time that the uniswap contract is touched in this block, so we update `kit_in_tez_in_prev_block` to the price observed now, and set `last_level` to the current height, so that we don't update `kit_in_tez_in_prev_block` again in this block:
@@ -224,8 +185,6 @@ QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how d
 * `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
 
 If any of the following holds, the transaction fails
-* If the pool of tez is empty (`tez = 0`), the transaction fails.
-* If the pool of kit is empty (`kit = 0`), the transaction fails.
 * If the amount of kit given is zero (`kit_given = 0`), the transaction fails.
 * If we are on or past the deadline (`now >= dealine`), the transaction fails.
 * If no amount of tez is expected (`min_tez_expected = 0`), the transaction fails.
@@ -266,8 +225,6 @@ where
 da' = da * (1 - fee)
 ```
 The two calculations give slightly different results, but hopefully that is not a problem.
-
-QQ: Are we OK with this operation leaving the contract without any tez? Is that even possible or is that prevented in a way I am missing?
 
 ## Misc
 

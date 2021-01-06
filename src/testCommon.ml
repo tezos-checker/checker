@@ -8,9 +8,6 @@ let show_error (e: Error.error) : string =
   | DelegationAuction.CannotReclaimWinningBid          -> "DelegationAuction.CannotReclaimWinningBid"
   | DelegationAuction.NotAWinningBid                   -> "DelegationAuction.NotAWinningBid"
   (* Uniswap errors *)
-  | Uniswap.UniswapEmptyTezPool                        -> "Uniswap.UniswapEmptyTezPool"
-  | Uniswap.UniswapEmptyKitPool                        -> "Uniswap.UniswapEmptyKitPool"
-  | Uniswap.UniswapEmptyLiquidityTokenPool             -> "Uniswap.UniswapEmptyLiquidityTokenPool"
   | Uniswap.UniswapNonPositiveInput                    -> "Uniswap.UniswapNonPositiveInput"
   | Uniswap.UniswapTooLate                             -> "Uniswap.UniswapTooLate"
   | Uniswap.AddLiquidityNoTezGiven                     -> "Uniswap.AddLiquidityNoTezGiven"

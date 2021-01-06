@@ -39,9 +39,6 @@ val show : t -> string
 val pp : Format.formatter -> t -> unit
 
 type Error.error +=
-  | UniswapEmptyTezPool
-  | UniswapEmptyKitPool
-  | UniswapEmptyLiquidityTokenPool
   | UniswapNonPositiveInput
   | UniswapTooLate
   | AddLiquidityNoTezGiven
@@ -76,8 +73,11 @@ val make_for_test :
   last_level:Level.t ->
   t
 
-(** The initial state of the uniswap contract. All amounts are set to zero, and
-  * the last-observed kit-in-tez price is undefined (0/0). *)
+(** The initial state of the uniswap contract. We always start with 1mukit,
+  * 1mutez, and 1lqt token (effectively setting the starting price to 1
+  * tez/kit). The price will eventually reach the value it should, but this
+  * saves us from having the first/non-first liquidity provider separation, and
+  * all division-by-zero checks. *)
 val make_initial : tezos:Tezos.t -> t
 
 (** Check whether the uniswap contract contains zero tez. *)

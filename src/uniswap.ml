@@ -3,9 +3,6 @@
 (* ************************************************************************* *)
 
 type Error.error +=
-  | UniswapEmptyTezPool
-  | UniswapEmptyKitPool
-  | UniswapEmptyLiquidityTokenPool
   | UniswapNonPositiveInput
   | UniswapTooLate
   | AddLiquidityNoTezGiven
@@ -83,10 +80,10 @@ let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
   }
 
 let make_initial ~tezos =
-  { tez = Tez.zero;
-    kit = Kit.issue ~tezos Kit.zero;
-    lqt = issue_liquidity_tokens ~tezos Z.zero;
-    kit_in_tez_in_prev_block = Q.undef; (* Same as tez/kit now. NOTE: undef! *)
+  { tez = Tez.of_mutez 1;
+    kit = Kit.issue ~tezos (Kit.of_mukit Z.one);
+    lqt = issue_liquidity_tokens ~tezos Z.one;
+    kit_in_tez_in_prev_block = Q.one; (* Same as tez/kit now. *)
     last_level = tezos.level;
   }
 
@@ -98,7 +95,7 @@ let is_kit_pool_empty (u: t) =
   let kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
   kit = Kit.zero
 
-(* TODO: Make sure to restore the ticket. *)
+(* NOTE: Make sure to restore the ticket. *)
 let is_liquidity_token_pool_empty (u: t) =
   let _, n, _, _same_ticket = Ticket.read u.lqt in
   assert (n >= Z.zero);
@@ -153,11 +150,7 @@ let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
 let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
   let uniswap = sync_last_observed uniswap tezos in
   assert_initialized uniswap;
-  if (is_tez_pool_empty uniswap) then
-    Error UniswapEmptyTezPool
-  else if (is_kit_pool_empty uniswap) then
-    Error UniswapEmptyKitPool
-  else if (amount <= Tez.zero) then
+  if (amount <= Tez.zero) then
     Error UniswapNonPositiveInput
   else if (tezos.now >= deadline) then
     Error UniswapTooLate
@@ -187,11 +180,7 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
   let kit, token = Kit.read_kit token in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   assert_initialized uniswap;
-  if is_tez_pool_empty uniswap then
-    Error UniswapEmptyTezPool
-  else if is_kit_pool_empty uniswap then
-    Error UniswapEmptyKitPool
-  else if (kit <= Kit.zero) then
+  if (kit <= Kit.zero) then
     Error UniswapNonPositiveInput
   else if tezos.now >= deadline then
     Error UniswapTooLate
@@ -232,6 +221,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
   let uniswap = sync_last_observed uniswap tezos in
   let max_kit_deposited, all_kit_deposited = Kit.read_kit max_kit_deposited in
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
+  assert_initialized uniswap;
   if tezos.now >= deadline then
     Error UniswapTooLate
   else if amount = Tez.zero then
@@ -240,34 +230,6 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
     Error AddLiquidityNoKitGiven
   else if min_lqt_minted <= Z.zero then
     Error AddLiquidityNoLiquidityToBeAdded
-  else
-  if is_liquidity_token_pool_empty uniswap then (
-    (* First Liquidity Provider *)
-    assert (uniswap_kit = Kit.zero);
-    assert (uniswap.tez = Tez.zero);
-    if amount < Tez.one then
-      Error AddLiquidityLessThanOneTez
-    else
-      let lqt_minted = Q.to_bigint (Tez.to_q amount) in (* TODO: it truncates. Desirable or not? *)
-      if lqt_minted < min_lqt_minted then
-        Error AddLiquidityTooLowLiquidityMinted
-      else
-        let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
-        let updated =
-          { kit = all_kit_deposited;
-            tez = amount;
-            lqt = liq_tokens;
-            (* George: when the contract is initialized, the "prev" data
-             * coincide with the current data, otherwise we keep uniswap
-             * useless for longer than needed. *)
-            kit_in_tez_in_prev_block = Q.(Tez.to_q amount / Kit.to_q max_kit_deposited);
-            last_level = tezos.level; } in
-        Ok (liq_tokens, Kit.issue ~tezos Kit.zero, updated)
-  )
-  else
-    (* Non-first Liquidity Provider *)
-  if is_tez_pool_empty uniswap then
-    Error UniswapEmptyTezPool
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
@@ -307,10 +269,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
   assert_initialized uniswap;
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   let _, lqt_burned, _, _ = Ticket.read lqt_burned in (* NOTE: consumed, right here. *)
-  if is_liquidity_token_pool_empty uniswap then
-    (* Since this requires a liquidity token, contract cannot be empty *)
-    Error UniswapEmptyLiquidityTokenPool
-  else if amount <> Tez.zero then
+  if amount <> Tez.zero then
     Error RemoveLiquidityNonEmptyAmount
   else if tezos.now >= deadline then
     Error UniswapTooLate
