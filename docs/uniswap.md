@@ -1,5 +1,4 @@
 
-
 # Uniswap sub-contract
 
 An operational interpretation of the uniswap API inside the checker contract, and operations on it.
@@ -51,6 +50,11 @@ QQ: Is it possible that `last_level > now`? If yes, what does it mean, and how d
 * `max_kit_deposited`: The maximum amount of kit to be added to the uniswap contract
 * `min_lqt_minted`: The minimum number of liquidity tokens expected to be received.
 * `deadline`: The deadline; starting from this timestamp the transaction cannot be executed.
+* `pending_accrual`: The amount of tez that we got from the delegation auction, to be (temporarily) added to the tez currently stored in the uniswap contract:
+  ```
+  effective_tez_balance = tez + pending_accrual
+  ```
+  Note that this does not end up being added to the tez in the uniswap contract within this function; this only happens when we enter a new cycle.
 
 If any of the following holds, the transaction fails
 * If we are on or past the deadline (`now >= dealine`), the transaction fails.
@@ -60,8 +64,8 @@ If any of the following holds, the transaction fails
 
 So, we calculate the number of liquidity tokens to mint and the amount of kit that needs to be deposited using the ratio of the provided tez vs. the tez currently in the uniswap contract:
 ```
-lqt_minted    = lqt * (amount / tez)    # floor, as an integer
-kit_deposited = kit * (amount / tez)    # ceil, in mukit
+lqt_minted    = lqt * (amount / effective_tez_balance)    # floor, as an integer
+kit_deposited = kit * (amount / effective_tez_balance)    # ceil, in mukit
 ```
 Because of this calculation, we need to know that the pool of tez is not empty, but this should be ensured by the initial setup of the uniswap sub-contract. Also
 * If `lqt_minted < min_lqt_minted` then the transaction fails.
