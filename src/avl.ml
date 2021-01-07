@@ -530,20 +530,20 @@ let is_empty (mem: ('l, 'r) mem) (AVLPtr ptr) : bool =
   | Root (Some _, _) -> false
   | _ -> (failwith "is_empty: avl_ptr does not point to a Root" : bool)
 
-let rec ref_delete_tree (mem: ('l, 'r) mem) (ptr: BigMap.ptr): ('l, 'r) mem =
-  let root = BigMap.mem_get mem ptr in
-  let mem = BigMap.mem_del mem ptr in
-  match root with
-  | Root (None, _) -> mem
-  | Leaf _ -> mem
-  | Root (Some p, _) -> ref_delete_tree mem p
-  | Branch branch ->
-    let mem = ref_delete_tree mem branch.left in
-    let mem = ref_delete_tree mem branch.right in
-    mem
+let rec ref_delete_tree (mem: ('l, 'r) mem) (ptrs: BigMap.ptr list): ('l, 'r) mem =
+  match ptrs with
+  | [] -> mem
+  | (ptr :: ptrs) ->
+    let root = BigMap.mem_get mem ptr in
+    let mem = BigMap.mem_del mem ptr in
+    match root with
+    | Root (None, _) -> ref_delete_tree mem ptrs
+    | Leaf _ -> ref_delete_tree mem ptrs
+    | Root (Some p, _) -> ref_delete_tree mem (p :: ptrs)
+    | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs)
 
 let delete_tree (mem: ('l, 'r) mem) (AVLPtr ptr): ('l, 'r) mem =
-  ref_delete_tree mem ptr
+  ref_delete_tree mem [ptr]
 
 let find_root (mem: ('l, 'r) mem) (LeafPtr leaf) : avl_ptr =
   let rec go (ptr: BigMap.ptr) : avl_ptr =
