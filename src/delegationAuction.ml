@@ -17,8 +17,9 @@ let empty (tezos: Tezos.t) = { cycle = Level.cycle tezos.level; winner = None; l
 
 let cycle t = t.cycle
 
-let winning_amount t =
-  Option.map (fun bid -> bid.amount) t.winner
+let winning_amount t = match t.winner with
+  | None -> None
+  | Some bid -> Some bid.amount
 
 let touch (t: t) (tezos: Tezos.t) =
   let current_cycle = Level.cycle tezos.level in

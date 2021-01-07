@@ -522,4 +522,6 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
 
 let oldest_liquidation_ptr (b: t) : Avl.leaf_ptr option =
   assert_invariants b;
-  Option.map (fun i -> i.oldest) b.liquidation_slices
+  match b.liquidation_slices with
+  | None -> None
+  | Some i -> Some i.oldest

@@ -343,9 +343,11 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
         burrow = burrow_id;
         tez = details.tez_to_auction;
         min_kit_for_unwarranted = details.min_kit_for_unwarranted;
-        older = Option.map
-            Burrow.(fun i -> i.youngest)
-            (Burrow.liquidation_slices burrow);
+        older = (
+          match Burrow.liquidation_slices burrow with
+          | None -> None
+          | Some i -> Some i.youngest
+        );
         younger = None;
       } in
     match LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice with
@@ -575,18 +577,23 @@ let updated_delegation_auction state tezos new_auction =
   }
 
 let delegation_auction_place_bid (state: t) ~(tezos: Tezos.t) ~(call: Call.t) =
-  Result.map
-    (fun (ticket, auction) -> (ticket, updated_delegation_auction state tezos auction) )
-    (DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount)
+  match DelegationAuction.place_bid state.delegation_auction tezos ~sender:call.sender ~amount:call.amount with
+  | Error err -> Error err
+  | Ok ticket_auction ->
+    let ticket, auction = ticket_auction in
+    Ok (ticket, updated_delegation_auction state tezos auction)
 
 let delegation_auction_claim_win state ~tezos ~bid_ticket =
-  Result.map (updated_delegation_auction state tezos)
-    (DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket)
+  match DelegationAuction.claim_win state.delegation_auction tezos ~bid_ticket:bid_ticket with
+  | Error err -> Error err
+  | Ok auction -> Ok (updated_delegation_auction state tezos auction)
 
 let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
-  Result.map
-    (fun (tez, auction) -> (tez, updated_delegation_auction state tezos auction))
-    (DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket)
+  match DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket with
+  | Error err -> Error err
+  | Ok tez_auction ->
+    let tez, auction = tez_auction in
+    Ok (tez, updated_delegation_auction state tezos auction)
 
 let touch_delegation_auction state tezos =
   updated_delegation_auction state tezos (DelegationAuction.touch state.delegation_auction tezos)

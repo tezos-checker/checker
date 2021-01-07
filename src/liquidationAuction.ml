@@ -485,9 +485,9 @@ let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions
   |> start_auction_if_possible tezos price
 
 let current_auction_tez (auctions: auctions) : Tez.t option =
-  Option.map
-    (fun auction -> Avl.avl_tez auctions.avl_storage auction.contents)
-    auctions.current_auction
+  match auctions.current_auction with
+  | None -> None
+  | Some auction -> Some (Avl.avl_tez auctions.avl_storage auction.contents)
 
 (*
  * - Cancel auction
