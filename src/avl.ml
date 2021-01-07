@@ -322,7 +322,7 @@ type join_direction =
 
 (* ************************** *)
 
-type ('l, 'r) ref_join_data = {
+type ref_join_data = {
   direction: join_direction;
   ptr: BigMap.ptr;
   to_fix: BigMap.ptr;
@@ -330,7 +330,7 @@ type ('l, 'r) ref_join_data = {
 }
 
 let ref_join_post_processing
-    (data: ('l, 'r) ref_join_data)
+    (data: ref_join_data)
     ((mem, new_child) : ('l, 'r) mem * BigMap.ptr)
   : ('l, 'r) mem * BigMap.ptr =
   let mem = update_matching_child mem data.ptr data.to_fix new_child in
@@ -342,7 +342,7 @@ let ref_join_post_processing
 (* Nice and tail-recursive left fold we can write in ligo more or less as-is. *)
 let rec left_fold_ref_join_data
     (mem_and_child_ptr : ('l, 'r) mem * BigMap.ptr)
-    (stack: (('l, 'r) ref_join_data) list)
+    (stack: ref_join_data list)
   : ('l, 'r) mem * BigMap.ptr =
   match stack with
   | [] -> mem_and_child_ptr
@@ -358,7 +358,7 @@ let rec ref_join_rec
     (direction: join_direction)
     (left_ptr: BigMap.ptr)
     (right_ptr: BigMap.ptr)
-    (stack: (('l, 'r) ref_join_data) list)
+    (stack: ref_join_data list)
   : ('l, 'r) mem * BigMap.ptr =
   let left = BigMap.mem_get mem left_ptr in
   let right = BigMap.mem_get mem right_ptr in
