@@ -592,9 +592,16 @@ let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) (limit: Tez.t)
     then (* total_tez <= limit *)
       let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
       (mem, Some curr_ptr, None)
-    else
+    else (* limit < total_tez *)
       let mem = BigMap.mem_del mem curr_ptr in
       let mem = BigMap.mem_update mem branch.right (node_set_parent branch.parent) in
+      (* Semantically it would be better to detach branch.left as well here
+       *
+       *   let mem = BigMap.mem_update mem branch.left (node_set_parent Ptr.null) in
+       *
+       * instead of changing the parent of branch.left in function "take" below.
+       * Unfortunately, this bumps reads and writes significantly (reads+=16%
+       * and writes+=20%), so we don't do it. *)
 
       if branch.left_tez = limit
       then (* left_tez = limit *)
@@ -614,7 +621,6 @@ let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) (limit: Tez.t)
           let (mem, joined) = ref_join mem Left branch.left left in
           (mem, Some joined, right)
         | (mem, None, right) ->
-          let mem = BigMap.mem_update mem branch.left (node_set_parent Ptr.null) in
           (mem, Some branch.left, right)
 
 (* Split the longest prefix of the tree with less than
