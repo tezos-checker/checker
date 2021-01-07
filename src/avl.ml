@@ -320,17 +320,55 @@ type join_direction =
   | Left
   | Right
 
-(* Appends left_ptr and right_ptr. The resulting node will inherit the
- * parent of the "${join_direction}_ptr". *)
-let rec ref_join
-    (mem: ('l, 'r) mem) (direction: join_direction)
-    (left_ptr: BigMap.ptr) (right_ptr: BigMap.ptr)
-    : ('l, 'r) mem * BigMap.ptr =
+(* ************************** *)
+
+type ('l, 'r) ref_join_data = {
+  direction: join_direction;
+  ptr: BigMap.ptr;
+  to_fix: BigMap.ptr;
+  parent_ptr: BigMap.ptr;
+}
+
+let ref_join_post_processing
+    (data: ('l, 'r) ref_join_data)
+    ((mem, new_child) : ('l, 'r) mem * BigMap.ptr)
+  : ('l, 'r) mem * BigMap.ptr =
+  let mem = update_matching_child mem data.ptr data.to_fix new_child in
+  let (mem, new_tree) = balance mem data.ptr in
+  let mem = BigMap.mem_update mem new_tree (node_set_parent data.parent_ptr) in
+  assert (node_parent (BigMap.mem_get mem new_tree) = data.parent_ptr);
+  (mem, new_tree)
+
+(* Nice and tail-recursive left fold we can write in ligo more or less as-is. *)
+let rec left_fold_ref_join_data
+    (mem_and_child_ptr : ('l, 'r) mem * BigMap.ptr)
+    (stack: (('l, 'r) ref_join_data) list)
+  : ('l, 'r) mem * BigMap.ptr =
+  match stack with
+  | [] -> mem_and_child_ptr
+  | (d :: ds) ->
+    let new_mem_and_child_ptr = ref_join_post_processing d mem_and_child_ptr in
+    left_fold_ref_join_data new_mem_and_child_ptr ds
+
+(* Appends left_ptr and right_ptr to form a new tree, and returns a pointer to
+ * the newly created tree. The resulting node will inherit the parent of the
+ * "${join_direction}_ptr". *)
+let rec ref_join_rec
+    (mem: ('l, 'r) mem)
+    (direction: join_direction)
+    (left_ptr: BigMap.ptr)
+    (right_ptr: BigMap.ptr)
+    (stack: (('l, 'r) ref_join_data) list)
+  : ('l, 'r) mem * BigMap.ptr =
   let left = BigMap.mem_get mem left_ptr in
   let right = BigMap.mem_get mem right_ptr in
 
-  let focused = match direction with | Left -> left | Right -> right in
-  let parent_ptr = node_parent focused in
+  (* The given direction determines whose parent will be the parent of the
+   * resulting tree. *)
+  let parent_ptr = match direction with
+    | Left -> node_parent left
+    | Right -> node_parent right
+  in
 
   (* If the left and right is of similar height, simply combining them
    * as a branch gives a valid AVL. *)
@@ -348,35 +386,32 @@ let rec ref_join
     let (mem, ptr) = BigMap.mem_new mem new_branch in
     let mem = BigMap.mem_update mem left_ptr (node_set_parent ptr) in
     let mem = BigMap.mem_update mem right_ptr (node_set_parent ptr) in
-    (mem, ptr)
-  (* If the left is heavier, we can make left the parent and append the
-   * original right to left.right . *)
-  else if node_height left > node_height right then
-    let left = match left with Branch b -> b | _ -> (failwith "impossible" : branch) in
-    let (mem, new_left_right) = ref_join mem Left left.right right_ptr in
-    let mem = update_matching_child mem left_ptr left.right new_left_right in
-    let (mem, new_left) = balance mem left_ptr in
-    (* If we are going to return the left one, but join_direction is right, we
-     * have to update left.parent. If the join_direction is left, we don't need
-     * to anything since it already has the correct parent. *)
-    let mem =
-      if direction = Right
-      then BigMap.mem_update mem new_left (node_set_parent parent_ptr)
-      else mem in
-    assert (node_parent (BigMap.mem_get mem new_left) = parent_ptr);
-    (mem, new_left)
-  (* Or vice versa. *)
-  else (* node_height left < node_height right *)
-    let right = match right with Branch b -> b | _ -> (failwith "impossible" : branch) in
-    let (mem, new_right_left) = ref_join mem Right left_ptr right.left in
-    let mem = update_matching_child mem right_ptr right.left new_right_left in
-    let (mem, new_right) = balance mem right_ptr in
-    let mem =
-      if direction = Left
-      then BigMap.mem_update mem new_right (node_set_parent parent_ptr)
-      else mem in
-    assert (node_parent (BigMap.mem_get mem new_right) = parent_ptr);
-    (mem, new_right)
+
+    (* Do all the patching up here *)
+    left_fold_ref_join_data (mem, ptr) stack
+  else
+    let new_direction, left_p, right_p, (ptr, to_fix) =
+      (* If the left is heavier, we can make left the parent and append the
+       * original right to left.right . *)
+      if node_height left > node_height right then
+        let left_p = (match left with Branch b -> b | _ -> failwith "impossible").right in
+        (Left, left_p, right_ptr, (left_ptr, left_p))
+      (* Or vice versa. *)
+      else (* node_height left < node_height right *)
+        let right_p = (match right with Branch b -> b | _ -> failwith "impossible").left in
+        (Right, left_ptr, right_p, (right_ptr, right_p))
+    in
+      ref_join_rec mem new_direction left_p right_p ({ direction; ptr; to_fix; parent_ptr; } :: stack)
+
+let ref_join
+    (mem: ('l, 'r) mem)
+    (direction: join_direction)
+    (left_ptr: BigMap.ptr)
+    (right_ptr: BigMap.ptr)
+  : ('l, 'r) mem * BigMap.ptr =
+  ref_join_rec mem direction left_ptr right_ptr []
+
+(* ************************** *)
 
 let push_back
     (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
