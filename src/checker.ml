@@ -748,7 +748,7 @@ let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.token * t) =
       else
         match LiquidationAuction.oldest_completed_liquidation_slice st.liquidation_auctions with
         | None -> st
-        | Some leaf -> touch_liquidation_slice st leaf |> touch_oldest (maximum - 1) in
+        | Some leaf -> touch_oldest (maximum - 1) (touch_liquidation_slice st leaf) in
 
     (* TODO: Figure out how many slices we can process per checker touch.*)
     let state = touch_oldest Constants.number_of_slices_to_process state in
