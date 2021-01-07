@@ -607,16 +607,11 @@ let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) (limit: Tez.t)
         | (mem, left, Some right) ->
           let (mem, joined) = ref_join mem Right right branch.right in
           (mem, left, Some joined)
-
       else (* left_tez < limit < total_tez *)
         let left = BigMap.mem_get mem branch.left in
         match ref_split mem branch.right Tez.(limit - (node_tez left)) with
         | (mem, Some left, right) ->
           let (mem, joined) = ref_join mem Left branch.left left in
-          let mem =
-            match right with
-            | None -> mem
-            | Some r -> BigMap.mem_update mem r (node_set_parent branch.parent) in
           (mem, Some joined, right)
         | (mem, None, right) ->
           let mem = BigMap.mem_update mem branch.left (node_set_parent Ptr.null) in
