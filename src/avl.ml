@@ -316,14 +316,14 @@ let balance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.p
    | Root _ -> ()
    | Leaf _ -> failwith "impossible"); *)
 
-type join_direction =
+type direction =
   | Left
   | Right
 
 (* ************************** *)
 
 type ref_join_data = {
-  direction: join_direction;
+  join_direction: direction;
   ptr: BigMap.ptr;
   to_fix: BigMap.ptr;
   parent_ptr: BigMap.ptr;
@@ -355,7 +355,7 @@ let rec left_fold_ref_join_data
  * "${join_direction}_ptr". *)
 let rec ref_join_rec
     (mem: ('l, 'r) mem)
-    (direction: join_direction)
+    (join_direction: direction)
     (left_ptr: BigMap.ptr)
     (right_ptr: BigMap.ptr)
     (stack: ref_join_data list)
@@ -365,7 +365,7 @@ let rec ref_join_rec
 
   (* The given direction determines whose parent will be the parent of the
    * resulting tree. *)
-  let parent_ptr = match direction with
+  let parent_ptr = match join_direction with
     | Left -> node_parent left
     | Right -> node_parent right
   in
@@ -390,7 +390,7 @@ let rec ref_join_rec
     (* Do all the patching up here *)
     left_fold_ref_join_data (mem, ptr) stack
   else
-    let new_direction, left_p, right_p, (ptr, to_fix) =
+    let new_join_direction, left_p, right_p, (ptr, to_fix) =
       (* If the left is heavier, we can make left the parent and append the
        * original right to left.right . *)
       if node_height left > node_height right then
@@ -401,15 +401,15 @@ let rec ref_join_rec
         let right_p = (match right with Branch b -> b | _ -> failwith "impossible").left in
         (Right, left_ptr, right_p, (right_ptr, right_p))
     in
-    ref_join_rec mem new_direction left_p right_p ({ direction; ptr; to_fix; parent_ptr; } :: stack)
+    ref_join_rec mem new_join_direction left_p right_p ({ join_direction; ptr; to_fix; parent_ptr; } :: stack)
 
 let ref_join
     (mem: ('l, 'r) mem)
-    (direction: join_direction)
+    (join_direction: direction)
     (left_ptr: BigMap.ptr)
     (right_ptr: BigMap.ptr)
   : ('l, 'r) mem * BigMap.ptr =
-  ref_join_rec mem direction left_ptr right_ptr []
+  ref_join_rec mem join_direction left_ptr right_ptr []
 
 (* ************************** *)
 
@@ -576,22 +576,72 @@ let pop_front (mem: ('l, 'r) mem) (AVLPtr root_ptr) : ('l, 'r) mem * 'l option =
     (mem, Some leaf.value)
   | _ -> (failwith "pop_front: avl_ptr does not point to a Root" : ('l, 'r) mem * 'l option)
 
-let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) (limit: Tez.t)
+(* ************************** *)
+
+type ref_split_data = {
+  rec_direction: direction;
+  branch: branch;
+}
+
+let ref_split_post_processing
+    (data : ref_split_data)
+    ((mem, maybe_left, maybe_right) : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
+  : ('l, 'r) mem * Ptr.t option * Ptr.t option =
+  match data.rec_direction with
+  | Left -> (
+      match maybe_right with
+      | None -> (failwith "impossible" : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
+      | Some right ->
+        let (mem, joined) = ref_join mem Right right data.branch.right in
+        (mem, maybe_left, Some joined)
+    )
+  | Right -> (
+      match maybe_left with
+      | Some left ->
+        let (mem, joined) = ref_join mem Left data.branch.left left in
+        (mem, Some joined, maybe_right)
+      | None ->
+        (mem, Some data.branch.left, maybe_right)
+    )
+
+(* Nice and tail-recursive left fold we can write in ligo more or less as-is. *)
+let rec left_fold_ref_split_data
+    (mem_and_left_ptr_and_right_ptr : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
+    (stack: ref_split_data list)
+  : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option =
+  match stack with
+  | [] -> mem_and_left_ptr_and_right_ptr
+  | (d :: ds) ->
+    let new_mem_and_left_ptr_and_right_ptr = ref_split_post_processing d mem_and_left_ptr_and_right_ptr in
+    left_fold_ref_split_data new_mem_and_left_ptr_and_right_ptr ds
+
+(* George: This does not split leaves; if the tez on the leaf exceeds the limit
+ * then it is not included in the result (it's part of the second tree
+ * returned). Essentially this means that the union of the resulting trees has
+ * the same contents as the input tree. *)
+let rec ref_split_rec
+    (mem: ('l, 'r) mem)
+    (curr_ptr: BigMap.ptr)
+    (limit: Tez.t)
+    (stack: ref_split_data list)
   : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option =
   match BigMap.mem_get mem curr_ptr with
   | Root _ -> (failwith "ref_split found Root" : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
   | Leaf leaf ->
     if leaf.tez <= limit
     then
+      (* Case 1a. Single leaf with not too much tez in it. Include it. *)
       let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
-      (mem, Some curr_ptr, None)
+      left_fold_ref_split_data (mem, Some curr_ptr, None) stack
     else
-      (mem, None, Some curr_ptr)
+      (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
+      left_fold_ref_split_data (mem, None, Some curr_ptr) stack
   | Branch branch ->
     if Tez.(branch.left_tez + branch.right_tez) <= limit
     then (* total_tez <= limit *)
+      (* Case 2. The whole tree has not too much tez in it. Include it. *)
       let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
-      (mem, Some curr_ptr, None)
+      left_fold_ref_split_data (mem, Some curr_ptr, None) stack
     else (* limit < total_tez *)
       let mem = BigMap.mem_del mem curr_ptr in
       let mem = BigMap.mem_update mem branch.right (node_set_parent branch.parent) in
@@ -604,24 +654,27 @@ let rec ref_split (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) (limit: Tez.t)
        * and writes+=20%), so we don't do it. *)
 
       if branch.left_tez = limit
-      then (* left_tez = limit *)
-        (mem, Some branch.left, Some branch.right)
+      then (* Case 3a. left_tez = limit (no need for recursion, split the tree right here) *)
+        left_fold_ref_split_data (mem, Some branch.left, Some branch.right) stack
+      else
+        let rec_direction, tree_to_recurse_into, limit_to_use =
+          if limit < branch.left_tez
+          then (* Case 3b. limit < left_tez < total_tez (we have to recurse into and split the left tree) *)
+            (Left, branch.left, limit)
+          else (* Case 3c. left_tez < limit < total_tez (we have to recurse into and split the right tree) *)
+            let left_branch = BigMap.mem_get mem branch.left in
+            (Right, branch.right, Tez.(limit - (node_tez left_branch)))
+        in
+        ref_split_rec mem tree_to_recurse_into limit_to_use ({ rec_direction; branch } :: stack)
 
-      else if limit < branch.left_tez
-      then (* limit < left_tez < total_tez *)
-        match ref_split mem branch.left limit with
-        | (_, _, None) -> (failwith "impossible" : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
-        | (mem, left, Some right) ->
-          let (mem, joined) = ref_join mem Right right branch.right in
-          (mem, left, Some joined)
-      else (* left_tez < limit < total_tez *)
-        let left = BigMap.mem_get mem branch.left in
-        match ref_split mem branch.right Tez.(limit - (node_tez left)) with
-        | (mem, Some left, right) ->
-          let (mem, joined) = ref_join mem Left branch.left left in
-          (mem, Some joined, right)
-        | (mem, None, right) ->
-          (mem, Some branch.left, right)
+let ref_split
+    (mem: ('l, 'r) mem)
+    (curr_ptr: BigMap.ptr)
+    (limit: Tez.t)
+  : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option =
+  ref_split_rec mem curr_ptr limit []
+
+(* ************************** *)
 
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
