@@ -1,6 +1,3 @@
-(* ************************************************************************* *)
-(*                                Pointers                                   *)
-(* ************************************************************************* *)
 type t (* George: perhaps I'd prefer a phantom parameter to not mix up pointers. *)
 
 val show : t -> string

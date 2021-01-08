@@ -1,6 +1,3 @@
-(* ************************************************************************* *)
-(*                                Uniswap                                    *)
-(* ************************************************************************* *)
 (* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
  * the product a * b constant. So if someone wants to sell a quantity da of

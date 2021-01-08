@@ -1,6 +1,3 @@
-(* ************************************************************************* *)
-(**                               CHECKER                                    *)
-(* ************************************************************************* *)
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_contract). *)

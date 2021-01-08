@@ -50,5 +50,3 @@ let mem_del (m: 'a M.t) (k: ptr) : 'a M.t =
   assert (M.mem k m);
   ops := { !ops with writes = !ops.writes + 1; };
   M.remove k m
-
-type node = ..
