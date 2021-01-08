@@ -290,23 +290,23 @@ let balance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.p
       heavy_child.right_height - heavy_child.left_height in
 
     let (mem, ptr) = if balance < 0 && heavy_child_balance <= 0 then
-      (* Left, Left *)
-      ref_rotate_right mem curr_ptr
-    else if balance < 0 && heavy_child_balance > 0 then
-      (* Left, Right *)
-      let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
-      let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-      ref_rotate_right mem curr_ptr
-    else if balance > 0 && heavy_child_balance >= 0 then
-      (* Right, Right*)
-      ref_rotate_left mem curr_ptr
-    else if balance > 0 && heavy_child_balance < 0 then
-      (* Right, Left *)
-      let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
-      let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-      ref_rotate_left mem curr_ptr
-    else
-      (failwith "invariant violation: balance predicates partial" : ('l, 'r) mem * BigMap.ptr) in
+        (* Left, Left *)
+        ref_rotate_right mem curr_ptr
+      else if balance < 0 && heavy_child_balance > 0 then
+        (* Left, Right *)
+        let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
+        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+        ref_rotate_right mem curr_ptr
+      else if balance > 0 && heavy_child_balance >= 0 then
+        (* Right, Right*)
+        ref_rotate_left mem curr_ptr
+      else if balance > 0 && heavy_child_balance < 0 then
+        (* Right, Left *)
+        let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
+        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+        ref_rotate_left mem curr_ptr
+      else
+        (failwith "invariant violation: balance predicates partial" : ('l, 'r) mem * BigMap.ptr) in
     assert (branch.parent = node_parent (BigMap.mem_get mem ptr));
     (mem, ptr)
   | _ -> (mem, curr_ptr)
@@ -396,12 +396,12 @@ let rec ref_join_rec
       if node_height left > node_height right then
         let left_p = (match left with Branch b -> b | _ -> failwith "impossible").right in
         (Left, left_p, right_ptr, (left_ptr, left_p))
-      (* Or vice versa. *)
+        (* Or vice versa. *)
       else (* node_height left < node_height right *)
         let right_p = (match right with Branch b -> b | _ -> failwith "impossible").left in
         (Right, left_ptr, right_p, (right_ptr, right_p))
     in
-      ref_join_rec mem new_direction left_p right_p ({ direction; ptr; to_fix; parent_ptr; } :: stack)
+    ref_join_rec mem new_direction left_p right_p ({ direction; ptr; to_fix; parent_ptr; } :: stack)
 
 let ref_join
     (mem: ('l, 'r) mem)
@@ -415,7 +415,7 @@ let ref_join
 
 let push_back
     (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
-    : ('l, 'r) mem * leaf_ptr =
+  : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = BigMap.mem_new mem node in
   match BigMap.mem_get mem root_ptr with
@@ -433,7 +433,7 @@ let push_back
 
 (* This is not going to be used in the final implementation, but it allows
  * testing some useful properties (mainly about `join` function).
- *)
+*)
 let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) mem =
   let mem = match (BigMap.mem_get mem left_ptr, BigMap.mem_get mem right_ptr) with
     | (Root _, Root (None, _)) ->
