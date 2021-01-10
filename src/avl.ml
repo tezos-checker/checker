@@ -51,19 +51,22 @@
  * to a leaf, it is possible to delete it `efficiently`.
 *)
 
+type tez = Tez.t
+[@@deriving show]
+
 type avl_ptr = AVLPtr of BigMap.ptr
 [@@deriving show]
 
-let ptr_of_avl_ptr (AVLPtr ptr) = ptr
+let ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 
 type leaf_ptr = LeafPtr of BigMap.ptr
 [@@deriving show]
 
-let ptr_of_leaf_ptr (LeafPtr ptr) = ptr
+let ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l
 
 type 't leaf = {
   value: 't;
-  tez: Tez.t;
+  tez: tez;
   parent: BigMap.ptr;
 }
 [@@deriving show]
@@ -75,8 +78,8 @@ type 't leaf = {
 type branch = {
   left: BigMap.ptr;
   left_height: int;
-  left_tez: Tez.t;
-  right_tez: Tez.t;
+  left_tez: tez;
+  right_tez: tez;
   right_height: int;
   right: BigMap.ptr;
   parent: BigMap.ptr;
@@ -91,11 +94,11 @@ type ('l, 'r) node =
 
 type ('l, 'r) mem = (('l, 'r) node) BigMap.t
 
-let node_tez (n: ('l, 'r) node) : Tez.t =
+let node_tez (n: ('l, 'r) node) : tez =
   match n with
   | Leaf leaf -> leaf.tez
   | Branch branch -> Tez.(branch.left_tez + branch.right_tez)
-  | Root _ -> (failwith "node_tez found Root" : Tez.t)
+  | Root _ -> (failwith "node_tez found Root" : tez)
 
 let node_height (n: ('l, 'r) node) : int =
   match n with
@@ -109,6 +112,18 @@ let node_parent (n: ('l, 'r) node) : BigMap.ptr =
   | Branch branch -> branch.parent
   | Root _ -> (failwith "node_parent found Root" : BigMap.ptr)
 
+let node_branch (n: ('l, 'r) node) : branch =
+  match n with
+  | Branch branch -> branch
+  | Root _ -> (failwith "node_branch found Root" : branch)
+  | Leaf _ -> (failwith "node_branch found Leaf" : branch)
+
+let node_left (n: ('l, 'r) node) : BigMap.ptr =
+  let b = node_branch n in b.left
+
+let node_right (n: ('l, 'r) node) : BigMap.ptr =
+  let b = node_branch n in b.right
+
 let node_set_parent (p: BigMap.ptr) (n: ('l, 'r) node) : ('l, 'r) node =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
@@ -118,9 +133,11 @@ let node_set_parent (p: BigMap.ptr) (n: ('l, 'r) node) : ('l, 'r) node =
 let update_matching_child
     (mem: ('l, 'r) mem) (ptr: BigMap.ptr) (from_ptr: BigMap.ptr) (to_ptr: BigMap.ptr) : ('l, 'r) mem =
   match BigMap.mem_get mem ptr with
-  | Root (b, r) ->
-    assert (b = Some from_ptr);
-    BigMap.mem_set mem ptr (Root ((Some to_ptr), r))
+  | Root r ->
+    (match r with
+      (b, r) ->
+        assert (b = Some from_ptr);
+        BigMap.mem_set mem ptr (Root ((Some to_ptr), r)))
   | Leaf _ ->
     (failwith "update_matching_child: got a leaf" : ('l, 'r) mem)
   | Branch old_branch ->
@@ -273,42 +290,43 @@ let ref_rotate_right (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem *
  * The case Dir1 <> Dir2 is repaired by
  *   a double rotation: rotate_Dir1Dir2
 *)
-let balance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.ptr =
+let rebalance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap.ptr =
   match BigMap.mem_get mem curr_ptr with
-  | Branch branch
-    when abs (branch.left_height - branch.right_height) > 1 ->
+  | Branch branch ->
+    if abs (branch.left_height - branch.right_height) > 1 then (
+      let diff = branch.right_height - branch.left_height in
+      assert (abs diff = 2);
 
-    let balance = branch.right_height - branch.left_height in
-    assert (abs balance = 2);
+      let heavy_child_ptr =
+        if diff < 0 then branch.left else branch.right in
+      let heavy_child = match BigMap.mem_get mem heavy_child_ptr with
+        | Branch b -> b
+        | Leaf _ -> (failwith "invariant violation: heavy_child should be a branch" : branch)
+        | Root _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
+      let heavy_child_balance =
+        heavy_child.right_height - heavy_child.left_height in
 
-    let heavy_child_ptr =
-      if balance < 0 then branch.left else branch.right in
-    let heavy_child = match BigMap.mem_get mem heavy_child_ptr with
-      | Branch b -> b
-      | _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
-    let heavy_child_balance =
-      heavy_child.right_height - heavy_child.left_height in
-
-    let (mem, ptr) = if balance < 0 && heavy_child_balance <= 0 then
-        (* Left, Left *)
-        ref_rotate_right mem curr_ptr
-      else if balance < 0 && heavy_child_balance > 0 then
-        (* Left, Right *)
-        let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
-        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-        ref_rotate_right mem curr_ptr
-      else if balance > 0 && heavy_child_balance >= 0 then
-        (* Right, Right*)
-        ref_rotate_left mem curr_ptr
-      else if balance > 0 && heavy_child_balance < 0 then
-        (* Right, Left *)
-        let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
-        let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-        ref_rotate_left mem curr_ptr
-      else
-        (failwith "invariant violation: balance predicates partial" : ('l, 'r) mem * BigMap.ptr) in
-    assert (branch.parent = node_parent (BigMap.mem_get mem ptr));
-    (mem, ptr)
+      let (mem, ptr) = if diff < 0 && heavy_child_balance <= 0 then
+          (* Left, Left *)
+          ref_rotate_right mem curr_ptr
+        else if diff < 0 && heavy_child_balance > 0 then
+          (* Left, Right *)
+          let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
+          let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+          ref_rotate_right mem curr_ptr
+        else if diff > 0 && heavy_child_balance >= 0 then
+          (* Right, Right*)
+          ref_rotate_left mem curr_ptr
+        else if diff > 0 && heavy_child_balance < 0 then
+          (* Right, Left *)
+          let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
+          let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+          ref_rotate_left mem curr_ptr
+        else
+          (failwith "invariant violation: balance predicates partial" : ('l, 'r) mem * BigMap.ptr) in
+      assert (branch.parent = node_parent (BigMap.mem_get mem ptr));
+      (mem, ptr)
+    ) else (mem, curr_ptr)
   | _ -> (mem, curr_ptr)
 
 (* (match BigMap.mem_get mem ptr with
@@ -334,7 +352,7 @@ let ref_join_post_processing
     ((mem, new_child) : ('l, 'r) mem * BigMap.ptr)
   : ('l, 'r) mem * BigMap.ptr =
   let mem = update_matching_child mem data.ptr data.to_fix new_child in
-  let (mem, new_tree) = balance mem data.ptr in
+  let (mem, new_tree) = rebalance mem data.ptr in
   let mem = BigMap.mem_update mem new_tree (node_set_parent data.parent_ptr) in
   assert (node_parent (BigMap.mem_get mem new_tree) = data.parent_ptr);
   (mem, new_tree)
@@ -346,7 +364,7 @@ let rec left_fold_ref_join_data
   : ('l, 'r) mem * BigMap.ptr =
   match stack with
   | [] -> mem_and_child_ptr
-  | (d :: ds) ->
+  | d :: ds ->
     let new_mem_and_child_ptr = ref_join_post_processing d mem_and_child_ptr in
     left_fold_ref_join_data new_mem_and_child_ptr ds
 
@@ -394,14 +412,15 @@ let rec ref_join_rec
       (* If the left is heavier, we can make left the parent and append the
        * original right to left.right . *)
       if node_height left > node_height right then
-        let left_p = (match left with Branch b -> b | _ -> failwith "impossible").right in
+        let left_p = node_right left in
         (Left, left_p, right_ptr, (left_ptr, left_p))
         (* Or vice versa. *)
       else (* node_height left < node_height right *)
-        let right_p = (match right with Branch b -> b | _ -> failwith "impossible").left in
+        let right_p = node_left right in
         (Right, left_ptr, right_p, (right_ptr, right_p))
     in
-    ref_join_rec mem new_join_direction left_p right_p ({ join_direction; ptr; to_fix; parent_ptr; } :: stack)
+    ref_join_rec mem new_join_direction left_p right_p
+      ({ join_direction=join_direction; ptr=ptr; to_fix=to_fix; parent_ptr=parent_ptr; } :: stack)
 
 let ref_join
     (mem: ('l, 'r) mem)
@@ -414,7 +433,7 @@ let ref_join
 (* ************************** *)
 
 let push_back
-    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: tez)
   : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = BigMap.mem_new mem node in
@@ -425,7 +444,7 @@ let push_back
     (mem, LeafPtr leaf_ptr)
   (* When there is already an element, join with the new leaf. *)
   | Root (Some ptr, r) ->
-    let (mem, ret) = ref_join mem Left ptr leaf_ptr in
+    let (mem, ret) = ref_join mem (Left) ptr leaf_ptr in
     let mem = BigMap.mem_set mem root_ptr (Root (Some ret, r)) in
     (mem, LeafPtr leaf_ptr)
   | _ ->
@@ -442,7 +461,7 @@ let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) me
       let mem = BigMap.mem_set mem left_ptr (Root (Some r, d)) in
       BigMap.mem_update mem r (node_set_parent left_ptr)
     | (Root (Some l, d), Root (Some r, _)) ->
-      let (mem, l) = ref_join mem Left l r in
+      let (mem, l) = ref_join mem (Left) l r in
       BigMap.mem_set mem left_ptr (Root (Some l, d))
     | _ ->
       (failwith "avlptr is not root" : ('l, 'r) mem) in
@@ -453,7 +472,7 @@ let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) me
  * these.
 *)
 let push_front
-    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: Tez.t)
+    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: tez)
   : ('l, 'r) mem * leaf_ptr =
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = BigMap.mem_new mem node in
@@ -464,7 +483,7 @@ let push_front
     (mem, LeafPtr leaf_ptr)
   (* When there is already an element, join with the new leaf. *)
   | Root (Some r, m) ->
-    let (mem, ret) = ref_join mem Right leaf_ptr r in
+    let (mem, ret) = ref_join mem (Right) leaf_ptr r in
     let mem = BigMap.mem_set mem root_ptr (Root (Some ret, m)) in
     (mem, LeafPtr leaf_ptr)
   | _ ->
@@ -479,7 +498,8 @@ let ref_del (mem: ('l, 'r) mem) (ptr: BigMap.ptr): ('l, 'r) mem * avl_ptr =
   match BigMap.mem_get mem parent_ptr with
   | Leaf _ -> (failwith "del: parent is a leaf" : ('l, 'r) mem * avl_ptr)
   (* when deleting the sole element, we return an empty tree *)
-  | Root (_, m) ->
+  | Root r ->
+    let (_, m) = r in
     let mem = BigMap.mem_set mem parent_ptr (Root (None, m)) in
     (mem, AVLPtr parent_ptr)
   (* otherwise, the parent of the deleted element is redundant since it
@@ -505,18 +525,19 @@ let ref_del (mem: ('l, 'r) mem) (ptr: BigMap.ptr): ('l, 'r) mem * avl_ptr =
       | Leaf _ -> (failwith "impossible" : ('l, 'r) mem * avl_ptr)
       | Branch b ->
         (* TODO we can stop recursing up when node height does not change. *)
-        let (mem, new_curr) = balance mem curr_ptr in
+        let (mem, new_curr) = rebalance mem curr_ptr in
         assert (node_parent (BigMap.mem_get mem new_curr) = b.parent);
         let mem = update_matching_child mem b.parent curr_ptr new_curr in
         balance_bottom_up mem b.parent in
     balance_bottom_up mem grandparent_ptr
 
-let del (mem: ('l, 'r) mem) (LeafPtr ptr): ('l, 'r) mem * avl_ptr = ref_del mem ptr
+let del (mem: ('l, 'r) mem) (ptr: leaf_ptr): ('l, 'r) mem * avl_ptr =
+  match ptr with LeafPtr ptr -> ref_del mem ptr
 
-let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 'l * Tez.t =
+let read_leaf (mem: ('l, 'r) mem) (LeafPtr ptr): 'l * tez =
   match BigMap.mem_get mem ptr with
   | Leaf l -> (l.value, l.tez)
-  | _ -> (failwith "read_leaf: leaf_ptr does not point to a leaf" : 'l * Tez.t)
+  | _ -> (failwith "read_leaf: leaf_ptr does not point to a leaf" : 'l * tez)
 
 let update_leaf (mem: ('l, 'r) mem) (LeafPtr ptr) (f: 'l -> 'l): ('l, 'r) mem =
   match BigMap.mem_get mem ptr with
@@ -533,14 +554,14 @@ let is_empty (mem: ('l, 'r) mem) (AVLPtr ptr) : bool =
 let rec ref_delete_tree (mem: ('l, 'r) mem) (ptrs: BigMap.ptr list): ('l, 'r) mem =
   match ptrs with
   | [] -> mem
-  | (ptr :: ptrs) ->
+  | ptr :: ptrs ->
     let root = BigMap.mem_get mem ptr in
     let mem = BigMap.mem_del mem ptr in
-    match root with
+    (match root with
     | Root (None, _) -> ref_delete_tree mem ptrs
     | Leaf _ -> ref_delete_tree mem ptrs
     | Root (Some p, _) -> ref_delete_tree mem (p :: ptrs)
-    | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs)
+    | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs))
 
 let delete_tree (mem: ('l, 'r) mem) (AVLPtr ptr): ('l, 'r) mem =
   ref_delete_tree mem [ptr]
@@ -679,27 +700,27 @@ let ref_split
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let take (mem: ('l, 'r) mem) (AVLPtr root_ptr) (limit: Tez.t) (root_data: 'r)
+let take (mem: ('l, 'r) mem) (AVLPtr root_ptr) (limit: tez) (root_data: 'r)
   : ('l, 'r) mem * avl_ptr =
   match BigMap.mem_get mem root_ptr with
-  | Root (Some r, r') ->
+  | Root (Some r, r2) ->
     let (mem, l, r) = ref_split mem r limit in
     let (mem, new_root) = BigMap.mem_new mem (Root (l, root_data)) in
     let mem = match l with
       | Some l -> BigMap.mem_update mem l (node_set_parent new_root)
       | None -> mem in
-    let mem = BigMap.mem_set mem root_ptr (Root (r, r')) in
+    let mem = BigMap.mem_set mem root_ptr (Root (r, r2)) in
     (mem, AVLPtr new_root)
   | Root (None, _) ->
     let (mem, new_root) = BigMap.mem_new mem (Root (None, root_data)) in
     (mem, AVLPtr new_root)
   | _ -> (failwith "invariant violation: avl_ptr does not point to a Root" : ('l, 'r) mem * avl_ptr)
 
-let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) : Tez.t =
+let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) : tez =
   match BigMap.mem_get mem ptr with
   | Root (Some ptr, _) -> node_tez (BigMap.mem_get mem ptr)
   | Root (None, _) -> Tez.zero
-  | _ -> (failwith "invariant violation: avl_ptr does not point to a Root" : Tez.t)
+  | _ -> (failwith "invariant violation: avl_ptr does not point to a Root" : tez)
 
 let avl_height (mem: ('l, 'r) mem) (AVLPtr ptr): int =
   match BigMap.mem_get mem ptr with
