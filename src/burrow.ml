@@ -174,8 +174,8 @@ let remove_liquidation_slice
   assert (burrow.collateral_at_auction >= leaf.tez);
   (* (a) the slice's tez is no longer in auctions, subtract it. *)
   let burrow = { burrow with
-    collateral_at_auction = Tez.(burrow.collateral_at_auction - leaf.tez);
-  } in
+                 collateral_at_auction = Tez.(burrow.collateral_at_auction - leaf.tez);
+               } in
   (* (b) adjust the pointers *)
   match burrow.liquidation_slices with
   | None -> (failwith "the burrow must have at least leaf_ptr sent off to an auction" : t)

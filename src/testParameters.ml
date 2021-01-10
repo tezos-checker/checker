@@ -216,94 +216,94 @@ let test_compute_imbalance_negative_capped =
 let test_imbalance_upper_bound =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_upper_bound"
-       ~count:property_test_count
-       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+    ~name:"test_imbalance_upper_bound"
+    ~count:property_test_count
+    (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-       Q.leq
-         (Parameters.compute_imbalance ~burrowed ~circulating)
-         (Q.of_string "5/100")
+  Q.leq
+    (Parameters.compute_imbalance ~burrowed ~circulating)
+    (Q.of_string "5/100")
 
 (* Imbalance can never go below -5% *)
 let test_imbalance_lower_bound =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_lower_bound"
-       ~count:property_test_count
-       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+    ~name:"test_imbalance_lower_bound"
+    ~count:property_test_count
+    (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-       Q.geq
-         (Parameters.compute_imbalance ~burrowed ~circulating)
-         (Q.of_string "-5/100")
+  Q.geq
+    (Parameters.compute_imbalance ~burrowed ~circulating)
+    (Q.of_string "-5/100")
 
 (* The sign of imbalance is the same as of (burrowed - circulating).
  * If burrowed > circulating then imbalance > 0
  * If burrowed < circulating then imbalance < 0
  * If burrowed = circulating then imbalance = 0 (NOTE: rarely checked, I guess)
- *)
+*)
 let test_imbalance_sign_preservation =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_sign_preservation"
-       ~count:property_test_count
-       (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+    ~name:"test_imbalance_sign_preservation"
+    ~count:property_test_count
+    (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-       Q.sign (Parameters.compute_imbalance ~burrowed ~circulating)
-       = Q.sign Kit.(to_q (burrowed - circulating))
+  Q.sign (Parameters.compute_imbalance ~burrowed ~circulating)
+  = Q.sign Kit.(to_q (burrowed - circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_is_zero_when_equal"
-       ~count:property_test_count
-       TestArbitrary.arb_kit
+    ~name:"test_imbalance_is_zero_when_equal"
+    ~count:property_test_count
+    TestArbitrary.arb_kit
   @@ fun kit ->
-       Q.equal
-         (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
-         Q.zero
+  Q.equal
+    (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
+    Q.zero
 
 (* For a fixed amount of kit in circulation, increasing the burrowed kit
  * increases the imbalance. *)
 let test_imbalance_positive_tendencies =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_positive_tendencies"
-       ~count:property_test_count
-       (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+    ~name:"test_imbalance_positive_tendencies"
+    ~count:property_test_count
+    (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (kit1, kit2, kit3) ->
-       (* If burrowed1 > burrowed2 > circulating then
-        * (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating) *)
-       let (circulating, burrowed2, burrowed1) = (
-         (* Just using sorting, to avoid expensive assume-conditionals. *)
-         match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
-         | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
-         | _ -> failwith "impossible"
-       ) in
-       Q.geq
-          (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
-          (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
+  (* If burrowed1 > burrowed2 > circulating then
+   * (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating) *)
+  let (circulating, burrowed2, burrowed1) = (
+    (* Just using sorting, to avoid expensive assume-conditionals. *)
+    match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+    | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
+    | _ -> failwith "impossible"
+  ) in
+  Q.geq
+    (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
+    (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
 
 (* For a fixed amount of burrowed kit, increasing the kit in circulation
  * decreases the imbalance. *)
 let test_imbalance_negative_tendencies =
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_imbalance_negative_tendencies"
-       ~count:property_test_count
-       (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+    ~name:"test_imbalance_negative_tendencies"
+    ~count:property_test_count
+    (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (kit1, kit2, kit3) ->
-       (* If circulating1 > circulating2 > burrowed then
-        * (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2) *)
-       let (burrowed, circulating2, circulating1) = (
-         (* Just using sorting, to avoid expensive assume-conditionals. *)
-         match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
-         | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
-         | _ -> failwith "impossible"
-       ) in
-       Q.leq
-          (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
-          (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
+  (* If circulating1 > circulating2 > burrowed then
+   * (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2) *)
+  let (burrowed, circulating2, circulating1) = (
+    (* Just using sorting, to avoid expensive assume-conditionals. *)
+    match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+    | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
+    | _ -> failwith "impossible"
+  ) in
+  Q.leq
+    (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
+    (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
 
 (* ************************************************************************* *)
 (*                          Index/Protected Index                            *)
@@ -321,63 +321,63 @@ let test_protected_index_follows_index =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_protected_index_follows_index"
-       ~count:property_test_count
-       (QCheck.pair TestArbitrary.arb_small_tez QCheck.small_nat)
+    ~name:"test_protected_index_follows_index"
+    ~count:property_test_count
+    (QCheck.pair TestArbitrary.arb_small_tez QCheck.small_nat)
   @@ fun (index, lvl) ->
-    let lvl = lvl + 1 in (* let time pass, please *)
-    let new_tezos =
-      { tezos with
-        now = Timestamp.of_seconds (lvl * 60);
-        level = Level.of_int lvl;
-      } in
+  let lvl = lvl + 1 in (* let time pass, please *)
+  let new_tezos =
+    { tezos with
+      now = Timestamp.of_seconds (lvl * 60);
+      level = Level.of_int lvl;
+    } in
 
-    let _total_accrual_to_uniswap, new_params =
-      Parameters.touch new_tezos index kit_in_tez params in
+  let _total_accrual_to_uniswap, new_params =
+    Parameters.touch new_tezos index kit_in_tez params in
 
-    assert_equal
-      (compare new_params.index params.index)
-      (compare new_params.protected_index params.protected_index)
-      ~printer:string_of_int;
-    true
+  assert_equal
+    (compare new_params.index params.index)
+    (compare new_params.protected_index params.protected_index)
+    ~printer:string_of_int;
+  true
 
 (* The protected index should not follow the tendency of the given index "too
  * fast". According to current expectations, the protected index should be able
  * to catch up to a 2x or 0.5x move in 24 hours, and a 3% move in an hour. *)
 let test_protected_index_pace =
   "test_protected_index_pace" >:: fun _ ->
-  (* initial *)
-  let tezos = initial_tezos in
-  let params = Parameters.make_initial tezos.now in
+    (* initial *)
+    let tezos = initial_tezos in
+    let params = Parameters.make_initial tezos.now in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+    (* Neutral kit_in_tez (same as initial) *)
+    let kit_in_tez = Q.one in
 
-  (* UPWARD MOVES *)
-  let very_high_index = Tez.of_q_floor Q.(Q.of_string "1000" * Tez.to_q params.index) in
-  (* One hour, upward move, touched in every block *)
-  (* Initial : 1.000000 *)
-  (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
-  let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
-  assert_equal ~printer:Tez.show (Tez.of_mutez 1_030_420) new_params.protected_index;
-  (* One day, upward move, touched in every block *)
-  (* Initial : 1.000000 *)
-  (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
-  let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
-  assert_equal ~printer:Tez.show (Tez.of_mutez 2_053_031) new_params.protected_index;
+    (* UPWARD MOVES *)
+    let very_high_index = Tez.of_q_floor Q.(Q.of_string "1000" * Tez.to_q params.index) in
+    (* One hour, upward move, touched in every block *)
+    (* Initial : 1.000000 *)
+    (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
+    let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
+    assert_equal ~printer:Tez.show (Tez.of_mutez 1_030_420) new_params.protected_index;
+    (* One day, upward move, touched in every block *)
+    (* Initial : 1.000000 *)
+    (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
+    let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
+    assert_equal ~printer:Tez.show (Tez.of_mutez 2_053_031) new_params.protected_index;
 
-  (* DOWNWARD MOVES *)
-  let very_low_index = Tez.of_q_floor Q.(Q.of_string "1/1000" * Tez.to_q params.index) in
-  (* One hour, downward move, touched in every block *)
-  (* Initial : 1.000000 *)
-  (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
-  let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
-  assert_equal ~printer:Tez.show (Tez.of_mutez 970_407) new_params.protected_index;
-  (* One day, downward move, touched in every block *)
-  (* Initial : 1.000000 *)
-  (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
-  let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
-  assert_equal ~printer:Tez.show (Tez.of_mutez 486_151) new_params.protected_index
+    (* DOWNWARD MOVES *)
+    let very_low_index = Tez.of_q_floor Q.(Q.of_string "1/1000" * Tez.to_q params.index) in
+    (* One hour, downward move, touched in every block *)
+    (* Initial : 1.000000 *)
+    (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
+    let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
+    assert_equal ~printer:Tez.show (Tez.of_mutez 970_407) new_params.protected_index;
+    (* One day, downward move, touched in every block *)
+    (* Initial : 1.000000 *)
+    (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
+    let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
+    assert_equal ~printer:Tez.show (Tez.of_mutez 486_151) new_params.protected_index
 
 (* ************************************************************************* *)
 (*                                 Prices                                    *)
@@ -396,19 +396,19 @@ let test_minting_index_low_bounded =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_minting_index_low_bounded"
-       ~count:property_test_count
-       (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
+    ~name:"test_minting_index_low_bounded"
+    ~count:property_test_count
+    (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
   @@ fun index ->
-    (* just the next block *)
-    let new_tezos =
-      { tezos with
-        now = Timestamp.of_seconds 60;
-        level = Level.of_int 1;
-      } in
-    let _total_accrual_to_uniswap, new_params =
-      Parameters.touch new_tezos index kit_in_tez params in
-    (Parameters.tz_minting new_params >= Tez.of_mutez 999_500) (* 0.05% down, at "best" *)
+  (* just the next block *)
+  let new_tezos =
+    { tezos with
+      now = Timestamp.of_seconds 60;
+      level = Level.of_int 1;
+    } in
+  let _total_accrual_to_uniswap, new_params =
+    Parameters.touch new_tezos index kit_in_tez params in
+  (Parameters.tz_minting new_params >= Tez.of_mutez 999_500) (* 0.05% down, at "best" *)
 
 (* The pace of change of the minting index is unbounded on the high side.
  * George: What about the pace of change of the minting price (affected also by
@@ -423,23 +423,23 @@ let test_minting_index_high_unbounded =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_minting_index_high_unbounded"
-       ~count:property_test_count
-       (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
+    ~name:"test_minting_index_high_unbounded"
+    ~count:property_test_count
+    (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
   @@ fun index ->
-    (* just the next block *)
-    let new_tezos =
-      { tezos with
-        now = Timestamp.of_seconds 60;
-        level = Level.of_int 1;
-      } in
-    let _total_accrual_to_uniswap, new_params =
-      Parameters.touch new_tezos index kit_in_tez params in
-    assert_equal
-      index
-      (Parameters.tz_minting new_params)
-      ~printer:Tez.show;
-    true
+  (* just the next block *)
+  let new_tezos =
+    { tezos with
+      now = Timestamp.of_seconds 60;
+      level = Level.of_int 1;
+    } in
+  let _total_accrual_to_uniswap, new_params =
+    Parameters.touch new_tezos index kit_in_tez params in
+  assert_equal
+    index
+    (Parameters.tz_minting new_params)
+    ~printer:Tez.show;
+  true
 
 (* The pace of change of the liquidation index is bounded on the high side.
  * George: What about the pace of change of the liquidation price (affected
@@ -454,21 +454,21 @@ let test_liquidation_index_high_bounded =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_liquidation_index_high_bounded"
-       ~count:property_test_count
-       (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
+    ~name:"test_liquidation_index_high_bounded"
+    ~count:property_test_count
+    (QCheck.map Tez.of_mutez QCheck.(1_000_001 -- max_int))
   @@ fun index ->
-    (* just the next block *)
-    let new_tezos =
-      { tezos with
-        now = Timestamp.of_seconds 60;
-        level = Level.of_int 1;
-      } in
-    let _total_accrual_to_uniswap, new_params =
-      Parameters.touch new_tezos index kit_in_tez params in
-    (* not very likely to hit the < case here I think;
-     * perhaps we need a different generator *)
-    (Parameters.tz_liquidation new_params <= Tez.of_mutez 1_000_500) (* 0.05% up, at "best" *)
+  (* just the next block *)
+  let new_tezos =
+    { tezos with
+      now = Timestamp.of_seconds 60;
+      level = Level.of_int 1;
+    } in
+  let _total_accrual_to_uniswap, new_params =
+    Parameters.touch new_tezos index kit_in_tez params in
+  (* not very likely to hit the < case here I think;
+   * perhaps we need a different generator *)
+  (Parameters.tz_liquidation new_params <= Tez.of_mutez 1_000_500) (* 0.05% up, at "best" *)
 
 (* The pace of change of the liquidation index is unbounded on the low side.
  * George: What about the pace of change of the liquidation price (affected
@@ -483,23 +483,23 @@ let test_liquidation_index_low_unbounded =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_liquidation_index_low_unbounded"
-       ~count:property_test_count
-       (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
+    ~name:"test_liquidation_index_low_unbounded"
+    ~count:property_test_count
+    (QCheck.map Tez.of_mutez QCheck.(0 -- 999_999))
   @@ fun index ->
-    (* just the next block *)
-    let new_tezos =
-      { tezos with
-        now = Timestamp.of_seconds 60;
-        level = Level.of_int 1;
-      } in
-    let _total_accrual_to_uniswap, new_params =
-      Parameters.touch new_tezos index kit_in_tez params in
-    assert_equal
-      index
-      (Parameters.tz_liquidation new_params)
-      ~printer:Tez.show;
-    true
+  (* just the next block *)
+  let new_tezos =
+    { tezos with
+      now = Timestamp.of_seconds 60;
+      level = Level.of_int 1;
+    } in
+  let _total_accrual_to_uniswap, new_params =
+    Parameters.touch new_tezos index kit_in_tez params in
+  assert_equal
+    index
+    (Parameters.tz_liquidation new_params)
+    ~printer:Tez.show;
+  true
 
 (* ************************************************************************* *)
 (*                                  touch                                    *)
@@ -522,49 +522,49 @@ let test_touch_identity =
 
   qcheck_to_ounit
   @@ QCheck.Test.make
-       ~name:"test_touch_identity"
-       ~count:property_test_count
-       TestArbitrary.arb_tezos
+    ~name:"test_touch_identity"
+    ~count:property_test_count
+    TestArbitrary.arb_tezos
   @@ fun new_tezos ->
-    let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
+  let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
 
-    (* Most of the parameters remain the same *)
-    assert_equal
-      { params with
-        last_touched = new_params.last_touched;
-        burrow_fee_index = new_params.burrow_fee_index;
-        outstanding_kit = new_params.outstanding_kit;
-        circulating_kit = new_params.circulating_kit;
-      }
-      new_params
-      ~printer:Parameters.show;
+  (* Most of the parameters remain the same *)
+  assert_equal
+    { params with
+      last_touched = new_params.last_touched;
+      burrow_fee_index = new_params.burrow_fee_index;
+      outstanding_kit = new_params.outstanding_kit;
+      circulating_kit = new_params.circulating_kit;
+    }
+    new_params
+    ~printer:Parameters.show;
 
-    (* Burrow fee index though is ever increasing (if time passes!) *)
-    assert_equal
-      (compare new_tezos.now tezos.now)
-      (compare new_params.burrow_fee_index params.burrow_fee_index)
-      ~printer:string_of_int;
+  (* Burrow fee index though is ever increasing (if time passes!) *)
+  assert_equal
+    (compare new_tezos.now tezos.now)
+    (compare new_params.burrow_fee_index params.burrow_fee_index)
+    ~printer:string_of_int;
 
-    (* Outstanding kit and circulating kit increase (imbalance starts at zero
-     * and stays there, so we only have burrowing fees). *)
-    assert_bool
-      "outstanding kit should increase over time"
-      (new_params.outstanding_kit >= params.outstanding_kit); (* most of the time equal, but over enough time greater-than *)
-    assert_bool
-      "circulating kit should increase over time"
-      (new_params.circulating_kit >= params.circulating_kit); (* most of the time equal, but over enough time greater-than *)
-    assert_bool
-      "imbalance should not increase or decrease over time"
-      (let new_imbalance =
-         Parameters.compute_imbalance
-           ~burrowed:new_params.outstanding_kit
-           ~circulating:new_params.circulating_kit in
-       let old_imbalance =
-         Parameters.compute_imbalance
-           ~burrowed:params.outstanding_kit
-           ~circulating:params.circulating_kit in
-       new_imbalance = old_imbalance);
-    true
+  (* Outstanding kit and circulating kit increase (imbalance starts at zero
+   * and stays there, so we only have burrowing fees). *)
+  assert_bool
+    "outstanding kit should increase over time"
+    (new_params.outstanding_kit >= params.outstanding_kit); (* most of the time equal, but over enough time greater-than *)
+  assert_bool
+    "circulating kit should increase over time"
+    (new_params.circulating_kit >= params.circulating_kit); (* most of the time equal, but over enough time greater-than *)
+  assert_bool
+    "imbalance should not increase or decrease over time"
+    (let new_imbalance =
+       Parameters.compute_imbalance
+         ~burrowed:new_params.outstanding_kit
+         ~circulating:new_params.circulating_kit in
+     let old_imbalance =
+       Parameters.compute_imbalance
+         ~burrowed:params.outstanding_kit
+         ~circulating:params.circulating_kit in
+     new_imbalance = old_imbalance);
+  true
 
 (* Just a simple unit test, testing nothing specific, really. *)
 let test_touch =

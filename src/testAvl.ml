@@ -100,9 +100,9 @@ let permutations (xs: 't list): ('t list) Stream.t =
     ) else None in
 
   Stream.from (fun _ ->
-    if !i == -1
-    then (i := 0; Some (Array.to_list a))
-    else loop ())
+      if !i == -1
+      then (i := 0; Some (Array.to_list a))
+      else loop ())
 
 
 
@@ -337,11 +337,11 @@ let suite =
        let (mem, root) = mk_empty BigMap.empty 0 in
 
        let rec go i mem =
-           if i <= 0
-           then mem
-           else
-             let (mem, _) = push_back mem root i (Tez.of_mutez i) in
-             go (i-1) mem in
+         if i <= 0
+         then mem
+         else
+           let (mem, _) = push_back mem root i (Tez.of_mutez i) in
+           go (i-1) mem in
 
        let mem = go 100_000 mem in
        assert_invariants mem root;
@@ -358,8 +358,8 @@ let suite =
     "test_all_permutations" >::
     (fun _ ->
        range 0 10
-         |> permutations
-         |> Stream.iter (fun xs ->
+       |> permutations
+       |> Stream.iter (fun xs ->
            let xs = List.map (fun i -> (i, Tez.of_mutez i)) xs in
            let (mem, root) = from_list BigMap.empty 0 xs in
            assert_invariants mem root;

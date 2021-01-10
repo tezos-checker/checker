@@ -254,7 +254,7 @@ let test_sell_kit_increases_product =
   @@ QCheck.Test.make
     ~name:"test_sell_kit_increases_product"
     ~count:property_test_count
-     make_inputs_for_sell_kit_to_succeed
+    make_inputs_for_sell_kit_to_succeed
   @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
   let _bought_tez, new_uniswap = assert_ok @@
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
@@ -267,7 +267,7 @@ let test_sell_kit_does_not_affect_liquidity =
   @@ QCheck.Test.make
     ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
-     make_inputs_for_sell_kit_to_succeed
+    make_inputs_for_sell_kit_to_succeed
   @@ fun (uniswap, amount, token, min_tez_expected, tezos, deadline) ->
   let _bought_tez, new_uniswap = assert_ok @@
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~tezos ~deadline in
@@ -357,8 +357,8 @@ let test_add_liquidity_might_decrease_price =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
-      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Q.(Uniswap.kit_in_tez new_uniswap <= Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the product
@@ -370,8 +370,8 @@ let test_add_liquidity_increases_product =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
-      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Q.(Uniswap.kit_times_tez new_uniswap > Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the liquidity;
@@ -383,8 +383,8 @@ let test_add_liquidity_increases_liquidity =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-    let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
-      Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+    Uniswap.add_liquidity uniswap ~tezos ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap > Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
@@ -444,8 +444,8 @@ let test_remove_liquidity_decreases_product =
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
   @@ fun (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-    let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
-      Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+  let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+    Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
   Q.(Uniswap.kit_times_tez new_uniswap <= Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.remove_liquidity always decreases the liquidity;
@@ -457,8 +457,8 @@ let test_remove_liquidity_decreases_liquidity =
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
   @@ fun (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-    let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
-      Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+  let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+    Uniswap.remove_liquidity uniswap ~tezos ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap < Uniswap.liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)

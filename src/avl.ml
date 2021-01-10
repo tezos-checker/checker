@@ -135,9 +135,9 @@ let update_matching_child
   match BigMap.mem_get mem ptr with
   | Root r ->
     (match r with
-      (b, r) ->
-        assert (b = Some from_ptr);
-        BigMap.mem_set mem ptr (Root ((Some to_ptr), r)))
+       (b, r) ->
+       assert (b = Some from_ptr);
+       BigMap.mem_set mem ptr (Root ((Some to_ptr), r)))
   | Leaf _ ->
     (failwith "update_matching_child: got a leaf" : ('l, 'r) mem)
   | Branch old_branch ->
@@ -558,10 +558,10 @@ let rec ref_delete_tree (mem: ('l, 'r) mem) (ptrs: BigMap.ptr list): ('l, 'r) me
     let root = BigMap.mem_get mem ptr in
     let mem = BigMap.mem_del mem ptr in
     (match root with
-    | Root (None, _) -> ref_delete_tree mem ptrs
-    | Leaf _ -> ref_delete_tree mem ptrs
-    | Root (Some p, _) -> ref_delete_tree mem (p :: ptrs)
-    | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs))
+     | Root (None, _) -> ref_delete_tree mem ptrs
+     | Leaf _ -> ref_delete_tree mem ptrs
+     | Root (Some p, _) -> ref_delete_tree mem (p :: ptrs)
+     | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs))
 
 let delete_tree (mem: ('l, 'r) mem) (AVLPtr ptr): ('l, 'r) mem =
   ref_delete_tree mem [ptr]

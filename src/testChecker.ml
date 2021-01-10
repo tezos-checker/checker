@@ -91,8 +91,8 @@ let suite =
            ~kit:(Kit.of_mukit Z.one) in
 
        (* Over time the burrows with outstanding kit should be overburrowed
-	* (NOTE: even if the index stays where it was before, but that would
-	* take more time I guess). *)
+          	* (NOTE: even if the index stays where it was before, but that would
+          	* take more time I guess). *)
        let int_level = 1 in
        let tezos = make_tezos int_level in
 
@@ -137,10 +137,10 @@ let suite =
        assert_equal
          (Error LiquidationAuction.NoOpenAuction)
          (Checker.liquidation_auction_place_bid
-           checker
-           ~tezos:tezos
-           ~call:{sender=bob; amount = Tez.zero;}
-           ~kit:(Kit.issue ~tezos (Kit.of_mukit (Z.of_int 1_000))));
+            checker
+            ~tezos:tezos
+            ~call:{sender=bob; amount = Tez.zero;}
+            ~kit:(Kit.issue ~tezos (Kit.of_mukit (Z.of_int 1_000))));
 
        let touch_reward, checker =
          Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in

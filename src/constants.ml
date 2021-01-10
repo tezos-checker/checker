@@ -86,5 +86,5 @@ let number_of_slices_to_process : int = 5
 (** Maximum height of the tree used as liquidation queue.
   * The maximum number of elements will be between 2**(n-1) and 2**(n-2).
   * TODO: Decide on the number here.
-  *)
+*)
 let max_liquidation_queue_height: int = 12
