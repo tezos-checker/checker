@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+relevant_files="$(
+  git diff --cached --name-status \
+    | awk '$1 != "D" { print $2 }' \
+    | grep -E '.ml$' \
+)"
+
+has_error=false
+while read fname; do
+  if [[ -z "$fname" ]]; then continue; fi
+  indented="$(ocp-indent "$fname")"
+  actual="$(cat "$fname")"
+  if [[ "$indented" != "$actual" ]]; then
+     has_error=true
+     echo "Not indented: $fname" >&2
+  fi
+done < <(echo "$relevant_files")
+
+if [[ $has_error = true ]]; then
+  echo "Found files with incorrect indentation. Please run 'make indent' under 'src/'." >&2
+  exit 1
+fi
