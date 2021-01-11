@@ -1,12 +1,11 @@
 
-let arb_tez = QCheck.map ~rev:Tez.to_mutez Tez.of_mutez QCheck.(0 -- max_int)
+let arb_tez = QCheck.map Tez.of_mutez QCheck.(0 -- max_int)
 
-let arb_positive_tez = QCheck.map ~rev:Tez.to_mutez Tez.of_mutez QCheck.(1 -- max_int)
+let arb_positive_tez = QCheck.map Tez.of_mutez QCheck.(1 -- max_int)
 
 (* somewhere between 0 and 3 tez *)
 let arb_small_tez =
   QCheck.map
-    ~rev:Tez.to_mutez
     Tez.of_mutez
     QCheck.(1 -- ((max_int / 479_988_656_967) / 4))
 
