@@ -1,3 +1,6 @@
+(* TODO: Perhaps we should represent this as a Nat.t, instead of an integer. It
+ * all boils down to what we wish to use when calculating. Leave an int for
+ * now, but we should make an explicit decision on this. *)
 type t = Z.t
 let scaling_factor = Z.of_int64 1000000L
 let scaling_exponent = 6

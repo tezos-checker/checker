@@ -1,12 +1,11 @@
 type 'a t =
   { issuer : Address.t;
-    amount : Z.t [@printer Z.pp_print]; (* INVARIANT: NON-NEGATIVE *)
+    amount : Nat.t;
     content : 'a;
   }
 [@@deriving show]
 
 let create ~issuer ~amount ~content =
-  assert (amount >= Z.zero);
   { issuer = issuer;
     amount = amount;
     content = content;
@@ -15,7 +14,7 @@ let create ~issuer ~amount ~content =
 let read ticket = (ticket.issuer, ticket.amount, ticket.content, ticket)
 
 let split ticket left right =
-  if Z.(left + right <> ticket.amount)
+  if Nat.(left + right <> ticket.amount)
   then None
   else
     (* NOTE: I hope the content has no tickets in it to duplicate! *)
@@ -28,6 +27,6 @@ let join t1 t2 =
   then None
   else Some (create
                ~issuer:t1.issuer
-               ~amount:Z.(t1.amount + t2.amount)
+               ~amount:Nat.(t1.amount + t2.amount)
                ~content:t1.content)
 

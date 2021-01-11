@@ -28,7 +28,7 @@ type liquidity = liquidity_token_content Ticket.t (* George: didn't want to expo
 val show_liquidity : liquidity -> string
 val pp_liquidity : Format.formatter -> liquidity -> unit
 
-val issue_liquidity_tokens : tezos:Tezos.t -> Z.t -> liquidity
+val issue_liquidity_tokens : tezos:Tezos.t -> Nat.t -> liquidity
 
 type t
 
@@ -149,7 +149,7 @@ val add_liquidity :
   (** This amount is temporarily treated as if it is part of the tez balance *)
   pending_accrual:Tez.t ->
   max_kit_deposited:Kit.token ->
-  min_lqt_minted:Z.t ->
+  min_lqt_minted:Nat.t ->
   deadline:Timestamp.t ->
   (liquidity * Kit.token * t, Error.error) result
 

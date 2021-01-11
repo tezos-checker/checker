@@ -1,3 +1,8 @@
+(* TODO: Perhaps we should represent this as a Nat.t, instead of an integer. It
+ * all boils down to what we wish to use when calculating (e.g. negative kit
+ * can be useful for the imbalance adjustment, which can be either positive or
+ * negative). Leave an int for now, but we should make an explicit decision on
+ * this. *)
 type t = Z.t
 let scaling_factor = Z.of_int64 1000000L
 let scaling_exponent = 6
@@ -45,7 +50,9 @@ type kit_token_content = Kit [@@deriving show]
 type token = kit_token_content Ticket.t [@@deriving show]
 
 let issue ~(tezos: Tezos.t) (kit: t) : token =
-  Ticket.create ~issuer:tezos.self ~amount:kit ~content:Kit
+  match Nat.of_int kit with
+  | None -> failwith "Kit.issue: cannot issue a negative number of mukit!"
+  | Some n -> Ticket.create ~issuer:tezos.self ~amount:n ~content:Kit
 
 type Error.error +=
   | InvalidKitToken
@@ -55,7 +62,7 @@ type Error.error +=
   * enforced by its type). *)
 let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
   let issuer, amount, _content, same_ticket = Ticket.read token in
-  let is_valid = issuer = tezos.self && amount >= Z.zero in
+  let is_valid = issuer = tezos.self && amount >= Nat.zero in
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token
@@ -69,10 +76,12 @@ let with_valid_kit_token
 
 let read_kit (token: token) : t * token =
   let _issuer, mukit, _content, same_token = Ticket.read token in
-  (mukit, same_token)
+  (Nat.to_int mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =
-  Option.get (Ticket.split token left right)
+  match Nat.of_int left, Nat.of_int right with
+  | Some l, Some r -> Option.get (Ticket.split token l r)
+  | _, _ -> failwith "Kit.split_or_fail: cannot split using a negative number of mukit!"
 
 let join_or_fail (left: token) (right: token) : token =
   Option.get (Ticket.join left right)
