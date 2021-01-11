@@ -1,48 +1,32 @@
-(* TODO: Perhaps we should represent this as a Nat.t, instead of an integer. It
- * all boils down to what we wish to use when calculating. Leave an int for
- * now, but we should make an explicit decision on this. *)
-type t = Z.t
+type t = Nat.t
 let scaling_factor = Z.of_int64 1000000L
-let scaling_exponent = 6
 
 (* Basic arithmetic operations. *)
-let ( + ) x y = Z.(x + y)
-let ( - ) x y = Z.(x - y)
+let ( + ) x y = Nat.(x + y)
+let ( - ) x y =
+  match Nat.of_int (Nat.sub x y) with
+  | None -> failwith "Tez.(-): negative"
+  | Some z -> z
 
-let compare x y = Z.compare x y
+let compare x y = Nat.compare x y
 
-let zero = Z.zero
-let one = scaling_factor
+let zero = Nat.zero
+let one = Nat.abs scaling_factor
 
 (* Conversions to/from other types. *)
-let of_mutez = Z.of_int
+let of_mutez amount =
+  match Nat.of_int (Z.of_int amount) with
+  | None -> failwith "Tez.of_mutez: negative"
+  | Some z -> z
 
-let to_q amount = Q.make amount scaling_factor
-let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
-let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
-(* George: do we need flooring-division or truncating-division? more thought is needed *)
-
-let scale amount fp = (* NOTE: IT FLOORS *)
-  of_q_floor Q.(FixedPoint.to_q fp * to_q amount)
+let to_q amount = Q.make (Nat.to_int amount) scaling_factor
+let of_q_ceil amount = Nat.of_q_ceil (Q.make Z.(Q.num amount * scaling_factor) (Q.den amount))
+let of_q_floor amount = Nat.of_q_floor (Q.make Z.(Q.num amount * scaling_factor) (Q.den amount))
 
 (* Pretty printing functions *)
-let show amount =
-  let zfill s width =
-    let to_fill = Stdlib.(width - (String.length s)) in
-    if to_fill <= 0
-    then s
-    else (String.make to_fill '0') ^ s in
-
-  let sign = if amount < Z.zero then "-" else "" in
-  let (upper, lower) = Z.div_rem (Z.abs amount) scaling_factor in
-  Format.sprintf "%s%s.%s"
-    sign
-    (Z.to_string upper)
-    (zfill (Z.to_string lower) scaling_exponent)
-
+let show amount = Nat.show amount ^ "mutez"
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
 (* Tez payments *)
 type payment = {destination: Address.t ; amount: t;}
 [@@deriving show]
-

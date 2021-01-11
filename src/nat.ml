@@ -21,10 +21,18 @@ let of_int x =
 
 let to_q x = Q.make x Z.one
 
-let of_q x =
+let of_q_floor x =
   if not (Q.is_real x) then
-    failwith "Nat.of_q: infinity/undef"
+    failwith "Nat.of_q_floor: infinity/undef"
   else if Q.lt x Q.zero then
-    failwith "Nat.of_q: negative"
+    failwith "Nat.of_q_floor: negative"
   else
-    Q.to_bigint x
+    Z.(fdiv (Q.num x) (Q.den x))
+
+let of_q_ceil x =
+  if not (Q.is_real x) then
+    failwith "Nat.of_q_ceil: infinity/undef"
+  else if Q.lt x Q.zero then
+    failwith "Nat.of_q_ceil: negative"
+  else
+    Z.(cdiv (Q.num x) (Q.den x))

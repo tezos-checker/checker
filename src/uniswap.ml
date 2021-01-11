@@ -227,7 +227,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
-    let lqt_minted = Nat.of_q Q.(Nat.to_q uniswap_lqt * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* floor *)
+    let lqt_minted = Nat.of_q_floor Q.(Nat.to_q uniswap_lqt * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* floor *)
     let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* ceil *)
 
     if lqt_minted < min_lqt_minted then

@@ -71,7 +71,7 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
          Kit.issue ~tezos (Kit.of_q_ceil Q.(Kit.to_q kit * Tez.to_q amount / Tez.to_q tez)) in
        let min_lqt_minted =
          let _, lqt, _, _same_ticket = Ticket.read lqt in
-         Nat.of_q Q.(Nat.to_q lqt * Tez.to_q amount / Tez.to_q tez) in
+         Nat.of_q_floor Q.(Nat.to_q lqt * Tez.to_q amount / Tez.to_q tez) in
        let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
        (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
@@ -87,7 +87,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
 
        let kit, _same_kit_ticket = Kit.read_kit kit in
        let _, lqt, _, _same_lqt_ticket = Ticket.read lqt in
-       let lqt_to_burn = Nat.of_q Q.(Nat.to_q lqt / of_int factor) in
+       let lqt_to_burn = Nat.of_q_floor Q.(Nat.to_q lqt / of_int factor) in
        (* let lqt_to_burn = if lqt_to_burn = Z.zero then Z.one else lqt_to_burn in *)
 
        let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in

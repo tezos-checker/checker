@@ -229,7 +229,9 @@ let start_auction_if_possible
     let split_threshold =
       max
         Constants.max_lot_size
-        (Tez.scale queued_amount Constants.min_lot_auction_queue_fraction) in
+        (Tez.of_q_floor
+           Q.(Tez.to_q queued_amount * FixedPoint.to_q Constants.min_lot_auction_queue_fraction)
+        ) in
     let (storage, new_auction) =
       take_with_splitting
         auctions.avl_storage

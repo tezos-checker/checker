@@ -13,7 +13,8 @@ let burrow_fee_percentage : Q.t = Q.of_string "5/1000" (* 0.005 *)
 
 (** The percentage of a burrow's collateral that we offer to whoever triggers
   * the burrow's liquidation. *)
-let liquidation_reward_percentage : Q.t = Q.of_string "1/1000" (* 0.001 *)
+let liquidation_reward_percentage : FixedPoint.t =
+  FixedPoint.of_q_floor (Q.of_string "1/1000") (* 0.001 *)
 
 (** Percentage kept by the uniswap contract from the return asset. *)
 let uniswap_fee : Q.t = Q.of_string "2/1000" (* 0.002 *)

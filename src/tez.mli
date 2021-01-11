@@ -3,7 +3,6 @@ type t
 (* Basic operations. *)
 val ( + ) : t -> t -> t
 val ( - ) : t -> t -> t
-val scale : t -> FixedPoint.t -> t
 val compare : t -> t -> int
 
 val zero : t
