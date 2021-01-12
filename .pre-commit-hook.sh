@@ -9,8 +9,8 @@ relevant_files="$(
 has_error=false
 while read fname; do
   if [[ -z "$fname" ]]; then continue; fi
-  indented="$(ocp-indent "$fname")"
-  actual="$(cat "$fname")"
+  actual="$(git show :$fname)"
+  indented="$(echo "$actual" | ocp-indent)"
   if [[ "$indented" != "$actual" ]]; then
      has_error=true
      echo "Not indented: $fname" >&2
