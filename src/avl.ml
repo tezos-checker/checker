@@ -64,8 +64,8 @@ type leaf_ptr = LeafPtr of BigMap.ptr
 
 let ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l
 
-type 't leaf = {
-  value: 't;
+type 'l leaf = {
+  value: 'l;
   tez: tez;
   parent: BigMap.ptr;
 }
@@ -327,7 +327,8 @@ let rebalance (mem: ('l, 'r) mem) (curr_ptr: BigMap.ptr) : ('l, 'r) mem * BigMap
       assert (branch.parent = node_parent (BigMap.mem_get mem ptr));
       (mem, ptr)
     ) else (mem, curr_ptr)
-  | _ -> (mem, curr_ptr)
+  | Leaf _ -> (mem, curr_ptr)
+  | Root _ -> (mem, curr_ptr)
 
 (* (match BigMap.mem_get mem ptr with
    | Branch b -> assert (abs (b.left_height - b.right_height) <= 1); ()
@@ -433,39 +434,28 @@ let ref_join
 (* ************************** *)
 
 let push_back
-    (mem: ('l, 'r) mem) (AVLPtr root_ptr) (value: 'l) (tez: tez)
+    (mem: ('l, 'r) mem) (root_ptr: avl_ptr) (value: 'l) (tez: tez)
   : ('l, 'r) mem * leaf_ptr =
+  let root_ptr = match root_ptr with AVLPtr root_ptr -> root_ptr in
   let node = Leaf { value=value; tez=tez; parent=root_ptr; } in
   let (mem, leaf_ptr) = BigMap.mem_new mem node in
   match BigMap.mem_get mem root_ptr with
-  (* When the tree is empty, create the initial leaf. *)
-  | Root (None, r) ->
-    let mem = BigMap.mem_set mem root_ptr (Root (Some leaf_ptr, r)) in
-    (mem, LeafPtr leaf_ptr)
-  (* When there is already an element, join with the new leaf. *)
-  | Root (Some ptr, r) ->
-    let (mem, ret) = ref_join mem (Left) ptr leaf_ptr in
-    let mem = BigMap.mem_set mem root_ptr (Root (Some ret, r)) in
-    (mem, LeafPtr leaf_ptr)
-  | _ ->
+  | Root root ->
+    let (r, data) = root in
+    (match r with
+     (* When the tree is empty, create the initial leaf. *)
+     | None ->
+       let mem = BigMap.mem_set mem root_ptr (Root (Some leaf_ptr, data)) in
+       (mem, LeafPtr leaf_ptr)
+     (* When there is already an element, join with the new leaf. *)
+     | Some ptr ->
+       let (mem, ret) = ref_join mem (Left) ptr leaf_ptr in
+       let mem = BigMap.mem_set mem root_ptr (Root (Some ret, data)) in
+       (mem, LeafPtr leaf_ptr))
+  | Branch _ ->
     (failwith "push_back is passed a non-root pointer." : ('l, 'r) mem * leaf_ptr)
-
-(* This is not going to be used in the final implementation, but it allows
- * testing some useful properties (mainly about `join` function).
-*)
-let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) mem =
-  let mem = match (BigMap.mem_get mem left_ptr, BigMap.mem_get mem right_ptr) with
-    | (Root _, Root (None, _)) ->
-      mem
-    | (Root (None, d), Root (Some r, _)) ->
-      let mem = BigMap.mem_set mem left_ptr (Root (Some r, d)) in
-      BigMap.mem_update mem r (node_set_parent left_ptr)
-    | (Root (Some l, d), Root (Some r, _)) ->
-      let (mem, l) = ref_join mem (Left) l r in
-      BigMap.mem_set mem left_ptr (Root (Some l, d))
-    | _ ->
-      (failwith "avlptr is not root" : ('l, 'r) mem) in
-  BigMap.mem_del mem right_ptr
+  | Leaf _ ->
+    (failwith "push_back is passed a non-root pointer." : ('l, 'r) mem * leaf_ptr)
 
 (* The only implementation difference between this and push_back
  * is the order of parameters on 'join'. We should probably combine
@@ -613,13 +603,13 @@ let ref_split_post_processing
       match maybe_right with
       | None -> (failwith "impossible" : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option)
       | Some right ->
-        let (mem, joined) = ref_join mem Right right data.branch.right in
+        let (mem, joined) = ref_join mem (Right) right data.branch.right in
         (mem, maybe_left, Some joined)
     )
   | Right -> (
       match maybe_left with
       | Some left ->
-        let (mem, joined) = ref_join mem Left data.branch.left left in
+        let (mem, joined) = ref_join mem (Left) data.branch.left left in
         (mem, Some joined, maybe_right)
       | None ->
         (mem, Some data.branch.left, maybe_right)
@@ -632,7 +622,7 @@ let rec left_fold_ref_split_data
   : ('l, 'r) mem * BigMap.ptr option * BigMap.ptr option =
   match stack with
   | [] -> mem_and_left_ptr_and_right_ptr
-  | (d :: ds) ->
+  | d :: ds ->
     let new_mem_and_left_ptr_and_right_ptr = ref_split_post_processing d mem_and_left_ptr_and_right_ptr in
     left_fold_ref_split_data new_mem_and_left_ptr_and_right_ptr ds
 
@@ -686,7 +676,7 @@ let rec ref_split_rec
             let left_branch = BigMap.mem_get mem branch.left in
             (Right, branch.right, Tez.(limit - (node_tez left_branch)))
         in
-        ref_split_rec mem tree_to_recurse_into limit_to_use ({ rec_direction; branch } :: stack)
+        ref_split_rec mem tree_to_recurse_into limit_to_use ({ rec_direction=rec_direction; branch=branch } :: stack)
 
 let ref_split
     (mem: ('l, 'r) mem)
@@ -740,6 +730,23 @@ let modify_root_data (mem: ('l, 'r) mem) (AVLPtr ptr) (f: 'r -> 'r) =
 
 
 (* Test utilities *)
+
+(* This is not going to be used in the final implementation, but it allows
+ * testing some useful properties (mainly about `join` function).
+*)
+let append (mem: ('l, 'r) mem) (AVLPtr left_ptr) (AVLPtr right_ptr): ('l, 'r) mem =
+  let mem = match (BigMap.mem_get mem left_ptr, BigMap.mem_get mem right_ptr) with
+    | (Root _, Root (None, _)) ->
+      mem
+    | (Root (None, d), Root (Some r, _)) ->
+      let mem = BigMap.mem_set mem left_ptr (Root (Some r, d)) in
+      BigMap.mem_update mem r (node_set_parent left_ptr)
+    | (Root (Some l, d), Root (Some r, _)) ->
+      let (mem, l) = ref_join mem (Left) l r in
+      BigMap.mem_set mem left_ptr (Root (Some l, d))
+    | _ ->
+      (failwith "avlptr is not root" : ('l, 'r) mem) in
+  BigMap.mem_del mem right_ptr
 
 let debug_mem (mem: ('l, 'r) mem) (show_l: Format.formatter -> 'l -> unit) (show_r: Format.formatter -> 'r -> unit) : unit =
   BigMap.M.iter
