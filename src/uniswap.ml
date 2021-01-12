@@ -154,7 +154,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
     let price = Ratio.(Kit.to_ratio uniswap_kit / Tez.to_ratio uniswap.tez) in
-    let slippage = Ratio.(Tez.to_ratio uniswap.tez / Tez.(to_ratio (uniswap.tez + amount))) in
+    let slippage = Ratio.make (Tez.to_mutez uniswap.tez) Tez.(to_mutez (uniswap.tez + amount)) in
     let return = Kit.of_ratio_floor Ratio.(Tez.to_ratio amount * price * slippage * (one - Constants.uniswap_fee)) in
     if return < min_kit_expected then
       Error BuyKitPriceFailure
@@ -226,8 +226,8 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
-    let lqt_minted = Nat.of_ratio_floor Ratio.(Nat.to_ratio uniswap_lqt * Tez.to_ratio amount / Tez.to_ratio effective_tez_balance) in (* floor *)
-    let kit_deposited = Kit.of_ratio_ceil Ratio.(Kit.to_ratio uniswap_kit * Tez.to_ratio amount / Tez.to_ratio effective_tez_balance) in (* ceil *)
+    let lqt_minted = Nat.of_ratio_floor Ratio.(Nat.to_ratio uniswap_lqt * Ratio.make (Tez.to_mutez amount) (Tez.to_mutez effective_tez_balance)) in (* floor *)
+    let kit_deposited = Kit.of_ratio_ceil Ratio.(Kit.to_ratio uniswap_kit * Ratio.make (Tez.to_mutez amount) (Tez.to_mutez effective_tez_balance)) in (* ceil *)
 
     if lqt_minted < min_lqt_minted then
       Error AddLiquidityTooLowLiquidityMinted

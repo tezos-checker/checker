@@ -10,7 +10,8 @@ val one : t
 
 (* Conversions to/from other types. *)
 val of_mutez : int -> t
-val to_ratio : t -> Ratio.t
+val to_mutez : t -> Z.t (* as-is *)
+val to_ratio : t -> Ratio.t (* divided by scaling factor *)
 val of_ratio_ceil : Ratio.t -> t
 val of_ratio_floor : Ratio.t -> t
 

@@ -191,12 +191,14 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
   (* left slice *)
   let ltez = amount in
   let lkit = Kit.of_ratio_ceil Ratio.(
-      Kit.to_ratio slice.min_kit_for_unwarranted * Tez.to_ratio ltez / Tez.to_ratio slice.tez
+      Kit.to_ratio slice.min_kit_for_unwarranted
+      * Ratio.make (Tez.to_mutez ltez) (Tez.to_mutez slice.tez)
     ) in
   (* right slice *)
   let rtez = Tez.(slice.tez - amount) in
   let rkit = Kit.of_ratio_ceil Ratio.(
-      Kit.to_ratio slice.min_kit_for_unwarranted * Tez.to_ratio rtez / Tez.to_ratio slice.tez
+      Kit.to_ratio slice.min_kit_for_unwarranted
+      * Ratio.make (Tez.to_mutez rtez) (Tez.to_mutez slice.tez)
     ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }

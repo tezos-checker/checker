@@ -180,7 +180,7 @@ let touch
     Tez.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
         Tez.to_ratio parameters.protected_index
         * clamp
-          (Tez.to_ratio current_index / Tez.to_ratio parameters.protected_index)
+          (Ratio.make (Tez.to_mutez current_index) (Tez.to_mutez parameters.protected_index))
           lower_lim
           upper_lim
       ) in

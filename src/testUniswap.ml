@@ -68,10 +68,10 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
        let pending_accrual = Tez.zero in
        let max_kit_deposited =
          let kit, _same_ticket = Kit.read_kit kit in
-         Kit.issue ~tezos (Kit.of_ratio_ceil Ratio.(Kit.to_ratio kit * Tez.to_ratio amount / Tez.to_ratio tez)) in
+         Kit.issue ~tezos (Kit.of_ratio_ceil Ratio.(Kit.to_ratio kit * Ratio.make (Tez.to_mutez amount) (Tez.to_mutez tez))) in
        let min_lqt_minted =
          let _, lqt, _, _same_ticket = Ticket.read lqt in
-         Nat.of_ratio_floor Ratio.(Nat.to_ratio lqt * Tez.to_ratio amount / Tez.to_ratio tez) in
+         Nat.of_ratio_floor Ratio.(Nat.to_ratio lqt * Ratio.make (Tez.to_mutez amount) (Tez.to_mutez tez)) in
        let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
        (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
@@ -104,7 +104,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
          if lqt_to_burn = Nat.zero || min_tez_withdrawn = Tez.zero || min_kit_withdrawn = Kit.zero then
            let lqt_to_burn =
              let least_kit_percentage = Ratio.(Kit.(to_ratio (of_mukit (Z.of_int 1))) / (Kit.to_ratio kit)) in
-             let least_tez_percentage = Ratio.(Tez.(to_ratio (of_mutez 1)) / (Tez.to_ratio tez)) in
+             let least_tez_percentage = Ratio.make (Tez.to_mutez (Tez.of_mutez 1)) (Tez.to_mutez tez) in
              let as_q = Ratio.(Nat.to_ratio lqt * max least_kit_percentage least_tez_percentage) in
              Option.get (Nat.of_int (Z.cdiv (Ratio.num as_q) (Ratio.den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in

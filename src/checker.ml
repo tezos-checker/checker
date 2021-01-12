@@ -486,7 +486,8 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
      * small, must be dealt with (e.g. be removed from the circulating kit). *)
     let kit_to_repay, kit_to_burn =
       let corresponding_kit = Kit.of_ratio_floor Ratio.(
-          (Tez.to_ratio leaf.tez / Tez.to_ratio outcome.sold_tez) * Kit.to_ratio outcome.winning_bid.kit
+          Ratio.make (Tez.to_mutez leaf.tez) (Tez.to_mutez outcome.sold_tez)
+          * Kit.to_ratio outcome.winning_bid.kit
         ) in
       let penalty =
         if corresponding_kit < leaf.min_kit_for_unwarranted then
