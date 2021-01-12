@@ -20,7 +20,7 @@ let rec add_many (p: int * storage) : storage =
   if count <= 0
   then storage
   else begin
-    let (mem, leaf) = avl_push_back (storage.root, 1, 1mutez, storage.mem) in
+    let (mem, leaf) = push_back (storage.mem, storage.root, 1, 1mutez) in
     let storage = { storage with mem = mem; } in
     add_many (count-1, storage)
   end
@@ -33,7 +33,7 @@ let main ((p, storage): action * storage): operation list * storage =
    | AddMany count ->
      add_many (count, storage)
    | Take limit ->
-     let (mem, ign) = avl_take (storage.root, limit, 0, storage.mem) in
+     let (mem, ign) = take (storage.mem, storage.root, limit, 0) in
      { mem = mem; root = storage.root } in
  (([] : operation list), storage)
 
