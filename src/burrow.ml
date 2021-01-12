@@ -446,7 +446,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
   let partial_reward =
     Tez.of_q_floor
       Q.(Tez.to_q b.collateral * FixedPoint.to_q Constants.liquidation_reward_percentage
-    ) in
+        ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
