@@ -66,7 +66,7 @@ val make_for_test :
   tez:Tez.t ->
   kit:Kit.token ->
   lqt:liquidity ->
-  kit_in_tez_in_prev_block:Q.t ->
+  kit_in_tez_in_prev_block:Ratio.t ->
   last_level:Level.t ->
   t
 
@@ -89,12 +89,12 @@ val is_liquidity_token_pool_empty : t -> bool
 (** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
   * current price of kit in tez, as estimated using the ratio of tez and kit
   * currently in the uniswap contract. *)
-val kit_in_tez : t -> Q.t
+val kit_in_tez : t -> Ratio.t
 
 (** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
   * current product of kit and tez, using the current contents of the uniswap
   * contract. *)
-val kit_times_tez : t -> Q.t
+val kit_times_tez : t -> Ratio.t
 
 (** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
   * current number of liquidity tokens extant. *)
@@ -104,7 +104,7 @@ val liquidity_tokens_extant : t -> liquidity
   * contract), as it was at the end of the last block. This is to be used when
   * required for the calculation of the drift derivative instead of up-to-date
   * kit_in_tez, because it is a little harder to manipulate. *)
-val kit_in_tez_in_prev_block : t -> Q.t
+val kit_in_tez_in_prev_block : t -> Ratio.t
 
 (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)

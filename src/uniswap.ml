@@ -61,7 +61,7 @@ type t =
     (* George: I don't expect this to get really big in size cause it's
      * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
      * are relatively prime, we are OK). *)
-    kit_in_tez_in_prev_block: Q.t [@printer Q.pp_print];
+    kit_in_tez_in_prev_block: Ratio.t [@printer Ratio.pp];
     last_level: Level.t;
   }
 [@@deriving show]
@@ -78,7 +78,7 @@ let make_initial ~tezos =
   { tez = Tez.of_mutez 1;
     kit = Kit.issue ~tezos (Kit.of_mukit Z.one);
     lqt = issue_liquidity_tokens ~tezos Nat.one;
-    kit_in_tez_in_prev_block = Q.one; (* Same as tez/kit now. *)
+    kit_in_tez_in_prev_block = Ratio.one; (* Same as tez/kit now. *)
     last_level = tezos.level;
   }
 
@@ -104,18 +104,17 @@ let is_liquidity_token_pool_empty (u: t) =
 let assert_initialized (u: t) =
   assert (not (is_tez_pool_empty u));
   assert (not (is_kit_pool_empty u));
-  assert (not (is_liquidity_token_pool_empty u));
-  assert (compare u.kit_in_tez_in_prev_block Q.undef != 0)
+  assert (not (is_liquidity_token_pool_empty u))
 
 (* NOTE: FOR TESTING ONLY *)
 let kit_in_tez (u: t) =
   let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
-  Q.(Tez.to_q u.tez / Kit.to_q u_kit)
+  Ratio.(Tez.to_ratio u.tez / Kit.to_ratio u_kit)
 
 (* NOTE: FOR TESTING ONLY *)
 let kit_times_tez (u: t) =
   let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
-  Q.(Tez.to_q u.tez * Kit.to_q u_kit)
+  Ratio.(Tez.to_ratio u.tez * Kit.to_ratio u_kit)
 
 (** NOTE: FOR TESTING ONLY *)
 let liquidity_tokens_extant (u: t) = u.lqt
@@ -137,7 +136,7 @@ let sync_last_observed (uniswap: t) (tezos: Tezos.t) =
   else
     let uniswap_kit, _same_token = Kit.read_kit uniswap.kit in (* NOTE: replace? *)
     { uniswap with
-      kit_in_tez_in_prev_block = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap_kit);
+      kit_in_tez_in_prev_block = Ratio.(Tez.to_ratio uniswap.tez / Kit.to_ratio uniswap_kit);
       last_level = tezos.level;
     }
 
@@ -154,9 +153,9 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
     let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = Q.(Kit.to_q uniswap_kit / Tez.to_q uniswap.tez) in
-    let slippage = Q.(Tez.to_q uniswap.tez / Tez.(to_q (uniswap.tez + amount))) in
-    let return = Kit.of_q_floor Q.(Tez.to_q amount * price * slippage * (one - Constants.uniswap_fee)) in
+    let price = Ratio.(Kit.to_ratio uniswap_kit / Tez.to_ratio uniswap.tez) in
+    let slippage = Ratio.(Tez.to_ratio uniswap.tez / Tez.(to_ratio (uniswap.tez + amount))) in
+    let return = Kit.of_ratio_floor Ratio.(Tez.to_ratio amount * price * slippage * (one - Constants.uniswap_fee)) in
     if return < min_kit_expected then
       Error BuyKitPriceFailure
     else if return > uniswap_kit then
@@ -185,9 +184,9 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = Q.(Tez.to_q uniswap.tez / Kit.to_q uniswap_kit) in
-    let slippage = Q.(Kit.to_q uniswap_kit / Kit.(to_q (uniswap_kit + kit))) in
-    let return = Tez.of_q_floor Q.(Kit.to_q kit * price * slippage * (one - Constants.uniswap_fee)) in
+    let price = Ratio.(Tez.to_ratio uniswap.tez / Kit.to_ratio uniswap_kit) in
+    let slippage = Ratio.(Kit.to_ratio uniswap_kit / Kit.(to_ratio (uniswap_kit + kit))) in
+    let return = Tez.of_ratio_floor Ratio.(Kit.to_ratio kit * price * slippage * (one - Constants.uniswap_fee)) in
 
     if return < min_tez_expected then
       Error SellKitPriceFailure
@@ -227,8 +226,8 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
-    let lqt_minted = Nat.of_q_floor Q.(Nat.to_q uniswap_lqt * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* floor *)
-    let kit_deposited = Kit.of_q_ceil Q.(Kit.to_q uniswap_kit * Tez.to_q amount / Tez.to_q effective_tez_balance) in (* ceil *)
+    let lqt_minted = Nat.of_ratio_floor Ratio.(Nat.to_ratio uniswap_lqt * Tez.to_ratio amount / Tez.to_ratio effective_tez_balance) in (* floor *)
+    let kit_deposited = Kit.of_ratio_ceil Ratio.(Kit.to_ratio uniswap_kit * Tez.to_ratio amount / Tez.to_ratio effective_tez_balance) in (* ceil *)
 
     if lqt_minted < min_lqt_minted then
       Error AddLiquidityTooLowLiquidityMinted
@@ -277,9 +276,9 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
   else
     let _, uniswap_lqt, _, same_ticket = Ticket.read uniswap.lqt in
     assert (lqt_burned <= uniswap_lqt); (* the ticket mechanism should enforce this *)
-    let ratio = Q.make (Nat.to_int lqt_burned) (Nat.to_int uniswap_lqt) in
-    let tez_withdrawn = Tez.of_q_floor Q.(Tez.to_q uniswap.tez * ratio) in
-    let kit_withdrawn = Kit.of_q_floor Q.(Kit.to_q uniswap_kit * ratio) in
+    let ratio = Ratio.make (Nat.to_int lqt_burned) (Nat.to_int uniswap_lqt) in
+    let tez_withdrawn = Tez.of_ratio_floor Ratio.(Tez.to_ratio uniswap.tez * ratio) in
+    let kit_withdrawn = Kit.of_ratio_floor Ratio.(Kit.to_ratio uniswap_kit * ratio) in
 
     if tez_withdrawn < min_tez_withdrawn then
       Error RemoveLiquidityCantWithdrawEnoughTez

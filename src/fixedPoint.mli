@@ -16,9 +16,9 @@ val exp : t -> t
 (* Conversions to/from other types. *)
 val of_int : int -> t
 val of_hex_string : string -> t
-val to_q : t -> Q.t
-val of_q_ceil : Q.t -> t
-val of_q_floor : Q.t -> t
+val to_ratio : t -> Ratio.t
+val of_ratio_ceil : Ratio.t -> t
+val of_ratio_floor : Ratio.t -> t
 
 (* Pretty printing functions *)
 val pp : Format.formatter -> t -> unit

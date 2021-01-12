@@ -190,13 +190,13 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
   assert (amount < slice.tez);
   (* left slice *)
   let ltez = amount in
-  let lkit = Kit.of_q_ceil Q.(
-      Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q ltez / Tez.to_q slice.tez
+  let lkit = Kit.of_ratio_ceil Ratio.(
+      Kit.to_ratio slice.min_kit_for_unwarranted * Tez.to_ratio ltez / Tez.to_ratio slice.tez
     ) in
   (* right slice *)
   let rtez = Tez.(slice.tez - amount) in
-  let rkit = Kit.of_q_ceil Q.(
-      Kit.to_q slice.min_kit_for_unwarranted * Tez.to_q rtez / Tez.to_q slice.tez
+  let rkit = Kit.of_ratio_ceil Ratio.(
+      Kit.to_ratio slice.min_kit_for_unwarranted * Tez.to_ratio rtez / Tez.to_ratio slice.tez
     ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
@@ -229,8 +229,8 @@ let start_auction_if_possible
     let split_threshold =
       max
         Constants.max_lot_size
-        (Tez.of_q_floor
-           Q.(Tez.to_q queued_amount * FixedPoint.to_q Constants.min_lot_auction_queue_fraction)
+        (Tez.of_ratio_floor
+           Ratio.(Tez.to_ratio queued_amount * FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
         ) in
     let (storage, new_auction) =
       take_with_splitting
@@ -245,7 +245,7 @@ let start_auction_if_possible
           Kit.scale
             Kit.one
             FixedPoint.(
-              FixedPoint.of_q_floor (Tez.to_q (Avl.avl_tez storage new_auction))
+              FixedPoint.of_ratio_floor (Tez.to_ratio (Avl.avl_tez storage new_auction))
               * start_price)  in
         Some
           { contents = new_auction;
@@ -262,14 +262,14 @@ let start_auction_if_possible
 let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
-    let auction_decay_rate = FixedPoint.of_q_ceil Constants.auction_decay_rate in (* FLOOR-or-CEIL *)
+    let auction_decay_rate = FixedPoint.of_ratio_ceil Constants.auction_decay_rate in (* FLOOR-or-CEIL *)
     let decay =
       FixedPoint.pow
         FixedPoint.(one - auction_decay_rate)
         (Timestamp.seconds_elapsed ~start:start_time ~finish:tezos.now) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
-    let bid_improvement_factor = FixedPoint.of_q_floor Constants.bid_improvement_factor in (* FLOOR-or-CEIL *)
+    let bid_improvement_factor = FixedPoint.of_ratio_floor Constants.bid_improvement_factor in (* FLOOR-or-CEIL *)
     Kit.scale leading_bid.kit FixedPoint.(one + bid_improvement_factor)
 
 (** Check if an auction is complete. A descending auction declines

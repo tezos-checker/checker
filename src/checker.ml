@@ -1,7 +1,7 @@
 
 module PtrMap = Map.Make(Ptr)
 
-(* TODO: At the very end, inline all numeric operations, flatten all Q.t so
+(* TODO: At the very end, inline all numeric operations, flatten all Ratio.t so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
 
@@ -485,12 +485,12 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
      * to truncation. That could be a problem; the extra kit, no matter how
      * small, must be dealt with (e.g. be removed from the circulating kit). *)
     let kit_to_repay, kit_to_burn =
-      let corresponding_kit = Kit.of_q_floor Q.(
-          (Tez.to_q leaf.tez / Tez.to_q outcome.sold_tez) * Kit.to_q outcome.winning_bid.kit
+      let corresponding_kit = Kit.of_ratio_floor Ratio.(
+          (Tez.to_ratio leaf.tez / Tez.to_ratio outcome.sold_tez) * Kit.to_ratio outcome.winning_bid.kit
         ) in
       let penalty =
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          Kit.of_q_ceil Q.(Kit.to_q corresponding_kit * Constants.liquidation_penalty)
+          Kit.of_ratio_ceil Ratio.(Kit.to_ratio corresponding_kit * Constants.liquidation_penalty)
         else
           Kit.zero
       in
@@ -688,8 +688,8 @@ let calculate_touch_reward (state:t) ~tezos : Kit.t =
   let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
   let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
 
-  let touch_low_reward = FixedPoint.of_q_ceil Constants.touch_low_reward in (* FLOOR-or-CEIL *)
-  let touch_high_reward = FixedPoint.of_q_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
+  let touch_low_reward = FixedPoint.of_ratio_ceil Constants.touch_low_reward in (* FLOOR-or-CEIL *)
+  let touch_high_reward = FixedPoint.of_ratio_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
   Kit.scale
     Kit.one
     FixedPoint.(
@@ -734,7 +734,7 @@ let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.token * t) =
          * feed as (tz_t * q_t), or use the current minting price, but using
          * the liquidation price is the safest option. *)
         (* George: I use ceil, to stay on the safe side (higher-price) *)
-        (FixedPoint.of_q_ceil (Parameters.minting_price updated_parameters)) in
+        (FixedPoint.of_ratio_ceil (Parameters.minting_price updated_parameters)) in
 
     (* 6: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step

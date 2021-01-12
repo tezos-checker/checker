@@ -19,20 +19,16 @@ let of_int x =
   | true -> Some x
   | false -> None
 
-let to_q x = Q.make x Z.one
+let to_ratio x = Ratio.make x Z.one
 
-let of_q_floor x =
-  if not (Q.is_real x) then
-    failwith "Nat.of_q_floor: infinity/undef"
-  else if Q.lt x Q.zero then
-    failwith "Nat.of_q_floor: negative"
+let of_ratio_floor x =
+  if Ratio.lt x Ratio.zero then
+    failwith "Nat.of_ratio_floor: negative"
   else
-    Z.(fdiv (Q.num x) (Q.den x))
+    Z.(fdiv (Ratio.num x) (Ratio.den x))
 
-let of_q_ceil x =
-  if not (Q.is_real x) then
-    failwith "Nat.of_q_ceil: infinity/undef"
-  else if Q.lt x Q.zero then
-    failwith "Nat.of_q_ceil: negative"
+let of_ratio_ceil x =
+  if Ratio.lt x Ratio.zero then
+    failwith "Nat.of_ratio_ceil: negative"
   else
-    Z.(cdiv (Q.num x) (Q.den x))
+    Z.(cdiv (Ratio.num x) (Ratio.den x))

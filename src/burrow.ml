@@ -123,10 +123,10 @@ let make_for_test
 let is_overburrowed (p : Parameters.t) (b : t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
-  let collateral = Tez.to_q b.collateral in
+  let collateral = Tez.to_ratio b.collateral in
   let minting_price = Parameters.minting_price p in
-  let outstanding_kit = Kit.to_q b.outstanding_kit in
-  Q.(collateral < Constants.fminting * outstanding_kit * minting_price)
+  let outstanding_kit = Kit.to_ratio b.outstanding_kit in
+  Ratio.(collateral < Constants.fminting * outstanding_kit * minting_price)
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -151,10 +151,10 @@ let touch (p: Parameters.t) (burrow: t) : t =
   else
     let b = rebalance_kit burrow in
     let current_adjustment_index = Parameters.compute_adjustment_index p in
-    let last_adjustment_index = FixedPoint.to_q b.adjustment_index in
-    let kit_outstanding = Kit.to_q b.outstanding_kit in
+    let last_adjustment_index = FixedPoint.to_ratio b.adjustment_index in
+    let kit_outstanding = Kit.to_ratio b.outstanding_kit in
     { b with
-      outstanding_kit = Kit.of_q_ceil Q.(kit_outstanding * FixedPoint.to_q current_adjustment_index / last_adjustment_index);
+      outstanding_kit = Kit.of_ratio_ceil Ratio.(kit_outstanding * FixedPoint.to_ratio current_adjustment_index / last_adjustment_index);
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
     }
@@ -358,12 +358,12 @@ let increase_permission_version (p: Parameters.t) (b: t) =
   * liquidation we are no longer "optimistically overburrowed" *)
 let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
   assert_invariants b;
-  let oustanding_kit = Kit.to_q b.outstanding_kit in
-  let collateral = Tez.to_q b.collateral in
-  let collateral_at_auction = Tez.to_q b.collateral_at_auction in
+  let oustanding_kit = Kit.to_ratio b.outstanding_kit in
+  let collateral = Tez.to_ratio b.collateral in
+  let collateral_at_auction = Tez.to_ratio b.collateral_at_auction in
   let minting_price = Parameters.minting_price p in
-  Tez.of_q_ceil
-    Q.(
+  Tez.of_ratio_ceil
+    Ratio.(
       ((oustanding_kit * Constants.fminting * minting_price)
        - ((one - Constants.liquidation_penalty) * Constants.fminting * collateral_at_auction)
        - collateral
@@ -375,8 +375,8 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
 let compute_expected_kit (p: Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
-  Kit.of_q_ceil
-    Q.(Tez.to_q tez_to_auction * (one - Constants.liquidation_penalty) / Parameters.minting_price p)
+  Kit.of_ratio_ceil
+    Ratio.(Tez.to_ratio tez_to_auction * (one - Constants.liquidation_penalty) / Parameters.minting_price p)
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
@@ -393,10 +393,10 @@ let is_liquidatable (p: Parameters.t) (b: t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_q (b.outstanding_kit - expected_kit)) in
+  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
   let liquidation_price = Parameters.liquidation_price p in
-  let collateral = Tez.to_q b.collateral in
-  b.active && Q.(collateral < Constants.fliquidation * optimistic_outstanding * liquidation_price)
+  let collateral = Tez.to_ratio b.collateral in
+  b.active && Ratio.(collateral < Constants.fliquidation * optimistic_outstanding * liquidation_price)
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
@@ -406,10 +406,10 @@ let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_q (b.outstanding_kit - expected_kit)) in
-  let collateral = Tez.to_q b.collateral in
+  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
+  let collateral = Tez.to_ratio b.collateral in
   let minting_price = Parameters.minting_price p in
-  Q.(collateral < Constants.fminting * optimistic_outstanding * minting_price)
+  Ratio.(collateral < Constants.fminting * optimistic_outstanding * minting_price)
 
 type liquidation_details =
   { liquidation_reward : Tez.t;
@@ -435,18 +435,18 @@ let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Te
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_q (b.outstanding_kit - expected_kit)) in
-  let collateral = Tez.to_q b.collateral in
-  Kit.of_q_ceil (* Round up here; safer for the system, less so for the burrow *)
-    Q.(Tez.to_q tez_to_auction * (Constants.fliquidation * optimistic_outstanding) / collateral)
+  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
+  let collateral = Tez.to_ratio b.collateral in
+  Kit.of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
+    Ratio.(Tez.to_ratio tez_to_auction * (Constants.fliquidation * optimistic_outstanding) / collateral)
 
 let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let partial_reward =
-    Tez.of_q_floor
-      Q.(Tez.to_q b.collateral * FixedPoint.to_q Constants.liquidation_reward_percentage
-        ) in
+    Tez.of_ratio_floor
+      Ratio.(Tez.to_ratio b.collateral * FixedPoint.to_ratio Constants.liquidation_reward_percentage
+            ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
   let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in

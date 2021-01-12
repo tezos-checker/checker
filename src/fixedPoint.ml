@@ -41,9 +41,9 @@ let of_hex_string str =
     | Some pos -> Z.pow (Z.of_int 16) Stdlib.(String.length str - pos - 1) in
   Z.(shift_left (of_string_base 16 without_dot) scaling_exponent / mantissa)
 
-let to_q amount = Q.make amount scaling_factor
-let of_q_ceil amount = Z.(cdiv (shift_left (Q.num amount) scaling_exponent) (Q.den amount))
-let of_q_floor amount = Z.(fdiv (shift_left (Q.num amount) scaling_exponent) (Q.den amount))
+let to_ratio amount = Ratio.make amount scaling_factor
+let of_ratio_ceil amount = Z.(cdiv (shift_left (Ratio.num amount) scaling_exponent) (Ratio.den amount))
+let of_ratio_floor amount = Z.(fdiv (shift_left (Ratio.num amount) scaling_exponent) (Ratio.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* Pretty printing functions (in hex, otherwise it's massive) *)

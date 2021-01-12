@@ -18,7 +18,7 @@ let initial_tezos =
 
 let rec call_touch_times
     (index: Tez.t)
-    (kit_in_tez: Q.t)
+    (kit_in_tez: Ratio.t)
     (n: int)
     (tezos: Tezos.t)
     (params: Parameters.t)
@@ -132,8 +132,8 @@ let test_compute_imbalance_all_zero =
     let burrowed    = Kit.zero in
     let circulating = Kit.zero in
     assert_equal
-      ~printer:(Q.sprint ())
-      Q.zero
+      ~printer:Ratio.show
+      Ratio.zero
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_zero_burrowed =
@@ -141,8 +141,8 @@ let test_compute_imbalance_zero_burrowed =
     let burrowed    = Kit.zero in
     let circulating = Kit.one in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "-5/100")
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int (-5)) (Z.of_int 100))
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_equal =
@@ -150,8 +150,8 @@ let test_compute_imbalance_equal =
     let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
     let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
-      ~printer:(Q.sprint ())
-      Q.zero
+      ~printer:Ratio.show
+      Ratio.zero
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_small =
@@ -159,8 +159,8 @@ let test_compute_imbalance_positive_small =
     let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
     let circulating = Kit.of_mukit (Z.of_int   800_000_001) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "199999999/4000000000") (* JUST BELOW SATURATION *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int 199999999) (Z.of_int 4000000000)) (* JUST BELOW SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_big =
@@ -168,8 +168,8 @@ let test_compute_imbalance_positive_big =
     let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
     let circulating = Kit.of_mukit (Z.of_int   800_000_000) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "5/100") (* JUST ABOVE SATURATION *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int 5) (Z.of_int 100)) (* JUST ABOVE SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_capped =
@@ -177,8 +177,8 @@ let test_compute_imbalance_positive_capped =
     let burrowed    = Kit.of_mukit (Z.of_int 1_000_000_000) in
     let circulating = Kit.of_mukit (Z.of_int             1) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "5/100") (* SATURATED *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int 5) (Z.of_int 100)) (* SATURATED *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_small =
@@ -186,8 +186,8 @@ let test_compute_imbalance_negative_small =
     let burrowed    = Kit.of_mukit (Z.of_int   833_333_334) in
     let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "-83333333/1666666668") (* JUST BELOW SATURATION *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int (-83333333)) (Z.of_int 1666666668)) (* JUST BELOW SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_big =
@@ -195,8 +195,8 @@ let test_compute_imbalance_negative_big =
     let burrowed    = Kit.of_mukit (Z.of_int   833_333_333) in
     let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "-5/100") (* JUST ABOVE SATURATION *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int (-5)) (Z.of_int 100)) (* JUST ABOVE SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_capped =
@@ -204,8 +204,8 @@ let test_compute_imbalance_negative_capped =
     let burrowed    = Kit.of_mukit (Z.of_int             1) in
     let circulating = Kit.of_mukit (Z.of_int 1_000_000_000) in
     assert_equal
-      ~printer:(Q.sprint ())
-      (Q.of_string "-5/100") (* SATURATED *)
+      ~printer:Ratio.show
+      (Ratio.make (Z.of_int (-5)) (Z.of_int 100)) (* SATURATED *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 (* ************************************************************************* *)
@@ -220,9 +220,9 @@ let test_imbalance_upper_bound =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Q.leq
+  Ratio.leq
     (Parameters.compute_imbalance ~burrowed ~circulating)
-    (Q.of_string "5/100")
+    (Ratio.make (Z.of_int 5) (Z.of_int 100))
 
 (* Imbalance can never go below -5% *)
 let test_imbalance_lower_bound =
@@ -232,9 +232,9 @@ let test_imbalance_lower_bound =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Q.geq
+  Ratio.geq
     (Parameters.compute_imbalance ~burrowed ~circulating)
-    (Q.of_string "-5/100")
+    (Ratio.make (Z.of_int (-5)) (Z.of_int 100))
 
 (* The sign of imbalance is the same as of (burrowed - circulating).
  * If burrowed > circulating then imbalance > 0
@@ -248,8 +248,8 @@ let test_imbalance_sign_preservation =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Q.sign (Parameters.compute_imbalance ~burrowed ~circulating)
-  = Q.sign Kit.(to_q (burrowed - circulating))
+  Ratio.sign (Parameters.compute_imbalance ~burrowed ~circulating)
+  = Ratio.sign Kit.(to_ratio (burrowed - circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =
@@ -259,9 +259,9 @@ let test_imbalance_is_zero_when_equal =
     ~count:property_test_count
     TestArbitrary.arb_kit
   @@ fun kit ->
-  Q.equal
+  Ratio.equal
     (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
-    Q.zero
+    Ratio.zero
 
 (* For a fixed amount of kit in circulation, increasing the burrowed kit
  * increases the imbalance. *)
@@ -280,7 +280,7 @@ let test_imbalance_positive_tendencies =
     | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
     | _ -> failwith "impossible"
   ) in
-  Q.geq
+  Ratio.geq
     (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
     (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
 
@@ -301,7 +301,7 @@ let test_imbalance_negative_tendencies =
     | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
     | _ -> failwith "impossible"
   ) in
-  Q.leq
+  Ratio.leq
     (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
     (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
 
@@ -317,7 +317,7 @@ let test_protected_index_follows_index =
   let params = Parameters.make_initial tezos.now in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -351,10 +351,10 @@ let test_protected_index_pace =
     let params = Parameters.make_initial tezos.now in
 
     (* Neutral kit_in_tez (same as initial) *)
-    let kit_in_tez = Q.one in
+    let kit_in_tez = Ratio.one in
 
     (* UPWARD MOVES *)
-    let very_high_index = Tez.of_q_floor Q.(Q.of_string "1000" * Tez.to_q params.index) in
+    let very_high_index = Tez.of_ratio_floor Ratio.(Ratio.of_int 1000 * Tez.to_ratio params.index) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
@@ -367,7 +367,7 @@ let test_protected_index_pace =
     assert_equal ~printer:Tez.show (Tez.of_mutez 2_053_031) new_params.protected_index;
 
     (* DOWNWARD MOVES *)
-    let very_low_index = Tez.of_q_floor Q.(Q.of_string "1/1000" * Tez.to_q params.index) in
+    let very_low_index = Tez.of_ratio_floor Ratio.(Ratio.make (Z.of_int 1) (Z.of_int 1000) * Tez.to_ratio params.index) in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
@@ -392,7 +392,7 @@ let test_minting_index_low_bounded =
   let params = Parameters.make_initial tezos.now in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -419,7 +419,7 @@ let test_minting_index_high_unbounded =
   let params = Parameters.make_initial tezos.now in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -450,7 +450,7 @@ let test_liquidation_index_high_bounded =
   let params = Parameters.make_initial tezos.now in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -479,7 +479,7 @@ let test_liquidation_index_low_unbounded =
   let params = Parameters.make_initial tezos.now in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -518,7 +518,7 @@ let test_touch_identity =
 
   (* neutral arguments *)
   let index = params.index in
-  let kit_in_tez = Q.one in
+  let kit_in_tez = Ratio.one in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -589,7 +589,7 @@ let test_touch =
       } in
 
     let new_index = Tez.of_mutez 340_000 in
-    let kit_in_tez = Q.of_string "305/1000" in
+    let kit_in_tez = Ratio.make (Z.of_int 305) (Z.of_int 1000) in
     let total_accrual_to_uniswap, new_parameters = Parameters.touch tezos new_index kit_in_tez initial_parameters in
     assert_equal
       { q = FixedPoint.of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)

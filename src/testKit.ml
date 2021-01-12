@@ -27,19 +27,19 @@ let suite =
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Z.of_int 15_370_401))
-         (Kit.scale (Kit.of_mukit (Z.of_int 5_123_467)) (FixedPoint.of_q_floor (Q.of_string "3")));
+         (Kit.scale (Kit.of_mukit (Z.of_int 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int 3)));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Z.of_int (-15_370_401)))
-         (Kit.scale (Kit.of_mukit (Z.of_int 5_123_467)) (FixedPoint.of_q_floor (Q.of_string "-3")));
+         (Kit.scale (Kit.of_mukit (Z.of_int 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int (-3))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Z.of_int (-15_370_401)))
-         (Kit.scale (Kit.of_mukit (Z.of_int (-5_123_467))) (FixedPoint.of_q_floor (Q.of_string "3")));
+         (Kit.scale (Kit.of_mukit (Z.of_int (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int 3)));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Z.of_int 15_370_401))
-         (Kit.scale (Kit.of_mukit (Z.of_int (-5_123_467))) (FixedPoint.of_q_floor (Q.of_string "-3")));
+         (Kit.scale (Kit.of_mukit (Z.of_int (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int (-3))));
 
        (* compare *)
        assert_equal

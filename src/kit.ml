@@ -20,13 +20,13 @@ let one = scaling_factor
 let of_mukit amount = amount
 let to_mukit amount = amount
 
-let to_q amount = Q.make amount scaling_factor
-let of_q_ceil amount = Z.(cdiv (Q.num amount * scaling_factor) (Q.den amount))
-let of_q_floor amount = Z.(fdiv (Q.num amount * scaling_factor) (Q.den amount))
+let to_ratio amount = Ratio.make amount scaling_factor
+let of_ratio_ceil amount = Z.(cdiv (Ratio.num amount * scaling_factor) (Ratio.den amount))
+let of_ratio_floor amount = Z.(fdiv (Ratio.num amount * scaling_factor) (Ratio.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp = (* NOTE: IT FLOORS *)
-  of_q_floor Q.(FixedPoint.to_q fp * to_q amount)
+  of_ratio_floor Ratio.(FixedPoint.to_ratio fp * to_ratio amount)
 
 (* Pretty printing functions *)
 let show amount =
