@@ -246,9 +246,10 @@ let start_auction_if_possible
         let start_value =
           Kit.scale
             Kit.one
-            FixedPoint.(
-              FixedPoint.of_ratio_floor (Tez.to_ratio (Avl.avl_tez storage new_auction))
-              * start_price)  in
+            (FixedPoint.mul
+               (FixedPoint.of_ratio_floor (Tez.to_ratio (Avl.avl_tez storage new_auction)))
+               start_price
+            ) in
         Some
           { contents = new_auction;
             state = Descending (start_value, tezos.now); } in
@@ -267,12 +268,12 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
     let auction_decay_rate = FixedPoint.of_ratio_ceil Constants.auction_decay_rate in (* FLOOR-or-CEIL *)
     let decay =
       FixedPoint.pow
-        FixedPoint.(one - auction_decay_rate)
+        (FixedPoint.sub FixedPoint.one auction_decay_rate)
         (Timestamp.seconds_elapsed ~start:start_time ~finish:tezos.now) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
     let bid_improvement_factor = FixedPoint.of_ratio_floor Constants.bid_improvement_factor in (* FLOOR-or-CEIL *)
-    Kit.scale leading_bid.kit FixedPoint.(one + bid_improvement_factor)
+    Kit.scale leading_bid.kit (FixedPoint.add FixedPoint.one bid_improvement_factor)
 
 (** Check if an auction is complete. A descending auction declines
   * exponentially over time, so it is effectively never complete (George: I

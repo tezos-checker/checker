@@ -148,11 +148,11 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
     (* No acceleration (0) *)
     | () when qexp (neg target_low_bracket) < target && target < qexp target_low_bracket -> FixedPoint.zero
     (* Low acceleration (-/+) *)
-    | () when qexp (neg target_high_bracket) < target && target <= qexp (neg target_low_bracket) -> FixedPoint.(neg (cnp_001 / pow secs_in_a_day 2))
-    | () when qexp      target_high_bracket  > target && target >= qexp      target_low_bracket  -> FixedPoint.(    (cnp_001 / pow secs_in_a_day 2))
+    | () when qexp (neg target_high_bracket) < target && target <= qexp (neg target_low_bracket) -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
+    | () when qexp      target_high_bracket  > target && target >= qexp      target_low_bracket  ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
     (* High acceleration (-/+) *)
-    | () when target <= qexp (neg target_high_bracket) -> FixedPoint.(neg (cnp_005 / pow secs_in_a_day 2))
-    | () when target >= qexp      target_high_bracket  -> FixedPoint.(    (cnp_005 / pow secs_in_a_day 2))
+    | () when target <= qexp (neg target_high_bracket) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
+    | () when target >= qexp      target_high_bracket  ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
     | _ -> (failwith "impossible" : FixedPoint.t)
   )
 
@@ -189,7 +189,7 @@ let touch
     FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
         FixedPoint.to_ratio parameters.drift
         + make (Z.of_int 1) (Z.of_int 2)
-          * FixedPoint.(to_ratio (parameters.drift' + current_drift'))
+          * FixedPoint.to_ratio (FixedPoint.add parameters.drift' current_drift')
           * duration_in_seconds
       ) in
 

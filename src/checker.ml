@@ -693,9 +693,9 @@ let calculate_touch_reward (state:t) ~tezos : Kit.t =
   let touch_high_reward = FixedPoint.of_ratio_ceil Constants.touch_high_reward in (* FLOOR-or-CEIL *)
   Kit.scale
     Kit.one
-    FixedPoint.(
-      of_int low_duration * touch_low_reward
-      + of_int high_duration * touch_high_reward
+    (FixedPoint.add
+       (FixedPoint.mul (FixedPoint.of_int low_duration) touch_low_reward)
+       (FixedPoint.mul (FixedPoint.of_int high_duration) touch_high_reward)
     )
 
 let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.token * t) =

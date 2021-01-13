@@ -5,10 +5,11 @@ val zero : t
 val one : t
 
 (* Arithmetic operations. *)
-val ( + ) : t -> t -> t
-val ( - ) : t -> t -> t
-val ( * ) : t -> t -> t
-val ( / ) : t -> t -> t
+val add : t -> t -> t
+val sub : t -> t -> t
+val mul : t -> t -> t
+val div : t -> t -> t
+
 val neg : t -> t
 val pow : t -> int -> t
 val exp : t -> t

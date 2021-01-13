@@ -9,15 +9,15 @@ let zero = Z.zero
 let one = scaling_factor
 
 (* Arithmetic operations. *)
-let ( + ) x y = Z.(x + y)
-let ( - ) x y = Z.(x - y)
-let ( * ) x y = Z.(shift_right_trunc (x * y) scaling_exponent)
+let add x y = Z.(x + y)
+let sub x y = Z.(x - y)
+let mul x y = Z.(shift_right_trunc (x * y) scaling_exponent)
 
 (* We round towards 0, for fixedpoint calculation, measuring things which are
  * inherently noisy, this is ok. Greater care must be excercised when doing
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
-let ( / ) x y = Z.(shift_left x scaling_exponent / y)
+let div x y = Z.(shift_left x scaling_exponent / y)
 let neg x = Z.neg x
 
 let pow x y =
@@ -28,7 +28,7 @@ let pow x y =
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amount + (amount * amount) / (one + one) *)
-let exp amount = one + amount
+let exp amount = add one amount
 
 (* Conversions to/from other types. *)
 let of_int amount = Z.(shift_left (of_int amount) scaling_exponent)
