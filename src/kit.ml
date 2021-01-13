@@ -5,7 +5,6 @@
  * this. *)
 type t = Z.t
 let scaling_factor = Z.of_int64 1000000L
-let scaling_exponent = 6
 
 (* Basic arithmetic operations. *)
 let ( + ) x y = Z.(x + y)
@@ -29,20 +28,7 @@ let scale amount fp = (* NOTE: IT FLOORS *)
   of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
 
 (* Pretty printing functions *)
-let show amount =
-  let zfill s width =
-    let to_fill = Stdlib.(width - (String.length s)) in
-    if to_fill <= 0
-    then s
-    else (String.make to_fill '0') ^ s in
-
-  let sign = if amount < Z.zero then "-" else "" in
-  let (upper, lower) = Z.div_rem (Z.abs amount) scaling_factor in
-  Format.sprintf "%s%s.%s"
-    sign
-    (Z.to_string upper)
-    (zfill (Z.to_string lower) scaling_exponent)
-
+let show amount = Z.to_string amount ^ "mukit"
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
 (* Kit are really tickets. *)

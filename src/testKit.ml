@@ -54,11 +54,11 @@ let suite =
        (* show *)
        assert_equal
          ~printer:(fun x -> x)
-         "-50.309951"
+         "-50309951mukit"
          (show_kt (Kit.of_mukit (Z.of_int (-50_309_951))));
        assert_equal
          ~printer:(fun x -> x)
-         "50.309951"
+         "50309951mukit"
          (show_kt (Kit.of_mukit (Z.of_int 50_309_951)));
     )
   ]
