@@ -24,7 +24,7 @@ let of_ratio_ceil amount = Z.(cdiv (Ratio.num amount * scaling_factor) (Ratio.de
 let of_ratio_floor amount = Z.(fdiv (Ratio.num amount * scaling_factor) (Ratio.den amount))
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
-let scale amount fp = (* NOTE: IT FLOORS *)
+let scale amount fp =
   of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
 
 (* Pretty printing functions *)

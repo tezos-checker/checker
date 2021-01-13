@@ -102,7 +102,7 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
 let compute_adjustment_index (p: t) : FixedPoint.t =
   let burrow_fee_index = FixedPoint.to_ratio p.burrow_fee_index in
   let imbalance_index = FixedPoint.to_ratio p.imbalance_index in
-  FixedPoint.of_ratio_floor (Ratio.mul burrow_fee_index imbalance_index) (* FLOOR-or-CEIL *)
+  FixedPoint.of_ratio_floor (Ratio.mul burrow_fee_index imbalance_index)
 
 (** Given the current target, calculate the rate of change of the drift (drift
   * derivative). That's how the following calculations came to be:
