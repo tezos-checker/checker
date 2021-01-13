@@ -26,7 +26,7 @@ let of_ratio_floor amount = Z.(fdiv (Ratio.num amount * scaling_factor) (Ratio.d
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp = (* NOTE: IT FLOORS *)
-  of_ratio_floor Ratio.(FixedPoint.to_ratio fp * to_ratio amount)
+  of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
 
 (* Pretty printing functions *)
 let show amount =

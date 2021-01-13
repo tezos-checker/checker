@@ -49,17 +49,3 @@ val div: t -> t -> t
 (* Pretty printing functions *)
 val pp: Format.formatter -> t -> unit
 val show: t -> string
-
-(* Infix operators. *)
-val ( + ): t -> t -> t
-val ( - ): t -> t -> t
-val ( * ): t -> t -> t
-val ( / ): t -> t -> t
-
-val ( = ): t -> t -> bool
-val ( <> ): t -> t -> bool
-
-val ( < ): t -> t -> bool
-val ( > ): t -> t -> bool
-val ( <= ): t -> t -> bool
-val ( >= ): t -> t -> bool

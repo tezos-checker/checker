@@ -43,13 +43,13 @@ let tz_liquidation (p: t) : Tez.t = min p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: t) : Ratio.t =
-  Ratio.(FixedPoint.to_ratio p.q * Tez.to_ratio (tz_minting p))
+  Ratio.mul (FixedPoint.to_ratio p.q) (Tez.to_ratio (tz_minting p))
 
 (** Current liquidation price (tez/kit). *)
 let liquidation_price (p: t) : Ratio.t =
-  Ratio.(FixedPoint.to_ratio p.q * Tez.to_ratio (tz_liquidation p))
+  Ratio.mul (FixedPoint.to_ratio p.q) (Tez.to_ratio (tz_liquidation p))
 
-let qexp amount = Ratio.(one + amount)
+let qexp amount = Ratio.add Ratio.one amount
 
 let clamp (v: Ratio.t) (lower: Ratio.t) (upper: Ratio.t) : 'a =
   assert (Ratio.compare lower upper <> 1);
@@ -89,18 +89,20 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
   else if burrowed = Kit.zero && circulating <> Kit.zero then
     Ratio.make (Z.of_int (-5)) (Z.of_int 100)
   else if burrowed >= circulating then
-    Ratio.(min Kit.(of_int 5 * to_ratio (burrowed - circulating)) (    (Kit.to_ratio burrowed))
-           / (of_int 20 * Kit.to_ratio burrowed))
+    Ratio.div
+      (Ratio.min (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio Kit.(burrowed - circulating))) (          (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
   else (* burrowed < circulating *)
-    Ratio.(max Kit.(of_int 5 * to_ratio (burrowed - circulating)) (neg (Kit.to_ratio burrowed))
-           / (of_int 20 * Kit.to_ratio burrowed))
+    Ratio.div
+      (Ratio.max (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio Kit.(burrowed - circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
 let compute_adjustment_index (p: t) : FixedPoint.t =
   let burrow_fee_index = FixedPoint.to_ratio p.burrow_fee_index in
   let imbalance_index = FixedPoint.to_ratio p.imbalance_index in
-  FixedPoint.of_ratio_floor Ratio.(burrow_fee_index * imbalance_index) (* FLOOR-or-CEIL *)
+  FixedPoint.of_ratio_floor (Ratio.mul burrow_fee_index imbalance_index) (* FLOOR-or-CEIL *)
 
 (** Given the current target, calculate the rate of change of the drift (drift
   * derivative). That's how the following calculations came to be:
@@ -143,18 +145,16 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   let cnp_001 = FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 1) (Z.of_int 10000)) in
   let cnp_005 = FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 5) (Z.of_int 10000)) in
   let secs_in_a_day = FixedPoint.of_int Constants.seconds_in_a_day in
-  Ratio.(
-    match () with
-    (* No acceleration (0) *)
-    | () when qexp (neg target_low_bracket) < target && target < qexp target_low_bracket -> FixedPoint.zero
-    (* Low acceleration (-/+) *)
-    | () when qexp (neg target_high_bracket) < target && target <= qexp (neg target_low_bracket) -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
-    | () when qexp      target_high_bracket  > target && target >= qexp      target_low_bracket  ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
-    (* High acceleration (-/+) *)
-    | () when target <= qexp (neg target_high_bracket) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
-    | () when target >= qexp      target_high_bracket  ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
-    | _ -> (failwith "impossible" : FixedPoint.t)
-  )
+  match () with
+  (* No acceleration (0) *)
+  | () when Ratio.lt (qexp (Ratio.neg target_low_bracket)) target && Ratio.lt target (qexp target_low_bracket) -> FixedPoint.zero
+  (* Low acceleration (-/+) *)
+  | () when Ratio.lt (qexp (Ratio.neg target_high_bracket)) target && Ratio.leq target (qexp (Ratio.neg target_low_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
+  | () when Ratio.gt (qexp (          target_high_bracket)) target && Ratio.geq target (qexp (          target_low_bracket)) ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
+  (* High acceleration (-/+) *)
+  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
+  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
+  | _ -> (failwith "impossible" : FixedPoint.t)
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
@@ -167,79 +167,128 @@ let touch
     (parameters: t)
   : Kit.t * t =
   let duration_in_seconds =
-    Ratio.of_int
+    Ratio.of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
     @@ Timestamp.seconds_elapsed
       ~start:parameters.last_touched
       ~finish:tezos.now
   in
 
   let current_protected_index =
-    let upper_lim = Ratio.(qexp      (Constants.protected_index_epsilon * duration_in_seconds)) in
-    let lower_lim = Ratio.(qexp (neg  Constants.protected_index_epsilon * duration_in_seconds)) in
+    let upper_lim = qexp (Ratio.mul           (Constants.protected_index_epsilon) duration_in_seconds) in
+    let lower_lim = qexp (Ratio.mul (Ratio.neg Constants.protected_index_epsilon) duration_in_seconds) in
 
-    Tez.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-        Tez.to_ratio parameters.protected_index
-        * clamp
-          (Ratio.make (Tez.to_mutez current_index) (Tez.to_mutez parameters.protected_index))
-          lower_lim
-          upper_lim
+    Tez.of_ratio_floor
+      (Ratio.mul
+         (Tez.to_ratio parameters.protected_index)
+         (clamp
+            (Ratio.make (Tez.to_mutez current_index) (Tez.to_mutez parameters.protected_index))
+            lower_lim
+            upper_lim
+         )
       ) in
-  let current_drift' = compute_drift_derivative parameters.target in
+  let current_drift' =
+    compute_drift_derivative parameters.target in
   let current_drift =
-    FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-        FixedPoint.to_ratio parameters.drift
-        + make (Z.of_int 1) (Z.of_int 2)
-          * FixedPoint.to_ratio (FixedPoint.add parameters.drift' current_drift')
-          * duration_in_seconds
+    FixedPoint.of_ratio_floor
+      (Ratio.add
+         (FixedPoint.to_ratio parameters.drift)
+         (Ratio.mul
+            (Ratio.make (Z.of_int 1) (Z.of_int 2))
+            (Ratio.mul
+               (FixedPoint.to_ratio (FixedPoint.add parameters.drift' current_drift'))
+               duration_in_seconds
+            )
+         )
       ) in
-
   let current_q =
-    FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-        FixedPoint.to_ratio parameters.q
-        * qexp ( ( FixedPoint.to_ratio parameters.drift
-                   + make (Z.of_int 1) (Z.of_int 6)
-                     * ((of_int 2 * FixedPoint.to_ratio parameters.drift') + FixedPoint.to_ratio current_drift')
-                     * duration_in_seconds )
-                 * duration_in_seconds )
+    FixedPoint.of_ratio_floor
+      (Ratio.mul
+         (FixedPoint.to_ratio parameters.q)
+         (qexp
+            (Ratio.mul
+               (Ratio.add
+                  (FixedPoint.to_ratio parameters.drift)
+                  (Ratio.mul
+                     (Ratio.make (Z.of_int 1) (Z.of_int 6))
+                     (Ratio.mul
+                        (Ratio.add
+                           (Ratio.mul
+                              (Ratio.of_int 2)
+                              (FixedPoint.to_ratio parameters.drift')
+                           )
+                           (FixedPoint.to_ratio current_drift')
+                        )
+                        duration_in_seconds
+                     )
+                  )
+               )
+               duration_in_seconds
+            )
+         )
       ) in
 
-  let current_target = FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-      FixedPoint.to_ratio current_q * Tez.to_ratio current_index / current_kit_in_tez
-    ) in
-
+  let current_target =
+    FixedPoint.of_ratio_floor
+      (Ratio.div
+         (Ratio.mul
+            (FixedPoint.to_ratio current_q)
+            (Tez.to_ratio current_index)
+         )
+         current_kit_in_tez
+      ) in
   (* Update the indices *)
-  let current_burrow_fee_index = FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-      (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
-      FixedPoint.to_ratio parameters.burrow_fee_index
-      * (one
-         + Constants.burrow_fee_percentage
-           * duration_in_seconds / Ratio.of_int Constants.seconds_in_a_year)
-    ) in
+  let current_burrow_fee_index =
+    (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
+    FixedPoint.of_ratio_floor
+      (Ratio.mul
+         (FixedPoint.to_ratio parameters.burrow_fee_index)
+         (Ratio.add
+            Ratio.one
+            (Ratio.div
+               (Ratio.mul Constants.burrow_fee_percentage duration_in_seconds)
+               (Ratio.of_int Constants.seconds_in_a_year)
+            )
+         )
+      ) in
 
-  let current_imbalance_index = FixedPoint.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-      let imbalance_rate =
-        compute_imbalance
-          ~burrowed:parameters.outstanding_kit
-          ~circulating:parameters.circulating_kit in
-      FixedPoint.to_ratio parameters.imbalance_index
-      * (one
-         + imbalance_rate
-           * duration_in_seconds / Ratio.of_int Constants.seconds_in_a_year)
-    ) in
+  let current_imbalance_index =
+    let imbalance_rate =
+      compute_imbalance
+        ~burrowed:parameters.outstanding_kit
+        ~circulating:parameters.circulating_kit in
+    FixedPoint.of_ratio_floor
+      (Ratio.mul
+         (FixedPoint.to_ratio parameters.imbalance_index)
+         (Ratio.add
+            Ratio.one
+            (Ratio.div
+               (Ratio.mul imbalance_rate duration_in_seconds)
+               (Ratio.of_int Constants.seconds_in_a_year)
+            )
+         )
+      ) in
 
-  let outstanding_with_fees = Kit.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-      Kit.to_ratio parameters.outstanding_kit
-      * FixedPoint.to_ratio current_burrow_fee_index
-      / FixedPoint.to_ratio parameters.burrow_fee_index
-    ) in
+  let outstanding_with_fees =
+    Kit.of_ratio_floor
+      (Ratio.div
+         (Ratio.mul
+            (Kit.to_ratio parameters.outstanding_kit)
+            (FixedPoint.to_ratio current_burrow_fee_index)
+         )
+         (FixedPoint.to_ratio parameters.burrow_fee_index)
+      ) in
 
   let accrual_to_uniswap = Kit.(outstanding_with_fees - parameters.outstanding_kit) in
 
-  let current_outstanding_kit = Kit.of_ratio_floor Ratio.( (* FLOOR-or-CEIL *)
-      Kit.to_ratio outstanding_with_fees
-      * FixedPoint.to_ratio current_imbalance_index
-      / FixedPoint.to_ratio parameters.imbalance_index
-    ) in
+  let current_outstanding_kit =
+    Kit.of_ratio_floor
+      (Ratio.div
+         (Ratio.mul
+            (Kit.to_ratio outstanding_with_fees)
+            (FixedPoint.to_ratio current_imbalance_index)
+         )
+         (FixedPoint.to_ratio parameters.imbalance_index)
+      ) in
 
   let current_circulating_kit = Kit.(parameters.circulating_kit + accrual_to_uniswap) in
 

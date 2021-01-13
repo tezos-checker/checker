@@ -354,7 +354,7 @@ let test_protected_index_pace =
     let kit_in_tez = Ratio.one in
 
     (* UPWARD MOVES *)
-    let very_high_index = Tez.of_ratio_floor Ratio.(Ratio.of_int 1000 * Tez.to_ratio params.index) in
+    let very_high_index = Tez.of_ratio_floor (Ratio.mul (Ratio.of_int 1000) (Tez.to_ratio params.index)) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
@@ -367,7 +367,7 @@ let test_protected_index_pace =
     assert_equal ~printer:Tez.show (Tez.of_mutez 2_053_031) new_params.protected_index;
 
     (* DOWNWARD MOVES *)
-    let very_low_index = Tez.of_ratio_floor Ratio.(Ratio.make (Z.of_int 1) (Z.of_int 1000) * Tez.to_ratio params.index) in
+    let very_low_index = Tez.of_ratio_floor (Ratio.mul (Ratio.make (Z.of_int 1) (Z.of_int 1000)) (Tez.to_ratio params.index)) in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)

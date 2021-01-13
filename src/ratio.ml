@@ -144,15 +144,3 @@ let div x y =
 (* Pretty printing functions *)
 let show n = (Z.to_string n.num) ^ "/" ^ (Z.to_string n.den)
 let pp f x = Format.pp_print_string f (show x)
-
-(* Infix operators. *)
-let ( + )  = add
-let ( - ) = sub
-let ( * ) = mul
-let ( / ) = div
-let ( = ) = equal
-let ( < ) = lt
-let ( > ) = gt
-let ( <= ) = leq
-let ( >= ) = geq
-let ( <> ) a b = not (equal a b)

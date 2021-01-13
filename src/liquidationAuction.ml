@@ -190,16 +190,20 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
   assert (amount < slice.tez);
   (* left slice *)
   let ltez = amount in
-  let lkit = Kit.of_ratio_ceil Ratio.(
-      Kit.to_ratio slice.min_kit_for_unwarranted
-      * Ratio.make (Tez.to_mutez ltez) (Tez.to_mutez slice.tez)
-    ) in
+  let lkit =
+    Kit.of_ratio_ceil
+      (Ratio.mul
+         (Kit.to_ratio slice.min_kit_for_unwarranted)
+         (Ratio.make (Tez.to_mutez ltez) (Tez.to_mutez slice.tez))
+      ) in
   (* right slice *)
   let rtez = Tez.(slice.tez - amount) in
-  let rkit = Kit.of_ratio_ceil Ratio.(
-      Kit.to_ratio slice.min_kit_for_unwarranted
-      * Ratio.make (Tez.to_mutez rtez) (Tez.to_mutez slice.tez)
-    ) in
+  let rkit =
+    Kit.of_ratio_ceil
+      (Ratio.mul
+         (Kit.to_ratio slice.min_kit_for_unwarranted)
+         (Ratio.make (Tez.to_mutez rtez) (Tez.to_mutez slice.tez))
+      ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
   )
@@ -232,7 +236,10 @@ let start_auction_if_possible
       max
         Constants.max_lot_size
         (Tez.of_ratio_floor
-           Ratio.(Tez.to_ratio queued_amount * FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
+           (Ratio.mul
+              (Tez.to_ratio queued_amount)
+              (FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
+           )
         ) in
     let (storage, new_auction) =
       take_with_splitting

@@ -485,13 +485,15 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
      * to truncation. That could be a problem; the extra kit, no matter how
      * small, must be dealt with (e.g. be removed from the circulating kit). *)
     let kit_to_repay, kit_to_burn =
-      let corresponding_kit = Kit.of_ratio_floor Ratio.(
-          Ratio.make (Tez.to_mutez leaf.tez) (Tez.to_mutez outcome.sold_tez)
-          * Kit.to_ratio outcome.winning_bid.kit
-        ) in
+      let corresponding_kit =
+        Kit.of_ratio_floor
+          (Ratio.mul
+             (Ratio.make (Tez.to_mutez leaf.tez) (Tez.to_mutez outcome.sold_tez))
+             (Kit.to_ratio outcome.winning_bid.kit)
+          ) in
       let penalty =
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          Kit.of_ratio_ceil Ratio.(Kit.to_ratio corresponding_kit * Constants.liquidation_penalty)
+          Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio corresponding_kit) Constants.liquidation_penalty)
         else
           Kit.zero
       in
