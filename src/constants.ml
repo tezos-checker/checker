@@ -25,7 +25,7 @@ let uniswap_fee : Ratio.t = Ratio.make (Z.of_int 2) (Z.of_int 1000) (* 0.002 *)
 let protected_index_epsilon : Ratio.t = Ratio.make (Z.of_int 5) (Z.of_int 600000)
 
 (** The maximum number of tez that can be in an auction lot. *)
-let max_lot_size : Tez.t = Tez.of_mutez 10_000_000_000
+let max_lot_size : Tez.t = Tez.of_mutez (Z.of_int 10_000_000_000)
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
 let min_lot_auction_queue_fraction : FixedPoint.t =

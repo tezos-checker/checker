@@ -14,7 +14,7 @@ let suite =
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction auctions {
            burrow = burrow_id_1;
-           tez = Tez.of_mutez 2_000_000;
+           tez = Tez.of_mutez (Z.of_int 2_000_000);
            min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 4_000_000); (* note: randomly chosen *)
            younger = None; older = None;
          } in
@@ -25,7 +25,7 @@ let suite =
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        let current = Option.get auctions.current_auction in
        assert_equal
-         (Some (Tez.of_mutez 2_000_000))
+         (Some (Tez.of_mutez (Z.of_int 2_000_000)))
          (LiquidationAuction.current_auction_tez auctions);
        assert_equal
          (Kit.of_mukit (Z.of_int 2_000_000))
@@ -64,19 +64,19 @@ let suite =
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Tez.of_mutez 5_000_000_000;
+           { burrow = burrow_id_1; tez = Tez.of_mutez (Z.of_int 5_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_001); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =  Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_2; tez = Tez.of_mutez 5_000_000_000;
+           { burrow = burrow_id_2; tez = Tez.of_mutez (Z.of_int 5_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_002); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_3; tez = Tez.of_mutez 5_000_000_000;
+           { burrow = burrow_id_3; tez = Tez.of_mutez (Z.of_int 5_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_003); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
@@ -84,7 +84,7 @@ let suite =
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
-       assert_equal (Some (Tez.of_mutez 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
+       assert_equal (Some (Tez.of_mutez (Z.of_int 10_000_000_000))) (LiquidationAuction.current_auction_tez auctions);
     );
 
     ("test splits up auction lots to fit batch size" >::
@@ -93,19 +93,19 @@ let suite =
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Tez.of_mutez 4_000_000_000;
+           { burrow = burrow_id_1; tez = Tez.of_mutez (Z.of_int 4_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_004); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_2; tez = Tez.of_mutez 5_000_000_000;
+           { burrow = burrow_id_2; tez = Tez.of_mutez (Z.of_int 5_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_005); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_3; tez = Tez.of_mutez 3_000_000_000;
+           { burrow = burrow_id_3; tez = Tez.of_mutez (Z.of_int 3_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 9_000_006); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in
@@ -113,7 +113,7 @@ let suite =
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
-       assert_equal (Some (Tez.of_mutez 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
+       assert_equal (Some (Tez.of_mutez (Z.of_int 10_000_000_000))) (LiquidationAuction.current_auction_tez auctions);
     );
 
     ("test bidding" >::
@@ -122,7 +122,7 @@ let suite =
        let (auctions, _) = Result.get_ok @@
          LiquidationAuction.send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Tez.of_mutez 2_000_000;
+           { burrow = burrow_id_1; tez = Tez.of_mutez (Z.of_int 2_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 4_000_007); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_time = Timestamp.of_seconds 0 in

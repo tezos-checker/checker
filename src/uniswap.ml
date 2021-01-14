@@ -75,7 +75,7 @@ let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
   }
 
 let make_initial ~tezos =
-  { tez = Tez.of_mutez 1;
+  { tez = Tez.of_mutez Z.one;
     kit = Kit.issue ~tezos (Kit.of_mukit Z.one);
     lqt = issue_liquidity_tokens ~tezos Nat.one;
     kit_in_tez_in_prev_block = Ratio.one; (* Same as tez/kit now. *)

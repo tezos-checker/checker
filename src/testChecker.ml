@@ -33,7 +33,7 @@ let suite =
        (* Activation/deactivation tests *)
        let () =
          (* Creation/deactivation does not incur any costs. *)
-         let tez = Tez.of_mutez 12_345_678 in
+         let tez = Tez.of_mutez (Z.of_int 12_345_678) in
          let (burrow_id, admin_permission, checker0) = assert_ok @@
            Checker.create_burrow checker ~tezos ~call:{sender = bob; amount = tez;} in
          let (payment, checker1) = assert_ok @@
@@ -58,7 +58,7 @@ let suite =
          Checker.create_burrow
            checker
            ~tezos
-           ~call:{sender = bob; amount = Tez.of_mutez 10_000_000;} in
+           ~call:{sender = bob; amount = Tez.of_mutez (Z.of_int 10_000_000);} in
 
        (* Mint as much kit as possible *)
        let (kit_token, checker) = assert_ok @@
@@ -97,7 +97,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let _touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_000_001) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Z.of_int 1_000_001)) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -114,7 +114,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Z.of_int 1_200_000)) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -129,7 +129,7 @@ let suite =
            checker
            ~call:{sender=alice; amount=Tez.zero;}
            ~burrow_id:burrow_id in
-       assert_equal (Tez.of_mutez 1_008_999) reward_payment.amount ~printer:Tez.show;
+       assert_equal (Tez.of_mutez (Z.of_int 1_008_999)) reward_payment.amount ~printer:Tez.show;
 
        let int_level = 217 in
        let tezos = make_tezos int_level in
@@ -143,7 +143,7 @@ let suite =
             ~kit:(Kit.issue ~tezos (Kit.of_mukit (Z.of_int 1_000))));
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Z.of_int 1_200_000)) in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
@@ -157,7 +157,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Z.of_int 1_200_000)) in
 
        let (bid, checker) = assert_ok @@
          Checker.liquidation_auction_place_bid
@@ -175,7 +175,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez 1_200_000) in
+         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Z.of_int 1_200_000)) in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
@@ -217,7 +217,7 @@ let suite =
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice; amount = Tez.of_mutez 3_155_960;})
+         (Tez.{destination = alice; amount = Tez.of_mutez (Z.of_int 3_155_960);})
          tez_from_bid
          ~printer:Tez.show_payment;
     );

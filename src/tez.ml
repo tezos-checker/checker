@@ -15,7 +15,7 @@ let one = Nat.abs scaling_factor
 
 (* Conversions to/from other types. *)
 let of_mutez amount =
-  match Nat.of_int (Z.of_int amount) with
+  match Nat.of_int amount with
   | None -> failwith "Tez.of_mutez: negative"
   | Some z -> z
 

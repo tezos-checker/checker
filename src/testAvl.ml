@@ -4,7 +4,7 @@ open Format
 
 type element_list = (int * Tez.t) list [@@deriving show]
 
-let nTez (i: int) : Tez.t = Tez.of_mutez (1_000_000 * i)
+let nTez (i: int) : Tez.t = Tez.of_mutez (Z.of_int (1_000_000 * i))
 
 let add_all (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
   : ('l, 'r) mem =
@@ -340,7 +340,7 @@ let suite =
          if i <= 0
          then mem
          else
-           let (mem, _) = push_back mem root i (Tez.of_mutez i) in
+           let (mem, _) = push_back mem root i (Tez.of_mutez (Z.of_int i)) in
            go (i-1) mem in
 
        let mem = go 100_000 mem in
@@ -348,7 +348,7 @@ let suite =
        assert_dangling_pointers mem [root];
 
        BigMap.reset_ops ();
-       let _ = take mem root (Tez.of_mutez 50_000) 0 in
+       let _ = take mem root (Tez.of_mutez (Z.of_int 50_000)) 0 in
 
        assert_equal
          {reads=104; writes=87}
@@ -360,7 +360,7 @@ let suite =
        range 0 10
        |> permutations
        |> Stream.iter (fun xs ->
-           let xs = List.map (fun i -> (i, Tez.of_mutez i)) xs in
+           let xs = List.map (fun i -> (i, Tez.of_mutez (Z.of_int i))) xs in
            let (mem, root) = from_list BigMap.empty 0 xs in
            assert_invariants mem root;
            let actual = to_list mem root in

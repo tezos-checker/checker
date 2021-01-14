@@ -50,7 +50,7 @@ let make_inputs_for_sell_kit_to_succeed =
        let token =
          let kit, _same_ticket = Kit.read_kit kit in
          Kit.issue ~tezos (Kit.of_ratio_ceil (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.sub Ratio.one Constants.uniswap_fee)) Constants.uniswap_fee)) in
-       let min_tez_expected = Tez.of_mutez 1 in (* absolute minimum *)
+       let min_tez_expected = Tez.of_mutez (Z.of_int 1) in (* absolute minimum *)
        let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, tezos, deadline)
     )
@@ -104,7 +104,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
          if lqt_to_burn = Nat.zero || min_tez_withdrawn = Tez.zero || min_kit_withdrawn = Kit.zero then
            let lqt_to_burn =
              let least_kit_percentage = (Ratio.div (Kit.to_ratio (Kit.of_mukit (Z.of_int 1))) (Kit.to_ratio kit)) in
-             let least_tez_percentage = Ratio.make (Tez.to_mutez (Tez.of_mutez 1)) (Tez.to_mutez tez) in
+             let least_tez_percentage = Ratio.make (Tez.to_mutez (Tez.of_mutez (Z.of_int 1))) (Tez.to_mutez tez) in
              let as_q = (Ratio.mul (Nat.to_ratio lqt) (Ratio.max least_kit_percentage least_tez_percentage)) in
              Option.get (Nat.of_int (Z.cdiv (Ratio.num as_q) (Ratio.den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
@@ -173,7 +173,7 @@ let buy_kit_unit_test =
   "buy kit unit test" >:: fun _ ->
     let uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 10_000_000)
+        ~tez:(Tez.of_mutez (Z.of_int 10_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 5_000_000)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 Nat.one)
         ~kit_in_tez_in_prev_block:Ratio.one
@@ -183,7 +183,7 @@ let buy_kit_unit_test =
     let expected_returned_kit = Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 453_636)) in
     let expected_updated_uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 11_000_000)
+        ~tez:(Tez.of_mutez (Z.of_int 11_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 4_546_364)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 Nat.one)
         ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
@@ -281,16 +281,16 @@ let sell_kit_unit_test =
   "sell kit" >:: fun _ ->
     let uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 10_000_000)
+        ~tez:(Tez.of_mutez (Z.of_int 10_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 5_000_000)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 Nat.one)
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
-    let expected_returned_tez = Tez.of_mutez 1_663_333 in
+    let expected_returned_tez = Tez.of_mutez (Z.of_int 1_663_333) in
     let expected_updated_uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 8_336_667)
+        ~tez:(Tez.of_mutez (Z.of_int 8_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 6_000_000)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 Nat.one)
         ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
@@ -303,7 +303,7 @@ let sell_kit_unit_test =
         uniswap
         ~amount:Tez.zero
         (Kit.issue ~tezos:tezos0 Kit.one)
-        ~min_tez_expected:(Tez.of_mutez 1)
+        ~min_tez_expected:(Tez.of_mutez (Z.of_int 1))
         ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
         ~deadline:(Timestamp.of_seconds 10) in
     assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
@@ -315,7 +315,7 @@ let sell_kit_unit_test =
         uniswap
         ~amount:Tez.zero
         (Kit.issue ~tezos:tezos0 Kit.one)
-        ~min_tez_expected:(Tez.of_mutez 1_663_333)
+        ~min_tez_expected:(Tez.of_mutez (Z.of_int 1_663_333))
         ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
         ~deadline:(Timestamp.of_seconds 1) in
     assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
@@ -327,7 +327,7 @@ let sell_kit_unit_test =
       uniswap
       ~amount:Tez.zero
       (Kit.issue ~tezos:tezos0 Kit.one)
-      ~min_tez_expected:(Tez.of_mutez 1_663_334)
+      ~min_tez_expected:(Tez.of_mutez (Z.of_int 1_663_334))
       ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
       ~deadline:(Timestamp.of_seconds 1);
 
@@ -337,7 +337,7 @@ let sell_kit_unit_test =
       uniswap
       ~amount:Tez.zero
       (Kit.issue ~tezos:tezos0 Kit.one)
-      ~min_tez_expected:(Tez.of_mutez 1_663_333)
+      ~min_tez_expected:(Tez.of_mutez (Z.of_int 1_663_333))
       ~tezos:Tezos.{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
       ~deadline:(Timestamp.of_seconds 1)
 
@@ -395,7 +395,7 @@ let add_liquidity_unit_test =
   "add liquidity unit test" >:: fun _ ->
     let uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 8_336_667)
+        ~tez:(Tez.of_mutez (Z.of_int 8_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 6_000_000)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 Nat.one)
         ~kit_in_tez_in_prev_block:Ratio.one
@@ -405,7 +405,7 @@ let add_liquidity_unit_test =
     let expected_returned_kit = Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 5_605_758)) in
     let expected_updated_uniswap : Uniswap.t =
       Uniswap.make_for_test
-        ~tez:(Tez.of_mutez 28_336_667)
+        ~tez:(Tez.of_mutez (Z.of_int 28_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 20_394_242)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.abs (Z.of_int 3)))
         ~kit_in_tez_in_prev_block:Ratio.one
@@ -417,7 +417,7 @@ let add_liquidity_unit_test =
       Uniswap.add_liquidity
         uniswap
         ~tezos
-        ~amount:(Tez.of_mutez 20_000_000)
+        ~amount:(Tez.of_mutez (Z.of_int 20_000_000))
         ~pending_accrual:Tez.zero
         ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 20_000_000)))
         ~min_lqt_minted:(Nat.abs (Z.of_int 2))
@@ -470,18 +470,18 @@ let pending_tez_deposit_test =
   (fun _ ->
      let uniswap =
        Uniswap.make_for_test
-         ~tez:(Tez.of_mutez 1000_000_000)
+         ~tez:(Tez.of_mutez (Z.of_int 1000_000_000))
          ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 5000_000_000)))
          ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.abs (Z.of_int 1000)))
          ~kit_in_tez_in_prev_block:Ratio.one
          ~last_level:level0 in
-     (* let uniswap = set_pending_accrued_tez uniswap (Tez.of_mutez 1_000_000) in *)
+     (* let uniswap = set_pending_accrued_tez uniswap (Tez.of_mutez (Z.of_int 1_000_000)) in *)
 
      match Uniswap.add_liquidity
              uniswap
              ~tezos:tezos0
-             ~amount:(Tez.of_mutez 101_000_000)
-             ~pending_accrual:(Tez.of_mutez 10_000_000)
+             ~amount:(Tez.of_mutez (Z.of_int 101_000_000))
+             ~pending_accrual:(Tez.of_mutez (Z.of_int 10_000_000))
              ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 500_000_000)))
              ~min_lqt_minted:Nat.one
              ~deadline:(Timestamp.of_seconds 1)
@@ -493,14 +493,14 @@ let pending_tez_deposit_test =
            ~tezos:tezos0
            ~amount:Tez.zero
            ~lqt_burned:liq
-           ~min_tez_withdrawn:(Tez.of_mutez 1)
+           ~min_tez_withdrawn:(Tez.of_mutez (Z.of_int 1))
            ~min_kit_withdrawn:(Kit.of_mukit (Z.of_int 1))
            ~deadline:(Timestamp.of_seconds 100)
        with
        | Error _ -> assert_string "removing liquidity failed"
        | Ok (tez, kit, _) ->
          assert_equal ~printer:Kit.show_token (Kit.issue ~tezos:tezos0 (Kit.of_mukit (Z.of_int 500_000_000))) kit;
-         assert_equal ~printer:Tez.show (Tez.of_mutez 100_090_909) tez;
+         assert_equal ~printer:Tez.show (Tez.of_mutez (Z.of_int 100_090_909)) tez;
   )
 
 let suite =
