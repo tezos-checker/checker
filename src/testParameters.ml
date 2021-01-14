@@ -249,7 +249,7 @@ let test_imbalance_sign_preservation =
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
   Ratio.sign (Parameters.compute_imbalance ~burrowed ~circulating)
-  = Ratio.sign Kit.(to_ratio (burrowed - circulating))
+  = Ratio.sign (Kit.to_ratio (Kit.sub burrowed circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =

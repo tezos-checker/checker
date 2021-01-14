@@ -135,8 +135,8 @@ let rebalance_kit (b: t) : t =
   assert (b.excess_kit >= Kit.zero);
   let kit_to_move = min b.outstanding_kit b.excess_kit in
   { b with
-    outstanding_kit = Kit.(b.outstanding_kit - kit_to_move);
-    excess_kit = Kit.(b.excess_kit - kit_to_move);
+    outstanding_kit = Kit.sub b.outstanding_kit kit_to_move;
+    excess_kit = Kit.sub b.excess_kit kit_to_move;
   }
 
 (** Update the outstanding kit (and excess_kit), update the adjustment index,
@@ -227,7 +227,7 @@ let return_kit_from_auction
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) burn/deposit the kit received from auctioning the slice *)
-  rebalance_kit { burrow with excess_kit = Kit.(burrow.excess_kit + kit); }
+  rebalance_kit { burrow with excess_kit = Kit.add burrow.excess_kit kit; }
 
 let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
   if tez < Constants.creation_deposit
@@ -271,7 +271,7 @@ let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t, Error.error) re
   assert_invariants b;
   assert (kit >= Kit.zero);
   assert (p.last_touched = b.last_touched);
-  let new_burrow = { b with outstanding_kit = Kit.(b.outstanding_kit + kit) } in
+  let new_burrow = { b with outstanding_kit = Kit.add b.outstanding_kit kit } in
   if is_overburrowed p new_burrow
   then Error MintKitFailure
   else Ok (new_burrow, kit)
@@ -283,10 +283,10 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
   assert (k >= Kit.zero);
   assert (p.last_touched = b.last_touched);
   let kit_to_burn = min b.outstanding_kit k in
-  let kit_to_store = Kit.(k - kit_to_burn) in
+  let kit_to_store = Kit.sub k kit_to_burn in
   { b with
-    outstanding_kit = Kit.(b.outstanding_kit - kit_to_burn);
-    excess_kit = Kit.(b.excess_kit + kit_to_store);
+    outstanding_kit = Kit.sub b.outstanding_kit kit_to_burn;
+    excess_kit = Kit.add b.excess_kit kit_to_store;
   }
 
 (** Activate a currently inactive burrow. This operation will fail if either
@@ -425,7 +425,7 @@ let is_liquidatable (p: Parameters.t) (b: t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
+  let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
   let liquidation_price = Parameters.liquidation_price p in
   let collateral = Tez.to_ratio b.collateral in
   b.active && Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fliquidation optimistic_outstanding) liquidation_price)
@@ -438,7 +438,7 @@ let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
+  let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
   let collateral = Tez.to_ratio b.collateral in
   let minting_price = Parameters.minting_price p in
   Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fminting optimistic_outstanding) minting_price)
@@ -467,7 +467,7 @@ let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Te
   assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = Kit.(to_ratio (b.outstanding_kit - expected_kit)) in
+  let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
   let collateral = Tez.to_ratio b.collateral in
   Kit.of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
     (Ratio.div

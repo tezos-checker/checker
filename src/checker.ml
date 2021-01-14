@@ -497,7 +497,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
         else
           Kit.zero
       in
-      (Kit.(corresponding_kit - penalty), penalty)
+      (Kit.sub corresponding_kit penalty, penalty)
     in
 
     (* Burn the kit by removing it from circulation. *)

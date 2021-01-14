@@ -90,11 +90,11 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
     Ratio.make (Z.of_int (-5)) (Z.of_int 100)
   else if burrowed >= circulating then
     Ratio.div
-      (Ratio.min (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio Kit.(burrowed - circulating))) (          (Kit.to_ratio burrowed)))
+      (Ratio.min (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
       (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
   else (* burrowed < circulating *)
     Ratio.div
-      (Ratio.max (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio Kit.(burrowed - circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
+      (Ratio.max (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio (Kit.sub burrowed circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
       (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
@@ -278,7 +278,7 @@ let touch
          (FixedPoint.to_ratio parameters.burrow_fee_index)
       ) in
 
-  let accrual_to_uniswap = Kit.(outstanding_with_fees - parameters.outstanding_kit) in
+  let accrual_to_uniswap = Kit.sub outstanding_with_fees parameters.outstanding_kit in
 
   let current_outstanding_kit =
     Kit.of_ratio_floor
@@ -290,7 +290,7 @@ let touch
          (FixedPoint.to_ratio parameters.imbalance_index)
       ) in
 
-  let current_circulating_kit = Kit.(parameters.circulating_kit + accrual_to_uniswap) in
+  let current_circulating_kit = Kit.add parameters.circulating_kit accrual_to_uniswap in
 
   ( accrual_to_uniswap
   , {
@@ -311,21 +311,21 @@ let touch
 (** Add some kit to the total amount of kit in circulation. *)
 let add_circulating_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
-  { parameters with circulating_kit = Kit.(parameters.circulating_kit + kit); }
+  { parameters with circulating_kit = Kit.add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
 let remove_circulating_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
   assert (parameters.circulating_kit >= kit);
-  { parameters with circulating_kit = Kit.(parameters.circulating_kit - kit); }
+  { parameters with circulating_kit = Kit.sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
 let add_outstanding_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
-  { parameters with outstanding_kit = Kit.(parameters.outstanding_kit + kit); }
+  { parameters with outstanding_kit = Kit.add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
 let remove_outstanding_kit (parameters: t) (kit: Kit.t) : t =
   assert (kit >= Kit.zero);
   assert (parameters.outstanding_kit >= kit);
-  { parameters with outstanding_kit = Kit.(parameters.outstanding_kit - kit); }
+  { parameters with outstanding_kit = Kit.sub parameters.outstanding_kit kit; }

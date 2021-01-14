@@ -172,7 +172,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
     else if return > uniswap_kit then
       Error BuyKitTooMuchKitBought
     else
-      let bought_kit, remaining_kit = Kit.split_or_fail all_kit_in_uniswap return Kit.(uniswap_kit - return) in
+      let bought_kit, remaining_kit = Kit.split_or_fail all_kit_in_uniswap return (Kit.sub uniswap_kit return) in
       Ok ( bought_kit,
            { uniswap with
              kit = remaining_kit;
@@ -196,7 +196,7 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
     let price = Ratio.div (Tez.to_ratio uniswap.tez) (Kit.to_ratio uniswap_kit) in
-    let slippage = Ratio.div (Kit.to_ratio uniswap_kit) (Kit.(to_ratio (uniswap_kit + kit))) in
+    let slippage = Ratio.div (Kit.to_ratio uniswap_kit) (Kit.to_ratio (Kit.add uniswap_kit kit)) in
     let return =
       Tez.of_ratio_floor
         (Ratio.mul
@@ -270,7 +270,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
         Kit.split_or_fail
           all_kit_deposited
           kit_deposited
-          Kit.(max_kit_deposited - kit_deposited) in
+          (Kit.sub max_kit_deposited kit_deposited) in
       let new_all_kit_in_uniswap = Kit.join_or_fail all_kit_in_uniswap kit_deposited in
       let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
       let updated = { uniswap with
@@ -325,7 +325,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
           | Some remaining -> Ticket.split same_ticket remaining lqt_burned
         ) in
 
-      let kit_withdrawn, remaining_kit = Kit.split_or_fail all_kit_in_uniswap kit_withdrawn Kit.(uniswap_kit - kit_withdrawn) in
+      let kit_withdrawn, remaining_kit = Kit.split_or_fail all_kit_in_uniswap kit_withdrawn (Kit.sub uniswap_kit kit_withdrawn) in
       let updated = { uniswap with
                       tez = Tez.sub uniswap.tez tez_withdrawn;
                       kit = remaining_kit;

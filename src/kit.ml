@@ -7,8 +7,8 @@ type t = Z.t
 let scaling_factor = Z.of_int64 1000000L
 
 (* Basic arithmetic operations. *)
-let ( + ) x y = Z.(x + y)
-let ( - ) x y = Z.(x - y)
+let add x y = Z.(x + y)
+let sub x y = Z.(x - y)
 
 let compare x y = Z.compare x y
 
