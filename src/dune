@@ -17,7 +17,8 @@
  (public_name src)
  (modules Checker Constants Timestamp Level BigMap Avl Kit Tez FixedPoint
    Parameters Burrow Uniswap Error Address LiquidationAuction Ticket Ptr
-   DelegationAuction Tezos Call Permission Nat Ratio)
+   DelegationAuction Tezos Call Permission Nat Ratio Ligo)
+ (modules_without_implementation ligo)
  (libraries str zarith)
  (wrapped false)
  (preprocess

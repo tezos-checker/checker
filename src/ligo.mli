@@ -61,8 +61,6 @@ type nat
      The only size limit to natural numbers is gas.
 *)
 
-type mutez
-
 type operation
 (**
     An operation emitted by the contract
@@ -128,9 +126,9 @@ val failwith : 'a -> unit
 
 val ediv_int_int : int -> int -> (int * nat) option
 
-val ediv_mutez_nat : mutez -> nat -> (mutez * mutez) option
+val ediv_tez_nat : tez -> nat -> (tez * tez) option
 
-val ediv_mutez_mutez : mutez -> mutez -> (nat * mutez) option
+val ediv_tez_tez : tez -> tez -> (nat * tez) option
 
 val ediv_nat_nat : nat -> nat -> (nat * nat) option
 
