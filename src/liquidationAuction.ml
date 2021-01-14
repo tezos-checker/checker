@@ -197,7 +197,7 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
          (Ratio.make (Tez.to_mutez ltez) (Tez.to_mutez slice.tez))
       ) in
   (* right slice *)
-  let rtez = Tez.(slice.tez - amount) in
+  let rtez = Tez.sub slice.tez amount in
   let rkit =
     Kit.of_ratio_ceil
       (Ratio.mul
@@ -217,7 +217,7 @@ let take_with_splitting storage queued_slices split_threshold =
     let (storage, next) = Avl.pop_front storage queued_slices in
     match next with
     | Some slice ->
-      let (part1, part2) = split Tez.(split_threshold - queued_amount) slice in
+      let (part1, part2) = split (Tez.sub split_threshold queued_amount) slice in
       let (storage, _) = Avl.push_front storage queued_slices part2 part2.tez in
       let (storage, _) = Avl.push_back storage new_auction part1 part1.tez in
       (storage, new_auction)

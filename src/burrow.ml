@@ -182,7 +182,7 @@ let remove_liquidation_slice
   assert (burrow.collateral_at_auction >= leaf.tez);
   (* (a) the slice's tez is no longer in auctions, subtract it. *)
   let burrow = { burrow with
-                 collateral_at_auction = Tez.(burrow.collateral_at_auction - leaf.tez);
+                 collateral_at_auction = Tez.sub burrow.collateral_at_auction leaf.tez;
                } in
   (* (b) adjust the pointers *)
   match burrow.liquidation_slices with
@@ -215,7 +215,7 @@ let return_slice_from_auction
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) return the tez into the burrow's collateral *)
-  { burrow with collateral = Tez.(burrow.collateral + leaf.tez); }
+  { burrow with collateral = Tez.add burrow.collateral leaf.tez; }
 
 let return_kit_from_auction
     (leaf_ptr: Avl.leaf_ptr)
@@ -238,7 +238,7 @@ let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
         allow_all_tez_deposits = false;
         allow_all_kit_burnings = false;
         delegate = None;
-        collateral = Tez.(tez - Constants.creation_deposit);
+        collateral = Tez.sub tez Constants.creation_deposit;
         outstanding_kit = Kit.zero;
         excess_kit = Kit.zero;
         adjustment_index = Parameters.compute_adjustment_index p;
@@ -252,7 +252,7 @@ let deposit_tez (p: Parameters.t) (t: Tez.t) (b: t) : t =
   assert_invariants b;
   assert (t >= Tez.zero);
   assert (p.last_touched = b.last_touched);
-  { b with collateral = Tez.(b.collateral + t) }
+  { b with collateral = Tez.add b.collateral t }
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
@@ -260,7 +260,7 @@ let withdraw_tez (p: Parameters.t) (t: Tez.t) (b: t) : (t * Tez.t, Error.error) 
   assert_invariants b;
   assert (t >= Tez.zero);
   assert (p.last_touched = b.last_touched);
-  let new_burrow = { b with collateral = Tez.(b.collateral - t) } in
+  let new_burrow = { b with collateral = Tez.sub b.collateral t } in
   if is_overburrowed p new_burrow
   then Error WithdrawTezFailure
   else Ok (new_burrow, t)
@@ -303,7 +303,7 @@ let activate (p: Parameters.t) (tez: Tez.t) (b: t) : (t, Error.error) result =
   else
     Ok { b with
          active = true;
-         collateral = Tez.(tez - Constants.creation_deposit);
+         collateral = Tez.sub tez Constants.creation_deposit;
        }
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
@@ -321,7 +321,7 @@ let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
   else if (b.collateral_at_auction > Tez.zero) then
     Error DeactivatingWithCollateralAtAuctions
   else
-    let return = Tez.(b.collateral + Constants.creation_deposit) in
+    let return = Tez.add b.collateral Constants.creation_deposit in
     let updated_burrow =
       { b with
         active = false;
@@ -489,22 +489,22 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
-  let liquidation_reward = Tez.(Constants.creation_deposit + partial_reward) in
+  let liquidation_reward = Tez.add Constants.creation_deposit partial_reward in
   if not (is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit, or
      * the burrow is already without its creation deposit, inactive; we
      * shouldn't liquidate the burrow. *)
     Unnecessary
-  else if Tez.(b.collateral - partial_reward) < Constants.creation_deposit then
+  else if Tez.sub b.collateral partial_reward < Constants.creation_deposit then
     (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
-    let tez_to_auction = Tez.(b.collateral - partial_reward) in
+    let tez_to_auction = Tez.sub b.collateral partial_reward in
     let expected_kit = compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
         active = false;
         collateral = Tez.zero;
-        collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
+        collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
       } in
     Close {
       liquidation_reward = liquidation_reward;
@@ -516,7 +516,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
      * possible to liquidate the burrow partially or if we have to do so
      * completely (deplete the collateral). *)
-    let b_without_reward = { b with collateral = Tez.(b.collateral - partial_reward - Constants.creation_deposit) } in
+    let b_without_reward = { b with collateral = Tez.sub (Tez.sub b.collateral partial_reward) Constants.creation_deposit } in
     let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
     if tez_to_auction < Tez.zero || tez_to_auction > b_without_reward.collateral then
@@ -529,7 +529,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       let final_burrow =
         { b with
           collateral = Tez.zero;
-          collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
+          collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
         } in
       Complete {
         liquidation_reward = liquidation_reward;
@@ -549,8 +549,8 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       let expected_kit = compute_expected_kit p tez_to_auction in
       let final_burrow =
         { b with
-          collateral = Tez.(b_without_reward.collateral - tez_to_auction);
-          collateral_at_auction = Tez.(b.collateral_at_auction + tez_to_auction);
+          collateral = Tez.sub b_without_reward.collateral tez_to_auction;
+          collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
         } in
       Partial {
         liquidation_reward = liquidation_reward;

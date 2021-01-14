@@ -69,7 +69,7 @@ let assert_invariants (state: 't) : unit =
            assert (slice.younger = prev);
            match slice.older with
            | Some next ->
-             Tez.(slice.tez + go next (Some curr))
+             Tez.add slice.tez (go next (Some curr))
            | None ->
              assert (curr = slices.oldest);
              slice.tez in

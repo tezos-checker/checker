@@ -154,7 +154,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
     let price = Ratio.div (Kit.to_ratio uniswap_kit) (Tez.to_ratio uniswap.tez) in
-    let slippage = Ratio.make (Tez.to_mutez uniswap.tez) Tez.(to_mutez (uniswap.tez + amount)) in
+    let slippage = Ratio.make (Tez.to_mutez uniswap.tez) (Tez.to_mutez (Tez.add uniswap.tez amount)) in
     let return =
       Kit.of_ratio_floor
         (Ratio.mul
@@ -176,7 +176,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
       Ok ( bought_kit,
            { uniswap with
              kit = remaining_kit;
-             tez = Tez.(uniswap.tez + amount) }
+             tez = Tez.add uniswap.tez amount }
          )
 
 let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~deadline =
@@ -218,7 +218,7 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~tezos ~d
       Ok ( return,
            { uniswap with
              kit = new_all_kit_in_uniswap;
-             tez = Tez.(uniswap.tez - return) }
+             tez = Tez.sub uniswap.tez return }
          )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
@@ -246,7 +246,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
     Error AddLiquidityNoLiquidityToBeAdded
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
-    let effective_tez_balance = Tez.(uniswap.tez + pending_accrual) in
+    let effective_tez_balance = Tez.add uniswap.tez pending_accrual in
     let lqt_minted =
       Nat.of_ratio_floor
         (Ratio.mul
@@ -275,7 +275,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
       let liq_tokens = issue_liquidity_tokens ~tezos lqt_minted in
       let updated = { uniswap with
                       kit = new_all_kit_in_uniswap;
-                      tez = Tez.(uniswap.tez + amount);
+                      tez = Tez.add uniswap.tez amount;
                       lqt = Option.get (Ticket.join uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
       (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
       Ok (liq_tokens, kit_to_return, updated)
@@ -327,7 +327,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
 
       let kit_withdrawn, remaining_kit = Kit.split_or_fail all_kit_in_uniswap kit_withdrawn Kit.(uniswap_kit - kit_withdrawn) in
       let updated = { uniswap with
-                      tez = Tez.(uniswap.tez - tez_withdrawn);
+                      tez = Tez.sub uniswap.tez tez_withdrawn;
                       kit = remaining_kit;
                       lqt = remaining_lqt } in
       Ok (tez_withdrawn, kit_withdrawn, updated)
@@ -338,4 +338,4 @@ let add_accrued_kit (uniswap: t) ~tezos (accrual: Kit.token) : t =
 
 let add_accrued_tez (uniswap: t) tezos (accrual: Tez.t) : t =
   let uniswap = sync_last_observed uniswap tezos in
-  { uniswap with tez = Tez.(uniswap.tez + accrual) }
+  { uniswap with tez = Tez.add uniswap.tez accrual }

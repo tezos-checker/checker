@@ -131,11 +131,11 @@ let assert_properties_of_partial_liquidation burrow_in details =
     (not (Burrow.is_optimistically_overburrowed params burrow_out));
   assert_equal
     (Burrow.collateral burrow_in)
-    Tez.(Burrow.collateral burrow_out + details.tez_to_auction + details.liquidation_reward)
+    (Tez.add (Tez.add (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Tez.show;
   assert_equal
     (Burrow.collateral_at_auction burrow_in)
-    Tez.(Burrow.collateral_at_auction burrow_out - details.tez_to_auction)
+    (Tez.sub (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Tez.show;
   assert_bool
     "partial liquidation does not deactivate burrows"
@@ -177,11 +177,11 @@ let assert_properties_of_complete_liquidation burrow_in details =
     (Burrow.collateral burrow_out = Tez.zero);
   assert_equal
     (Burrow.collateral burrow_in)
-    Tez.(Burrow.collateral burrow_out + details.tez_to_auction + details.liquidation_reward)
+    (Tez.add (Tez.add (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Tez.show;
   assert_equal
     (Burrow.collateral_at_auction burrow_in)
-    Tez.(Burrow.collateral_at_auction burrow_out - details.tez_to_auction)
+    (Tez.sub (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Tez.show;
   assert_bool
     "complete liquidation does not deactivate burrows"
@@ -221,12 +221,12 @@ let assert_properties_of_close_liquidation burrow_in details =
     "close liquidation means inactive output burrow"
     (not (Burrow.active burrow_out));
   assert_equal
-    Tez.(Burrow.collateral burrow_in + Constants.creation_deposit)
-    Tez.(Burrow.collateral burrow_out + details.tez_to_auction + details.liquidation_reward)
+    (Tez.add (Burrow.collateral burrow_in) Constants.creation_deposit)
+    (Tez.add (Tez.add (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Tez.show;
   assert_equal
     (Burrow.collateral_at_auction burrow_in)
-    Tez.(Burrow.collateral_at_auction burrow_out - details.tez_to_auction)
+    (Tez.sub (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Tez.show
 
 let test_general_liquidation_properties =
@@ -663,7 +663,7 @@ let partial_liquidation_unit_test =
 
     let expected_liquidation_result =
       Partial
-        { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
+        { liquidation_reward = Tez.add Constants.creation_deposit (Tez.of_mutez 9_999);
           tez_to_auction = Tez.of_mutez 7_142_471;
           expected_kit = Kit.of_mukit (Z.of_int 17_592_294);
           min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 27_141_390);
@@ -717,7 +717,7 @@ let complete_liquidation_unit_test =
 
     let expected_liquidation_result =
       Complete
-        { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 9_999);
+        { liquidation_reward = Tez.add Constants.creation_deposit (Tez.of_mutez 9_999);
           tez_to_auction = Tez.of_mutez 8_990_001;
           expected_kit = Kit.of_mukit (Z.of_int 22_142_860);
           min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 170_810_019);
@@ -773,7 +773,7 @@ let complete_and_close_liquidation_test =
 
     let expected_liquidation_result =
       Close
-        { liquidation_reward = Tez.(Constants.creation_deposit + Tez.of_mutez 999);
+        { liquidation_reward = Tez.add Constants.creation_deposit (Tez.of_mutez 999);
           tez_to_auction = Tez.of_mutez 999_001;
           expected_kit = Kit.of_mukit (Z.of_int 2_460_594);
           min_kit_for_unwarranted = Kit.of_mukit (Z.of_int 189_810_190);

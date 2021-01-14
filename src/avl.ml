@@ -97,7 +97,7 @@ type ('l, 'r) mem = (('l, 'r) node) BigMap.t
 let node_tez (n: ('l, 'r) node) : tez =
   match n with
   | Leaf leaf -> leaf.tez
-  | Branch branch -> Tez.(branch.left_tez + branch.right_tez)
+  | Branch branch -> Tez.add branch.left_tez branch.right_tez
   | Root _ -> (failwith "node_tez found Root" : tez)
 
 let node_height (n: ('l, 'r) node) : int =
@@ -648,7 +648,7 @@ let rec ref_split_rec
       (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
       left_fold_ref_split_data (mem, None, Some curr_ptr) stack
   | Branch branch ->
-    if Tez.(branch.left_tez + branch.right_tez) <= limit
+    if Tez.add branch.left_tez branch.right_tez <= limit
     then (* total_tez <= limit *)
       (* Case 2. The whole tree has not too much tez in it. Include it. *)
       let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
@@ -674,7 +674,7 @@ let rec ref_split_rec
             (Left, branch.left, limit)
           else (* Case 3c. left_tez < limit < total_tez (we have to recurse into and split the right tree) *)
             let left_branch = BigMap.mem_get mem branch.left in
-            (Right, branch.right, Tez.(limit - (node_tez left_branch)))
+            (Right, branch.right, Tez.sub limit (node_tez left_branch))
         in
         ref_split_rec mem tree_to_recurse_into limit_to_use ({ rec_direction=rec_direction; branch=branch } :: stack)
 

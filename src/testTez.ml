@@ -9,10 +9,10 @@ let suite =
     (fun _ ->
        assert_equal ~printer:show_tz
          (Tez.of_mutez 8_000_000)
-         Tez.(of_mutez 5_000_000 + of_mutez 3_000_000);
+         (Tez.add (Tez.of_mutez 5_000_000) (Tez.of_mutez 3_000_000));
        assert_equal ~printer:show_tz
          (Tez.of_mutez 2_000_000)
-         Tez.(of_mutez 5_000_000 - of_mutez 3_000_000);
+         (Tez.sub (Tez.of_mutez 5_000_000) (Tez.of_mutez 3_000_000));
        assert_equal
          ~printer:show_tz
          (Tez.of_mutez 5_000_000)
