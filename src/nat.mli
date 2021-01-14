@@ -4,7 +4,7 @@ val show : t -> string
 val pp : Format.formatter -> t -> unit
 
 val compare : t -> t -> int
-val ( + ) : t -> t -> t
+val add : t -> t -> t
 val sub : t -> t -> Z.t
 
 val zero : t

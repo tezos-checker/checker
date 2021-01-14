@@ -2,7 +2,7 @@ type t = Nat.t
 let scaling_factor = Z.of_int64 1000000L
 
 (* Basic arithmetic operations. *)
-let ( + ) x y = Nat.(x + y)
+let ( + ) x y = Nat.add x y
 let ( - ) x y =
   match Nat.of_int (Nat.sub x y) with
   | None -> failwith "Tez.(-): negative"

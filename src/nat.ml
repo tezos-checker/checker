@@ -4,7 +4,7 @@ let show = Z.to_string
 let pp = Z.pp_print
 
 let compare = Z.compare
-let ( + ) x y = Z.(x + y)
+let add x y = Z.(x + y)
 let sub x y = Z.sub x y
 
 let zero = Z.zero
