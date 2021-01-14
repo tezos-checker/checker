@@ -132,4 +132,46 @@ val ediv_tez_tez : tez -> tez -> (nat * tez) option
 
 val ediv_nat_nat : nat -> nat -> (nat * nat) option
 
+(* Additions *)
+
+val add_nat_nat : nat -> nat -> nat
+
+val add_int_int : int -> int -> int
+
+val add_tez_tez : tez -> tez -> tez
+
+val add_nat_int : nat -> int -> int
+
+val add_int_nat : int -> nat -> int
+
+val add_timestamp_int : timestamp -> int -> timestamp
+
+val add_int_timestamp : int -> timestamp -> timestamp
+
+(* Subtractions *)
+
+val sub_timestamp_int : timestamp -> int -> timestamp
+
+val sub_timestamp_timestamp : timestamp -> timestamp -> int
+
+val sub_int_int : int -> int -> int
+
+val sub_int_nat : int -> nat -> int
+
+val sub_nat_int : nat -> int -> int
+
+val sub_nat_nat : nat -> nat -> int
+
+(* TODO: The following also seem to be allowed,
+ *
+ *   val sub_mutez_mutez : mutez -> mutez -> mutez
+ *   val sub_mutez_tez : mutez -> tez -> mutez
+ *   val sub_tez_mutez : tez -> mutez -> mutez
+ *   val sub_tez_tez : tez -> tez -> mutez
+ *
+ * but I (George) am totally unclear as to what is mutez as a type. My
+ * impression is that the only type we have for tez is "tez", values of which
+ * we can construct by giving a number of tez or mutez.
+*)
+
 (* TODO: arithmetic shim functions *)
