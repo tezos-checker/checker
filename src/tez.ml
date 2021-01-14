@@ -5,7 +5,7 @@ let scaling_factor = Z.of_int64 1000000L
 let add x y = Nat.add x y
 let sub x y =
   match Nat.of_int (Nat.sub x y) with
-  | None -> failwith "Tez.(-): negative"
+  | None -> failwith "Tez.sub: negative"
   | Some z -> z
 
 let compare x y = Nat.compare x y
