@@ -4,7 +4,7 @@ type t =
     index: Tez.t;
     protected_index: Tez.t;
     target: FixedPoint.t;
-    drift': FixedPoint.t;
+    drift_derivative: FixedPoint.t;
     drift: FixedPoint.t;
     burrow_fee_index: FixedPoint.t;
     imbalance_index: FixedPoint.t;
@@ -25,7 +25,7 @@ let make_initial (ts: Timestamp.t) : t =
     protected_index = Tez.one;
     target = FixedPoint.one;
     drift = FixedPoint.zero;
-    drift' = FixedPoint.zero;
+    drift_derivative = FixedPoint.zero;
     burrow_fee_index = FixedPoint.one;
     imbalance_index = FixedPoint.one;
     (* Cannot be zero because then it stays
@@ -186,7 +186,7 @@ let touch
             upper_lim
          )
       ) in
-  let current_drift' =
+  let current_drift_derivative =
     compute_drift_derivative parameters.target in
   let current_drift =
     FixedPoint.of_ratio_floor
@@ -195,7 +195,7 @@ let touch
          (Ratio.mul
             (Ratio.make (Z.of_int 1) (Z.of_int 2))
             (Ratio.mul
-               (FixedPoint.to_ratio (FixedPoint.add parameters.drift' current_drift'))
+               (FixedPoint.to_ratio (FixedPoint.add parameters.drift_derivative current_drift_derivative))
                duration_in_seconds
             )
          )
@@ -214,9 +214,9 @@ let touch
                         (Ratio.add
                            (Ratio.mul
                               (Ratio.of_int 2)
-                              (FixedPoint.to_ratio parameters.drift')
+                              (FixedPoint.to_ratio parameters.drift_derivative)
                            )
-                           (FixedPoint.to_ratio current_drift')
+                           (FixedPoint.to_ratio current_drift_derivative)
                         )
                         duration_in_seconds
                      )
@@ -298,7 +298,7 @@ let touch
     protected_index = current_protected_index;
     target = current_target;
     drift = current_drift;
-    drift' = current_drift';
+    drift_derivative = current_drift_derivative;
     q = current_q;
     burrow_fee_index = current_burrow_fee_index;
     imbalance_index = current_imbalance_index;
