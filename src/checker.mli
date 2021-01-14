@@ -297,6 +297,6 @@ val delegation_auction_claim_win :
 val delegation_auction_reclaim_bid :
   t ->
   tezos:Tezos.t ->
-  address:Address.t ->
+  call:Call.t ->
   bid_ticket:DelegationAuction.bid_ticket ->
-  (Tez.t * t, Error.error) result
+  (Tez.payment * t, Error.error) result

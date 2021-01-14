@@ -81,8 +81,7 @@ let claim_win t tezos ~bid_ticket =
   else
     Error NotAWinningBid
 
-(* TODO use address *)
-let reclaim_bid t tezos ~address:_ ~bid_ticket =
+let reclaim_bid t tezos ~bid_ticket =
   let t = touch t tezos in
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
   let (_, _, bid, _) = Ticket.read bid_ticket in

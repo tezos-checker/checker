@@ -26,8 +26,7 @@ val place_bid : t -> Tezos.t -> sender:Address.t -> amount:Tez.t -> (bid_ticket 
 val claim_win : t -> Tezos.t -> bid_ticket:bid_ticket
   -> (t, Error.error) result
 
-val reclaim_bid : t -> Tezos.t -> address:Address.t -> bid_ticket:bid_ticket
-  -> (Tez.t * t, Error.error) result
+val reclaim_bid : t -> Tezos.t -> bid_ticket:bid_ticket -> (Tez.t * t, Error.error) result
 
 val show : t -> string
 val pp : Format.formatter -> t -> unit

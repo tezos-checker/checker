@@ -588,12 +588,14 @@ let delegation_auction_claim_win state ~tezos ~bid_ticket =
   | Error err -> Error err
   | Ok auction -> Ok (updated_delegation_auction state tezos auction)
 
-let delegation_auction_reclaim_bid state ~tezos ~address ~bid_ticket =
-  match DelegationAuction.reclaim_bid state.delegation_auction tezos ~address:address ~bid_ticket:bid_ticket with
+let delegation_auction_reclaim_bid state ~tezos ~(call: Call.t) ~bid_ticket =
+  with_no_tez_given call @@ fun () ->
+  match DelegationAuction.reclaim_bid state.delegation_auction tezos ~bid_ticket:bid_ticket with
   | Error err -> Error err
   | Ok tez_auction ->
     let tez, auction = tez_auction in
-    Ok (tez, updated_delegation_auction state tezos auction)
+    let tez_payment = Tez.{destination = call.sender; amount = tez} in
+    Ok (tez_payment, updated_delegation_auction state tezos auction)
 
 let touch_delegation_auction state tezos =
   updated_delegation_auction state tezos (DelegationAuction.touch state.delegation_auction tezos)
