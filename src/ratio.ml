@@ -14,7 +14,7 @@ let normalize n d =
   let g = Z.gcd n d in
   if g = Z.one
   then { num = n; den = d }
-  else { num = Z.divexact n g; den = Z.divexact d g; }
+  else { num = Z.(n / g); den = Z.(d / g); }
 
 (* make and normalize n/d, assuming d > 0 *)
 let make_real n d =
