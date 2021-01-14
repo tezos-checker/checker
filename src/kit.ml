@@ -48,7 +48,7 @@ type Error.error +=
   * enforced by its type). *)
 let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
   let issuer, amount, _content, same_ticket = Ticket.read token in
-  let is_valid = issuer = tezos.self && amount >= Nat.zero in
+  let is_valid = issuer = tezos.self && amount >= Nat.zero in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token

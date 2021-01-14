@@ -389,7 +389,7 @@ let completed_auction_won_by
   | Some outcome when outcome.winning_bid = bid_details.bid -> Some outcome
   | _ -> None
 
-(* NOTE: If successful, it consumes the ticket. *)
+(* If successful, it consumes the ticket. *)
 let reclaim_bid
     ~(tezos:Tezos.t)
     (auctions: auctions)
@@ -401,7 +401,6 @@ let reclaim_bid
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
   else
-    (* TODO: punch tickets *)
     Ok bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
@@ -461,6 +460,7 @@ let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
     avl_storage = storage
   }
 
+(* If successful, it consumes the ticket. *)
 let reclaim_winning_bid
     ~(tezos:Tezos.t)
     (auctions: auctions)

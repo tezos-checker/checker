@@ -71,6 +71,7 @@ let place_bid t (tezos: Tezos.t) ~sender ~amount =
     let ticket = issue_bid_ticket tezos bid in
     Ok (ticket, {t with leading_bid = Some bid;})
 
+(* If successful, it consumes the ticket. *)
 (* TODO: allow winner to nominate a different address as the delegate? *)
 let claim_win t tezos ~bid_ticket =
   let t = touch t tezos in
@@ -81,6 +82,7 @@ let claim_win t tezos ~bid_ticket =
   else
     Error NotAWinningBid
 
+(* If successful, it consumes the ticket. *)
 let reclaim_bid t tezos ~bid_ticket =
   let t = touch t tezos in
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
