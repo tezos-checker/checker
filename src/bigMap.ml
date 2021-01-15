@@ -1,3 +1,5 @@
+open Ptr
+
 (*
  * BigMap
  *
@@ -22,10 +24,10 @@ type ptr = Ptr.t [@@deriving show]
 
 let mem_next_ptr (m: 'a M.t): ptr =
   match M.max_binding_opt m with
-  | None -> Ptr.init
-  | Some (t, _) -> Ptr.next t
+  | None -> ptr_init
+  | Some (t, _) -> ptr_next t
 
-let is_null (p: ptr) = p = Ptr.null
+let is_null (p: ptr) = p = ptr_null
 
 let empty = M.empty
 let is_empty = M.is_empty

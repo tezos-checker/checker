@@ -1,11 +1,12 @@
+open Ptr
 open OUnit2
 
 let checker_address = Address.of_string "checker"
 
 let suite =
-  let burrow_id_1 = Ptr.init in
-  let burrow_id_2 = Ptr.next burrow_id_1 in
-  let burrow_id_3 = Ptr.next burrow_id_2 in
+  let burrow_id_1 = ptr_init in
+  let burrow_id_2 = ptr_next burrow_id_1 in
+  let burrow_id_3 = ptr_next burrow_id_2 in
 
   "Liquidation auction tests" >::: [
     ("test starts descending auction" >::

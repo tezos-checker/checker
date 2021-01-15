@@ -1,12 +1,11 @@
-type t (* George: perhaps I'd prefer a phantom parameter to not mix up pointers. *)
+type ptr (* George: perhaps I'd prefer a phantom parameter to not mix up pointers. *)
 
-val show : t -> string
-val pp : Format.formatter -> t -> unit
+val ptr_null : ptr
+val ptr_init : ptr
+val ptr_next : ptr -> ptr
+val ptr_compare : ptr -> ptr -> int
 
-val null : t
-val init : t
-val next : t -> t
-
-val compare : t -> t -> int
-
-val to_string : t -> string
+type t = ptr
+val compare : ptr -> ptr -> int
+val show : ptr -> string
+val pp : Format.formatter -> ptr -> unit

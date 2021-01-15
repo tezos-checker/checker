@@ -51,6 +51,8 @@
  * to a leaf, it is possible to delete it `efficiently`.
 *)
 
+open Ptr
+
 type tez = Tez.t
 [@@deriving show]
 
@@ -642,7 +644,7 @@ let rec ref_split_rec
     if leaf.tez <= limit
     then
       (* Case 1a. Single leaf with not too much tez in it. Include it. *)
-      let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
+      let mem = BigMap.mem_update mem curr_ptr (node_set_parent ptr_null) in
       left_fold_ref_split_data (mem, Some curr_ptr, None) stack
     else
       (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
@@ -651,14 +653,14 @@ let rec ref_split_rec
     if Tez.add branch.left_tez branch.right_tez <= limit
     then (* total_tez <= limit *)
       (* Case 2. The whole tree has not too much tez in it. Include it. *)
-      let mem = BigMap.mem_update mem curr_ptr (node_set_parent Ptr.null) in
+      let mem = BigMap.mem_update mem curr_ptr (node_set_parent ptr_null) in
       left_fold_ref_split_data (mem, Some curr_ptr, None) stack
     else (* limit < total_tez *)
       let mem = BigMap.mem_del mem curr_ptr in
       let mem = BigMap.mem_update mem branch.right (node_set_parent branch.parent) in
       (* Semantically it would be better to detach branch.left as well here
        *
-       *   let mem = BigMap.mem_update mem branch.left (node_set_parent Ptr.null) in
+       *   let mem = BigMap.mem_update mem branch.left (node_set_parent ptr_null) in
        *
        * instead of changing the parent of branch.left in function "take" below.
        * Unfortunately, this bumps reads and writes significantly (reads+=16%
@@ -753,7 +755,7 @@ let debug_mem (mem: ('l, 'r) mem) (show_l: Format.formatter -> 'l -> unit) (show
     (fun k v ->
        Format.printf
          "%s -> %s\n"
-         (Ptr.to_string k)
+         (Ptr.show k)
          (show_node show_l show_r v);
     )
     mem

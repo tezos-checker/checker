@@ -1,3 +1,4 @@
+open Ptr
 
 module PtrMap = Map.Make(Ptr)
 
@@ -39,8 +40,8 @@ type Error.error +=
 (* Utility function to give us burrow addresses *)
 let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
   match PtrMap.max_binding_opt burrows with
-  | None -> Ptr.init
-  | Some (id, _) -> Ptr.next id
+  | None -> ptr_init
+  | Some (id, _) -> ptr_next id
 
 let assert_invariants (state: 't) : unit =
   (* Check if the auction pointerfest kind of make sense. *)

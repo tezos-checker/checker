@@ -1,9 +1,13 @@
-type t = int64 [@@deriving show]
+type ptr = Ligo.int
+(* BEGIN_OCAML *) [@@deriving show] (* END_OCAML *)
 
-let null = Int64.zero
-let init = Int64.one
-let next t = Int64.succ t
+let ptr_null = Ligo.int_from_literal 0
+let ptr_init = Ligo.int_from_literal 1
+let ptr_next (t: ptr) = Ligo.add_int_int t (Ligo.int_from_literal 1)
+let ptr_compare = Ligo.compare_int
 
-let compare = Int64.compare
-
-let to_string = Int64.to_string
+(* BEGIN_OCAML *)
+type t = ptr
+[@@deriving show]
+let compare = ptr_compare
+(* END_OCAML *)

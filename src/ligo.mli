@@ -1,9 +1,9 @@
-type address
+(* type address *)
 (**
    An untyped address which can refer to a smart contract or account.
 *)
 
-type ('key, 'value) big_map
+(* type ('key, 'value) big_map *)
 
 (**
    The type of a big map from values of type key to values of type value is big_map (key, value).
@@ -13,16 +13,16 @@ type ('key, 'value) big_map
 
 (* type bool *)
 
-type bytes
+(* type bytes *)
 
-type 'parameter contract
+(* type 'parameter contract *)
 (**
    A typed contract.
 
    Use unit as parameter to indicate an implicit account.
 *)
 
-type chain_id
+(* type chain_id *)
 (**
     The identifier of a chain, used to indicate test or main chains.
 *)
@@ -34,17 +34,21 @@ type int
    The only size limit to integers is gas.
 *)
 
-type key
+val int_from_literal : Int.t -> int
+val compare_int : int -> int -> Int.t
+val string_of_int : int -> string
+
+(* type key *)
 (**
     A public cryptographic key.
 *)
 
-type key_hash
+(* type key_hash *)
 (**
     The hash of a public cryptographic key.
 *)
 
-type 't list
+(* type 't list *)
 (**
     A sequence of elements of the same type.
 *)
@@ -54,65 +58,65 @@ type 't list
     The type of a map from values of type key to values of type value is map (key, value).
 *)
 
-type nat
+(* type nat *)
 (**
     A natural number.
 
      The only size limit to natural numbers is gas.
 *)
 
-type operation
+(* type operation *)
 (**
     An operation emitted by the contract
 *)
 
-type 'value set
+(* type 'value set *)
 
-type signature
+(* type signature *)
 (**
     A cryptographic signature.
 *)
 
-type string
+(* type string *)
 (**
     A sequence of characters.
 *)
 
-type tez
+(* type tez *)
 (**
     A specific type for tokens.
 *)
 
-type timestamp
+(* type timestamp *)
 (**
     A date in the real world.
 *)
 
 (* type unit *)
 
-val is_nat: int -> nat option
+(* val is_nat: int -> nat option *)
 (**
    Convert an int to a nat if possible.
 
    Note that Michelson.is_nat is deprecated. Please use is_nat instead.
 *)
 
-val abs: int -> nat
+(* val abs: int -> nat *)
 (**
    Cast an int to nat.
 *)
 
-val int: nat -> int
+(* val int: nat -> int *)
 (**
    Cast an nat to int.
 *)
 
-val unit: unit
+(* val unit: unit *)
 (**
    A helper to create a unit.
 *)
 
-val failwith : 'a -> unit
+(* val failwith : 'a -> unit *)
 (**
    Cause the contract to fail with an error message or integer. Other types are not supported at the moment.
 
@@ -124,43 +128,43 @@ val failwith : 'a -> unit
     Check if a certain condition has been met. If not the contract will fail.
 *)
 
-val ediv_int_int : int -> int -> (int * nat) option
+(* val ediv_int_int : int -> int -> (int * nat) option *)
 
-val ediv_tez_nat : tez -> nat -> (tez * tez) option
+(* val ediv_tez_nat : tez -> nat -> (tez * tez) option *)
 
-val ediv_tez_tez : tez -> tez -> (nat * tez) option
+(* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
-val ediv_nat_nat : nat -> nat -> (nat * nat) option
+(* val ediv_nat_nat : nat -> nat -> (nat * nat) option *)
 
 (* Additions *)
 
-val add_nat_nat : nat -> nat -> nat
+(* val add_nat_nat : nat -> nat -> nat *)
 
 val add_int_int : int -> int -> int
 
-val add_tez_tez : tez -> tez -> tez
+(* val add_tez_tez : tez -> tez -> tez *)
 
-val add_nat_int : nat -> int -> int
+(* val add_nat_int : nat -> int -> int *)
 
-val add_int_nat : int -> nat -> int
+(* val add_int_nat : int -> nat -> int *)
 
-val add_timestamp_int : timestamp -> int -> timestamp
+(* val add_timestamp_int : timestamp -> int -> timestamp *)
 
-val add_int_timestamp : int -> timestamp -> timestamp
+(* val add_int_timestamp : int -> timestamp -> timestamp *)
 
 (* Subtractions *)
 
-val sub_timestamp_int : timestamp -> int -> timestamp
+(* val sub_timestamp_int : timestamp -> int -> timestamp *)
 
-val sub_timestamp_timestamp : timestamp -> timestamp -> int
+(* val sub_timestamp_timestamp : timestamp -> timestamp -> int *)
 
-val sub_int_int : int -> int -> int
+(* val sub_int_int : int -> int -> int *)
 
-val sub_int_nat : int -> nat -> int
+(* val sub_int_nat : int -> nat -> int *)
 
-val sub_nat_int : nat -> int -> int
+(* val sub_nat_int : nat -> int -> int *)
 
-val sub_nat_nat : nat -> nat -> int
+(* val sub_nat_nat : nat -> nat -> int *)
 
 (* TODO: The following also seem to be allowed,
  *
@@ -175,3 +179,7 @@ val sub_nat_nat : nat -> nat -> int
 *)
 
 (* TODO: arithmetic shim functions *)
+
+(* BEGIN_OCAML *)
+
+val pp_int : Format.formatter -> int -> unit

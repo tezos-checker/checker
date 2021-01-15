@@ -18,13 +18,13 @@ let add_all (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
 let debug_avl (mem: (int, int) mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-    sprintf "%s: " (Ptr.to_string curr) ^
+    sprintf "%s: " (Ptr.show curr) ^
     match BigMap.mem_get mem curr with
     | Root (None, r) -> "Root(" ^ string_of_int r ^ ") Empty"
     | Root (Some r, r') -> "Root(" ^ string_of_int r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
       sprintf "Leaf { value: %s; tez: %s; parent: %s }"
-        (Int.to_string leaf.value) (Tez.show leaf.tez) (Ptr.to_string leaf.parent)
+        (Int.to_string leaf.value) (Tez.show leaf.tez) (Ptr.show leaf.parent)
     | Branch branch ->
       "Branch " ^ show_branch branch ^ "\n"
       ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
