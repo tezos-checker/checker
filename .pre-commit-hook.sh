@@ -3,7 +3,7 @@
 relevant_files="$(
   git diff --cached --name-status \
     | awk '$1 != "D" { print $2 }' \
-    | grep -E '.mli?$' \
+    | grep -E '\.mli?$' \
 )"
 
 has_error=false
