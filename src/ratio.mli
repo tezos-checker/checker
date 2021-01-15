@@ -17,6 +17,10 @@ val to_bigint: t -> Z.t
 
 val of_int: int -> t
 
+val of_nat: Nat.t -> t
+val to_nat_floor: t -> Nat.t
+val to_nat_ceil: t -> Nat.t
+
 (* Relational operations. *)
 val equal: t -> t -> bool
 val lt: t -> t -> bool

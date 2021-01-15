@@ -35,6 +35,22 @@ let make n d =
 let of_bigint n = { num = n; den = Z.one; }
 let of_int n = { num = Z.of_int n; den = Z.one; }
 
+let of_nat n = { num = Nat.int n; den = Z.one }
+
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let to_nat_floor x =
+  if Z.sign x.num = -1 then
+    failwith "Ratio.to_nat_floor: negative"
+  else
+    Nat.abs (Z.fdiv x.num x.den)
+
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let to_nat_ceil x =
+  if Z.sign x.num = -1 then
+    failwith "Ratio.to_nat_ceil: negative"
+  else
+    Nat.abs (Z.cdiv x.num x.den)
+
 (* Predefined values *)
 let zero = { num = Z.zero; den = Z.one; }
 let one = { num = Z.one; den = Z.one; }

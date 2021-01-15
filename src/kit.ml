@@ -36,7 +36,7 @@ type kit_token_content = Kit [@@deriving show]
 type token = kit_token_content Ticket.t [@@deriving show]
 
 let issue ~(tezos: Tezos.t) (kit: t) : token =
-  match Nat.of_int kit with
+  match Nat.is_nat kit with
   | None -> failwith "Kit.issue: cannot issue a negative number of mukit!"
   | Some n -> Ticket.create ~issuer:tezos.self ~amount:n ~content:Kit
 
@@ -48,7 +48,7 @@ type Error.error +=
   * enforced by its type). *)
 let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
   let issuer, amount, _content, same_ticket = Ticket.read token in
-  let is_valid = issuer = tezos.self && amount >= Nat.zero in (* TODO: > Nat.zero perhaps? *)
+  let is_valid = issuer = tezos.self && amount >= Nat.from_literal 0 in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token
@@ -62,10 +62,10 @@ let with_valid_kit_token
 
 let read_kit (token: token) : t * token =
   let _issuer, mukit, _content, same_token = Ticket.read token in
-  (Nat.to_int mukit, same_token)
+  (Nat.int mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =
-  match Nat.of_int left, Nat.of_int right with
+  match Nat.is_nat left, Nat.is_nat right with
   | Some l, Some r -> Option.get (Ticket.split token l r)
   | _, _ -> failwith "Kit.split_or_fail: cannot split using a negative number of mukit!"
 

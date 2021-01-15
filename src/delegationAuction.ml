@@ -4,7 +4,7 @@ type bid = { bidder: Address.t; cycle: int; amount: Tez.t }
 type bid_ticket = bid Ticket.t
 
 let issue_bid_ticket (tezos: Tezos.t) (bid: bid) =
-  Ticket.create ~issuer:tezos.self ~amount:Nat.one ~content:bid
+  Ticket.create ~issuer:tezos.self ~amount:(Nat.from_literal 1) ~content:bid
 
 type Error.error +=
   | BidTooLow
@@ -24,7 +24,7 @@ let is_bid_ticket_valid
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
   let issuer, amount, _bid_details, same_ticket = Ticket.read bid_ticket in
-  let is_valid = issuer = tezos.self && amount = Nat.one in
+  let is_valid = issuer = tezos.self && amount = Nat.from_literal 1 in
   if is_valid then Ok same_ticket else Error InvalidDelegationAuctionTicket
 
 let with_valid_bid_ticket
