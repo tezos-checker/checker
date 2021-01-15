@@ -27,7 +27,7 @@ let suite =
            ~tezos
            ~call:{sender=alice; amount=Tez.one;}
            ~max_kit_deposited:(Kit.issue ~tezos Kit.one)
-           ~min_lqt_minted:(Nat.from_literal 1)
+           ~min_lqt_minted:(Ligo.nat_from_literal 1)
            ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
 
        (* Activation/deactivation tests *)

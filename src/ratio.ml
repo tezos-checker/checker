@@ -35,21 +35,21 @@ let make n d =
 let of_bigint n = { num = n; den = Ligo.int_from_literal 1; }
 let of_int n = { num = Ligo.int_from_literal n; den = Ligo.int_from_literal 1; }
 
-let of_nat n = { num = Nat.int n; den = Ligo.int_from_literal 1 }
+let of_nat n = { num = Ligo.int n; den = Ligo.int_from_literal 1 }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_nat_floor x =
   if Ligo.sign_int x.num = -1 then
     failwith "Ratio.to_nat_floor: negative"
   else
-    Nat.abs (Ligo.fdiv_int_int x.num x.den)
+    Ligo.abs (Ligo.fdiv_int_int x.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_nat_ceil x =
   if Ligo.sign_int x.num = -1 then
     failwith "Ratio.to_nat_ceil: negative"
   else
-    Nat.abs (Ligo.cdiv_int_int x.num x.den)
+    Ligo.abs (Ligo.cdiv_int_int x.num x.den)
 
 (* Predefined values *)
 let zero = { num = Ligo.int_from_literal 0; den = Ligo.int_from_literal 1; }

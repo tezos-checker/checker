@@ -223,7 +223,7 @@ val add_liquidity :
   tezos:Tezos.t ->
   call:Call.t ->
   max_kit_deposited:Kit.token ->
-  min_lqt_minted:Nat.t ->
+  min_lqt_minted:Ligo.nat ->
   deadline:Timestamp.t ->
   (Uniswap.liquidity * Kit.token * t, Error.error) result
 

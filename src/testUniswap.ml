@@ -13,7 +13,7 @@ let tezos0 = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker
 let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.arb_positive_kit
 
 (* Issue an arbitrary number of liquidity tokens (checker-issued) *)
-let arb_liquidity = QCheck.map (fun x -> Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.abs (Ligo.int_from_literal x))) QCheck.(0 -- max_int)
+let arb_liquidity = QCheck.map (fun x -> Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.abs (Ligo.int_from_literal x))) QCheck.(0 -- max_int)
 
 (* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
 let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: Ratio.t) (last_level: Level.t) =
@@ -101,12 +101,12 @@ let make_inputs_for_remove_liquidity_to_succeed =
         * We make the generator thus ensure that at least 1mukit and 1mutez
         * will be returned. *)
        let lqt_burned, min_tez_withdrawn, min_kit_withdrawn =
-         if lqt_to_burn = Nat.from_literal 0 || min_tez_withdrawn = Tez.zero || min_kit_withdrawn = Kit.zero then
+         if lqt_to_burn = Ligo.nat_from_literal 0 || min_tez_withdrawn = Tez.zero || min_kit_withdrawn = Kit.zero then
            let lqt_to_burn =
              let least_kit_percentage = (Ratio.div (Kit.to_ratio (Kit.of_mukit (Ligo.int_from_literal 1))) (Kit.to_ratio kit)) in
              let least_tez_percentage = Ratio.make (Tez.to_mutez (Tez.of_mutez (Ligo.int_from_literal 1))) (Tez.to_mutez tez) in
              let as_q = (Ratio.mul (Ratio.of_nat lqt) (Ratio.max least_kit_percentage least_tez_percentage)) in
-             Option.get (Nat.is_nat (Ligo.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
+             Option.get (Ligo.is_nat (Ligo.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
            let min_tez_withdrawn = Tez.of_ratio_floor (Ratio.div (Ratio.mul (Tez.to_ratio tez) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
            let min_kit_withdrawn = Kit.of_ratio_floor (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
@@ -175,7 +175,7 @@ let buy_kit_unit_test =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 10_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 5_000_000)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
@@ -185,7 +185,7 @@ let buy_kit_unit_test =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 11_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 4_546_364)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
         ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
         ~last_level:level1
     in
@@ -283,7 +283,7 @@ let sell_kit_unit_test =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 10_000_000))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 5_000_000)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
@@ -292,7 +292,7 @@ let sell_kit_unit_test =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 8_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 6_000_000)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
         ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
         ~last_level:level1
     in
@@ -397,17 +397,17 @@ let add_liquidity_unit_test =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 8_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 6_000_000)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
-    let expected_returned_liquidity = Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 2) in
+    let expected_returned_liquidity = Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 2) in
     let expected_returned_kit = Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 5_605_758)) in
     let expected_updated_uniswap : Uniswap.t =
       Uniswap.make_for_test
         ~tez:(Tez.of_mutez (Ligo.int_from_literal 28_336_667))
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 20_394_242)))
-        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 3))
+        ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 3))
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
@@ -420,7 +420,7 @@ let add_liquidity_unit_test =
         ~amount:(Tez.of_mutez (Ligo.int_from_literal 20_000_000))
         ~pending_accrual:Tez.zero
         ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 20_000_000)))
-        ~min_lqt_minted:(Nat.from_literal 2)
+        ~min_lqt_minted:(Ligo.nat_from_literal 2)
         ~deadline:(Timestamp.of_seconds 1) in
     assert_equal ~printer:Uniswap.show_liquidity expected_returned_liquidity returned_liquidity;
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
@@ -472,7 +472,7 @@ let pending_tez_deposit_test =
        Uniswap.make_for_test
          ~tez:(Tez.of_mutez (Ligo.int_from_literal 1000_000_000))
          ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 5000_000_000)))
-         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Nat.from_literal 1000))
+         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1000))
          ~kit_in_tez_in_prev_block:Ratio.one
          ~last_level:level0 in
      (* let uniswap = set_pending_accrued_tez uniswap (Tez.of_mutez (Ligo.int_from_literal 1_000_000)) in *)
@@ -483,7 +483,7 @@ let pending_tez_deposit_test =
              ~amount:(Tez.of_mutez (Ligo.int_from_literal 101_000_000))
              ~pending_accrual:(Tez.of_mutez (Ligo.int_from_literal 10_000_000))
              ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 500_000_000)))
-             ~min_lqt_minted:(Nat.from_literal 1)
+             ~min_lqt_minted:(Ligo.nat_from_literal 1)
              ~deadline:(Timestamp.of_seconds 1)
      with
      | Error _ -> assert_string "adding liquidity failed"

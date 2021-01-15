@@ -30,7 +30,7 @@ type liquidity_token_content = Lqt [@@deriving show]
 
 type liquidity = liquidity_token_content Ticket.t [@@deriving show]
 
-let issue_liquidity_tokens ~(tezos: Tezos.t) (i: Nat.t) =
+let issue_liquidity_tokens ~(tezos: Tezos.t) (i: Ligo.nat) =
   Ticket.create ~issuer:tezos.self ~amount:i ~content:Lqt
 
 (** Check whether a liquidity token is valid. A liquidity token is valid if (a)
@@ -77,7 +77,7 @@ let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
 let make_initial ~tezos =
   { tez = Tez.of_mutez (Ligo.int_from_literal 1);
     kit = Kit.issue ~tezos (Kit.of_mukit (Ligo.int_from_literal 1));
-    lqt = issue_liquidity_tokens ~tezos (Nat.from_literal 1);
+    lqt = issue_liquidity_tokens ~tezos (Ligo.nat_from_literal 1);
     kit_in_tez_in_prev_block = Ratio.one; (* Same as tez/kit now. *)
     last_level = tezos.level;
   }
@@ -93,7 +93,7 @@ let is_kit_pool_empty (u: t) =
 (* NOTE: Make sure to restore the ticket. *)
 let is_liquidity_token_pool_empty (u: t) =
   let _, n, _, _same_ticket = Ticket.read u.lqt in
-  n = Nat.from_literal 0
+  n = Ligo.nat_from_literal 0
 
 (* When the uniswap is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow
@@ -242,7 +242,7 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
     Error AddLiquidityNoTezGiven
   else if max_kit_deposited = Kit.zero then
     Error AddLiquidityNoKitGiven
-  else if min_lqt_minted = Nat.from_literal 0 then
+  else if min_lqt_minted = Ligo.nat_from_literal 0 then
     Error AddLiquidityNoLiquidityToBeAdded
   else
     let _, uniswap_lqt, _, _same_ticket = Ticket.read uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
@@ -296,7 +296,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
     Error RemoveLiquidityNonEmptyAmount
   else if tezos.now >= deadline then
     Error UniswapTooLate
-  else if lqt_burned = Nat.from_literal 0 then
+  else if lqt_burned = Ligo.nat_from_literal 0 then
     Error RemoveLiquidityNoLiquidityBurned
   else if min_tez_withdrawn <= Tez.zero then
     Error RemoveLiquidityNoTezWithdrawnExpected
@@ -306,7 +306,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
   else
     let _, uniswap_lqt, _, same_ticket = Ticket.read uniswap.lqt in
     assert (lqt_burned <= uniswap_lqt); (* the ticket mechanism should enforce this *)
-    let ratio = Ratio.make (Nat.int lqt_burned) (Nat.int uniswap_lqt) in
+    let ratio = Ratio.make (Ligo.int lqt_burned) (Ligo.int uniswap_lqt) in
     let tez_withdrawn = Tez.of_ratio_floor (Ratio.mul (Tez.to_ratio uniswap.tez) ratio) in
     let kit_withdrawn = Kit.of_ratio_floor (Ratio.mul (Kit.to_ratio uniswap_kit) ratio) in
 
@@ -320,7 +320,7 @@ let remove_liquidity (uniswap: t) ~tezos ~amount ~lqt_burned ~min_tez_withdrawn 
       Error RemoveLiquidityTooMuchKitWithdrawn
     else
       let remaining_lqt, _burned = Option.get ( (* NOTE: SHOULD NEVER FAIL!! *)
-          match Nat.is_nat (Nat.sub uniswap_lqt lqt_burned) with
+          match Ligo.is_nat (Ligo.sub_nat_nat uniswap_lqt lqt_burned) with
           | None -> failwith "Uniswap.remove_liquidity: impossible"
           | Some remaining -> Ticket.split same_ticket remaining lqt_burned
         ) in

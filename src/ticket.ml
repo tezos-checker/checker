@@ -1,6 +1,6 @@
 type 'a t =
   { issuer : Address.t;
-    amount : Nat.t;
+    amount : Ligo.nat;
     content : 'a;
   }
 [@@deriving show]
@@ -14,7 +14,7 @@ let create ~issuer ~amount ~content =
 let read ticket = (ticket.issuer, ticket.amount, ticket.content, ticket)
 
 let split ticket left right =
-  if (Nat.add left right) <> ticket.amount
+  if (Ligo.add_nat_nat left right) <> ticket.amount
   then None
   else
     (* NOTE: I hope the content has no tickets in it to duplicate! *)
@@ -27,6 +27,6 @@ let join t1 t2 =
   then None
   else Some (create
                ~issuer:t1.issuer
-               ~amount:(Nat.add t1.amount t2.amount)
+               ~amount:(Ligo.add_nat_nat t1.amount t2.amount)
                ~content:t1.content)
 

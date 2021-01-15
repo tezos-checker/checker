@@ -17,9 +17,9 @@ val to_bigint: t -> Ligo.int
 
 val of_int: int -> t
 
-val of_nat: Nat.t -> t
-val to_nat_floor: t -> Nat.t
-val to_nat_ceil: t -> Nat.t
+val of_nat: Ligo.nat -> t
+val to_nat_floor: t -> Ligo.nat
+val to_nat_ceil: t -> Ligo.nat
 
 (* Relational operations. *)
 val equal: t -> t -> bool

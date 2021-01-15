@@ -1,3 +1,5 @@
+(* int *)
+
 type int = Z.t
 
 let int_from_literal = Z.of_int
@@ -45,3 +47,29 @@ let of_string_base_int = Z.of_string_base
 let div_rem_int_int = Z.div_rem
 
 let format_int = Z.format
+
+(* nat *)
+
+type nat = Z.t
+
+let add_nat_nat = Z.add
+
+let sub_nat_nat = Z.sub
+
+let int x = x
+
+let abs = Z.abs
+
+let is_nat x = if Z.lt x Z.zero then None else Some x
+
+let string_of_nat = Z.to_string
+
+let pp_nat fmt z = Format.pp_print_string fmt (string_of_int z)
+
+let compare_nat = Z.compare
+
+let nat_from_literal x =
+  if x < 0 then
+    failwith "Ligo.nat_from_literal: negative"
+  else
+    Z.of_int x

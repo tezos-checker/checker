@@ -38,6 +38,17 @@ val int_from_literal : Int.t -> int
 val compare_int : int -> int -> Int.t
 val string_of_int : int -> string
 
+type nat
+(**
+    A natural number.
+
+     The only size limit to natural numbers is gas.
+*)
+
+val nat_from_literal : Int.t -> nat
+val compare_nat : nat -> nat -> Int.t
+val string_of_nat : nat -> string
+
 (* type key *)
 (**
     A public cryptographic key.
@@ -56,13 +67,6 @@ val string_of_int : int -> string
 (* type ('key, 'value) map *)
 (**
     The type of a map from values of type key to values of type value is map (key, value).
-*)
-
-(* type nat *)
-(**
-    A natural number.
-
-     The only size limit to natural numbers is gas.
 *)
 
 (* type operation *)
@@ -136,10 +140,7 @@ val string_of_int : int -> string
 
 (* val ediv_nat_nat : nat -> nat -> (nat * nat) option *)
 
-(* Additions *)
-
-(* val add_nat_nat : nat -> nat -> nat *)
-
+(* OPERATIONS ON int *)
 val add_int_int : int -> int -> int
 val sub_int_int : int -> int -> int
 val mul_int_int : int -> int -> int
@@ -159,6 +160,14 @@ val abs_int : int -> int (* NON-LIGO. Ideally we should use Ligo.(abs : int -> n
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. OCaml-ONLY *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
 val format_int : string -> int -> string (* NON-LIGO. OCaml-ONLY *)
+
+(* OPERATIONS ON nat *)
+
+val add_nat_nat : nat -> nat -> nat
+val sub_nat_nat : nat -> nat -> int
+val int : nat -> int
+val abs : int -> nat
+val is_nat : int -> nat option
 
 (* val add_tez_tez : tez -> tez -> tez *)
 
@@ -180,8 +189,6 @@ val format_int : string -> int -> string (* NON-LIGO. OCaml-ONLY *)
 
 (* val sub_nat_int : nat -> int -> int *)
 
-(* val sub_nat_nat : nat -> nat -> int *)
-
 (* TODO: The following also seem to be allowed,
  *
  *   val sub_mutez_mutez : mutez -> mutez -> mutez
@@ -199,3 +206,4 @@ val format_int : string -> int -> string (* NON-LIGO. OCaml-ONLY *)
 (* BEGIN_OCAML *)
 
 val pp_int : Format.formatter -> int -> unit
+val pp_nat : Format.formatter -> nat -> unit
