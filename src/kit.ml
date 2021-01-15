@@ -7,8 +7,8 @@ type t = Z.t
 let scaling_factor = Z.of_int64 1000000L
 
 (* Basic arithmetic operations. *)
-let add x y = Z.(x + y)
-let sub x y = Z.(x - y)
+let add x y = Z.add x y
+let sub x y = Z.sub x y
 
 let compare x y = Z.compare x y
 
@@ -20,8 +20,8 @@ let of_mukit amount = amount
 let to_mukit amount = amount
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil amount = Z.(cdiv (Ratio.num amount * scaling_factor) (Ratio.den amount))
-let of_ratio_floor amount = Z.(fdiv (Ratio.num amount * scaling_factor) (Ratio.den amount))
+let of_ratio_ceil  amount = Z.cdiv (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Z.fdiv (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp =

@@ -21,8 +21,8 @@ let of_mutez amount =
 
 let to_mutez amount = Nat.to_int amount
 let to_ratio amount = Ratio.make (Nat.to_int amount) scaling_factor
-let of_ratio_ceil amount = Nat.of_ratio_ceil (Ratio.make Z.(Ratio.num amount * scaling_factor) (Ratio.den amount))
-let of_ratio_floor amount = Nat.of_ratio_floor (Ratio.make Z.(Ratio.num amount * scaling_factor) (Ratio.den amount))
+let of_ratio_ceil  amount = Nat.of_ratio_ceil  (Ratio.make (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount))
+let of_ratio_floor amount = Nat.of_ratio_floor (Ratio.make (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount))
 
 (* Pretty printing functions *)
 let show amount = Nat.show amount ^ "mutez"

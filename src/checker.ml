@@ -685,8 +685,8 @@ let liquidation_auction_reclaim_winning_bid state ~tezos ~(call:Call.t) ~bid_tic
   * contract. We use a bracketed calculation, where for the first
   * touch_reward_low_bracket seconds the reward increases by touch_low_reward
   * per second, and after that by touch_high_reward per second. *)
-let calculate_touch_reward (state:t) ~tezos : Kit.t =
-  assert (state.parameters.last_touched <= Tezos.(tezos.now));
+let calculate_touch_reward (state:t) ~(tezos:Tezos.t) : Kit.t =
+  assert (state.parameters.last_touched <= tezos.now);
   let duration_in_seconds =
     Timestamp.seconds_elapsed
       ~start:state.parameters.last_touched
@@ -703,8 +703,8 @@ let calculate_touch_reward (state:t) ~tezos : Kit.t =
        (FixedPoint.mul (FixedPoint.of_int high_duration) touch_high_reward)
     )
 
-let touch (state:t) ~tezos ~(index:Tez.t) : (Kit.token * t) =
-  if state.parameters.last_touched = Tezos.(tezos.now) then
+let touch (state:t) ~(tezos:Tezos.t) ~(index:Tez.t) : (Kit.token * t) =
+  if state.parameters.last_touched = tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     (Kit.issue ~tezos Kit.zero, state)
   else

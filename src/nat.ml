@@ -4,7 +4,7 @@ let show = Z.to_string
 let pp = Z.pp_print
 
 let compare = Z.compare
-let add x y = Z.(x + y)
+let add x y = Z.add x y
 let sub x y = Z.sub x y
 
 let zero = Z.zero
@@ -25,10 +25,10 @@ let of_ratio_floor x =
   if Ratio.lt x Ratio.zero then
     failwith "Nat.of_ratio_floor: negative"
   else
-    Z.(fdiv (Ratio.num x) (Ratio.den x))
+    Z.fdiv (Ratio.num x) (Ratio.den x)
 
 let of_ratio_ceil x =
   if Ratio.lt x Ratio.zero then
     failwith "Nat.of_ratio_ceil: negative"
   else
-    Z.(cdiv (Ratio.num x) (Ratio.den x))
+    Z.cdiv (Ratio.num x) (Ratio.den x)
