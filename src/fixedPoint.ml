@@ -1,49 +1,49 @@
-type t = Z.t
+type t = Ligo.int
 
-let scaling_base = Z.of_int64 2L
+let scaling_base = Ligo.int_from_literal 2
 let scaling_exponent = 64
-let scaling_factor = Z.pow scaling_base scaling_exponent
+let scaling_factor = Ligo.pow_int_nat scaling_base scaling_exponent
 
 (* Predefined values. *)
-let zero = Z.zero
+let zero = Ligo.int_from_literal 0
 let one = scaling_factor
 
 (* Arithmetic operations. *)
-let add x y = Z.add x y
-let sub x y = Z.sub x y
-let mul x y = Z.shift_right_trunc (Z.mul x y) scaling_exponent
+let add x y = Ligo.add_int_int x y
+let sub x y = Ligo.sub_int_int x y
+let mul x y = Ligo.shift_right_trunc_int_nat (Ligo.mul_int_int x y) scaling_exponent
 
 (* We round towards 0, for fixedpoint calculation, measuring things which are
  * inherently noisy, this is ok. Greater care must be excercised when doing
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
-let div x y = Z.div (Z.shift_left x scaling_exponent) y
-let neg x = Z.neg x
+let div x y = Ligo.div_int_int (Ligo.shift_left_int_nat x scaling_exponent) y
+let neg x = Ligo.neg_int x
 
 let pow x y =
   assert (y >= 0);
   if y = 0
   then one
-  else Z.div (Z.pow x y) (Z.pow scaling_factor (y - 1))
+  else Ligo.div_int_int (Ligo.pow_int_nat x y) (Ligo.pow_int_nat scaling_factor (y - 1))
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amount + (amount * amount) / (one + one) *)
 let exp amount = add one amount
 
 (* Conversions to/from other types. *)
-let of_int amount = Z.shift_left (Z.of_int amount) scaling_exponent
+let of_int amount = Ligo.shift_left_int_nat (Ligo.int_from_literal amount) scaling_exponent
 
 let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
   let mantissa = match dotpos with
-    | None -> Z.one
-    | Some pos -> Z.pow (Z.of_int 16) (String.length str - pos - 1) in
-  Z.div (Z.shift_left (Z.of_string_base 16 without_dot) scaling_exponent) mantissa
+    | None -> Ligo.int_from_literal 1
+    | Some pos -> Ligo.pow_int_nat (Ligo.int_from_literal 16) (String.length str - pos - 1) in
+  Ligo.div_int_int (Ligo.shift_left_int_nat (Ligo.of_string_base_int 16 without_dot) scaling_exponent) mantissa
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Z.cdiv (Z.shift_left (Ratio.num amount) scaling_exponent) (Ratio.den amount)
-let of_ratio_floor amount = Z.fdiv (Z.shift_left (Ratio.num amount) scaling_exponent) (Ratio.den amount)
+let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.shift_left_int_nat (Ratio.num amount) scaling_exponent) (Ratio.den amount)
+let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.shift_left_int_nat (Ratio.num amount) scaling_exponent) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* Pretty printing functions (in hex, otherwise it's massive) *)
@@ -54,13 +54,13 @@ let show amount =
     then s
     else (String.make to_fill '0') ^ s in
 
-  let sign = if amount < Z.zero then "-" else "" in
-  let (upper, lower) = Z.div_rem (Z.abs amount) scaling_factor in
+  let sign = if amount < Ligo.int_from_literal 0 then "-" else "" in
+  let (upper, lower) = Ligo.div_rem_int_int (Ligo.abs_int amount) scaling_factor in
 
   Format.sprintf "%s%s.%s"
     sign
-    (Z.format "%X" upper)
-    (zfill (Z.format "%X" lower) (scaling_exponent / 4))
+    (Ligo.format_int "%X" upper)
+    (zfill (Ligo.format_int "%X" lower) (scaling_exponent / 4))
 
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 

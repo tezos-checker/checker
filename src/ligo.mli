@@ -141,6 +141,24 @@ val string_of_int : int -> string
 (* val add_nat_nat : nat -> nat -> nat *)
 
 val add_int_int : int -> int -> int
+val sub_int_int : int -> int -> int
+val mul_int_int : int -> int -> int
+val lt_int_int : int -> int -> bool
+val leq_int_int : int -> int -> bool
+val geq_int_int : int -> int -> bool
+val div_int_int : int -> int -> int (* do we need this even (rounds towards zero..)? *)
+val cdiv_int_int : int -> int -> int (* NON-LIGO *)
+val fdiv_int_int : int -> int -> int (* NON-LIGO *)
+val pow_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
+val shift_right_trunc_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
+val shift_left_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
+val gcd_int_int : int -> int -> int (* NON-LIGO *)
+val sign_int : int -> Int.t (* NON-LIGO, I think? *)
+val neg_int : int -> int (* NON-LIGO, I think? *)
+val abs_int : int -> int (* NON-LIGO. Ideally we should use Ligo.(abs : int -> nat) and then lift back to int? *)
+val of_string_base_int : Int.t -> string -> int (* NON-LIGO. OCaml-ONLY *)
+val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
+val format_int : string -> int -> string (* NON-LIGO. OCaml-ONLY *)
 
 (* val add_tez_tez : tez -> tez -> tez *)
 
@@ -157,8 +175,6 @@ val add_int_int : int -> int -> int
 (* val sub_timestamp_int : timestamp -> int -> timestamp *)
 
 (* val sub_timestamp_timestamp : timestamp -> timestamp -> int *)
-
-(* val sub_int_int : int -> int -> int *)
 
 (* val sub_int_nat : int -> nat -> int *)
 

@@ -30,8 +30,8 @@ let make_initial (ts: Timestamp.t) : t =
     imbalance_index = FixedPoint.one;
     (* Cannot be zero because then it stays
      * zero forever; only multiplications occur. *)
-    outstanding_kit = Kit.of_mukit (Z.of_int 1);
-    circulating_kit = Kit.of_mukit (Z.of_int 1);
+    outstanding_kit = Kit.of_mukit (Ligo.int_from_literal 1);
+    circulating_kit = Kit.of_mukit (Ligo.int_from_literal 1);
     last_touched = ts;
   }
 
@@ -87,7 +87,7 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
   if burrowed = Kit.zero && circulating = Kit.zero then
     Ratio.zero
   else if burrowed = Kit.zero && circulating <> Kit.zero then
-    Ratio.make (Z.of_int (-5)) (Z.of_int 100)
+    Ratio.make (Ligo.int_from_literal (-5)) (Ligo.int_from_literal 100)
   else if burrowed >= circulating then
     Ratio.div
       (Ratio.min (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
@@ -142,8 +142,8 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   let target = FixedPoint.to_ratio target in
   let target_low_bracket  = Constants.target_low_bracket in
   let target_high_bracket = Constants.target_high_bracket in
-  let cnp_001 = FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 1) (Z.of_int 10000)) in
-  let cnp_005 = FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 5) (Z.of_int 10000)) in
+  let cnp_001 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 10000)) in
+  let cnp_005 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 10000)) in
   let secs_in_a_day = FixedPoint.of_int Constants.seconds_in_a_day in
   match () with
   (* No acceleration (0) *)
@@ -193,7 +193,7 @@ let touch
       (Ratio.add
          (FixedPoint.to_ratio parameters.drift)
          (Ratio.mul
-            (Ratio.make (Z.of_int 1) (Z.of_int 2))
+            (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 2))
             (Ratio.mul
                (FixedPoint.to_ratio (FixedPoint.add parameters.drift_derivative current_drift_derivative))
                duration_in_seconds
@@ -209,7 +209,7 @@ let touch
                (Ratio.add
                   (FixedPoint.to_ratio parameters.drift)
                   (Ratio.mul
-                     (Ratio.make (Z.of_int 1) (Z.of_int 6))
+                     (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 6))
                      (Ratio.mul
                         (Ratio.add
                            (Ratio.mul

@@ -10,8 +10,8 @@ val zero : t
 val one : t
 
 (* Conversions to/from other types. *)
-val of_mukit : Z.t -> t
-val to_mukit : t -> Z.t
+val of_mukit : Ligo.int -> t
+val to_mukit : t -> Ligo.int
 val to_ratio : t -> Ratio.t
 val of_ratio_ceil : Ratio.t -> t
 val of_ratio_floor : Ratio.t -> t

@@ -1,5 +1,5 @@
 type t = Nat.t
-let scaling_factor = Z.of_int 1_000_000
+let scaling_factor = Ligo.int_from_literal 1_000_000
 
 (* Basic arithmetic operations. *)
 let add x y = Nat.add x y
@@ -21,8 +21,8 @@ let of_mutez amount =
 
 let to_mutez amount = Nat.int amount
 let to_ratio amount = Ratio.make (Nat.int amount) scaling_factor
-let of_ratio_ceil  amount = Ratio.to_nat_ceil  (Ratio.make (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount))
-let of_ratio_floor amount = Ratio.to_nat_floor (Ratio.make (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount))
+let of_ratio_ceil  amount = Ratio.to_nat_ceil  (Ratio.make (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount))
+let of_ratio_floor amount = Ratio.to_nat_floor (Ratio.make (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount))
 
 (* Pretty printing functions *)
 let show amount = Nat.show amount ^ "mutez"

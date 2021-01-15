@@ -11,11 +11,11 @@ let suite =
        let fp3 = FixedPoint.of_hex_string "5.1F972474538EF34D" in
        let fp4 = FixedPoint.of_hex_string "1389" in
        let fp5 = FixedPoint.of_hex_string "-28" in
-       let fp6 = FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 1) (Z.of_int 10)) in
+       let fp6 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 10)) in
        let two = FixedPoint.of_hex_string "2" in
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 11) (Z.of_int 10)))
+         (FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 11) (Ligo.int_from_literal 10)))
          (FixedPoint.exp fp6);
        assert_equal
          ~printer:show_fp
@@ -39,7 +39,7 @@ let suite =
          (FixedPoint.mul fp3 fp5);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 5) (Z.of_int 3)))
+         (FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 3)))
          (FixedPoint.div fp1 fp2);
        assert_equal
          ~printer:show_fp
@@ -47,7 +47,7 @@ let suite =
          (FixedPoint.div fp5 fp1);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.make (Z.of_int 17078) (Z.of_int 10000)))
+         (FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 17078) (Ligo.int_from_literal 10000)))
          (FixedPoint.div fp3 fp2);
        assert_equal
          ~printer:show_fp

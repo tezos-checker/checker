@@ -2,9 +2,9 @@
 type t
 
 (* Construction/deconstruction. *)
-val make: Z.t -> Z.t -> t
-val num: t -> Z.t
-val den: t -> Z.t
+val make: Ligo.int -> Ligo.int -> t
+val num: t -> Ligo.int
+val den: t -> Ligo.int
 
 (* Predefined values *)
 val zero: t
@@ -12,8 +12,8 @@ val one: t
 val minus_one:t
 
 (* Conversions to/from other types. *)
-val of_bigint: Z.t -> t
-val to_bigint: t -> Z.t
+val of_bigint: Ligo.int -> t
+val to_bigint: t -> Ligo.int
 
 val of_int: int -> t
 

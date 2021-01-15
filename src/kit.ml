@@ -3,16 +3,16 @@
  * can be useful for the imbalance adjustment, which can be either positive or
  * negative). Leave an int for now, but we should make an explicit decision on
  * this. *)
-type t = Z.t
-let scaling_factor = Z.of_int64 1000000L
+type t = Ligo.int
+let scaling_factor = Ligo.int_from_literal 1_000_000
 
 (* Basic arithmetic operations. *)
-let add x y = Z.add x y
-let sub x y = Z.sub x y
+let add x y = Ligo.add_int_int x y
+let sub x y = Ligo.sub_int_int x y
 
-let compare x y = Z.compare x y
+let compare x y = Ligo.compare_int x y
 
-let zero = Z.zero
+let zero = Ligo.int_from_literal 0
 let one = scaling_factor
 
 (* Conversions to/from other types. *)
@@ -20,15 +20,15 @@ let of_mukit amount = amount
 let to_mukit amount = amount
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Z.cdiv (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Z.fdiv (Z.mul (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp =
   of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
 
 (* Pretty printing functions *)
-let show amount = Z.to_string amount ^ "mukit"
+let show amount = Ligo.string_of_int amount ^ "mukit"
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
 (* Kit are really tickets. *)

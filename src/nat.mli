@@ -6,8 +6,8 @@ val from_literal : Int.t -> t
 
 val compare : t -> t -> int
 val add : t -> t -> t
-val sub : t -> t -> Z.t
+val sub : t -> t -> Ligo.int
 
-val int : t -> Z.t
-val abs : Z.t -> t
-val is_nat : Z.t -> t option
+val int : t -> Ligo.int
+val abs : Ligo.int -> t
+val is_nat : Ligo.int -> t option
