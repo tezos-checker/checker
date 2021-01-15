@@ -687,12 +687,12 @@ let liquidation_auction_reclaim_winning_bid state ~tezos ~(call:Call.t) ~bid_tic
   * per second, and after that by touch_high_reward per second. *)
 let calculate_touch_reward (state:t) ~(tezos:Tezos.t) : Kit.t =
   assert (state.parameters.last_touched <= tezos.now);
-  let duration_in_seconds =
-    Timestamp.seconds_elapsed
-      ~start:state.parameters.last_touched
-      ~finish:tezos.now in
+  let duration_in_seconds = Ligo.sub_timestamp_timestamp tezos.now state.parameters.last_touched in
   let low_duration = min duration_in_seconds Constants.touch_reward_low_bracket in
-  let high_duration = max 0 (duration_in_seconds - Constants.touch_reward_low_bracket) in
+  let high_duration =
+    max
+      (Ligo.int_from_literal 0)
+      (Ligo.sub_int_int duration_in_seconds Constants.touch_reward_low_bracket) in
 
   let touch_low_reward = FixedPoint.of_ratio_ceil Constants.touch_low_reward in
   let touch_high_reward = FixedPoint.of_ratio_ceil Constants.touch_high_reward in

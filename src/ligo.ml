@@ -16,6 +16,8 @@ let sub_int_int = Z.sub
 
 let mul_int_int = Z.mul
 
+let eq_int_int = Z.equal
+
 let lt_int_int = Z.lt
 
 let leq_int_int = Z.leq
@@ -28,7 +30,10 @@ let cdiv_int_int = Z.cdiv
 
 let fdiv_int_int = Z.fdiv
 
-let pow_int_nat = Z.pow
+let pow_int_nat b e =
+  assert (e >= Z.zero);
+  assert (e <= Z.of_int max_int);
+  Z.pow b (Z.to_int e)
 
 let shift_right_trunc_int_nat = Z.shift_right_trunc
 
@@ -73,3 +78,23 @@ let nat_from_literal x =
     failwith "Ligo.nat_from_literal: negative"
   else
     Z.of_int x
+
+(* timestamp *)
+
+type timestamp = Z.t
+
+let add_timestamp_int = Z.add
+
+let sub_timestamp_timestamp = Z.sub
+
+let string_of_timestamp = Z.to_string
+
+let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_int z)
+
+let compare_timestamp = Z.compare
+
+let timestamp_from_seconds_literal s =
+  if s < 0 then
+    failwith "Ligo.timestamp_from_seconds_literal: negative"
+  else
+    Z.of_int s

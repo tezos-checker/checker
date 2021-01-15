@@ -1,7 +1,7 @@
 open OUnit2
 
 let checker_address = Address.of_string "checker"
-let start_time = Timestamp.of_seconds 0
+let start_time = Ligo.timestamp_from_seconds_literal 0
 let start_level = Level.of_int 0
 let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;}
 

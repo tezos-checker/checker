@@ -29,7 +29,7 @@ type t =
     (* Pointer to liquidation slices in auction queue. *)
     liquidation_slices : liquidation_slices option;
     (* The last time the burrow was touched. *)
-    last_touched : Timestamp.t;
+    last_touched : Ligo.timestamp;
   }
 [@@deriving show]
 

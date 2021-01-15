@@ -18,7 +18,7 @@ let arb_tezos =
   QCheck.map
     (fun level ->
        Tezos.{
-         now = Timestamp.of_seconds (level * 60);
+         now = Ligo.timestamp_from_seconds_literal (level * 60);
          level = Level.of_int level;
          self = Address.of_string "checker";
        }

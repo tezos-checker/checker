@@ -7,7 +7,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let level0 = Level.of_int 0
 let level1 = Level.of_int 1
 let checker_address = Address.of_string "checker"
-let tezos0 = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker_address;}
+let tezos0 = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = checker_address;}
 
 (* Issue an arbitrary amount of kit (checker-issued) *)
 let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.arb_positive_kit
@@ -33,7 +33,7 @@ let make_inputs_for_buy_kit_to_succeed =
     (fun (tez, _kit, _lqt, uniswap) ->
        let amount = Tez.of_ratio_ceil (Ratio.div (Ratio.mul (Tez.to_ratio tez) (Ratio.sub Ratio.one Constants.uniswap_fee)) Constants.uniswap_fee) in
        let min_kit_expected = Kit.of_mukit (Ligo.int_from_literal 1) in (* absolute minimum *)
-       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, amount, min_kit_expected, tezos, deadline)
     )
     (arbitrary_non_empty_uniswap Ratio.one tezos.level)
@@ -51,7 +51,7 @@ let make_inputs_for_sell_kit_to_succeed =
          let kit, _same_ticket = Kit.read_kit kit in
          Kit.issue ~tezos (Kit.of_ratio_ceil (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.sub Ratio.one Constants.uniswap_fee)) Constants.uniswap_fee)) in
        let min_tez_expected = Tez.of_mutez (Ligo.int_from_literal 1) in (* absolute minimum *)
-       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, tezos, deadline)
     )
     (arbitrary_non_empty_uniswap Ratio.one tezos.level)
@@ -72,7 +72,7 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
        let min_lqt_minted =
          let _, lqt, _, _same_ticket = Ticket.read lqt in
          Ratio.to_nat_floor (Ratio.mul (Ratio.of_nat lqt) (Ratio.make (Tez.to_mutez amount) (Tez.to_mutez tez))) in
-       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
     (QCheck.pair (arbitrary_non_empty_uniswap Ratio.one tezos.level) TestArbitrary.arb_positive_tez)
@@ -114,7 +114,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
          else
            lqt_burned, min_tez_withdrawn, min_kit_withdrawn in
 
-       let deadline = Timestamp.add_seconds tezos.now 1 in (* always one second later *)
+       let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, tezos, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
     )
     (QCheck.pair (arbitrary_non_empty_uniswap Ratio.one tezos.level) QCheck.pos_int)
@@ -196,8 +196,8 @@ let buy_kit_unit_test =
         uniswap
         ~amount:Tez.one
         ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 1))
-        ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-        ~deadline:(Timestamp.of_seconds 10) in
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~deadline:(Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
 
@@ -207,8 +207,8 @@ let buy_kit_unit_test =
         uniswap
         ~amount:Tez.one
         ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_636))
-        ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-        ~deadline:(Timestamp.of_seconds 1) in
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
 
@@ -218,8 +218,8 @@ let buy_kit_unit_test =
       uniswap
       ~amount:Tez.one
       ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_637))
-      ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-      ~deadline:(Timestamp.of_seconds 1);
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+      ~deadline:(Ligo.timestamp_from_seconds_literal 1);
 
     (* Low expectations but too late (tight): fail *)
     assert_failwith Uniswap.UniswapTooLate @@
@@ -227,8 +227,8 @@ let buy_kit_unit_test =
       uniswap
       ~amount:Tez.one
       ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_636))
-      ~tezos:Tezos.{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
-      ~deadline:(Timestamp.of_seconds 1)
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = checker_address;}
+      ~deadline:(Ligo.timestamp_from_seconds_literal 1)
 
 (* ************************************************************************* *)
 (*                     sell_kit (property-based tests)                       *)
@@ -304,8 +304,8 @@ let sell_kit_unit_test =
         ~amount:Tez.zero
         (Kit.issue ~tezos:tezos0 Kit.one)
         ~min_tez_expected:(Tez.of_mutez (Ligo.int_from_literal 1))
-        ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-        ~deadline:(Timestamp.of_seconds 10) in
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~deadline:(Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
 
@@ -316,8 +316,8 @@ let sell_kit_unit_test =
         ~amount:Tez.zero
         (Kit.issue ~tezos:tezos0 Kit.one)
         ~min_tez_expected:(Tez.of_mutez (Ligo.int_from_literal 1_663_333))
-        ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-        ~deadline:(Timestamp.of_seconds 1) in
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Tez.show expected_returned_tez returned_tez;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
 
@@ -328,8 +328,8 @@ let sell_kit_unit_test =
       ~amount:Tez.zero
       (Kit.issue ~tezos:tezos0 Kit.one)
       ~min_tez_expected:(Tez.of_mutez (Ligo.int_from_literal 1_663_334))
-      ~tezos:Tezos.{now = Timestamp.of_seconds 0; level = level1; self = checker_address;}
-      ~deadline:(Timestamp.of_seconds 1);
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+      ~deadline:(Ligo.timestamp_from_seconds_literal 1);
 
     (* Low expectations but too late (tight): fail *)
     assert_failwith Uniswap.UniswapTooLate @@
@@ -338,8 +338,8 @@ let sell_kit_unit_test =
       ~amount:Tez.zero
       (Kit.issue ~tezos:tezos0 Kit.one)
       ~min_tez_expected:(Tez.of_mutez (Ligo.int_from_literal 1_663_333))
-      ~tezos:Tezos.{now = Timestamp.of_seconds 1; level = level1; self = checker_address;}
-      ~deadline:(Timestamp.of_seconds 1)
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = checker_address;}
+      ~deadline:(Ligo.timestamp_from_seconds_literal 1)
 
 (* ************************************************************************* *)
 (*             add_liquidity (non-first) (property-based tests)              *)
@@ -411,7 +411,7 @@ let add_liquidity_unit_test =
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
-    let tezos = Tezos.{now = Timestamp.of_seconds 0; level = level0; self = checker_address;} in
+    let tezos = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = checker_address;} in
 
     let returned_liquidity, returned_kit, updated_uniswap = assert_ok @@
       Uniswap.add_liquidity
@@ -421,7 +421,7 @@ let add_liquidity_unit_test =
         ~pending_accrual:Tez.zero
         ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 20_000_000)))
         ~min_lqt_minted:(Ligo.nat_from_literal 2)
-        ~deadline:(Timestamp.of_seconds 1) in
+        ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Uniswap.show_liquidity expected_returned_liquidity returned_liquidity;
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap
@@ -484,7 +484,7 @@ let pending_tez_deposit_test =
              ~pending_accrual:(Tez.of_mutez (Ligo.int_from_literal 10_000_000))
              ~max_kit_deposited:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 500_000_000)))
              ~min_lqt_minted:(Ligo.nat_from_literal 1)
-             ~deadline:(Timestamp.of_seconds 1)
+             ~deadline:(Ligo.timestamp_from_seconds_literal 1)
      with
      | Error _ -> assert_string "adding liquidity failed"
      | Ok (liq, _kit, uniswap) ->
@@ -495,7 +495,7 @@ let pending_tez_deposit_test =
            ~lqt_burned:liq
            ~min_tez_withdrawn:(Tez.of_mutez (Ligo.int_from_literal 1))
            ~min_kit_withdrawn:(Kit.of_mukit (Ligo.int_from_literal 1))
-           ~deadline:(Timestamp.of_seconds 100)
+           ~deadline:(Ligo.timestamp_from_seconds_literal 100)
        with
        | Error _ -> assert_string "removing liquidity failed"
        | Ok (tez, kit, _) ->

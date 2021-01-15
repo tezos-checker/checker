@@ -56,14 +56,14 @@ let suite =
        assert_equal
          ~printer:show_fp
          (FixedPoint.of_ratio_floor (Ratio.of_int 4))
-         (FixedPoint.pow two 2);
+         (FixedPoint.pow two (Ligo.int_from_literal 2));
        assert_equal
          ~printer:show_fp
          (FixedPoint.of_ratio_floor (Ratio.of_int 2))
-         (FixedPoint.pow two 1);
+         (FixedPoint.pow two (Ligo.int_from_literal 1));
        assert_equal
          ~printer:show_fp
          (FixedPoint.one)
-         (FixedPoint.pow fp5 0);
+         (FixedPoint.pow fp5 (Ligo.int_from_literal 0));
     );
   ]

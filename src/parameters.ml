@@ -14,12 +14,12 @@ type t =
      * would be tolerable. *)
     outstanding_kit: Kit.t;
     circulating_kit: Kit.t;
-    last_touched: Timestamp.t;
+    last_touched: Ligo.timestamp;
   }
 [@@deriving show]
 
 (** Initial state of the parameters. TODO: Contents TBD. *)
-let make_initial (ts: Timestamp.t) : t =
+let make_initial (ts: Ligo.timestamp) : t =
   { q = FixedPoint.one;
     index = Tez.one;
     protected_index = Tez.one;
@@ -149,11 +149,13 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   (* No acceleration (0) *)
   | () when Ratio.lt (qexp (Ratio.neg target_low_bracket)) target && Ratio.lt target (qexp target_low_bracket) -> FixedPoint.zero
   (* Low acceleration (-/+) *)
-  | () when Ratio.lt (qexp (Ratio.neg target_high_bracket)) target && Ratio.leq target (qexp (Ratio.neg target_low_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
-  | () when Ratio.gt (qexp (          target_high_bracket)) target && Ratio.geq target (qexp (          target_low_bracket)) ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day 2))
+  | () when Ratio.lt (qexp (Ratio.neg target_high_bracket)) target && Ratio.leq target (qexp (Ratio.neg target_low_bracket))
+    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
+  | () when Ratio.gt (qexp (          target_high_bracket)) target && Ratio.geq target (qexp (          target_low_bracket))
+    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
   (* High acceleration (-/+) *)
-  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
-  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day 2))
+  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
+  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
   | _ -> (failwith "impossible" : FixedPoint.t)
 
 (** Update the checker's parameters, given (a) the current timestamp
@@ -167,10 +169,8 @@ let touch
     (parameters: t)
   : Kit.t * t =
   let duration_in_seconds =
-    Ratio.of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
-    @@ Timestamp.seconds_elapsed
-      ~start:parameters.last_touched
-      ~finish:tezos.now
+    Ratio.of_bigint (* NOTE: can it be negative? Does the protocol ensure this? *)
+    @@ Ligo.sub_timestamp_timestamp tezos.now parameters.last_touched
   in
 
   let current_protected_index =

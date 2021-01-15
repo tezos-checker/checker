@@ -19,7 +19,7 @@ let suite =
            min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 4_000_000); (* note: randomly chosen *)
            younger = None; older = None;
          } in
-       let start_time = Timestamp.of_seconds 0 in
+       let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
@@ -37,22 +37,22 @@ let suite =
          (LiquidationAuction.current_auction_minimum_bid start_tezos current)
          ~printer:Kit.show;
        (* Price of descending auction should go down... *)
-       let one_second_later = Tezos.{now = Timestamp.add_seconds start_time 1; level = Level.of_int 0; self = checker_address;} in
+       let one_second_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 1); level = Level.of_int 0; self = checker_address;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_999_666))
          (LiquidationAuction.current_auction_minimum_bid one_second_later current)
          ~printer:Kit.show;
-       let two_seconds_later = Tezos.{now = Timestamp.add_seconds start_time 2; level = Level.of_int 0; self = checker_address;} in
+       let two_seconds_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 2); level = Level.of_int 0; self = checker_address;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_999_333))
          (LiquidationAuction.current_auction_minimum_bid two_seconds_later current)
          ~printer:Kit.show;
-       let one_minute_later = Tezos.{now = Timestamp.add_seconds start_time 60; level = Level.of_int 1; self = checker_address;} in
+       let one_minute_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 60); level = Level.of_int 1; self = checker_address;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_980_098))
          (LiquidationAuction.current_auction_minimum_bid one_minute_later current)
          ~printer:Kit.show;
-       let two_minutes_later = Tezos.{now = Timestamp.add_seconds start_time (2 * 60); level = Level.of_int 2; self = checker_address;} in
+       let two_minutes_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal (2 * 60)); level = Level.of_int 2; self = checker_address;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_960_394))
          (LiquidationAuction.current_auction_minimum_bid two_minutes_later current)
@@ -80,7 +80,7 @@ let suite =
            { burrow = burrow_id_3; tez = Tez.of_mutez (Ligo.int_from_literal 5_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 9_000_003); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = Timestamp.of_seconds 0 in
+       let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
@@ -109,7 +109,7 @@ let suite =
            { burrow = burrow_id_3; tez = Tez.of_mutez (Ligo.int_from_literal 3_000_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 9_000_006); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = Timestamp.of_seconds 0 in
+       let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
@@ -126,7 +126,7 @@ let suite =
            { burrow = burrow_id_1; tez = Tez.of_mutez (Ligo.int_from_literal 2_000_000);
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 4_000_007); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_time = Timestamp.of_seconds 0 in
+       let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
@@ -150,7 +150,7 @@ let suite =
          ~printer:Kit.show;
        (* Minimum bid does not drop over time *)
        let ten_seconds_later = {
-         start_tezos with now = Timestamp.add_seconds start_tezos.now 10
+         start_tezos with now = Ligo.add_timestamp_int start_tezos.now (Ligo.int_from_literal 10)
        } in
        (* Can increase the bid.*)
        let (current, _) = Result.get_ok @@

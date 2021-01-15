@@ -57,6 +57,14 @@ val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" ss
 val compare_nat : nat -> nat -> Int.t (* NON-LIGO *)
 val string_of_nat : nat -> string     (* NON-LIGO *)
 
+type timestamp
+(**
+    A date in the real world.
+*)
+val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)
+val compare_timestamp : timestamp -> timestamp -> Int.t (* NON-LIGO *)
+val string_of_timestamp : timestamp -> string           (* NON-LIGO *)
+
 (* type key *)
 (**
     A public cryptographic key.
@@ -97,11 +105,6 @@ val string_of_nat : nat -> string     (* NON-LIGO *)
 (* type tez *)
 (**
     A specific type for tokens.
-*)
-
-(* type timestamp *)
-(**
-    A date in the real world.
 *)
 
 (* type unit *)
@@ -153,13 +156,14 @@ val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
 val mul_int_int : int -> int -> int  (* IN LIGO: ( * ) *)
 val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
+val eq_int_int : int -> int -> bool  (* IN LIGO: ( = ) *)
 val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
 val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
 val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
 val cdiv_int_int : int -> int -> int (* NON-LIGO *)
 val fdiv_int_int : int -> int -> int (* NON-LIGO *)
-val pow_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
+val pow_int_nat : int -> nat -> int (* NON-LIGO *)
 val shift_right_trunc_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
 val shift_left_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
 val gcd_int_int : int -> int -> int (* NON-LIGO *)
@@ -177,13 +181,16 @@ val int : nat -> int                (* IN LIGO: int *)
 val abs : int -> nat                (* IN LIGO: abs *)
 val is_nat : int -> nat option      (* IN LIGO: is_nat *)
 
+(* OPERATIONS ON timestamp *)
+
+val add_timestamp_int : timestamp -> int -> timestamp       (* IN LIGO: ( + ) *)
+val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
+
 (* val add_tez_tez : tez -> tez -> tez *)
 
 (* val add_nat_int : nat -> int -> int *)
 
 (* val add_int_nat : int -> nat -> int *)
-
-(* val add_timestamp_int : timestamp -> int -> timestamp *)
 
 (* val add_int_timestamp : int -> timestamp -> timestamp *)
 
@@ -191,7 +198,6 @@ val is_nat : int -> nat option      (* IN LIGO: is_nat *)
 
 (* val sub_timestamp_int : timestamp -> int -> timestamp *)
 
-(* val sub_timestamp_timestamp : timestamp -> timestamp -> int *)
 
 (* val sub_int_nat : int -> nat -> int *)
 
@@ -215,4 +221,5 @@ val is_nat : int -> nat option      (* IN LIGO: is_nat *)
 
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
+val pp_timestamp : Format.formatter -> timestamp -> unit
 val format_int : string -> int -> string

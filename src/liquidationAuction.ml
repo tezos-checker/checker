@@ -116,8 +116,8 @@ let with_valid_bid_ticket
   | Ok ticket -> f ticket
 
 type auction_state =
-  | Descending of Kit.t * Timestamp.t
-  | Ascending of bid * Timestamp.t * Level.t
+  | Descending of Kit.t * Ligo.timestamp
+  | Ascending of bid * Ligo.timestamp * Level.t
 [@@deriving show]
 
 type current_auction = {
@@ -276,7 +276,7 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
     let decay =
       FixedPoint.pow
         (FixedPoint.sub FixedPoint.one auction_decay_rate)
-        (Timestamp.seconds_elapsed ~start:start_time ~finish:tezos.now) in
+        (Ligo.sub_timestamp_timestamp tezos.now start_time) in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
     let bid_improvement_factor = FixedPoint.of_ratio_floor Constants.bid_improvement_factor in
@@ -294,7 +294,7 @@ let is_auction_complete
   | Descending _ ->
     None
   | Ascending (b, t, h) ->
-    if Timestamp.seconds_elapsed ~start:t ~finish:tezos.now
+    if Ligo.sub_timestamp_timestamp tezos.now t
        > Constants.max_bid_interval_in_seconds
     && Level.blocks_elapsed ~start:h ~finish:tezos.level
        > Constants.max_bid_interval_in_blocks

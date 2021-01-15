@@ -199,7 +199,7 @@ val buy_kit :
   tezos:Tezos.t ->
   call:Call.t ->
   min_kit_expected:Kit.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Kit.token * t, Error.error) result
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
@@ -210,7 +210,7 @@ val sell_kit :
   call:Call.t ->
   kit:Kit.token ->
   min_tez_expected:Tez.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Tez.payment * t, Error.error) result
 
 (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
@@ -224,7 +224,7 @@ val add_liquidity :
   call:Call.t ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Uniswap.liquidity * Kit.token * t, Error.error) result
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
@@ -236,7 +236,7 @@ val remove_liquidity :
   lqt_burned:Uniswap.liquidity ->
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Tez.payment * Kit.token * t, Error.error) result
 
 (* ************************************************************************* *)

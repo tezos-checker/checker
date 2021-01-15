@@ -113,7 +113,7 @@ val buy_kit :
   amount:Tez.t ->
   min_kit_expected:Kit.t ->
   tezos:Tezos.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Kit.token * t, Error.error) result
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
@@ -124,7 +124,7 @@ val sell_kit :
   Kit.token ->
   min_tez_expected:Tez.t ->
   tezos:Tezos.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Tez.t * t, Error.error) result
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
@@ -150,7 +150,7 @@ val add_liquidity :
   pending_accrual:Tez.t ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (liquidity * Kit.token * t, Error.error) result
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
@@ -165,7 +165,7 @@ val remove_liquidity :
   lqt_burned:liquidity ->
   min_tez_withdrawn:Tez.t ->
   min_kit_withdrawn:Kit.t ->
-  deadline:Timestamp.t ->
+  deadline:Ligo.timestamp ->
   (Tez.t * Kit.token * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. *)

@@ -33,7 +33,7 @@ val make_for_test :
   adjustment_index:FixedPoint.t ->
   collateral_at_auction:Tez.t ->
   liquidation_slices:(liquidation_slices option) ->
-  last_touched:Timestamp.t ->
+  last_touched:Ligo.timestamp ->
   t
 
 type Error.error +=

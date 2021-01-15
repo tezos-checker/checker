@@ -8,7 +8,7 @@ let alice = Address.of_string "alice"
 
 let make_tezos int_level =
   Tezos.{
-    now = Timestamp.of_seconds @@ int_level * 60;
+    now = Ligo.timestamp_from_seconds_literal @@ int_level * 60;
     level = Level.of_int int_level;
     self = Address.of_string "checker";
   }
@@ -28,7 +28,7 @@ let suite =
            ~call:{sender=alice; amount=Tez.one;}
            ~max_kit_deposited:(Kit.issue ~tezos Kit.one)
            ~min_lqt_minted:(Ligo.nat_from_literal 1)
-           ~deadline:(Timestamp.of_seconds 1) in (* barely on time *)
+           ~deadline:(Ligo.timestamp_from_seconds_literal 1) in (* barely on time *)
 
        (* Activation/deactivation tests *)
        let () =

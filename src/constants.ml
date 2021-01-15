@@ -41,7 +41,7 @@ let seconds_in_a_year : int = 31556952
 
 (** For convenience. The number of seconds in a day. Basically
   * 24h * 60min/h * 60sec/min = 86400. *)
-let seconds_in_a_day : int = 86400
+let seconds_in_a_day : Ligo.int = Ligo.int_from_literal 86400
 
 (** Low bracket used for the calculation of the drift derivative. *)
 let target_low_bracket : Ratio.t = Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 1000) (* 0.005 *)
@@ -57,7 +57,7 @@ let auction_decay_rate : Ratio.t = Ratio.make (Ligo.int_from_literal 1) (Ligo.in
 (** The maximum number of seconds that can pass between two (ascending) bids
   * during an auction. The auction should expire if more than this many seconds
   * pass between two bids. Currently set to 20min (20min * 60sec/min = 1200s). *)
-let max_bid_interval_in_seconds : int = 1200
+let max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal 1200
 
 (** The maximum number of blocks that can pass between two (ascending) bids
   * during an auction. The auction should expire if more blocks than this
@@ -70,7 +70,7 @@ let bid_improvement_factor : Ratio.t = Ratio.make (Ligo.int_from_literal 33) (Li
 
 (** Parameter used for calculating the current reward for touching the checker
   * contract. See calculate_touch_reward for their use. *)
-let touch_reward_low_bracket : int = 600 (* = 60 * 10 = 10 minutes *)
+let touch_reward_low_bracket : Ligo.int = Ligo.int_from_literal 600 (* = 60 * 10 = 10 minutes *)
 
 (** We want the reward in the first bracket to be 0.1 kit / minute, so we just
   * divide by 60 to get roughly how much should it be per second. *)

@@ -11,7 +11,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let initial_tezos =
   Tezos.{
-    now = Timestamp.of_seconds 0;
+    now = Ligo.timestamp_from_seconds_literal 0;
     level = Level.of_int 0;
     self = Address.of_string "checker";
   }
@@ -28,7 +28,7 @@ let rec call_touch_times
   else
     let new_tezos =
       { tezos with
-        now = Timestamp.add_seconds tezos.now 60;
+        now = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 60);
         level = Level.(of_int (succ (to_int tezos.level)));
       } in
     let _total_accrual_to_uniswap, new_params = Parameters.touch new_tezos index kit_in_tez params in
@@ -328,7 +328,7 @@ let test_protected_index_follows_index =
   let lvl = lvl + 1 in (* let time pass, please *)
   let new_tezos =
     { tezos with
-      now = Timestamp.of_seconds (lvl * 60);
+      now = Ligo.timestamp_from_seconds_literal (lvl * 60);
       level = Level.of_int lvl;
     } in
 
@@ -403,7 +403,7 @@ let test_minting_index_low_bounded =
   (* just the next block *)
   let new_tezos =
     { tezos with
-      now = Timestamp.of_seconds 60;
+      now = Ligo.timestamp_from_seconds_literal 60;
       level = Level.of_int 1;
     } in
   let _total_accrual_to_uniswap, new_params =
@@ -430,7 +430,7 @@ let test_minting_index_high_unbounded =
   (* just the next block *)
   let new_tezos =
     { tezos with
-      now = Timestamp.of_seconds 60;
+      now = Ligo.timestamp_from_seconds_literal 60;
       level = Level.of_int 1;
     } in
   let _total_accrual_to_uniswap, new_params =
@@ -461,7 +461,7 @@ let test_liquidation_index_high_bounded =
   (* just the next block *)
   let new_tezos =
     { tezos with
-      now = Timestamp.of_seconds 60;
+      now = Ligo.timestamp_from_seconds_literal 60;
       level = Level.of_int 1;
     } in
   let _total_accrual_to_uniswap, new_params =
@@ -490,7 +490,7 @@ let test_liquidation_index_low_unbounded =
   (* just the next block *)
   let new_tezos =
     { tezos with
-      now = Timestamp.of_seconds 60;
+      now = Ligo.timestamp_from_seconds_literal 60;
       level = Level.of_int 1;
     } in
   let _total_accrual_to_uniswap, new_params =
@@ -580,10 +580,10 @@ let test_touch =
         imbalance_index = FixedPoint.one;
         outstanding_kit = Kit.one;
         circulating_kit = Kit.zero;
-        last_touched = Timestamp.of_seconds 0;
+        last_touched = Ligo.timestamp_from_seconds_literal 0;
       } in
     let tezos = Tezos.{
-        now = Timestamp.of_seconds 3600;
+        now = Ligo.timestamp_from_seconds_literal 3600;
         level = Level.of_int 60;
         self = Address.of_string "checker";
       } in
