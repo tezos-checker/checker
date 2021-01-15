@@ -7,7 +7,7 @@ clean:
 	$(RM) -r _build
 
 indent:
-	ocp-indent -i *.ml
+	ocp-indent -i *.ml *.mli
 
 docs:
 	dune build @doc

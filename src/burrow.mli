@@ -22,19 +22,19 @@ val allow_all_tez_deposits : t -> bool
 val allow_all_kit_burnings : t -> bool
 
 val make_for_test :
-    active:bool ->
-    permission_version:int ->
-    allow_all_tez_deposits:bool ->
-    allow_all_kit_burnings:bool ->
-    delegate:(Address.t option) ->
-    collateral:Tez.t ->
-    outstanding_kit:Kit.t ->
-    excess_kit:Kit.t ->
-    adjustment_index:FixedPoint.t ->
-    collateral_at_auction:Tez.t ->
-    liquidation_slices:(liquidation_slices option) ->
-    last_touched:Timestamp.t ->
-    t
+  active:bool ->
+  permission_version:int ->
+  allow_all_tez_deposits:bool ->
+  allow_all_kit_burnings:bool ->
+  delegate:(Address.t option) ->
+  collateral:Tez.t ->
+  outstanding_kit:Kit.t ->
+  excess_kit:Kit.t ->
+  adjustment_index:FixedPoint.t ->
+  collateral_at_auction:Tez.t ->
+  liquidation_slices:(liquidation_slices option) ->
+  last_touched:Timestamp.t ->
+  t
 
 type Error.error +=
   | InsufficientFunds of Tez.t
