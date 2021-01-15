@@ -9,7 +9,7 @@ type t =
     parameters : Parameters.t;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
-    delegate : Address.t option;
+    delegate : Ligo.address option;
   }
 
 type Error.error +=
@@ -119,7 +119,7 @@ val deactivate_burrow :
   call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
-  recipient:Address.t ->
+  recipient:Ligo.address ->
   (Tez.payment * t, Error.error) result
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
@@ -164,7 +164,7 @@ val set_burrow_delegate :
   call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
-  delegate:Address.t ->
+  delegate:Ligo.address ->
   (t, Error.error) result
 
 (** Requires admin. Create a new permission for a burrow. *)
@@ -270,7 +270,7 @@ val liquidation_auction_reclaim_winning_bid :
   (Tez.payment * t, Error.error) result
 
 (* (\** Increase a failed bid for the current auction. *\)
- * val increase_bid : t -> address:Address.t -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
+ * val increase_bid : t -> address:Ligo.address -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
  *   -> (LiquidationAuction.bid_ticket, Error.error) result *)
 
 (* ************************************************************************* *)

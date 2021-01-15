@@ -1,4 +1,4 @@
-type bid = { bidder: Address.t; cycle: int; amount: Tez.t }
+type bid = { bidder: Ligo.address; cycle: int; amount: Tez.t }
 [@@deriving show]
 
 type bid_ticket = bid Ticket.t
@@ -36,7 +36,7 @@ let with_valid_bid_ticket
   | Error err -> Error err
   | Ok ticket -> f ticket
 
-type t = { cycle: int; winner: bid option; leading_bid: bid option; delegate: Address.t option; }
+type t = { cycle: int; winner: bid option; leading_bid: bid option; delegate: Ligo.address option; }
 [@@deriving show]
 
 let empty (tezos: Tezos.t) = { cycle = Level.cycle tezos.level; winner = None; leading_bid = None; delegate = None; }

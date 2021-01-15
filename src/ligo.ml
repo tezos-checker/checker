@@ -1,3 +1,15 @@
+(* address *)
+
+type address = string
+
+let address_from_literal s = s
+
+let compare_address = String.compare
+
+let string_of_address s = s
+
+let pp_address = Format.pp_print_string
+
 (* int *)
 
 type int = Z.t

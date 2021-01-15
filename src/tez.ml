@@ -29,5 +29,5 @@ let show amount = Ligo.string_of_nat amount ^ "mutez"
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
 (* Tez payments *)
-type payment = {destination: Address.t; amount: t;}
+type payment = {destination: Ligo.address; amount: t;}
 [@@deriving show]

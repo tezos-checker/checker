@@ -86,7 +86,7 @@ type liquidation_slice = {
 [@@deriving show]
 
 type auction_id = Avl.avl_ptr
-type bid = { address: Address.t; kit: Kit.t } [@@deriving show]
+type bid = { address: Ligo.address; kit: Kit.t } [@@deriving show]
 type bid_details = { auction_id: auction_id; bid: bid; }
 type bid_ticket = bid_details Ticket.t
 

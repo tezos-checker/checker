@@ -1,11 +1,11 @@
 open OUnit2
 
-let checker_address = Address.of_string "checker"
+let checker_address = Ligo.address_from_literal "checker"
 let start_time = Ligo.timestamp_from_seconds_literal 0
 let start_level = Level.of_int 0
 let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;}
 
-type address_option = Address.t option [@@deriving show]
+type address_option = Ligo.address option [@@deriving show]
 
 let suite =
   "Delegation auction tests" >::: [
@@ -19,7 +19,7 @@ let suite =
     ("test single bidder" >::
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
-       let bidder = Address.of_string "5678" in
+       let bidder = Ligo.address_from_literal "5678" in
        let amount = Tez.of_mutez (Ligo.int_from_literal 1) in
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* New bidder does not immediately become the delegate and cannot claim the win *)
@@ -56,10 +56,10 @@ let suite =
     ("test outbidding" >::
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
-       let bidder1 = Address.of_string "1111" in
-       let bidder2 = Address.of_string "2222" in
-       let bidder3 = Address.of_string "3333" in
-       let bidder4 = Address.of_string "4444" in
+       let bidder1 = Ligo.address_from_literal "1111" in
+       let bidder2 = Ligo.address_from_literal "2222" in
+       let bidder3 = Ligo.address_from_literal "3333" in
+       let bidder4 = Ligo.address_from_literal "4444" in
        let amount1 = Tez.of_mutez (Ligo.int_from_literal 1) in
        let amount2 = Tez.of_mutez (Ligo.int_from_literal 2) in
        let amount3 = Tez.of_mutez (Ligo.int_from_literal 3) in
@@ -93,7 +93,7 @@ let suite =
     ("test sanity when skipping multiple levels" >::
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
-       let bidder = Address.of_string "5678" in
+       let bidder = Ligo.address_from_literal "5678" in
        let amount = Tez.of_mutez (Ligo.int_from_literal 1) in
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* And in the subsequent cycle they cease to be the delegate again *)

@@ -14,7 +14,7 @@ type t =
     parameters : Parameters.t;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
-    delegate : Address.t option;
+    delegate : Ligo.address option;
   }
 
 let initialize (tezos: Tezos.t) =

@@ -1,8 +1,3 @@
-(* type address *)
-(**
-   An untyped address which can refer to a smart contract or account.
-*)
-
 (* type ('key, 'value) big_map *)
 
 (**
@@ -34,6 +29,14 @@
 (**
     The identifier of a chain, used to indicate test or main chains.
 *)
+
+type address
+(**
+   An untyped address which can refer to a smart contract or account.
+*)
+val address_from_literal : string -> address      (* IN LIGO: type-annotate with "address". *)
+val compare_address : address -> address -> Int.t (* NON-LIGO (but address IS comparable) *)
+val string_of_address : address -> string         (* NON-LIGO *)
 
 type int
 (**
@@ -219,6 +222,7 @@ val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
 
 (* BEGIN_OCAML *)
 
+val pp_address : Format.formatter -> address -> unit
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
 val pp_timestamp : Format.formatter -> timestamp -> unit

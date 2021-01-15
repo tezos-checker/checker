@@ -20,7 +20,7 @@ val pp : Format.formatter -> t -> unit
 val show : t -> string
 
 (* Tez payments *)
-type payment = {destination: Address.t ; amount: t;}
+type payment = {destination: Ligo.address ; amount: t;}
 
 val pp_payment : Format.formatter -> payment -> unit
 val show_payment : payment -> string

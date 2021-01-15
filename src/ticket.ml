@@ -1,5 +1,5 @@
 type 'a t =
-  { issuer : Address.t;
+  { issuer : Ligo.address;
     amount : Ligo.nat;
     content : 'a;
   }

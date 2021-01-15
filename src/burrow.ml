@@ -12,7 +12,7 @@ type t =
     permission_version : int;
     allow_all_tez_deposits : bool;
     allow_all_kit_burnings : bool;
-    delegate : Address.t option;
+    delegate : Ligo.address option;
     (* Collateral currently stored in the burrow. *)
     collateral : Tez.t;
     (* Outstanding kit minted out of the burrow. *)
@@ -329,7 +329,7 @@ let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
       } in
     Ok (updated_burrow, return)
 
-let set_delegate (p: Parameters.t) (new_delegate: Address.t) (b: t) : t =
+let set_delegate (p: Parameters.t) (new_delegate: Ligo.address) (b: t) : t =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   { b with delegate = Some new_delegate; }

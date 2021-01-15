@@ -1,7 +1,7 @@
 open Ptr
 open OUnit2
 
-let checker_address = Address.of_string "checker"
+let checker_address = Ligo.address_from_literal "checker"
 
 let suite =
   let burrow_id_1 = ptr_init in
@@ -131,7 +131,7 @@ let suite =
        let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
-       let bidder = Address.of_string "23456" in
+       let bidder = Ligo.address_from_literal "23456" in
        let current = Option.get auctions.current_auction in
 
        (* Below minimum bid *)

@@ -26,7 +26,7 @@ val make_for_test :
   permission_version:int ->
   allow_all_tez_deposits:bool ->
   allow_all_kit_burnings:bool ->
-  delegate:(Address.t option) ->
+  delegate:(Ligo.address option) ->
   collateral:Tez.t ->
   outstanding_kit:Kit.t ->
   excess_kit:Kit.t ->
@@ -128,7 +128,7 @@ val activate : Parameters.t -> Tez.t -> t -> (t, Error.error) result
 val deactivate : Parameters.t -> t -> (t * Tez.t, Error.error) result
 
 (** Set the delegate of a burrow. *)
-val set_delegate : Parameters.t -> Address.t -> t -> t
+val set_delegate : Parameters.t -> Ligo.address -> t -> t
 
 (* ************************************************************************* *)
 (*                           Permission-related                              *)

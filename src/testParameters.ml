@@ -13,7 +13,7 @@ let initial_tezos =
   Tezos.{
     now = Ligo.timestamp_from_seconds_literal 0;
     level = Level.of_int 0;
-    self = Address.of_string "checker";
+    self = Ligo.address_from_literal "checker";
   }
 
 let rec call_touch_times
@@ -585,7 +585,7 @@ let test_touch =
     let tezos = Tezos.{
         now = Ligo.timestamp_from_seconds_literal 3600;
         level = Level.of_int 60;
-        self = Address.of_string "checker";
+        self = Ligo.address_from_literal "checker";
       } in
 
     let new_index = Tez.of_mutez (Ligo.int_from_literal 340_000) in

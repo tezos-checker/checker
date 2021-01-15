@@ -6,7 +6,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let level0 = Level.of_int 0
 let level1 = Level.of_int 1
-let checker_address = Address.of_string "checker"
+let checker_address = Ligo.address_from_literal "checker"
 let tezos0 = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = checker_address;}
 
 (* Issue an arbitrary amount of kit (checker-issued) *)

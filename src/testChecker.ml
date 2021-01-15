@@ -3,14 +3,14 @@ open TestCommon
 
 module PtrMap = Map.Make(Ptr)
 
-let bob = Address.of_string "bob"
-let alice = Address.of_string "alice"
+let bob = Ligo.address_from_literal "bob"
+let alice = Ligo.address_from_literal "alice"
 
 let make_tezos int_level =
   Tezos.{
     now = Ligo.timestamp_from_seconds_literal @@ int_level * 60;
     level = Level.of_int int_level;
-    self = Address.of_string "checker";
+    self = Ligo.address_from_literal "checker";
   }
 
 let suite =

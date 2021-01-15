@@ -20,7 +20,7 @@ let arb_tezos =
        Tezos.{
          now = Ligo.timestamp_from_seconds_literal (level * 60);
          level = Level.of_int level;
-         self = Address.of_string "checker";
+         self = Ligo.address_from_literal "checker";
        }
     )
     QCheck.(0 -- (31556952000 (* a thousand years in seconds *) / 60))
