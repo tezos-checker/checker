@@ -13,6 +13,14 @@
 
 (* type bool *)
 
+(* NOTE: Booleans use different notation in LIGO than they do in OCaml:
+ * - https://ligolang.org/docs/language-basics/boolean-if-else#booleans
+ * Differences:
+ * - OCaml: true / false vs. LIGO: True / False
+ * - OCaml: && / ||      vs. LIGO: and / or
+ * - OCaml: <>           vs. LIGO: =/=
+*)
+
 (* type bytes *)
 
 (* type 'parameter contract *)
@@ -34,9 +42,9 @@ type int
    The only size limit to integers is gas.
 *)
 
-val int_from_literal : Int.t -> int
-val compare_int : int -> int -> Int.t
-val string_of_int : int -> string
+val int_from_literal : Int.t -> int   (* IN LIGO: replace with "". *)
+val compare_int : int -> int -> Int.t (* NON-LIGO *)
+val string_of_int : int -> string     (* NON-LIGO *)
 
 type nat
 (**
@@ -45,9 +53,9 @@ type nat
      The only size limit to natural numbers is gas.
 *)
 
-val nat_from_literal : Int.t -> nat
-val compare_nat : nat -> nat -> Int.t
-val string_of_nat : nat -> string
+val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" ssiffix. *)
+val compare_nat : nat -> nat -> Int.t (* NON-LIGO *)
+val string_of_nat : nat -> string     (* NON-LIGO *)
 
 (* type key *)
 (**
@@ -141,13 +149,14 @@ val string_of_nat : nat -> string
 (* val ediv_nat_nat : nat -> nat -> (nat * nat) option *)
 
 (* OPERATIONS ON int *)
-val add_int_int : int -> int -> int
-val sub_int_int : int -> int -> int
-val mul_int_int : int -> int -> int
-val lt_int_int : int -> int -> bool
-val leq_int_int : int -> int -> bool
-val geq_int_int : int -> int -> bool
-val div_int_int : int -> int -> int (* do we need this even (rounds towards zero..)? *)
+val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
+val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
+val mul_int_int : int -> int -> int  (* IN LIGO: ( * ) *)
+val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
+val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
+val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
+val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
+
 val cdiv_int_int : int -> int -> int (* NON-LIGO *)
 val fdiv_int_int : int -> int -> int (* NON-LIGO *)
 val pow_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
@@ -157,17 +166,16 @@ val gcd_int_int : int -> int -> int (* NON-LIGO *)
 val sign_int : int -> Int.t (* NON-LIGO, I think? *)
 val neg_int : int -> int (* NON-LIGO, I think? *)
 val abs_int : int -> int (* NON-LIGO. Ideally we should use Ligo.(abs : int -> nat) and then lift back to int? *)
-val of_string_base_int : Int.t -> string -> int (* NON-LIGO. OCaml-ONLY *)
+val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
-val format_int : string -> int -> string (* NON-LIGO. OCaml-ONLY *)
 
 (* OPERATIONS ON nat *)
 
-val add_nat_nat : nat -> nat -> nat
-val sub_nat_nat : nat -> nat -> int
-val int : nat -> int
-val abs : int -> nat
-val is_nat : int -> nat option
+val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
+val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
+val int : nat -> int                (* IN LIGO: int *)
+val abs : int -> nat                (* IN LIGO: abs *)
+val is_nat : int -> nat option      (* IN LIGO: is_nat *)
 
 (* val add_tez_tez : tez -> tez -> tez *)
 
@@ -207,3 +215,4 @@ val is_nat : int -> nat option
 
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
+val format_int : string -> int -> string
