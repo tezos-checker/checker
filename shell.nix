@@ -1,3 +1,5 @@
+{ ci ? false }:
+
 let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
@@ -10,8 +12,9 @@ in
 pkgs.mkShell {
   name = "huxian-ocaml";
   buildInputs =
-    # ligo does not compile on macos
-    pkgs.lib.optional pkgs.stdenv.isLinux ligoPkgs.ligo
+    # ligo does not compile on macos, also we don't want to
+    # compile it in CI
+    pkgs.lib.optional (pkgs.stdenv.isLinux && !ci) ligoPkgs.ligo
     ++ (with pkgs.ocamlPackages; [
       ocaml
       dune_2
