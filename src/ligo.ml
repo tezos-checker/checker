@@ -1,3 +1,28 @@
+(* FIXME find an efficient implementation.
+ *   Map: Does not have two type parameters.
+ *   Hashtbl: Mutable.
+*)
+type ('key, 'value) big_map = ('key * 'value) list
+
+module Big_map = struct
+  let empty = []
+  let rec find_opt (k: 'key) (m: ('key, 'value) big_map) : 'value option =
+    match m with
+    | [] -> None
+    | ((k', v')::xs) -> if k = k' then Some v' else find_opt k xs
+  let rec update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+    match m with
+    | [] -> (match v with | Some v -> [(k, v)] | None -> [])
+    | ((k', v')::xs) ->
+      if k = k'
+      then match v with
+        | Some v -> (k, v) :: xs
+        | None -> xs
+      else (k', v') :: update k v m
+  let bindings i = i
+
+end
+
 (* address *)
 
 type address = string
@@ -15,6 +40,7 @@ let pp_address = Format.pp_print_string
 type int = Z.t
 
 let int_from_literal = Z.of_int
+let int_from_int64 = Z.of_int64
 
 let compare_int = Z.compare
 

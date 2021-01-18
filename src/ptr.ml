@@ -10,4 +10,5 @@ let ptr_compare = Ligo.compare_int
 type t = ptr
 [@@deriving show]
 let compare = ptr_compare
+let random_ptr () = Ligo.int_from_int64 (Random.int64 Int64.max_int)
 (* END_OCAML *)

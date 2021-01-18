@@ -19,7 +19,7 @@ let debug_avl (mem: (int, int) mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
     sprintf "%s: " (Ptr.show curr) ^
-    match BigMap.mem_get mem curr with
+    match Mem.mem_get mem curr with
     | Root (None, r) -> "Root(" ^ string_of_int r ^ ") Empty"
     | Root (Some r, r') -> "Root(" ^ string_of_int r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
@@ -47,7 +47,7 @@ let add_all_debug (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
 
 let to_list (mem: (int, int) mem) (AVLPtr ptr) : element_list =
   let rec go ptr: element_list =
-    match BigMap.mem_get mem ptr with
+    match Mem.mem_get mem ptr with
     | Root (None, _) -> []
     | Root (Some ptr, _) -> go ptr
     | Leaf leaf ->
@@ -118,7 +118,7 @@ let suite =
   "AVLTests" >::: [
     "test_push_back_singleton" >::
     (fun _ ->
-       let (mem, root) = mk_empty BigMap.empty 0 in
+       let (mem, root) = mk_empty Mem.empty 0 in
        let (mem, _) = push_back mem root 0 (nTez 5) in
        let actual = to_list mem root in
        let expected = [(0, nTez 5)] in
@@ -126,7 +126,7 @@ let suite =
 
     "test_push_front_singleton" >::
     (fun _ ->
-       let (mem, root) = mk_empty BigMap.empty 0 in
+       let (mem, root) = mk_empty Mem.empty 0 in
        let (mem, _) = push_front mem root 0 (nTez 5) in
        let actual = to_list mem root in
        let expected = [(0, nTez 5)] in
@@ -137,7 +137,7 @@ let suite =
        let elements =
          (List.map (fun i -> (i, nTez 5))
             [ 1; 2; 3; 4; 5; 6; 7; 8; ]) in
-       let (mem, root) = from_list BigMap.empty 0 elements in
+       let (mem, root) = from_list Mem.empty 0 elements in
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
 
@@ -146,7 +146,7 @@ let suite =
 
     "test_pop_front_empty" >::
     (fun _ ->
-       let (mem, root) = from_list BigMap.empty 0 [] in
+       let (mem, root) = from_list Mem.empty 0 [] in
        let (mem, x) = pop_front mem root in
        assert_equal [] (to_list mem root) ~printer:show_element_list;
        assert_equal x None;
@@ -155,7 +155,7 @@ let suite =
     "test_pop_front" >::
     (fun _ ->
        let elements = [ (1, nTez 5); (2, nTez 5) ] in
-       let (mem, root) = from_list BigMap.empty 0 elements in
+       let (mem, root) = from_list Mem.empty 0 elements in
        let (mem, x) = pop_front mem root in
        assert_equal [ (2, nTez 5) ] (to_list mem root) ~printer:show_element_list;
        assert_equal x (Some 1);
@@ -166,13 +166,13 @@ let suite =
 
     "test_del_singleton" >::
     (fun _ ->
-       BigMap.reset_ops ();
-       let (mem, root) = mk_empty BigMap.empty 0 in
+       Mem.reset_ops ();
+       let (mem, root) = mk_empty Mem.empty 0 in
        let (mem, elem) = push_back mem root 1 (nTez 5) in
        let (mem, root_) = del mem elem in
        assert_equal root root_;
        assert_equal [] (to_list mem root);
-       assert_equal 1 (BigMap.M.cardinal mem));
+       assert_equal 1 (Mem.M.cardinal mem));
 
     "test_del" >::
     (fun _ ->
@@ -184,7 +184,7 @@ let suite =
          (List.map (fun i -> (i, nTez 5))
             [ 7; 8; 9 ]) in
 
-       let (mem, root) = from_list BigMap.empty 0 fst_elements in
+       let (mem, root) = from_list Mem.empty 0 fst_elements in
        let (mem, elem) = push_back mem root (fst mid) (snd mid) in
        let mem = add_all mem root snd_elements in
 
@@ -204,14 +204,14 @@ let suite =
     "test_empty_from_list_to_list" >::
     (fun _ ->
        let elements = [] in
-       let (mem, root) = from_list BigMap.empty 0 elements in
+       let (mem, root) = from_list Mem.empty 0 elements in
        let actual = to_list mem root in
        let expected = [] in
        assert_equal expected actual);
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list arb_item)
      @@ fun xs ->
-     let (mem, root) = from_list BigMap.empty 0 xs in
+     let (mem, root) = from_list Mem.empty 0 xs in
      assert_invariants mem root;
      assert_dangling_pointers mem [root];
 
@@ -226,7 +226,7 @@ let suite =
        QCheck.(triple (list arb_item) arb_item (list arb_item))
      @@ fun (left_items, mid_item, right_items) ->
 
-     let (mem, root) = from_list BigMap.empty 0 left_items in
+     let (mem, root) = from_list Mem.empty 0 left_items in
      assert_invariants mem root;
 
      let (mem, to_del) = push_back mem root (fst mid_item) (snd mid_item)in
@@ -257,7 +257,7 @@ let suite =
      @@ QCheck.Test.make ~name:"prop_append" ~count:property_test_count QCheck.(pair (list arb_item) (list arb_item))
      @@ fun (ls, rs) ->
 
-     let (mem, left_tree) = from_list BigMap.empty 0 ls in
+     let (mem, left_tree) = from_list Mem.empty 0 ls in
      let (mem, right_tree) = from_list mem 0 rs in
 
      let mem = append mem left_tree right_tree in
@@ -277,7 +277,7 @@ let suite =
      QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
      QCheck.assume (limit > Tez.zero);
 
-     let (mem, right) = from_list BigMap.empty 0 xs in
+     let (mem, right) = from_list Mem.empty 0 xs in
      let (mem, left) = take mem right limit 0 in
 
      assert_invariants mem left;
@@ -320,7 +320,7 @@ let suite =
      QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
      QCheck.assume (limit > Tez.zero);
 
-     let (mem, right) = from_list BigMap.empty 0 xs in
+     let (mem, right) = from_list Mem.empty 0 xs in
      let (mem, left) = take mem right limit 0 in
 
      let mem = append mem left right in
@@ -334,7 +334,7 @@ let suite =
     );
     "bench_large_ops" >::
     (fun _ ->
-       let (mem, root) = mk_empty BigMap.empty 0 in
+       let (mem, root) = mk_empty Mem.empty 0 in
 
        let rec go i mem =
          if i <= 0
@@ -347,13 +347,13 @@ let suite =
        assert_invariants mem root;
        assert_dangling_pointers mem [root];
 
-       BigMap.reset_ops ();
+       Mem.reset_ops ();
        let _ = take mem root (Tez.of_mutez (Ligo.int_from_literal 50_000)) 0 in
 
        assert_equal
          {reads=104; writes=87}
-         !BigMap.ops
-         ~printer:BigMap.show_ops;
+         !Mem.ops
+         ~printer:Mem.show_ops;
     );
     "test_all_permutations" >::
     (fun _ ->
@@ -361,7 +361,7 @@ let suite =
        |> permutations
        |> Stream.iter (fun xs ->
            let xs = List.map (fun i -> (i, Tez.of_mutez (Ligo.int_from_literal i))) xs in
-           let (mem, root) = from_list BigMap.empty 0 xs in
+           let (mem, root) = from_list Mem.empty 0 xs in
            assert_invariants mem root;
            let actual = to_list mem root in
            assert_equal actual xs

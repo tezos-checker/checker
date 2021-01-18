@@ -1,10 +1,11 @@
+open Ptr
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_contract). *)
 type burrow_id = Ptr.t
 
 type t =
-  { burrows : Burrow.t Map.Make(Ptr).t;
+  { burrows : (ptr, Burrow.t) Ligo.big_map;
     uniswap : Uniswap.t;
     parameters : Parameters.t;
     liquidation_auctions : LiquidationAuction.auctions;

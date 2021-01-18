@@ -77,7 +77,7 @@ let suite =
          (not
           @@ Burrow.is_overburrowed
             checker.parameters
-            (PtrMap.find burrow_id checker.burrows)
+            (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))
          );
 
        (* Minting another kit should fail *)
@@ -106,7 +106,7 @@ let suite =
          "if the index goes up, then burrows should become overburrowed"
          (Burrow.is_overburrowed
             checker.parameters
-            (PtrMap.find burrow_id checker.burrows)
+            (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))
          );
 
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
@@ -200,7 +200,7 @@ let suite =
            [slice] in
        *)
 
-       let result = PtrMap.find burrow_id checker.burrows in
+       let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_bool "burrow should have no liquidation slices"
          (Option.is_none (Burrow.liquidation_slices result));
 

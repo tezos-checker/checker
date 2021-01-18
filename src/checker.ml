@@ -1,7 +1,5 @@
 open Ptr
 
-module PtrMap = Map.Make(Ptr)
-
 (* TODO: At the very end, inline all numeric operations, flatten all Ratio.t so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
@@ -9,7 +7,7 @@ module PtrMap = Map.Make(Ptr)
 type burrow_id = Ptr.t
 
 type t =
-  { burrows : Burrow.t PtrMap.t;
+  { burrows : (ptr, Burrow.t) Ligo.big_map;
     uniswap : Uniswap.t;
     parameters : Parameters.t;
     liquidation_auctions : LiquidationAuction.auctions;
@@ -18,7 +16,7 @@ type t =
   }
 
 let initialize (tezos: Tezos.t) =
-  { burrows = PtrMap.empty;
+  { burrows = Ligo.Big_map.empty;
     uniswap = Uniswap.make_initial ~tezos;
     parameters = Parameters.make_initial tezos.now;
     liquidation_auctions = LiquidationAuction.empty;
@@ -38,10 +36,8 @@ type Error.error +=
   | UnwantedTezGiven
 
 (* Utility function to give us burrow addresses *)
-let mk_next_burrow_id (burrows: Burrow.t PtrMap.t) : burrow_id =
-  match PtrMap.max_binding_opt burrows with
-  | None -> ptr_init
-  | Some (id, _) -> ptr_next id
+let mk_burrow_id () : burrow_id =
+  Ptr.random_ptr ()
 
 let assert_invariants (state: 't) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
@@ -77,7 +73,7 @@ let assert_invariants (state: 't) : unit =
          let actual_collateral = go slices.youngest None in
          assert (Burrow.collateral_at_auction burrow = actual_collateral)
     )
-    (PtrMap.bindings state.burrows)
+    (Ligo.Big_map.bindings state.burrows)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -96,7 +92,7 @@ let with_existing_burrow
     (burrow_id: burrow_id)
     (f: Burrow.t -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  match PtrMap.find_opt burrow_id state.burrows with
+  match Ligo.Big_map.find_opt burrow_id state.burrows with
   | None -> Error (NonExistentBurrow burrow_id)
   | Some burrow -> f burrow
 
@@ -148,7 +144,7 @@ let with_valid_permission
   else Error InvalidPermission
 
 let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
-  let burrow_id = mk_next_burrow_id state.burrows in
+  let burrow_id = mk_burrow_id () in
   match Burrow.create state.parameters call.amount with
   | Ok burrow ->
     let admin_ticket =
@@ -156,28 +152,28 @@ let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
         ~issuer:tezos.self
         ~amount:(Ligo.nat_from_literal 0)
         ~content:(Permission.Admin, burrow_id, 0) in
-    let updated_state = {state with burrows = PtrMap.add burrow_id burrow state.burrows} in
+    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
   | Error err -> Error err
 
 let touch_burrow (state: t) (burrow_id: burrow_id) =
   with_existing_burrow state burrow_id @@ fun burrow ->
   let updated_burrow = Burrow.touch state.parameters burrow in
-  Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+  Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
 
 let deposit_tez (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   if Burrow.allow_all_tez_deposits burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
-    Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
     with_permission_present permission @@ fun permission ->
     with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
     if Permission.does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = Burrow.deposit_tez state.parameters call.amount burrow in
-      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+      Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
     else
       Error InsufficientPermission
 
@@ -192,7 +188,7 @@ let mint_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
       assert (kit = minted);
       Ok ( Kit.issue ~tezos minted,
            {state with
-            burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+            burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
             parameters =
               Parameters.add_outstanding_kit
                 (Parameters.add_circulating_kit state.parameters minted)
@@ -212,7 +208,7 @@ let withdraw_tez (state:t) ~tezos ~(call:Call.t) ~permission ~tez ~burrow_id =
     match Burrow.withdraw_tez state.parameters tez burrow with
     | Ok (updated_burrow, withdrawn) ->
       assert (tez = withdrawn);
-      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+      let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
       let tez_payment = Tez.{destination = call.sender; amount = withdrawn} in
       Ok (tez_payment, updated_state)
     | Error err -> Error err
@@ -230,7 +226,7 @@ let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
     Ok {state with
-        burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
         parameters =
           Parameters.remove_outstanding_kit
             (Parameters.remove_circulating_kit state.parameters kit)
@@ -245,7 +241,7 @@ let burn_kit (state:t) ~tezos ~call ~permission ~burrow_id ~kit =
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= kit);
       Ok {state with
-          burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+          burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
           parameters =
             Parameters.remove_outstanding_kit
               (Parameters.remove_circulating_kit state.parameters kit)
@@ -261,7 +257,7 @@ let activate_burrow (state:t) ~tezos ~(call:Call.t) ~permission ~burrow_id =
     (* only admins can activate burrows. *)
     match Burrow.activate state.parameters call.amount burrow with
     | Ok updated_burrow ->
-      Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+      Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
     | Error err -> Error err
   else
     Error InsufficientPermission
@@ -274,7 +270,7 @@ let deactivate_burrow (state:t) ~tezos ~call ~permission ~burrow_id ~recipient =
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     match Burrow.deactivate state.parameters burrow with
     | Ok (updated_burrow, returned_tez) ->
-      let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+      let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
       let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
       Ok (tez_payment, updated_state)
     | Error err -> Error err
@@ -288,7 +284,7 @@ let set_burrow_delegate (state:t) ~tezos ~call ~permission ~burrow_id ~delegate 
   if Permission.does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
-    Ok {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows}
+    Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
     Error InsufficientPermission
 
@@ -314,7 +310,7 @@ let invalidate_all_permissions (state:t) ~tezos ~call ~permission ~burrow_id =
   if Permission.is_admin_right r then
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
-    let updated_state = {state with burrows = PtrMap.add burrow_id updated_burrow state.burrows} in
+    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let admin_ticket =
       Ticket.create
         ~issuer:tezos.self
@@ -362,7 +358,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
         match liquidation_slice.older with
         | None -> updated_liquidation_auctions.avl_storage
         | Some older_ptr ->
-          BigMap.mem_update
+          Mem.mem_update
             updated_liquidation_auctions.avl_storage
             (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
           match older with
@@ -382,7 +378,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
       in
       Ok ( Tez.{destination = call.sender; amount = details.liquidation_reward},
            {state with
-            burrows = PtrMap.add burrow_id updated_burrow state.burrows;
+            burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
             liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
            }
          )
@@ -443,7 +439,7 @@ let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (lea
     else
       let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
-      match PtrMap.find_opt leaf.burrow state.burrows with
+      match Ligo.Big_map.find_opt leaf.burrow state.burrows with
       | None -> (failwith "invariant violation" : (t, Error.error) result)
       | Some b when b <> burrow ->
         Error SlicePointsToDifferentBurrow
@@ -461,7 +457,7 @@ let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (lea
         let burrow = Burrow.return_slice_from_auction leaf_ptr leaf burrow in
         let state =
           { state with
-            burrows = PtrMap.add leaf.burrow burrow state.burrows } in
+            burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
 
         (* And we update the slices around it *)
         let state = update_immediate_neighbors state leaf_ptr leaf in
@@ -538,15 +534,13 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
     *)
     let state =
       { state with burrows =
-                     PtrMap.update
+                     let burrow = match Ligo.Big_map.find_opt leaf.burrow state.burrows with
+                       | None -> (failwith "TODO: Check if this case can happen." : Burrow.t)
+                       | Some b -> b;
+                     in
+                     Ligo.Big_map.update
                        leaf.burrow
-                       (fun b ->
-                          match b with
-                          | None -> (failwith "TODO: Check if this case can happen." : Burrow.t option)
-                          (* NOTE: We should touch the burrow here I think, before we
-                           * do anything else. *)
-                          | Some burrow -> Some (Burrow.return_kit_from_auction leaf_ptr leaf kit_to_repay burrow)
-                       )
+                       (Some (Burrow.return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
                        state.burrows
       } in
 

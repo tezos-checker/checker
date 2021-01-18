@@ -52,6 +52,12 @@ let show_error (e: Error.error) : string =
   | LiquidationAuction.NotAllSlicesClaimed             -> "LiquidationAuction.NotAllSlicesClaimed"
   | LiquidationAuction.LiquidationQueueTooLong         -> "LiquidationAuction.LiquidationQueueTooLong"
   | LiquidationAuction.InvalidLiquidationAuctionTicket -> "LiquidationAuction.InvalidLiquidationAuctionTicket"
+  (* Checker errors *)
+  | Checker.InsufficientPermission                     -> "Checker.InsufficientPermission"
+  | Checker.MissingPermission                          -> "Checker.MissingPermission"
+  | Checker.UnwantedTezGiven                           -> "Checker.UnwantedTezGiven"
+  | Checker.BurrowHasCompletedLiquidation              -> "Checker.BurrowHasCompletedLiquidation"
+  | Checker.NonExistentBurrow _                        -> "Checker.NonExistentBurrow"
   (* open ended *)
   | _ -> "Unknown Error"
 

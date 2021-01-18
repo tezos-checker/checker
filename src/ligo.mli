@@ -1,4 +1,13 @@
-(* type ('key, 'value) big_map *)
+type ('key, 'value) big_map
+
+module Big_map : sig
+  val empty : ('key, 'value) big_map
+  val find_opt : 'key -> ('key, 'value) big_map -> 'value option
+  val update: 'key -> 'value option -> ('key, 'value) big_map -> ('key, 'value) big_map
+
+  (*NON_LIGO*)
+  val bindings : ('key, 'value) big_map -> ('key * 'value) list
+end
 
 (**
    The type of a big map from values of type key to values of type value is big_map (key, value).
@@ -38,6 +47,7 @@ type int
 *)
 
 val int_from_literal : Int.t -> int   (* IN LIGO: replace with "". *)
+val int_from_int64: Int64.t -> int    (* NON-LIGO, temporary*)
 val compare_int : int -> int -> Int.t (* NON-LIGO *)
 val string_of_int : int -> string     (* NON-LIGO *)
 
