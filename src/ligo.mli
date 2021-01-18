@@ -8,14 +8,6 @@
 
 (* type bool *)
 
-(* NOTE: Booleans use different notation in LIGO than they do in OCaml:
- * - https://ligolang.org/docs/language-basics/boolean-if-else#booleans
- * Differences:
- * - OCaml: true / false vs. LIGO: True / False
- * - OCaml: && / ||      vs. LIGO: and / or
- * - OCaml: <>           vs. LIGO: =/=
-*)
-
 (* type bytes *)
 
 (* type 'parameter contract *)
