@@ -35,12 +35,12 @@ let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit [@@deriving show]
-type token = kit_token_content Ticket.t [@@deriving show]
+type token = kit_token_content Tezos.ticket [@@deriving show]
 
 let issue ~(tezos: Tezos.t) (kit: t) : token =
   match Ligo.is_nat kit with
   | None -> failwith "Kit.issue: cannot issue a negative number of mukit!"
-  | Some n -> Ticket.create tezos Kit n
+  | Some n -> Tezos.create_ticket tezos Kit n
 
 type Error.error +=
   | InvalidKitToken
@@ -49,7 +49,7 @@ type Error.error +=
   * issued by checker, and (b) is tagged appropriately (this is already
   * enforced by its type). *)
 let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
-  let (issuer, _content, amount), same_ticket = Ticket.read token in
+  let (issuer, _content, amount), same_ticket = Tezos.read_ticket token in
   let is_valid = issuer = tezos.self && amount >= Ligo.nat_from_literal 0 in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
@@ -63,14 +63,14 @@ let with_valid_kit_token
   | Ok token -> f token
 
 let read_kit (token: token) : t * token =
-  let (_issuer, _content, mukit), same_token = Ticket.read token in
+  let (_issuer, _content, mukit), same_token = Tezos.read_ticket token in
   (Ligo.int mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =
   match Ligo.is_nat left, Ligo.is_nat right with
-  | Some l, Some r -> Option.get (Ticket.split token (l, r))
+  | Some l, Some r -> Option.get (Tezos.split_ticket token (l, r))
   | _, _ -> failwith "Kit.split_or_fail: cannot split using a negative number of mukit!"
 
 let join_or_fail (left: token) (right: token) : token =
-  Option.get (Ticket.join left right)
+  Option.get (Tezos.join_tickets left right)
 

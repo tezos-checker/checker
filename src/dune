@@ -16,7 +16,7 @@
  (name huxian)
  (public_name src)
  (modules Checker Constants Level Mem Avl Kit Tez FixedPoint
-   Parameters Burrow Uniswap Error LiquidationAuction Ticket Ptr
+   Parameters Burrow Uniswap Error LiquidationAuction Ptr
    DelegationAuction Tezos Call Permission Ratio Ligo)
  (libraries str zarith)
  (wrapped false)

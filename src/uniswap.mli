@@ -23,7 +23,7 @@
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
 type liquidity_token_content
-type liquidity = liquidity_token_content Ticket.t (* George: didn't want to expose *)
+type liquidity = liquidity_token_content Tezos.ticket (* George: didn't want to expose *)
 
 val show_liquidity : liquidity -> string
 val pp_liquidity : Format.formatter -> liquidity -> unit

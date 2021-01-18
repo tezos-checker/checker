@@ -1,3 +1,9 @@
+type t =
+  { now: Ligo.timestamp;
+    level: Level.t;
+    self: Ligo.address; (* NOTE: is of type contract, really, not address *)
+  }
+
 (*
 Ticket-based entitities in checker and their expected value/mechanics:
 
@@ -56,15 +62,13 @@ Ticket-based entitities in checker and their expected value/mechanics:
    different ticketer or content.
 *)
 
-type 'a t
+type 'a ticket
 
-val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+val create_ticket : t -> 'a -> Ligo.nat -> 'a ticket
+val read_ticket : 'a ticket -> (Ligo.address * 'a * Ligo.nat) * 'a ticket
+val split_ticket : 'a ticket -> (Ligo.nat * Ligo.nat) -> ('a ticket * 'a ticket) option
+val join_tickets : 'a ticket -> 'a ticket -> ('a ticket) option
 
-val create : Tezos.t -> 'a -> Ligo.nat -> 'a t
-
-val read : 'a t -> (Ligo.address * 'a * Ligo.nat) * 'a t
-
-val split : 'a t -> (Ligo.nat * Ligo.nat) -> ('a t * 'a t) option
-
-val join : 'a t -> 'a t -> ('a t) option
+(* BEGIN_OCAML *)
+val show_ticket : (Format.formatter -> 'a -> unit) -> 'a ticket -> string
+val pp_ticket : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ticket -> unit

@@ -88,10 +88,10 @@ type liquidation_slice = {
 type auction_id = Avl.avl_ptr
 type bid = { address: Ligo.address; kit: Kit.t } [@@deriving show]
 type bid_details = { auction_id: auction_id; bid: bid; }
-type bid_ticket = bid_details Ticket.t
+type bid_ticket = bid_details Tezos.ticket
 
 let issue_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
-  Ticket.create tezos bid_details (Ligo.nat_from_literal 1)
+  Tezos.create_ticket tezos bid_details (Ligo.nat_from_literal 1)
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
@@ -102,7 +102,7 @@ let is_bid_ticket_valid
     ~(tezos:Tezos.t)
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
-  let (issuer, _bid_details, amount), same_ticket = Ticket.read bid_ticket in
+  let (issuer, _bid_details, amount), same_ticket = Tezos.read_ticket bid_ticket in
   let is_valid = issuer = tezos.self && amount = Ligo.nat_from_literal 1 in
   if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
 
@@ -396,7 +396,7 @@ let reclaim_bid
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Ticket.read bid_ticket in
+  let (_, bid_details, _), _ = Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
@@ -467,7 +467,7 @@ let reclaim_winning_bid
     (bid_ticket: bid_ticket)
   : (Tez.t * auctions, Error.error) result =
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Ticket.read bid_ticket in
+  let (_, bid_details, _), _ = Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices

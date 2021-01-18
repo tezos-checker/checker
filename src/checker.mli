@@ -1,7 +1,7 @@
 open Ptr
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
- * receive when we originate the burrow contract (Tezos.create_contract). *)
+ * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
 type burrow_id = Ptr.t
 
 type t =

@@ -28,7 +28,7 @@ type Error.error +=
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit
-type token = kit_token_content Ticket.t
+type token = kit_token_content Tezos.ticket
 val pp_token : Format.formatter -> token -> unit
 val show_token : token -> string
 

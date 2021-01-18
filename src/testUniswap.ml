@@ -70,7 +70,7 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
          let kit, _same_ticket = Kit.read_kit kit in
          Kit.issue ~tezos (Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio kit) (Ratio.make (Tez.to_mutez amount) (Tez.to_mutez tez)))) in
        let min_lqt_minted =
-         let (_, _, lqt), _same_ticket = Ticket.read lqt in
+         let (_, _, lqt), _same_ticket = Tezos.read_ticket lqt in
          Ratio.to_nat_floor (Ratio.mul (Ratio.of_nat lqt) (Ratio.make (Tez.to_mutez amount) (Tez.to_mutez tez))) in
        let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
@@ -86,7 +86,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let amount = Tez.zero in
 
        let kit, _same_kit_ticket = Kit.read_kit kit in
-       let (_, _, lqt), _same_lqt_ticket = Ticket.read lqt in
+       let (_, _, lqt), _same_lqt_ticket = Tezos.read_ticket lqt in
        let lqt_to_burn = Ratio.to_nat_floor (Ratio.div (Ratio.of_nat lqt) (Ratio.of_int factor)) in
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
 

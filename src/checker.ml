@@ -133,7 +133,7 @@ let with_valid_permission
     ~(burrow: Burrow.t)
     (f: Permission.rights -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  let (issuer, (rights, id, version), amount), _ = Ticket.read permission in
+  let (issuer, (rights, id, version), amount), _ = Tezos.read_ticket permission in
   let validity_condition =
     issuer = tezos.self
     && amount = Ligo.nat_from_literal 0
@@ -148,7 +148,7 @@ let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
   match Burrow.create state.parameters call.amount with
   | Ok burrow ->
     let admin_ticket =
-      Ticket.create
+      Tezos.create_ticket
         tezos
         (Permission.Admin, burrow_id, 0)
         (Ligo.nat_from_literal 0) in
@@ -295,7 +295,7 @@ let make_permission (state:t) ~tezos ~call ~permission ~burrow_id ~rights =
   if Permission.is_admin_right r then
     (* only admins can create permissions. *)
     let permission_ticket =
-      Ticket.create
+      Tezos.create_ticket
         tezos
         (rights, burrow_id, 0)
         (Ligo.nat_from_literal 0) in
@@ -312,7 +312,7 @@ let invalidate_all_permissions (state:t) ~tezos ~call ~permission ~burrow_id =
     let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let admin_ticket =
-      Ticket.create
+      Tezos.create_ticket
         tezos
         (Permission.Admin, burrow_id, updated_version)
         (Ligo.nat_from_literal 0) in
