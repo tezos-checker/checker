@@ -4,7 +4,7 @@ type bid = { bidder: Ligo.address; cycle: int; amount: Tez.t }
 type bid_ticket = bid Ticket.t
 
 let issue_bid_ticket (tezos: Tezos.t) (bid: bid) =
-  Ticket.create ~issuer:tezos.self ~amount:(Ligo.nat_from_literal 1) ~content:bid
+  Ticket.create tezos bid (Ligo.nat_from_literal 1)
 
 type Error.error +=
   | BidTooLow
@@ -23,7 +23,7 @@ let is_bid_ticket_valid
     ~(tezos:Tezos.t)
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
-  let issuer, amount, _bid_details, same_ticket = Ticket.read bid_ticket in
+  let (issuer, _bid_details, amount), same_ticket = Ticket.read bid_ticket in
   let is_valid = issuer = tezos.self && amount = Ligo.nat_from_literal 1 in
   if is_valid then Ok same_ticket else Error InvalidDelegationAuctionTicket
 
@@ -76,7 +76,7 @@ let place_bid t (tezos: Tezos.t) ~sender ~amount =
 let claim_win t tezos ~bid_ticket =
   let t = touch t tezos in
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, _, bid, _) = Ticket.read bid_ticket in
+  let (_, bid, _), _ = Ticket.read bid_ticket in
   if Some bid = t.winner then
     Ok { t with delegate = Some bid.bidder }
   else
@@ -86,7 +86,7 @@ let claim_win t tezos ~bid_ticket =
 let reclaim_bid t tezos ~bid_ticket =
   let t = touch t tezos in
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, _, bid, _) = Ticket.read bid_ticket in
+  let (_, bid, _), _ = Ticket.read bid_ticket in
   if Some bid = t.leading_bid then
     Error CannotReclaimLeadingBid
   else if Some bid = t.winner then

@@ -133,7 +133,7 @@ let with_valid_permission
     ~(burrow: Burrow.t)
     (f: Permission.rights -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  let issuer, amount, (rights, id, version), _ = Ticket.read permission in
+  let (issuer, (rights, id, version), amount), _ = Ticket.read permission in
   let validity_condition =
     issuer = tezos.self
     && amount = Ligo.nat_from_literal 0
@@ -149,9 +149,9 @@ let create_burrow (state:t) ~(tezos:Tezos.t) ~(call:Call.t) =
   | Ok burrow ->
     let admin_ticket =
       Ticket.create
-        ~issuer:tezos.self
-        ~amount:(Ligo.nat_from_literal 0)
-        ~content:(Permission.Admin, burrow_id, 0) in
+        tezos
+        (Permission.Admin, burrow_id, 0)
+        (Ligo.nat_from_literal 0) in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
   | Error err -> Error err
@@ -296,9 +296,9 @@ let make_permission (state:t) ~tezos ~call ~permission ~burrow_id ~rights =
     (* only admins can create permissions. *)
     let permission_ticket =
       Ticket.create
-        ~issuer:tezos.self
-        ~amount:(Ligo.nat_from_literal 0)
-        ~content:(rights, burrow_id, 0) in
+        tezos
+        (rights, burrow_id, 0)
+        (Ligo.nat_from_literal 0) in
     Ok permission_ticket
   else
     Error InsufficientPermission
@@ -313,9 +313,9 @@ let invalidate_all_permissions (state:t) ~tezos ~call ~permission ~burrow_id =
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let admin_ticket =
       Ticket.create
-        ~issuer:tezos.self
-        ~amount:(Ligo.nat_from_literal 0)
-        ~content:(Permission.Admin, burrow_id, updated_version) in
+        tezos
+        (Permission.Admin, burrow_id, updated_version)
+        (Ligo.nat_from_literal 0) in
     Ok (admin_ticket, updated_state)
   else
     Error InsufficientPermission

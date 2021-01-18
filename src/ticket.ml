@@ -1,32 +1,28 @@
 type 'a t =
   { issuer : Ligo.address;
-    amount : Ligo.nat;
     content : 'a;
+    amount : Ligo.nat;
   }
 [@@deriving show]
 
-let create ~issuer ~amount ~content =
-  { issuer = issuer;
-    amount = amount;
+let create (tezos:Tezos.t) content amount =
+  { issuer = tezos.self;
     content = content;
+    amount = amount;
   }
 
-let read ticket = (ticket.issuer, ticket.amount, ticket.content, ticket)
+let read ticket = ((ticket.issuer, ticket.content, ticket.amount), ticket)
 
-let split ticket left right =
+let split ticket (left, right) =
   if (Ligo.add_nat_nat left right) <> ticket.amount
   then None
   else
     (* NOTE: I hope the content has no tickets in it to duplicate! *)
-    let l = create ~issuer:ticket.issuer ~amount:left  ~content:ticket.content in
-    let r = create ~issuer:ticket.issuer ~amount:right ~content:ticket.content in
+    let l = {issuer = ticket.issuer; content = ticket.content; amount = left;} in
+    let r = {issuer = ticket.issuer; content = ticket.content; amount = right;} in
     Some (l, r)
 
 let join t1 t2 =
   if (t1.content <> t2.content) || (t1.issuer <> t2.issuer)
   then None
-  else Some (create
-               ~issuer:t1.issuer
-               ~amount:(Ligo.add_nat_nat t1.amount t2.amount)
-               ~content:t1.content)
-
+  else Some {issuer = t1.issuer; content = t1.content; amount = Ligo.add_nat_nat t1.amount t2.amount;}

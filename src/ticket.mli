@@ -61,10 +61,10 @@ type 'a t
 val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
-val create : issuer:Ligo.address -> amount:Ligo.nat -> content:'a -> 'a t
+val create : Tezos.t -> 'a -> Ligo.nat -> 'a t
 
-val read : 'a t -> Ligo.address * Ligo.nat * 'a * 'a t
+val read : 'a t -> (Ligo.address * 'a * Ligo.nat) * 'a t
 
-val split : 'a t -> Ligo.nat -> Ligo.nat -> ('a t * 'a t) option
+val split : 'a t -> (Ligo.nat * Ligo.nat) -> ('a t * 'a t) option
 
 val join : 'a t -> 'a t -> ('a t) option
