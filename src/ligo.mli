@@ -177,11 +177,18 @@ val neg_int : int -> int (* NON-LIGO, I think? *)
 val abs_int : int -> int (* NON-LIGO. Ideally we should use Ligo.(abs : int -> nat) and then lift back to int? *)
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
+val int_min : int -> int -> int (* NON-LIGO. *)
+val int_max : int -> int -> int (* NON-LIGO. *)
 
 (* OPERATIONS ON nat *)
-
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
 val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
+
+val eq_nat_nat : nat -> nat -> bool  (* IN LIGO: ( = ) *)
+val lt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( < ) *)
+val leq_nat_nat : nat -> nat -> bool (* IN LIGO: ( <= ) *)
+val geq_nat_nat : nat -> nat -> bool (* IN LIGO: ( >= ) *)
+
 val int : nat -> int                (* IN LIGO: int *)
 val abs : int -> nat                (* IN LIGO: abs *)
 val is_nat : int -> nat option      (* IN LIGO: is_nat *)

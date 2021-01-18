@@ -233,7 +233,7 @@ let start_auction_if_possible
   | None ->
     let queued_amount = Avl.avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
-      max
+      Tez.max
         Constants.max_lot_size
         (Tez.of_ratio_floor
            (Ratio.mul

@@ -36,10 +36,10 @@ let make_initial (ts: Ligo.timestamp) : t =
   }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: t) : Tez.t = max p.index p.protected_index
+let tz_minting (p: t) : Tez.t = Tez.max p.index p.protected_index
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: t) : Tez.t = min p.index p.protected_index
+let tz_liquidation (p: t) : Tez.t = Tez.min p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: t) : Ratio.t =

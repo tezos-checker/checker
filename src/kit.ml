@@ -11,6 +11,8 @@ let add x y = Ligo.add_int_int x y
 let sub x y = Ligo.sub_int_int x y
 
 let compare x y = Ligo.compare_int x y
+let min x y = if Ligo.leq_int_int x y then x else y
+let max x y = if Ligo.geq_int_int x y then x else y
 
 let zero = Ligo.int_from_literal 0
 let one = scaling_factor

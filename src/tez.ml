@@ -10,6 +10,9 @@ let sub x y =
 
 let compare x y = Ligo.compare_nat x y
 
+let min x y = if Ligo.leq_nat_nat x y then x else y
+let max x y = if Ligo.geq_nat_nat x y then x else y
+
 let zero = Ligo.nat_from_literal 0
 let one = Ligo.nat_from_literal 1_000_000
 

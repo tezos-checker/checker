@@ -133,7 +133,7 @@ let is_overburrowed (p : Parameters.t) (b : t) : bool =
 let rebalance_kit (b: t) : t =
   assert (b.outstanding_kit >= Kit.zero);
   assert (b.excess_kit >= Kit.zero);
-  let kit_to_move = min b.outstanding_kit b.excess_kit in
+  let kit_to_move = Kit.min b.outstanding_kit b.excess_kit in
   { b with
     outstanding_kit = Kit.sub b.outstanding_kit kit_to_move;
     excess_kit = Kit.sub b.excess_kit kit_to_move;
@@ -282,7 +282,7 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
   assert_invariants b;
   assert (k >= Kit.zero);
   assert (p.last_touched = b.last_touched);
-  let kit_to_burn = min b.outstanding_kit k in
+  let kit_to_burn = Kit.min b.outstanding_kit k in
   let kit_to_store = Kit.sub k kit_to_burn in
   { b with
     outstanding_kit = Kit.sub b.outstanding_kit kit_to_burn;

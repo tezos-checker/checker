@@ -91,6 +91,10 @@ let div_rem_int_int = Z.div_rem
 
 let format_int = Z.format
 
+let int_min x y = if leq_int_int x y then x else y
+
+let int_max x y = if geq_int_int x y then x else y
+
 (* nat *)
 
 type nat = Z.t
@@ -98,6 +102,14 @@ type nat = Z.t
 let add_nat_nat = Z.add
 
 let sub_nat_nat = Z.sub
+
+let eq_nat_nat = Z.equal
+
+let lt_nat_nat = Z.lt
+
+let leq_nat_nat = Z.leq
+
+let geq_nat_nat = Z.geq
 
 let int x = x
 

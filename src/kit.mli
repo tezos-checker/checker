@@ -4,7 +4,10 @@ type t
 val add : t -> t -> t
 val sub : t -> t -> t
 val scale : t -> FixedPoint.t -> t
+
 val compare : t -> t -> int
+val min : t -> t -> t
+val max : t -> t -> t
 
 val zero : t
 val one : t
