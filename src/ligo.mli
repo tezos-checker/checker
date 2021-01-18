@@ -161,6 +161,7 @@ val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
 val mul_int_int : int -> int -> int  (* IN LIGO: ( * ) *)
 val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
+
 val eq_int_int : int -> int -> bool  (* IN LIGO: ( = ) *)
 val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
 val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
@@ -183,6 +184,7 @@ val int_max : int -> int -> int (* NON-LIGO. *)
 (* OPERATIONS ON nat *)
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
 val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
+val mul_nat_nat : nat -> nat -> nat (* IN LIGO: ( * ) *)
 
 val eq_nat_nat : nat -> nat -> bool  (* IN LIGO: ( = ) *)
 val lt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( < ) *)
@@ -210,7 +212,6 @@ val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
 
 (* val sub_timestamp_int : timestamp -> int -> timestamp *)
 
-
 (* val sub_int_nat : int -> nat -> int *)
 
 (* val sub_nat_int : nat -> int -> int *)
@@ -226,6 +227,12 @@ val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
  * impression is that the only type we have for tez is "tez", values of which
  * we can construct by giving a number of tez or mutez.
 *)
+
+(* Multiplications *)
+
+(* val mul_nat_tez : nat -> tez -> tez *)
+
+(* val mul_tez_nat : tez -> nat -> tez *)
 
 (* TODO: arithmetic shim functions *)
 

@@ -103,6 +103,8 @@ let add_nat_nat = Z.add
 
 let sub_nat_nat = Z.sub
 
+let mul_nat_nat = Z.mul
+
 let eq_nat_nat = Z.equal
 
 let lt_nat_nat = Z.lt
