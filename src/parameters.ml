@@ -1,8 +1,8 @@
 type t =
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
     q : FixedPoint.t; (* 1/kit, really *)
-    index: Tez.t;
-    protected_index: Tez.t;
+    index: Ligo.tez;
+    protected_index: Ligo.tez;
     target: FixedPoint.t;
     drift_derivative: FixedPoint.t;
     drift: FixedPoint.t;
@@ -21,8 +21,8 @@ type t =
 (** Initial state of the parameters. TODO: Contents TBD. *)
 let make_initial (ts: Ligo.timestamp) : t =
   { q = FixedPoint.one;
-    index = Tez.one;
-    protected_index = Tez.one;
+    index = Ligo.tez_from_mutez_literal 1_000_000;
+    protected_index = Ligo.tez_from_mutez_literal 1_000_000;
     target = FixedPoint.one;
     drift = FixedPoint.zero;
     drift_derivative = FixedPoint.zero;
@@ -36,18 +36,18 @@ let make_initial (ts: Ligo.timestamp) : t =
   }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: t) : Tez.t = Tez.max p.index p.protected_index
+let tz_minting (p: t) : Ligo.tez = Ligo.tez_max p.index p.protected_index
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: t) : Tez.t = Tez.min p.index p.protected_index
+let tz_liquidation (p: t) : Ligo.tez = Ligo.tez_min p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: t) : Ratio.t =
-  Ratio.mul (FixedPoint.to_ratio p.q) (Tez.to_ratio (tz_minting p))
+  Ratio.mul (FixedPoint.to_ratio p.q) (Ratio.of_tez (tz_minting p))
 
 (** Current liquidation price (tez/kit). *)
 let liquidation_price (p: t) : Ratio.t =
-  Ratio.mul (FixedPoint.to_ratio p.q) (Tez.to_ratio (tz_liquidation p))
+  Ratio.mul (FixedPoint.to_ratio p.q) (Ratio.of_tez (tz_liquidation p))
 
 let qexp amount = Ratio.add Ratio.one amount
 
@@ -164,7 +164,7 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   * sub-contract. *)
 let touch
     (tezos: Tezos.t)
-    (current_index: Tez.t)
+    (current_index: Ligo.tez)
     (current_kit_in_tez: Ratio.t)
     (parameters: t)
   : Kit.t * t =
@@ -177,11 +177,11 @@ let touch
     let upper_lim = qexp (Ratio.mul           (Constants.protected_index_epsilon) duration_in_seconds) in
     let lower_lim = qexp (Ratio.mul (Ratio.neg Constants.protected_index_epsilon) duration_in_seconds) in
 
-    Tez.of_ratio_floor
+    Ratio.to_tez_floor
       (Ratio.mul
-         (Tez.to_ratio parameters.protected_index)
+         (Ratio.of_tez parameters.protected_index)
          (clamp
-            (Ratio.make (Tez.to_mutez current_index) (Tez.to_mutez parameters.protected_index))
+            (Ratio.make (Ligo.tez_to_mutez current_index) (Ligo.tez_to_mutez parameters.protected_index))
             lower_lim
             upper_lim
          )
@@ -232,7 +232,7 @@ let touch
       (Ratio.div
          (Ratio.mul
             (FixedPoint.to_ratio current_q)
-            (Tez.to_ratio current_index)
+            (Ratio.of_tez current_index)
          )
          current_kit_in_tez
       ) in

@@ -51,6 +51,33 @@ let to_nat_ceil x =
   else
     Ligo.abs (Ligo.cdiv_int_int x.num x.den)
 
+let of_tez x = { num = Ligo.tez_to_mutez x; den = Ligo.int_from_literal 1_000_000; }
+
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let to_tez_floor x =
+  match Ligo.is_nat x.num with
+  | None -> failwith "Ratio.to_tez_floor: negative"
+  | Some n ->
+    let n = Ligo.mul_nat_tez n (Ligo.tez_from_mutez_literal 1_000_000) in
+    let d = Ligo.abs x.den in
+    match Ligo.ediv_tez_nat n d with
+    | None -> (failwith "Ratio.to_tez_floor: zero denominator" : Ligo.tez)
+    | Some (quot, _rem) -> quot (* ignore the remainder; we floor towards zero here *)
+
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let to_tez_ceil x =
+  match Ligo.is_nat x.num with
+  | None -> failwith "Ratio.to_tez_ceil: negative"
+  | Some n ->
+    let n = Ligo.mul_nat_tez n (Ligo.tez_from_mutez_literal 1_000_000) in
+    let d = Ligo.abs x.den in
+    match Ligo.ediv_tez_nat n d with
+    | None -> (failwith "Ratio.to_tez_ceil: zero denominator" : Ligo.tez)
+    | Some (quot, rem) ->
+      if Ligo.eq_tez_tez rem (Ligo.tez_from_mutez_literal 0)
+      then quot
+      else Ligo.add_tez_tez quot (Ligo.tez_from_mutez_literal 1)
+
 (* Predefined values *)
 let zero = { num = Ligo.int_from_literal 0; den = Ligo.int_from_literal 1; }
 let one = { num = Ligo.int_from_literal 1; den = Ligo.int_from_literal 1; }

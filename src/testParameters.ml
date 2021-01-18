@@ -17,7 +17,7 @@ let initial_tezos =
   }
 
 let rec call_touch_times
-    (index: Tez.t)
+    (index: Ligo.tez)
     (kit_in_tez: Ratio.t)
     (n: int)
     (tezos: Tezos.t)
@@ -354,30 +354,30 @@ let test_protected_index_pace =
     let kit_in_tez = Ratio.one in
 
     (* UPWARD MOVES *)
-    let very_high_index = Tez.of_ratio_floor (Ratio.mul (Ratio.of_int 1000) (Tez.to_ratio params.index)) in
+    let very_high_index = Ratio.to_tez_floor (Ratio.mul (Ratio.of_int 1000) (Ratio.of_tez params.index)) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
     let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
-    assert_equal ~printer:Tez.show (Tez.of_mutez (Ligo.int_from_literal 1_030_420)) new_params.protected_index;
+    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_mutez_literal 1_030_420) new_params.protected_index;
     (* One day, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
     let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
-    assert_equal ~printer:Tez.show (Tez.of_mutez (Ligo.int_from_literal 2_053_031)) new_params.protected_index;
+    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_mutez_literal 2_053_031) new_params.protected_index;
 
     (* DOWNWARD MOVES *)
-    let very_low_index = Tez.of_ratio_floor (Ratio.mul (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 1000)) (Tez.to_ratio params.index)) in
+    let very_low_index = Ratio.to_tez_floor (Ratio.mul (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 1000)) (Ratio.of_tez params.index)) in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
     let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) tezos params in
-    assert_equal ~printer:Tez.show (Tez.of_mutez (Ligo.int_from_literal 970_407)) new_params.protected_index;
+    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_mutez_literal 970_407) new_params.protected_index;
     (* One day, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
     let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) tezos params in
-    assert_equal ~printer:Tez.show (Tez.of_mutez (Ligo.int_from_literal 486_151)) new_params.protected_index
+    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_mutez_literal 486_151) new_params.protected_index
 
 (* ************************************************************************* *)
 (*                                 Prices                                    *)
@@ -398,7 +398,7 @@ let test_minting_index_low_bounded =
   @@ QCheck.Test.make
     ~name:"test_minting_index_low_bounded"
     ~count:property_test_count
-    (QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(0 -- 999_999))
+    (QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(0 -- 999_999))
   @@ fun index ->
   (* just the next block *)
   let new_tezos =
@@ -408,7 +408,7 @@ let test_minting_index_low_bounded =
     } in
   let _total_accrual_to_uniswap, new_params =
     Parameters.touch new_tezos index kit_in_tez params in
-  (Parameters.tz_minting new_params >= Tez.of_mutez (Ligo.int_from_literal 999_500)) (* 0.05% down, at "best" *)
+  (Parameters.tz_minting new_params >= Ligo.tez_from_mutez_literal 999_500) (* 0.05% down, at "best" *)
 
 (* The pace of change of the minting index is unbounded on the high side.
  * George: What about the pace of change of the minting price (affected also by
@@ -425,7 +425,7 @@ let test_minting_index_high_unbounded =
   @@ QCheck.Test.make
     ~name:"test_minting_index_high_unbounded"
     ~count:property_test_count
-    (QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(1_000_001 -- max_int))
+    (QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(1_000_001 -- max_int))
   @@ fun index ->
   (* just the next block *)
   let new_tezos =
@@ -438,7 +438,7 @@ let test_minting_index_high_unbounded =
   assert_equal
     index
     (Parameters.tz_minting new_params)
-    ~printer:Tez.show;
+    ~printer:Ligo.string_of_tez;
   true
 
 (* The pace of change of the liquidation index is bounded on the high side.
@@ -456,7 +456,7 @@ let test_liquidation_index_high_bounded =
   @@ QCheck.Test.make
     ~name:"test_liquidation_index_high_bounded"
     ~count:property_test_count
-    (QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(1_000_001 -- max_int))
+    (QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(1_000_001 -- max_int))
   @@ fun index ->
   (* just the next block *)
   let new_tezos =
@@ -468,7 +468,7 @@ let test_liquidation_index_high_bounded =
     Parameters.touch new_tezos index kit_in_tez params in
   (* not very likely to hit the < case here I think;
    * perhaps we need a different generator *)
-  (Parameters.tz_liquidation new_params <= Tez.of_mutez (Ligo.int_from_literal 1_000_500)) (* 0.05% up, at "best" *)
+  (Parameters.tz_liquidation new_params <= Ligo.tez_from_mutez_literal 1_000_500) (* 0.05% up, at "best" *)
 
 (* The pace of change of the liquidation index is unbounded on the low side.
  * George: What about the pace of change of the liquidation price (affected
@@ -485,7 +485,7 @@ let test_liquidation_index_low_unbounded =
   @@ QCheck.Test.make
     ~name:"test_liquidation_index_low_unbounded"
     ~count:property_test_count
-    (QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(0 -- 999_999))
+    (QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(0 -- 999_999))
   @@ fun index ->
   (* just the next block *)
   let new_tezos =
@@ -498,7 +498,7 @@ let test_liquidation_index_low_unbounded =
   assert_equal
     index
     (Parameters.tz_liquidation new_params)
-    ~printer:Tez.show;
+    ~printer:Ligo.string_of_tez;
   true
 
 (* ************************************************************************* *)
@@ -571,9 +571,9 @@ let test_touch =
   "test_touch" >:: fun _ ->
     let initial_parameters : Parameters.t =
       { q = FixedPoint.of_hex_string "0.E666666666666666"; (* 0.9 *)
-        index = Tez.of_mutez (Ligo.int_from_literal 360_000);
+        index = Ligo.tez_from_mutez_literal 360_000;
         target = FixedPoint.of_hex_string "1.147AE147AE147AE1"; (* 1.08 *)
-        protected_index = Tez.of_mutez (Ligo.int_from_literal 350_000);
+        protected_index = Ligo.tez_from_mutez_literal 350_000;
         drift = FixedPoint.zero;
         drift_derivative = FixedPoint.zero;
         burrow_fee_index = FixedPoint.one;
@@ -588,13 +588,13 @@ let test_touch =
         self = Ligo.address_from_literal "checker";
       } in
 
-    let new_index = Tez.of_mutez (Ligo.int_from_literal 340_000) in
+    let new_index = Ligo.tez_from_mutez_literal 340_000 in
     let kit_in_tez = Ratio.make (Ligo.int_from_literal 305) (Ligo.int_from_literal 1000) in
     let total_accrual_to_uniswap, new_parameters = Parameters.touch tezos new_index kit_in_tez initial_parameters in
     assert_equal
       { q = FixedPoint.of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
-        index = Tez.of_mutez (Ligo.int_from_literal 340_000);
-        protected_index = Tez.of_mutez (Ligo.int_from_literal 340_000);
+        index = Ligo.tez_from_mutez_literal 340_000;
+        protected_index = Ligo.tez_from_mutez_literal 340_000;
         target = FixedPoint.of_hex_string "1.00D6E1B366FF4BEE"; (* 1.00327883367481013224 *)
         drift_derivative = FixedPoint.of_hex_string "0.000000000012DA63"; (* 0.00000000000006697957 *)
         drift  = FixedPoint.of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)

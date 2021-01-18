@@ -53,7 +53,7 @@
 
 open Ptr
 
-type tez = Tez.t
+type tez = Ligo.tez
 [@@deriving show]
 
 type avl_ptr = AVLPtr of Mem.ptr
@@ -99,7 +99,7 @@ type ('l, 'r) mem = (('l, 'r) node) Mem.t
 let node_tez (n: ('l, 'r) node) : tez =
   match n with
   | Leaf leaf -> leaf.tez
-  | Branch branch -> Tez.add branch.left_tez branch.right_tez
+  | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
   | Root _ -> (failwith "node_tez found Root" : tez)
 
 let node_height (n: ('l, 'r) node) : int =
@@ -635,7 +635,7 @@ let rec left_fold_ref_split_data
 let rec ref_split_rec
     (mem: ('l, 'r) mem)
     (curr_ptr: Mem.ptr)
-    (limit: Tez.t)
+    (limit: Ligo.tez)
     (stack: ref_split_data list)
   : ('l, 'r) mem * Mem.ptr option * Mem.ptr option =
   match Mem.mem_get mem curr_ptr with
@@ -650,7 +650,7 @@ let rec ref_split_rec
       (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
       left_fold_ref_split_data (mem, None, Some curr_ptr) stack
   | Branch branch ->
-    if Tez.add branch.left_tez branch.right_tez <= limit
+    if Ligo.add_tez_tez branch.left_tez branch.right_tez <= limit
     then (* total_tez <= limit *)
       (* Case 2. The whole tree has not too much tez in it. Include it. *)
       let mem = Mem.mem_update mem curr_ptr (node_set_parent ptr_null) in
@@ -676,14 +676,14 @@ let rec ref_split_rec
             (Left, branch.left, limit)
           else (* Case 3c. left_tez < limit < total_tez (we have to recurse into and split the right tree) *)
             let left_branch = Mem.mem_get mem branch.left in
-            (Right, branch.right, Tez.sub limit (node_tez left_branch))
+            (Right, branch.right, Ligo.sub_tez_tez limit (node_tez left_branch))
         in
         ref_split_rec mem tree_to_recurse_into limit_to_use ({ rec_direction=rec_direction; branch=branch } :: stack)
 
 let ref_split
     (mem: ('l, 'r) mem)
     (curr_ptr: Mem.ptr)
-    (limit: Tez.t)
+    (limit: Ligo.tez)
   : ('l, 'r) mem * Mem.ptr option * Mem.ptr option =
   ref_split_rec mem curr_ptr limit []
 
@@ -711,7 +711,7 @@ let take (mem: ('l, 'r) mem) (AVLPtr root_ptr) (limit: tez) (root_data: 'r)
 let avl_tez (mem: ('l, 'r) mem) (AVLPtr ptr) : tez =
   match Mem.mem_get mem ptr with
   | Root (Some ptr, _) -> node_tez (Mem.mem_get mem ptr)
-  | Root (None, _) -> Tez.zero
+  | Root (None, _) -> Ligo.tez_from_mutez_literal 0
   | _ -> (failwith "invariant violation: avl_ptr does not point to a Root" : tez)
 
 let avl_height (mem: ('l, 'r) mem) (AVLPtr ptr): int =

@@ -33,7 +33,7 @@ val initialize : Tezos.t -> t
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : t -> tezos:Tezos.t -> index:Tez.t -> (Kit.token * t)
+val touch : t -> tezos:Tezos.t -> index:Ligo.tez -> (Kit.token * t)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -68,7 +68,7 @@ val withdraw_tez :
   tezos:Tezos.t ->
   call:Call.t ->
   permission:Permission.t ->
-  tez:Tez.t ->
+  tez:Ligo.tez ->
   burrow_id:burrow_id ->
   (Tez.payment * t, Error.error) result
 
@@ -210,7 +210,7 @@ val sell_kit :
   tezos:Tezos.t ->
   call:Call.t ->
   kit:Kit.token ->
-  min_tez_expected:Tez.t ->
+  min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
   (Tez.payment * t, Error.error) result
 
@@ -235,7 +235,7 @@ val remove_liquidity :
   tezos:Tezos.t ->
   call:Call.t ->
   lqt_burned:Uniswap.liquidity ->
-  min_tez_withdrawn:Tez.t ->
+  min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
   deadline:Ligo.timestamp ->
   (Tez.payment * Kit.token * t, Error.error) result

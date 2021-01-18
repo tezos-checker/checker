@@ -78,7 +78,7 @@ type Error.error +=
 
 type liquidation_slice = {
   burrow: Ptr.t;
-  tez: Tez.t;
+  tez: Ligo.tez;
   min_kit_for_unwarranted: Kit.t;
   older: Avl.leaf_ptr option;
   younger: Avl.leaf_ptr option;
@@ -127,7 +127,7 @@ type current_auction = {
 [@@deriving show]
 
 type auction_outcome = {
-  sold_tez: Tez.t;
+  sold_tez: Ligo.tez;
   winning_bid: bid;
   younger_auction: Avl.avl_ptr option;
   older_auction: Avl.avl_ptr option;
@@ -185,8 +185,8 @@ let send_to_auction
   * harshly, for both slices we round up. NOTE: Alternatively, we can calculate
   * min_kit_for_unwarranted_1 and then calculate min_kit_for_unwarranted_2 =
   * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
-let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
-  assert (amount > Tez.zero);
+let split (amount: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
+  assert (amount > Ligo.tez_from_mutez_literal 0);
   assert (amount < slice.tez);
   (* left slice *)
   let ltez = amount in
@@ -194,15 +194,15 @@ let split (amount: Tez.t) (slice: liquidation_slice) : (liquidation_slice * liqu
     Kit.of_ratio_ceil
       (Ratio.mul
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Tez.to_mutez ltez) (Tez.to_mutez slice.tez))
+         (Ratio.make (Ligo.tez_to_mutez ltez) (Ligo.tez_to_mutez slice.tez))
       ) in
   (* right slice *)
-  let rtez = Tez.sub slice.tez amount in
+  let rtez = Ligo.sub_tez_tez slice.tez amount in
   let rkit =
     Kit.of_ratio_ceil
       (Ratio.mul
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Tez.to_mutez rtez) (Tez.to_mutez slice.tez))
+         (Ratio.make (Ligo.tez_to_mutez rtez) (Ligo.tez_to_mutez slice.tez))
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
@@ -217,7 +217,7 @@ let take_with_splitting storage queued_slices split_threshold =
     let (storage, next) = Avl.pop_front storage queued_slices in
     match next with
     | Some slice ->
-      let (part1, part2) = split (Tez.sub split_threshold queued_amount) slice in
+      let (part1, part2) = split (Ligo.sub_tez_tez split_threshold queued_amount) slice in
       let (storage, _) = Avl.push_front storage queued_slices part2 part2.tez in
       let (storage, _) = Avl.push_back storage new_auction part1 part1.tez in
       (storage, new_auction)
@@ -233,11 +233,11 @@ let start_auction_if_possible
   | None ->
     let queued_amount = Avl.avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
-      Tez.max
+      Ligo.tez_max
         Constants.max_lot_size
-        (Tez.of_ratio_floor
+        (Ratio.to_tez_floor
            (Ratio.mul
-              (Tez.to_ratio queued_amount)
+              (Ratio.of_tez queued_amount)
               (FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
            )
         ) in
@@ -254,7 +254,7 @@ let start_auction_if_possible
           Kit.scale
             Kit.one
             (FixedPoint.mul
-               (FixedPoint.of_ratio_floor (Tez.to_ratio (Avl.avl_tez storage new_auction)))
+               (FixedPoint.of_ratio_floor (Ratio.of_tez (Avl.avl_tez storage new_auction)))
                start_price
             ) in
         Some
@@ -465,7 +465,7 @@ let reclaim_winning_bid
     ~(tezos:Tezos.t)
     (auctions: auctions)
     (bid_ticket: bid_ticket)
-  : (Tez.t * auctions, Error.error) result =
+  : (Ligo.tez * auctions, Error.error) result =
   with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
   let (_, bid_details, _), _ = Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
@@ -496,7 +496,7 @@ let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions
   |> complete_auction_if_possible tezos
   |> start_auction_if_possible tezos price
 
-let current_auction_tez (auctions: auctions) : Tez.t option =
+let current_auction_tez (auctions: auctions) : Ligo.tez option =
   match auctions.current_auction with
   | None -> None
   | Some auction -> Some (Avl.avl_tez auctions.avl_storage auction.contents)

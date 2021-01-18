@@ -20,7 +20,7 @@ let suite =
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
        let bidder = Ligo.address_from_literal "5678" in
-       let amount = Tez.of_mutez (Ligo.int_from_literal 1) in
+       let amount = Ligo.tez_from_mutez_literal 1 in
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* New bidder does not immediately become the delegate and cannot claim the win *)
        let (delegate) = DelegationAuction.delegate auction in
@@ -60,10 +60,10 @@ let suite =
        let bidder2 = Ligo.address_from_literal "2222" in
        let bidder3 = Ligo.address_from_literal "3333" in
        let bidder4 = Ligo.address_from_literal "4444" in
-       let amount1 = Tez.of_mutez (Ligo.int_from_literal 1) in
-       let amount2 = Tez.of_mutez (Ligo.int_from_literal 2) in
-       let amount3 = Tez.of_mutez (Ligo.int_from_literal 3) in
-       let amount4 = Tez.of_mutez (Ligo.int_from_literal 4) in
+       let amount1 = Ligo.tez_from_mutez_literal 1 in
+       let amount2 = Ligo.tez_from_mutez_literal 2 in
+       let amount3 = Ligo.tez_from_mutez_literal 3 in
+       let amount4 = Ligo.tez_from_mutez_literal 4 in
        let (ticket1, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder1 ~amount:amount1) in
        assert_bool "must match bid" (Result.is_error (DelegationAuction.place_bid auction start_tezos ~sender:bidder2 ~amount:amount1));
        let (ticket2, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder2 ~amount:amount2) in
@@ -94,7 +94,7 @@ let suite =
      fun _ ->
        let auction = DelegationAuction.empty start_tezos in
        let bidder = Ligo.address_from_literal "5678" in
-       let amount = Tez.of_mutez (Ligo.int_from_literal 1) in
+       let amount = Ligo.tez_from_mutez_literal 1 in
        let (ticket, auction) = Result.get_ok (DelegationAuction.place_bid auction start_tezos ~sender:bidder ~amount:amount) in
        (* And in the subsequent cycle they cease to be the delegate again *)
        let tezos = {start_tezos with level = Level.of_int (3 * 4096)} in

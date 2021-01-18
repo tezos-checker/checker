@@ -21,6 +21,10 @@ val of_nat: Ligo.nat -> t
 val to_nat_floor: t -> Ligo.nat
 val to_nat_ceil: t -> Ligo.nat
 
+val of_tez: Ligo.tez -> t
+val to_tez_floor: t -> Ligo.tez
+val to_tez_ceil: t -> Ligo.tez
+
 (* Relational operations. *)
 val equal: t -> t -> bool
 val lt: t -> t -> bool

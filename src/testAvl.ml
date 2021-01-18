@@ -2,9 +2,9 @@ open Avl
 open OUnit2
 open Format
 
-type element_list = (int * Tez.t) list [@@deriving show]
+type element_list = (int * Ligo.tez) list [@@deriving show]
 
-let nTez (i: int) : Tez.t = Tez.of_mutez (Ligo.int_from_literal (1_000_000 * i))
+let nTez (i: int) : Ligo.tez = Ligo.tez_from_mutez_literal (1_000_000 * i)
 
 let add_all (mem: ('l, 'r) mem) (root: avl_ptr) (xs: element_list)
   : ('l, 'r) mem =
@@ -24,7 +24,7 @@ let debug_avl (mem: (int, int) mem) (AVLPtr root) : unit =
     | Root (Some r, r') -> "Root(" ^ string_of_int r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
       sprintf "Leaf { value: %s; tez: %s; parent: %s }"
-        (Int.to_string leaf.value) (Tez.show leaf.tez) (Ptr.show leaf.parent)
+        (Int.to_string leaf.value) (Ligo.string_of_tez leaf.tez) (Ptr.show leaf.parent)
     | Branch branch ->
       "Branch " ^ show_branch branch ^ "\n"
       ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
@@ -274,8 +274,8 @@ let suite =
      @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
-     QCheck.assume (limit > Tez.zero);
+     QCheck.assume (List.for_all (fun (_, t) -> t > (Ligo.tez_from_mutez_literal 0)) xs);
+     QCheck.assume (limit > (Ligo.tez_from_mutez_literal 0));
 
      let (mem, right) = from_list Mem.empty 0 xs in
      let (mem, left) = take mem right limit 0 in
@@ -287,13 +287,13 @@ let suite =
      let actual_left = to_list mem left in
      let actual_right = to_list mem right in
 
-     let rec split_list (lim: Tez.t) (xs: element_list) =
+     let rec split_list (lim: Ligo.tez) (xs: element_list) =
        match xs with
        | [] -> ([], [])
        | x :: xs ->
          if snd x <= lim
          then
-           match split_list (Tez.sub lim (snd x)) xs with
+           match split_list (Ligo.sub_tez_tez lim (snd x)) xs with
              (l, r) -> (x::l, r)
          else
            ([], x::xs)
@@ -317,8 +317,8 @@ let suite =
      @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list arb_item))
      @@ fun (limit, xs) ->
 
-     QCheck.assume (List.for_all (fun (_, t) -> t > Tez.zero) xs);
-     QCheck.assume (limit > Tez.zero);
+     QCheck.assume (List.for_all (fun (_, t) -> t > (Ligo.tez_from_mutez_literal 0)) xs);
+     QCheck.assume (limit > (Ligo.tez_from_mutez_literal 0));
 
      let (mem, right) = from_list Mem.empty 0 xs in
      let (mem, left) = take mem right limit 0 in
@@ -340,7 +340,7 @@ let suite =
          if i <= 0
          then mem
          else
-           let (mem, _) = push_back mem root i (Tez.of_mutez (Ligo.int_from_literal i)) in
+           let (mem, _) = push_back mem root i (Ligo.tez_from_mutez_literal i) in
            go (i-1) mem in
 
        let mem = go 100_000 mem in
@@ -348,7 +348,7 @@ let suite =
        assert_dangling_pointers mem [root];
 
        Mem.reset_ops ();
-       let _ = take mem root (Tez.of_mutez (Ligo.int_from_literal 50_000)) 0 in
+       let _ = take mem root (Ligo.tez_from_mutez_literal 50_000) 0 in
 
        assert_equal
          {reads=104; writes=87}
@@ -360,7 +360,7 @@ let suite =
        range 0 10
        |> permutations
        |> Stream.iter (fun xs ->
-           let xs = List.map (fun i -> (i, Tez.of_mutez (Ligo.int_from_literal i))) xs in
+           let xs = List.map (fun i -> (i, Ligo.tez_from_mutez_literal i)) xs in
            let (mem, root) = from_list Mem.empty 0 xs in
            assert_invariants mem root;
            let actual = to_list mem root in

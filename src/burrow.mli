@@ -11,10 +11,10 @@ val show : t -> string
 val pp : Format.formatter -> t -> unit
 
 (* Burrow API *)
-val collateral : t -> Tez.t (* NOTE: FOR TESTING PURPOSES ONLY *)
+val collateral : t -> Ligo.tez (* NOTE: FOR TESTING PURPOSES ONLY *)
 val liquidation_slices : t -> liquidation_slices option
 val set_liquidation_slices : t -> liquidation_slices option -> t
-val collateral_at_auction : t -> Tez.t
+val collateral_at_auction : t -> Ligo.tez
 val active : t -> bool
 
 val permission_version : t -> int
@@ -27,17 +27,17 @@ val make_for_test :
   allow_all_tez_deposits:bool ->
   allow_all_kit_burnings:bool ->
   delegate:(Ligo.address option) ->
-  collateral:Tez.t ->
+  collateral:Ligo.tez ->
   outstanding_kit:Kit.t ->
   excess_kit:Kit.t ->
   adjustment_index:FixedPoint.t ->
-  collateral_at_auction:Tez.t ->
+  collateral_at_auction:Ligo.tez ->
   liquidation_slices:(liquidation_slices option) ->
   last_touched:Ligo.timestamp ->
   t
 
 type Error.error +=
-  | InsufficientFunds of Tez.t
+  | InsufficientFunds of Ligo.tez
   | WithdrawTezFailure
   | MintKitFailure
   | BurrowIsAlreadyActive
@@ -100,14 +100,14 @@ val return_slice_from_auction : Avl.leaf_ptr -> LiquidationAuction.liquidation_s
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
   * is less than the creation deposit. *)
-val create : Parameters.t -> Tez.t -> (t, Error.error) result
+val create : Parameters.t -> Ligo.tez -> (t, Error.error) result
 
 (** Add non-negative collateral to a burrow. *)
-val deposit_tez : Parameters.t -> Tez.t -> t -> t
+val deposit_tez : Parameters.t -> Ligo.tez -> t -> t
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-val withdraw_tez : Parameters.t -> Tez.t -> t -> (t * Tez.t, Error.error) result
+val withdraw_tez : Parameters.t -> Ligo.tez -> t -> (t * Ligo.tez, Error.error) result
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
@@ -120,12 +120,12 @@ val burn_kit : Parameters.t -> Kit.t -> t -> t
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
   * the creation deposit. *)
-val activate : Parameters.t -> Tez.t -> t -> (t, Error.error) result
+val activate : Parameters.t -> Ligo.tez -> t -> (t, Error.error) result
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-val deactivate : Parameters.t -> t -> (t * Tez.t, Error.error) result
+val deactivate : Parameters.t -> t -> (t * Ligo.tez, Error.error) result
 
 (** Set the delegate of a burrow. *)
 val set_delegate : Parameters.t -> Ligo.address -> t -> t
@@ -156,8 +156,8 @@ val increase_permission_version : Parameters.t -> t -> (int * t)
 *)
 
 type liquidation_details =
-  { liquidation_reward : Tez.t;
-    tez_to_auction : Tez.t;
+  { liquidation_reward : Ligo.tez;
+    tez_to_auction : Ligo.tez;
     expected_kit : Kit.t;
     min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : t;

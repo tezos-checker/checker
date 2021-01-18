@@ -49,14 +49,14 @@ let assert_invariants (state: 't) : unit =
 
        match Burrow.liquidation_slices burrow with
        | None ->
-         assert (Burrow.collateral_at_auction burrow = Tez.zero);
+         assert (Burrow.collateral_at_auction burrow = Ligo.tez_from_mutez_literal 0);
        | Some slices ->
          (* Check if the linked list of slices are correct, and the amount of
           * tez inside is consistent with collateral_at_auction.
          *)
          let rec go
              (curr: Avl.leaf_ptr)
-             (prev: Avl.leaf_ptr option) : Tez.t =
+             (prev: Avl.leaf_ptr option) : Ligo.tez =
            let (slice, tez) =
              Avl.read_leaf
                (state.liquidation_auctions.avl_storage)
@@ -66,7 +66,7 @@ let assert_invariants (state: 't) : unit =
            assert (slice.younger = prev);
            match slice.older with
            | Some next ->
-             Tez.add slice.tez (go next (Some curr))
+             Ligo.add_tez_tez slice.tez (go next (Some curr))
            | None ->
              assert (curr = slices.oldest);
              slice.tez in
@@ -120,7 +120,7 @@ let with_no_unclaimed_slices
 (* Ensure that there is no tez given. To prevent accidental fund loss. *)
 let with_no_tez_given (call: Call.t) (f: unit -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  if call.amount <> Tez.zero
+  if call.amount <> Ligo.tez_from_mutez_literal 0
   then Error UnwantedTezGiven
   else f ()
 
@@ -485,7 +485,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
       let corresponding_kit =
         Kit.of_ratio_floor
           (Ratio.mul
-             (Ratio.make (Tez.to_mutez leaf.tez) (Tez.to_mutez outcome.sold_tez))
+             (Ratio.make (Ligo.tez_to_mutez leaf.tez) (Ligo.tez_to_mutez outcome.sold_tez))
              (Kit.to_ratio outcome.winning_bid.kit)
           ) in
       let penalty =
@@ -564,7 +564,7 @@ let updated_delegation_auction state tezos new_auction =
     Option.value
       (if DelegationAuction.cycle prev_auction != DelegationAuction.cycle new_auction
        then DelegationAuction.winning_amount prev_auction else None)
-      ~default:Tez.zero in
+      ~default:(Ligo.tez_from_mutez_literal 0) in
   { state with
     delegation_auction = new_auction;
     delegate = DelegationAuction.delegate new_auction;
@@ -617,7 +617,7 @@ let sell_kit (state:t) ~tezos ~(call:Call.t) ~kit ~min_tez_expected ~deadline =
 
 let add_liquidity (state:t) ~tezos ~(call:Call.t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let state = touch_delegation_auction state tezos in
-  let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:Tez.zero in
+  let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_mutez_literal 0) in
   Kit.with_valid_kit_token ~tezos max_kit_deposited @@ fun max_kit_deposited ->
   match Uniswap.add_liquidity state.uniswap ~tezos ~amount:call.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline with
   | Error err -> Error err
@@ -697,7 +697,7 @@ let calculate_touch_reward (state:t) ~(tezos:Tezos.t) : Kit.t =
        (FixedPoint.mul (FixedPoint.of_int high_duration) touch_high_reward)
     )
 
-let touch (state:t) ~(tezos:Tezos.t) ~(index:Tez.t) : (Kit.token * t) =
+let touch (state:t) ~(tezos:Tezos.t) ~(index:Ligo.tez) : (Kit.token * t) =
   if state.parameters.last_touched = tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     (Kit.issue ~tezos Kit.zero, state)

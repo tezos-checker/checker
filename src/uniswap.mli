@@ -63,7 +63,7 @@ type Error.error +=
   | InvalidLiquidityToken
 
 val make_for_test :
-  tez:Tez.t ->
+  tez:Ligo.tez ->
   kit:Kit.token ->
   lqt:liquidity ->
   kit_in_tez_in_prev_block:Ratio.t ->
@@ -110,7 +110,7 @@ val kit_in_tez_in_prev_block : t -> Ratio.t
   * cannot be bought or if the deadline has passed. *)
 val buy_kit :
   t ->
-  amount:Tez.t ->
+  amount:Ligo.tez ->
   min_kit_expected:Kit.t ->
   tezos:Tezos.t ->
   deadline:Ligo.timestamp ->
@@ -120,12 +120,12 @@ val buy_kit :
   * cannot be bought or if the deadline has passed. *)
 val sell_kit :
   t ->
-  amount:Tez.t ->
+  amount:Ligo.tez ->
   Kit.token ->
-  min_tez_expected:Tez.t ->
+  min_tez_expected:Ligo.tez ->
   tezos:Tezos.t ->
   deadline:Ligo.timestamp ->
-  (Tez.t * t, Error.error) result
+  (Ligo.tez * t, Error.error) result
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
   * some kit. If the given amounts does not have the right ratio, we
@@ -145,9 +145,9 @@ val sell_kit :
 val add_liquidity :
   t ->
   tezos:Tezos.t ->
-  amount:Tez.t ->
+  amount:Ligo.tez ->
   (** This amount is temporarily treated as if it is part of the tez balance *)
-  pending_accrual:Tez.t ->
+  pending_accrual:Ligo.tez ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
@@ -161,12 +161,12 @@ val add_liquidity :
 val remove_liquidity :
   t ->
   tezos:Tezos.t ->
-  amount:Tez.t ->
+  amount:Ligo.tez ->
   lqt_burned:liquidity ->
-  min_tez_withdrawn:Tez.t ->
+  min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
   deadline:Ligo.timestamp ->
-  (Tez.t * Kit.token * t, Error.error) result
+  (Ligo.tez * Kit.token * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. *)
 val add_accrued_kit :
@@ -179,5 +179,5 @@ val add_accrued_kit :
 val add_accrued_tez :
   t ->
   Tezos.t ->
-  Tez.t ->
+  Ligo.tez ->
   t

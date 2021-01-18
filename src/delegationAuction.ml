@@ -1,4 +1,4 @@
-type bid = { bidder: Ligo.address; cycle: int; amount: Tez.t }
+type bid = { bidder: Ligo.address; cycle: int; amount: Ligo.tez }
 [@@deriving show]
 
 type bid_ticket = bid Tezos.ticket
@@ -63,7 +63,7 @@ let delegate t  =
 let place_bid t (tezos: Tezos.t) ~sender ~amount =
   let t = touch t tezos in
   match t.leading_bid with
-  | Some current when Tez.compare amount current.amount <= 0 ->
+  | Some current when Ligo.compare_tez amount current.amount <= 0 ->
     Error BidTooLow
   | _ ->
     (* Either there is no bid or this is the highest *)

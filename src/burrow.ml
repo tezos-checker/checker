@@ -14,7 +14,7 @@ type t =
     allow_all_kit_burnings : bool;
     delegate : Ligo.address option;
     (* Collateral currently stored in the burrow. *)
-    collateral : Tez.t;
+    collateral : Ligo.tez;
     (* Outstanding kit minted out of the burrow. *)
     outstanding_kit : Kit.t;
     (* Excess kit returned by auctions. *)
@@ -25,7 +25,7 @@ type t =
     (* Collateral that has been sent off to auctions. For all intents and
      * purposes, this collateral can be considered gone, but depending on the
      * outcome of the auctions we expect some kit in return. *)
-    collateral_at_auction : Tez.t;
+    collateral_at_auction : Ligo.tez;
     (* Pointer to liquidation slices in auction queue. *)
     liquidation_slices : liquidation_slices option;
     (* The last time the burrow was touched. *)
@@ -34,7 +34,7 @@ type t =
 [@@deriving show]
 
 type Error.error +=
-  | InsufficientFunds of Tez.t
+  | InsufficientFunds of Ligo.tez
   | WithdrawTezFailure
   | MintKitFailure
   | BurrowIsAlreadyActive
@@ -44,8 +44,8 @@ type Error.error +=
   | DeactivatingWithCollateralAtAuctions
 
 let assert_invariants (b: t) : unit =
-  assert (b.collateral >= Tez.zero);
-  assert (b.collateral_at_auction >= Tez.zero);
+  assert (b.collateral >= Ligo.tez_from_mutez_literal 0);
+  assert (b.collateral_at_auction >= Ligo.tez_from_mutez_literal 0);
   assert (b.outstanding_kit >= Kit.zero);
   assert (b.excess_kit >= Kit.zero);
   assert (b.outstanding_kit = Kit.zero || b.excess_kit = Kit.zero);
@@ -123,7 +123,7 @@ let make_for_test
 let is_overburrowed (p : Parameters.t) (b : t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
-  let collateral = Tez.to_ratio b.collateral in
+  let collateral = Ratio.of_tez b.collateral in
   let minting_price = Parameters.minting_price p in
   let outstanding_kit = Kit.to_ratio b.outstanding_kit in
   Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fminting outstanding_kit) minting_price)
@@ -178,11 +178,11 @@ let remove_liquidation_slice
     (leaf_ptr: Avl.leaf_ptr)
     (leaf : LiquidationAuction.liquidation_slice) (* NOTE: derived from the leaf_ptr *)
   : t =
-  assert (leaf.tez >= Tez.zero);
+  assert (leaf.tez >= Ligo.tez_from_mutez_literal 0);
   assert (burrow.collateral_at_auction >= leaf.tez);
   (* (a) the slice's tez is no longer in auctions, subtract it. *)
   let burrow = { burrow with
-                 collateral_at_auction = Tez.sub burrow.collateral_at_auction leaf.tez;
+                 collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction leaf.tez;
                } in
   (* (b) adjust the pointers *)
   match burrow.liquidation_slices with
@@ -211,11 +211,11 @@ let return_slice_from_auction
   : t =
   assert_invariants burrow;
   assert burrow.active;
-  assert (leaf.tez >= Tez.zero);
+  assert (leaf.tez >= Ligo.tez_from_mutez_literal 0);
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) return the tez into the burrow's collateral *)
-  { burrow with collateral = Tez.add burrow.collateral leaf.tez; }
+  { burrow with collateral = Ligo.add_tez_tez burrow.collateral leaf.tez; }
 
 let return_kit_from_auction
     (leaf_ptr: Avl.leaf_ptr)
@@ -229,7 +229,7 @@ let return_kit_from_auction
   (* (b) burn/deposit the kit received from auctioning the slice *)
   rebalance_kit { burrow with excess_kit = Kit.add burrow.excess_kit kit; }
 
-let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
+let create (p: Parameters.t) (tez: Ligo.tez) : (t, Error.error) result =
   if tez < Constants.creation_deposit
   then Error (InsufficientFunds tez)
   else Ok
@@ -238,29 +238,29 @@ let create (p: Parameters.t) (tez: Tez.t) : (t, Error.error) result =
         allow_all_tez_deposits = false;
         allow_all_kit_burnings = false;
         delegate = None;
-        collateral = Tez.sub tez Constants.creation_deposit;
+        collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
         outstanding_kit = Kit.zero;
         excess_kit = Kit.zero;
         adjustment_index = Parameters.compute_adjustment_index p;
-        collateral_at_auction = Tez.zero;
+        collateral_at_auction = Ligo.tez_from_mutez_literal 0;
         last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
         liquidation_slices = None;
       }
 
 (** Add non-negative collateral to a burrow. *)
-let deposit_tez (p: Parameters.t) (t: Tez.t) (b: t) : t =
+let deposit_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : t =
   assert_invariants b;
-  assert (t >= Tez.zero);
+  assert (t >= Ligo.tez_from_mutez_literal 0);
   assert (p.last_touched = b.last_touched);
-  { b with collateral = Tez.add b.collateral t }
+  { b with collateral = Ligo.add_tez_tez b.collateral t }
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdraw_tez (p: Parameters.t) (t: Tez.t) (b: t) : (t * Tez.t, Error.error) result =
+let withdraw_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : (t * Ligo.tez, Error.error) result =
   assert_invariants b;
-  assert (t >= Tez.zero);
+  assert (t >= Ligo.tez_from_mutez_literal 0);
   assert (p.last_touched = b.last_touched);
-  let new_burrow = { b with collateral = Tez.sub b.collateral t } in
+  let new_burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
   if is_overburrowed p new_burrow
   then Error WithdrawTezFailure
   else Ok (new_burrow, t)
@@ -292,9 +292,9 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
   * the creation deposit. *)
-let activate (p: Parameters.t) (tez: Tez.t) (b: t) : (t, Error.error) result =
+let activate (p: Parameters.t) (tez: Ligo.tez) (b: t) : (t, Error.error) result =
   assert_invariants b;
-  assert (tez >= Tez.zero);
+  assert (tez >= Ligo.tez_from_mutez_literal 0);
   assert (p.last_touched = b.last_touched);
   if tez < Constants.creation_deposit then
     Error (InsufficientFunds tez)
@@ -303,13 +303,13 @@ let activate (p: Parameters.t) (tez: Tez.t) (b: t) : (t, Error.error) result =
   else
     Ok { b with
          active = true;
-         collateral = Tez.sub tez Constants.creation_deposit;
+         collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
        }
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
+let deactivate (p: Parameters.t) (b: t) : (t * Ligo.tez, Error.error) result =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   if (is_overburrowed p b) then
@@ -318,14 +318,14 @@ let deactivate (p: Parameters.t) (b: t) : (t * Tez.t, Error.error) result =
     Error DeactivatingAnInactiveBurrow
   else if (b.outstanding_kit > Kit.zero) then
     Error DeactivatingWithOutstandingKit
-  else if (b.collateral_at_auction > Tez.zero) then
+  else if (b.collateral_at_auction > Ligo.tez_from_mutez_literal 0) then
     Error DeactivatingWithCollateralAtAuctions
   else
-    let return = Tez.add b.collateral Constants.creation_deposit in
+    let return = Ligo.add_tez_tez b.collateral Constants.creation_deposit in
     let updated_burrow =
       { b with
         active = false;
-        collateral = Tez.zero;
+        collateral = Ligo.tez_from_mutez_literal 0;
       } in
     Ok (updated_burrow, return)
 
@@ -364,13 +364,13 @@ let increase_permission_version (p: Parameters.t) (b: t) =
   * calculation, see docs/burrow-state-liquidations.md.  Note that it's skewed
   * on the safe side (overapproximation). This ensures that after a partial
   * liquidation we are no longer "optimistically overburrowed" *)
-let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
+let compute_tez_to_auction (p: Parameters.t) (b: t) : Ligo.tez =
   assert_invariants b;
   let oustanding_kit = Kit.to_ratio b.outstanding_kit in
-  let collateral = Tez.to_ratio b.collateral in
-  let collateral_at_auction = Tez.to_ratio b.collateral_at_auction in
+  let collateral = Ratio.of_tez b.collateral in
+  let collateral_at_auction = Ratio.of_tez b.collateral_at_auction in
   let minting_price = Parameters.minting_price p in
-  Tez.of_ratio_ceil
+  Ratio.to_tez_ceil
     (Ratio.div
        (Ratio.sub
           (Ratio.sub
@@ -400,11 +400,11 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Tez.t =
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
-let compute_expected_kit (p: Parameters.t) (tez_to_auction: Tez.t) : Kit.t =
+let compute_expected_kit (p: Parameters.t) (tez_to_auction: Ligo.tez) : Kit.t =
   Kit.of_ratio_ceil
     (Ratio.div
        (Ratio.mul
-          (Tez.to_ratio tez_to_auction)
+          (Ratio.of_tez tez_to_auction)
           (Ratio.sub Ratio.one Constants.liquidation_penalty)
        )
        (Parameters.minting_price p)
@@ -427,7 +427,7 @@ let is_liquidatable (p: Parameters.t) (b: t) : bool =
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
   let liquidation_price = Parameters.liquidation_price p in
-  let collateral = Tez.to_ratio b.collateral in
+  let collateral = Ratio.of_tez b.collateral in
   b.active && Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fliquidation optimistic_outstanding) liquidation_price)
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
@@ -439,13 +439,13 @@ let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
-  let collateral = Tez.to_ratio b.collateral in
+  let collateral = Ratio.of_tez b.collateral in
   let minting_price = Parameters.minting_price p in
   Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fminting optimistic_outstanding) minting_price)
 
 type liquidation_details =
-  { liquidation_reward : Tez.t;
-    tez_to_auction : Tez.t;
+  { liquidation_reward : Ligo.tez;
+    tez_to_auction : Ligo.tez;
     expected_kit : Kit.t;
     min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : t;
@@ -463,16 +463,16 @@ type liquidation_result =
   | Close of liquidation_details
 [@@deriving show]
 
-let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Tez.t) : Kit.t =
-  assert (b.collateral <> Tez.zero); (* NOTE: division by zero *)
+let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Ligo.tez) : Kit.t =
+  assert (b.collateral <> Ligo.tez_from_mutez_literal 0); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
-  let collateral = Tez.to_ratio b.collateral in
+  let collateral = Ratio.of_tez b.collateral in
   Kit.of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
     (Ratio.div
        (Ratio.mul
-          (Tez.to_ratio tez_to_auction)
+          (Ratio.of_tez tez_to_auction)
           (Ratio.mul Constants.fliquidation optimistic_outstanding)
        )
        collateral
@@ -482,29 +482,29 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let partial_reward =
-    Tez.of_ratio_floor
+    Ratio.to_tez_floor
       (Ratio.mul
-         (Tez.to_ratio b.collateral)
+         (Ratio.of_tez b.collateral)
          (FixedPoint.to_ratio Constants.liquidation_reward_percentage)
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
-  let liquidation_reward = Tez.add Constants.creation_deposit partial_reward in
+  let liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit partial_reward in
   if not (is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit, or
      * the burrow is already without its creation deposit, inactive; we
      * shouldn't liquidate the burrow. *)
     Unnecessary
-  else if Tez.sub b.collateral partial_reward < Constants.creation_deposit then
+  else if Ligo.sub_tez_tez b.collateral partial_reward < Constants.creation_deposit then
     (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
      * thing (after paying the liquidation reward of course). *)
-    let tez_to_auction = Tez.sub b.collateral partial_reward in
+    let tez_to_auction = Ligo.sub_tez_tez b.collateral partial_reward in
     let expected_kit = compute_expected_kit p tez_to_auction in
     let final_burrow =
       { b with
         active = false;
-        collateral = Tez.zero;
-        collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
+        collateral = Ligo.tez_from_mutez_literal 0;
+        collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
       } in
     Close {
       liquidation_reward = liquidation_reward;
@@ -516,10 +516,10 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
      * possible to liquidate the burrow partially or if we have to do so
      * completely (deplete the collateral). *)
-    let b_without_reward = { b with collateral = Tez.sub (Tez.sub b.collateral partial_reward) Constants.creation_deposit } in
+    let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) Constants.creation_deposit } in
     let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
-    if tez_to_auction < Tez.zero || tez_to_auction > b_without_reward.collateral then
+    if tez_to_auction < Ligo.tez_from_mutez_literal 0 || tez_to_auction > b_without_reward.collateral then
       (* Case 2b.1: With the current price it's impossible to make the burrow
        * not undercollateralized; pay the liquidation reward, stash away the
        * creation deposit, and liquidate all the remaining collateral, even if
@@ -528,8 +528,8 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       let expected_kit = compute_expected_kit p tez_to_auction in
       let final_burrow =
         { b with
-          collateral = Tez.zero;
-          collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
+          collateral = Ligo.tez_from_mutez_literal 0;
+          collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
         } in
       Complete {
         liquidation_reward = liquidation_reward;
@@ -549,8 +549,8 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       let expected_kit = compute_expected_kit p tez_to_auction in
       let final_burrow =
         { b with
-          collateral = Tez.sub b_without_reward.collateral tez_to_auction;
-          collateral_at_auction = Tez.add b.collateral_at_auction tez_to_auction;
+          collateral = Ligo.sub_tez_tez b_without_reward.collateral tez_to_auction;
+          collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
         } in
       Partial {
         liquidation_reward = liquidation_reward;

@@ -121,7 +121,7 @@ let is_nat x = if Z.lt x Z.zero then None else Some x
 
 let string_of_nat = Z.to_string
 
-let pp_nat fmt z = Format.pp_print_string fmt (string_of_int z)
+let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
 
 let compare_nat = Z.compare
 
@@ -141,7 +141,7 @@ let sub_timestamp_timestamp = Z.sub
 
 let string_of_timestamp = Z.to_string
 
-let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_int z)
+let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
 
 let compare_timestamp = Z.compare
 
@@ -150,3 +150,49 @@ let timestamp_from_seconds_literal s =
     failwith "Ligo.timestamp_from_seconds_literal: negative"
   else
     Z.of_int s
+
+(* tez *)
+
+type tez = Z.t
+
+let tez_from_mutez_literal x =
+  if x < 0 then
+    failwith "Ligo.nat_from_literal: negative"
+  else
+    Z.of_int x
+
+let add_tez_tez = Z.add
+
+let sub_tez_tez x y =
+  if Z.lt x y then
+    failwith "Ligo.sub_tez_tez: negative"
+  else
+    Z.sub x y
+
+let mul_nat_tez = Z.mul
+
+let mul_tez_nat = Z.mul
+
+let ediv_tez_nat n d =
+  try Some (Z.ediv_rem n d)
+  with Division_by_zero -> None
+
+let compare_tez = Z.compare
+
+let string_of_tez x = Z.to_string x ^ "mutez"
+
+let pp_tez fmt z = Format.pp_print_string fmt (string_of_tez z)
+
+let eq_tez_tez = Z.equal
+
+let lt_tez_tez = Z.lt
+
+let leq_tez_tez = Z.leq
+
+let geq_tez_tez = Z.geq
+
+let tez_min x y = if leq_tez_tez x y then x else y
+
+let tez_max x y = if geq_tez_tez x y then x else y
+
+let tez_to_mutez x = x

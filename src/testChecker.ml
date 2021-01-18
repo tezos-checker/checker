@@ -25,7 +25,7 @@ let suite =
          Checker.add_liquidity
            checker
            ~tezos
-           ~call:{sender=alice; amount=Tez.one;}
+           ~call:{sender = alice; amount = Ligo.tez_from_mutez_literal 1_000_000;}
            ~max_kit_deposited:(Kit.issue ~tezos Kit.one)
            ~min_lqt_minted:(Ligo.nat_from_literal 1)
            ~deadline:(Ligo.timestamp_from_seconds_literal 1) in (* barely on time *)
@@ -33,17 +33,17 @@ let suite =
        (* Activation/deactivation tests *)
        let () =
          (* Creation/deactivation does not incur any costs. *)
-         let tez = Tez.of_mutez (Ligo.int_from_literal 12_345_678) in
+         let tez = Ligo.tez_from_mutez_literal 12_345_678 in
          let (burrow_id, admin_permission, checker0) = assert_ok @@
            Checker.create_burrow checker ~tezos ~call:{sender = bob; amount = tez;} in
          let (payment, checker1) = assert_ok @@
            Checker.deactivate_burrow
              checker0
              ~permission:admin_permission
-             ~tezos ~call:{sender = bob; amount = Tez.zero;}
+             ~tezos ~call:{sender = bob; amount = (Ligo.tez_from_mutez_literal 0);}
              ~burrow_id
              ~recipient:bob in
-         assert_equal tez payment.amount ~printer:Tez.show;
+         assert_equal tez payment.amount ~printer:Ligo.string_of_tez;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          let checker2 = assert_ok @@
            Checker.activate_burrow
@@ -58,14 +58,14 @@ let suite =
          Checker.create_burrow
            checker
            ~tezos
-           ~call:{sender = bob; amount = Tez.of_mutez (Ligo.int_from_literal 10_000_000);} in
+           ~call:{sender = bob; amount = Ligo.tez_from_mutez_literal 10_000_000;} in
 
        (* Mint as much kit as possible *)
        let (kit_token, checker) = assert_ok @@
          Checker.mint_kit
            checker
            ~tezos
-           ~call:{sender=bob; amount=Tez.zero;}
+           ~call:{sender=bob; amount=(Ligo.tez_from_mutez_literal 0);}
            ~permission:admin_permission
            ~burrow_id:burrow_id
            ~kit:(Kit.of_mukit (Ligo.int_from_literal 4_285_714)) in
@@ -85,7 +85,7 @@ let suite =
          Checker.mint_kit
            checker
            ~tezos
-           ~call:{sender=bob; amount=Tez.zero;}
+           ~call:{sender=bob; amount=(Ligo.tez_from_mutez_literal 0);}
            ~permission:admin_permission
            ~burrow_id:burrow_id
            ~kit:(Kit.of_mukit (Ligo.int_from_literal 1)) in
@@ -97,7 +97,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let _touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Ligo.int_from_literal 1_000_001)) in
+         Checker.touch checker ~tezos ~index:(Ligo.tez_from_mutez_literal 1_000_001) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -114,7 +114,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Ligo.int_from_literal 1_200_000)) in
+         Checker.touch checker ~tezos ~index:(Ligo.tez_from_mutez_literal 1_200_000) in
 
        let checker = assert_ok @@
          Checker.touch_burrow checker burrow_id in
@@ -127,9 +127,9 @@ let suite =
        let (reward_payment, checker) = assert_ok @@
          Checker.mark_for_liquidation
            checker
-           ~call:{sender=alice; amount=Tez.zero;}
+           ~call:{sender=alice; amount=(Ligo.tez_from_mutez_literal 0);}
            ~burrow_id:burrow_id in
-       assert_equal (Tez.of_mutez (Ligo.int_from_literal 1_008_999)) reward_payment.amount ~printer:Tez.show;
+       assert_equal (Ligo.tez_from_mutez_literal 1_008_999) reward_payment.amount ~printer:Ligo.string_of_tez;
 
        let int_level = 217 in
        let tezos = make_tezos int_level in
@@ -139,11 +139,11 @@ let suite =
          (Checker.liquidation_auction_place_bid
             checker
             ~tezos:tezos
-            ~call:{sender=bob; amount = Tez.zero;}
+            ~call:{sender=bob; amount = (Ligo.tez_from_mutez_literal 0);}
             ~kit:(Kit.issue ~tezos (Kit.of_mukit (Ligo.int_from_literal 1_000))));
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Ligo.int_from_literal 1_200_000)) in
+         Checker.touch checker ~tezos ~index:(Ligo.tez_from_mutez_literal 1_200_000) in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
@@ -157,13 +157,13 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Ligo.int_from_literal 1_200_000)) in
+         Checker.touch checker ~tezos ~index:(Ligo.tez_from_mutez_literal 1_200_000) in
 
        let (bid, checker) = assert_ok @@
          Checker.liquidation_auction_place_bid
            checker
            ~tezos
-           ~call:{sender=alice; amount=Tez.zero;}
+           ~call:{sender=alice; amount=(Ligo.tez_from_mutez_literal 0);}
            ~kit:(Kit.issue ~tezos (Kit.of_mukit (Ligo.int_from_literal 4_200_000))) in
 
        assert_equal
@@ -175,7 +175,7 @@ let suite =
        let tezos = make_tezos int_level in
 
        let touch_reward, checker =
-         Checker.touch checker ~tezos ~index:(Tez.of_mutez (Ligo.int_from_literal 1_200_000)) in
+         Checker.touch checker ~tezos ~index:(Ligo.tez_from_mutez_literal 1_200_000) in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
@@ -205,19 +205,19 @@ let suite =
          (Option.is_none (Burrow.liquidation_slices result));
 
        assert_equal
-         Tez.zero
+         (Ligo.tez_from_mutez_literal 0)
          (Burrow.collateral_at_auction result)
-         ~printer:Tez.show;
+         ~printer:Ligo.string_of_tez;
 
        let (tez_from_bid, _checker) = assert_ok @@
          Checker.liquidation_auction_reclaim_winning_bid
            checker
            ~tezos
-           ~call:{sender=alice; amount=Tez.zero;}
+           ~call:{sender=alice; amount=(Ligo.tez_from_mutez_literal 0);}
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice; amount = Tez.of_mutez (Ligo.int_from_literal 3_155_960);})
+         (Tez.{destination = alice; amount = Ligo.tez_from_mutez_literal 3_155_960;})
          tez_from_bid
          ~printer:Tez.show_payment;
     );

@@ -58,7 +58,7 @@ type nat
      The only size limit to natural numbers is gas.
 *)
 
-val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" ssiffix. *)
+val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" suffix. *)
 val compare_nat : nat -> nat -> Int.t (* NON-LIGO *)
 val string_of_nat : nat -> string     (* NON-LIGO *)
 
@@ -69,6 +69,14 @@ type timestamp
 val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)
 val compare_timestamp : timestamp -> timestamp -> Int.t (* NON-LIGO *)
 val string_of_timestamp : timestamp -> string           (* NON-LIGO *)
+
+type tez
+(**
+    A specific type for tokens.
+*)
+val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "mutez" suffix. *)
+val compare_tez : tez -> tez -> Int.t     (* NON-LIGO *)
+val string_of_tez : tez -> string         (* NON-LIGO *)
 
 (* type key *)
 (**
@@ -107,19 +115,7 @@ val string_of_timestamp : timestamp -> string           (* NON-LIGO *)
     A sequence of characters.
 *)
 
-(* type tez *)
-(**
-    A specific type for tokens.
-*)
-
 (* type unit *)
-
-(* val is_nat: int -> nat option *)
-(**
-   Convert an int to a nat if possible.
-
-   Note that Michelson.is_nat is deprecated. Please use is_nat instead.
-*)
 
 (* val abs: int -> nat *)
 (**
@@ -149,8 +145,6 @@ val string_of_timestamp : timestamp -> string           (* NON-LIGO *)
 *)
 
 (* val ediv_int_int : int -> int -> (int * nat) option *)
-
-(* val ediv_tez_nat : tez -> nat -> (tez * tez) option *)
 
 (* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
@@ -196,11 +190,25 @@ val abs : int -> nat                (* IN LIGO: abs *)
 val is_nat : int -> nat option      (* IN LIGO: is_nat *)
 
 (* OPERATIONS ON timestamp *)
-
 val add_timestamp_int : timestamp -> int -> timestamp       (* IN LIGO: ( + ) *)
 val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
 
-(* val add_tez_tez : tez -> tez -> tez *)
+(* OPERATIONS ON tez *)
+val add_tez_tez : tez -> tez -> tez (* IN LIGO: ( + ) *)
+val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( - ) *)
+val mul_nat_tez : nat -> tez -> tez (* IN LIGO: ( * ) *)
+val mul_tez_nat : tez -> nat -> tez (* IN LIGO: ( * ) *)
+val ediv_tez_nat : tez -> nat -> (tez * tez) option
+
+val eq_tez_tez : tez -> tez -> bool  (* IN LIGO: ( = ) *)
+val lt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( < ) *)
+val leq_tez_tez : tez -> tez -> bool (* IN LIGO: ( <= ) *)
+val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
+
+val tez_min : tez -> tez -> tez (* NON-LIGO. *)
+val tez_max : tez -> tez -> tez (* NON-LIGO. *)
+
+val tez_to_mutez : tez -> int (* NON-LIGO. *)
 
 (* val add_nat_int : nat -> int -> int *)
 
@@ -228,12 +236,6 @@ val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
  * we can construct by giving a number of tez or mutez.
 *)
 
-(* Multiplications *)
-
-(* val mul_nat_tez : nat -> tez -> tez *)
-
-(* val mul_tez_nat : tez -> nat -> tez *)
-
 (* TODO: arithmetic shim functions *)
 
 (* BEGIN_OCAML *)
@@ -241,5 +243,6 @@ val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
 val pp_address : Format.formatter -> address -> unit
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
+val pp_tez : Format.formatter -> tez -> unit
 val pp_timestamp : Format.formatter -> timestamp -> unit
 val format_int : string -> int -> string

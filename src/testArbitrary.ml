@@ -1,12 +1,12 @@
 
-let arb_tez = QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(0 -- max_int)
+let arb_tez = QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(0 -- max_int)
 
-let arb_positive_tez = QCheck.map (fun x -> Tez.of_mutez (Ligo.int_from_literal x)) QCheck.(1 -- max_int)
+let arb_positive_tez = QCheck.map (fun x -> Ligo.tez_from_mutez_literal x) QCheck.(1 -- max_int)
 
 (* somewhere between 0 and 3 tez *)
 let arb_small_tez =
   QCheck.map
-    (fun x -> Tez.of_mutez (Ligo.int_from_literal x))
+    (fun x -> Ligo.tez_from_mutez_literal x)
     QCheck.(1 -- ((max_int / 479_988_656_967) / 4))
 
 let arb_kit = QCheck.map (fun x -> Kit.of_mukit (Ligo.int_from_literal x)) QCheck.(0 -- max_int)

@@ -6,7 +6,7 @@ let fliquidation : Ratio.t = Ratio.make (Ligo.int_from_literal 19) (Ligo.int_fro
 
 (** Number of tez needed to be given for the creation of a burrow; it does
   * not count towards the burrow's collateral. *)
-let creation_deposit : Tez.t = Tez.one
+let creation_deposit : Ligo.tez = Ligo.tez_from_mutez_literal 1_000_000
 
 (** Yearly burrow fee percentage. *)
 let burrow_fee_percentage : Ratio.t = Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 1000) (* 0.005 *)
@@ -25,7 +25,7 @@ let uniswap_fee : Ratio.t = Ratio.make (Ligo.int_from_literal 2) (Ligo.int_from_
 let protected_index_epsilon : Ratio.t = Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 600000)
 
 (** The maximum number of tez that can be in an auction lot. *)
-let max_lot_size : Tez.t = Tez.of_mutez (Ligo.int_from_literal 10_000_000_000)
+let max_lot_size : Ligo.tez = Ligo.tez_from_mutez_literal 10_000_000_000
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
 let min_lot_auction_queue_fraction : FixedPoint.t =
