@@ -177,11 +177,13 @@ let mul_nat_tez = Z.mul
 
 let mul_tez_nat = Z.mul
 
+let div_tez_tez x y =
+  try Z.div x y
+  with Division_by_zero -> failwith "Ligo.div_tez_tez: zero denominator"
+
 let ediv_tez_nat n d =
   try Some (Z.ediv_rem n d)
   with Division_by_zero -> None
-
-let compare_tez = Z.compare
 
 let string_of_tez x = Z.to_string x ^ "mutez"
 
@@ -194,9 +196,3 @@ let lt_tez_tez = Z.lt
 let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
-
-let tez_min x y = if leq_tez_tez x y then x else y
-
-let tez_max x y = if geq_tez_tez x y then x else y
-
-let tez_to_mutez x = x

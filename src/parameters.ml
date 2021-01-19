@@ -36,10 +36,10 @@ let make_initial (ts: Ligo.timestamp) : t =
   }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: t) : Ligo.tez = Ligo.tez_max p.index p.protected_index
+let tz_minting (p: t) : Ligo.tez = Common.tez_max p.index p.protected_index
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: t) : Ligo.tez = Ligo.tez_min p.index p.protected_index
+let tz_liquidation (p: t) : Ligo.tez = Common.tez_min p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: t) : Ratio.t =
@@ -181,7 +181,7 @@ let touch
       (Ratio.mul
          (Ratio.of_tez parameters.protected_index)
          (clamp
-            (Ratio.make (Ligo.tez_to_mutez current_index) (Ligo.tez_to_mutez parameters.protected_index))
+            (Ratio.make (Common.tez_to_mutez current_index) (Common.tez_to_mutez parameters.protected_index))
             lower_lim
             upper_lim
          )

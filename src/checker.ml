@@ -484,7 +484,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
       let corresponding_kit =
         Kit.of_ratio_floor
           (Ratio.mul
-             (Ratio.make (Ligo.tez_to_mutez leaf.tez) (Ligo.tez_to_mutez outcome.sold_tez))
+             (Ratio.make (Common.tez_to_mutez leaf.tez) (Common.tez_to_mutez outcome.sold_tez))
              (Kit.to_ratio outcome.winning_bid.kit)
           ) in
       let penalty =

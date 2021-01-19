@@ -51,7 +51,7 @@ let to_nat_ceil x =
   else
     Ligo.abs (Ligo.cdiv_int_int x.num x.den)
 
-let of_tez x = { num = Ligo.tez_to_mutez x; den = Ligo.int_from_literal 1_000_000; }
+let of_tez x = { num = Common.tez_to_mutez x; den = Ligo.int_from_literal 1_000_000; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_tez_floor x =

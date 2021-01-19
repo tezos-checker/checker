@@ -153,7 +153,7 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~tezos ~deadline =
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
     let price = Ratio.div (Kit.to_ratio uniswap_kit) (Ratio.of_tez uniswap.tez) in
-    let slippage = Ratio.make (Ligo.tez_to_mutez uniswap.tez) (Ligo.tez_to_mutez (Ligo.add_tez_tez uniswap.tez amount)) in
+    let slippage = Ratio.make (Common.tez_to_mutez uniswap.tez) (Common.tez_to_mutez (Ligo.add_tez_tez uniswap.tez amount)) in
     let return =
       Kit.of_ratio_floor
         (Ratio.mul
@@ -250,13 +250,13 @@ let add_liquidity (uniswap: t) ~tezos ~amount ~pending_accrual ~max_kit_deposite
       Ratio.to_nat_floor
         (Ratio.mul
            (Ratio.of_nat uniswap_lqt)
-           (Ratio.make (Ligo.tez_to_mutez amount) (Ligo.tez_to_mutez effective_tez_balance))
+           (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
         ) in
     let kit_deposited =
       Kit.of_ratio_ceil
         (Ratio.mul
            (Kit.to_ratio uniswap_kit)
-           (Ratio.make (Ligo.tez_to_mutez amount) (Ligo.tez_to_mutez effective_tez_balance))
+           (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
         ) in
     if lqt_minted < min_lqt_minted then
       Error AddLiquidityTooLowLiquidityMinted

@@ -68,10 +68,10 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
        let pending_accrual = (Ligo.tez_from_mutez_literal 0) in
        let max_kit_deposited =
          let kit, _same_ticket = Kit.read_kit kit in
-         Kit.issue ~tezos (Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio kit) (Ratio.make (Ligo.tez_to_mutez amount) (Ligo.tez_to_mutez tez)))) in
+         Kit.issue ~tezos (Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio kit) (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)))) in
        let min_lqt_minted =
          let (_, _, lqt), _same_ticket = Tezos.read_ticket lqt in
-         Ratio.to_nat_floor (Ratio.mul (Ratio.of_nat lqt) (Ratio.make (Ligo.tez_to_mutez amount) (Ligo.tez_to_mutez tez))) in
+         Ratio.to_nat_floor (Ratio.mul (Ratio.of_nat lqt) (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez tez))) in
        let deadline = Ligo.add_timestamp_int tezos.now (Ligo.int_from_literal 1) in (* always one second later *)
        (uniswap, tezos, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
@@ -104,7 +104,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
          if lqt_to_burn = Ligo.nat_from_literal 0 || min_tez_withdrawn = (Ligo.tez_from_mutez_literal 0) || min_kit_withdrawn = Kit.zero then
            let lqt_to_burn =
              let least_kit_percentage = (Ratio.div (Kit.to_ratio (Kit.of_mukit (Ligo.int_from_literal 1))) (Kit.to_ratio kit)) in
-             let least_tez_percentage = Ratio.make (Ligo.tez_to_mutez (Ligo.tez_from_mutez_literal 1)) (Ligo.tez_to_mutez tez) in
+             let least_tez_percentage = Ratio.make (Common.tez_to_mutez (Ligo.tez_from_mutez_literal 1)) (Common.tez_to_mutez tez) in
              let as_q = (Ratio.mul (Ratio.of_nat lqt) (Ratio.max least_kit_percentage least_tez_percentage)) in
              Option.get (Ligo.is_nat (Ligo.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in

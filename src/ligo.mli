@@ -76,8 +76,6 @@ type tez
     A specific type for tokens.
 *)
 val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "mutez" suffix. *)
-val compare_tez : tez -> tez -> Int.t     (* NON-LIGO *)
-val string_of_tez : tez -> string         (* NON-LIGO *)
 
 (* type key *)
 (**
@@ -199,17 +197,14 @@ val add_tez_tez : tez -> tez -> tez (* IN LIGO: ( + ) *)
 val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( - ) *)
 val mul_nat_tez : nat -> tez -> tez (* IN LIGO: ( * ) *)
 val mul_tez_nat : tez -> nat -> tez (* IN LIGO: ( * ) *)
-val ediv_tez_nat : tez -> nat -> (tez * tez) option
+val div_tez_tez : tez -> tez -> nat (* IN LIGO: ( / ) *)
+
+val ediv_tez_nat : tez -> nat -> (tez * tez) option (* IN LIGO: ediv *)
 
 val eq_tez_tez : tez -> tez -> bool  (* IN LIGO: ( = ) *)
 val lt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( < ) *)
 val leq_tez_tez : tez -> tez -> bool (* IN LIGO: ( <= ) *)
 val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
-
-val tez_min : tez -> tez -> tez (* NON-LIGO. *)
-val tez_max : tez -> tez -> tez (* NON-LIGO. *)
-
-val tez_to_mutez : tez -> int (* NON-LIGO. *)
 
 (* val add_nat_int : nat -> int -> int *)
 
@@ -240,6 +235,7 @@ val tez_to_mutez : tez -> int (* NON-LIGO. *)
 (* TODO: arithmetic shim functions *)
 
 (* BEGIN_OCAML *)
+val string_of_tez : tez -> string
 
 val pp_address : Format.formatter -> address -> unit
 val pp_int : Format.formatter -> int -> unit

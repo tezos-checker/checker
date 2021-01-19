@@ -178,7 +178,7 @@ let split (amount: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * l
     Kit.of_ratio_ceil
       (Ratio.mul
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Ligo.tez_to_mutez ltez) (Ligo.tez_to_mutez slice.tez))
+         (Ratio.make (Common.tez_to_mutez ltez) (Common.tez_to_mutez slice.tez))
       ) in
   (* right slice *)
   let rtez = Ligo.sub_tez_tez slice.tez amount in
@@ -186,7 +186,7 @@ let split (amount: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * l
     Kit.of_ratio_ceil
       (Ratio.mul
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Ligo.tez_to_mutez rtez) (Ligo.tez_to_mutez slice.tez))
+         (Ratio.make (Common.tez_to_mutez rtez) (Common.tez_to_mutez slice.tez))
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
@@ -217,7 +217,7 @@ let start_auction_if_possible
   | None ->
     let queued_amount = Avl.avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
-      Ligo.tez_max
+      Common.tez_max
         Constants.max_lot_size
         (Ratio.to_tez_floor
            (Ratio.mul
