@@ -55,4 +55,4 @@ let mem_del (mem: mem) (k: ptr) : mem =
   (* BEGIN_OCAML *) ops := { !ops with writes = !ops.writes + 1; }; (* END_OCAML *)
   let {mem=mem; last_ptr=last_ptr} = mem in
   assert (Ligo.Big_map.mem k mem);
-  { mem=Ligo.Big_map.update k None mem; last_ptr=last_ptr }
+  { mem=Ligo.Big_map.update k (None: node option) mem; last_ptr=last_ptr }
