@@ -4,6 +4,7 @@ module Big_map : sig
   val empty : ('key, 'value) big_map
   val find_opt : 'key -> ('key, 'value) big_map -> 'value option
   val update: 'key -> 'value option -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val mem: 'key -> ('key, 'value) big_map -> bool
 
   (*NON_LIGO*)
   val bindings : ('key, 'value) big_map -> ('key * 'value) list

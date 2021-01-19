@@ -1,5 +1,5 @@
 type liquidation_slices =
-  { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
+  { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
 
 val show_liquidation_slices : liquidation_slices -> string
 val pp_liquidation_slices : Format.formatter -> liquidation_slices -> unit
@@ -88,14 +88,14 @@ val touch : Parameters.t -> t -> t
   * pointers to the liquidation queue accordingly (which is a no-op if we are
   * not deleting the youngest or the oldest liquidation slice). *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val return_kit_from_auction : Avl.leaf_ptr -> LiquidationAuction.liquidation_slice -> Kit.t -> t -> t
+val return_kit_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> Kit.t -> t -> t
 
 (** Cancel the liquidation of a slice. That is, (a) return the tez that is part
   * of a liquidation slice back to the burrow and (b) adjust the burrow's
   * pointers to the liquidation queue accordingly (which is a no-op if we are
   * not deleting the youngest or the oldest liquidation slice). *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val return_slice_from_auction : Avl.leaf_ptr -> LiquidationAuction.liquidation_slice -> t -> t
+val return_slice_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> t -> t
 
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
@@ -180,6 +180,6 @@ val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
 val request_liquidation : Parameters.t -> t -> liquidation_result
-val oldest_liquidation_ptr : t -> Avl.leaf_ptr option
+val oldest_liquidation_ptr : t -> LiquidationAuctionTypes.leaf_ptr option
 
 val assert_invariants : t -> unit

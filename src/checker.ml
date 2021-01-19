@@ -55,14 +55,13 @@ let assert_invariants (state: 't) : unit =
           * tez inside is consistent with collateral_at_auction.
          *)
          let rec go
-             (curr: Avl.leaf_ptr)
-             (prev: Avl.leaf_ptr option) : Ligo.tez =
-           let (slice, tez) =
+             (curr: LiquidationAuctionTypes.leaf_ptr)
+             (prev: LiquidationAuctionTypes.leaf_ptr option) : Ligo.tez =
+           let slice =
              Avl.read_leaf
                (state.liquidation_auctions.avl_storage)
                curr in
            assert (slice.burrow = burrow_address);
-           assert (slice.tez = tez);
            assert (slice.younger = prev);
            match slice.older with
            | Some next ->
@@ -333,7 +332,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
   | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
   | Partial details | Complete details | Close details ->
     let liquidation_slice =
-      LiquidationAuction.{
+      LiquidationAuctionTypes.{
         burrow = burrow_id;
         tez = details.tez_to_auction;
         min_kit_for_unwarranted = details.min_kit_for_unwarranted;
@@ -364,7 +363,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
           match older with
           | Leaf l -> Leaf
                         { l with value = { l.value with younger = Some leaf_ptr; }; }
-          | _ -> (failwith "impossible" : (LiquidationAuction.liquidation_slice, LiquidationAuction.auction_outcome option) Avl.node)
+          | _ -> (failwith "impossible" : LiquidationAuctionTypes.node)
       ) in
 
       (* Update the burrow's liquidation slices with the pointer to the newly
@@ -387,7 +386,7 @@ let mark_for_liquidation (state:t) ~(call:Call.t) ~burrow_id =
  * to point to each other instead of the slice in question, so that it can be
  * removed. *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-let update_immediate_neighbors state (leaf_ptr: Avl.leaf_ptr) (leaf : LiquidationAuction.liquidation_slice) =
+let update_immediate_neighbors state (leaf_ptr: LiquidationAuctionTypes.leaf_ptr) (leaf : LiquidationAuctionTypes.liquidation_slice) =
   (* update the younger *)
   let state = (
     match leaf.younger with
@@ -426,7 +425,7 @@ let update_immediate_neighbors state (leaf_ptr: Avl.leaf_ptr) (leaf : Liquidatio
 
 (* Cancel the liquidation of a slice. The burden is on the caller to provide
  * both the burrow_id and the leaf_ptr. *)
-let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (leaf_ptr: Avl.leaf_ptr): (t, Error.error) result =
+let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): (t, Error.error) result =
   with_no_tez_given call @@ fun () ->
   with_existing_burrow state burrow_id @@ fun burrow ->
   with_valid_permission ~tezos ~permission ~burrow_id ~burrow @@ fun r ->
@@ -437,7 +436,7 @@ let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (lea
     if root <> state.liquidation_auctions.queued_slices
     then Error UnwarrantedCancellation
     else
-      let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+      let leaf = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       match Ligo.Big_map.find_opt leaf.burrow state.burrows with
       | None -> (failwith "invariant violation" : (t, Error.error) result)
@@ -464,7 +463,7 @@ let cancel_liquidation_slice (state: t) ~tezos ~call ~permission ~burrow_id (lea
         assert_invariants state;
         Ok state
 
-let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
+let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): t =
   let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
   match Avl.root_data state.liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
@@ -474,7 +473,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
   (* If it belongs to a completed auction, we delete the slice *)
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
-    let (leaf, _) = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+    let leaf = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
     (* How much kit should be given to the burrow and how much should be burned. *)
     (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
@@ -549,7 +548,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: Avl.leaf_ptr): t =
     assert_invariants state;
     state
 
-let touch_liquidation_slices (state: t) (slices: Avl.leaf_ptr list) : t =
+let touch_liquidation_slices (state: t) (slices: LiquidationAuctionTypes.leaf_ptr list) : t =
   List.fold_left touch_liquidation_slice state slices
 
 (* ************************************************************************* *)
@@ -641,7 +640,8 @@ let liquidation_auction_place_bid state ~tezos ~(call:Call.t) ~kit =
   with_no_tez_given call @@ fun () ->
   Kit.with_valid_kit_token ~tezos kit @@ fun kit ->
   let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
-  let bid = LiquidationAuction.{ address=call.sender; kit=kit; } in
+
+  let bid = LiquidationAuctionTypes.{ address=call.sender; kit=kit; } in
   match
     LiquidationAuction.with_current_auction state.liquidation_auctions @@
     fun auction -> LiquidationAuction.place_bid tezos auction bid with

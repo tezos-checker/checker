@@ -1,4 +1,5 @@
 open Ptr
+open LiquidationAuctionTypes
 
 (*
  * BigMap
@@ -12,47 +13,46 @@ open Ptr
  * int64 is big enough that it shouldn't be an issue.
  *)
 
-module M = Map.Make(Ptr)
-type 'a t = 'a M.t
+type mem = {
+  mem: (ptr, node) Ligo.big_map;
+  last_ptr: ptr;
+}
 
+(* BEGIN_OCAML *)
 type ops = { reads: int; writes: int }
 [@@deriving show]
 let ops: ops ref = ref { reads=0; writes=0 }
 let reset_ops () = ops := { reads=0; writes=0 }
+(* END_OCAML *)
 
-type ptr = Ptr.t [@@deriving show]
+let mem_empty = {last_ptr = ptr_null; mem = (Ligo.Big_map.empty: (ptr, node) Ligo.big_map); }
 
-let mem_next_ptr (m: 'a M.t): ptr =
-  match M.max_binding_opt m with
-  | None -> ptr_init
-  | Some (t, _) -> ptr_next t
+(* BEGIN_OCAML *)
+let mem_bindings (mem: mem) = Ligo.Big_map.bindings mem.mem
+(* END_OCAML *)
 
-let is_null (p: ptr) = p = ptr_null
+let mem_set (m: mem) (k: ptr) (v: node) : mem =
+  (* BEGIN_OCAML *) ops := { !ops with writes = !ops.writes + 1; }; (* END_OCAML *)
+  { m with mem = Ligo.Big_map.update k (Some v) m.mem }
 
-let empty = M.empty
-let is_empty = M.is_empty
-let bindings = M.bindings
+let mem_new (m: mem) (v: node) : mem * ptr =
+  let ptr = ptr_next m.last_ptr in
+  let m =
+    { mem = Ligo.Big_map.update ptr (Some v) m.mem;
+      last_ptr = ptr; } in
+  (m, ptr)
 
-let mem_set (m: 'a M.t) (k: ptr) (v: 'a) : 'a M.t =
-  ops := { !ops with writes = !ops.writes + 1; };
-  M.add k v m
+let mem_get (m: mem) (k: ptr) : node =
+  (* BEGIN_OCAML *) ops := { !ops with reads = !ops.reads + 1; }; (* END_OCAML *)
+  match Ligo.Big_map.find_opt k m.mem with
+  | Some v -> v
+  | None -> (failwith "mem_get: not found": node)
 
-let mem_new (m: 'a M.t) (v: 'a) : 'a M.t * ptr =
-  let ptr = mem_next_ptr m in
-  (mem_set m ptr v, ptr)
+let mem_update (m: mem) (k: ptr) (f: node -> node) : mem =
+  mem_set m k (f (mem_get m k))
 
-let mem_get (m: 'a M.t) (k: ptr) : 'a =
-  ops := { !ops with reads = !ops.reads + 1; };
-  M.find k m
-
-let mem_update (m: 'a M.t) (k: ptr) (f: 'a -> 'a) : 'a M.t =
-  mem_set m k @@ f (mem_get m k)
-
-let mem_del (m: 'a M.t) (k: ptr) : 'a M.t =
-  assert (M.mem k m);
-  ops := { !ops with writes = !ops.writes + 1; };
-  M.remove k m
-
-module Foo = struct
-  type ('k, 'v) map = ('k, 'v) Hashtbl.t
-end
+let mem_del (mem: mem) (k: ptr) : mem =
+  (* BEGIN_OCAML *) ops := { !ops with writes = !ops.writes + 1; }; (* END_OCAML *)
+  let {mem=mem; last_ptr=last_ptr} = mem in
+  assert (Ligo.Big_map.mem k mem);
+  { mem=Ligo.Big_map.update k None mem; last_ptr=last_ptr }

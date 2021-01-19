@@ -67,6 +67,8 @@ Utku: Lifecycle of liquidation slices.
    this case, we transfer the result to the callee, and remove the auction alltogether.
 *)
 
+open LiquidationAuctionTypes
+
 type Error.error +=
   | NoOpenAuction
   | BidTooLow
@@ -76,17 +78,7 @@ type Error.error +=
   | LiquidationQueueTooLong
   | InvalidLiquidationAuctionTicket
 
-type liquidation_slice = {
-  burrow: Ptr.t;
-  tez: Ligo.tez;
-  min_kit_for_unwarranted: Kit.t;
-  older: Avl.leaf_ptr option;
-  younger: Avl.leaf_ptr option;
-}
-[@@deriving show]
-
-type auction_id = Avl.avl_ptr
-type bid = { address: Ligo.address; kit: Kit.t } [@@deriving show]
+type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
 type bid_ticket = bid_details Tezos.ticket
 
@@ -121,40 +113,32 @@ type auction_state =
 [@@deriving show]
 
 type current_auction = {
-  contents: Avl.avl_ptr;
+  contents: avl_ptr;
   state: auction_state;
 }
 [@@deriving show]
 
-type auction_outcome = {
-  sold_tez: Ligo.tez;
-  winning_bid: bid;
-  younger_auction: Avl.avl_ptr option;
-  older_auction: Avl.avl_ptr option;
-}
-[@@deriving show]
-
 type completed_auctions =
-  { youngest: Avl.avl_ptr
-  ; oldest: Avl.avl_ptr
+  { youngest: avl_ptr
+  ; oldest: avl_ptr
   }
 [@@deriving show]
 
 module AvlPtrMap =
   Map.Make(struct
-    type t = Avl.avl_ptr
-    let compare (Avl.AVLPtr a) (Avl.AVLPtr b) = Ptr.compare a b end)
+    type t = avl_ptr
+    let compare (AVLPtr a) (AVLPtr b) = Ptr.compare a b end)
 
 type auctions = {
-  avl_storage: (liquidation_slice, auction_outcome option) Avl.mem;
+  avl_storage: Mem.mem;
 
-  queued_slices: Avl.avl_ptr;
+  queued_slices: avl_ptr;
   current_auction: current_auction option;
   completed_auctions: completed_auctions option;
 }
 
 let empty : auctions =
-  let avl_storage = Mem.empty in
+  let avl_storage = Mem.mem_empty in
   let (avl_storage, queued_slices) = Avl.mk_empty avl_storage None in
   { avl_storage = avl_storage;
     queued_slices = queued_slices;
@@ -169,13 +153,13 @@ let empty : auctions =
 let send_to_auction
     (auctions: auctions)
     (slice: liquidation_slice)
-  : (auctions * Avl.leaf_ptr, Error.error) result =
+  : (auctions * leaf_ptr, Error.error) result =
   if Avl.avl_height auctions.avl_storage auctions.queued_slices
      >= Constants.max_liquidation_queue_height then
     Error LiquidationQueueTooLong
   else
     let (new_storage, ret) =
-      Avl.push_back auctions.avl_storage auctions.queued_slices slice slice.tez in
+      Avl.push_back auctions.avl_storage auctions.queued_slices slice in
     let new_state = { auctions with avl_storage = new_storage; } in
     Ok (new_state, ret)
 
@@ -218,8 +202,8 @@ let take_with_splitting storage queued_slices split_threshold =
     match next with
     | Some slice ->
       let (part1, part2) = split (Ligo.sub_tez_tez split_threshold queued_amount) slice in
-      let (storage, _) = Avl.push_front storage queued_slices part2 part2.tez in
-      let (storage, _) = Avl.push_back storage new_auction part1 part1.tez in
+      let (storage, _) = Avl.push_front storage queued_slices part2 in
+      let (storage, _) = Avl.push_back storage new_auction part1 in
       (storage, new_auction)
     | None ->
       (storage, new_auction)
@@ -404,7 +388,7 @@ let reclaim_bid
     Ok bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
-let pop_completed_auction (auctions: auctions) (tree: Avl.avl_ptr) : auctions =
+let pop_completed_auction (auctions: auctions) (tree: avl_ptr) : auctions =
   let storage = auctions.avl_storage in
 
   let outcome = match Avl.root_data storage tree with
@@ -509,12 +493,12 @@ let current_auction_tez (auctions: auctions) : Ligo.tez option =
  * TODO: when liquidation result was "close", what happens after the tez is sold? Might we find that we didn't need to close it after all?
  *)
 
-let oldest_completed_liquidation_slice (auctions: auctions) : Avl.leaf_ptr option =
+let oldest_completed_liquidation_slice (auctions: auctions) : leaf_ptr option =
   match auctions.completed_auctions with
   | None -> None
   | Some completed_auctions ->
     match Avl.peek_front auctions.avl_storage completed_auctions.youngest with
-    | None -> (failwith "invariant violation: empty auction in completed_auctions" : Avl.leaf_ptr option)
+    | None -> (failwith "invariant violation: empty auction in completed_auctions" : leaf_ptr option)
     | Some (leaf_ptr, _) -> Some leaf_ptr
 
 (* Test utilities *)
@@ -524,9 +508,9 @@ let assert_invariants (auctions: auctions) : unit =
 
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
-  let roots = Mem.bindings mem
-              |> List.filter (fun (_, n) -> match n with | Avl.Root _ -> true; | _ -> false)
-              |> List.map (fun (p, _) -> Avl.AVLPtr p) in
+  let roots = Ligo.Big_map.bindings mem.mem
+              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionTypes.Root _ -> true; | _ -> false)
+              |> List.map (fun (p, _) -> AVLPtr p) in
   List.iter (Avl.assert_invariants mem) roots;
 
   (* There are no dangling pointers in the storage. *)
@@ -535,7 +519,7 @@ let assert_invariants (auctions: auctions) : unit =
   (* Completed_auctions linked list is correct. *)
   auctions.completed_auctions
   |> Option.iter (fun completed_auctions ->
-      let rec go (curr: Avl.avl_ptr) (prev: Avl.avl_ptr option) =
+      let rec go (curr: avl_ptr) (prev: avl_ptr option) =
         let curr_data = Option.get (Avl.root_data mem curr) in
         assert (curr_data.younger_auction = prev);
         match curr_data.older_auction with

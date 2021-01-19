@@ -6,10 +6,12 @@ type ('key, 'value) big_map = ('key * 'value) list
 
 module Big_map = struct
   let empty = []
+
   let rec find_opt (k: 'key) (m: ('key, 'value) big_map) : 'value option =
     match m with
     | [] -> None
     | ((k', v')::xs) -> if k = k' then Some v' else find_opt k xs
+
   let rec update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
     match m with
     | [] -> (match v with | Some v -> [(k, v)] | None -> [])
@@ -18,9 +20,11 @@ module Big_map = struct
       then match v with
         | Some v -> (k, v) :: xs
         | None -> xs
-      else (k', v') :: update k v m
+      else (k', v') :: update k v xs
+
   let bindings i = i
 
+  let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
 end
 
 (* address *)

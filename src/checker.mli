@@ -135,7 +135,7 @@ val mark_for_liquidation :
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : t -> Avl.leaf_ptr list -> t
+val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
@@ -152,7 +152,7 @@ val cancel_liquidation_slice :
   call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
-  Avl.leaf_ptr ->
+  LiquidationAuctionTypes.leaf_ptr ->
   (t, Error.error) result
 
 (** Perform maintainance tasks for the burrow. *)

@@ -1,5 +1,5 @@
 type liquidation_slices =
-  { oldest: Avl.leaf_ptr; youngest: Avl.leaf_ptr }
+  { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
 [@@deriving show]
 
 type t =
@@ -175,8 +175,8 @@ let touch (p: Parameters.t) (burrow: t) : t =
  * is the youngest or the oldest they won't. *)
 let remove_liquidation_slice
     (burrow : t)
-    (leaf_ptr: Avl.leaf_ptr)
-    (leaf : LiquidationAuction.liquidation_slice) (* NOTE: derived from the leaf_ptr *)
+    (leaf_ptr: LiquidationAuctionTypes.leaf_ptr)
+    (leaf : LiquidationAuctionTypes.liquidation_slice) (* NOTE: derived from the leaf_ptr *)
   : t =
   assert (leaf.tez >= Ligo.tez_from_mutez_literal 0);
   assert (burrow.collateral_at_auction >= leaf.tez);
@@ -205,8 +205,8 @@ let remove_liquidation_slice
       burrow
 
 let return_slice_from_auction
-    (leaf_ptr: Avl.leaf_ptr)
-    (leaf: LiquidationAuction.liquidation_slice)
+    (leaf_ptr: LiquidationAuctionTypes.leaf_ptr)
+    (leaf: LiquidationAuctionTypes.liquidation_slice)
     (burrow: t)
   : t =
   assert_invariants burrow;
@@ -218,8 +218,8 @@ let return_slice_from_auction
   { burrow with collateral = Ligo.add_tez_tez burrow.collateral leaf.tez; }
 
 let return_kit_from_auction
-    (leaf_ptr: Avl.leaf_ptr)
-    (leaf: LiquidationAuction.liquidation_slice)
+    (leaf_ptr: LiquidationAuctionTypes.leaf_ptr)
+    (leaf: LiquidationAuctionTypes.liquidation_slice)
     (kit: Kit.t)
     (burrow: t) : t =
   assert_invariants burrow;
@@ -559,7 +559,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
         min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
         burrow_state = final_burrow }
 
-let oldest_liquidation_ptr (b: t) : Avl.leaf_ptr option =
+let oldest_liquidation_ptr (b: t) : LiquidationAuctionTypes.leaf_ptr option =
   assert_invariants b;
   match b.liquidation_slices with
   | None -> None
