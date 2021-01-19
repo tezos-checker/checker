@@ -6,6 +6,8 @@ val int_max : Ligo.int -> Ligo.int -> Ligo.int
 val neg_int : Ligo.int -> Ligo.int
 val abs_int : Ligo.int -> Ligo.int
 
+val pow_int_nat : Ligo.int -> Ligo.nat -> Ligo.int
+
 (* OPERATIONS ON tez *)
 val tez_min : Ligo.tez -> Ligo.tez -> Ligo.tez
 val tez_max : Ligo.tez -> Ligo.tez -> Ligo.tez

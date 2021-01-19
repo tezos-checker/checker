@@ -258,9 +258,9 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
   | Descending (start_value, start_time) ->
     let auction_decay_rate = FixedPoint.of_ratio_ceil Constants.auction_decay_rate in
     let decay =
-      FixedPoint.pow
-        (FixedPoint.sub FixedPoint.one auction_decay_rate)
-        (Ligo.sub_timestamp_timestamp tezos.now start_time) in
+      match Ligo.is_nat (Ligo.sub_timestamp_timestamp tezos.now start_time) with
+      | None -> (failwith "TODO: is this possible?" : FixedPoint.t) (* TODO *)
+      | Some secs -> FixedPoint.pow (FixedPoint.sub FixedPoint.one auction_decay_rate) secs in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
     let bid_improvement_factor = FixedPoint.of_ratio_floor Constants.bid_improvement_factor in

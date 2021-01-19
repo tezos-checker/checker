@@ -11,7 +11,7 @@ val mul : t -> t -> t
 val div : t -> t -> t
 
 val neg : t -> t
-val pow : t -> Ligo.int -> t
+val pow : t -> Ligo.nat -> t
 val exp : t -> t
 
 (* Conversions to/from other types. *)

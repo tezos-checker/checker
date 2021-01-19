@@ -150,12 +150,12 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   | () when Ratio.lt (qexp (Ratio.neg target_low_bracket)) target && Ratio.lt target (qexp target_low_bracket) -> FixedPoint.zero
   (* Low acceleration (-/+) *)
   | () when Ratio.lt (qexp (Ratio.neg target_high_bracket)) target && Ratio.leq target (qexp (Ratio.neg target_low_bracket))
-    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
+    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
   | () when Ratio.gt (qexp (          target_high_bracket)) target && Ratio.geq target (qexp (          target_low_bracket))
-    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
+    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
   (* High acceleration (-/+) *)
-  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
-  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.int_from_literal 2)))
+  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
+  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
   | _ -> (failwith "impossible" : FixedPoint.t)
 
 (** Update the checker's parameters, given (a) the current timestamp

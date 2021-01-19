@@ -74,15 +74,6 @@ let cdiv_int_int = Z.cdiv
 
 let fdiv_int_int = Z.fdiv
 
-let pow_int_nat b e =
-  assert (e >= Z.zero);
-  assert (e <= Z.of_int max_int);
-  Z.pow b (Z.to_int e)
-
-let shift_right_trunc_int_nat = Z.shift_right_trunc
-
-let shift_left_int_nat = Z.shift_left
-
 let gcd_int_int = Z.gcd
 
 let of_string_base_int = Z.of_string_base
@@ -126,6 +117,10 @@ let nat_from_literal x =
     failwith "Ligo.nat_from_literal: negative"
   else
     Z.of_int x
+
+let ediv_nat_nat n d =
+  try Some (Z.ediv_rem n d)
+  with Division_by_zero -> None
 
 (* timestamp *)
 

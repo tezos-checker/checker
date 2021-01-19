@@ -1,8 +1,20 @@
 type t = Ligo.int
 
-let scaling_base = Ligo.int_from_literal 2
+(* let scaling_base = Ligo.int_from_literal 2 *)
 let scaling_exponent = 64
-let scaling_factor = Ligo.pow_int_nat scaling_base (Ligo.abs (Ligo.int_from_literal scaling_exponent)) (* FIXME *)
+(* TODO: 2 ^ 64 (= 18446744073709551616) is too big to fit in an int so we
+ * can't use just an int literal here (and our translation to ligo, thus).
+ * We'll have to manually edit this at the end, or some beta reduction
+ * simplifications or something. Keep in mind that this is a problem that goes
+ * beyond this constant; FixedPoint.of_hex_string was introduced to address
+ * this problem.
+ *
+ * let scaling_factor = Ligo.pow_int_nat scaling_base (Ligo.abs (Ligo.int_from_literal scaling_exponent))
+*)
+let scaling_factor =
+  let to_sixteen = Ligo.int_from_literal 65536 in  (* 2 ^ 16 *)
+  let to_thirty_two = Ligo.mul_int_int to_sixteen to_sixteen in (* 2 ^ 16 * 2 ^ 16 = 2 ^ 32 *)
+  Ligo.mul_int_int to_thirty_two to_thirty_two (* 2 ^ 32 * 2 ^ 32 = 2 ^ 64 *)
 
 (* Predefined values. *)
 let zero = Ligo.int_from_literal 0
@@ -11,44 +23,41 @@ let one = scaling_factor
 (* Arithmetic operations. *)
 let add x y = Ligo.add_int_int x y
 let sub x y = Ligo.sub_int_int x y
-let mul x y = Ligo.shift_right_trunc_int_nat (Ligo.mul_int_int x y) scaling_exponent
+let mul x y = Ligo.div_int_int (Ligo.mul_int_int x y) scaling_factor
 
 (* We round towards 0, for fixedpoint calculation, measuring things which are
  * inherently noisy, this is ok. Greater care must be excercised when doing
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
-let div x y = Ligo.div_int_int (Ligo.shift_left_int_nat x scaling_exponent) y
+let div x y = Ligo.div_int_int (Ligo.mul_int_int x scaling_factor) y
 let neg x = Common.neg_int x
 
-(* TODO: too slow. Make log(n) when you look at this again. *)
-(* TODO: I the type should be nat, not int here (exponent). *)
 let pow x y =
-  assert (Ligo.geq_int_int y (Ligo.int_from_literal 0));
-  if Ligo.eq_int_int y (Ligo.int_from_literal 0) then
+  if Ligo.eq_nat_nat y (Ligo.nat_from_literal 0) then
     one
   else
     Ligo.div_int_int
-      (Ligo.pow_int_nat x (Ligo.abs y)) (* FIXME *)
-      (Ligo.pow_int_nat scaling_factor (Ligo.abs (Ligo.sub_int_int y (Ligo.int_from_literal 1)))) (* FIXME *)
+      (Common.pow_int_nat x y)
+      (Common.pow_int_nat scaling_factor (Ligo.abs (Ligo.sub_int_int (Ligo.int y) (Ligo.int_from_literal 1))))
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amount + (amount * amount) / (one + one) *)
 let exp amount = add one amount
 
 (* Conversions to/from other types. *)
-let of_int amount = Ligo.shift_left_int_nat amount scaling_exponent
+let of_int amount = Ligo.mul_int_int amount scaling_factor
 
 let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
   let mantissa = match dotpos with
     | None -> Ligo.int_from_literal 1
-    | Some pos -> Ligo.pow_int_nat (Ligo.int_from_literal 16) (Ligo.abs (Ligo.int_from_literal (String.length str - pos - 1))) in (* FIXME *)
-  Ligo.div_int_int (Ligo.shift_left_int_nat (Ligo.of_string_base_int 16 without_dot) scaling_exponent) mantissa
+    | Some pos -> Common.pow_int_nat (Ligo.int_from_literal 16) (Ligo.abs (Ligo.int_from_literal (String.length str - pos - 1))) in (* FIXME *)
+  Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) scaling_factor) mantissa
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.shift_left_int_nat (Ratio.num amount) scaling_exponent) (Ratio.den amount)
-let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.shift_left_int_nat (Ratio.num amount) scaling_exponent) (Ratio.den amount)
+let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* Pretty printing functions (in hex, otherwise it's massive) *)

@@ -145,8 +145,6 @@ val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "m
 
 (* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
-(* val ediv_nat_nat : nat -> nat -> (nat * nat) option *)
-
 (* OPERATIONS ON int *)
 val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
@@ -161,9 +159,6 @@ val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
 val cdiv_int_int : int -> int -> int (* NON-LIGO *)
 val fdiv_int_int : int -> int -> int (* NON-LIGO *)
-val pow_int_nat : int -> nat -> int (* NON-LIGO *)
-val shift_right_trunc_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
-val shift_left_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
 val gcd_int_int : int -> int -> int (* NON-LIGO *)
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
@@ -181,6 +176,8 @@ val geq_nat_nat : nat -> nat -> bool (* IN LIGO: ( >= ) *)
 val int : nat -> int                (* IN LIGO: int *)
 val abs : int -> nat                (* IN LIGO: abs *)
 val is_nat : int -> nat option      (* IN LIGO: is_nat *)
+
+val ediv_nat_nat : nat -> nat -> (nat * nat) option (* IN LIGO: ediv *)
 
 (* OPERATIONS ON timestamp *)
 val add_timestamp_int : timestamp -> int -> timestamp       (* IN LIGO: ( + ) *)
