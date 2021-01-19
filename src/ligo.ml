@@ -62,6 +62,8 @@ let eq_int_int = Z.equal
 
 let lt_int_int = Z.lt
 
+let gt_int_int = Z.gt
+
 let leq_int_int = Z.leq
 
 let geq_int_int = Z.geq
@@ -83,21 +85,11 @@ let shift_left_int_nat = Z.shift_left
 
 let gcd_int_int = Z.gcd
 
-let sign_int = Z.sign
-
-let neg_int = Z.neg
-
-let abs_int = Z.abs
-
 let of_string_base_int = Z.of_string_base
 
 let div_rem_int_int = Z.div_rem
 
 let format_int = Z.format
-
-let int_min x y = if leq_int_int x y then x else y
-
-let int_max x y = if geq_int_int x y then x else y
 
 (* nat *)
 
@@ -146,8 +138,6 @@ let sub_timestamp_timestamp = Z.sub
 let string_of_timestamp = Z.to_string
 
 let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
-
-let compare_timestamp = Z.compare
 
 let timestamp_from_seconds_literal s =
   if s < 0 then

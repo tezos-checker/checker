@@ -24,12 +24,12 @@ let make_real n d =
 
 (* make and normalize any fraction *)
 let make n d =
-  let sd = Ligo.sign_int d in
-  if sd = 0 then
+  if Ligo.eq_int_int d (Ligo.int_from_literal 0) then
     failwith "Ratio.make: division by zero"
+  else if Ligo.gt_int_int d (Ligo.int_from_literal 0) then
+    make_real n d
   else
-  if sd > 0 then make_real n d else
-    make_real (Ligo.neg_int n) (Ligo.neg_int d)
+    make_real (Common.neg_int n) (Common.neg_int d)
 
 (* Conversions to/from other types. *)
 let of_bigint n = { num = n; den = Ligo.int_from_literal 1; }
@@ -39,14 +39,14 @@ let of_nat n = { num = Ligo.int n; den = Ligo.int_from_literal 1 }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_nat_floor x =
-  if Ligo.sign_int x.num = -1 then
+  if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
     failwith "Ratio.to_nat_floor: negative"
   else
     Ligo.abs (Ligo.fdiv_int_int x.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_nat_ceil x =
-  if Ligo.sign_int x.num = -1 then
+  if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
     failwith "Ratio.to_nat_ceil: negative"
   else
     Ligo.abs (Ligo.cdiv_int_int x.num x.den)
@@ -84,7 +84,13 @@ let one = { num = Ligo.int_from_literal 1; den = Ligo.int_from_literal 1; }
 let minus_one = { num = Ligo.int_from_literal (-1); den = Ligo.int_from_literal 1; }
 
 (* NOTE: this implementation relies on the fact that the rationals are normalized. *)
-let sign x = Ligo.sign_int x.num
+let sign x =
+  if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
+    -1
+  else if Ligo.eq_int_int x.num (Ligo.int_from_literal 0) then
+    0
+  else
+    1
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let compare x y =
@@ -135,10 +141,10 @@ let gt x y = lt y x
 let to_bigint x = Ligo.div_int_int x.num x.den
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let neg x = { num = Ligo.neg_int x.num; den = x.den; }
+let neg x = { num = Common.neg_int x.num; den = x.den; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let abs x = { num = Ligo.abs_int x.num; den = x.den; }
+let abs x = { num = Common.abs_int x.num; den = x.den; }
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
@@ -171,18 +177,21 @@ let mul x y = make_real (Ligo.mul_int_int x.num y.num) (Ligo.mul_int_int x.den y
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let inv x =
-  match Ligo.sign_int x.num with
-  | 0 -> failwith "Ratio.inv: division by zero"
-  | 1 -> { num = x.den; den = x.num; }
-  | _ -> { num = Ligo.neg_int x.den; den = Ligo.neg_int x.num; }
+  if Ligo.eq_int_int x.num (Ligo.int_from_literal 0) then
+    failwith "Ratio.inv: division by zero"
+  else if Ligo.gt_int_int x.num (Ligo.int_from_literal 0) then
+    { num = x.den; den = x.num; }
+  else
+    { num = Common.neg_int x.den; den = Common.neg_int x.num; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let div x y =
-  if y.num = Ligo.int_from_literal 0 then
+  if Ligo.eq_int_int y.num (Ligo.int_from_literal 0) then
     failwith "Ratio.div: division by zero"
-  else if Ligo.sign_int y.num >= 0
-  then mul x { num = y.den; den = y.num; }
-  else mul x { num = Ligo.neg_int y.den; den = Ligo.neg_int y.num; }
+  else if Ligo.gt_int_int y.num (Ligo.int_from_literal 0) then
+    mul x { num = y.den; den = y.num; }
+  else
+    mul x { num = Common.neg_int y.den; den = Common.neg_int y.num; }
 
 (* Pretty printing functions *)
 let show n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)

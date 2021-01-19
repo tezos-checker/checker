@@ -18,7 +18,7 @@ let mul x y = Ligo.shift_right_trunc_int_nat (Ligo.mul_int_int x y) scaling_expo
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
 let div x y = Ligo.div_int_int (Ligo.shift_left_int_nat x scaling_exponent) y
-let neg x = Ligo.neg_int x
+let neg x = Common.neg_int x
 
 (* TODO: too slow. Make log(n) when you look at this again. *)
 (* TODO: I the type should be nat, not int here (exponent). *)
@@ -60,7 +60,7 @@ let show amount =
     else (String.make to_fill '0') ^ s in
 
   let sign = if amount < Ligo.int_from_literal 0 then "-" else "" in
-  let (upper, lower) = Ligo.div_rem_int_int (Ligo.abs_int amount) scaling_factor in
+  let (upper, lower) = Ligo.div_rem_int_int (Common.abs_int amount) scaling_factor in
 
   Format.sprintf "%s%s.%s"
     sign

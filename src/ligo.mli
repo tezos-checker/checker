@@ -68,8 +68,6 @@ type timestamp
     A date in the real world.
 *)
 val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)
-val compare_timestamp : timestamp -> timestamp -> Int.t (* NON-LIGO *)
-val string_of_timestamp : timestamp -> string           (* NON-LIGO *)
 
 type tez
 (**
@@ -157,6 +155,7 @@ val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
 
 val eq_int_int : int -> int -> bool  (* IN LIGO: ( = ) *)
 val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
+val gt_int_int : int -> int -> bool  (* IN LIGO: ( > ) *)
 val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
 val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
@@ -166,13 +165,8 @@ val pow_int_nat : int -> nat -> int (* NON-LIGO *)
 val shift_right_trunc_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
 val shift_left_int_nat : int -> Int.t -> int (* NON-LIGO, wrong type also, must be (int -> nat -> int) *)
 val gcd_int_int : int -> int -> int (* NON-LIGO *)
-val sign_int : int -> Int.t (* NON-LIGO, I think? *)
-val neg_int : int -> int (* NON-LIGO, I think? *)
-val abs_int : int -> int (* NON-LIGO. Ideally we should use Ligo.(abs : int -> nat) and then lift back to int? *)
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
-val int_min : int -> int -> int (* NON-LIGO. *)
-val int_max : int -> int -> int (* NON-LIGO. *)
 
 (* OPERATIONS ON nat *)
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
@@ -236,6 +230,7 @@ val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
 
 (* BEGIN_OCAML *)
 val string_of_tez : tez -> string
+val string_of_timestamp : timestamp -> string
 
 val pp_address : Format.formatter -> address -> unit
 val pp_int : Format.formatter -> int -> unit

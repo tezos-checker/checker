@@ -38,7 +38,7 @@ val geq: t -> t -> bool
  * with the ordering of rationals we provide here (OCaml's comparison will use
  * lexicographic ordering which is incorrect in this instance). *)
 val compare: t -> t -> int
-val sign: t -> int
+val sign: t -> int (* NOTE: for tests only *)
 
 val min: t -> t -> t
 val max: t -> t -> t
