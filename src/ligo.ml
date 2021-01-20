@@ -88,11 +88,11 @@ let geq_int_int = Z.geq
 
 let div_int_int = Z.div
 
+let mod_int_int = Z.rem
+
 let cdiv_int_int = Z.cdiv
 
 let fdiv_int_int = Z.fdiv
-
-let gcd_int_int = Z.gcd
 
 let of_string_base_int = Z.of_string_base
 
@@ -127,8 +127,6 @@ let is_nat x = if Z.lt x Z.zero then None else Some x
 let string_of_nat = Z.to_string
 
 let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
-
-let compare_nat = Z.compare
 
 let nat_from_literal x =
   if x < 0 then

@@ -58,9 +58,7 @@ type nat
 
      The only size limit to natural numbers is gas.
 *)
-
 val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" suffix. *)
-val compare_nat : nat -> nat -> Int.t (* NON-LIGO *)
 val string_of_nat : nat -> string     (* NON-LIGO *)
 
 type timestamp
@@ -150,6 +148,7 @@ val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
 val mul_int_int : int -> int -> int  (* IN LIGO: ( * ) *)
 val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
+val mod_int_int : int -> int -> nat  (* IN LIGO: mod, infix *)
 
 val eq_int_int : int -> int -> bool  (* IN LIGO: ( = ) *)
 val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
@@ -159,7 +158,6 @@ val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
 val cdiv_int_int : int -> int -> int (* NON-LIGO *)
 val fdiv_int_int : int -> int -> int (* NON-LIGO *)
-val gcd_int_int : int -> int -> int (* NON-LIGO *)
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
 

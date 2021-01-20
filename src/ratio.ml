@@ -9,9 +9,14 @@ type t = {
 let num x = x.num
 let den x = x.den
 
+let rec gcd_int_int (x: Ligo.int) (y: Ligo.int) : Ligo.int =
+  if y = Ligo.int_from_literal 0
+  then x
+  else gcd_int_int y (Ligo.int (Ligo.mod_int_int x y))
+
 (* normalize n/d, assuming d > 0 *)
 let normalize n d =
-  let g = Ligo.gcd_int_int n d in
+  let g = gcd_int_int n d in
   if g = Ligo.int_from_literal 1
   then { num = n; den = d }
   else { num = Ligo.div_int_int n g; den = Ligo.div_int_int d g; }
