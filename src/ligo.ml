@@ -1,28 +1,46 @@
-(* FIXME find an efficient implementation.
- *   Map: Does not have two type parameters.
- *   Hashtbl: Mutable.
+(* big_map's have two type parameters, but the ocaml's map type only has one (just for the value,
+   the key is a parameter to the Map.Make module). Below is the shortest way I was able to think of
+   to have an associative array with two type parameters. We abuse the polymorphic 'Hashtbl.hash :: 'a -> int'
+   and '=' functions to implement something similar to a hash table, where we use an immutable int map as
+   the underlying storage, and the collisions are handled by storing a list.
+   Please do refactor if you find a nice solution.
 *)
-type ('key, 'value) big_map = ('key * 'value) list
+module IntMap = Map.Make(Int)
+type ('key, 'value) big_map = ('key * 'value) list IntMap.t
 
 module Big_map = struct
-  let empty = []
+  let empty = IntMap.empty
 
-  let rec find_opt (k: 'key) (m: ('key, 'value) big_map) : 'value option =
-    match m with
-    | [] -> None
-    | ((k', v')::xs) -> if k = k' then Some v' else find_opt k xs
+  let find_opt (k: 'key) (m: ('key, 'value) big_map) : 'value option =
+    let hash = Hashtbl.seeded_hash 42 k in
+    Option.bind
+      (IntMap.find_opt hash m)
+      (List.find_map (fun (k', v') -> if k' = k then Some v' else None))
 
-  let rec update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
-    match m with
-    | [] -> (match v with | Some v -> [(k, v)] | None -> [])
-    | ((k', v')::xs) ->
-      if k = k'
-      then match v with
-        | Some v -> (k, v) :: xs
-        | None -> xs
-      else (k', v') :: update k v xs
+  let update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+    let hash = Hashtbl.seeded_hash 42 k in
+    IntMap.update
+      hash
+      (fun slot -> match slot with
+         | None  -> Option.map (fun v -> [(k, v)]) v
+         | Some slot ->
+           let rec go xs =
+             match xs with
+             | [] -> (match v with | Some v -> [(k, v)] | None -> [])
+             | ((k', v')::rest) ->
+               if k' = k
+               then match v with
+                 | Some v -> (k, v) :: rest
+                 | None -> rest
+               else (k', v') :: go rest in
+           match go slot with
+           | [] -> None
+           | xs -> Some xs
+      )
+      m
 
-  let bindings i = i
+  let bindings i =
+    IntMap.bindings i |> List.concat_map snd
 
   let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
 end

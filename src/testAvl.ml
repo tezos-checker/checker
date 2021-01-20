@@ -119,7 +119,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module IntSet = Set.Make(Int)
 
-let property_test_count = 10000
+let property_test_count = 100
 
 let suite =
   "AVLTests" >::: [
@@ -215,10 +215,6 @@ let suite =
        let expected = [] in
        assert_equal expected actual);
 
-    (* FIXME uncomment below when bigmap is performant again
-     * Currently our big_map performance is terrible, and these tests take forever.
-    *)
-    (*
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list TestArbitrary.arb_liquidation_slice)
      @@ fun xs ->
@@ -372,5 +368,4 @@ let suite =
            assert_equal actual xs
          )
     );
-    *)
   ]
