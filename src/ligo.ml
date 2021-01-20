@@ -53,10 +53,6 @@ let address_from_literal s = s
 
 let compare_address = String.compare
 
-let string_of_address s = s
-
-let pp_address = Format.pp_print_string
-
 (* int *)
 
 type int = Z.t
@@ -65,10 +61,6 @@ let int_from_literal = Z.of_int
 let int_from_int64 = Z.of_int64
 
 let compare_int = Z.compare
-
-let string_of_int = Z.to_string
-
-let pp_int fmt z = Format.pp_print_string fmt (string_of_int z)
 
 let add_int_int = Z.add
 
@@ -96,10 +88,6 @@ let fdiv_int_int = Z.fdiv
 
 let of_string_base_int = Z.of_string_base
 
-let div_rem_int_int = Z.div_rem
-
-let format_int = Z.format
-
 (* nat *)
 
 type nat = Z.t
@@ -124,10 +112,6 @@ let abs = Z.abs
 
 let is_nat x = if Z.lt x Z.zero then None else Some x
 
-let string_of_nat = Z.to_string
-
-let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
-
 let nat_from_literal x =
   if x < 0 then
     failwith "Ligo.nat_from_literal: negative"
@@ -145,10 +129,6 @@ type timestamp = Z.t
 let add_timestamp_int = Z.add
 
 let sub_timestamp_timestamp = Z.sub
-
-let string_of_timestamp = Z.to_string
-
-let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
 
 let timestamp_from_seconds_literal s =
   if s < 0 then
@@ -186,10 +166,6 @@ let ediv_tez_nat n d =
   try Some (Z.ediv_rem n d)
   with Division_by_zero -> None
 
-let string_of_tez x = Z.to_string x ^ "mutez"
-
-let pp_tez fmt z = Format.pp_print_string fmt (string_of_tez z)
-
 let eq_tez_tez = Z.equal
 
 let lt_tez_tez = Z.lt
@@ -197,3 +173,20 @@ let lt_tez_tez = Z.lt
 let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
+
+(* BEGIN_OCAML *)
+let string_of_int = Z.to_string
+let string_of_nat = Z.to_string
+let string_of_tez x = Z.to_string x ^ "mutez"
+let string_of_timestamp = Z.to_string
+let string_of_address s = s
+
+let pp_int fmt z = Format.pp_print_string fmt (string_of_int z)
+let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
+let pp_tez fmt z = Format.pp_print_string fmt (string_of_tez z)
+let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
+let pp_address = Format.pp_print_string
+
+let format_int = Z.format
+let div_rem_int_int = Z.div_rem
+(* END_OCAML *)

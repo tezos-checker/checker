@@ -201,6 +201,7 @@ let div x y =
   else
     mul x { num = Common.neg_int y.den; den = Common.neg_int y.num; }
 
-(* Pretty printing functions *)
+(* BEGIN_OCAML *)
 let show n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp f x = Format.pp_print_string f (show x)
+(* END_OCAML *)

@@ -54,6 +54,7 @@ val sub: t -> t -> t
 val mul: t -> t -> t
 val div: t -> t -> t
 
-(* Pretty printing functions *)
+(* BEGIN_OCAML *)
 val pp: Format.formatter -> t -> unit
 val show: t -> string
+(* END_OCAML *)

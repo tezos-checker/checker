@@ -19,18 +19,12 @@ val to_ratio : t -> Ratio.t
 val of_ratio_ceil : Ratio.t -> t
 val of_ratio_floor : Ratio.t -> t
 
-(* Pretty printing functions *)
-val pp : Format.formatter -> t -> unit
-val show : t -> string
-
 type Error.error +=
   | InvalidKitToken
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit
 type token = kit_token_content Tezos.ticket
-val pp_token : Format.formatter -> token -> unit
-val show_token : token -> string
 
 val issue : tezos:Tezos.t -> t -> token
 
@@ -46,3 +40,10 @@ val read_kit : token -> t * token
 val split_or_fail : token -> t -> t -> token * token
 val join_or_fail : token -> token -> token
 
+(* BEGIN_OCAML *)
+val pp : Format.formatter -> t -> unit
+val show : t -> string
+
+val pp_token : Format.formatter -> token -> unit
+val show_token : token -> string
+(* END_OCAML *)

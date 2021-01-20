@@ -60,7 +60,7 @@ let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.mul_int_int (Ratio.num amoun
 let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
-(* Pretty printing functions (in hex, otherwise it's massive) *)
+(* BEGIN_OCAML *)
 let show amount =
   let zfill s width =
     let to_fill = (width - (String.length s)) in
@@ -71,10 +71,11 @@ let show amount =
   let sign = if amount < Ligo.int_from_literal 0 then "-" else "" in
   let (upper, lower) = Ligo.div_rem_int_int (Common.abs_int amount) scaling_factor in
 
+  (* in hex, otherwise it's massive *)
   Format.sprintf "%s%s.%s"
     sign
     (Ligo.format_int "%X" upper)
     (zfill (Ligo.format_int "%X" lower) (scaling_exponent / 4))
 
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
-
+(* END_OCAML *)

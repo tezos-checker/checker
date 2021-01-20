@@ -29,10 +29,6 @@ let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amoun
 let scale amount fp =
   of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
 
-(* Pretty printing functions *)
-let show amount = Ligo.string_of_int amount ^ "mukit"
-let pp ppf amount = Format.fprintf ppf "%s" (show amount)
-
 (* Kit are really tickets. *)
 type kit_token_content = Kit [@@deriving show]
 type token = kit_token_content Tezos.ticket [@@deriving show]
@@ -74,3 +70,7 @@ let split_or_fail (token: token) (left: t) (right: t) : token * token =
 let join_or_fail (left: token) (right: token) : token =
   Option.get (Tezos.join_tickets left right)
 
+(* BEGIN_OCAML *)
+let show amount = Ligo.string_of_int amount ^ "mukit"
+let pp ppf amount = Format.fprintf ppf "%s" (show amount)
+(* END_OCAML *)

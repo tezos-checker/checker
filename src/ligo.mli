@@ -38,7 +38,6 @@ type address
 *)
 val address_from_literal : string -> address      (* IN LIGO: type-annotate with "address". *)
 val compare_address : address -> address -> Int.t (* NON-LIGO (but address IS comparable) *)
-val string_of_address : address -> string         (* NON-LIGO *)
 
 type int
 (**
@@ -50,7 +49,6 @@ type int
 val int_from_literal : Int.t -> int   (* IN LIGO: replace with "". *)
 val int_from_int64: Int64.t -> int    (* NON-LIGO, temporary*)
 val compare_int : int -> int -> Int.t (* NON-LIGO *)
-val string_of_int : int -> string     (* NON-LIGO *)
 
 type nat
 (**
@@ -59,7 +57,6 @@ type nat
      The only size limit to natural numbers is gas.
 *)
 val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" suffix. *)
-val string_of_nat : nat -> string     (* NON-LIGO *)
 
 type timestamp
 (**
@@ -159,7 +156,6 @@ val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 val cdiv_int_int : int -> int -> int (* NON-LIGO *)
 val fdiv_int_int : int -> int -> int (* NON-LIGO *)
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
-val div_rem_int_int : int -> int -> (int * int) (* NON-LIGO. Would be nice to use ediv_int_int for this.. *)
 
 (* OPERATIONS ON nat *)
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
@@ -209,27 +205,19 @@ val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
 
 (* val sub_nat_int : nat -> int -> int *)
 
-(* TODO: The following also seem to be allowed,
- *
- *   val sub_mutez_mutez : mutez -> mutez -> mutez
- *   val sub_mutez_tez : mutez -> tez -> mutez
- *   val sub_tez_mutez : tez -> mutez -> mutez
- *   val sub_tez_tez : tez -> tez -> mutez
- *
- * but I (George) am totally unclear as to what is mutez as a type. My
- * impression is that the only type we have for tez is "tez", values of which
- * we can construct by giving a number of tez or mutez.
-*)
-
-(* TODO: arithmetic shim functions *)
-
 (* BEGIN_OCAML *)
+val string_of_int : int -> string
+val string_of_nat : nat -> string
 val string_of_tez : tez -> string
 val string_of_timestamp : timestamp -> string
+val string_of_address : address -> string
 
 val pp_address : Format.formatter -> address -> unit
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
 val pp_tez : Format.formatter -> tez -> unit
 val pp_timestamp : Format.formatter -> timestamp -> unit
+
 val format_int : string -> int -> string
+val div_rem_int_int : int -> int -> (int * int)
+(* END_OCAML *)
