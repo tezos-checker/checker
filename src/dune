@@ -17,7 +17,7 @@
  (public_name src)
  (modules Checker Constants Level Mem Avl Kit Tez FixedPoint
    Parameters Burrow Uniswap Error LiquidationAuction LiquidationAuctionTypes Ptr
-   DelegationAuction Tezos Call Permission Ratio Ligo Common)
+   DelegationAuction Tezos Permission Ratio Ligo Common)
  (libraries str zarith)
  (wrapped false)
  (preprocess

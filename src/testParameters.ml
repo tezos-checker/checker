@@ -14,6 +14,8 @@ let initial_tezos =
     now = Ligo.timestamp_from_seconds_literal 0;
     level = Level.of_int 0;
     self = Ligo.address_from_literal "checker";
+    amount = Ligo.tez_from_mutez_literal 0;
+    sender = Ligo.address_from_literal "somebody";
   }
 
 let rec call_touch_times
@@ -586,6 +588,8 @@ let test_touch =
         now = Ligo.timestamp_from_seconds_literal 3600;
         level = Level.of_int 60;
         self = Ligo.address_from_literal "checker";
+        amount = Ligo.tez_from_mutez_literal 0;
+        sender = Ligo.address_from_literal "somebody";
       } in
 
     let new_index = Ligo.tez_from_mutez_literal 340_000 in

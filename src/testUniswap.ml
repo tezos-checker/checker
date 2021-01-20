@@ -6,8 +6,14 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let level0 = Level.of_int 0
 let level1 = Level.of_int 1
-let checker_address = Ligo.address_from_literal "checker"
-let tezos0 = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = checker_address;}
+let tezos0 =
+  Tezos.{
+    now = Ligo.timestamp_from_seconds_literal 0;
+    level = level0;
+    self = Ligo.address_from_literal "checker";
+    amount = Ligo.tez_from_mutez_literal 0;
+    sender = Ligo.address_from_literal "somebody";
+  }
 
 (* Issue an arbitrary amount of kit (checker-issued) *)
 let arb_positive_kit_token = QCheck.map (Kit.issue ~tezos:tezos0) TestArbitrary.arb_positive_kit
@@ -196,7 +202,7 @@ let buy_kit_unit_test =
         uniswap
         ~amount:(Ligo.tez_from_mutez_literal 1_000_000)
         ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 1))
-        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
         ~deadline:(Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
@@ -207,7 +213,7 @@ let buy_kit_unit_test =
         uniswap
         ~amount:(Ligo.tez_from_mutez_literal 1_000_000)
         ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_636))
-        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
         ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Kit.show_token expected_returned_kit returned_kit;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
@@ -218,7 +224,7 @@ let buy_kit_unit_test =
       uniswap
       ~amount:(Ligo.tez_from_mutez_literal 1_000_000)
       ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_637))
-      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
       ~deadline:(Ligo.timestamp_from_seconds_literal 1);
 
     (* Low expectations but too late (tight): fail *)
@@ -227,7 +233,7 @@ let buy_kit_unit_test =
       uniswap
       ~amount:(Ligo.tez_from_mutez_literal 1_000_000)
       ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal 453_636))
-      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = checker_address;}
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
       ~deadline:(Ligo.timestamp_from_seconds_literal 1)
 
 (* ************************************************************************* *)
@@ -304,7 +310,7 @@ let sell_kit_unit_test =
         ~amount:(Ligo.tez_from_mutez_literal 0)
         (Kit.issue ~tezos:tezos0 Kit.one)
         ~min_tez_expected:(Ligo.tez_from_mutez_literal 1)
-        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
         ~deadline:(Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
@@ -316,7 +322,7 @@ let sell_kit_unit_test =
         ~amount:(Ligo.tez_from_mutez_literal 0)
         (Kit.issue ~tezos:tezos0 Kit.one)
         ~min_tez_expected:(Ligo.tez_from_mutez_literal 1_663_333)
-        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+        ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
         ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
     assert_equal ~printer:Uniswap.show expected_updated_uniswap updated_uniswap;
@@ -328,7 +334,7 @@ let sell_kit_unit_test =
       ~amount:(Ligo.tez_from_mutez_literal 0)
       (Kit.issue ~tezos:tezos0 Kit.one)
       ~min_tez_expected:(Ligo.tez_from_mutez_literal 1_663_334)
-      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = checker_address;}
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
       ~deadline:(Ligo.timestamp_from_seconds_literal 1);
 
     (* Low expectations but too late (tight): fail *)
@@ -338,7 +344,7 @@ let sell_kit_unit_test =
       ~amount:(Ligo.tez_from_mutez_literal 0)
       (Kit.issue ~tezos:tezos0 Kit.one)
       ~min_tez_expected:(Ligo.tez_from_mutez_literal 1_663_333)
-      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = checker_address;}
+      ~tezos:Tezos.{now = Ligo.timestamp_from_seconds_literal 1; level = level1; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;}
       ~deadline:(Ligo.timestamp_from_seconds_literal 1)
 
 (* ************************************************************************* *)
@@ -411,7 +417,7 @@ let add_liquidity_unit_test =
         ~kit_in_tez_in_prev_block:Ratio.one
         ~last_level:level0
     in
-    let tezos = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = checker_address;} in
+    let tezos = Tezos.{now = Ligo.timestamp_from_seconds_literal 0; level = level0; self = tezos0.self; amount = tezos0.amount; sender = tezos0.sender;} in
 
     let returned_liquidity, returned_kit, updated_uniswap = assert_ok @@
       Uniswap.add_liquidity

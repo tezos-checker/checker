@@ -46,7 +46,6 @@ val touch : t -> tezos:Tezos.t -> index:Ligo.tez -> (Kit.token * t)
 val create_burrow :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   (burrow_id * Permission.t * t, Error.error) result
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
@@ -55,7 +54,6 @@ val create_burrow :
 val deposit_tez :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
   (t, Error.error) result
@@ -66,7 +64,6 @@ val deposit_tez :
 val withdraw_tez :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   tez:Ligo.tez ->
   burrow_id:burrow_id ->
@@ -78,7 +75,6 @@ val withdraw_tez :
 val mint_kit :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   kit:Kit.t ->
@@ -91,7 +87,6 @@ val mint_kit :
 val burn_kit :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
   kit:Kit.token ->
@@ -104,7 +99,6 @@ val burn_kit :
 val activate_burrow :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   (t, Error.error) result
@@ -117,7 +111,6 @@ val activate_burrow :
 val deactivate_burrow :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   recipient:Ligo.address ->
@@ -128,7 +121,7 @@ val deactivate_burrow :
   * reward, to be credited to the liquidator. *)
 val mark_for_liquidation :
   t ->
-  call:Call.t ->
+  tezos:Tezos.t ->
   burrow_id:burrow_id ->
   (Tez.payment * t, Error.error) result
 
@@ -149,7 +142,6 @@ val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
 val cancel_liquidation_slice :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   LiquidationAuctionTypes.leaf_ptr ->
@@ -162,7 +154,6 @@ val touch_burrow : t -> burrow_id -> (t, Error.error) result
 val set_burrow_delegate :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   delegate:Ligo.address ->
@@ -172,7 +163,6 @@ val set_burrow_delegate :
 val make_permission :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   rights:Permission.rights ->
@@ -184,7 +174,6 @@ val make_permission :
 val invalidate_all_permissions :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   (Permission.t * t, Error.error) result
@@ -198,7 +187,6 @@ val invalidate_all_permissions :
 val buy_kit :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   min_kit_expected:Kit.t ->
   deadline:Ligo.timestamp ->
   (Kit.token * t, Error.error) result
@@ -208,7 +196,6 @@ val buy_kit :
 val sell_kit :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   kit:Kit.token ->
   min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
@@ -222,7 +209,6 @@ val sell_kit :
 val add_liquidity :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
@@ -233,7 +219,6 @@ val add_liquidity :
 val remove_liquidity :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   lqt_burned:Uniswap.liquidity ->
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
@@ -250,7 +235,6 @@ val remove_liquidity :
 val liquidation_auction_place_bid :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   kit:Kit.token ->
   (LiquidationAuction.bid_ticket * t, Error.error) result
 
@@ -258,7 +242,6 @@ val liquidation_auction_place_bid :
 val liquidation_auction_reclaim_bid :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
   (Kit.token, Error.error) result
 
@@ -266,7 +249,6 @@ val liquidation_auction_reclaim_bid :
 val liquidation_auction_reclaim_winning_bid :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
   (Tez.payment * t, Error.error) result
 
@@ -284,7 +266,6 @@ val liquidation_auction_reclaim_winning_bid :
 val delegation_auction_place_bid :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   (DelegationAuction.bid_ticket * t, Error.error) result
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
@@ -298,6 +279,5 @@ val delegation_auction_claim_win :
 val delegation_auction_reclaim_bid :
   t ->
   tezos:Tezos.t ->
-  call:Call.t ->
   bid_ticket:DelegationAuction.bid_ticket ->
   (Tez.payment * t, Error.error) result

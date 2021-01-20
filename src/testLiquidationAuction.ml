@@ -2,6 +2,8 @@ open Ptr
 open OUnit2
 
 let checker_address = Ligo.address_from_literal "checker"
+let checker_amount = Ligo.tez_from_mutez_literal 0
+let checker_sender = Ligo.address_from_literal "somebody"
 
 let suite =
   let burrow_id_1 = ptr_init in
@@ -21,7 +23,7 @@ let suite =
          } in
        let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        let current = Option.get auctions.current_auction in
@@ -37,22 +39,22 @@ let suite =
          (LiquidationAuction.current_auction_minimum_bid start_tezos current)
          ~printer:Kit.show;
        (* Price of descending auction should go down... *)
-       let one_second_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 1); level = Level.of_int 0; self = checker_address;} in
+       let one_second_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 1); level = Level.of_int 0; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_999_666))
          (LiquidationAuction.current_auction_minimum_bid one_second_later current)
          ~printer:Kit.show;
-       let two_seconds_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 2); level = Level.of_int 0; self = checker_address;} in
+       let two_seconds_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 2); level = Level.of_int 0; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_999_333))
          (LiquidationAuction.current_auction_minimum_bid two_seconds_later current)
          ~printer:Kit.show;
-       let one_minute_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 60); level = Level.of_int 1; self = checker_address;} in
+       let one_minute_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal 60); level = Level.of_int 1; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_980_098))
          (LiquidationAuction.current_auction_minimum_bid one_minute_later current)
          ~printer:Kit.show;
-       let two_minutes_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal (2 * 60)); level = Level.of_int 2; self = checker_address;} in
+       let two_minutes_later = Tezos.{now = Ligo.add_timestamp_int start_time (Ligo.int_from_literal (2 * 60)); level = Level.of_int 2; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        assert_equal
          (Kit.of_mukit (Ligo.int_from_literal 1_960_394))
          (LiquidationAuction.current_auction_minimum_bid two_minutes_later current)
@@ -82,7 +84,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        assert_equal (Some (Ligo.tez_from_mutez_literal 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
@@ -111,7 +113,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        assert_equal (Some (Ligo.tez_from_mutez_literal 10_000_000_000)) (LiquidationAuction.current_auction_tez auctions);
@@ -128,7 +130,7 @@ let suite =
              younger = None; older = None; } in
        let start_time = Ligo.timestamp_from_seconds_literal 0 in
        let start_level = Level.of_int 0 in
-       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;} in
+       let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address; amount = checker_amount; sender = checker_sender;} in
        let start_price = FixedPoint.one in
        let auctions = LiquidationAuction.touch auctions start_tezos start_price in
        let bidder = Ligo.address_from_literal "23456" in

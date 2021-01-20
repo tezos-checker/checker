@@ -23,6 +23,8 @@ let arb_tezos =
          now = Ligo.timestamp_from_seconds_literal (level * 60);
          level = Level.of_int level;
          self = Ligo.address_from_literal "checker";
+         amount = Ligo.tez_from_mutez_literal 0;
+         sender = Ligo.address_from_literal "somebody";
        }
     )
     QCheck.(0 -- (31556952000 (* a thousand years in seconds *) / 60))

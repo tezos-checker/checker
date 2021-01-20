@@ -1,9 +1,12 @@
 open OUnit2
 
 let checker_address = Ligo.address_from_literal "checker"
+let checker_amount = Ligo.tez_from_mutez_literal 0
+let checker_sender = Ligo.address_from_literal "somebody"
+
 let start_time = Ligo.timestamp_from_seconds_literal 0
 let start_level = Level.of_int 0
-let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address;}
+let start_tezos = Tezos.{now = start_time; level = start_level; self = checker_address; amount = checker_amount; sender = checker_sender;}
 
 type address_option = Ligo.address option [@@deriving show]
 

@@ -3,6 +3,8 @@ type t =
   { now: Ligo.timestamp;
     level: Level.t;
     self: Ligo.address; (* NOTE: is of type contract, really, not address *)
+    sender: Ligo.address;
+    amount: Ligo.tez;
   }
 
 (* TICKETS *)
