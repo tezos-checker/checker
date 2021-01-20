@@ -93,7 +93,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
 
        let kit, _same_kit_ticket = Kit.read_kit kit in
        let (_, _, lqt), _same_lqt_ticket = Tezos.read_ticket lqt in
-       let lqt_to_burn = Ratio.to_nat_floor (Ratio.div (Ratio.of_nat lqt) (Ratio.of_int factor)) in
+       let lqt_to_burn = Ratio.to_nat_floor (Ratio.div (Ratio.of_nat lqt) (Ratio.of_int (Ligo.int_from_literal factor))) in
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
 
        let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
@@ -192,7 +192,7 @@ let buy_kit_unit_test =
         ~tez:(Ligo.tez_from_mutez_literal 11_000_000)
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 4_546_364)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
-        ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
+        ~kit_in_tez_in_prev_block:(Ratio.of_int (Ligo.int_from_literal 2))
         ~last_level:level1
     in
 
@@ -299,7 +299,7 @@ let sell_kit_unit_test =
         ~tez:(Ligo.tez_from_mutez_literal 8_336_667)
         ~kit:(Kit.issue ~tezos:tezos0 (Kit.of_mukit (Ligo.int_from_literal 6_000_000)))
         ~lqt:(Uniswap.issue_liquidity_tokens ~tezos:tezos0 (Ligo.nat_from_literal 1))
-        ~kit_in_tez_in_prev_block:(Ratio.of_int 2)
+        ~kit_in_tez_in_prev_block:(Ratio.of_int (Ligo.int_from_literal 2))
         ~last_level:level1
     in
 

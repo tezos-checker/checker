@@ -356,7 +356,7 @@ let test_protected_index_pace =
     let kit_in_tez = Ratio.one in
 
     (* UPWARD MOVES *)
-    let very_high_index = Ratio.to_tez_floor (Ratio.mul (Ratio.of_int 1000) (Ratio.of_tez params.index)) in
+    let very_high_index = Ratio.to_tez_floor (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 1000)) (Ratio.of_tez params.index)) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)

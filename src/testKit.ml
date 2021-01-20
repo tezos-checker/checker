@@ -27,19 +27,19 @@ let suite =
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal 15_370_401))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int 3)));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 3))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal (-15_370_401)))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int (-3))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal 5_123_467)) (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal (-3)))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal (-15_370_401)))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int 3)));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 3))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal 15_370_401))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int (-3))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal (-5_123_467))) (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal (-3)))));
 
        (* compare *)
        assert_equal

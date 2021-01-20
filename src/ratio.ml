@@ -40,8 +40,7 @@ let make n d =
     make_real (Common.neg_int n) (Common.neg_int d)
 
 (* Conversions to/from other types. *)
-let of_bigint n = { num = n; den = Ligo.int_from_literal 1; }
-let of_int n = { num = Ligo.int_from_literal n; den = Ligo.int_from_literal 1; }
+let of_int n = { num = n; den = Ligo.int_from_literal 1; }
 
 let of_nat n = { num = Ligo.int n; den = Ligo.int_from_literal 1 }
 
@@ -91,24 +90,6 @@ let zero = { num = Ligo.int_from_literal 0; den = Ligo.int_from_literal 1; }
 let one = { num = Ligo.int_from_literal 1; den = Ligo.int_from_literal 1; }
 let minus_one = { num = Ligo.int_from_literal (-1); den = Ligo.int_from_literal 1; }
 
-(* NOTE: this implementation relies on the fact that the rationals are normalized. *)
-let sign x =
-  if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
-    -1
-  else if Ligo.eq_int_int x.num (Ligo.int_from_literal 0) then
-    0
-  else
-    1
-
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let compare x y =
-  if x.den = y.den
-  then Ligo.compare_int x.num y.num (* avoid multiplication, for performance. *)
-  else
-    Ligo.compare_int
-      (Ligo.mul_int_int x.num y.den)
-      (Ligo.mul_int_int y.num x.den)
-
 (* If we wish to rely on the fact that the rationals are normalized, we could
  * instead implement equality very efficiently as
  *
@@ -117,10 +98,13 @@ let compare x y =
  * but I'd like to avoid that. Ideally we'll drop all fancy normalization, and
  * have rationals be lightweight. We always return to fixed-point, tez, and
  * kit, at the end anyway. *)
-let equal x y = compare x y = 0
-
-let min a b = if compare a b <= 0 then a else b
-let max a b = if compare a b >= 0 then a else b
+let equal x y =
+  if x.den = y.den (* avoid multiplication, for performance. *)
+  then Ligo.eq_int_int x.num y.num
+  else
+    Ligo.eq_int_int
+      (Ligo.mul_int_int x.num y.den)
+      (Ligo.mul_int_int y.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let leq x y =
@@ -146,7 +130,13 @@ let geq x y = leq y x
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let gt x y = lt y x
 
-let to_bigint x = Ligo.div_int_int x.num x.den
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let min a b = if leq a b then a else b
+
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let max a b = if geq a b then a else b
+
+let to_int x = Ligo.div_int_int x.num x.den
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let neg x = { num = Common.neg_int x.num; den = x.den; }
@@ -204,4 +194,13 @@ let div x y =
 (* BEGIN_OCAML *)
 let show n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp f x = Format.pp_print_string f (show x)
+
+(* NOTE: this implementation relies on the fact that the rationals are normalized. *)
+let sign x =
+  if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
+    -1
+  else if Ligo.eq_int_int x.num (Ligo.int_from_literal 0) then
+    0
+  else
+    1
 (* END_OCAML *)

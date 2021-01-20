@@ -52,7 +52,7 @@ let liquidation_price (p: t) : Ratio.t =
 let qexp amount = Ratio.add Ratio.one amount
 
 let clamp (v: Ratio.t) (lower: Ratio.t) (upper: Ratio.t) : 'a =
-  assert (Ratio.compare lower upper <> 1);
+  assert (Ratio.leq lower upper);
   Ratio.min upper (Ratio.max v lower)
 
 (** Given the amount of kit necessary to close all existing burrows
@@ -90,12 +90,12 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
     Ratio.make (Ligo.int_from_literal (-5)) (Ligo.int_from_literal 100)
   else if burrowed >= circulating then
     Ratio.div
-      (Ratio.min (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
-      (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
+      (Ratio.min (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 5)) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 20)) (Kit.to_ratio burrowed))
   else (* burrowed < circulating *)
     Ratio.div
-      (Ratio.max (Ratio.mul (Ratio.of_int 5) (Kit.to_ratio (Kit.sub burrowed circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
-      (Ratio.mul (Ratio.of_int 20) (Kit.to_ratio burrowed))
+      (Ratio.max (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 5)) (Kit.to_ratio (Kit.sub burrowed circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 20)) (Kit.to_ratio burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
@@ -169,7 +169,7 @@ let touch
     (parameters: t)
   : Kit.t * t =
   let duration_in_seconds =
-    Ratio.of_bigint (* NOTE: can it be negative? Does the protocol ensure this? *)
+    Ratio.of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
     @@ Ligo.sub_timestamp_timestamp tezos.now parameters.last_touched
   in
 
@@ -213,7 +213,7 @@ let touch
                      (Ratio.mul
                         (Ratio.add
                            (Ratio.mul
-                              (Ratio.of_int 2)
+                              (Ratio.of_int (Ligo.int_from_literal 2))
                               (FixedPoint.to_ratio parameters.drift_derivative)
                            )
                            (FixedPoint.to_ratio current_drift_derivative)

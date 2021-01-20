@@ -51,8 +51,6 @@ type address = string
 
 let address_from_literal s = s
 
-let compare_address = String.compare
-
 (* int *)
 
 type int = Z.t

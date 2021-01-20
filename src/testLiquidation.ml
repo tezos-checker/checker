@@ -12,8 +12,8 @@ let arbitrary_burrow (params: Parameters.t) =
     let positive_int = QCheck.(1 -- max_int) in
     QCheck.map
       (fun (t, k, factor) ->
-         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_int t) (Ratio.mul (Ratio.of_int 2) (Ratio.of_int factor))) in
-         let kit = Kit.of_ratio_floor (Ratio.div (Ratio.of_int k) (Ratio.of_int factor)) in
+         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_int (Ligo.int_from_literal t)) (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 2)) (Ratio.of_int (Ligo.int_from_literal factor)))) in
+         let kit = Kit.of_ratio_floor (Ratio.div (Ratio.of_int (Ligo.int_from_literal k)) (Ratio.of_int (Ligo.int_from_literal factor))) in
          (tez, kit)
       )
       (QCheck.triple positive_int positive_int positive_int) in
@@ -21,7 +21,7 @@ let arbitrary_burrow (params: Parameters.t) =
   let arb_smart_tez_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
-         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_tez tez) (Ratio.of_int 2)) in
+         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_tez tez) (Ratio.of_int (Ligo.int_from_literal 2))) in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in

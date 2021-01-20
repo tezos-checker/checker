@@ -12,10 +12,8 @@ val one: t
 val minus_one:t
 
 (* Conversions to/from other types. *)
-val of_bigint: Ligo.int -> t
-val to_bigint: t -> Ligo.int
-
-val of_int: int -> t
+val of_int: Ligo.int -> t
+val to_int: t -> Ligo.int
 
 val of_nat: Ligo.nat -> t
 val to_nat_floor: t -> Ligo.nat
@@ -37,9 +35,6 @@ val geq: t -> t -> bool
 (* NOTE: OCaml's polymorphic comparison will NOT return a result consistent
  * with the ordering of rationals we provide here (OCaml's comparison will use
  * lexicographic ordering which is incorrect in this instance). *)
-val compare: t -> t -> int
-val sign: t -> int (* NOTE: for tests only *)
-
 val min: t -> t -> t
 val max: t -> t -> t
 
@@ -57,4 +52,6 @@ val div: t -> t -> t
 (* BEGIN_OCAML *)
 val pp: Format.formatter -> t -> unit
 val show: t -> string
+
+val sign: t -> int
 (* END_OCAML *)

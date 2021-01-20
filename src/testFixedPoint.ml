@@ -19,15 +19,15 @@ let suite =
          (FixedPoint.exp fp6);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int 8))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 8)))
          (FixedPoint.add fp1 fp2);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int 2))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 2)))
          (FixedPoint.sub fp1 fp2);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int 15))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 15)))
          (FixedPoint.mul fp1 fp2);
        assert_equal
          ~printer:show_fp
@@ -43,7 +43,7 @@ let suite =
          (FixedPoint.div fp1 fp2);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int (-8)))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal (-8))))
          (FixedPoint.div fp5 fp1);
        assert_equal
          ~printer:show_fp
@@ -55,11 +55,11 @@ let suite =
          (FixedPoint.div fp4 fp5);
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int 4))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 4)))
          (FixedPoint.pow two (Ligo.nat_from_literal 2));
        assert_equal
          ~printer:show_fp
-         (FixedPoint.of_ratio_floor (Ratio.of_int 2))
+         (FixedPoint.of_ratio_floor (Ratio.of_int (Ligo.int_from_literal 2)))
          (FixedPoint.pow two (Ligo.nat_from_literal 1));
        assert_equal
          ~printer:show_fp

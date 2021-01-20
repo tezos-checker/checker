@@ -37,7 +37,6 @@ type address
    An untyped address which can refer to a smart contract or account.
 *)
 val address_from_literal : string -> address      (* IN LIGO: type-annotate with "address". *)
-val compare_address : address -> address -> Int.t (* NON-LIGO (but address IS comparable) *)
 
 type int
 (**

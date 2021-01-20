@@ -37,7 +37,7 @@ let liquidation_penalty : Ratio.t = Ratio.make (Ligo.int_from_literal 1) (Ligo.i
 
 (** For convenience. The number of seconds in a year, taking into account
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
-let seconds_in_a_year : int = 31556952
+let seconds_in_a_year : Ligo.int = Ligo.int_from_literal 31556952
 
 (** For convenience. The number of seconds in a day. Basically
   * 24h * 60min/h * 60sec/min = 86400. *)
