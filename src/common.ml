@@ -25,6 +25,28 @@ let pow_int_nat x n =
   in
   pow_rec (Ligo.int_from_literal 1) x n
 
+let cdiv_int_int x y =
+  match Ligo.ediv_int_int x y with
+  | None -> (failwith "Ligo.cdiv_int_int: zero denominator" : Ligo.int)
+  | Some (quot, rem) ->
+    if Ligo.eq_nat_nat rem (Ligo.nat_from_literal 0) then
+      quot
+    else if Ligo.lt_int_int y (Ligo.int_from_literal 0) then
+      quot
+    else
+      Ligo.add_int_int quot (Ligo.int_from_literal 1)
+
+let fdiv_int_int x y =
+  match Ligo.ediv_int_int x y with
+  | None -> (failwith "Ligo.fdiv_int_int: zero denominator" : Ligo.int)
+  | Some (quot, rem) ->
+    if Ligo.eq_nat_nat rem (Ligo.nat_from_literal 0) then
+      quot
+    else if Ligo.gt_int_int y (Ligo.int_from_literal 0) then
+      quot
+    else
+      Ligo.sub_int_int quot (Ligo.int_from_literal 1)
+
 (* OPERATIONS ON tez *)
 let tez_min x y = if Ligo.leq_tez_tez x y then x else y
 let tez_max x y = if Ligo.geq_tez_tez x y then x else y

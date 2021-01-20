@@ -56,8 +56,8 @@ let of_hex_string str =
   Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) scaling_factor) mantissa
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* BEGIN_OCAML *)

@@ -50,14 +50,14 @@ let to_nat_floor x =
   if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
     failwith "Ratio.to_nat_floor: negative"
   else
-    Ligo.abs (Ligo.fdiv_int_int x.num x.den)
+    Ligo.abs (Common.fdiv_int_int x.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let to_nat_ceil x =
   if Ligo.lt_int_int x.num (Ligo.int_from_literal 0) then
     failwith "Ratio.to_nat_ceil: negative"
   else
-    Ligo.abs (Ligo.cdiv_int_int x.num x.den)
+    Ligo.abs (Common.cdiv_int_int x.num x.den)
 
 let of_tez x = { num = Common.tez_to_mutez x; den = Ligo.int_from_literal 1_000_000; }
 

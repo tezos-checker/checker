@@ -82,9 +82,9 @@ let div_int_int = Z.div
 
 let mod_int_int = Z.rem
 
-let cdiv_int_int = Z.cdiv
-
-let fdiv_int_int = Z.fdiv
+let ediv_int_int n d =
+  try Some (Z.ediv_rem n d)
+  with Division_by_zero -> None
 
 let of_string_base_int = Z.of_string_base
 

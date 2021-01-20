@@ -136,8 +136,6 @@ val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "m
     Check if a certain condition has been met. If not the contract will fail.
 *)
 
-(* val ediv_int_int : int -> int -> (int * nat) option *)
-
 (* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
 (* OPERATIONS ON int *)
@@ -153,8 +151,8 @@ val gt_int_int : int -> int -> bool  (* IN LIGO: ( > ) *)
 val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
 val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
-val cdiv_int_int : int -> int -> int (* NON-LIGO *)
-val fdiv_int_int : int -> int -> int (* NON-LIGO *)
+val ediv_int_int : int -> int -> (int * nat) option
+
 val of_string_base_int : Int.t -> string -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
 
 (* OPERATIONS ON nat *)

@@ -112,7 +112,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
              let least_kit_percentage = (Ratio.div (Kit.to_ratio (Kit.of_mukit (Ligo.int_from_literal 1))) (Kit.to_ratio kit)) in
              let least_tez_percentage = Ratio.make (Common.tez_to_mutez (Ligo.tez_from_mutez_literal 1)) (Common.tez_to_mutez tez) in
              let as_q = (Ratio.mul (Ratio.of_nat lqt) (Ratio.max least_kit_percentage least_tez_percentage)) in
-             Option.get (Ligo.is_nat (Ligo.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
+             Option.get (Ligo.is_nat (Common.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens ~tezos lqt_to_burn in
            let min_tez_withdrawn = Ratio.to_tez_floor (Ratio.div (Ratio.mul (Ratio.of_tez tez) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
            let min_kit_withdrawn = Kit.of_ratio_floor (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in

@@ -22,8 +22,8 @@ let of_mukit amount = amount
 let to_mukit amount = amount
 
 let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Ligo.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Ligo.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp =
