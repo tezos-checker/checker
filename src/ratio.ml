@@ -9,10 +9,13 @@ type t = {
 let num x = x.num
 let den x = x.den
 
-let rec gcd_int_int (x: Ligo.int) (y: Ligo.int) : Ligo.int =
+let rec gcd_rec (x: Ligo.int) (y: Ligo.int) : Ligo.int =
   if y = Ligo.int_from_literal 0
   then x
-  else gcd_int_int y (Ligo.int (Ligo.mod_int_int x y))
+  else gcd_rec y (Ligo.int (Ligo.mod_int_int x y))
+
+let gcd_int_int (x: Ligo.int) (y: Ligo.int) : Ligo.int =
+  gcd_rec (Common.abs_int x) (Common.abs_int y)
 
 (* normalize n/d, assuming d > 0 *)
 let normalize n d =
