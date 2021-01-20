@@ -23,17 +23,11 @@
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
 type liquidity_token_content
-type liquidity = liquidity_token_content Tezos.ticket (* George: didn't want to expose *)
-
-val show_liquidity : liquidity -> string
-val pp_liquidity : Format.formatter -> liquidity -> unit
+type liquidity = liquidity_token_content Tezos.ticket
 
 val issue_liquidity_tokens : tezos:Tezos.t -> Ligo.nat -> liquidity
 
 type t
-
-val show : t -> string
-val pp : Format.formatter -> t -> unit
 
 type Error.error +=
   | UniswapNonPositiveInput
@@ -62,43 +56,12 @@ type Error.error +=
   | SellKitTooMuchTezBought
   | InvalidLiquidityToken
 
-val make_for_test :
-  tez:Ligo.tez ->
-  kit:Kit.token ->
-  lqt:liquidity ->
-  kit_in_tez_in_prev_block:Ratio.t ->
-  last_level:Level.t ->
-  t
-
 (** The initial state of the uniswap contract. We always start with 1mukit,
   * 1mutez, and 1lqt token (effectively setting the starting price to 1
   * tez/kit). The price will eventually reach the value it should, but this
   * saves us from having the first/non-first liquidity provider separation, and
   * all division-by-zero checks. *)
 val make_initial : tezos:Tezos.t -> t
-
-(** Check whether the uniswap contract contains zero tez. *)
-val is_tez_pool_empty : t -> bool
-
-(** Check whether the uniswap contract contains zero kit. *)
-val is_kit_pool_empty : t -> bool
-
-(** Check whether the uniswap contract contains zero liquidity tokens. *)
-val is_liquidity_token_pool_empty : t -> bool
-
-(** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
-  * current price of kit in tez, as estimated using the ratio of tez and kit
-  * currently in the uniswap contract. *)
-val kit_in_tez : t -> Ratio.t
-
-(** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
-  * current product of kit and tez, using the current contents of the uniswap
-  * contract. *)
-val kit_times_tez : t -> Ratio.t
-
-(** NOTE: FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
-  * current number of liquidity tokens extant. *)
-val liquidity_tokens_extant : t -> liquidity
 
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
@@ -169,15 +132,38 @@ val remove_liquidity :
   (Ligo.tez * Kit.token * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. *)
-val add_accrued_kit :
-  t ->
-  tezos:Tezos.t ->
-  Kit.token ->
-  t
+val add_accrued_kit : t -> tezos:Tezos.t -> Kit.token -> t
 
 (** Add accrued tez to the uniswap contract. *)
-val add_accrued_tez :
-  t ->
-  Tezos.t ->
-  Ligo.tez ->
+val add_accrued_tez : t -> Tezos.t -> Ligo.tez -> t
+
+(* BEGIN_OCAML *)
+val show_liquidity : liquidity -> string
+val pp_liquidity : Format.formatter -> liquidity -> unit
+
+val show : t -> string
+val pp : Format.formatter -> t -> unit
+
+(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
+val make_for_test :
+  tez:Ligo.tez ->
+  kit:Kit.token ->
+  lqt:liquidity ->
+  kit_in_tez_in_prev_block:Ratio.t ->
+  last_level:Level.t ->
   t
+
+(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
+ * current price of kit in tez, as estimated using the ratio of tez and kit
+ * currently in the uniswap contract. *)
+val kit_in_tez : t -> Ratio.t
+
+(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
+ * current product of kit and tez, using the current contents of the uniswap
+ * contract. *)
+val kit_times_tez : t -> Ratio.t
+
+(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
+ * current number of liquidity tokens extant. *)
+val liquidity_tokens_extant : t -> liquidity
+(* END_OCAML *)

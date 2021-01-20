@@ -32,17 +32,15 @@ type liquidity = liquidity_token_content Tezos.ticket [@@deriving show]
 
 let issue_liquidity_tokens ~(tezos: Tezos.t) (i: Ligo.nat) = Tezos.create_ticket tezos Lqt i
 
-(** Check whether a liquidity token is valid. A liquidity token is valid if (a)
-  * it is issued by checker, its amount is non-negative (George: I assume that
-  * the ticket mechanism gives us that for free, by using nat?), and (c) is
-  * tagged appropriately (this is already enforced by its type). *)
+(** Check whether a liquidity token is valid. A liquidity token is valid if it
+  * is issued by checker, and it is tagged appropriately (this is already
+  * enforced by its type). *)
 let is_liquidity_token_valid
     ~(tezos:Tezos.t)
     ~(liquidity: liquidity)
   : (liquidity, Error.error) result =
-  let (issuer, _content, _amount), same_ticket = Tezos.read_ticket liquidity in
-  let is_valid = issuer = tezos.self in (* NOTE: perhaps we want amount = 0 to be invalid here already *)
-  if is_valid then Ok same_ticket else Error InvalidLiquidityToken
+  let (issuer, _content, _amount), liquidity = Tezos.read_ticket liquidity in
+  if issuer = tezos.self then Ok liquidity else Error InvalidLiquidityToken
 
 let with_valid_liquidity_token
     ~(tezos:Tezos.t)
@@ -65,14 +63,6 @@ type t =
   }
 [@@deriving show]
 
-let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
-  { tez = tez;
-    kit = kit;
-    lqt = lqt;
-    kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
-    last_level = last_level;
-  }
-
 let make_initial ~tezos =
   { tez = Ligo.tez_from_mutez_literal 1;
     kit = Kit.issue ~tezos (Kit.of_mukit (Ligo.int_from_literal 1));
@@ -81,19 +71,6 @@ let make_initial ~tezos =
     last_level = tezos.level;
   }
 
-let is_tez_pool_empty (u: t) =
-  assert (u.tez >= Ligo.tez_from_mutez_literal 0);
-  u.tez = Ligo.tez_from_mutez_literal 0
-
-let is_kit_pool_empty (u: t) =
-  let kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
-  kit = Kit.zero
-
-(* NOTE: Make sure to restore the ticket. *)
-let is_liquidity_token_pool_empty (u: t) =
-  let (_, _, n), _same_ticket = Tezos.read_ticket u.lqt in
-  n = Ligo.nat_from_literal 0
-
 (* When the uniswap is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow
  * is adding liquidity, to kick things off. I would also like to assume that
@@ -101,22 +78,19 @@ let is_liquidity_token_pool_empty (u: t) =
  * implementation of remove_liquidity currently allows liquidity to reach zero.
  * *)
 let assert_initialized (u: t) =
+  let is_tez_pool_empty (u: t) =
+    assert (u.tez >= Ligo.tez_from_mutez_literal 0);
+    u.tez = Ligo.tez_from_mutez_literal 0 in
+  let is_kit_pool_empty (u: t) =
+    let kit, _same_token = Kit.read_kit u.kit in
+    kit = Kit.zero in
+  let is_liquidity_token_pool_empty (u: t) =
+    (* NOTE: this part consumes the ticket. *)
+    let (_, _, n), _same_ticket = Tezos.read_ticket u.lqt in
+    n = Ligo.nat_from_literal 0 in
   assert (not (is_tez_pool_empty u));
   assert (not (is_kit_pool_empty u));
   assert (not (is_liquidity_token_pool_empty u))
-
-(* NOTE: FOR TESTING ONLY *)
-let kit_in_tez (u: t) =
-  let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
-  Ratio.div (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
-
-(* NOTE: FOR TESTING ONLY *)
-let kit_times_tez (u: t) =
-  let u_kit, _same_token = Kit.read_kit u.kit in (* NOTE: replace? *)
-  Ratio.mul (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
-
-(** NOTE: FOR TESTING ONLY *)
-let liquidity_tokens_extant (u: t) = u.lqt
 
 let kit_in_tez_in_prev_block (uniswap: t) =
   assert_initialized uniswap;
@@ -338,3 +312,23 @@ let add_accrued_kit (uniswap: t) ~tezos (accrual: Kit.token) : t =
 let add_accrued_tez (uniswap: t) tezos (accrual: Ligo.tez) : t =
   let uniswap = sync_last_observed uniswap tezos in
   { uniswap with tez = Ligo.add_tez_tez uniswap.tez accrual }
+
+(* BEGIN_OCAML *)
+let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
+  { tez = tez;
+    kit = kit;
+    lqt = lqt;
+    kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
+    last_level = last_level;
+  }
+
+let kit_in_tez (u: t) =
+  let u_kit, _same_token = Kit.read_kit u.kit in
+  Ratio.div (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
+
+let kit_times_tez (u: t) =
+  let u_kit, _same_token = Kit.read_kit u.kit in
+  Ratio.mul (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
+
+let liquidity_tokens_extant (u: t) = u.lqt
+(* END_OCAML *)
