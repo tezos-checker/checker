@@ -352,7 +352,7 @@ let suite =
        let _ = take mem root (Ligo.tez_from_mutez_literal 50_000) None in
 
        assert_equal
-         {reads=104; writes=87}
+         {reads=104; writes=69}
          !Mem.ops
          ~printer:Mem.show_ops;
     );
