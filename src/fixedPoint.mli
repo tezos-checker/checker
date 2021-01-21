@@ -16,12 +16,12 @@ val exp : t -> t
 
 (* Conversions to/from other types. *)
 val of_int : Ligo.int -> t
-val of_hex_string : string -> t
 val to_ratio : t -> Ratio.t
 val of_ratio_ceil : Ratio.t -> t
 val of_ratio_floor : Ratio.t -> t
 
-(* Pretty printing functions *)
-val pp : Format.formatter -> t -> unit
+(* BEGIN_OCAML *)
+val of_hex_string : string -> t
 val show : t -> string
-
+val pp : Format.formatter -> t -> unit
+(* END_OCAML *)

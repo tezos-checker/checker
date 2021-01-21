@@ -173,8 +173,6 @@ val geq_int_int : int -> int -> bool (* IN LIGO: ( >= ) *)
 
 val ediv_int_int : int -> int -> (int * nat) option
 
-val of_string_base_int : Int.t -> String.t -> int (* NON-LIGO. Eventually find a different way to input FP numbers. *)
-
 (* OPERATIONS ON nat *)
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
 val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
@@ -243,4 +241,5 @@ val pp_ticket : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ticke
 
 val format_int : String.t -> int -> String.t
 val div_rem_int_int : int -> int -> (int * int)
+val of_string_base_int : Int.t -> String.t -> int
 (* END_OCAML *)

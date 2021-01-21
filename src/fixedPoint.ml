@@ -35,6 +35,12 @@ let exp amount = add one amount
 (* Conversions to/from other types. *)
 let of_int amount = Ligo.mul_int_int amount scaling_factor
 
+let to_ratio amount = Ratio.make amount scaling_factor
+let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+(* George: do we need flooring-division or truncating-division? more thought is needed *)
+
+(* BEGIN_OCAML *)
 let of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
@@ -43,12 +49,6 @@ let of_hex_string str =
     | Some pos -> Common.pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in (* FIXME: NOT LEGITIMATE *)
   Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) scaling_factor) mantissa
 
-let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-(* George: do we need flooring-division or truncating-division? more thought is needed *)
-
-(* BEGIN_OCAML *)
 let show amount =
   let zfill s width =
     let to_fill = (width - (String.length s)) in
