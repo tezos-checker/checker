@@ -8,15 +8,17 @@
 ;;   (flags (:standard -w -27))))
 
 ;; If one wishes to make warnings non-fatal
+
 (env
  (dev
-  (flags (:standard -warn-error -A))))
+  (flags
+   (:standard -warn-error -A))))
 
 (library
  (name huxian)
  (public_name src)
- (modules Checker Constants Level Mem Avl Kit Tez FixedPoint
-   Parameters Burrow Uniswap Error LiquidationAuction LiquidationAuctionTypes Ptr
+ (modules Checker Constants Level Mem Avl Kit Tez FixedPoint Parameters
+   Burrow Uniswap Error LiquidationAuction LiquidationAuctionTypes Ptr
    DelegationAuction Tezos Permission Ratio Ligo Common)
  (libraries str zarith)
  (wrapped false)

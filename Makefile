@@ -21,6 +21,7 @@ clean:
 
 indent:
 	ocp-indent -i src/*.ml src/*.mli
+	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
 
 docs:
 	dune build @doc
