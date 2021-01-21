@@ -1,7 +1,3 @@
-[@inline] let int_from_literal (i: int) = i
-
-[@inline] let compare_int (i: int) (j: int) : int = if i > j then 1 else if i = j then 0 else -1
-
 [@inline] let add_int_int (i: int) (j: int) : int = i + j
 [@inline] let add_tez_tez (i: tez) (j: tez) : tez = i + j
 

@@ -17,3 +17,7 @@ val fdiv_int_int : Ligo.int -> Ligo.int -> Ligo.int
 val tez_min : Ligo.tez -> Ligo.tez -> Ligo.tez
 val tez_max : Ligo.tez -> Ligo.tez -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
+
+(* BEGIN_OCAML *)
+val compare_int : Ligo.int -> Ligo.int -> Int.t
+(* END_OCAML *)

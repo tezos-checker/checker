@@ -3,7 +3,6 @@ type ptr (* George: perhaps I'd prefer a phantom parameter to not mix up pointer
 val ptr_null : ptr
 val ptr_init : ptr
 val ptr_next : ptr -> ptr
-val ptr_compare : ptr -> ptr -> int
 
 type t = ptr
 val compare : ptr -> ptr -> int

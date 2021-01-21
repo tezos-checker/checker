@@ -44,8 +44,6 @@ type int
    The only size limit to integers is gas.
 *)
 
-val compare_int : int -> int -> Int.t (* NON-LIGO *)
-
 type nat
 (**
     A natural number.

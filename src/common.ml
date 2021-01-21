@@ -56,3 +56,13 @@ let fdiv_int_int (x: Ligo.int) (y: Ligo.int) =
 let tez_min (x: Ligo.tez) (y: Ligo.tez) = if Ligo.leq_tez_tez x y then x else y
 let tez_max (x: Ligo.tez) (y: Ligo.tez) = if Ligo.geq_tez_tez x y then x else y
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
+
+(* BEGIN_OCAML *)
+let compare_int (i: Ligo.int) (j: Ligo.int) : Int.t =
+  if Ligo.gt_int_int i j then
+    1
+  else if Ligo.eq_int_int i j then
+    0
+  else
+    -1
+(* END_OCAML *)

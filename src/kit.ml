@@ -10,7 +10,6 @@ let scaling_factor = Ligo.int_from_literal "1_000_000"
 let add x y = Ligo.add_int_int x y
 let sub x y = Ligo.sub_int_int x y
 
-let compare x y = Ligo.compare_int x y
 let min x y = if Ligo.leq_int_int x y then x else y
 let max x y = if Ligo.geq_int_int x y then x else y
 
@@ -70,6 +69,8 @@ let join_or_fail (left: token) (right: token) : token =
   Option.get (Ligo.Tezos.join_tickets left right)
 
 (* BEGIN_OCAML *)
+let compare x y = Common.compare_int x y
+
 let show amount = Ligo.string_of_int amount ^ "mukit"
 let pp ppf amount = Format.fprintf ppf "%s" (show amount)
 (* END_OCAML *)

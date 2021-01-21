@@ -91,8 +91,6 @@ let int_from_literal s =
 
 let int_from_int64 = Z.of_int64
 
-let compare_int = Z.compare
-
 let add_int_int = Z.add
 
 let sub_int_int = Z.sub

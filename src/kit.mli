@@ -5,7 +5,6 @@ val add : t -> t -> t
 val sub : t -> t -> t
 val scale : t -> FixedPoint.t -> t
 
-val compare : t -> t -> int
 val min : t -> t -> t
 val max : t -> t -> t
 
@@ -40,6 +39,8 @@ val split_or_fail : token -> t -> t -> token * token
 val join_or_fail : token -> token -> token
 
 (* BEGIN_OCAML *)
+val compare : t -> t -> int
+
 val pp : Format.formatter -> t -> unit
 val show : t -> string
 
