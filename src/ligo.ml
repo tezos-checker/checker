@@ -52,15 +52,23 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
   let suffix_len = String.length expected_suffix in
   let prefix_len = total_len - suffix_len in
 
-  let prefix = String.sub s 0 prefix_len in
+  (* FIXME: This I only do to circumvent the fact that Z.of_string in Zarith
+   * 1.10 cannot deal with underscores. Once we fix shell.nix this should be
+   * simply:
+   *
+   *   let prefix = String.sub s 0 prefix_len in
+  *)
+  let remove_underscores l = String.concat "" (String.split_on_char '_' l) in
+  let prefix = remove_underscores (String.sub s 0 prefix_len) in
+
   let suffix = String.sub s prefix_len suffix_len in
 
   try
     if not (String.equal suffix expected_suffix) then
-      raise (Invalid_argument s)
+      raise (Invalid_argument ("Expected suffix: " ^ expected_suffix ^ ", real suffix: " ^ suffix))
     else
       Z.of_string prefix
-  with _ -> raise (Invalid_argument ("parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix ^ ", input = " ^ s ^ ")"))
+  with exc -> raise (Invalid_argument ("parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix ^ ", input = " ^ s ^ ") " ^ Printexc.to_string exc))
 
 (* address *)
 
@@ -147,7 +155,7 @@ let is_nat x = if Z.lt x Z.zero then None else Some x
 let nat_from_literal s =
   try
     let n = parse_int_with_suffix "n" s in
-    if n < Z.zero then
+    if Z.lt n Z.zero then
       failwith "Ligo.nat_from_literal: negative"
     else n
   with exc ->
@@ -178,12 +186,11 @@ type tez = Z.t
 let tez_from_literal s =
   try
     let n = parse_int_with_suffix "mutez" s in
-    if n < Z.zero then
+    if Z.lt n Z.zero then
       failwith "Ligo.tez_from_literal: negative"
     else n
   with exc ->
     failwith ("Ligo.tez_from_literal: " ^ Printexc.to_string exc)
-
 
 let add_tez_tez = Z.add
 
