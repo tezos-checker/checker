@@ -7,7 +7,7 @@ open Format
 type auction_outcome_option = auction_outcome option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]
 
-let nTez (i: int) : Ligo.tez = Ligo.tez_from_mutez_literal (1_000_000 * i)
+let nTez (i: int) : Ligo.tez = Ligo.tez_from_literal (string_of_int (1_000_000 * i) ^ "mutez")
 
 let add_all (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
   : mem =
@@ -65,7 +65,7 @@ let from_list (mem: mem) (root_data: auction_outcome option) (elements: liquidat
   (add_all mem root elements, root)
 
 let mk_liquidation_slice (n: int): liquidation_slice =
-  { tez = Ligo.tez_from_mutez_literal n
+  { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
   ; older = None
   ; younger = None
   ; burrow = Ptr.ptr_null
@@ -349,7 +349,7 @@ let suite =
        assert_dangling_pointers mem [root];
 
        Mem.reset_ops ();
-       let _ = take mem root (Ligo.tez_from_mutez_literal 50_000) None in
+       let _ = take mem root (Ligo.tez_from_literal "50_000mutez") None in
 
        assert_equal
          {reads=104; writes=69}

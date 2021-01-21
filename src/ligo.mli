@@ -45,7 +45,7 @@ type int
    The only size limit to integers is gas.
 *)
 
-val int_from_literal : Int.t -> int   (* IN LIGO: replace with "". *)
+val int_from_literal : String.t -> int   (* IN LIGO: drop int_from_literal and replace the double quotes with parentheses. *)
 val int_from_int64: Int64.t -> int    (* NON-LIGO, temporary*)
 val compare_int : int -> int -> Int.t (* NON-LIGO *)
 
@@ -55,7 +55,7 @@ type nat
 
      The only size limit to natural numbers is gas.
 *)
-val nat_from_literal : Int.t -> nat   (* IN LIGO: replace with "" and add "n" suffix. *)
+val nat_from_literal : String.t -> nat   (* IN LIGO: drop nat_from_literal and the double quotes. *)
 
 type timestamp
 (**
@@ -67,7 +67,7 @@ type tez
 (**
     A specific type for tokens.
 *)
-val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "mutez" suffix. *)
+val tez_from_literal : String.t -> tez (* IN LIGO: drop tez_from_literal and the double quotes. *)
 
 (* type key *)
 (**

@@ -45,6 +45,23 @@ module Big_map = struct
   let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
 end
 
+(* UTILITY FUNCTIONS *)
+
+let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
+  let total_len = String.length s in
+  let suffix_len = String.length expected_suffix in
+  let prefix_len = total_len - suffix_len in
+
+  let prefix = String.sub s 0 prefix_len in
+  let suffix = String.sub s prefix_len suffix_len in
+
+  try
+    if not (String.equal suffix expected_suffix) then
+      raise (Invalid_argument s)
+    else
+      Z.of_string prefix
+  with _ -> raise (Invalid_argument ("parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix ^ ", input = " ^ s ^ ")"))
+
 (* address *)
 
 type address = string
@@ -60,7 +77,10 @@ let address_from_literal s = s
 
 type int = Z.t
 
-let int_from_literal = Z.of_int
+let int_from_literal s =
+  try parse_int_with_suffix "" s
+  with exc -> failwith ("Ligo.int_from_literal: " ^ Printexc.to_string exc)
+
 let int_from_int64 = Z.of_int64
 
 let compare_int = Z.compare
@@ -124,11 +144,14 @@ let abs = Z.abs
 
 let is_nat x = if Z.lt x Z.zero then None else Some x
 
-let nat_from_literal x =
-  if x < 0 then
-    failwith "Ligo.nat_from_literal: negative"
-  else
-    Z.of_int x
+let nat_from_literal s =
+  try
+    let n = parse_int_with_suffix "n" s in
+    if n < Z.zero then
+      failwith "Ligo.nat_from_literal: negative"
+    else n
+  with exc ->
+    failwith ("Ligo.nat_from_literal: " ^ Printexc.to_string exc)
 
 let ediv_nat_nat n d =
   try Some (Z.ediv_rem n d)
@@ -152,11 +175,15 @@ let timestamp_from_seconds_literal s =
 
 type tez = Z.t
 
-let tez_from_mutez_literal x =
-  if x < 0 then
-    failwith "Ligo.nat_from_literal: negative"
-  else
-    Z.of_int x
+let tez_from_literal s =
+  try
+    let n = parse_int_with_suffix "mutez" s in
+    if n < Z.zero then
+      failwith "Ligo.tez_from_literal: negative"
+    else n
+  with exc ->
+    failwith ("Ligo.tez_from_literal: " ^ Printexc.to_string exc)
+
 
 let add_tez_tez = Z.add
 
@@ -197,10 +224,10 @@ type 'a ticket =
 
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
-  let level = ref (nat_from_literal 0)
+  let level = ref (nat_from_literal "0n")
   let self = "self"
   let sender = ref "sender"
-  let amount = ref (tez_from_mutez_literal 0)
+  let amount = ref (tez_from_literal "0mutez")
 
   let create_ticket content amount =
     { issuer = self;
@@ -226,8 +253,8 @@ module Tezos = struct
 
   let reset () =
     now := timestamp_from_seconds_literal 0;
-    level := nat_from_literal 0;
-    amount := tez_from_mutez_literal 0
+    level := nat_from_literal "0n";
+    amount := tez_from_literal "0mutez"
 
   let new_transaction ~seconds_passed ~blocks_passed ~sender:address_ ~amount:amount_ =
     (* You can not increase blocks_passed without seconds_passed, or vice versa. *)

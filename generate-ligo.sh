@@ -37,8 +37,15 @@ for name in "${inputs[@]}"; do
     # replace "_" with ignored
     sed 's/ _ / ignored /g' |
 
-    # replace 'tez_from_mutez_literal' with 'mutez' suffix
-    sed -E 's/tez_from_mutez_literal ([0-9]+)/\1mutez/g' |
+    # replace 'int_from_literal' with its argument and replace
+    # the double quotes with parentheses (for the potential sign)
+    sed -E 's/int_from_literal \"([+-])?([0-9_]+)\"/(\1\2)/g' |
+
+    # replace 'int_from_literal' with its argument and remove the double quotes
+    sed -E 's/nat_from_literal \"([0-9_]+)n\"/\1n/g' |
+
+    # replace 'tez_from_literal' with its argument and remove the double quotes
+    sed -E 's/tez_from_literal \"([0-9_]+)mutez\"/\1mutez/g' |
 
     cat > "$to"
 done

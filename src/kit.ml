@@ -4,7 +4,7 @@
  * negative). Leave an int for now, but we should make an explicit decision on
  * this. *)
 type t = Ligo.int
-let scaling_factor = Ligo.int_from_literal 1_000_000
+let scaling_factor = Ligo.int_from_literal "1_000_000"
 
 (* Basic arithmetic operations. *)
 let add x y = Ligo.add_int_int x y
@@ -14,7 +14,7 @@ let compare x y = Ligo.compare_int x y
 let min x y = if Ligo.leq_int_int x y then x else y
 let max x y = if Ligo.geq_int_int x y then x else y
 
-let zero = Ligo.int_from_literal 0
+let zero = Ligo.int_from_literal "0"
 let one = scaling_factor
 
 (* Conversions to/from other types. *)
@@ -46,7 +46,7 @@ type Error.error +=
   * enforced by its type). *)
 let is_token_valid (token: token) : (token, Error.error) result =
   let (issuer, _content, amount), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = Ligo.Tezos.self && amount >= Ligo.nat_from_literal 0 in (* TODO: > Nat.zero perhaps? *)
+  let is_valid = issuer = Ligo.Tezos.self && amount >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token

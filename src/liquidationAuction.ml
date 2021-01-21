@@ -83,7 +83,7 @@ type bid_details = { auction_id: auction_id; bid: bid; }
 type bid_ticket = bid_details Ligo.ticket
 
 let issue_bid_ticket (bid_details: bid_details) =
-  Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal 1)
+  Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal "1n")
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
@@ -94,7 +94,7 @@ let is_bid_ticket_valid
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
   let (issuer, _bid_details, amount), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal 1 in
+  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal "1n" in
   if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
 
 let with_valid_bid_ticket
@@ -168,7 +168,7 @@ let send_to_auction
   * min_kit_for_unwarranted_1 and then calculate min_kit_for_unwarranted_2 =
   * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
 let split (amount: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
-  assert (amount > Ligo.tez_from_mutez_literal 0);
+  assert (amount > Ligo.tez_from_literal "0mutez");
   assert (amount < slice.tez);
   (* left slice *)
   let ltez = amount in

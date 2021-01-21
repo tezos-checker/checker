@@ -44,8 +44,8 @@ type Error.error +=
   | DeactivatingWithCollateralAtAuctions
 
 let assert_invariants (b: t) : unit =
-  assert (b.collateral >= Ligo.tez_from_mutez_literal 0);
-  assert (b.collateral_at_auction >= Ligo.tez_from_mutez_literal 0);
+  assert (b.collateral >= Ligo.tez_from_literal "0mutez");
+  assert (b.collateral_at_auction >= Ligo.tez_from_literal "0mutez");
   assert (b.outstanding_kit >= Kit.zero);
   assert (b.excess_kit >= Kit.zero);
   assert (b.outstanding_kit = Kit.zero || b.excess_kit = Kit.zero);
@@ -178,7 +178,7 @@ let remove_liquidation_slice
     (leaf_ptr: LiquidationAuctionTypes.leaf_ptr)
     (leaf : LiquidationAuctionTypes.liquidation_slice) (* NOTE: derived from the leaf_ptr *)
   : t =
-  assert (leaf.tez >= Ligo.tez_from_mutez_literal 0);
+  assert (leaf.tez >= Ligo.tez_from_literal "0mutez");
   assert (burrow.collateral_at_auction >= leaf.tez);
   (* (a) the slice's tez is no longer in auctions, subtract it. *)
   let burrow = { burrow with
@@ -211,7 +211,7 @@ let return_slice_from_auction
   : t =
   assert_invariants burrow;
   assert burrow.active;
-  assert (leaf.tez >= Ligo.tez_from_mutez_literal 0);
+  assert (leaf.tez >= Ligo.tez_from_literal "0mutez");
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) return the tez into the burrow's collateral *)
@@ -242,7 +242,7 @@ let create (p: Parameters.t) (tez: Ligo.tez) : (t, Error.error) result =
         outstanding_kit = Kit.zero;
         excess_kit = Kit.zero;
         adjustment_index = Parameters.compute_adjustment_index p;
-        collateral_at_auction = Ligo.tez_from_mutez_literal 0;
+        collateral_at_auction = Ligo.tez_from_literal "0mutez";
         last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
         liquidation_slices = None;
       }
@@ -250,7 +250,7 @@ let create (p: Parameters.t) (tez: Ligo.tez) : (t, Error.error) result =
 (** Add non-negative collateral to a burrow. *)
 let deposit_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : t =
   assert_invariants b;
-  assert (t >= Ligo.tez_from_mutez_literal 0);
+  assert (t >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   { b with collateral = Ligo.add_tez_tez b.collateral t }
 
@@ -258,7 +258,7 @@ let deposit_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : t =
   * not overburrow it. *)
 let withdraw_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : (t * Ligo.tez, Error.error) result =
   assert_invariants b;
-  assert (t >= Ligo.tez_from_mutez_literal 0);
+  assert (t >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
   if is_overburrowed p new_burrow
@@ -294,7 +294,7 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
   * the creation deposit. *)
 let activate (p: Parameters.t) (tez: Ligo.tez) (b: t) : (t, Error.error) result =
   assert_invariants b;
-  assert (tez >= Ligo.tez_from_mutez_literal 0);
+  assert (tez >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   if tez < Constants.creation_deposit then
     Error (InsufficientFunds tez)
@@ -318,14 +318,14 @@ let deactivate (p: Parameters.t) (b: t) : (t * Ligo.tez, Error.error) result =
     Error DeactivatingAnInactiveBurrow
   else if (b.outstanding_kit > Kit.zero) then
     Error DeactivatingWithOutstandingKit
-  else if (b.collateral_at_auction > Ligo.tez_from_mutez_literal 0) then
+  else if (b.collateral_at_auction > Ligo.tez_from_literal "0mutez") then
     Error DeactivatingWithCollateralAtAuctions
   else
     let return = Ligo.add_tez_tez b.collateral Constants.creation_deposit in
     let updated_burrow =
       { b with
         active = false;
-        collateral = Ligo.tez_from_mutez_literal 0;
+        collateral = Ligo.tez_from_literal "0mutez";
       } in
     Ok (updated_burrow, return)
 
@@ -464,7 +464,7 @@ type liquidation_result =
 [@@deriving show]
 
 let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Ligo.tez) : Kit.t =
-  assert (b.collateral <> Ligo.tez_from_mutez_literal 0); (* NOTE: division by zero *)
+  assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
@@ -503,7 +503,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     let final_burrow =
       { b with
         active = false;
-        collateral = Ligo.tez_from_mutez_literal 0;
+        collateral = Ligo.tez_from_literal "0mutez";
         collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
       } in
     Close {
@@ -519,7 +519,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) Constants.creation_deposit } in
     let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
-    if tez_to_auction < Ligo.tez_from_mutez_literal 0 || tez_to_auction > b_without_reward.collateral then
+    if tez_to_auction < Ligo.tez_from_literal "0mutez" || tez_to_auction > b_without_reward.collateral then
       (* Case 2b.1: With the current price it's impossible to make the burrow
        * not undercollateralized; pay the liquidation reward, stash away the
        * creation deposit, and liquidate all the remaining collateral, even if
@@ -528,7 +528,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
       let expected_kit = compute_expected_kit p tez_to_auction in
       let final_burrow =
         { b with
-          collateral = Ligo.tez_from_mutez_literal 0;
+          collateral = Ligo.tez_from_literal "0mutez";
           collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
         } in
       Complete {

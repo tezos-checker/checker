@@ -21,8 +21,8 @@ type t =
 (** Initial state of the parameters. TODO: Contents TBD. *)
 let initial_parameters : t =
   { q = FixedPoint.one;
-    index = Ligo.tez_from_mutez_literal 1_000_000;
-    protected_index = Ligo.tez_from_mutez_literal 1_000_000;
+    index = Ligo.tez_from_literal "1_000_000mutez";
+    protected_index = Ligo.tez_from_literal "1_000_000mutez";
     target = FixedPoint.one;
     drift = FixedPoint.zero;
     drift_derivative = FixedPoint.zero;
@@ -30,8 +30,8 @@ let initial_parameters : t =
     imbalance_index = FixedPoint.one;
     (* Cannot be zero because then it stays
      * zero forever; only multiplications occur. *)
-    outstanding_kit = Kit.of_mukit (Ligo.int_from_literal 1);
-    circulating_kit = Kit.of_mukit (Ligo.int_from_literal 1);
+    outstanding_kit = Kit.of_mukit (Ligo.int_from_literal "1");
+    circulating_kit = Kit.of_mukit (Ligo.int_from_literal "1");
     last_touched = !Ligo.Tezos.now;
   }
 
@@ -87,15 +87,15 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : Ratio.t =
   if burrowed = Kit.zero && circulating = Kit.zero then
     Ratio.zero
   else if burrowed = Kit.zero && circulating <> Kit.zero then
-    Ratio.make (Ligo.int_from_literal (-5)) (Ligo.int_from_literal 100)
+    Ratio.make (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
   else if burrowed >= circulating then
     Ratio.div
-      (Ratio.min (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 5)) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
-      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 20)) (Kit.to_ratio burrowed))
+      (Ratio.min (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "5")) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "20")) (Kit.to_ratio burrowed))
   else (* burrowed < circulating *)
     Ratio.div
-      (Ratio.max (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 5)) (Kit.to_ratio (Kit.sub burrowed circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
-      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 20)) (Kit.to_ratio burrowed))
+      (Ratio.max (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "5")) (Kit.to_ratio (Kit.sub burrowed circulating))) (Ratio.neg (Kit.to_ratio burrowed)))
+      (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "20")) (Kit.to_ratio burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
@@ -142,20 +142,20 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   let target = FixedPoint.to_ratio target in
   let target_low_bracket  = Constants.target_low_bracket in
   let target_high_bracket = Constants.target_high_bracket in
-  let cnp_001 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 10000)) in
-  let cnp_005 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 5) (Ligo.int_from_literal 10000)) in
+  let cnp_001 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
+  let cnp_005 = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
   let secs_in_a_day = FixedPoint.of_int Constants.seconds_in_a_day in
   match () with
   (* No acceleration (0) *)
   | () when Ratio.lt (qexp (Ratio.neg target_low_bracket)) target && Ratio.lt target (qexp target_low_bracket) -> FixedPoint.zero
   (* Low acceleration (-/+) *)
   | () when Ratio.lt (qexp (Ratio.neg target_high_bracket)) target && Ratio.leq target (qexp (Ratio.neg target_low_bracket))
-    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
+    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
   | () when Ratio.gt (qexp (          target_high_bracket)) target && Ratio.geq target (qexp (          target_low_bracket))
-    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
+    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
   (* High acceleration (-/+) *)
-  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
-  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal 2)))
+  | () when Ratio.leq target (qexp (Ratio.neg target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  | () when Ratio.geq target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
   | _ -> (failwith "impossible" : FixedPoint.t)
 
 (** Update the checker's parameters, given (a) the current timestamp
@@ -192,7 +192,7 @@ let touch
       (Ratio.add
          (FixedPoint.to_ratio parameters.drift)
          (Ratio.mul
-            (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 2))
+            (Ratio.make (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
             (Ratio.mul
                (FixedPoint.to_ratio (FixedPoint.add parameters.drift_derivative current_drift_derivative))
                duration_in_seconds
@@ -208,11 +208,11 @@ let touch
                (Ratio.add
                   (FixedPoint.to_ratio parameters.drift)
                   (Ratio.mul
-                     (Ratio.make (Ligo.int_from_literal 1) (Ligo.int_from_literal 6))
+                     (Ratio.make (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
                      (Ratio.mul
                         (Ratio.add
                            (Ratio.mul
-                              (Ratio.of_int (Ligo.int_from_literal 2))
+                              (Ratio.of_int (Ligo.int_from_literal "2"))
                               (FixedPoint.to_ratio parameters.drift_derivative)
                            )
                            (FixedPoint.to_ratio current_drift_derivative)

@@ -12,8 +12,18 @@ let arbitrary_burrow (params: Parameters.t) =
     let positive_int = QCheck.(1 -- max_int) in
     QCheck.map
       (fun (t, k, factor) ->
-         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_int (Ligo.int_from_literal t)) (Ratio.mul (Ratio.of_int (Ligo.int_from_literal 2)) (Ratio.of_int (Ligo.int_from_literal factor)))) in
-         let kit = Kit.of_ratio_floor (Ratio.div (Ratio.of_int (Ligo.int_from_literal k)) (Ratio.of_int (Ligo.int_from_literal factor))) in
+         let tez =
+           Ratio.to_tez_floor
+             (Ratio.div
+                (Ratio.of_int (Ligo.int_from_literal (string_of_int t)))
+                (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "2")) (Ratio.of_int (Ligo.int_from_literal (string_of_int factor))))
+             ) in
+         let kit =
+           Kit.of_ratio_floor
+             (Ratio.div
+                (Ratio.of_int (Ligo.int_from_literal (string_of_int k)))
+                (Ratio.of_int (Ligo.int_from_literal (string_of_int factor)))
+             ) in
          (tez, kit)
       )
       (QCheck.triple positive_int positive_int positive_int) in
@@ -21,7 +31,7 @@ let arbitrary_burrow (params: Parameters.t) =
   let arb_smart_tez_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
-         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_tez tez) (Ratio.of_int (Ligo.int_from_literal 2))) in
+         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_tez tez) (Ratio.of_int (Ligo.int_from_literal "2"))) in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
@@ -42,7 +52,7 @@ let arbitrary_burrow (params: Parameters.t) =
          ~outstanding_kit:kit
          ~excess_kit:Kit.zero
          ~adjustment_index:(Parameters.compute_adjustment_index params)
-         ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
          ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
          ~liquidation_slices:None
     )
@@ -58,10 +68,10 @@ Other properties
 *)
 
 let params : Parameters.t =
-  { q = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 1015) (Ligo.int_from_literal 1000));
-    index = Ligo.tez_from_mutez_literal 320_000;
-    protected_index = Ligo.tez_from_mutez_literal 360_000;
-    target = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal 108) (Ligo.int_from_literal 100));
+  { q = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
+    index = Ligo.tez_from_literal "320_000mutez";
+    protected_index = Ligo.tez_from_literal "360_000mutez";
+    target = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
     drift = FixedPoint.zero;
     drift_derivative = FixedPoint.zero;
     burrow_fee_index = FixedPoint.one;
@@ -174,7 +184,7 @@ let assert_properties_of_complete_liquidation burrow_in details =
     (Burrow.is_optimistically_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means no collateral in the output burrow"
-    (Burrow.collateral burrow_out = (Ligo.tez_from_mutez_literal 0));
+    (Burrow.collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
   assert_equal
     (Burrow.collateral burrow_in)
     (Ligo.add_tez_tez (Ligo.add_tez_tez (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
@@ -216,7 +226,7 @@ let assert_properties_of_close_liquidation burrow_in details =
     (not (Burrow.is_liquidatable params burrow_out));
   assert_bool
     "close liquidation means no collateral in the output burrow"
-    (Burrow.collateral burrow_out = (Ligo.tez_from_mutez_literal 0));
+    (Burrow.collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
   assert_bool
     "close liquidation means inactive output burrow"
     (not (Burrow.active burrow_out));
@@ -258,11 +268,11 @@ let initial_burrow =
     ~allow_all_kit_burnings:false
     ~delegate:None
     ~active:true
-    ~collateral:(Ligo.tez_from_mutez_literal 10_000_000)
-    ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 20_000_000))
+    ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
+    ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "20_000_000"))
     ~excess_kit:Kit.zero
     ~adjustment_index:(Parameters.compute_adjustment_index params)
-    ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+    ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
     ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
     ~liquidation_slices:None
 
@@ -276,11 +286,11 @@ let barely_not_overburrowed_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 7_673_400)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -306,11 +316,11 @@ let barely_overburrowed_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 7_673_399)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "7_673_399mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -336,11 +346,11 @@ let barely_non_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 6_171_200)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "6_171_200mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -366,11 +376,11 @@ let barely_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 6_171_199)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "6_171_199mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -380,10 +390,10 @@ let barely_liquidatable_test =
 
     let expected_liquidation_result =
       Partial
-        { liquidation_reward = Ligo.tez_from_mutez_literal 1_006_171;
-          tez_to_auction = Ligo.tez_from_mutez_literal 2_818_396;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 6_941_863);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 8_677_329);
+        { liquidation_reward = Ligo.tez_from_literal "1_006_171mutez";
+          tez_to_auction = Ligo.tez_from_literal "2_818_396mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "6_941_863");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "8_677_329");
           burrow_state =
             Burrow.make_for_test
               ~active:true
@@ -391,11 +401,11 @@ let barely_liquidatable_test =
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
-              ~collateral:(Ligo.tez_from_mutez_literal 2_346_632)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+              ~collateral:(Ligo.tez_from_literal "2_346_632mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:FixedPoint.one
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 2_818_396)
+              ~collateral_at_auction:(Ligo.tez_from_literal "2_818_396mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
@@ -423,11 +433,11 @@ let barely_non_complete_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 5_065_065)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "5_065_065mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -437,10 +447,10 @@ let barely_non_complete_liquidatable_test =
 
     let expected_liquidation_result =
       Partial
-        { liquidation_reward = Ligo.tez_from_mutez_literal 1_005_065;
-          tez_to_auction = Ligo.tez_from_mutez_literal 4_060_000;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 10_000_001);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 15_229_815);
+        { liquidation_reward = Ligo.tez_from_literal "1_005_065mutez";
+          tez_to_auction = Ligo.tez_from_literal "4_060_000mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "10_000_001");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "15_229_815");
           burrow_state =
             Burrow.make_for_test
               ~active:true
@@ -448,11 +458,11 @@ let barely_non_complete_liquidatable_test =
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:FixedPoint.one
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 4_060_000)
+              ~collateral_at_auction:(Ligo.tez_from_literal "4_060_000mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
@@ -478,11 +488,11 @@ let barely_complete_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 5_065_064)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "5_065_064mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -492,10 +502,10 @@ let barely_complete_liquidatable_test =
 
     let expected_liquidation_result =
       Complete
-        { liquidation_reward = Ligo.tez_from_mutez_literal 1_005_065;
-          tez_to_auction = Ligo.tez_from_mutez_literal 4_059_999;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 9_999_998);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 15_229_814);
+        { liquidation_reward = Ligo.tez_from_literal "1_005_065mutez";
+          tez_to_auction = Ligo.tez_from_literal "4_059_999mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "9_999_998");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "15_229_814");
           burrow_state =
             Burrow.make_for_test
               ~active:true
@@ -503,11 +513,11 @@ let barely_complete_liquidatable_test =
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:FixedPoint.one
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 4_059_999)
+              ~collateral_at_auction:(Ligo.tez_from_literal "4_059_999mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
@@ -533,11 +543,11 @@ let barely_non_close_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 1_001_000)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "1_001_000mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -547,8 +557,8 @@ let barely_non_close_liquidatable_test =
 
     let expected_liquidation_result =
       Complete
-        { liquidation_reward = Ligo.tez_from_mutez_literal 1_001_000;
-          tez_to_auction = (Ligo.tez_from_mutez_literal 0);
+        { liquidation_reward = Ligo.tez_from_literal "1_001_000mutez";
+          tez_to_auction = (Ligo.tez_from_literal "0mutez");
           expected_kit = Kit.zero;
           min_kit_for_unwarranted = Kit.zero;
           burrow_state =
@@ -558,11 +568,11 @@ let barely_non_close_liquidatable_test =
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:FixedPoint.one
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+              ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
@@ -588,11 +598,11 @@ let barely_close_liquidatable_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 1_000_999)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "1_000_999mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -602,10 +612,10 @@ let barely_close_liquidatable_test =
 
     let expected_liquidation_result =
       Close
-        { liquidation_reward = Ligo.tez_from_mutez_literal 1_001_000;
-          tez_to_auction = Ligo.tez_from_mutez_literal 999_999;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 2_463_052);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 18_981_019);
+        { liquidation_reward = Ligo.tez_from_literal "1_001_000mutez";
+          tez_to_auction = Ligo.tez_from_literal "999_999mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "2_463_052");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "18_981_019");
           burrow_state =
             Burrow.make_for_test
               ~active:false
@@ -613,11 +623,11 @@ let barely_close_liquidatable_test =
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:FixedPoint.one
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 999_999)
+              ~collateral_at_auction:(Ligo.tez_from_literal "999_999mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
@@ -641,11 +651,11 @@ let unwarranted_liquidation_unit_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 7_673_400)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 10_000_000))
+        ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
@@ -663,10 +673,10 @@ let partial_liquidation_unit_test =
 
     let expected_liquidation_result =
       Partial
-        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_mutez_literal 9_999);
-          tez_to_auction = Ligo.tez_from_mutez_literal 7_142_471;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 17_592_294);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 27_141_390);
+        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "9_999mutez");
+          tez_to_auction = Ligo.tez_from_literal "7_142_471mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "17_592_294");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "27_141_390");
           burrow_state =
             Burrow.make_for_test
               ~permission_version:0
@@ -674,11 +684,11 @@ let partial_liquidation_unit_test =
               ~allow_all_kit_burnings:false
               ~delegate:None
               ~active:true
-              ~collateral:(Ligo.tez_from_mutez_literal 1_847_530)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 20_000_000))
+              ~collateral:(Ligo.tez_from_literal "1_847_530mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "20_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:(Parameters.compute_adjustment_index params)
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 7_142_471)
+              ~collateral_at_auction:(Ligo.tez_from_literal "7_142_471mutez")
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
               ~liquidation_slices:None
         } in
@@ -706,21 +716,21 @@ let complete_liquidation_unit_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 10_000_000)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 100_000_000))
+        ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "100_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
 
     let expected_liquidation_result =
       Complete
-        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_mutez_literal 9_999);
-          tez_to_auction = Ligo.tez_from_mutez_literal 8_990_001;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 22_142_860);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 170_810_019);
+        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "9_999mutez");
+          tez_to_auction = Ligo.tez_from_literal "8_990_001mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "22_142_860");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "170_810_019");
           burrow_state =
             Burrow.make_for_test
               ~permission_version:0
@@ -728,11 +738,11 @@ let complete_liquidation_unit_test =
               ~allow_all_kit_burnings:false
               ~delegate:None
               ~active:true
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 100_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "100_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:(Parameters.compute_adjustment_index params)
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 8_990_001)
+              ~collateral_at_auction:(Ligo.tez_from_literal "8_990_001mutez")
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
               ~liquidation_slices:None
         } in
@@ -762,21 +772,21 @@ let complete_and_close_liquidation_test =
         ~allow_all_kit_burnings:false
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_mutez_literal 1_000_000)
-        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 100_000_000))
+        ~collateral:(Ligo.tez_from_literal "1_000_000mutez")
+        ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "100_000_000"))
         ~excess_kit:Kit.zero
         ~adjustment_index:(Parameters.compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_mutez_literal 0)
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
 
     let expected_liquidation_result =
       Close
-        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_mutez_literal 999);
-          tez_to_auction = Ligo.tez_from_mutez_literal 999_001;
-          expected_kit = Kit.of_mukit (Ligo.int_from_literal 2_460_594);
-          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal 189_810_190);
+        { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "999mutez");
+          tez_to_auction = Ligo.tez_from_literal "999_001mutez";
+          expected_kit = Kit.of_mukit (Ligo.int_from_literal "2_460_594");
+          min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "189_810_190");
           burrow_state =
             Burrow.make_for_test
               ~permission_version:0
@@ -784,11 +794,11 @@ let complete_and_close_liquidation_test =
               ~allow_all_kit_burnings:false
               ~delegate:None
               ~active:false
-              ~collateral:(Ligo.tez_from_mutez_literal 0)
-              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal 100_000_000))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "100_000_000"))
               ~excess_kit:Kit.zero
               ~adjustment_index:(Parameters.compute_adjustment_index params)
-              ~collateral_at_auction:(Ligo.tez_from_mutez_literal 999_001)
+              ~collateral_at_auction:(Ligo.tez_from_literal "999_001mutez")
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
               ~liquidation_slices:None
         } in

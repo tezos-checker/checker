@@ -49,7 +49,7 @@ let assert_invariants (state: 't) : unit =
 
        match Burrow.liquidation_slices burrow with
        | None ->
-         assert (Burrow.collateral_at_auction burrow = Ligo.tez_from_mutez_literal 0);
+         assert (Burrow.collateral_at_auction burrow = Ligo.tez_from_literal "0mutez");
        | Some slices ->
          (* Check if the linked list of slices are correct, and the amount of
           * tez inside is consistent with collateral_at_auction.
@@ -119,7 +119,7 @@ let with_no_unclaimed_slices
 (* Ensure that there is no tez given. To prevent accidental fund loss. *)
 let with_no_tez_given (f: unit -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  if !Ligo.Tezos.amount <> Ligo.tez_from_mutez_literal 0
+  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
   then Error UnwantedTezGiven
   else f ()
 
@@ -134,7 +134,7 @@ let with_valid_permission
   let (issuer, (rights, id, version), amount), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
     issuer = Ligo.Tezos.self
-    && amount = Ligo.nat_from_literal 0
+    && amount = Ligo.nat_from_literal "0n"
     && version = Burrow.permission_version burrow
     && id = burrow_id in
   if validity_condition
@@ -148,7 +148,7 @@ let create_burrow (state:t) =
     let admin_ticket =
       Ligo.Tezos.create_ticket
         (Permission.Admin, burrow_id, 0)
-        (Ligo.nat_from_literal 0) in
+        (Ligo.nat_from_literal "0n") in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
   | Error err -> Error err
@@ -294,7 +294,7 @@ let make_permission (state:t) ~permission ~burrow_id ~rights =
     let permission_ticket =
       Ligo.Tezos.create_ticket
         (rights, burrow_id, 0)
-        (Ligo.nat_from_literal 0) in
+        (Ligo.nat_from_literal "0n") in
     Ok permission_ticket
   else
     Error InsufficientPermission
@@ -310,7 +310,7 @@ let invalidate_all_permissions (state:t) ~permission ~burrow_id =
     let admin_ticket =
       Ligo.Tezos.create_ticket
         (Permission.Admin, burrow_id, updated_version)
-        (Ligo.nat_from_literal 0) in
+        (Ligo.nat_from_literal "0n") in
     Ok (admin_ticket, updated_state)
   else
     Error InsufficientPermission
@@ -559,7 +559,7 @@ let updated_delegation_auction state new_auction =
     Option.value
       (if DelegationAuction.cycle prev_auction != DelegationAuction.cycle new_auction
        then DelegationAuction.winning_amount prev_auction else None)
-      ~default:(Ligo.tez_from_mutez_literal 0) in
+      ~default:(Ligo.tez_from_literal "0mutez") in
   { state with
     delegation_auction = new_auction;
     delegate = DelegationAuction.delegate new_auction;
@@ -612,7 +612,7 @@ let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
 
 let add_liquidity (state:t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let state = touch_delegation_auction state in
-  let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_mutez_literal 0) in
+  let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_literal "0mutez") in
   Kit.with_valid_kit_token max_kit_deposited @@ fun max_kit_deposited ->
   match Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline with
   | Error err -> Error err
@@ -681,7 +681,7 @@ let calculate_touch_reward (state:t) : Kit.t =
   let low_duration = Common.int_min duration_in_seconds Constants.touch_reward_low_bracket in
   let high_duration =
     Common.int_max
-      (Ligo.int_from_literal 0)
+      (Ligo.int_from_literal "0")
       (Ligo.sub_int_int duration_in_seconds Constants.touch_reward_low_bracket) in
 
   let touch_low_reward = FixedPoint.of_ratio_ceil Constants.touch_low_reward in

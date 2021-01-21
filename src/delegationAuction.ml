@@ -6,7 +6,7 @@ type bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 type bid_ticket = bid Ligo.ticket
 
 let issue_bid_ticket (bid: bid) =
-  Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal 1)
+  Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
 
 type Error.error +=
   | BidTooLow
@@ -25,7 +25,7 @@ let is_bid_ticket_valid
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
   let (issuer, _bid_details, amount), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal 1 in
+  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal "1n" in
   if is_valid then Ok same_ticket else Error InvalidDelegationAuctionTicket
 
 let with_valid_bid_ticket
@@ -50,7 +50,7 @@ let winning_amount t = match t.winner with
 let touch (t: t) =
   let current_cycle = level_to_cycle !Ligo.Tezos.level in
   let cycles_elapsed = Ligo.sub_nat_nat current_cycle t.cycle in
-  if cycles_elapsed = Ligo.int_from_literal 1 then
+  if cycles_elapsed = Ligo.int_from_literal "1" then
     (* We're on a new cycle, so reset state, and save the winner pending their claim. *)
     { cycle = current_cycle; winner = t.leading_bid; leading_bid = None; delegate = None; }
     (* TODO what if we somehow skip a level? *)
@@ -91,7 +91,7 @@ let reclaim_bid t ~bid_ticket =
     Error CannotReclaimLeadingBid
   else if Some bid = t.winner then
     Error CannotReclaimWinningBid
-  else if Ligo.gt_int_int (Ligo.sub_nat_nat t.cycle bid.cycle) (Ligo.int_from_literal 1) then
+  else if Ligo.gt_int_int (Ligo.sub_nat_nat t.cycle bid.cycle) (Ligo.int_from_literal "1") then
     Error BidTicketExpired
   else
     Ok (bid.amount, t)
