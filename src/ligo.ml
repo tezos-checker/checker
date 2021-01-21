@@ -49,6 +49,11 @@ end
 
 type address = string
 
+(* BEGIN_OCAML *)
+let string_of_address s = s
+let pp_address = Format.pp_print_string
+(* END_OCAML *)
+
 let address_from_literal s = s
 
 (* int *)
@@ -90,15 +95,24 @@ let of_string_base_int = Z.of_string_base
 
 type nat = Z.t
 
+(* BEGIN_OCAML *)
+let string_of_nat = Z.to_string
+let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
+(* END_OCAML *)
+
 let add_nat_nat = Z.add
 
 let sub_nat_nat = Z.sub
 
 let mul_nat_nat = Z.mul
 
+let div_nat_nat = Z.div
+
 let eq_nat_nat = Z.equal
 
 let lt_nat_nat = Z.lt
+
+let gt_nat_nat = Z.gt
 
 let leq_nat_nat = Z.leq
 
@@ -172,18 +186,67 @@ let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
 
+(* tickets *)
+
+type 'a ticket =
+  { issuer : address;
+    content : 'a;
+    amount : nat;
+  }
+[@@deriving show]
+
+module Tezos = struct
+  let now = ref (timestamp_from_seconds_literal 0)
+  let level = ref (nat_from_literal 0)
+  let self = "self"
+  let sender = ref "sender"
+  let amount = ref (tez_from_mutez_literal 0)
+
+  let create_ticket content amount =
+    { issuer = self;
+      content = content;
+      amount = amount;
+    }
+
+  let read_ticket ticket = ((ticket.issuer, ticket.content, ticket.amount), ticket)
+
+  let split_ticket ticket (left, right) =
+    if (add_nat_nat left right) <> ticket.amount
+    then None
+    else
+      (* NOTE: I hope the content has no tickets in it to duplicate! *)
+      let l = {issuer = ticket.issuer; content = ticket.content; amount = left;} in
+      let r = {issuer = ticket.issuer; content = ticket.content; amount = right;} in
+      Some (l, r)
+
+  let join_tickets t1 t2 =
+    if (t1.content <> t2.content) || (t1.issuer <> t2.issuer)
+    then None
+    else Some {issuer = t1.issuer; content = t1.content; amount = add_nat_nat t1.amount t2.amount;}
+
+  let reset () =
+    now := timestamp_from_seconds_literal 0;
+    level := nat_from_literal 0;
+    amount := tez_from_mutez_literal 0
+
+  let new_transaction ~seconds_passed ~blocks_passed ~sender:address_ ~amount:amount_ =
+    (* You can not increase blocks_passed without seconds_passed, or vice versa. *)
+    assert ((seconds_passed = 0 && blocks_passed = 0)
+            || (seconds_passed > 0) && (blocks_passed > 0));
+    now := Z.(!now + Z.of_int seconds_passed);
+    level := Z.(!level + Z.of_int blocks_passed);
+    sender := address_;
+    amount := amount_
+end
+
 (* BEGIN_OCAML *)
 let string_of_int = Z.to_string
-let string_of_nat = Z.to_string
 let string_of_tez x = Z.to_string x ^ "mutez"
 let string_of_timestamp = Z.to_string
-let string_of_address s = s
 
 let pp_int fmt z = Format.pp_print_string fmt (string_of_int z)
-let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
 let pp_tez fmt z = Format.pp_print_string fmt (string_of_tez z)
 let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
-let pp_address = Format.pp_print_string
 
 let format_int = Z.format
 let div_rem_int_int = Z.div_rem

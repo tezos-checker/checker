@@ -23,9 +23,9 @@
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
 type liquidity_token_content
-type liquidity = liquidity_token_content Tezos.ticket
+type liquidity = liquidity_token_content Ligo.ticket
 
-val issue_liquidity_tokens : tezos:Tezos.t -> Ligo.nat -> liquidity
+val issue_liquidity_tokens : Ligo.nat -> liquidity
 
 type t
 
@@ -61,7 +61,7 @@ type Error.error +=
   * tez/kit). The price will eventually reach the value it should, but this
   * saves us from having the first/non-first liquidity provider separation, and
   * all division-by-zero checks. *)
-val make_initial : tezos:Tezos.t -> t
+val make_initial : t
 
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
@@ -75,7 +75,6 @@ val buy_kit :
   t ->
   amount:Ligo.tez ->
   min_kit_expected:Kit.t ->
-  tezos:Tezos.t ->
   deadline:Ligo.timestamp ->
   (Kit.token * t, Error.error) result
 
@@ -86,7 +85,6 @@ val sell_kit :
   amount:Ligo.tez ->
   Kit.token ->
   min_tez_expected:Ligo.tez ->
-  tezos:Tezos.t ->
   deadline:Ligo.timestamp ->
   (Ligo.tez * t, Error.error) result
 
@@ -107,7 +105,6 @@ val sell_kit :
 *)
 val add_liquidity :
   t ->
-  tezos:Tezos.t ->
   amount:Ligo.tez ->
   (** This amount is temporarily treated as if it is part of the tez balance *)
   pending_accrual:Ligo.tez ->
@@ -123,7 +120,6 @@ val add_liquidity :
 *)
 val remove_liquidity :
   t ->
-  tezos:Tezos.t ->
   amount:Ligo.tez ->
   lqt_burned:liquidity ->
   min_tez_withdrawn:Ligo.tez ->
@@ -132,10 +128,10 @@ val remove_liquidity :
   (Ligo.tez * Kit.token * t, Error.error) result
 
 (** Add accrued burrowing fees to the uniswap contract. *)
-val add_accrued_kit : t -> tezos:Tezos.t -> Kit.token -> t
+val add_accrued_kit : t ->  Kit.token -> t
 
 (** Add accrued tez to the uniswap contract. *)
-val add_accrued_tez : t -> Tezos.t -> Ligo.tez -> t
+val add_accrued_tez : t -> Ligo.tez -> t
 
 (* BEGIN_OCAML *)
 val show_liquidity : liquidity -> string
@@ -150,7 +146,7 @@ val make_for_test :
   kit:Kit.token ->
   lqt:liquidity ->
   kit_in_tez_in_prev_block:Ratio.t ->
-  last_level:Level.t ->
+  last_level: Ligo.nat ->
   t
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the

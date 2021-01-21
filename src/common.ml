@@ -1,3 +1,6 @@
+(* Tezos utilities *)
+
+let level_to_cycle t = Ligo.div_nat_nat t (Ligo.nat_from_literal 4096)
 
 (* OPERATIONS ON int *)
 let int_min x y = if Ligo.leq_int_int x y then x else y

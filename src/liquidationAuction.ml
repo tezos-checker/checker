@@ -80,10 +80,10 @@ type Error.error +=
 
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
-type bid_ticket = bid_details Tezos.ticket
+type bid_ticket = bid_details Ligo.ticket
 
-let issue_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
-  Tezos.create_ticket tezos bid_details (Ligo.nat_from_literal 1)
+let issue_bid_ticket (bid_details: bid_details) =
+  Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal 1)
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
@@ -91,25 +91,23 @@ let issue_bid_ticket (tezos: Tezos.t) (bid_details: bid_details) =
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
 let is_bid_ticket_valid
-    ~(tezos:Tezos.t)
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
-  let (issuer, _bid_details, amount), same_ticket = Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = tezos.self && amount = Ligo.nat_from_literal 1 in
+  let (issuer, _bid_details, amount), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal 1 in
   if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
 
 let with_valid_bid_ticket
-    ~(tezos:Tezos.t)
     ~(bid_ticket: bid_ticket)
     (f: bid_ticket -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  match is_bid_ticket_valid ~tezos ~bid_ticket with
+  match is_bid_ticket_valid ~bid_ticket with
   | Error err -> Error err
   | Ok ticket -> f ticket
 
 type auction_state =
   | Descending of Kit.t * Ligo.timestamp
-  | Ascending of bid * Ligo.timestamp * Level.t
+  | Ascending of bid * Ligo.timestamp * Ligo.nat
 [@@deriving show]
 
 type current_auction = {
@@ -211,7 +209,7 @@ let take_with_splitting storage queued_slices split_threshold =
     (storage, new_auction)
 
 let start_auction_if_possible
-    (tezos: Tezos.t) (start_price: FixedPoint.t) (auctions: auctions): auctions =
+    (start_price: FixedPoint.t) (auctions: auctions): auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
@@ -243,7 +241,7 @@ let start_auction_if_possible
             ) in
         Some
           { contents = new_auction;
-            state = Descending (start_value, tezos.now); } in
+            state = Descending (start_value, !Ligo.Tezos.now); } in
     { auctions with
       avl_storage = storage;
       current_auction = current_auction;
@@ -253,12 +251,12 @@ let start_auction_if_possible
   * auction this amounts to the reserve price (which is exponentially
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
-let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Kit.t =
+let current_auction_minimum_bid (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
     let auction_decay_rate = FixedPoint.of_ratio_ceil Constants.auction_decay_rate in
     let decay =
-      match Ligo.is_nat (Ligo.sub_timestamp_timestamp tezos.now start_time) with
+      match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
       | None -> (failwith "TODO: is this possible?" : FixedPoint.t) (* TODO *)
       | Some secs -> FixedPoint.pow (FixedPoint.sub FixedPoint.one auction_decay_rate) secs in
     Kit.scale start_value decay
@@ -272,25 +270,25 @@ let current_auction_minimum_bid (tezos: Tezos.t) (auction: current_auction) : Ki
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_auction_complete
-    (tezos: Tezos.t)
     (auction: current_auction) : bid option =
   match auction.state with
   | Descending _ ->
     None
   | Ascending (b, t, h) ->
-    if Ligo.sub_timestamp_timestamp tezos.now t
+    if Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t
        > Constants.max_bid_interval_in_seconds
-    && Level.blocks_elapsed ~start:h ~finish:tezos.level
-       > Constants.max_bid_interval_in_blocks
+    && Ligo.gt_int_int
+         (Ligo.sub_nat_nat !Ligo.Tezos.level h)
+         (Ligo.int Constants.max_bid_interval_in_blocks)
     then Some b
     else None
 
 let complete_auction_if_possible
-    (tezos: Tezos.t) (auctions: auctions): auctions =
+    (auctions: auctions): auctions =
   match auctions.current_auction with
   | None -> auctions
   | Some curr ->
-    match is_auction_complete tezos curr with
+    match is_auction_complete curr with
     | None -> auctions
     | Some winning_bid ->
       let (storage, completed_auctions) = match auctions.completed_auctions with
@@ -337,13 +335,13 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (tezos: Tezos.t) (auction: current_auction) (bid: bid)
+let place_bid (auction: current_auction) (bid: bid)
   : (current_auction * bid_ticket, Error.error) result =
-  if bid.kit >= current_auction_minimum_bid tezos auction
+  if bid.kit >= current_auction_minimum_bid auction
   then
     Ok (
-      { auction with state = Ascending (bid, tezos.now, tezos.level); },
-      issue_bid_ticket tezos { auction_id = auction.contents; bid = bid; }
+      { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
+      issue_bid_ticket { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
 
@@ -375,12 +373,11 @@ let completed_auction_won_by
 
 (* If successful, it consumes the ticket. *)
 let reclaim_bid
-    ~(tezos:Tezos.t)
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
-  with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Tezos.read_ticket bid_ticket in
+  with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let (_, bid_details, _), _ = Ligo.Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
@@ -446,12 +443,11 @@ let pop_completed_auction (auctions: auctions) (tree: avl_ptr) : auctions =
 
 (* If successful, it consumes the ticket. *)
 let reclaim_winning_bid
-    ~(tezos:Tezos.t)
     (auctions: auctions)
     (bid_ticket: bid_ticket)
   : (Ligo.tez * auctions, Error.error) result =
-  with_valid_bid_ticket ~tezos ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Tezos.read_ticket bid_ticket in
+  with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let (_, bid_details, _), _ = Ligo.Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
@@ -475,10 +471,10 @@ let reclaim_winning_bid
   | None -> Error NotAWinningBid
 
 
-let touch (auctions: auctions) (tezos: Tezos.t) (price: FixedPoint.t) : auctions =
+let touch (auctions: auctions) (price: FixedPoint.t) : auctions =
   auctions
-  |> complete_auction_if_possible tezos
-  |> start_auction_if_possible tezos price
+  |> complete_auction_if_possible
+  |> start_auction_if_possible price
 
 let current_auction_tez (auctions: auctions) : Ligo.tez option =
   match auctions.current_auction with

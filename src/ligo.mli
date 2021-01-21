@@ -137,6 +137,24 @@ val tez_from_mutez_literal : Int.t -> tez (* IN LIGO: replace with "" and add "m
 
 (* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
+type 'a ticket
+
+module Tezos : sig
+  val now: timestamp ref
+  val level: nat ref
+  val self: address (* NOTE: is of type contract, really, not address *)
+  val sender: address ref
+  val amount: tez ref
+
+  val create_ticket : 'a -> nat -> 'a ticket
+  val read_ticket : 'a ticket -> (address * 'a * nat) * 'a ticket
+  val split_ticket : 'a ticket -> (nat * nat) -> ('a ticket * 'a ticket) option
+  val join_tickets : 'a ticket -> 'a ticket -> ('a ticket) option
+
+  val reset: unit -> unit
+  val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
+end
+
 (* OPERATIONS ON int *)
 val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
@@ -161,6 +179,7 @@ val mul_nat_nat : nat -> nat -> nat (* IN LIGO: ( * ) *)
 
 val eq_nat_nat : nat -> nat -> bool  (* IN LIGO: ( = ) *)
 val lt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( < ) *)
+val gt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( > ) *)
 val leq_nat_nat : nat -> nat -> bool (* IN LIGO: ( <= ) *)
 val geq_nat_nat : nat -> nat -> bool (* IN LIGO: ( >= ) *)
 
@@ -180,6 +199,7 @@ val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( - ) *)
 val mul_nat_tez : nat -> tez -> tez (* IN LIGO: ( * ) *)
 val mul_tez_nat : tez -> nat -> tez (* IN LIGO: ( * ) *)
 val div_tez_tez : tez -> tez -> nat (* IN LIGO: ( / ) *)
+val div_nat_nat : nat -> nat -> nat (* IN LIGO: ( / ) *)
 
 val ediv_tez_nat : tez -> nat -> (tez * tez) option (* IN LIGO: ediv *)
 
@@ -214,6 +234,9 @@ val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
 val pp_tez : Format.formatter -> tez -> unit
 val pp_timestamp : Format.formatter -> timestamp -> unit
+
+val show_ticket : (Format.formatter -> 'a -> unit) -> 'a ticket -> string
+val pp_ticket : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ticket -> unit
 
 val format_int : string -> int -> string
 val div_rem_int_int : int -> int -> (int * int)

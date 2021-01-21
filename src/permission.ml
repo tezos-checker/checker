@@ -17,7 +17,7 @@ type rights =
 type permission_content = rights * Ptr.t * int [@@deriving show]
 
 (** A permission is a ticket containing a right. *)
-type t = permission_content Tezos.ticket [@@deriving show]
+type t = permission_content Ligo.ticket [@@deriving show]
 
 let does_right_allow_tez_deposits (rights: rights) : bool =
   match rights with

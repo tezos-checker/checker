@@ -31,12 +31,12 @@ let scale amount fp =
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit [@@deriving show]
-type token = kit_token_content Tezos.ticket [@@deriving show]
+type token = kit_token_content Ligo.ticket [@@deriving show]
 
-let issue ~(tezos: Tezos.t) (kit: t) : token =
+let issue (kit: t) : token =
   match Ligo.is_nat kit with
   | None -> failwith "Kit.issue: cannot issue a negative number of mukit!"
-  | Some n -> Tezos.create_ticket tezos Kit n
+  | Some n -> Ligo.Tezos.create_ticket Kit n
 
 type Error.error +=
   | InvalidKitToken
@@ -44,31 +44,30 @@ type Error.error +=
 (** Check whether a kit token is valid. A kit token is valid if (a) it is
   * issued by checker, and (b) is tagged appropriately (this is already
   * enforced by its type). *)
-let is_token_valid ~(tezos:Tezos.t) (token: token) : (token, Error.error) result =
-  let (issuer, _content, amount), same_ticket = Tezos.read_ticket token in
-  let is_valid = issuer = tezos.self && amount >= Ligo.nat_from_literal 0 in (* TODO: > Nat.zero perhaps? *)
+let is_token_valid (token: token) : (token, Error.error) result =
+  let (issuer, _content, amount), same_ticket = Ligo.Tezos.read_ticket token in
+  let is_valid = issuer = Ligo.Tezos.self && amount >= Ligo.nat_from_literal 0 in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token
-    ~(tezos: Tezos.t)
     (token: token)
     (f: token -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  match is_token_valid ~tezos token with
+  match is_token_valid token with
   | Error err -> Error err
   | Ok token -> f token
 
 let read_kit (token: token) : t * token =
-  let (_issuer, _content, mukit), same_token = Tezos.read_ticket token in
+  let (_issuer, _content, mukit), same_token = Ligo.Tezos.read_ticket token in
   (Ligo.int mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =
   match Ligo.is_nat left, Ligo.is_nat right with
-  | Some l, Some r -> Option.get (Tezos.split_ticket token (l, r))
+  | Some l, Some r -> Option.get (Ligo.Tezos.split_ticket token (l, r))
   | _, _ -> failwith "Kit.split_or_fail: cannot split using a negative number of mukit!"
 
 let join_or_fail (left: token) (right: token) : token =
-  Option.get (Tezos.join_tickets left right)
+  Option.get (Ligo.Tezos.join_tickets left right)
 
 (* BEGIN_OCAML *)
 let show amount = Ligo.string_of_int amount ^ "mukit"

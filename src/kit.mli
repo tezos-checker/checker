@@ -24,12 +24,11 @@ type Error.error +=
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit
-type token = kit_token_content Tezos.ticket
+type token = kit_token_content Ligo.ticket
 
-val issue : tezos:Tezos.t -> t -> token
+val issue : t -> token
 
 val with_valid_kit_token :
-  tezos:Tezos.t ->
   token ->
   (token -> ('a, Error.error) result) ->
   ('a, Error.error) result

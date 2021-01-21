@@ -25,7 +25,7 @@ type Error.error +=
   | UnwantedTezGiven
 
 (** Make a fresh state. *)
-val initialize : Tezos.t -> t
+val initial_checker : t
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters
@@ -33,7 +33,7 @@ val initialize : Tezos.t -> t
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : t -> tezos:Tezos.t -> index:Ligo.tez -> (Kit.token * t)
+val touch : t -> index:Ligo.tez -> (Kit.token * t)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -45,7 +45,6 @@ val touch : t -> tezos:Tezos.t -> index:Ligo.tez -> (Kit.token * t)
   * sender. *)
 val create_burrow :
   t ->
-  tezos:Tezos.t ->
   (burrow_id * Permission.t * t, Error.error) result
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
@@ -53,7 +52,6 @@ val create_burrow :
   * anyone and the permission ticket given is insufficient. *)
 val deposit_tez :
   t ->
-  tezos:Tezos.t ->
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
   (t, Error.error) result
@@ -63,7 +61,6 @@ val deposit_tez :
   * ticket given is insufficient. *)
 val withdraw_tez :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   tez:Ligo.tez ->
   burrow_id:burrow_id ->
@@ -74,7 +71,6 @@ val withdraw_tez :
   * insufficient. *)
 val mint_kit :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   kit:Kit.t ->
@@ -86,7 +82,6 @@ val mint_kit :
   * permission ticket given is insufficient. *)
 val burn_kit :
   t ->
-  tezos:Tezos.t ->
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
   kit:Kit.token ->
@@ -98,7 +93,6 @@ val burn_kit :
   * ticket. *)
 val activate_burrow :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   (t, Error.error) result
@@ -110,7 +104,6 @@ val activate_burrow :
   * successful, make a tez payment to the given address. *)
 val deactivate_burrow :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   recipient:Ligo.address ->
@@ -121,7 +114,6 @@ val deactivate_burrow :
   * reward, to be credited to the liquidator. *)
 val mark_for_liquidation :
   t ->
-  tezos:Tezos.t ->
   burrow_id:burrow_id ->
   (Tez.payment * t, Error.error) result
 
@@ -141,7 +133,6 @@ val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
 *)
 val cancel_liquidation_slice :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   LiquidationAuctionTypes.leaf_ptr ->
@@ -153,7 +144,6 @@ val touch_burrow : t -> burrow_id -> (t, Error.error) result
 (** Set the delegate of a burrow. *)
 val set_burrow_delegate :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   delegate:Ligo.address ->
@@ -162,7 +152,6 @@ val set_burrow_delegate :
 (** Requires admin. Create a new permission for a burrow. *)
 val make_permission :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   rights:Permission.rights ->
@@ -173,7 +162,6 @@ val make_permission :
   * transfer an admin permission to another party. *)
 val invalidate_all_permissions :
   t ->
-  tezos:Tezos.t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
   (Permission.t * t, Error.error) result
@@ -186,7 +174,6 @@ val invalidate_all_permissions :
   * cannot be bought or if the deadline has passed. *)
 val buy_kit :
   t ->
-  tezos:Tezos.t ->
   min_kit_expected:Kit.t ->
   deadline:Ligo.timestamp ->
   (Kit.token * t, Error.error) result
@@ -195,7 +182,6 @@ val buy_kit :
   * cannot be bought or if the deadline has passed. *)
 val sell_kit :
   t ->
-  tezos:Tezos.t ->
   kit:Kit.token ->
   min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
@@ -208,7 +194,6 @@ val sell_kit :
   * the liquidity tokens. *)
 val add_liquidity :
   t ->
-  tezos:Tezos.t ->
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
@@ -218,7 +203,6 @@ val add_liquidity :
   * exchange for the corresponding tez and kit of the right ratio. *)
 val remove_liquidity :
   t ->
-  tezos:Tezos.t ->
   lqt_burned:Uniswap.liquidity ->
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
@@ -234,21 +218,18 @@ val remove_liquidity :
   * reclaim the kit when outbid. *)
 val liquidation_auction_place_bid :
   t ->
-  tezos:Tezos.t ->
   kit:Kit.token ->
   (LiquidationAuction.bid_ticket * t, Error.error) result
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_bid :
   t ->
-  tezos:Tezos.t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
   (Kit.token, Error.error) result
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_winning_bid :
   t ->
-  tezos:Tezos.t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
   (Tez.payment * t, Error.error) result
 
@@ -265,19 +246,16 @@ val liquidation_auction_reclaim_winning_bid :
   * reclaim the tez when outbid, or claim the auction result. *)
 val delegation_auction_place_bid :
   t ->
-  tezos:Tezos.t ->
   (DelegationAuction.bid_ticket * t, Error.error) result
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
 val delegation_auction_claim_win :
   t ->
-  tezos:Tezos.t ->
   bid_ticket:DelegationAuction.bid_ticket ->
   (t, Error.error) result
 
 (** Reclaim a failed bid for the current or a completed auction. *)
 val delegation_auction_reclaim_bid :
   t ->
-  tezos:Tezos.t ->
   bid_ticket:DelegationAuction.bid_ticket ->
   (Tez.payment * t, Error.error) result

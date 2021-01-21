@@ -62,7 +62,7 @@ let max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal 1200
 (** The maximum number of blocks that can pass between two (ascending) bids
   * during an auction. The auction should expire if more blocks than this
   * number pass between two bids. Currently set to 20. *)
-let max_bid_interval_in_blocks : int = 20
+let max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal 20
 
 (** Every bid in an ascending auction needs to improve over the previous bid by
   * at least 0.33 cNp. *)

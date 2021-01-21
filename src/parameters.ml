@@ -19,7 +19,7 @@ type t =
 [@@deriving show]
 
 (** Initial state of the parameters. TODO: Contents TBD. *)
-let make_initial (ts: Ligo.timestamp) : t =
+let initial_parameters : t =
   { q = FixedPoint.one;
     index = Ligo.tez_from_mutez_literal 1_000_000;
     protected_index = Ligo.tez_from_mutez_literal 1_000_000;
@@ -32,7 +32,7 @@ let make_initial (ts: Ligo.timestamp) : t =
      * zero forever; only multiplications occur. *)
     outstanding_kit = Kit.of_mukit (Ligo.int_from_literal 1);
     circulating_kit = Kit.of_mukit (Ligo.int_from_literal 1);
-    last_touched = ts;
+    last_touched = !Ligo.Tezos.now;
   }
 
 (* tez. To get tez/kit must multiply with q. *)
@@ -163,14 +163,13 @@ let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
   * and (c) the current price of kit in tez, as given by the uniswap
   * sub-contract. *)
 let touch
-    (tezos: Tezos.t)
     (current_index: Ligo.tez)
     (current_kit_in_tez: Ratio.t)
     (parameters: t)
   : Kit.t * t =
   let duration_in_seconds =
     Ratio.of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
-    @@ Ligo.sub_timestamp_timestamp tezos.now parameters.last_touched
+    @@ Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched
   in
 
   let current_protected_index =
@@ -304,7 +303,7 @@ let touch
     imbalance_index = current_imbalance_index;
     outstanding_kit = current_outstanding_kit;
     circulating_kit = current_circulating_kit;
-    last_touched = tezos.now;
+    last_touched = !Ligo.Tezos.now;
   }
   )
 
