@@ -52,14 +52,7 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
   let suffix_len = String.length expected_suffix in
   let prefix_len = total_len - suffix_len in
 
-  (* FIXME: This I only do to circumvent the fact that Z.of_string in Zarith
-   * 1.10 cannot deal with underscores. Once we fix shell.nix this should be
-   * simply:
-   *
-   *   let prefix = String.sub s 0 prefix_len in
-  *)
-  let remove_underscores l = String.concat "" (String.split_on_char '_' l) in
-  let prefix = remove_underscores (String.sub s 0 prefix_len) in
+  let prefix = String.sub s 0 prefix_len in
 
   let suffix = String.sub s prefix_len suffix_len in
 
