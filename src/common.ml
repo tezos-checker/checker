@@ -3,8 +3,8 @@
 let level_to_cycle (t : Ligo.nat) = Ligo.div_nat_nat t (Ligo.nat_from_literal "4096n")
 
 (* OPERATIONS ON int *)
-let int_min (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
-let int_max (x: Ligo.int) (y: Ligo.int) = if Ligo.geq_int_int x y then x else y
+let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
+let max_int (x: Ligo.int) (y: Ligo.int) = if Ligo.geq_int_int x y then x else y
 
 let neg_int (x: Ligo.int) = Ligo.mul_int_int x (Ligo.int_from_literal "-1")
 let abs_int (x: Ligo.int) = Ligo.int (Ligo.abs x)
@@ -53,8 +53,8 @@ let fdiv_int_int (x: Ligo.int) (y: Ligo.int) =
       Ligo.sub_int_int quot (Ligo.int_from_literal "1")
 
 (* OPERATIONS ON tez *)
-let tez_min (x: Ligo.tez) (y: Ligo.tez) = if Ligo.leq_tez_tez x y then x else y
-let tez_max (x: Ligo.tez) (y: Ligo.tez) = if Ligo.geq_tez_tez x y then x else y
+let min_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.leq_tez_tez x y then x else y
+let max_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.geq_tez_tez x y then x else y
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
 
 (* BEGIN_OCAML *)

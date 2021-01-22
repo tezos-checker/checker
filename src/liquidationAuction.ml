@@ -68,6 +68,7 @@ Utku: Lifecycle of liquidation slices.
 *)
 
 open LiquidationAuctionTypes
+open Ratio
 
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
@@ -152,17 +153,17 @@ let split (amount: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * l
   let ltez = amount in
   let lkit =
     Kit.of_ratio_ceil
-      (Ratio.mul
+      (mul_ratio
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Common.tez_to_mutez ltez) (Common.tez_to_mutez slice.tez))
+         (make_ratio (Common.tez_to_mutez ltez) (Common.tez_to_mutez slice.tez))
       ) in
   (* right slice *)
   let rtez = Ligo.sub_tez_tez slice.tez amount in
   let rkit =
     Kit.of_ratio_ceil
-      (Ratio.mul
+      (mul_ratio
          (Kit.to_ratio slice.min_kit_for_unwarranted)
-         (Ratio.make (Common.tez_to_mutez rtez) (Common.tez_to_mutez slice.tez))
+         (make_ratio (Common.tez_to_mutez rtez) (Common.tez_to_mutez slice.tez))
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
@@ -193,11 +194,11 @@ let start_auction_if_possible
   | None ->
     let queued_amount = Avl.avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
-      Common.tez_max
+      Common.max_tez
         Constants.max_lot_size
-        (Ratio.to_tez_floor
-           (Ratio.mul
-              (Ratio.of_tez queued_amount)
+        (ratio_to_tez_floor
+           (mul_ratio
+              (ratio_of_tez queued_amount)
               (FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
            )
         ) in
@@ -214,7 +215,7 @@ let start_auction_if_possible
           Kit.scale
             Kit.one
             (FixedPoint.mul
-               (FixedPoint.of_ratio_floor (Ratio.of_tez (Avl.avl_tez storage new_auction)))
+               (FixedPoint.of_ratio_floor (ratio_of_tez (Avl.avl_tez storage new_auction)))
                start_price
             ) in
         Some

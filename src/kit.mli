@@ -14,9 +14,9 @@ val one : t
 (* Conversions to/from other types. *)
 val of_mukit : Ligo.int -> t
 val to_mukit : t -> Ligo.int
-val to_ratio : t -> Ratio.t
-val of_ratio_ceil : Ratio.t -> t
-val of_ratio_floor : Ratio.t -> t
+val to_ratio : t -> Ratio.ratio
+val of_ratio_ceil : Ratio.ratio -> t
+val of_ratio_floor : Ratio.ratio -> t
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit

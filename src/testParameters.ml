@@ -1,5 +1,6 @@
 open OUnit2
 open TestCommon
+open Ratio
 
 (*
 Parameter-related things we might want to add tests for:
@@ -12,7 +13,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let rec call_touch_times
     (index: Ligo.tez)
-    (kit_in_tez: Ratio.t)
+    (kit_in_tez: ratio)
     (n: int)
     (params: Parameters.t)
   : Parameters.t =
@@ -122,8 +123,8 @@ let test_compute_imbalance_all_zero =
     let burrowed    = Kit.zero in
     let circulating = Kit.zero in
     assert_equal
-      ~printer:Ratio.show
-      Ratio.zero
+      ~printer:show_ratio
+      zero_ratio
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_zero_burrowed =
@@ -131,8 +132,8 @@ let test_compute_imbalance_zero_burrowed =
     let burrowed    = Kit.zero in
     let circulating = Kit.one in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_equal =
@@ -140,8 +141,8 @@ let test_compute_imbalance_equal =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
-      ~printer:Ratio.show
-      Ratio.zero
+      ~printer:show_ratio
+      zero_ratio
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_small =
@@ -149,8 +150,8 @@ let test_compute_imbalance_positive_small =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal   "800_000_001") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_big =
@@ -158,8 +159,8 @@ let test_compute_imbalance_positive_big =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal   "800_000_000") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_positive_capped =
@@ -167,8 +168,8 @@ let test_compute_imbalance_positive_capped =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal             "1") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_small =
@@ -176,8 +177,8 @@ let test_compute_imbalance_negative_small =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal   "833_333_334") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_big =
@@ -185,8 +186,8 @@ let test_compute_imbalance_negative_big =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal   "833_333_333") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 let test_compute_imbalance_negative_capped =
@@ -194,8 +195,8 @@ let test_compute_imbalance_negative_capped =
     let burrowed    = Kit.of_mukit (Ligo.int_from_literal             "1") in
     let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
-      ~printer:Ratio.show
-      (Ratio.make (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~printer:show_ratio
+      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
       (Parameters.compute_imbalance ~burrowed ~circulating)
 
 (* ************************************************************************* *)
@@ -210,9 +211,9 @@ let test_imbalance_upper_bound =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Ratio.leq
+  leq_ratio_ratio
     (Parameters.compute_imbalance ~burrowed ~circulating)
-    (Ratio.make (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+    (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
 
 (* Imbalance can never go below -5% *)
 let test_imbalance_lower_bound =
@@ -222,9 +223,9 @@ let test_imbalance_lower_bound =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Ratio.geq
+  geq_ratio_ratio
     (Parameters.compute_imbalance ~burrowed ~circulating)
-    (Ratio.make (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+    (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
 
 (* The sign of imbalance is the same as of (burrowed - circulating).
  * If burrowed > circulating then imbalance > 0
@@ -238,8 +239,8 @@ let test_imbalance_sign_preservation =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  Ratio.sign (Parameters.compute_imbalance ~burrowed ~circulating)
-  = Ratio.sign (Kit.to_ratio (Kit.sub burrowed circulating))
+  sign_ratio (Parameters.compute_imbalance ~burrowed ~circulating)
+  = sign_ratio (Kit.to_ratio (Kit.sub burrowed circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =
@@ -249,9 +250,9 @@ let test_imbalance_is_zero_when_equal =
     ~count:property_test_count
     TestArbitrary.arb_kit
   @@ fun kit ->
-  Ratio.equal
+  eq_ratio_ratio
     (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
-    Ratio.zero
+    zero_ratio
 
 (* For a fixed amount of kit in circulation, increasing the burrowed kit
  * increases the imbalance. *)
@@ -270,7 +271,7 @@ let test_imbalance_positive_tendencies =
     | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
     | _ -> failwith "impossible"
   ) in
-  Ratio.geq
+  geq_ratio_ratio
     (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
     (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
 
@@ -291,7 +292,7 @@ let test_imbalance_negative_tendencies =
     | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
     | _ -> failwith "impossible"
   ) in
-  Ratio.leq
+  leq_ratio_ratio
     (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
     (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
 
@@ -306,7 +307,7 @@ let test_protected_index_follows_index =
   let params = Parameters.initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Ratio.one in
+  let kit_in_tez = one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -339,10 +340,10 @@ let test_protected_index_pace =
     let params = Parameters.initial_parameters in
 
     (* Neutral kit_in_tez (same as initial) *)
-    let kit_in_tez = Ratio.one in
+    let kit_in_tez = one_ratio in
 
     (* UPWARD MOVES *)
-    let very_high_index = Ratio.to_tez_floor (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "1000")) (Ratio.of_tez params.index)) in
+    let very_high_index = ratio_to_tez_floor (mul_ratio (ratio_of_int (Ligo.int_from_literal "1000")) (ratio_of_tez params.index)) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
@@ -357,7 +358,7 @@ let test_protected_index_pace =
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "2_053_031mutez") new_params.protected_index;
 
     (* DOWNWARD MOVES *)
-    let very_low_index = Ratio.to_tez_floor (Ratio.mul (Ratio.make (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (Ratio.of_tez params.index)) in
+    let very_low_index = ratio_to_tez_floor (mul_ratio (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (ratio_of_tez params.index)) in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
@@ -383,7 +384,7 @@ let test_minting_index_low_bounded =
   let params = Parameters.initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Ratio.one in
+  let kit_in_tez = one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -409,7 +410,7 @@ let test_minting_index_high_unbounded =
   let params = Parameters.initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Ratio.one in
+  let kit_in_tez = one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -437,7 +438,7 @@ let test_liquidation_index_high_bounded =
   let params = Parameters.initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Ratio.one in
+  let kit_in_tez = one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -464,7 +465,7 @@ let test_liquidation_index_low_unbounded =
   let params = Parameters.initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Ratio.one in
+  let kit_in_tez = one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -502,7 +503,7 @@ let test_liquidation_index_low_unbounded =
 
    (* neutral arguments *)
    let index = params.index in
-   let kit_in_tez = Ratio.one in
+   let kit_in_tez = one_ratio in
 
    qcheck_to_ounit
    @@ QCheck.Test.make
@@ -571,7 +572,7 @@ let test_touch =
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in
-    let kit_in_tez = Ratio.make (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_uniswap, new_parameters = Parameters.touch new_index kit_in_tez initial_parameters in
     assert_equal
       { q = FixedPoint.of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)

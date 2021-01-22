@@ -1,6 +1,7 @@
 open Ptr
+open Ratio
 
-(* TODO: At the very end, inline all numeric operations, flatten all Ratio.t so
+(* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
 
@@ -450,13 +451,13 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
     let kit_to_repay, kit_to_burn =
       let corresponding_kit =
         Kit.of_ratio_floor
-          (Ratio.mul
-             (Ratio.make (Common.tez_to_mutez leaf.tez) (Common.tez_to_mutez outcome.sold_tez))
+          (mul_ratio
+             (make_ratio (Common.tez_to_mutez leaf.tez) (Common.tez_to_mutez outcome.sold_tez))
              (Kit.to_ratio outcome.winning_bid.kit)
           ) in
       let penalty =
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio corresponding_kit) Constants.liquidation_penalty)
+          Kit.of_ratio_ceil (mul_ratio (Kit.to_ratio corresponding_kit) Constants.liquidation_penalty)
         else
           Kit.zero
       in
@@ -634,9 +635,9 @@ let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
 let calculate_touch_reward (state:t) : Kit.t =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now);
   let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now state.parameters.last_touched in
-  let low_duration = Common.int_min duration_in_seconds Constants.touch_reward_low_bracket in
+  let low_duration = Common.min_int duration_in_seconds Constants.touch_reward_low_bracket in
   let high_duration =
-    Common.int_max
+    Common.max_int
       (Ligo.int_from_literal "0")
       (Ligo.sub_int_int duration_in_seconds Constants.touch_reward_low_bracket) in
 

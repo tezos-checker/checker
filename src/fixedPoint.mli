@@ -16,9 +16,9 @@ val exp : t -> t
 
 (* Conversions to/from other types. *)
 val of_int : Ligo.int -> t
-val to_ratio : t -> Ratio.t
-val of_ratio_ceil : Ratio.t -> t
-val of_ratio_floor : Ratio.t -> t
+val to_ratio : t -> Ratio.ratio
+val of_ratio_ceil : Ratio.ratio -> t
+val of_ratio_floor : Ratio.ratio -> t
 
 (* BEGIN_OCAML *)
 val of_hex_string : string -> t

@@ -1,4 +1,5 @@
 open Burrow
+open Ratio
 open OUnit2
 
 let property_test_count = 100
@@ -13,16 +14,16 @@ let arbitrary_burrow (params: Parameters.t) =
     QCheck.map
       (fun (t, k, factor) ->
          let tez =
-           Ratio.to_tez_floor
-             (Ratio.div
-                (Ratio.of_int (Ligo.int_from_literal (string_of_int t)))
-                (Ratio.mul (Ratio.of_int (Ligo.int_from_literal "2")) (Ratio.of_int (Ligo.int_from_literal (string_of_int factor))))
+           ratio_to_tez_floor
+             (div_ratio
+                (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
+                (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
              ) in
          let kit =
            Kit.of_ratio_floor
-             (Ratio.div
-                (Ratio.of_int (Ligo.int_from_literal (string_of_int k)))
-                (Ratio.of_int (Ligo.int_from_literal (string_of_int factor)))
+             (div_ratio
+                (ratio_of_int (Ligo.int_from_literal (string_of_int k)))
+                (ratio_of_int (Ligo.int_from_literal (string_of_int factor)))
              ) in
          (tez, kit)
       )
@@ -31,7 +32,7 @@ let arbitrary_burrow (params: Parameters.t) =
   let arb_smart_tez_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
-         let tez = Ratio.to_tez_floor (Ratio.div (Ratio.of_tez tez) (Ratio.of_int (Ligo.int_from_literal "2"))) in
+         let tez = ratio_to_tez_floor (div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2"))) in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
@@ -68,10 +69,10 @@ Other properties
 *)
 
 let params : Parameters.t =
-  { q = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
+  { q = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
     index = Ligo.tez_from_literal "320_000mutez";
     protected_index = Ligo.tez_from_literal "360_000mutez";
-    target = FixedPoint.of_ratio_floor (Ratio.make (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
+    target = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
     drift = FixedPoint.zero;
     drift_derivative = FixedPoint.zero;
     burrow_fee_index = FixedPoint.one;

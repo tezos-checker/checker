@@ -1,3 +1,5 @@
+open Ratio
+
 (* TODO: Perhaps we should represent this as a Ligo.nat, instead of an integer. It
  * all boils down to what we wish to use when calculating (e.g. negative kit
  * can be useful for the imbalance adjustment, which can be either positive or
@@ -20,13 +22,13 @@ let one = scaling_factor
 let of_mukit amount = amount
 let to_mukit amount = amount
 
-let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let to_ratio amount = make_ratio amount scaling_factor
+let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (ratio_num amount) scaling_factor) (ratio_den amount)
+let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (ratio_num amount) scaling_factor) (ratio_den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp =
-  of_ratio_floor (Ratio.mul (FixedPoint.to_ratio fp) (to_ratio amount))
+  of_ratio_floor (mul_ratio (FixedPoint.to_ratio fp) (to_ratio amount))
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit [@@deriving show]

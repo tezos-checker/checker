@@ -1,57 +1,54 @@
-
-type t
+type ratio
 
 (* Construction/deconstruction. *)
-val make: Ligo.int -> Ligo.int -> t
-val num: t -> Ligo.int
-val den: t -> Ligo.int
+val make_ratio: Ligo.int -> Ligo.int -> ratio
+val ratio_num: ratio -> Ligo.int
+val ratio_den: ratio -> Ligo.int
 
 (* Predefined values *)
-val zero: t
-val one: t
-val minus_one:t
+val zero_ratio: ratio
+val one_ratio: ratio
 
 (* Conversions to/from other types. *)
-val of_int: Ligo.int -> t
-val to_int: t -> Ligo.int
+val ratio_of_int: Ligo.int -> ratio
+val ratio_to_int: ratio -> Ligo.int
 
-val of_nat: Ligo.nat -> t
-val to_nat_floor: t -> Ligo.nat
-val to_nat_ceil: t -> Ligo.nat
+val ratio_of_nat: Ligo.nat -> ratio
+val ratio_to_nat_floor: ratio -> Ligo.nat
+val ratio_to_nat_ceil: ratio -> Ligo.nat
 
-val of_tez: Ligo.tez -> t
-val to_tez_floor: t -> Ligo.tez
-val to_tez_ceil: t -> Ligo.tez
+val ratio_of_tez: Ligo.tez -> ratio
+val ratio_to_tez_floor: ratio -> Ligo.tez
+val ratio_to_tez_ceil: ratio -> Ligo.tez
 
 (* Relational operations. *)
-val equal: t -> t -> bool
-val lt: t -> t -> bool
-val gt: t -> t -> bool
-val leq: t -> t -> bool
-val geq: t -> t -> bool
+val eq_ratio_ratio: ratio -> ratio -> bool
+val lt_ratio_ratio: ratio -> ratio -> bool
+val gt_ratio_ratio: ratio -> ratio -> bool
+val leq_ratio_ratio: ratio -> ratio -> bool
+val geq_ratio_ratio: ratio -> ratio -> bool
 
 (* Other operations *)
 
 (* NOTE: OCaml's polymorphic comparison will NOT return a result consistent
  * with the ordering of rationals we provide here (OCaml's comparison will use
  * lexicographic ordering which is incorrect in this instance). *)
-val min: t -> t -> t
-val max: t -> t -> t
+val min_ratio: ratio -> ratio -> ratio
+val max_ratio: ratio -> ratio -> ratio
 
 (* Basic unary operations. *)
-val neg: t -> t
-val abs_ratio: t -> t
-val inv: t -> t
+val neg_ratio: ratio -> ratio
+val abs_ratio: ratio -> ratio
 
 (* Basic binary operations. *)
-val add: t -> t -> t
-val sub: t -> t -> t
-val mul: t -> t -> t
-val div: t -> t -> t
+val add_ratio: ratio -> ratio -> ratio
+val sub_ratio: ratio -> ratio -> ratio
+val mul_ratio: ratio -> ratio -> ratio
+val div_ratio: ratio -> ratio -> ratio
 
 (* BEGIN_OCAML *)
-val pp: Format.formatter -> t -> unit
-val show: t -> string
+val pp_ratio: Format.formatter -> ratio -> unit
+val show_ratio: ratio -> string
 
-val sign: t -> int
+val sign_ratio: ratio -> int
 (* END_OCAML *)

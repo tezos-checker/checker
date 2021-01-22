@@ -1,5 +1,6 @@
 open OUnit2
 open TestCommon
+open Ratio
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -11,7 +12,7 @@ let arb_positive_kit_token = QCheck.map Kit.issue TestArbitrary.arb_positive_kit
 let arb_liquidity = QCheck.map (fun x -> Uniswap.issue_liquidity_tokens (Ligo.abs (Ligo.int_from_literal (string_of_int x)))) QCheck.(0 -- max_int)
 
 (* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
-let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: Ratio.t) (last_level: Ligo.nat) =
+let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: ratio) (last_level: Ligo.nat) =
   QCheck.map
     (fun (tez, kit, lqt) ->
        (tez, kit, lqt, Uniswap.make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level)
@@ -25,12 +26,12 @@ let make_inputs_for_buy_kit_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
     (fun (tez, _kit, _lqt, uniswap) ->
-       let amount = Ratio.to_tez_ceil (Ratio.div (Ratio.mul (Ratio.of_tez tez) (Ratio.sub Ratio.one Constants.uniswap_fee)) Constants.uniswap_fee) in
+       let amount = ratio_to_tez_ceil (div_ratio (mul_ratio (ratio_of_tez tez) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee) in
        let min_kit_expected = Kit.of_mukit (Ligo.int_from_literal "1") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, min_kit_expected, deadline)
     )
-    (arbitrary_non_empty_uniswap Ratio.one !Ligo.tezos_level)
+    (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level)
 
 (* kit >= uniswap_kit * (1 - fee) / fee *)
 (* 1mutez <= min_tez_expected < FLOOR{kit * (uniswap_tez / (uniswap_kit + kit)) * FACTOR} *)
@@ -42,12 +43,12 @@ let make_inputs_for_sell_kit_to_succeed =
        let amount = (Ligo.tez_from_literal "0mutez") in
        let token =
          let kit, _same_ticket = Kit.read_kit kit in
-         Kit.issue (Kit.of_ratio_ceil (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.sub Ratio.one Constants.uniswap_fee)) Constants.uniswap_fee)) in
+         Kit.issue (Kit.of_ratio_ceil (div_ratio (mul_ratio (Kit.to_ratio kit) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee)) in
        let min_tez_expected = Ligo.tez_from_literal "1mutez" in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, deadline)
     )
-    (arbitrary_non_empty_uniswap Ratio.one !Ligo.tezos_level)
+    (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level)
 
 (* amount > 0xtz *)
 (* max_kit_deposited = CEIL{kit * amount / tez} *)
@@ -60,14 +61,14 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
        let pending_accrual = (Ligo.tez_from_literal "0mutez") in
        let max_kit_deposited =
          let kit, _same_ticket = Kit.read_kit kit in
-         Kit.issue (Kit.of_ratio_ceil (Ratio.mul (Kit.to_ratio kit) (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)))) in
+         Kit.issue (Kit.of_ratio_ceil (mul_ratio (Kit.to_ratio kit) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)))) in
        let min_lqt_minted =
          let (_, (_, lqt)), _same_ticket = Ligo.Tezos.read_ticket lqt in
-         Ratio.to_nat_floor (Ratio.mul (Ratio.of_nat lqt) (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez tez))) in
+         ratio_to_nat_floor (mul_ratio (ratio_of_nat lqt) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez))) in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap Ratio.one !Ligo.tezos_level) TestArbitrary.arb_positive_tez)
+    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level) TestArbitrary.arb_positive_tez)
 
 (* NB: some values are fixed *)
 let make_inputs_for_remove_liquidity_to_succeed =
@@ -78,12 +79,12 @@ let make_inputs_for_remove_liquidity_to_succeed =
 
        let kit, _same_kit_ticket = Kit.read_kit kit in
        let (_, (_, lqt)), _same_lqt_ticket = Ligo.Tezos.read_ticket lqt in
-       let lqt_to_burn = Ratio.to_nat_floor (Ratio.div (Ratio.of_nat lqt) (Ratio.of_int (Ligo.int_from_literal (string_of_int factor)))) in
+       let lqt_to_burn = ratio_to_nat_floor (div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor)))) in
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
 
        let lqt_burned = Uniswap.issue_liquidity_tokens lqt_to_burn in
-       let min_tez_withdrawn = Ratio.to_tez_floor (Ratio.div (Ratio.mul (Ratio.of_tez tez) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
-       let min_kit_withdrawn = Kit.of_ratio_floor (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
+       let min_tez_withdrawn = ratio_to_tez_floor (div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
+       let min_kit_withdrawn = Kit.of_ratio_floor (div_ratio (mul_ratio (Kit.to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
 
        (* NOTE: We cannot just factor down the number of liquidity tokens
         * extant for this operation. When we remove liquidity we round the
@@ -94,13 +95,13 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let lqt_burned, min_tez_withdrawn, min_kit_withdrawn =
          if lqt_to_burn = Ligo.nat_from_literal "0n" || min_tez_withdrawn = (Ligo.tez_from_literal "0mutez") || min_kit_withdrawn = Kit.zero then
            let lqt_to_burn =
-             let least_kit_percentage = (Ratio.div (Kit.to_ratio (Kit.of_mukit (Ligo.int_from_literal "1"))) (Kit.to_ratio kit)) in
-             let least_tez_percentage = Ratio.make (Common.tez_to_mutez (Ligo.tez_from_literal "1mutez")) (Common.tez_to_mutez tez) in
-             let as_q = (Ratio.mul (Ratio.of_nat lqt) (Ratio.max least_kit_percentage least_tez_percentage)) in
-             Option.get (Ligo.is_nat (Common.cdiv_int_int (Ratio.num as_q) (Ratio.den as_q))) in
+             let least_kit_percentage = (div_ratio (Kit.to_ratio (Kit.of_mukit (Ligo.int_from_literal "1"))) (Kit.to_ratio kit)) in
+             let least_tez_percentage = make_ratio (Common.tez_to_mutez (Ligo.tez_from_literal "1mutez")) (Common.tez_to_mutez tez) in
+             let as_q = (mul_ratio (ratio_of_nat lqt) (max_ratio least_kit_percentage least_tez_percentage)) in
+             Option.get (Ligo.is_nat (Common.cdiv_int_int (ratio_num as_q) (ratio_den as_q))) in
            let lqt_burned = Uniswap.issue_liquidity_tokens lqt_to_burn in
-           let min_tez_withdrawn = Ratio.to_tez_floor (Ratio.div (Ratio.mul (Ratio.of_tez tez) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
-           let min_kit_withdrawn = Kit.of_ratio_floor (Ratio.div (Ratio.mul (Kit.to_ratio kit) (Ratio.of_nat lqt_to_burn)) (Ratio.of_nat lqt)) in
+           let min_tez_withdrawn = ratio_to_tez_floor (div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
+           let min_kit_withdrawn = Kit.of_ratio_floor (div_ratio (mul_ratio (Kit.to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
            (lqt_burned, min_tez_withdrawn, min_kit_withdrawn)
          else
            lqt_burned, min_tez_withdrawn, min_kit_withdrawn in
@@ -108,7 +109,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap Ratio.one !Ligo.tezos_level) QCheck.pos_int)
+    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level) QCheck.pos_int)
 
 (* TODO: Write down for which inputs are the uniswap functions to succeed and
  * test the corresponding edge cases. *)
@@ -128,7 +129,7 @@ let test_buy_kit_increases_price =
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_uniswap =
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~deadline in
-  Ratio.gt (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
+  gt_ratio_ratio (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.buy_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
@@ -141,7 +142,7 @@ let test_buy_kit_increases_product =
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_uniswap =
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~deadline in
-  Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
+  gt_ratio_ratio (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
 (* Successful or not, Uniswap.buy_kit should never affect the number of
  * liquidity tokens extant. *)
@@ -168,7 +169,7 @@ let buy_kit_unit_test =
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "5_000_000")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
-        ~kit_in_tez_in_prev_block:Ratio.one
+        ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
@@ -178,7 +179,7 @@ let buy_kit_unit_test =
         ~tez:(Ligo.tez_from_literal "11_000_000mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "4_546_364")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
-        ~kit_in_tez_in_prev_block:(Ratio.of_int (Ligo.int_from_literal "2"))
+        ~kit_in_tez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
     in
 
@@ -247,7 +248,7 @@ let test_sell_kit_decreases_price =
   @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
   let _bought_tez, new_uniswap =
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~deadline in
-  Ratio.lt (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
+  lt_ratio_ratio (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.sell_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
@@ -260,7 +261,7 @@ let test_sell_kit_increases_product =
   @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
   let _bought_tez, new_uniswap =
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~deadline in
-  Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
+  gt_ratio_ratio (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
 (* Successful or not, Uniswap.sell_kit should never affect the number of
  * liquidity tokens extant. *)
@@ -287,7 +288,7 @@ let sell_kit_unit_test =
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "5_000_000")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
-        ~kit_in_tez_in_prev_block:Ratio.one
+        ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
     let expected_returned_tez = Ligo.tez_from_literal "1_663_333mutez" in
@@ -296,7 +297,7 @@ let sell_kit_unit_test =
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "6_000_000")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
-        ~kit_in_tez_in_prev_block:(Ratio.of_int (Ligo.int_from_literal "2"))
+        ~kit_in_tez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
     in
 
@@ -371,7 +372,7 @@ let test_add_liquidity_might_decrease_price =
   @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, _bought_kit, new_uniswap =
     Uniswap.add_liquidity uniswap ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
-  Ratio.leq (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
+  leq_ratio_ratio (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the product
  * total_tez * total_kit, because we add both tez and kit. *)
@@ -384,7 +385,7 @@ let test_add_liquidity_increases_product =
   @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, _bought_kit, new_uniswap =
     Uniswap.add_liquidity uniswap ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
-  Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
+  gt_ratio_ratio (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.add_liquidity always increases the liquidity;
  * that's what it's supposed to do. *)
@@ -411,7 +412,7 @@ let add_liquidity_unit_test =
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "6_000_000")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
-        ~kit_in_tez_in_prev_block:Ratio.one
+        ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
     let expected_returned_liquidity = Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "2n") in
@@ -421,7 +422,7 @@ let add_liquidity_unit_test =
         ~tez:(Ligo.tez_from_literal "28_336_667mutez")
         ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "20_394_242")))
         ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "3n"))
-        ~kit_in_tez_in_prev_block:Ratio.one
+        ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
@@ -457,7 +458,7 @@ let test_remove_liquidity_decreases_product =
   @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
   let _withdrawn_tez, _withdrawn_kit, new_uniswap =
     Uniswap.remove_liquidity uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
-  Ratio.leq (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
+  leq_ratio_ratio (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
 (* If successful, Uniswap.remove_liquidity always decreases the liquidity;
  * that's what it's supposed to do. *)
@@ -485,7 +486,7 @@ let pending_tez_deposit_test =
          ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
          ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "5000_000_000")))
          ~lqt:(Uniswap.issue_liquidity_tokens (Ligo.nat_from_literal "1000n"))
-         ~kit_in_tez_in_prev_block:Ratio.one
+         ~kit_in_tez_in_prev_block:one_ratio
          ~last_level:(Ligo.nat_from_literal "0n") in
      (* let uniswap = set_pending_accrued_tez uniswap (Ligo.tez_from_literal "1_000_000mutez") in *)
 

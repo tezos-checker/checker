@@ -1,3 +1,5 @@
+open Ratio
+
 (* To be used as the content in liquidity tokens for disambiguation. *)
 type liquidity_token_content = Lqt [@@deriving show]
 
@@ -19,7 +21,7 @@ type t =
     (* George: I don't expect this to get really big in size cause it's
      * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
      * are relatively prime, we are OK). *)
-    kit_in_tez_in_prev_block: Ratio.t [@printer Ratio.pp];
+    kit_in_tez_in_prev_block: ratio [@printer pp_ratio];
     last_level: Ligo.nat;
   }
 [@@deriving show]
@@ -28,7 +30,7 @@ let make_initial =
   { tez = Ligo.tez_from_literal "1mutez";
     kit = Kit.issue (Kit.of_mukit (Ligo.int_from_literal "1"));
     lqt = issue_liquidity_tokens (Ligo.nat_from_literal "1n");
-    kit_in_tez_in_prev_block = Ratio.one; (* Same as tez/kit now. *)
+    kit_in_tez_in_prev_block = one_ratio; (* Same as tez/kit now. *)
     last_level = !Ligo.tezos_level;
   }
 
@@ -70,7 +72,7 @@ let sync_last_observed (uniswap: t) =
   else
     let uniswap_kit, _same_token = Kit.read_kit uniswap.kit in (* NOTE: replace? *)
     { uniswap with
-      kit_in_tez_in_prev_block = Ratio.div (Ratio.of_tez uniswap.tez) (Kit.to_ratio uniswap_kit);
+      kit_in_tez_in_prev_block = div_ratio (ratio_of_tez uniswap.tez) (Kit.to_ratio uniswap_kit);
       last_level = !Ligo.tezos_level;
     }
 
@@ -87,17 +89,17 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~deadline =
     let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = Ratio.div (Kit.to_ratio uniswap_kit) (Ratio.of_tez uniswap.tez) in
-    let slippage = Ratio.make (Common.tez_to_mutez uniswap.tez) (Common.tez_to_mutez (Ligo.add_tez_tez uniswap.tez amount)) in
+    let price = div_ratio (Kit.to_ratio uniswap_kit) (ratio_of_tez uniswap.tez) in
+    let slippage = make_ratio (Common.tez_to_mutez uniswap.tez) (Common.tez_to_mutez (Ligo.add_tez_tez uniswap.tez amount)) in
     let return =
       Kit.of_ratio_floor
-        (Ratio.mul
-           (Ratio.of_tez amount)
-           (Ratio.mul
+        (mul_ratio
+           (ratio_of_tez amount)
+           (mul_ratio
               price
-              (Ratio.mul
+              (mul_ratio
                  slippage
-                 (Ratio.sub Ratio.one Constants.uniswap_fee)
+                 (sub_ratio one_ratio Constants.uniswap_fee)
               )
            )
         ) in
@@ -129,17 +131,17 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~deadline
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = Ratio.div (Ratio.of_tez uniswap.tez) (Kit.to_ratio uniswap_kit) in
-    let slippage = Ratio.div (Kit.to_ratio uniswap_kit) (Kit.to_ratio (Kit.add uniswap_kit kit)) in
+    let price = div_ratio (ratio_of_tez uniswap.tez) (Kit.to_ratio uniswap_kit) in
+    let slippage = div_ratio (Kit.to_ratio uniswap_kit) (Kit.to_ratio (Kit.add uniswap_kit kit)) in
     let return =
-      Ratio.to_tez_floor
-        (Ratio.mul
+      ratio_to_tez_floor
+        (mul_ratio
            (Kit.to_ratio kit)
-           (Ratio.mul
+           (mul_ratio
               price
-              (Ratio.mul
+              (mul_ratio
                  slippage
-                 (Ratio.sub Ratio.one Constants.uniswap_fee)
+                 (sub_ratio one_ratio Constants.uniswap_fee)
               )
            )
         ) in
@@ -182,16 +184,16 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
     let (_, (_, uniswap_lqt)), _same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
     let lqt_minted =
-      Ratio.to_nat_floor
-        (Ratio.mul
-           (Ratio.of_nat uniswap_lqt)
-           (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
+      ratio_to_nat_floor
+        (mul_ratio
+           (ratio_of_nat uniswap_lqt)
+           (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
         ) in
     let kit_deposited =
       Kit.of_ratio_ceil
-        (Ratio.mul
+        (mul_ratio
            (Kit.to_ratio uniswap_kit)
-           (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
+           (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
         ) in
     if lqt_minted < min_lqt_minted then
       failwith "AddLiquidityTooLowLiquidityMinted"
@@ -240,9 +242,9 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
   else
     let (_, (_, uniswap_lqt)), same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in
     assert (lqt_burned <= uniswap_lqt); (* the ticket mechanism should enforce this *)
-    let ratio = Ratio.make (Ligo.int lqt_burned) (Ligo.int uniswap_lqt) in
-    let tez_withdrawn = Ratio.to_tez_floor (Ratio.mul (Ratio.of_tez uniswap.tez) ratio) in
-    let kit_withdrawn = Kit.of_ratio_floor (Ratio.mul (Kit.to_ratio uniswap_kit) ratio) in
+    let ratio = make_ratio (Ligo.int lqt_burned) (Ligo.int uniswap_lqt) in
+    let tez_withdrawn = ratio_to_tez_floor (mul_ratio (ratio_of_tez uniswap.tez) ratio) in
+    let kit_withdrawn = Kit.of_ratio_floor (mul_ratio (Kit.to_ratio uniswap_kit) ratio) in
 
     if tez_withdrawn < min_tez_withdrawn then
       failwith "RemoveLiquidityCantWithdrawEnoughTez"
@@ -285,11 +287,11 @@ let make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
 
 let kit_in_tez (u: t) =
   let u_kit, _same_token = Kit.read_kit u.kit in
-  Ratio.div (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
+  div_ratio (ratio_of_tez u.tez) (Kit.to_ratio u_kit)
 
 let kit_times_tez (u: t) =
   let u_kit, _same_token = Kit.read_kit u.kit in
-  Ratio.mul (Ratio.of_tez u.tez) (Kit.to_ratio u_kit)
+  mul_ratio (ratio_of_tez u.tez) (Kit.to_ratio u_kit)
 
 let liquidity_tokens_extant (u: t) = u.lqt
 (* END_OCAML *)

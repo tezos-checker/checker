@@ -1,3 +1,5 @@
+open Ratio
+
 type liquidation_slices =
   { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
 [@@deriving show]
@@ -113,10 +115,10 @@ let make_for_test
 let is_overburrowed (p : Parameters.t) (b : t) : bool =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
-  let collateral = Ratio.of_tez b.collateral in
+  let collateral = ratio_of_tez b.collateral in
   let minting_price = Parameters.minting_price p in
   let outstanding_kit = Kit.to_ratio b.outstanding_kit in
-  Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fminting outstanding_kit) minting_price)
+  lt_ratio_ratio collateral (mul_ratio (mul_ratio Constants.fminting outstanding_kit) minting_price)
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -146,8 +148,8 @@ let touch (p: Parameters.t) (burrow: t) : t =
     { b with
       outstanding_kit =
         Kit.of_ratio_ceil
-          (Ratio.div
-             (Ratio.mul
+          (div_ratio
+             (mul_ratio
                 kit_outstanding
                 (FixedPoint.to_ratio current_adjustment_index)
              )
@@ -357,20 +359,20 @@ let increase_permission_version (p: Parameters.t) (b: t) =
 let compute_tez_to_auction (p: Parameters.t) (b: t) : Ligo.tez =
   assert_invariants b;
   let oustanding_kit = Kit.to_ratio b.outstanding_kit in
-  let collateral = Ratio.of_tez b.collateral in
-  let collateral_at_auction = Ratio.of_tez b.collateral_at_auction in
+  let collateral = ratio_of_tez b.collateral in
+  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
   let minting_price = Parameters.minting_price p in
-  Ratio.to_tez_ceil
-    (Ratio.div
-       (Ratio.sub
-          (Ratio.sub
-             (Ratio.mul
-                (Ratio.mul oustanding_kit Constants.fminting)
+  ratio_to_tez_ceil
+    (div_ratio
+       (sub_ratio
+          (sub_ratio
+             (mul_ratio
+                (mul_ratio oustanding_kit Constants.fminting)
                 minting_price
              )
-             (Ratio.mul
-                (Ratio.mul
-                   (Ratio.sub Ratio.one Constants.liquidation_penalty)
+             (mul_ratio
+                (mul_ratio
+                   (sub_ratio one_ratio Constants.liquidation_penalty)
                    Constants.fminting
                 )
                 collateral_at_auction
@@ -378,12 +380,12 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Ligo.tez =
           )
           collateral
        )
-       (Ratio.sub
-          (Ratio.mul
-             (Ratio.sub Ratio.one Constants.liquidation_penalty)
+       (sub_ratio
+          (mul_ratio
+             (sub_ratio one_ratio Constants.liquidation_penalty)
              Constants.fminting
           )
-          Ratio.one
+          one_ratio
        )
     )
 
@@ -392,10 +394,10 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Ligo.tez =
   * rather optimistic here (we overapproximate the expected kit). *)
 let compute_expected_kit (p: Parameters.t) (tez_to_auction: Ligo.tez) : Kit.t =
   Kit.of_ratio_ceil
-    (Ratio.div
-       (Ratio.mul
-          (Ratio.of_tez tez_to_auction)
-          (Ratio.sub Ratio.one Constants.liquidation_penalty)
+    (div_ratio
+       (mul_ratio
+          (ratio_of_tez tez_to_auction)
+          (sub_ratio one_ratio Constants.liquidation_penalty)
        )
        (Parameters.minting_price p)
     )
@@ -417,8 +419,8 @@ let is_liquidatable (p: Parameters.t) (b: t) : bool =
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
   let liquidation_price = Parameters.liquidation_price p in
-  let collateral = Ratio.of_tez b.collateral in
-  b.active && Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fliquidation optimistic_outstanding) liquidation_price)
+  let collateral = ratio_of_tez b.collateral in
+  b.active && lt_ratio_ratio collateral (mul_ratio (mul_ratio Constants.fliquidation optimistic_outstanding) liquidation_price)
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
@@ -429,9 +431,9 @@ let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
-  let collateral = Ratio.of_tez b.collateral in
+  let collateral = ratio_of_tez b.collateral in
   let minting_price = Parameters.minting_price p in
-  Ratio.lt collateral (Ratio.mul (Ratio.mul Constants.fminting optimistic_outstanding) minting_price)
+  lt_ratio_ratio collateral (mul_ratio (mul_ratio Constants.fminting optimistic_outstanding) minting_price)
 
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
@@ -458,12 +460,12 @@ let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Li
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = Kit.to_ratio (Kit.sub b.outstanding_kit expected_kit) in
-  let collateral = Ratio.of_tez b.collateral in
+  let collateral = ratio_of_tez b.collateral in
   Kit.of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
-    (Ratio.div
-       (Ratio.mul
-          (Ratio.of_tez tez_to_auction)
-          (Ratio.mul Constants.fliquidation optimistic_outstanding)
+    (div_ratio
+       (mul_ratio
+          (ratio_of_tez tez_to_auction)
+          (mul_ratio Constants.fliquidation optimistic_outstanding)
        )
        collateral
     )
@@ -472,9 +474,9 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   let partial_reward =
-    Ratio.to_tez_floor
-      (Ratio.mul
-         (Ratio.of_tez b.collateral)
+    ratio_to_tez_floor
+      (mul_ratio
+         (ratio_of_tez b.collateral)
          (FixedPoint.to_ratio Constants.liquidation_reward_percentage)
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to

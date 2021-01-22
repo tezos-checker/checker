@@ -1,3 +1,5 @@
+open Ratio
+
 type t = Ligo.int
 
 (* let scaling_base = Ligo.int_from_literal 2 *)
@@ -35,9 +37,9 @@ let exp amount = add one amount
 (* Conversions to/from other types. *)
 let of_int amount = Ligo.mul_int_int amount scaling_factor
 
-let to_ratio amount = Ratio.make amount scaling_factor
-let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
-let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (Ratio.num amount) scaling_factor) (Ratio.den amount)
+let to_ratio amount = make_ratio amount scaling_factor
+let of_ratio_ceil  amount = Common.cdiv_int_int (Ligo.mul_int_int (ratio_num amount) scaling_factor) (ratio_den amount)
+let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (ratio_num amount) scaling_factor) (ratio_den amount)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 (* BEGIN_OCAML *)
