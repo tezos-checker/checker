@@ -3,12 +3,6 @@ let bob_addr = Ligo.address_from_literal "bob_addr"
 
 let show_error (e: Error.error) : string =
   match e with
-  (* Delegation auction errors *)
-  | DelegationAuction.BidTooLow                        -> "DelegationAuction.BidTooLow"
-  | DelegationAuction.BidTicketExpired                 -> "DelegationAuction.BidTicketExpired"
-  | DelegationAuction.CannotReclaimLeadingBid          -> "DelegationAuction.CannotReclaimLeadingBid"
-  | DelegationAuction.CannotReclaimWinningBid          -> "DelegationAuction.CannotReclaimWinningBid"
-  | DelegationAuction.NotAWinningBid                   -> "DelegationAuction.NotAWinningBid"
   (* Uniswap errors *)
   | Uniswap.UniswapNonPositiveInput                    -> "Uniswap.UniswapNonPositiveInput"
   | Uniswap.UniswapTooLate                             -> "Uniswap.UniswapTooLate"

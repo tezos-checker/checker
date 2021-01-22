@@ -11,7 +11,7 @@ let abs_int (x: Ligo.int) = Ligo.int (Ligo.abs x)
 
 (* Note that ligo is not happy with nested lets. Take out when ready, but
  * keep internal for now. *)
-let rec pow_rec (y: Ligo.int) (x: Ligo.int) (n: Ligo.nat) : Ligo.int =
+let rec pow_rec (y, x, n: Ligo.int * Ligo.int * Ligo.nat) : Ligo.int =
   if Ligo.eq_nat_nat n (Ligo.nat_from_literal "0n") then
     y
   else if Ligo.eq_nat_nat n (Ligo.nat_from_literal "1n") then
@@ -22,11 +22,11 @@ let rec pow_rec (y: Ligo.int) (x: Ligo.int) (n: Ligo.nat) : Ligo.int =
     | Some quot_rem ->
       let (quot, rem) = quot_rem in
       if Ligo.eq_nat_nat rem (Ligo.nat_from_literal "0n") then
-        pow_rec y (Ligo.mul_int_int x x) quot
+        pow_rec (y, Ligo.mul_int_int x x, quot)
       else
-        pow_rec (Ligo.mul_int_int x y) (Ligo.mul_int_int x x) quot
+        pow_rec (Ligo.mul_int_int x y, Ligo.mul_int_int x x, quot)
 
-let pow_int_nat (x: Ligo.int) (n: Ligo.nat) = pow_rec (Ligo.int_from_literal "1") x n
+let pow_int_nat (x: Ligo.int) (n: Ligo.nat) = pow_rec (Ligo.int_from_literal "1", x, n)
 
 let cdiv_int_int (x: Ligo.int) (y: Ligo.int) =
   match Ligo.ediv_int_int x y with

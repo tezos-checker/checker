@@ -38,8 +38,8 @@ let issue_liquidity_tokens (i: Ligo.nat) = Ligo.Tezos.create_ticket Lqt i
 let is_liquidity_token_valid
     ~(liquidity: liquidity)
   : (liquidity, Error.error) result =
-  let (issuer, _content, _amount), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = Ligo.Tezos.self then Ok liquidity else Error InvalidLiquidityToken
+  let (issuer, (_content, _amount)), liquidity = Ligo.Tezos.read_ticket liquidity in
+  if issuer = Ligo.Tezos.self_address then Ok liquidity else Error InvalidLiquidityToken
 
 let with_valid_liquidity_token
     ~(liquidity: liquidity)
@@ -66,7 +66,7 @@ let make_initial =
     kit = Kit.issue (Kit.of_mukit (Ligo.int_from_literal "1"));
     lqt = issue_liquidity_tokens (Ligo.nat_from_literal "1n");
     kit_in_tez_in_prev_block = Ratio.one; (* Same as tez/kit now. *)
-    last_level = !Ligo.Tezos.level;
+    last_level = !Ligo.tezos_level;
   }
 
 (* When the uniswap is uninitialized, we should not be able to query prices
@@ -84,7 +84,7 @@ let assert_initialized (u: t) =
     kit = Kit.zero in
   let is_liquidity_token_pool_empty (u: t) =
     (* NOTE: this part consumes the ticket. *)
-    let (_, _, n), _same_ticket = Ligo.Tezos.read_ticket u.lqt in
+    let (_, (_, n)), _same_ticket = Ligo.Tezos.read_ticket u.lqt in
     n = Ligo.nat_from_literal "0n" in
   assert (not (is_tez_pool_empty u));
   assert (not (is_kit_pool_empty u));
@@ -100,15 +100,15 @@ let kit_in_tez_in_prev_block (uniswap: t) =
  * that this is not be the previous block, but the last block in which the
  * uniswap contract was touched. *)
 let sync_last_observed (uniswap: t) =
-  assert (!Ligo.Tezos.level >= uniswap.last_level); (* TODO: can it be later?? *)
-  if uniswap.last_level = !Ligo.Tezos.level then
+  assert (!Ligo.tezos_level >= uniswap.last_level); (* TODO: can it be later?? *)
+  if uniswap.last_level = !Ligo.tezos_level then
     (* do nothing if it's been touched already in this block *)
     uniswap
   else
     let uniswap_kit, _same_token = Kit.read_kit uniswap.kit in (* NOTE: replace? *)
     { uniswap with
       kit_in_tez_in_prev_block = Ratio.div (Ratio.of_tez uniswap.tez) (Kit.to_ratio uniswap_kit);
-      last_level = !Ligo.Tezos.level;
+      last_level = !Ligo.tezos_level;
     }
 
 let buy_kit (uniswap: t) ~amount ~min_kit_expected ~deadline =
@@ -216,7 +216,7 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     Error AddLiquidityNoLiquidityToBeAdded
   else
-    let (_, _, uniswap_lqt), _same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
+    let (_, (_, uniswap_lqt)), _same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
     let lqt_minted =
       Ratio.to_nat_floor
@@ -262,7 +262,7 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
   let uniswap = sync_last_observed uniswap in
   assert_initialized uniswap;
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
-  let (_, _, lqt_burned), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
+  let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
   if amount <> Ligo.tez_from_literal "0mutez" then
     Error RemoveLiquidityNonEmptyAmount
   else if !Ligo.Tezos.now >= deadline then
@@ -275,7 +275,7 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
     Error RemoveLiquidityNoKitWithdrawnExpected
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
-    let (_, _, uniswap_lqt), same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in
+    let (_, (_, uniswap_lqt)), same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in
     assert (lqt_burned <= uniswap_lqt); (* the ticket mechanism should enforce this *)
     let ratio = Ratio.make (Ligo.int lqt_burned) (Ligo.int uniswap_lqt) in
     let tez_withdrawn = Ratio.to_tez_floor (Ratio.mul (Ratio.of_tez uniswap.tez) ratio) in

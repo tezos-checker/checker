@@ -223,17 +223,17 @@ type 'a ticket =
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
   let level = ref (nat_from_literal "0n")
-  let self = "self"
+  let self_address = "self_address"
   let sender = ref "sender"
   let amount = ref (tez_from_literal "0mutez")
 
   let create_ticket content amount =
-    { issuer = self;
+    { issuer = self_address;
       content = content;
       amount = amount;
     }
 
-  let read_ticket ticket = ((ticket.issuer, ticket.content, ticket.amount), ticket)
+  let read_ticket ticket = ((ticket.issuer, (ticket.content, ticket.amount)), ticket)
 
   let split_ticket ticket (left, right) =
     if (add_nat_nat left right) <> ticket.amount
@@ -263,6 +263,7 @@ module Tezos = struct
     sender := address_;
     amount := amount_
 end
+let tezos_level: nat ref = Tezos.level
 
 (* BEGIN_OCAML *)
 let string_of_int = Z.to_string

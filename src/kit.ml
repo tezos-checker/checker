@@ -44,8 +44,8 @@ type Error.error +=
   * issued by checker, and (b) is tagged appropriately (this is already
   * enforced by its type). *)
 let is_token_valid (token: token) : (token, Error.error) result =
-  let (issuer, _content, amount), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = Ligo.Tezos.self && amount >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
+  let (issuer, (_content, amount)), same_ticket = Ligo.Tezos.read_ticket token in
+  let is_valid = issuer = Ligo.Tezos.self_address && amount >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
   if is_valid then Ok same_ticket else Error InvalidKitToken
 
 let with_valid_kit_token
@@ -57,7 +57,7 @@ let with_valid_kit_token
   | Ok token -> f token
 
 let read_kit (token: token) : t * token =
-  let (_issuer, _content, mukit), same_token = Ligo.Tezos.read_ticket token in
+  let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
   (Ligo.int mukit, same_token)
 
 let split_or_fail (token: token) (left: t) (right: t) : token * token =

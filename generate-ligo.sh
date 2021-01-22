@@ -10,6 +10,8 @@ inputs=(
   liquidationAuctionTypes
   mem
   avl
+  common
+  delegationAuction
 )
 
 for name in "${inputs[@]}"; do
@@ -46,6 +48,10 @@ for name in "${inputs[@]}"; do
 
     # replace 'tez_from_literal' with its argument and remove the double quotes
     sed -E 's/tez_from_literal \"([0-9_]+)mutez\"/\1mutez/g' |
+
+    # remove the dereferences from Ligo.Tezos values
+    sed -E 's/!(Tezos\..*)/\1/g' |
+    sed -E 's/!(tezos_level)/\1/g' |
 
     cat > "$to"
 done

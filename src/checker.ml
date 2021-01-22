@@ -123,6 +123,11 @@ let with_no_tez_given (f: unit -> ('a, Error.error) result)
   then Error UnwantedTezGiven
   else f ()
 
+let assert_no_tez_given () =
+  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+  then failwith "UnwantedTezGiven"
+  else ()
+
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
 let with_valid_permission
@@ -131,9 +136,9 @@ let with_valid_permission
     ~(burrow: Burrow.t)
     (f: Permission.rights -> ('a, Error.error) result)
   : ('a, Error.error) result =
-  let (issuer, (rights, id, version), amount), _ = Ligo.Tezos.read_ticket permission in
+  let (issuer, ((rights, id, version), amount)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
-    issuer = Ligo.Tezos.self
+    issuer = Ligo.Tezos.self_address
     && amount = Ligo.nat_from_literal "0n"
     && version = Burrow.permission_version burrow
     && id = burrow_id in
@@ -567,25 +572,22 @@ let updated_delegation_auction state new_auction =
   }
 
 let delegation_auction_place_bid (state: t) =
-  match DelegationAuction.place_bid state.delegation_auction ~sender:!Ligo.Tezos.sender ~amount:!Ligo.Tezos.amount with
-  | Error err -> Error err
-  | Ok ticket_auction ->
-    let ticket, auction = ticket_auction in
-    Ok (ticket, updated_delegation_auction state auction)
+  let ticket, auction =
+    DelegationAuction.place_bid
+      state.delegation_auction
+      !Ligo.Tezos.sender
+      !Ligo.Tezos.amount in
+  (ticket, updated_delegation_auction state auction)
 
 let delegation_auction_claim_win state ~bid_ticket =
-  match DelegationAuction.claim_win state.delegation_auction ~bid_ticket:bid_ticket with
-  | Error err -> Error err
-  | Ok auction -> Ok (updated_delegation_auction state auction)
+  let auction = DelegationAuction.claim_win state.delegation_auction bid_ticket in
+  updated_delegation_auction state auction
 
 let delegation_auction_reclaim_bid state ~bid_ticket =
-  with_no_tez_given @@ fun () ->
-  match DelegationAuction.reclaim_bid state.delegation_auction ~bid_ticket:bid_ticket with
-  | Error err -> Error err
-  | Ok tez_auction ->
-    let tez, auction = tez_auction in
-    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez} in
-    Ok (tez_payment, updated_delegation_auction state auction)
+  assert_no_tez_given ();
+  let tez, auction = DelegationAuction.reclaim_bid state.delegation_auction bid_ticket in
+  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez} in
+  (tez_payment, updated_delegation_auction state auction)
 
 let touch_delegation_auction state =
   updated_delegation_auction state (DelegationAuction.touch state.delegation_auction)

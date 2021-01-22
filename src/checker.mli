@@ -245,17 +245,12 @@ val liquidation_auction_reclaim_winning_bid :
   * too low. If successful, return a token which can be used to either
   * reclaim the tez when outbid, or claim the auction result. *)
 val delegation_auction_place_bid :
-  t ->
-  (DelegationAuction.bid_ticket * t, Error.error) result
+  t -> DelegationAuction.bid_ticket * t
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
 val delegation_auction_claim_win :
-  t ->
-  bid_ticket:DelegationAuction.bid_ticket ->
-  (t, Error.error) result
+  t -> bid_ticket:DelegationAuction.bid_ticket -> t
 
 (** Reclaim a failed bid for the current or a completed auction. *)
 val delegation_auction_reclaim_bid :
-  t ->
-  bid_ticket:DelegationAuction.bid_ticket ->
-  (Tez.payment * t, Error.error) result
+  t -> bid_ticket:DelegationAuction.bid_ticket -> Tez.payment * t

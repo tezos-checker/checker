@@ -93,8 +93,8 @@ let issue_bid_ticket (bid_details: bid_details) =
 let is_bid_ticket_valid
     ~(bid_ticket: bid_ticket)
   : (bid_ticket, Error.error) result =
-  let (issuer, _bid_details, amount), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = Ligo.Tezos.self && amount = Ligo.nat_from_literal "1n" in
+  let (issuer, (_bid_details, amount)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = Ligo.Tezos.self_address && amount = Ligo.nat_from_literal "1n" in
   if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
 
 let with_valid_bid_ticket
@@ -278,7 +278,7 @@ let is_auction_complete
     if Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t
        > Constants.max_bid_interval_in_seconds
     && Ligo.gt_int_int
-         (Ligo.sub_nat_nat !Ligo.Tezos.level h)
+         (Ligo.sub_nat_nat !Ligo.tezos_level h)
          (Ligo.int Constants.max_bid_interval_in_blocks)
     then Some b
     else None
@@ -340,7 +340,7 @@ let place_bid (auction: current_auction) (bid: bid)
   if bid.kit >= current_auction_minimum_bid auction
   then
     Ok (
-      { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
+      { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.tezos_level); },
       issue_bid_ticket { auction_id = auction.contents; bid = bid; }
     )
   else Error BidTooLow
@@ -377,7 +377,7 @@ let reclaim_bid
     (bid_ticket: bid_ticket)
   : (Kit.t, Error.error) result =
   with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
   then Error CannotReclaimLeadingBid
@@ -447,7 +447,7 @@ let reclaim_winning_bid
     (bid_ticket: bid_ticket)
   : (Ligo.tez * auctions, Error.error) result =
   with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
-  let (_, bid_details, _), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
