@@ -40,7 +40,7 @@ val max: t -> t -> t
 
 (* Basic unary operations. *)
 val neg: t -> t
-val abs: t -> t
+val abs_ratio: t -> t
 val inv: t -> t
 
 (* Basic binary operations. *)

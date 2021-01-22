@@ -12,6 +12,7 @@ inputs=(
   avl
   common
   delegationAuction
+  ratio
 )
 
 for name in "${inputs[@]}"; do
