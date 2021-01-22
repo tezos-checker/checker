@@ -8,12 +8,9 @@ let issue_liquidity_tokens (i: Ligo.nat) = Ligo.Tezos.create_ticket Lqt i
 (** Check whether a liquidity token is valid. A liquidity token is valid if it
   * is issued by checker, and it is tagged appropriately (this is already
   * enforced by its type). *)
-let is_liquidity_token_valid ~(liquidity: liquidity) : liquidity =
+let assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
   let (issuer, (_content, _amount)), liquidity = Ligo.Tezos.read_ticket liquidity in
   if issuer = Ligo.Tezos.self_address then liquidity else failwith "InvalidLiquidityToken"
-
-let with_valid_liquidity_token ~(liquidity: liquidity) (f: liquidity -> 'a) : 'a =
-  f (is_liquidity_token_valid ~liquidity)
 
 type t =
   { tez: Ligo.tez;
@@ -224,7 +221,7 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
 (* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline
   : (Ligo.tez * Kit.token * t) =
-  with_valid_liquidity_token ~liquidity:lqt_burned @@ fun lqt_burned ->
+  let lqt_burned = assert_valid_liquidity_token lqt_burned in
   let uniswap = sync_last_observed uniswap in
   assert_initialized uniswap;
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in

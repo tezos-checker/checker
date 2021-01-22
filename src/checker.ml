@@ -75,34 +75,22 @@ let is_burrow_done_with_liquidations (state: t) (burrow: Burrow.t) =
     let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
     Option.is_none outcome
 
-let with_existing_burrow
-    (state: t)
-    (burrow_id: burrow_id)
-    (f: Burrow.t -> 'a)
-  : 'a =
+let find_burrow (state: t) (burrow_id: burrow_id) : Burrow.t =
   match Ligo.Big_map.find_opt burrow_id state.burrows with
   | None -> failwith "NonExistentBurrow"
-  | Some burrow -> f burrow
+  | Some burrow -> burrow
 
-let with_permission_present
-    (permission: Permission.t option)
-    (f: Permission.t -> 'a)
-  : 'a =
+let assert_permission_is_present (permission: Permission.t option) : Permission.t =
   match permission with
   | None -> failwith "MissingPermission"
-  | Some permission -> f permission
+  | Some permission -> permission
 
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
-let with_no_unclaimed_slices
-    (state: t)
-    (burrow_id: burrow_id)
-    (f: Burrow.t -> 'a)
-  : 'a =
-  with_existing_burrow state burrow_id @@ fun burrow ->
+let assert_burrow_has_no_unclaimed_slices (state: t) (burrow: Burrow.t) : unit =
   if is_burrow_done_with_liquidations state burrow
-  then f burrow
+  then ()
   else failwith "BurrowHasCompletedLiquidation"
 
 (* Ensure that there is no tez given. To prevent accidental fund loss. *)
@@ -113,12 +101,11 @@ let assert_no_tez_given () =
 
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
-let with_valid_permission
+let assert_valid_permission
     ~(permission: Permission.t)
     ~(burrow_id:burrow_id)
     ~(burrow: Burrow.t)
-    (f: Permission.rights -> 'a)
-  : 'a =
+  : Permission.rights =
   let (issuer, ((rights, id, version), amount)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
     issuer = Ligo.Tezos.self_address
@@ -126,7 +113,7 @@ let with_valid_permission
     && version = Burrow.permission_version burrow
     && id = burrow_id in
   if validity_condition
-  then f rights
+  then rights
   else failwith "InvalidPermission"
 
 let create_burrow (state:t) =
@@ -140,19 +127,20 @@ let create_burrow (state:t) =
   (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
 
 let touch_burrow (state: t) (burrow_id: burrow_id) =
-  with_existing_burrow state burrow_id @@ fun burrow ->
+  let burrow = find_burrow state burrow_id in
   let updated_burrow = Burrow.touch state.parameters burrow in
   {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
 
 let deposit_tez (state:t) ~permission ~burrow_id =
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
   if Burrow.allow_all_tez_deposits burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = Burrow.deposit_tez state.parameters !Ligo.Tezos.amount burrow in
     {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
-    with_permission_present permission @@ fun permission ->
-    with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+    let permission = assert_permission_is_present permission in
+    let r = assert_valid_permission ~permission ~burrow_id ~burrow in
     if Permission.does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = Burrow.deposit_tez state.parameters !Ligo.Tezos.amount burrow in
@@ -162,8 +150,9 @@ let deposit_tez (state:t) ~permission ~burrow_id =
 
 let mint_kit (state:t) ~permission ~burrow_id ~kit =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
     let (updated_burrow, minted) = Burrow.mint_kit state.parameters kit burrow in
@@ -182,8 +171,9 @@ let mint_kit (state:t) ~permission ~burrow_id ~kit =
 
 let withdraw_tez (state:t) ~permission ~tez ~burrow_id =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
     let (updated_burrow, withdrawn) = Burrow.withdraw_tez state.parameters tez burrow in
@@ -196,8 +186,9 @@ let withdraw_tez (state:t) ~permission ~tez ~burrow_id =
 
 let burn_kit (state:t) ~permission ~burrow_id ~kit =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  Kit.with_valid_kit_token kit @@ fun kit ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let kit = Kit.assert_valid_kit_token kit in
   let kit, _ (* destroyed *) = Kit.read_kit kit in
   if Burrow.allow_all_kit_burnings burrow then
     (* no need to check the permission argument at all *)
@@ -212,8 +203,8 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
          kit;
     }
   else
-    with_permission_present permission @@ fun permission ->
-    with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+    let permission = assert_permission_is_present permission in
+    let r = assert_valid_permission ~permission ~burrow_id ~burrow in
     if Permission.does_right_allow_kit_burning r then
       (* the permission should support burning kit. *)
       let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
@@ -230,8 +221,9 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
       failwith "InsufficientPermission"
 
 let activate_burrow (state:t) ~permission ~burrow_id =
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.is_admin_right r then
     (* only admins can activate burrows. *)
     let updated_burrow = Burrow.activate state.parameters !Ligo.Tezos.amount burrow in
@@ -241,8 +233,9 @@ let activate_burrow (state:t) ~permission ~burrow_id =
 
 let deactivate_burrow (state:t) ~permission ~burrow_id ~recipient =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = Burrow.deactivate state.parameters burrow in
@@ -254,8 +247,9 @@ let deactivate_burrow (state:t) ~permission ~burrow_id ~recipient =
 
 let set_burrow_delegate (state:t) ~permission ~burrow_id ~delegate =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
@@ -265,8 +259,9 @@ let set_burrow_delegate (state:t) ~permission ~burrow_id ~delegate =
 
 let make_permission (state:t) ~permission ~burrow_id ~rights =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.is_admin_right r then
     (* only admins can create permissions. *)
     Ligo.Tezos.create_ticket
@@ -277,8 +272,9 @@ let make_permission (state:t) ~permission ~burrow_id ~rights =
 
 let invalidate_all_permissions (state:t) ~permission ~burrow_id =
   assert_no_tez_given ();
-  with_no_unclaimed_slices state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  assert_burrow_has_no_unclaimed_slices state burrow;
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if Permission.is_admin_right r then
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
@@ -299,7 +295,7 @@ let invalidate_all_permissions (state:t) ~permission ~burrow_id =
  * but roughly speaking in most cases it should average out) *)
 let mark_for_liquidation (state:t) ~burrow_id =
   assert_no_tez_given ();
-  with_existing_burrow state burrow_id @@ fun burrow ->
+  let burrow = find_burrow state burrow_id in
   match Burrow.request_liquidation state.parameters burrow with
   | Unnecessary -> failwith "NotLiquidationCandidate"
   | Partial details | Complete details | Close details ->
@@ -398,8 +394,8 @@ let update_immediate_neighbors state (leaf_ptr: LiquidationAuctionTypes.leaf_ptr
  * both the burrow_id and the leaf_ptr. *)
 let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): t =
   assert_no_tez_given ();
-  with_existing_burrow state burrow_id @@ fun burrow ->
-  with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
+  let burrow = find_burrow state burrow_id in
+  let r = assert_valid_permission ~permission ~burrow_id ~burrow in
   if not (Permission.does_right_allow_cancelling_liquidations r) then
     failwith "InsufficientPermission"
   else
@@ -573,7 +569,7 @@ let buy_kit (state:t) ~min_kit_expected ~deadline =
 
 let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
   let state = touch_delegation_auction state in
-  Kit.with_valid_kit_token kit @@ fun kit ->
+  let kit = Kit.assert_valid_kit_token kit in
   let (tez, updated_uniswap) = Uniswap.sell_kit state.uniswap ~amount:!Ligo.Tezos.amount kit ~min_tez_expected ~deadline in
   let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
@@ -582,7 +578,7 @@ let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
 let add_liquidity (state:t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let state = touch_delegation_auction state in
   let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_literal "0mutez") in
-  Kit.with_valid_kit_token max_kit_deposited @@ fun max_kit_deposited ->
+  let max_kit_deposited = Kit.assert_valid_kit_token max_kit_deposited in
   let (tokens, leftover_kit, updated_uniswap) =
     Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
@@ -601,7 +597,7 @@ let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn
 
 let liquidation_auction_place_bid state ~kit =
   assert_no_tez_given ();
-  Kit.with_valid_kit_token kit @@ fun kit ->
+  let kit = Kit.assert_valid_kit_token kit in
   let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
 
   let bid = LiquidationAuctionTypes.{ address=(!Ligo.Tezos.sender); kit=kit; } in
@@ -613,13 +609,13 @@ let liquidation_auction_place_bid state ~kit =
 
 let liquidation_auction_reclaim_bid state ~bid_ticket =
   assert_no_tez_given ();
-  LiquidationAuction.with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
   let kit = LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket in
   Kit.issue kit (* TODO: should not issue; should change the auction logic instead! *)
 
 let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
   assert_no_tez_given ();
-  LiquidationAuction.with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket in
   let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
   (tez_payment, {state with liquidation_auctions })

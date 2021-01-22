@@ -40,16 +40,10 @@ let issue (kit: t) : token =
 (** Check whether a kit token is valid. A kit token is valid if (a) it is
   * issued by checker, and (b) is tagged appropriately (this is already
   * enforced by its type). *)
-let is_token_valid (token: token) : token =
+let assert_valid_kit_token (token: token) : token =
   let (issuer, (_content, amount)), same_ticket = Ligo.Tezos.read_ticket token in
   let is_valid = issuer = Ligo.Tezos.self_address && amount >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
   if is_valid then same_ticket else failwith "InvalidKitToken"
-
-let with_valid_kit_token
-    (token: token)
-    (f: token -> 'a)
-  : 'a =
-  f (is_token_valid token)
 
 let read_kit (token: token) : t * token =
   let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in

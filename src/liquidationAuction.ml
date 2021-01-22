@@ -81,13 +81,10 @@ let issue_bid_ticket (bid_details: bid_details) =
   * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
-let is_bid_ticket_valid ~(bid_ticket: bid_ticket) : bid_ticket =
+let assert_valid_bid_ticket (bid_ticket: bid_ticket) : bid_ticket =
   let (issuer, (_bid_details, amount)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = Ligo.Tezos.self_address && amount = Ligo.nat_from_literal "1n" in
   if is_valid then same_ticket else failwith "InvalidLiquidationAuctionTicket"
-
-let with_valid_bid_ticket ~(bid_ticket: bid_ticket) (f: bid_ticket -> 'a) : 'a =
-  f (is_bid_ticket_valid ~bid_ticket)
 
 type auction_state =
   | Descending of Kit.t * Ligo.timestamp
@@ -351,7 +348,7 @@ let completed_auction_won_by
 
 (* If successful, it consumes the ticket. *)
 let reclaim_bid (auctions: auctions) (bid_ticket: bid_ticket) : Kit.t =
-  with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let bid_ticket = assert_valid_bid_ticket bid_ticket in
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
@@ -417,7 +414,7 @@ let pop_completed_auction (auctions: auctions) (tree: avl_ptr) : auctions =
 
 (* If successful, it consumes the ticket. *)
 let reclaim_winning_bid (auctions: auctions) (bid_ticket: bid_ticket) : (Ligo.tez * auctions) =
-  with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
+  let bid_ticket = assert_valid_bid_ticket bid_ticket in
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
   | Some outcome ->

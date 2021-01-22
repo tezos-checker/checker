@@ -24,7 +24,7 @@ type token = kit_token_content Ligo.ticket
 
 val issue : t -> token
 
-val with_valid_kit_token : token -> (token -> 'a) -> 'a
+val assert_valid_kit_token : token -> token
 
 (* George: I really didn't want to have these here, but the clutter without
  * them was unbearable. They should be inlined, eventually. *)
