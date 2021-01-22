@@ -18,19 +18,13 @@ val to_ratio : t -> Ratio.t
 val of_ratio_ceil : Ratio.t -> t
 val of_ratio_floor : Ratio.t -> t
 
-type Error.error +=
-  | InvalidKitToken
-
 (* Kit are really tickets. *)
 type kit_token_content = Kit
 type token = kit_token_content Ligo.ticket
 
 val issue : t -> token
 
-val with_valid_kit_token :
-  token ->
-  (token -> ('a, Error.error) result) ->
-  ('a, Error.error) result
+val with_valid_kit_token : token -> (token -> 'a) -> 'a
 
 (* George: I really didn't want to have these here, but the clutter without
  * them was unbearable. They should be inlined, eventually. *)

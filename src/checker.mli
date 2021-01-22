@@ -13,17 +13,6 @@ type t =
     delegate : Ligo.address option;
   }
 
-type Error.error +=
-  | InvalidPermission
-  | MissingPermission
-  | InsufficientPermission
-  | NonExistentBurrow of burrow_id
-  | NotLiquidationCandidate of burrow_id
-  | BurrowHasCompletedLiquidation
-  | UnwarrantedCancellation
-  | SlicePointsToDifferentBurrow
-  | UnwantedTezGiven
-
 (** Make a fresh state. *)
 val initial_checker : t
 
@@ -43,18 +32,12 @@ val touch : t -> index:Ligo.tez -> (Kit.token * t)
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
   * sender. *)
-val create_burrow :
-  t ->
-  (burrow_id * Permission.t * t, Error.error) result
+val create_burrow : t -> (burrow_id * Permission.t * t)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
   * anyone and the permission ticket given is insufficient. *)
-val deposit_tez :
-  t ->
-  permission:(Permission.t option) ->
-  burrow_id:burrow_id ->
-  (t, Error.error) result
+val deposit_tez : t -> permission:(Permission.t option) -> burrow_id:burrow_id -> t
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
   * does not exist, if this action would overburrow it, or if the permission
@@ -64,7 +47,7 @@ val withdraw_tez :
   permission:Permission.t ->
   tez:Ligo.tez ->
   burrow_id:burrow_id ->
-  (Tez.payment * t, Error.error) result
+  (Tez.payment * t)
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
   * there is not enough collateral, or if the permission ticket given is
@@ -74,7 +57,7 @@ val mint_kit :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   kit:Kit.t ->
-  (Kit.token * t, Error.error) result
+  (Kit.token * t)
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is
   * excess kit, simply store it into the burrow. Fail if the burrow does not
@@ -85,17 +68,13 @@ val burn_kit :
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
   kit:Kit.token ->
-  (t, Error.error) result
+  t
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
   * if the burrow is already active, if the amount of tez given is less than
   * the creation deposit, or if the permission ticket given is not an admin
   * ticket. *)
-val activate_burrow :
-  t ->
-  permission:Permission.t ->
-  burrow_id:burrow_id ->
-  (t, Error.error) result
+val activate_burrow : t -> permission:Permission.t -> burrow_id:burrow_id -> t
 
 (** Deativate a currently active burrow. Fail if the burrow does not exist,
   * if it is already inactive, if it is overburrowed, if it has kit
@@ -107,15 +86,12 @@ val deactivate_burrow :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   recipient:Ligo.address ->
-  (Tez.payment * t, Error.error) result
+  (Tez.payment * t)
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
   * liquidation or if the burrow does not exist. If successful, return the
   * reward, to be credited to the liquidator. *)
-val mark_for_liquidation :
-  t ->
-  burrow_id:burrow_id ->
-  (Tez.payment * t, Error.error) result
+val mark_for_liquidation : t -> burrow_id:burrow_id -> (Tez.payment * t)
 
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
@@ -136,10 +112,10 @@ val cancel_liquidation_slice :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   LiquidationAuctionTypes.leaf_ptr ->
-  (t, Error.error) result
+  t
 
 (** Perform maintainance tasks for the burrow. *)
-val touch_burrow : t -> burrow_id -> (t, Error.error) result
+val touch_burrow : t -> burrow_id -> t
 
 (** Set the delegate of a burrow. *)
 val set_burrow_delegate :
@@ -147,7 +123,7 @@ val set_burrow_delegate :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   delegate:Ligo.address ->
-  (t, Error.error) result
+  t
 
 (** Requires admin. Create a new permission for a burrow. *)
 val make_permission :
@@ -155,7 +131,7 @@ val make_permission :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   rights:Permission.rights ->
-  (Permission.t, Error.error) result
+  Permission.t
 
 (** Requires admin. Increments a counter so that all previous permissions are
   * now invalid and returns a new admin permission. This makes it easy to
@@ -164,7 +140,7 @@ val invalidate_all_permissions :
   t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
-  (Permission.t * t, Error.error) result
+  (Permission.t * t)
 
 (* ************************************************************************* *)
 (**                                UNISWAP                                   *)
@@ -176,7 +152,7 @@ val buy_kit :
   t ->
   min_kit_expected:Kit.t ->
   deadline:Ligo.timestamp ->
-  (Kit.token * t, Error.error) result
+  (Kit.token * t)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
@@ -185,7 +161,7 @@ val sell_kit :
   kit:Kit.token ->
   min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
-  (Tez.payment * t, Error.error) result
+  (Tez.payment * t)
 
 (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
   * giving it some tez and some kit. If the given amounts do not have the
@@ -197,7 +173,7 @@ val add_liquidity :
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
-  (Uniswap.liquidity * Kit.token * t, Error.error) result
+  (Uniswap.liquidity * Kit.token * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
@@ -207,7 +183,7 @@ val remove_liquidity :
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
   deadline:Ligo.timestamp ->
-  (Tez.payment * Kit.token * t, Error.error) result
+  (Tez.payment * Kit.token * t)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -219,23 +195,23 @@ val remove_liquidity :
 val liquidation_auction_place_bid :
   t ->
   kit:Kit.token ->
-  (LiquidationAuction.bid_ticket * t, Error.error) result
+  (LiquidationAuction.bid_ticket * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_bid :
   t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
-  (Kit.token, Error.error) result
+  Kit.token
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_winning_bid :
   t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
-  (Tez.payment * t, Error.error) result
+  (Tez.payment * t)
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : t -> address:Ligo.address -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
- *   -> (LiquidationAuction.bid_ticket, Error.error) result *)
+ *   -> LiquidationAuction.bid_ticket *)
 
 (* ************************************************************************* *)
 (**                          DELEGATION AUCTIONS                             *)

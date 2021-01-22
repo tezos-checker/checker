@@ -24,17 +24,6 @@ let initial_checker =
     delegate = None;
   }
 
-type Error.error +=
-  | InvalidPermission
-  | MissingPermission
-  | InsufficientPermission
-  | NonExistentBurrow of burrow_id
-  | NotLiquidationCandidate of burrow_id
-  | BurrowHasCompletedLiquidation
-  | UnwarrantedCancellation
-  | SlicePointsToDifferentBurrow
-  | UnwantedTezGiven
-
 (* Utility function to give us burrow addresses *)
 let mk_burrow_id () : burrow_id =
   Ptr.random_ptr ()
@@ -89,18 +78,18 @@ let is_burrow_done_with_liquidations (state: t) (burrow: Burrow.t) =
 let with_existing_burrow
     (state: t)
     (burrow_id: burrow_id)
-    (f: Burrow.t -> ('a, Error.error) result)
-  : ('a, Error.error) result =
+    (f: Burrow.t -> 'a)
+  : 'a =
   match Ligo.Big_map.find_opt burrow_id state.burrows with
-  | None -> Error (NonExistentBurrow burrow_id)
+  | None -> failwith "NonExistentBurrow"
   | Some burrow -> f burrow
 
 let with_permission_present
     (permission: Permission.t option)
-    (f: Permission.t -> ('a, Error.error) result)
-  : ('a, Error.error) result =
+    (f: Permission.t -> 'a)
+  : 'a =
   match permission with
-  | None -> Error MissingPermission
+  | None -> failwith "MissingPermission"
   | Some permission -> f permission
 
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
@@ -109,20 +98,14 @@ let with_permission_present
 let with_no_unclaimed_slices
     (state: t)
     (burrow_id: burrow_id)
-    (f: Burrow.t -> ('a, Error.error) result)
-  : ('a, Error.error) result =
+    (f: Burrow.t -> 'a)
+  : 'a =
   with_existing_burrow state burrow_id @@ fun burrow ->
   if is_burrow_done_with_liquidations state burrow
   then f burrow
-  else Error BurrowHasCompletedLiquidation
+  else failwith "BurrowHasCompletedLiquidation"
 
 (* Ensure that there is no tez given. To prevent accidental fund loss. *)
-let with_no_tez_given (f: unit -> ('a, Error.error) result)
-  : ('a, Error.error) result =
-  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
-  then Error UnwantedTezGiven
-  else f ()
-
 let assert_no_tez_given () =
   if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
   then failwith "UnwantedTezGiven"
@@ -134,8 +117,8 @@ let with_valid_permission
     ~(permission: Permission.t)
     ~(burrow_id:burrow_id)
     ~(burrow: Burrow.t)
-    (f: Permission.rights -> ('a, Error.error) result)
-  : ('a, Error.error) result =
+    (f: Permission.rights -> 'a)
+  : 'a =
   let (issuer, ((rights, id, version), amount)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
     issuer = Ligo.Tezos.self_address
@@ -144,81 +127,75 @@ let with_valid_permission
     && id = burrow_id in
   if validity_condition
   then f rights
-  else Error InvalidPermission
+  else failwith "InvalidPermission"
 
 let create_burrow (state:t) =
   let burrow_id = mk_burrow_id () in
-  match Burrow.create state.parameters !Ligo.Tezos.amount with
-  | Ok burrow ->
-    let admin_ticket =
-      Ligo.Tezos.create_ticket
-        (Permission.Admin, burrow_id, 0)
-        (Ligo.nat_from_literal "0n") in
-    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
-    Ok (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
-  | Error err -> Error err
+  let burrow = Burrow.create state.parameters !Ligo.Tezos.amount in
+  let admin_ticket =
+    Ligo.Tezos.create_ticket
+      (Permission.Admin, burrow_id, 0)
+      (Ligo.nat_from_literal "0n") in
+  let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
+  (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
 
 let touch_burrow (state: t) (burrow_id: burrow_id) =
   with_existing_burrow state burrow_id @@ fun burrow ->
   let updated_burrow = Burrow.touch state.parameters burrow in
-  Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+  {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
 
 let deposit_tez (state:t) ~permission ~burrow_id =
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   if Burrow.allow_all_tez_deposits burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = Burrow.deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-    Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+    {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
     with_permission_present permission @@ fun permission ->
     with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
     if Permission.does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = Burrow.deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-      Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+      {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
     else
-      Error InsufficientPermission
+      failwith "InsufficientPermission"
 
 let mint_kit (state:t) ~permission ~burrow_id ~kit =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
-    match Burrow.mint_kit state.parameters kit burrow with
-    | Ok (updated_burrow, minted) ->
-      assert (kit = minted);
-      Ok ( Kit.issue minted,
-           {state with
-            burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-            parameters =
-              Parameters.add_outstanding_kit
-                (Parameters.add_circulating_kit state.parameters minted)
-                minted;
-           }
-         )
-    | Error err -> Error err
+    let (updated_burrow, minted) = Burrow.mint_kit state.parameters kit burrow in
+    assert (kit = minted);
+    ( Kit.issue minted,
+      {state with
+       burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+       parameters =
+         Parameters.add_outstanding_kit
+           (Parameters.add_circulating_kit state.parameters minted)
+           minted;
+      }
+    )
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let withdraw_tez (state:t) ~permission ~tez ~burrow_id =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
-    match Burrow.withdraw_tez state.parameters tez burrow with
-    | Ok (updated_burrow, withdrawn) ->
-      assert (tez = withdrawn);
-      let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-      let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = withdrawn} in
-      Ok (tez_payment, updated_state)
-    | Error err -> Error err
+    let (updated_burrow, withdrawn) = Burrow.withdraw_tez state.parameters tez burrow in
+    assert (tez = withdrawn);
+    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = withdrawn} in
+    (tez_payment, updated_state)
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let burn_kit (state:t) ~permission ~burrow_id ~kit =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   Kit.with_valid_kit_token kit @@ fun kit ->
   let kit, _ (* destroyed *) = Kit.read_kit kit in
@@ -227,13 +204,13 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
     let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
-    Ok {state with
-        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-        parameters =
-          Parameters.remove_outstanding_kit
-            (Parameters.remove_circulating_kit state.parameters kit)
-            kit;
-       }
+    {state with
+     burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+     parameters =
+       Parameters.remove_outstanding_kit
+         (Parameters.remove_circulating_kit state.parameters kit)
+         kit;
+    }
   else
     with_permission_present permission @@ fun permission ->
     with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
@@ -242,70 +219,64 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
       let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= kit);
-      Ok {state with
-          burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-          parameters =
-            Parameters.remove_outstanding_kit
-              (Parameters.remove_circulating_kit state.parameters kit)
-              kit;
-         }
+      {state with
+       burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+       parameters =
+         Parameters.remove_outstanding_kit
+           (Parameters.remove_circulating_kit state.parameters kit)
+           kit;
+      }
     else
-      Error InsufficientPermission
+      failwith "InsufficientPermission"
 
 let activate_burrow (state:t) ~permission ~burrow_id =
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.is_admin_right r then
     (* only admins can activate burrows. *)
-    match Burrow.activate state.parameters !Ligo.Tezos.amount burrow with
-    | Ok updated_burrow ->
-      Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
-    | Error err -> Error err
+    let updated_burrow = Burrow.activate state.parameters !Ligo.Tezos.amount burrow in
+    {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let deactivate_burrow (state:t) ~permission ~burrow_id ~recipient =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
-    match Burrow.deactivate state.parameters burrow with
-    | Ok (updated_burrow, returned_tez) ->
-      let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-      let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
-      Ok (tez_payment, updated_state)
-    | Error err -> Error err
+    let (updated_burrow, returned_tez) = Burrow.deactivate state.parameters burrow in
+    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+    let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+    (tez_payment, updated_state)
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let set_burrow_delegate (state:t) ~permission ~burrow_id ~delegate =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
-    Ok {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+    {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let make_permission (state:t) ~permission ~burrow_id ~rights =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.is_admin_right r then
     (* only admins can create permissions. *)
-    let permission_ticket =
-      Ligo.Tezos.create_ticket
-        (rights, burrow_id, 0)
-        (Ligo.nat_from_literal "0n") in
-    Ok permission_ticket
+    Ligo.Tezos.create_ticket
+      (rights, burrow_id, 0)
+      (Ligo.nat_from_literal "0n")
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 let invalidate_all_permissions (state:t) ~permission ~burrow_id =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_no_unclaimed_slices state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if Permission.is_admin_right r then
@@ -316,9 +287,9 @@ let invalidate_all_permissions (state:t) ~permission ~burrow_id =
       Ligo.Tezos.create_ticket
         (Permission.Admin, burrow_id, updated_version)
         (Ligo.nat_from_literal "0n") in
-    Ok (admin_ticket, updated_state)
+    (admin_ticket, updated_state)
   else
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
 
 (* TODO: Arthur: one time we might want to trigger garbage collection of
  * slices is during a liquidation. a liquidation creates one slice, so if we
@@ -327,10 +298,10 @@ let invalidate_all_permissions (state:t) ~permission ~burrow_id =
  * the auctions are happening and in those instances it could grow unbounded,
  * but roughly speaking in most cases it should average out) *)
 let mark_for_liquidation (state:t) ~burrow_id =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   with_existing_burrow state burrow_id @@ fun burrow ->
   match Burrow.request_liquidation state.parameters burrow with
-  | Unnecessary -> Error (NotLiquidationCandidate burrow_id)
+  | Unnecessary -> failwith "NotLiquidationCandidate"
   | Partial details | Complete details | Close details ->
     let liquidation_slice =
       LiquidationAuctionTypes.{
@@ -344,44 +315,43 @@ let mark_for_liquidation (state:t) ~burrow_id =
         );
         younger = None;
       } in
-    match LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice with
-    | Error err -> Error err
-    | Ok (updated_liquidation_auctions, leaf_ptr) ->
+    let (updated_liquidation_auctions, leaf_ptr) =
+      LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice in
 
-      (* Fixup the previous youngest pointer since the newly added slice
-       * is even younger.
-       *
-       * This is hacky, but couldn't figure out a nicer way, please do
-       * refactor if you do.
-      *)
-      let updated_storage = (
-        match liquidation_slice.older with
-        | None -> updated_liquidation_auctions.avl_storage
-        | Some older_ptr ->
-          Mem.mem_update
-            updated_liquidation_auctions.avl_storage
-            (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
-          match older with
-          | Leaf l -> Leaf
-                        { l with value = { l.value with younger = Some leaf_ptr; }; }
-          | _ -> (failwith "impossible" : LiquidationAuctionTypes.node)
-      ) in
+    (* Fixup the previous youngest pointer since the newly added slice
+     * is even younger.
+     *
+     * This is hacky, but couldn't figure out a nicer way, please do
+     * refactor if you do.
+    *)
+    let updated_storage = (
+      match liquidation_slice.older with
+      | None -> updated_liquidation_auctions.avl_storage
+      | Some older_ptr ->
+        Mem.mem_update
+          updated_liquidation_auctions.avl_storage
+          (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+        match older with
+        | Leaf l -> Leaf
+                      { l with value = { l.value with younger = Some leaf_ptr; }; }
+        | _ -> (failwith "impossible" : LiquidationAuctionTypes.node)
+    ) in
 
-      (* Update the burrow's liquidation slices with the pointer to the newly
-       * created liquidation slice. *)
-      let updated_burrow =
-        Burrow.set_liquidation_slices
-          details.burrow_state
-          (match Burrow.liquidation_slices details.burrow_state with
-           | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
-           | Some s -> Some { s with youngest=leaf_ptr; })
-      in
-      Ok ( Tez.{destination = !Ligo.Tezos.sender; amount = details.liquidation_reward},
-           {state with
-            burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-            liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
-           }
-         )
+    (* Update the burrow's liquidation slices with the pointer to the newly
+     * created liquidation slice. *)
+    let updated_burrow =
+      Burrow.set_liquidation_slices
+        details.burrow_state
+        (match Burrow.liquidation_slices details.burrow_state with
+         | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
+         | Some s -> Some { s with youngest=leaf_ptr; })
+    in
+    ( Tez.{destination = !Ligo.Tezos.sender; amount = details.liquidation_reward},
+      {state with
+       burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+       liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
+      }
+    )
 
 (* Update the immediate neighbors of a slice (i.e. the younger and the older)
  * to point to each other instead of the slice in question, so that it can be
@@ -426,25 +396,25 @@ let update_immediate_neighbors state (leaf_ptr: LiquidationAuctionTypes.leaf_ptr
 
 (* Cancel the liquidation of a slice. The burden is on the caller to provide
  * both the burrow_id and the leaf_ptr. *)
-let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): (t, Error.error) result =
-  with_no_tez_given @@ fun () ->
+let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): t =
+  assert_no_tez_given ();
   with_existing_burrow state burrow_id @@ fun burrow ->
   with_valid_permission ~permission ~burrow_id ~burrow @@ fun r ->
   if not (Permission.does_right_allow_cancelling_liquidations r) then
-    Error InsufficientPermission
+    failwith "InsufficientPermission"
   else
     let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
     if root <> state.liquidation_auctions.queued_slices
-    then Error UnwarrantedCancellation
+    then failwith "UnwarrantedCancellation"
     else
       let leaf = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       match Ligo.Big_map.find_opt leaf.burrow state.burrows with
-      | None -> (failwith "invariant violation" : (t, Error.error) result)
+      | None -> (failwith "invariant violation" : t)
       | Some b when b <> burrow ->
-        Error SlicePointsToDifferentBurrow
+        failwith "SlicePointsToDifferentBurrow"
       | Some _ when Burrow.is_overburrowed state.parameters burrow ->
-        Error UnwarrantedCancellation
+        failwith "UnwarrantedCancellation"
       | Some _ ->
         let state =
           let (new_storage, _) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
@@ -462,7 +432,7 @@ let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: Liquid
         (* And we update the slices around it *)
         let state = update_immediate_neighbors state leaf_ptr leaf in
         assert_invariants state;
-        Ok state
+        state
 
 let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): t =
   let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
@@ -598,73 +568,61 @@ let touch_delegation_auction state =
 
 let buy_kit (state:t) ~min_kit_expected ~deadline =
   let state = touch_delegation_auction state in
-  match Uniswap.buy_kit state.uniswap ~amount:!Ligo.Tezos.amount ~min_kit_expected ~deadline with
-  | Ok (kit, updated_uniswap) -> Ok (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
-  | Error err -> Error err
+  let (kit, updated_uniswap) = Uniswap.buy_kit state.uniswap ~amount:!Ligo.Tezos.amount ~min_kit_expected ~deadline in
+  (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
 let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
   let state = touch_delegation_auction state in
   Kit.with_valid_kit_token kit @@ fun kit ->
-  match Uniswap.sell_kit state.uniswap ~amount:!Ligo.Tezos.amount kit ~min_tez_expected ~deadline with
-  | Ok (tez, updated_uniswap) ->
-    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
-    let updated_state = {state with uniswap = updated_uniswap} in
-    Ok (tez_payment, updated_state)
-  | Error err -> Error err
+  let (tez, updated_uniswap) = Uniswap.sell_kit state.uniswap ~amount:!Ligo.Tezos.amount kit ~min_tez_expected ~deadline in
+  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  let updated_state = {state with uniswap = updated_uniswap} in
+  (tez_payment, updated_state)
 
 let add_liquidity (state:t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let state = touch_delegation_auction state in
   let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_literal "0mutez") in
   Kit.with_valid_kit_token max_kit_deposited @@ fun max_kit_deposited ->
-  match Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline with
-  | Error err -> Error err
-  | Ok (tokens, leftover_kit, updated_uniswap) ->
-    Ok (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
+  let (tokens, leftover_kit, updated_uniswap) =
+    Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+  (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
 
 let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
   let state = touch_delegation_auction state in
-  match Uniswap.remove_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline with
-  | Error err -> Error err
-  | Ok (tez, kit, updated_uniswap) ->
-    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
-    let updated_state = {state with uniswap = updated_uniswap} in
-    Ok (tez_payment, kit, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  let (tez, kit, updated_uniswap) =
+    Uniswap.remove_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  let updated_state = {state with uniswap = updated_uniswap} in
+  (tez_payment, kit, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
 let liquidation_auction_place_bid state ~kit =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   Kit.with_valid_kit_token kit @@ fun kit ->
   let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
 
   let bid = LiquidationAuctionTypes.{ address=(!Ligo.Tezos.sender); kit=kit; } in
-  match
+  let (new_auctions, bid_ticket) =
     LiquidationAuction.with_current_auction state.liquidation_auctions @@
-    fun auction -> LiquidationAuction.place_bid auction bid with
-  | Error err -> Error err
-  | Ok (new_auctions, bid_ticket) ->
-    Ok (
-      bid_ticket,
-      {state with liquidation_auctions=new_auctions;}
-    )
+    fun auction -> LiquidationAuction.place_bid auction bid
+  in
+  (bid_ticket, {state with liquidation_auctions=new_auctions;})
 
 let liquidation_auction_reclaim_bid state ~bid_ticket =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   LiquidationAuction.with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
-  match LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket with
-  | Error err -> Error err
-  | Ok kit -> Ok (Kit.issue kit) (* TODO: should not issue; should change the auction logic instead! *)
+  let kit = LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket in
+  Kit.issue kit (* TODO: should not issue; should change the auction logic instead! *)
 
 let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
-  with_no_tez_given @@ fun () ->
+  assert_no_tez_given ();
   LiquidationAuction.with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
-  match LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket with
-  | Error err -> Error err
-  | Ok (tez, liquidation_auctions) ->
-    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
-    Ok (tez_payment, { state with liquidation_auctions })
+  let (tez, liquidation_auctions) = LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket in
+  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  (tez_payment, {state with liquidation_auctions })
 
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
  * *)

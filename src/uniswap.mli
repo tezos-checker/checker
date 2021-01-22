@@ -29,33 +29,6 @@ val issue_liquidity_tokens : Ligo.nat -> liquidity
 
 type t
 
-type Error.error +=
-  | UniswapNonPositiveInput
-  | UniswapTooLate
-  | AddLiquidityNoTezGiven
-  | AddLiquidityNoKitGiven
-  | AddLiquidityNoLiquidityToBeAdded
-  | AddLiquidityLessThanOneTez
-  | AddLiquidityTooLowLiquidityMinted
-  | AddLiquidityTooMuchKitRequired
-  | AddLiquidityZeroKitDeposited
-  | RemoveLiquidityNonEmptyAmount
-  | RemoveLiquidityCantWithdrawEnoughTez
-  | RemoveLiquidityCantWithdrawEnoughKit
-  | RemoveLiquidityTooMuchTezWithdrawn
-  | RemoveLiquidityTooMuchKitWithdrawn
-  | RemoveLiquidityNoLiquidityBurned
-  | RemoveLiquidityNoTezWithdrawnExpected
-  | RemoveLiquidityNoKitWithdrawnExpected
-  | BuyKitPriceFailure
-  | BuyKitTooLowExpectedKit
-  | BuyKitTooMuchKitBought
-  | SellKitNonEmptyAmount
-  | SellKitPriceFailure
-  | SellKitTooLowExpectedTez
-  | SellKitTooMuchTezBought
-  | InvalidLiquidityToken
-
 (** The initial state of the uniswap contract. We always start with 1mukit,
   * 1mutez, and 1lqt token (effectively setting the starting price to 1
   * tez/kit). The price will eventually reach the value it should, but this
@@ -76,7 +49,7 @@ val buy_kit :
   amount:Ligo.tez ->
   min_kit_expected:Kit.t ->
   deadline:Ligo.timestamp ->
-  (Kit.token * t, Error.error) result
+  (Kit.token * t)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
@@ -86,7 +59,7 @@ val sell_kit :
   Kit.token ->
   min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
-  (Ligo.tez * t, Error.error) result
+  (Ligo.tez * t)
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
   * some kit. If the given amounts does not have the right ratio, we
@@ -111,7 +84,7 @@ val add_liquidity :
   max_kit_deposited:Kit.token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
-  (liquidity * Kit.token * t, Error.error) result
+  (liquidity * Kit.token * t)
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
@@ -125,7 +98,7 @@ val remove_liquidity :
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:Kit.t ->
   deadline:Ligo.timestamp ->
-  (Ligo.tez * Kit.token * t, Error.error) result
+  (Ligo.tez * Kit.token * t)
 
 (** Add accrued burrowing fees to the uniswap contract. *)
 val add_accrued_kit : t ->  Kit.token -> t

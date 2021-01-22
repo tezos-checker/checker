@@ -36,16 +36,6 @@ val make_for_test :
   last_touched:Ligo.timestamp ->
   t
 
-type Error.error +=
-  | InsufficientFunds of Ligo.tez
-  | WithdrawTezFailure
-  | MintKitFailure
-  | BurrowIsAlreadyActive
-  | DeactivatingAnOverburrowedBurrow
-  | DeactivatingAnInactiveBurrow
-  | DeactivatingWithOutstandingKit
-  | DeactivatingWithCollateralAtAuctions
-
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
   *   tez_collateral < fminting * kit_outstanding * minting_price
@@ -100,18 +90,18 @@ val return_slice_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationA
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
   * is less than the creation deposit. *)
-val create : Parameters.t -> Ligo.tez -> (t, Error.error) result
+val create : Parameters.t -> Ligo.tez -> t
 
 (** Add non-negative collateral to a burrow. *)
 val deposit_tez : Parameters.t -> Ligo.tez -> t -> t
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-val withdraw_tez : Parameters.t -> Ligo.tez -> t -> (t * Ligo.tez, Error.error) result
+val withdraw_tez : Parameters.t -> Ligo.tez -> t -> (t * Ligo.tez)
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
-val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t, Error.error) result
+val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t)
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
@@ -120,12 +110,12 @@ val burn_kit : Parameters.t -> Kit.t -> t -> t
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
   * the creation deposit. *)
-val activate : Parameters.t -> Ligo.tez -> t -> (t, Error.error) result
+val activate : Parameters.t -> Ligo.tez -> t -> t
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-val deactivate : Parameters.t -> t -> (t * Ligo.tez, Error.error) result
+val deactivate : Parameters.t -> t -> (t * Ligo.tez)
 
 (** Set the delegate of a burrow. *)
 val set_delegate : Parameters.t -> Ligo.address -> t -> t

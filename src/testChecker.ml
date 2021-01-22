@@ -11,7 +11,7 @@ let suite =
        let checker = Checker.initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let _lqt_minted, _ret_kit, checker = assert_ok @@
+       let _lqt_minted, _ret_kit, checker =
          Checker.add_liquidity
            checker
            ~max_kit_deposited:(Kit.issue Kit.one)
@@ -23,10 +23,9 @@ let suite =
          (* Creation/deactivation does not incur any costs. *)
          let tez = Ligo.tez_from_literal "12_345_678mutez" in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let (burrow_id, admin_permission, checker0) = assert_ok @@
-           Checker.create_burrow checker in
+         let (burrow_id, admin_permission, checker0) = Checker.create_burrow checker in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (payment, checker1) = assert_ok @@
+         let (payment, checker1) =
            Checker.deactivate_burrow
              checker0
              ~permission:admin_permission
@@ -35,7 +34,7 @@ let suite =
          assert_equal tez payment.amount ~printer:Ligo.string_of_tez;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let checker2 = assert_ok @@
+         let checker2 =
            Checker.activate_burrow
              checker1
              ~permission:admin_permission
@@ -44,12 +43,11 @@ let suite =
          () in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let (burrow_id, admin_permission, checker) = assert_ok @@
-         Checker.create_burrow checker in
+       let (burrow_id, admin_permission, checker) = Checker.create_burrow checker in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (kit_token, checker) = assert_ok @@
+       let (kit_token, checker) =
          Checker.mint_kit
            checker
            ~permission:admin_permission
@@ -68,12 +66,15 @@ let suite =
 
        (* Minting another kit should fail *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let () = TestCommon.assert_failwith Burrow.MintKitFailure @@
-         Checker.mint_kit
-           checker
-           ~permission:admin_permission
-           ~burrow_id:burrow_id
-           ~kit:(Kit.of_mukit (Ligo.int_from_literal "1")) in
+       assert_raises
+         (Failure "MintKitFailure")
+         (fun () ->
+            Checker.mint_kit
+              checker
+              ~permission:admin_permission
+              ~burrow_id:burrow_id
+              ~kit:(Kit.of_mukit (Ligo.int_from_literal "1"))
+         );
 
        (* Over time the burrows with outstanding kit should be overburrowed
           	* (NOTE: even if the index stays where it was before, but that would
@@ -83,8 +84,7 @@ let suite =
        let _touch_reward, checker =
          Checker.touch checker ~index:(Ligo.tez_from_literal "1_000_001mutez") in
 
-       let checker = assert_ok @@
-         Checker.touch_burrow checker burrow_id in
+       let checker = Checker.touch_burrow checker burrow_id in
 
        assert_bool
          "if the index goes up, then burrows should become overburrowed"
@@ -99,8 +99,7 @@ let suite =
        let touch_reward, checker =
          Checker.touch checker ~index:(Ligo.tez_from_literal "1_200_000mutez") in
 
-       let checker = assert_ok @@
-         Checker.touch_burrow checker burrow_id in
+       let checker = Checker.touch_burrow checker burrow_id in
 
        assert_equal
          (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "202_000_000"))) (* wow, high reward, many blocks have passed. *)
@@ -108,18 +107,20 @@ let suite =
          ~printer:Kit.show_token;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (reward_payment, checker) = assert_ok @@
+       let (reward_payment, checker) =
          Checker.mark_for_liquidation
            checker
            ~burrow_id:burrow_id in
        assert_equal (Ligo.tez_from_literal "1_008_999mutez") reward_payment.amount ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_equal
-         (Error LiquidationAuction.NoOpenAuction)
-         (Checker.liquidation_auction_place_bid
-            checker
-            ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "1_000"))));
+       assert_raises
+         (Failure "NoOpenAuction")
+         (fun () ->
+            Checker.liquidation_auction_place_bid
+              checker
+              ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "1_000")))
+         );
 
        let touch_reward, checker =
          Checker.touch checker ~index:(Ligo.tez_from_literal "1_200_000mutez") in
@@ -137,7 +138,7 @@ let suite =
        let touch_reward, checker =
          Checker.touch checker ~index:(Ligo.tez_from_literal "1_200_000mutez") in
 
-       let (bid, checker) = assert_ok @@
+       let (bid, checker) =
          Checker.liquidation_auction_place_bid
            checker
            ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "4_200_000"))) in
@@ -185,7 +186,7 @@ let suite =
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (tez_from_bid, _checker) = assert_ok @@
+       let (tez_from_bid, _checker) =
          Checker.liquidation_auction_reclaim_winning_bid
            checker
            ~bid_ticket:bid in

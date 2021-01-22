@@ -33,16 +33,6 @@ type t =
   }
 [@@deriving show]
 
-type Error.error +=
-  | InsufficientFunds of Ligo.tez
-  | WithdrawTezFailure
-  | MintKitFailure
-  | BurrowIsAlreadyActive
-  | DeactivatingAnOverburrowedBurrow
-  | DeactivatingAnInactiveBurrow
-  | DeactivatingWithOutstandingKit
-  | DeactivatingWithCollateralAtAuctions
-
 let assert_invariants (b: t) : unit =
   assert (b.collateral >= Ligo.tez_from_literal "0mutez");
   assert (b.collateral_at_auction >= Ligo.tez_from_literal "0mutez");
@@ -229,23 +219,23 @@ let return_kit_from_auction
   (* (b) burn/deposit the kit received from auctioning the slice *)
   rebalance_kit { burrow with excess_kit = Kit.add burrow.excess_kit kit; }
 
-let create (p: Parameters.t) (tez: Ligo.tez) : (t, Error.error) result =
+let create (p: Parameters.t) (tez: Ligo.tez) : t =
   if tez < Constants.creation_deposit
-  then Error (InsufficientFunds tez)
-  else Ok
-      { active = true;
-        permission_version = 0;
-        allow_all_tez_deposits = false;
-        allow_all_kit_burnings = false;
-        delegate = None;
-        collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
-        outstanding_kit = Kit.zero;
-        excess_kit = Kit.zero;
-        adjustment_index = Parameters.compute_adjustment_index p;
-        collateral_at_auction = Ligo.tez_from_literal "0mutez";
-        last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
-        liquidation_slices = None;
-      }
+  then failwith "InsufficientFunds"
+  else
+    { active = true;
+      permission_version = 0;
+      allow_all_tez_deposits = false;
+      allow_all_kit_burnings = false;
+      delegate = None;
+      collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
+      outstanding_kit = Kit.zero;
+      excess_kit = Kit.zero;
+      adjustment_index = Parameters.compute_adjustment_index p;
+      collateral_at_auction = Ligo.tez_from_literal "0mutez";
+      last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
+      liquidation_slices = None;
+    }
 
 (** Add non-negative collateral to a burrow. *)
 let deposit_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : t =
@@ -256,25 +246,25 @@ let deposit_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : t =
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let withdraw_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : (t * Ligo.tez, Error.error) result =
+let withdraw_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : (t * Ligo.tez) =
   assert_invariants b;
   assert (t >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
   if is_overburrowed p new_burrow
-  then Error WithdrawTezFailure
-  else Ok (new_burrow, t)
+  then failwith "WithdrawTezFailure"
+  else (new_burrow, t)
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t, Error.error) result =
+let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t) =
   assert_invariants b;
   assert (kit >= Kit.zero);
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with outstanding_kit = Kit.add b.outstanding_kit kit } in
   if is_overburrowed p new_burrow
-  then Error MintKitFailure
-  else Ok (new_burrow, kit)
+  then failwith "MintKitFailure"
+  else (new_burrow, kit)
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
@@ -292,34 +282,34 @@ let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
   * the creation deposit. *)
-let activate (p: Parameters.t) (tez: Ligo.tez) (b: t) : (t, Error.error) result =
+let activate (p: Parameters.t) (tez: Ligo.tez) (b: t) : t =
   assert_invariants b;
   assert (tez >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   if tez < Constants.creation_deposit then
-    Error (InsufficientFunds tez)
+    failwith "InsufficientFunds"
   else if b.active then
-    Error BurrowIsAlreadyActive
+    failwith "BurrowIsAlreadyActive"
   else
-    Ok { b with
-         active = true;
-         collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
-       }
+    { b with
+      active = true;
+      collateral = Ligo.sub_tez_tez tez Constants.creation_deposit;
+    }
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-let deactivate (p: Parameters.t) (b: t) : (t * Ligo.tez, Error.error) result =
+let deactivate (p: Parameters.t) (b: t) : (t * Ligo.tez) =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
   if (is_overburrowed p b) then
-    Error DeactivatingAnOverburrowedBurrow
+    failwith "DeactivatingAnOverburrowedBurrow"
   else if (not b.active) then
-    Error DeactivatingAnInactiveBurrow
+    failwith "DeactivatingAnInactiveBurrow"
   else if (b.outstanding_kit > Kit.zero) then
-    Error DeactivatingWithOutstandingKit
+    failwith "DeactivatingWithOutstandingKit"
   else if (b.collateral_at_auction > Ligo.tez_from_literal "0mutez") then
-    Error DeactivatingWithCollateralAtAuctions
+    failwith "DeactivatingWithCollateralAtAuctions"
   else
     let return = Ligo.add_tez_tez b.collateral Constants.creation_deposit in
     let updated_burrow =
@@ -327,7 +317,7 @@ let deactivate (p: Parameters.t) (b: t) : (t * Ligo.tez, Error.error) result =
         active = false;
         collateral = Ligo.tez_from_literal "0mutez";
       } in
-    Ok (updated_burrow, return)
+    (updated_burrow, return)
 
 let set_delegate (p: Parameters.t) (new_delegate: Ligo.address) (b: t) : t =
   assert_invariants b;

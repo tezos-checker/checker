@@ -69,15 +69,6 @@ Utku: Lifecycle of liquidation slices.
 
 open LiquidationAuctionTypes
 
-type Error.error +=
-  | NoOpenAuction
-  | BidTooLow
-  | CannotReclaimLeadingBid
-  | NotAWinningBid
-  | NotAllSlicesClaimed
-  | LiquidationQueueTooLong
-  | InvalidLiquidationAuctionTicket
-
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
 type bid_ticket = bid_details Ligo.ticket
@@ -90,20 +81,13 @@ let issue_bid_ticket (bid_details: bid_details) =
   * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
-let is_bid_ticket_valid
-    ~(bid_ticket: bid_ticket)
-  : (bid_ticket, Error.error) result =
+let is_bid_ticket_valid ~(bid_ticket: bid_ticket) : bid_ticket =
   let (issuer, (_bid_details, amount)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = Ligo.Tezos.self_address && amount = Ligo.nat_from_literal "1n" in
-  if is_valid then Ok same_ticket else Error InvalidLiquidationAuctionTicket
+  if is_valid then same_ticket else failwith "InvalidLiquidationAuctionTicket"
 
-let with_valid_bid_ticket
-    ~(bid_ticket: bid_ticket)
-    (f: bid_ticket -> ('a, Error.error) result)
-  : ('a, Error.error) result =
-  match is_bid_ticket_valid ~bid_ticket with
-  | Error err -> Error err
-  | Ok ticket -> f ticket
+let with_valid_bid_ticket ~(bid_ticket: bid_ticket) (f: bid_ticket -> 'a) : 'a =
+  f (is_bid_ticket_valid ~bid_ticket)
 
 type auction_state =
   | Descending of Kit.t * Ligo.timestamp
@@ -148,18 +132,15 @@ let empty : auctions =
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
  * when we start auctions.
 *)
-let send_to_auction
-    (auctions: auctions)
-    (slice: liquidation_slice)
-  : (auctions * leaf_ptr, Error.error) result =
+let send_to_auction (auctions: auctions) (slice: liquidation_slice) : (auctions * leaf_ptr) =
   if Avl.avl_height auctions.avl_storage auctions.queued_slices
      >= Constants.max_liquidation_queue_height then
-    Error LiquidationQueueTooLong
+    failwith "LiquidationQueueTooLong"
   else
     let (new_storage, ret) =
       Avl.push_back auctions.avl_storage auctions.queued_slices slice in
     let new_state = { auctions with avl_storage = new_storage; } in
-    Ok (new_state, ret)
+    (new_state, ret)
 
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
@@ -335,26 +316,23 @@ let complete_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the current_auction_minimum_bid. *)
-let place_bid (auction: current_auction) (bid: bid)
-  : (current_auction * bid_ticket, Error.error) result =
+let place_bid (auction: current_auction) (bid: bid) : (current_auction * bid_ticket) =
   if bid.kit >= current_auction_minimum_bid auction
   then
-    Ok (
-      { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.tezos_level); },
+    ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.tezos_level); },
       issue_bid_ticket { auction_id = auction.contents; bid = bid; }
     )
-  else Error BidTooLow
+  else failwith "BidTooLow"
 
 let with_current_auction
     (auctions: auctions)
-    (f: current_auction -> (current_auction * 'a, Error.error) result)
-  : (auctions * 'a, Error.error) result =
+    (f: current_auction -> (current_auction * 'a))
+  : (auctions * 'a) =
   match auctions.current_auction with
-  | None -> Error NoOpenAuction
-  | Some curr -> match f curr with
-    | Error err -> Error err
-    | Ok (updated, ret)
-      -> Ok ({ auctions with current_auction = Some updated; }, ret)
+  | None -> failwith "NoOpenAuction"
+  | Some curr ->
+    let (updated, ret) = f curr in
+    ({ auctions with current_auction = Some updated; }, ret)
 
 let is_leading_current_auction
     (auctions: auctions) (bid_details: bid_details): bool =
@@ -372,17 +350,13 @@ let completed_auction_won_by
   | _ -> None
 
 (* If successful, it consumes the ticket. *)
-let reclaim_bid
-    (auctions: auctions)
-    (bid_ticket: bid_ticket)
-  : (Kit.t, Error.error) result =
+let reclaim_bid (auctions: auctions) (bid_ticket: bid_ticket) : Kit.t =
   with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details
   || Option.is_some (completed_auction_won_by auctions bid_details)
-  then Error CannotReclaimLeadingBid
-  else
-    Ok bid_details.bid.kit
+  then failwith "CannotReclaimLeadingBid"
+  else bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
 let pop_completed_auction (auctions: auctions) (tree: avl_ptr) : auctions =
@@ -442,10 +416,7 @@ let pop_completed_auction (auctions: auctions) (tree: avl_ptr) : auctions =
   }
 
 (* If successful, it consumes the ticket. *)
-let reclaim_winning_bid
-    (auctions: auctions)
-    (bid_ticket: bid_ticket)
-  : (Ligo.tez * auctions, Error.error) result =
+let reclaim_winning_bid (auctions: auctions) (bid_ticket: bid_ticket) : (Ligo.tez * auctions) =
   with_valid_bid_ticket ~bid_ticket @@ fun bid_ticket ->
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   match completed_auction_won_by auctions bid_details with
@@ -453,7 +424,7 @@ let reclaim_winning_bid
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
     if not (Avl.is_empty auctions.avl_storage bid_details.auction_id)
-    then Error NotAllSlicesClaimed
+    then failwith "NotAllSlicesClaimed"
     else (
       (* When the winner reclaims their bid, we finally remove
          every reference to the auction. This is just to
@@ -466,9 +437,9 @@ let reclaim_winning_bid
         { auctions with
           avl_storage =
             Avl.delete_tree auctions.avl_storage bid_details.auction_id } in
-      Ok (outcome.sold_tez, auctions)
+      (outcome.sold_tez, auctions)
     )
-  | None -> Error NotAWinningBid
+  | None -> failwith "NotAWinningBid"
 
 
 let touch (auctions: auctions) (price: FixedPoint.t) : auctions =

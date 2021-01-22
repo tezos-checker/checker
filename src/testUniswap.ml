@@ -126,7 +126,7 @@ let test_buy_kit_increases_price =
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap = assert_ok @@
+  let _bought_kit, new_uniswap =
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~deadline in
   Ratio.gt (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
@@ -139,7 +139,7 @@ let test_buy_kit_increases_product =
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap = assert_ok @@
+  let _bought_kit, new_uniswap =
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~deadline in
   Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
@@ -152,7 +152,7 @@ let test_buy_kit_does_not_affect_liquidity =
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap = assert_ok @@
+  let _bought_kit, new_uniswap =
     Uniswap.buy_kit uniswap ~amount ~min_kit_expected ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap = Uniswap.liquidity_tokens_extant uniswap
 
@@ -185,7 +185,7 @@ let buy_kit_unit_test =
     (* Low expectations and on time (lax): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_uniswap = assert_ok @@
+    let returned_kit, updated_uniswap =
       Uniswap.buy_kit
         uniswap
         ~amount:(Ligo.tez_from_literal "1_000_000mutez")
@@ -197,7 +197,7 @@ let buy_kit_unit_test =
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_uniswap = assert_ok @@
+    let returned_kit, updated_uniswap =
       Uniswap.buy_kit
         uniswap
         ~amount:(Ligo.tez_from_literal "1_000_000mutez")
@@ -209,22 +209,28 @@ let buy_kit_unit_test =
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_failwith Uniswap.BuyKitPriceFailure @@
-    Uniswap.buy_kit
-      uniswap
-      ~amount:(Ligo.tez_from_literal "1_000_000mutez")
-      ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal "453_637"))
-      ~deadline:(Ligo.timestamp_from_seconds_literal 2);
+    assert_raises
+      (Failure "BuyKitPriceFailure")
+      (fun () ->
+         Uniswap.buy_kit
+           uniswap
+           ~amount:(Ligo.tez_from_literal "1_000_000mutez")
+           ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal "453_637"))
+           ~deadline:(Ligo.timestamp_from_seconds_literal 2)
+      );
 
     (* Low expectations but too late (tight): fail *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_failwith Uniswap.UniswapTooLate @@
-    Uniswap.buy_kit
-      uniswap
-      ~amount:(Ligo.tez_from_literal "1_000_000mutez")
-      ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal "453_636"))
-      ~deadline:(Ligo.timestamp_from_seconds_literal 1)
+    assert_raises
+      (Failure "UniswapTooLate")
+      (fun () ->
+         Uniswap.buy_kit
+           uniswap
+           ~amount:(Ligo.tez_from_literal "1_000_000mutez")
+           ~min_kit_expected:(Kit.of_mukit (Ligo.int_from_literal "453_636"))
+           ~deadline:(Ligo.timestamp_from_seconds_literal 1)
+      )
 
 (* ************************************************************************* *)
 (*                     sell_kit (property-based tests)                       *)
@@ -239,7 +245,7 @@ let test_sell_kit_decreases_price =
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
   @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap = assert_ok @@
+  let _bought_tez, new_uniswap =
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~deadline in
   Ratio.lt (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
@@ -252,7 +258,7 @@ let test_sell_kit_increases_product =
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
   @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap = assert_ok @@
+  let _bought_tez, new_uniswap =
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~deadline in
   Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
@@ -265,7 +271,7 @@ let test_sell_kit_does_not_affect_liquidity =
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
   @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap = assert_ok @@
+  let _bought_tez, new_uniswap =
     Uniswap.sell_kit uniswap ~amount token ~min_tez_expected ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap = Uniswap.liquidity_tokens_extant uniswap
 
@@ -297,7 +303,7 @@ let sell_kit_unit_test =
     (* Low expectations and on time (lax): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_tez, updated_uniswap = assert_ok @@
+    let returned_tez, updated_uniswap =
       Uniswap.sell_kit
         uniswap
         ~amount:(Ligo.tez_from_literal "0mutez")
@@ -310,7 +316,7 @@ let sell_kit_unit_test =
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_tez, updated_uniswap = assert_ok @@
+    let returned_tez, updated_uniswap =
       Uniswap.sell_kit
         uniswap
         ~amount:(Ligo.tez_from_literal "0mutez")
@@ -323,23 +329,29 @@ let sell_kit_unit_test =
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_failwith Uniswap.SellKitPriceFailure @@
-    Uniswap.sell_kit
-      uniswap
-      ~amount:(Ligo.tez_from_literal "0mutez")
-      (Kit.issue Kit.one)
-      ~min_tez_expected:(Ligo.tez_from_literal "1_663_334mutez")
-      ~deadline:(Ligo.timestamp_from_seconds_literal 2);
+    assert_raises
+      (Failure "SellKitPriceFailure")
+      (fun () ->
+         Uniswap.sell_kit
+           uniswap
+           ~amount:(Ligo.tez_from_literal "0mutez")
+           (Kit.issue Kit.one)
+           ~min_tez_expected:(Ligo.tez_from_literal "1_663_334mutez")
+           ~deadline:(Ligo.timestamp_from_seconds_literal 2)
+      );
 
     (* Low expectations but too late (tight): fail *)
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_failwith Uniswap.UniswapTooLate @@
-    Uniswap.sell_kit
-      uniswap
-      ~amount:(Ligo.tez_from_literal "0mutez")
-      (Kit.issue Kit.one)
-      ~min_tez_expected:(Ligo.tez_from_literal "1_663_333mutez")
-      ~deadline:(Ligo.timestamp_from_seconds_literal 1)
+    assert_raises
+      (Failure "UniswapTooLate")
+      (fun () ->
+         Uniswap.sell_kit
+           uniswap
+           ~amount:(Ligo.tez_from_literal "0mutez")
+           (Kit.issue Kit.one)
+           ~min_tez_expected:(Ligo.tez_from_literal "1_663_333mutez")
+           ~deadline:(Ligo.timestamp_from_seconds_literal 1)
+      )
 
 (* ************************************************************************* *)
 (*             add_liquidity (non-first) (property-based tests)              *)
@@ -357,7 +369,7 @@ let test_add_liquidity_might_decrease_price =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+  let _bought_liquidity, _bought_kit, new_uniswap =
     Uniswap.add_liquidity uniswap ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Ratio.leq (Uniswap.kit_in_tez new_uniswap) (Uniswap.kit_in_tez uniswap)
 
@@ -370,7 +382,7 @@ let test_add_liquidity_increases_product =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+  let _bought_liquidity, _bought_kit, new_uniswap =
     Uniswap.add_liquidity uniswap ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Ratio.gt (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
@@ -383,7 +395,7 @@ let test_add_liquidity_increases_liquidity =
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
   @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap = assert_ok @@
+  let _bought_liquidity, _bought_kit, new_uniswap =
     Uniswap.add_liquidity uniswap ~amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap > Uniswap.liquidity_tokens_extant uniswap
 
@@ -413,7 +425,7 @@ let add_liquidity_unit_test =
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
-    let returned_liquidity, returned_kit, updated_uniswap = assert_ok @@
+    let returned_liquidity, returned_kit, updated_uniswap =
       Uniswap.add_liquidity
         uniswap
         ~amount:(Ligo.tez_from_literal "20_000_000mutez")
@@ -443,7 +455,7 @@ let test_remove_liquidity_decreases_product =
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
   @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+  let _withdrawn_tez, _withdrawn_kit, new_uniswap =
     Uniswap.remove_liquidity uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
   Ratio.leq (Uniswap.kit_times_tez new_uniswap) (Uniswap.kit_times_tez uniswap)
 
@@ -456,7 +468,7 @@ let test_remove_liquidity_decreases_liquidity =
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
   @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, _withdrawn_kit, new_uniswap = assert_ok @@
+  let _withdrawn_tez, _withdrawn_kit, new_uniswap =
     Uniswap.remove_liquidity uniswap ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
   Uniswap.liquidity_tokens_extant new_uniswap < Uniswap.liquidity_tokens_extant uniswap
 
@@ -477,28 +489,23 @@ let pending_tez_deposit_test =
          ~last_level:(Ligo.nat_from_literal "0n") in
      (* let uniswap = set_pending_accrued_tez uniswap (Ligo.tez_from_literal "1_000_000mutez") in *)
 
-     match Uniswap.add_liquidity
-             uniswap
-             ~amount:(Ligo.tez_from_literal "101_000_000mutez")
-             ~pending_accrual:(Ligo.tez_from_literal "10_000_000mutez")
-             ~max_kit_deposited:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000_000")))
-             ~min_lqt_minted:(Ligo.nat_from_literal "1n")
-             ~deadline:(Ligo.timestamp_from_seconds_literal 1)
-     with
-     | Error _ -> assert_string "adding liquidity failed"
-     | Ok (liq, _kit, uniswap) ->
-       match
-         Uniswap.remove_liquidity uniswap
-           ~amount:(Ligo.tez_from_literal "0mutez")
-           ~lqt_burned:liq
-           ~min_tez_withdrawn:(Ligo.tez_from_literal "1mutez")
-           ~min_kit_withdrawn:(Kit.of_mukit (Ligo.int_from_literal "1"))
-           ~deadline:(Ligo.timestamp_from_seconds_literal 100)
-       with
-       | Error _ -> assert_string "removing liquidity failed"
-       | Ok (tez, kit, _) ->
-         assert_equal ~printer:Kit.show_token (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000_000"))) kit;
-         assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "100_090_909mutez") tez;
+     let (liq, _kit, uniswap) =
+       Uniswap.add_liquidity
+         uniswap
+         ~amount:(Ligo.tez_from_literal "101_000_000mutez")
+         ~pending_accrual:(Ligo.tez_from_literal "10_000_000mutez")
+         ~max_kit_deposited:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000_000")))
+         ~min_lqt_minted:(Ligo.nat_from_literal "1n")
+         ~deadline:(Ligo.timestamp_from_seconds_literal 1) in
+     let (tez, kit, _) =
+       Uniswap.remove_liquidity uniswap
+         ~amount:(Ligo.tez_from_literal "0mutez")
+         ~lqt_burned:liq
+         ~min_tez_withdrawn:(Ligo.tez_from_literal "1mutez")
+         ~min_kit_withdrawn:(Kit.of_mukit (Ligo.int_from_literal "1"))
+         ~deadline:(Ligo.timestamp_from_seconds_literal 100) in
+     assert_equal ~printer:Kit.show_token (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000_000"))) kit;
+     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "100_090_909mutez") tez;
   )
 
 let suite =

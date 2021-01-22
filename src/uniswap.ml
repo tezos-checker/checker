@@ -1,30 +1,3 @@
-type Error.error +=
-  | UniswapNonPositiveInput
-  | UniswapTooLate
-  | AddLiquidityNoTezGiven
-  | AddLiquidityNoKitGiven
-  | AddLiquidityNoLiquidityToBeAdded
-  | AddLiquidityLessThanOneTez
-  | AddLiquidityTooLowLiquidityMinted
-  | AddLiquidityTooMuchKitRequired
-  | AddLiquidityZeroKitDeposited
-  | RemoveLiquidityNonEmptyAmount
-  | RemoveLiquidityCantWithdrawEnoughTez
-  | RemoveLiquidityCantWithdrawEnoughKit
-  | RemoveLiquidityTooMuchTezWithdrawn
-  | RemoveLiquidityTooMuchKitWithdrawn
-  | RemoveLiquidityNoLiquidityBurned
-  | RemoveLiquidityNoTezWithdrawnExpected
-  | RemoveLiquidityNoKitWithdrawnExpected
-  | BuyKitPriceFailure
-  | BuyKitTooLowExpectedKit
-  | BuyKitTooMuchKitBought
-  | SellKitNonEmptyAmount
-  | SellKitPriceFailure
-  | SellKitTooLowExpectedTez
-  | SellKitTooMuchTezBought
-  | InvalidLiquidityToken
-
 (* To be used as the content in liquidity tokens for disambiguation. *)
 type liquidity_token_content = Lqt [@@deriving show]
 
@@ -35,19 +8,12 @@ let issue_liquidity_tokens (i: Ligo.nat) = Ligo.Tezos.create_ticket Lqt i
 (** Check whether a liquidity token is valid. A liquidity token is valid if it
   * is issued by checker, and it is tagged appropriately (this is already
   * enforced by its type). *)
-let is_liquidity_token_valid
-    ~(liquidity: liquidity)
-  : (liquidity, Error.error) result =
+let is_liquidity_token_valid ~(liquidity: liquidity) : liquidity =
   let (issuer, (_content, _amount)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = Ligo.Tezos.self_address then Ok liquidity else Error InvalidLiquidityToken
+  if issuer = Ligo.Tezos.self_address then liquidity else failwith "InvalidLiquidityToken"
 
-let with_valid_liquidity_token
-    ~(liquidity: liquidity)
-    (f: liquidity -> ('a, Error.error) result)
-  : ('a, Error.error) result =
-  match is_liquidity_token_valid ~liquidity with
-  | Error err -> Error err
-  | Ok ticket -> f ticket
+let with_valid_liquidity_token ~(liquidity: liquidity) (f: liquidity -> 'a) : 'a =
+  f (is_liquidity_token_valid ~liquidity)
 
 type t =
   { tez: Ligo.tez;
@@ -115,11 +81,11 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~deadline =
   let uniswap = sync_last_observed uniswap in
   assert_initialized uniswap;
   if (amount <= Ligo.tez_from_literal "0mutez") then
-    Error UniswapNonPositiveInput
+    failwith "UniswapNonPositiveInput"
   else if (!Ligo.Tezos.now >= deadline) then
-    Error UniswapTooLate
+    failwith "UniswapTooLate"
   else if (min_kit_expected <= Kit.zero) then
-    Error BuyKitTooLowExpectedKit
+    failwith "BuyKitTooLowExpectedKit"
   else
     let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
@@ -139,16 +105,16 @@ let buy_kit (uniswap: t) ~amount ~min_kit_expected ~deadline =
            )
         ) in
     if return < min_kit_expected then
-      Error BuyKitPriceFailure
+      failwith "BuyKitPriceFailure"
     else if return > uniswap_kit then
-      Error BuyKitTooMuchKitBought
+      failwith "BuyKitTooMuchKitBought"
     else
       let bought_kit, remaining_kit = Kit.split_or_fail all_kit_in_uniswap return (Kit.sub uniswap_kit return) in
-      Ok ( bought_kit,
-           { uniswap with
-             kit = remaining_kit;
-             tez = Ligo.add_tez_tez uniswap.tez amount }
-         )
+      ( bought_kit,
+        { uniswap with
+          kit = remaining_kit;
+          tez = Ligo.add_tez_tez uniswap.tez amount }
+      )
 
 let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~deadline =
   let uniswap = sync_last_observed uniswap in
@@ -156,13 +122,13 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~deadline
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   assert_initialized uniswap;
   if (kit <= Kit.zero) then
-    Error UniswapNonPositiveInput
+    failwith "UniswapNonPositiveInput"
   else if !Ligo.Tezos.now >= deadline then
-    Error UniswapTooLate
+    failwith "UniswapTooLate"
   else if amount <> Ligo.tez_from_literal "0mutez" then
-    Error SellKitNonEmptyAmount
+    failwith "SellKitNonEmptyAmount"
   else if (min_tez_expected <= Ligo.tez_from_literal "0mutez") then
-    Error SellKitTooLowExpectedTez
+    failwith "SellKitTooLowExpectedTez"
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -181,16 +147,16 @@ let sell_kit (uniswap: t) ~amount (token: Kit.token) ~min_tez_expected ~deadline
            )
         ) in
     if return < min_tez_expected then
-      Error SellKitPriceFailure
+      failwith "SellKitPriceFailure"
     else if return > uniswap.tez then
-      Error SellKitTooMuchTezBought
+      failwith "SellKitTooMuchTezBought"
     else
       let new_all_kit_in_uniswap = Kit.join_or_fail all_kit_in_uniswap token in
-      Ok ( return,
-           { uniswap with
-             kit = new_all_kit_in_uniswap;
-             tez = Ligo.sub_tez_tez uniswap.tez return }
-         )
+      ( return,
+        { uniswap with
+          kit = new_all_kit_in_uniswap;
+          tez = Ligo.sub_tez_tez uniswap.tez return }
+      )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
@@ -208,13 +174,13 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   assert_initialized uniswap;
   if !Ligo.Tezos.now >= deadline then
-    Error UniswapTooLate
+    failwith "UniswapTooLate"
   else if amount = Ligo.tez_from_literal "0mutez" then
-    Error AddLiquidityNoTezGiven
+    failwith "AddLiquidityNoTezGiven"
   else if max_kit_deposited = Kit.zero then
-    Error AddLiquidityNoKitGiven
+    failwith "AddLiquidityNoKitGiven"
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
-    Error AddLiquidityNoLiquidityToBeAdded
+    failwith "AddLiquidityNoLiquidityToBeAdded"
   else
     let (_, (_, uniswap_lqt)), _same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in (* TODO: Make sure to restore the ticket. *)
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
@@ -231,11 +197,11 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
            (Ratio.make (Common.tez_to_mutez amount) (Common.tez_to_mutez effective_tez_balance))
         ) in
     if lqt_minted < min_lqt_minted then
-      Error AddLiquidityTooLowLiquidityMinted
+      failwith "AddLiquidityTooLowLiquidityMinted"
     else if max_kit_deposited < kit_deposited then
-      Error AddLiquidityTooMuchKitRequired
+      failwith "AddLiquidityTooMuchKitRequired"
     else if kit_deposited = Kit.zero then
-      Error AddLiquidityZeroKitDeposited
+      failwith "AddLiquidityZeroKitDeposited"
     else
       let kit_deposited, kit_to_return =
         Kit.split_or_fail
@@ -249,7 +215,7 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
                       tez = Ligo.add_tez_tez uniswap.tez amount;
                       lqt = Option.get (Ligo.Tezos.join_tickets uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
       (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
-      Ok (liq_tokens, kit_to_return, updated)
+      (liq_tokens, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without tez and kit if everybody sells their liquidity. I think
@@ -257,22 +223,22 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
  * want to lose the burrow fees. *)
 (* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline
-  : (Ligo.tez * Kit.token * t, Error.error) result =
+  : (Ligo.tez * Kit.token * t) =
   with_valid_liquidity_token ~liquidity:lqt_burned @@ fun lqt_burned ->
   let uniswap = sync_last_observed uniswap in
   assert_initialized uniswap;
   let uniswap_kit, all_kit_in_uniswap = Kit.read_kit uniswap.kit in
   let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
   if amount <> Ligo.tez_from_literal "0mutez" then
-    Error RemoveLiquidityNonEmptyAmount
+    failwith "RemoveLiquidityNonEmptyAmount"
   else if !Ligo.Tezos.now >= deadline then
-    Error UniswapTooLate
+    failwith "UniswapTooLate"
   else if lqt_burned = Ligo.nat_from_literal "0n" then
-    Error RemoveLiquidityNoLiquidityBurned
+    failwith "RemoveLiquidityNoLiquidityBurned"
   else if min_tez_withdrawn <= Ligo.tez_from_literal "0mutez" then
-    Error RemoveLiquidityNoTezWithdrawnExpected
+    failwith "RemoveLiquidityNoTezWithdrawnExpected"
   else if min_kit_withdrawn <= Kit.zero then
-    Error RemoveLiquidityNoKitWithdrawnExpected
+    failwith "RemoveLiquidityNoKitWithdrawnExpected"
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let (_, (_, uniswap_lqt)), same_ticket = Ligo.Tezos.read_ticket uniswap.lqt in
@@ -282,13 +248,13 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
     let kit_withdrawn = Kit.of_ratio_floor (Ratio.mul (Kit.to_ratio uniswap_kit) ratio) in
 
     if tez_withdrawn < min_tez_withdrawn then
-      Error RemoveLiquidityCantWithdrawEnoughTez
+      failwith "RemoveLiquidityCantWithdrawEnoughTez"
     else if tez_withdrawn > uniswap.tez then
-      Error RemoveLiquidityTooMuchTezWithdrawn
+      failwith "RemoveLiquidityTooMuchTezWithdrawn"
     else if kit_withdrawn < min_kit_withdrawn then
-      Error RemoveLiquidityCantWithdrawEnoughKit
+      failwith "RemoveLiquidityCantWithdrawEnoughKit"
     else if kit_withdrawn > uniswap_kit then
-      Error RemoveLiquidityTooMuchKitWithdrawn
+      failwith "RemoveLiquidityTooMuchKitWithdrawn"
     else
       let remaining_lqt, _burned = Option.get ( (* NOTE: SHOULD NEVER FAIL!! *)
           match Ligo.is_nat (Ligo.sub_nat_nat uniswap_lqt lqt_burned) with
@@ -301,7 +267,7 @@ let remove_liquidity (uniswap: t) ~amount ~lqt_burned ~min_tez_withdrawn ~min_ki
                       tez = Ligo.sub_tez_tez uniswap.tez tez_withdrawn;
                       kit = remaining_kit;
                       lqt = remaining_lqt } in
-      Ok (tez_withdrawn, kit_withdrawn, updated)
+      (tez_withdrawn, kit_withdrawn, updated)
 
 let add_accrued_kit (uniswap: t) (accrual: Kit.token) : t =
   let uniswap = sync_last_observed uniswap in
