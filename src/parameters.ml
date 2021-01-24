@@ -1,15 +1,16 @@
 open Ratio
+open FixedPoint
 
 type t =
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
-    q : FixedPoint.t; (* 1/kit, really *)
+    q : fixedpoint; (* 1/kit, really *)
     index: Ligo.tez;
     protected_index: Ligo.tez;
-    target: FixedPoint.t;
-    drift_derivative: FixedPoint.t;
-    drift: FixedPoint.t;
-    burrow_fee_index: FixedPoint.t;
-    imbalance_index: FixedPoint.t;
+    target: fixedpoint;
+    drift_derivative: fixedpoint;
+    drift: fixedpoint;
+    burrow_fee_index: fixedpoint;
+    imbalance_index: fixedpoint;
     (* TODO: Test that this value does not drift too far from the real value
      * (the total amount of kit needed to close all burrows). Errors of a few
      * percents per year are NOT acceptable. Errors of 0.1% or so per year
@@ -22,14 +23,14 @@ type t =
 
 (** Initial state of the parameters. TODO: Contents TBD. *)
 let initial_parameters : t =
-  { q = FixedPoint.one;
+  { q = fixedpoint_one;
     index = Ligo.tez_from_literal "1_000_000mutez";
     protected_index = Ligo.tez_from_literal "1_000_000mutez";
-    target = FixedPoint.one;
-    drift = FixedPoint.zero;
-    drift_derivative = FixedPoint.zero;
-    burrow_fee_index = FixedPoint.one;
-    imbalance_index = FixedPoint.one;
+    target = fixedpoint_one;
+    drift = fixedpoint_zero;
+    drift_derivative = fixedpoint_zero;
+    burrow_fee_index = fixedpoint_one;
+    imbalance_index = fixedpoint_one;
     (* Cannot be zero because then it stays
      * zero forever; only multiplications occur. *)
     outstanding_kit = Kit.of_mukit (Ligo.int_from_literal "1");
@@ -45,11 +46,11 @@ let tz_liquidation (p: t) : Ligo.tez = Common.min_tez p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: t) : ratio =
-  mul_ratio (FixedPoint.to_ratio p.q) (ratio_of_tez (tz_minting p))
+  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_minting p))
 
 (** Current liquidation price (tez/kit). *)
 let liquidation_price (p: t) : ratio =
-  mul_ratio (FixedPoint.to_ratio p.q) (ratio_of_tez (tz_liquidation p))
+  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_liquidation p))
 
 let qexp amount = add_ratio one_ratio amount
 
@@ -101,10 +102,10 @@ let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : ratio =
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
-let compute_adjustment_index (p: t) : FixedPoint.t =
-  let burrow_fee_index = FixedPoint.to_ratio p.burrow_fee_index in
-  let imbalance_index = FixedPoint.to_ratio p.imbalance_index in
-  FixedPoint.of_ratio_floor (mul_ratio burrow_fee_index imbalance_index)
+let compute_adjustment_index (p: t) : fixedpoint=
+  let burrow_fee_index = fixedpoint_to_ratio p.burrow_fee_index in
+  let imbalance_index = fixedpoint_to_ratio p.imbalance_index in
+  fixedpoint_of_ratio_floor (mul_ratio burrow_fee_index imbalance_index)
 
 (** Given the current target, calculate the rate of change of the drift (drift
   * derivative). That's how the following calculations came to be:
@@ -139,26 +140,26 @@ let compute_adjustment_index (p: t) : FixedPoint.t =
   *
   * I've left these calculations here so that others could double-check them too.
 *)
-let compute_drift_derivative (target : FixedPoint.t) : FixedPoint.t =
-  assert (target > FixedPoint.zero);
-  let target = FixedPoint.to_ratio target in
+let compute_drift_derivative (target : fixedpoint) : fixedpoint =
+  assert (target > fixedpoint_zero);
+  let target = fixedpoint_to_ratio target in
   let target_low_bracket  = Constants.target_low_bracket in
   let target_high_bracket = Constants.target_high_bracket in
-  let cnp_001 = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
-  let cnp_005 = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
-  let secs_in_a_day = FixedPoint.of_int Constants.seconds_in_a_day in
+  let cnp_001 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
+  let cnp_005 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
+  let secs_in_a_day = fixedpoint_of_int Constants.seconds_in_a_day in
   match () with
   (* No acceleration (0) *)
-  | () when lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) -> FixedPoint.zero
+  | () when lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) -> fixedpoint_zero
   (* Low acceleration (-/+) *)
   | () when lt_ratio_ratio (qexp (neg_ratio target_high_bracket)) target && leq_ratio_ratio target (qexp (neg_ratio target_low_bracket))
-    -> FixedPoint.neg (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    -> fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
   | () when gt_ratio_ratio (qexp (          target_high_bracket)) target && geq_ratio_ratio target (qexp (          target_low_bracket))
-    ->                (FixedPoint.div cnp_001 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    ->                (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
   (* High acceleration (-/+) *)
-  | () when leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) -> FixedPoint.neg (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  | () when geq_ratio_ratio target (qexp (          target_high_bracket)) ->                (FixedPoint.div cnp_005 (FixedPoint.pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  | _ -> (failwith "impossible" : FixedPoint.t)
+  | () when leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) -> fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  | () when geq_ratio_ratio target (qexp (          target_high_bracket)) ->                (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  | _ -> (failwith "impossible" : fixedpoint)
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
@@ -190,34 +191,34 @@ let touch
   let current_drift_derivative =
     compute_drift_derivative parameters.target in
   let current_drift =
-    FixedPoint.of_ratio_floor
+    fixedpoint_of_ratio_floor
       (add_ratio
-         (FixedPoint.to_ratio parameters.drift)
+         (fixedpoint_to_ratio parameters.drift)
          (mul_ratio
             (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
             (mul_ratio
-               (FixedPoint.to_ratio (FixedPoint.add parameters.drift_derivative current_drift_derivative))
+               (fixedpoint_to_ratio (fixedpoint_add parameters.drift_derivative current_drift_derivative))
                duration_in_seconds
             )
          )
       ) in
   let current_q =
-    FixedPoint.of_ratio_floor
+    fixedpoint_of_ratio_floor
       (mul_ratio
-         (FixedPoint.to_ratio parameters.q)
+         (fixedpoint_to_ratio parameters.q)
          (qexp
             (mul_ratio
                (add_ratio
-                  (FixedPoint.to_ratio parameters.drift)
+                  (fixedpoint_to_ratio parameters.drift)
                   (mul_ratio
                      (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
                      (mul_ratio
                         (add_ratio
                            (mul_ratio
                               (ratio_of_int (Ligo.int_from_literal "2"))
-                              (FixedPoint.to_ratio parameters.drift_derivative)
+                              (fixedpoint_to_ratio parameters.drift_derivative)
                            )
-                           (FixedPoint.to_ratio current_drift_derivative)
+                           (fixedpoint_to_ratio current_drift_derivative)
                         )
                         duration_in_seconds
                      )
@@ -229,10 +230,10 @@ let touch
       ) in
 
   let current_target =
-    FixedPoint.of_ratio_floor
+    fixedpoint_of_ratio_floor
       (div_ratio
          (mul_ratio
-            (FixedPoint.to_ratio current_q)
+            (fixedpoint_to_ratio current_q)
             (ratio_of_tez current_index)
          )
          current_kit_in_tez
@@ -240,9 +241,9 @@ let touch
   (* Update the indices *)
   let current_burrow_fee_index =
     (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
-    FixedPoint.of_ratio_floor
+    fixedpoint_of_ratio_floor
       (mul_ratio
-         (FixedPoint.to_ratio parameters.burrow_fee_index)
+         (fixedpoint_to_ratio parameters.burrow_fee_index)
          (add_ratio
             one_ratio
             (div_ratio
@@ -257,9 +258,9 @@ let touch
       compute_imbalance
         ~burrowed:parameters.outstanding_kit
         ~circulating:parameters.circulating_kit in
-    FixedPoint.of_ratio_floor
+    fixedpoint_of_ratio_floor
       (mul_ratio
-         (FixedPoint.to_ratio parameters.imbalance_index)
+         (fixedpoint_to_ratio parameters.imbalance_index)
          (add_ratio
             one_ratio
             (div_ratio
@@ -274,9 +275,9 @@ let touch
       (div_ratio
          (mul_ratio
             (Kit.to_ratio parameters.outstanding_kit)
-            (FixedPoint.to_ratio current_burrow_fee_index)
+            (fixedpoint_to_ratio current_burrow_fee_index)
          )
-         (FixedPoint.to_ratio parameters.burrow_fee_index)
+         (fixedpoint_to_ratio parameters.burrow_fee_index)
       ) in
 
   let accrual_to_uniswap = Kit.sub outstanding_with_fees parameters.outstanding_kit in
@@ -286,9 +287,9 @@ let touch
       (div_ratio
          (mul_ratio
             (Kit.to_ratio outstanding_with_fees)
-            (FixedPoint.to_ratio current_imbalance_index)
+            (fixedpoint_to_ratio current_imbalance_index)
          )
-         (FixedPoint.to_ratio parameters.imbalance_index)
+         (fixedpoint_to_ratio parameters.imbalance_index)
       ) in
 
   let current_circulating_kit = Kit.add parameters.circulating_kit accrual_to_uniswap in

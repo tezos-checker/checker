@@ -1,6 +1,7 @@
 open Burrow
 open Ratio
 open OUnit2
+open FixedPoint
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -69,14 +70,14 @@ Other properties
 *)
 
 let params : Parameters.t =
-  { q = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
+  { q = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
     index = Ligo.tez_from_literal "320_000mutez";
     protected_index = Ligo.tez_from_literal "360_000mutez";
-    target = FixedPoint.of_ratio_floor (make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
-    drift = FixedPoint.zero;
-    drift_derivative = FixedPoint.zero;
-    burrow_fee_index = FixedPoint.one;
-    imbalance_index = FixedPoint.one;
+    target = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
+    drift = fixedpoint_zero;
+    drift_derivative = fixedpoint_zero;
+    burrow_fee_index = fixedpoint_one;
+    imbalance_index = fixedpoint_one;
     outstanding_kit = Kit.one;
     circulating_kit = Kit.one;
     last_touched = Ligo.timestamp_from_seconds_literal 0;
@@ -405,7 +406,7 @@ let barely_liquidatable_test =
               ~collateral:(Ligo.tez_from_literal "2_346_632mutez")
               ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
-              ~adjustment_index:FixedPoint.one
+              ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "2_818_396mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
@@ -462,7 +463,7 @@ let barely_non_complete_liquidatable_test =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
-              ~adjustment_index:FixedPoint.one
+              ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "4_060_000mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
@@ -517,7 +518,7 @@ let barely_complete_liquidatable_test =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
-              ~adjustment_index:FixedPoint.one
+              ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "4_059_999mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
@@ -572,7 +573,7 @@ let barely_non_close_liquidatable_test =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
-              ~adjustment_index:FixedPoint.one
+              ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
@@ -627,7 +628,7 @@ let barely_close_liquidatable_test =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(Kit.of_mukit (Ligo.int_from_literal "10_000_000"))
               ~excess_kit:Kit.zero
-              ~adjustment_index:FixedPoint.one
+              ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "999_999mutez")
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)

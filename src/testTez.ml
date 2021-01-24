@@ -1,7 +1,8 @@
 open OUnit2
+open FixedPoint
 
 type tz = Ligo.tez [@@deriving show]
-type fp = FixedPoint.t [@@deriving show]
+type fp = fixedpoint[@@deriving show]
 
 let suite =
   "TezTests" >::: [

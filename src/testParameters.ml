@@ -1,6 +1,7 @@
 open OUnit2
 open TestCommon
 open Ratio
+open FixedPoint
 
 (*
 Parameter-related things we might want to add tests for:
@@ -44,74 +45,74 @@ d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
 let test_compute_drift_derivative_no_acceleration =
   "test_compute_drift_derivative_no_acceleration" >:: fun _ ->
     (* exp( 0 ): 1 *)
-    let target = FixedPoint.one in
+    let target = fixedpoint_one in
     assert_equal
       ~printer:FixedPoint.show
-      FixedPoint.zero
+      fixedpoint_zero
       (Parameters.compute_drift_derivative target);
 
     (* exp( low ): 201/200 = 1.005 (rounded DOWN) *)
-    let target = FixedPoint.of_hex_string "1.0147AE147AE147AE" in
+    let target = fixedpoint_of_hex_string "1.0147AE147AE147AE" in
     assert_equal
       ~printer:FixedPoint.show
-      FixedPoint.zero
+      fixedpoint_zero
       (Parameters.compute_drift_derivative target);
 
     (* exp(-low ): 199/200 = 0.995 (rounded UP) *)
-    let target = FixedPoint.of_hex_string "0.FEB851EB851EB852" in
+    let target = fixedpoint_of_hex_string "0.FEB851EB851EB852" in
     assert_equal
       ~printer:FixedPoint.show
-      FixedPoint.zero
+      fixedpoint_zero
       (Parameters.compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_positive_acceleration =
   "test_compute_drift_derivative_low_positive_acceleration" >:: fun _ ->
     (* exp( low ): 201/200 = 1.005 (rounded UP) *)
-    let target = FixedPoint.of_hex_string "1.0147AE147AE147AF" in
+    let target = fixedpoint_of_hex_string "1.0147AE147AE147AF" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "0.000000000003C547")
+      (fixedpoint_of_hex_string "0.000000000003C547")
       (Parameters.compute_drift_derivative target);
 
     (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
-    let target = FixedPoint.of_hex_string "1.0CCCCCCCCCCCCCCC" in
+    let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCC" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "0.000000000003C547")
+      (fixedpoint_of_hex_string "0.000000000003C547")
       (Parameters.compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_negative_acceleration =
   "test_compute_drift_derivative_low_negative_acceleration" >:: fun _ ->
     (* exp(-low ): 199/200 = 0.995 (rounded DOWN) *)
-    let target = FixedPoint.of_hex_string "0.FEB851EB851EB851" in
+    let target = fixedpoint_of_hex_string "0.FEB851EB851EB851" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "-0.000000000003C547")
+      (fixedpoint_of_hex_string "-0.000000000003C547")
       (Parameters.compute_drift_derivative target);
 
     (* exp(-high): 19/20   = 0.95 (rounded UP) *)
-    let target = FixedPoint.of_hex_string "0.F333333333333334" in
+    let target = fixedpoint_of_hex_string "0.F333333333333334" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "-0.000000000003C547")
+      (fixedpoint_of_hex_string "-0.000000000003C547")
       (Parameters.compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_positive_acceleration =
   "test_compute_drift_derivative_high_positive_acceleration" >:: fun _ ->
     (* exp( high): 21/20   = 1.05 (rounded UP) *)
-    let target = FixedPoint.of_hex_string "1.0CCCCCCCCCCCCCCD" in
+    let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCD" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "0.000000000012DA63")
+      (fixedpoint_of_hex_string "0.000000000012DA63")
       (Parameters.compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_negative_acceleration =
   "test_compute_drift_derivative_high_negative_acceleration" >:: fun _ ->
     (* exp(-high): 19/20   = 0.95 (rounded DOWN) *)
-    let target = FixedPoint.of_hex_string "0.F333333333333333" in
+    let target = fixedpoint_of_hex_string "0.F333333333333333" in
     assert_equal
       ~printer:FixedPoint.show
-      (FixedPoint.of_hex_string "-0.000000000012DA63")
+      (fixedpoint_of_hex_string "-0.000000000012DA63")
       (Parameters.compute_drift_derivative target)
 
 (* ************************************************************************* *)
@@ -556,14 +557,14 @@ let test_liquidation_index_low_unbounded =
 let test_touch =
   "test_touch" >:: fun _ ->
     let initial_parameters : Parameters.t =
-      { q = FixedPoint.of_hex_string "0.E666666666666666"; (* 0.9 *)
+      { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
         index = Ligo.tez_from_literal "360_000mutez";
-        target = FixedPoint.of_hex_string "1.147AE147AE147AE1"; (* 1.08 *)
+        target = fixedpoint_of_hex_string "1.147AE147AE147AE1"; (* 1.08 *)
         protected_index = Ligo.tez_from_literal "350_000mutez";
-        drift = FixedPoint.zero;
-        drift_derivative = FixedPoint.zero;
-        burrow_fee_index = FixedPoint.one;
-        imbalance_index = FixedPoint.one;
+        drift = fixedpoint_zero;
+        drift_derivative = fixedpoint_zero;
+        burrow_fee_index = fixedpoint_one;
+        imbalance_index = fixedpoint_one;
         outstanding_kit = Kit.one;
         circulating_kit = Kit.zero;
         last_touched = Ligo.timestamp_from_seconds_literal 0;
@@ -575,14 +576,14 @@ let test_touch =
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_uniswap, new_parameters = Parameters.touch new_index kit_in_tez initial_parameters in
     assert_equal
-      { q = FixedPoint.of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
+      { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
         index = Ligo.tez_from_literal "340_000mutez";
         protected_index = Ligo.tez_from_literal "340_000mutez";
-        target = FixedPoint.of_hex_string "1.00D6E1B366FF4BEE"; (* 1.00327883367481013224 *)
-        drift_derivative = FixedPoint.of_hex_string "0.000000000012DA63"; (* 0.00000000000006697957 *)
-        drift  = FixedPoint.of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
-        burrow_fee_index = FixedPoint.of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
-        imbalance_index = FixedPoint.of_hex_string "1.00005FB2608FF99D"; (* 1.000005703972931226 *)
+        target = fixedpoint_of_hex_string "1.00D6E1B366FF4BEE"; (* 1.00327883367481013224 *)
+        drift_derivative = fixedpoint_of_hex_string "0.000000000012DA63"; (* 0.00000000000006697957 *)
+        drift  = fixedpoint_of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
+        burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
+        imbalance_index = fixedpoint_of_hex_string "1.00005FB2608FF99D"; (* 1.000005703972931226 *)
         outstanding_kit = Kit.of_mukit (Ligo.int_from_literal "1_000_005");
         circulating_kit = Kit.of_mukit (Ligo.int_from_literal "0_000_000"); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = !Ligo.Tezos.now;

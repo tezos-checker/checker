@@ -1,3 +1,4 @@
+open FixedPoint
 open Ratio
 
 type liquidation_slices =
@@ -23,7 +24,7 @@ type t =
     excess_kit : Kit.t;
     (* The imbalance adjustment index observed the last time the burrow was
      * touched. *)
-    adjustment_index : FixedPoint.t;
+    adjustment_index : fixedpoint;
     (* Collateral that has been sent off to auctions. For all intents and
      * purposes, this collateral can be considered gone, but depending on the
      * outcome of the auctions we expect some kit in return. *)
@@ -143,7 +144,7 @@ let touch (p: Parameters.t) (burrow: t) : t =
   else
     let b = rebalance_kit burrow in
     let current_adjustment_index = Parameters.compute_adjustment_index p in
-    let last_adjustment_index = FixedPoint.to_ratio b.adjustment_index in
+    let last_adjustment_index = fixedpoint_to_ratio b.adjustment_index in
     let kit_outstanding = Kit.to_ratio b.outstanding_kit in
     { b with
       outstanding_kit =
@@ -151,7 +152,7 @@ let touch (p: Parameters.t) (burrow: t) : t =
           (div_ratio
              (mul_ratio
                 kit_outstanding
-                (FixedPoint.to_ratio current_adjustment_index)
+                (fixedpoint_to_ratio current_adjustment_index)
              )
              last_adjustment_index
           );
@@ -477,7 +478,7 @@ let request_liquidation (p: Parameters.t) (b: t) : liquidation_result =
     ratio_to_tez_floor
       (mul_ratio
          (ratio_of_tez b.collateral)
-         (FixedPoint.to_ratio Constants.liquidation_reward_percentage)
+         (fixedpoint_to_ratio Constants.liquidation_reward_percentage)
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)

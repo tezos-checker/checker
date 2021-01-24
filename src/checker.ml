@@ -1,3 +1,4 @@
+open FixedPoint
 open Ptr
 open Ratio
 
@@ -641,13 +642,13 @@ let calculate_touch_reward (state:t) : Kit.t =
       (Ligo.int_from_literal "0")
       (Ligo.sub_int_int duration_in_seconds Constants.touch_reward_low_bracket) in
 
-  let touch_low_reward = FixedPoint.of_ratio_ceil Constants.touch_low_reward in
-  let touch_high_reward = FixedPoint.of_ratio_ceil Constants.touch_high_reward in
+  let touch_low_reward = fixedpoint_of_ratio_ceil Constants.touch_low_reward in
+  let touch_high_reward = fixedpoint_of_ratio_ceil Constants.touch_high_reward in
   Kit.scale
     Kit.one
-    (FixedPoint.add
-       (FixedPoint.mul (FixedPoint.of_int low_duration) touch_low_reward)
-       (FixedPoint.mul (FixedPoint.of_int high_duration) touch_high_reward)
+    (fixedpoint_add
+       (fixedpoint_mul (fixedpoint_of_int low_duration) touch_low_reward)
+       (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
 let touch (state:t) ~(index:Ligo.tez) : (Kit.token * t) =
@@ -686,7 +687,7 @@ let touch (state:t) ~(index:Ligo.tez) : (Kit.token * t) =
          * feed as (tz_t * q_t), or use the current minting price, but using
          * the liquidation price is the safest option. *)
         (* George: I use ceil, to stay on the safe side (higher-price) *)
-        (FixedPoint.of_ratio_ceil (Parameters.minting_price updated_parameters)) in
+        (fixedpoint_of_ratio_ceil (Parameters.minting_price updated_parameters)) in
 
     (* 6: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step

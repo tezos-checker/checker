@@ -17,9 +17,25 @@
 (library
  (name huxian)
  (public_name src)
- (modules Checker Constants Mem Avl Kit Tez FixedPoint Parameters Burrow
-   Uniswap LiquidationAuction LiquidationAuctionTypes Ptr DelegationAuction
-   Permission Ratio Ligo Common)
+ (modules
+  Checker
+  Constants
+  Mem
+  Avl
+  Kit
+  Tez
+  FixedPoint
+  Parameters
+  Burrow
+  Uniswap
+  LiquidationAuction
+  LiquidationAuctionTypes
+  Ptr
+  DelegationAuction
+  Permission
+  Ratio
+  Ligo
+  Common)
  (libraries str zarith)
  (wrapped false)
  (preprocess
@@ -27,9 +43,20 @@
 
 (test
  (name tests)
- (modules Tests TestAvl TestFixedPoint TestTez TestKit TestParameters
-   TestLiquidation TestUniswap TestDelegationAuction TestLiquidationAuction
-   TestChecker TestArbitrary TestCommon)
+ (modules
+  Tests
+  TestAvl
+  TestFixedPoint
+  TestTez
+  TestKit
+  TestParameters
+  TestLiquidation
+  TestUniswap
+  TestDelegationAuction
+  TestLiquidationAuction
+  TestChecker
+  TestArbitrary
+  TestCommon)
  (libraries huxian ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

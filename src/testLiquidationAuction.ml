@@ -1,6 +1,7 @@
 open Ptr
 open OUnit2
 open TestCommon
+open FixedPoint
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -23,7 +24,7 @@ let suite =
            min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "4_000_000"); (* note: randomly chosen *)
            younger = None; older = None;
          } in
-       let start_price = FixedPoint.one in
+       let start_price = fixedpoint_one in
        let auctions = LiquidationAuction.touch auctions start_price in
        let current = Option.get auctions.current_auction in
        assert_equal
@@ -82,7 +83,7 @@ let suite =
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "9_000_003"); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_price = FixedPoint.one in
+       let start_price = fixedpoint_one in
        let auctions = LiquidationAuction.touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (LiquidationAuction.current_auction_tez auctions);
     );
@@ -109,7 +110,7 @@ let suite =
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "3_000_000_000mutez";
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "9_000_006"); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_price = FixedPoint.one in
+       let start_price = fixedpoint_one in
        let auctions = LiquidationAuction.touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (LiquidationAuction.current_auction_tez auctions);
     );
@@ -124,7 +125,7 @@ let suite =
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "2_000_000mutez";
              min_kit_for_unwarranted = Kit.of_mukit (Ligo.int_from_literal "4_000_007"); (* note: randomly chosen *)
              younger = None; older = None; } in
-       let start_price = FixedPoint.one in
+       let start_price = fixedpoint_one in
        let auctions = LiquidationAuction.touch auctions start_price in
        let bidder = Ligo.address_from_literal "23456" in
        let current = Option.get auctions.current_auction in

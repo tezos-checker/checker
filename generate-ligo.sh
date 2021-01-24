@@ -13,6 +13,7 @@ inputs=(
   common
   delegationAuction
   ratio
+  fixedPoint
 )
 
 for name in "${inputs[@]}"; do

@@ -1,27 +1,28 @@
-type t
+type fixedpoint
 
 (* Predefined values. *)
-val zero : t
-val one : t
+val fixedpoint_zero : fixedpoint
+val fixedpoint_one : fixedpoint
 
 (* Arithmetic operations. *)
-val add : t -> t -> t
-val sub : t -> t -> t
-val mul : t -> t -> t
-val div : t -> t -> t
+val fixedpoint_add : fixedpoint -> fixedpoint -> fixedpoint
+val fixedpoint_sub : fixedpoint -> fixedpoint -> fixedpoint
+val fixedpoint_mul : fixedpoint -> fixedpoint -> fixedpoint
+val fixedpoint_div : fixedpoint -> fixedpoint -> fixedpoint
 
-val neg : t -> t
-val pow : t -> Ligo.nat -> t
-val exp : t -> t
+val fixedpoint_neg : fixedpoint -> fixedpoint
+val fixedpoint_pow : fixedpoint -> Ligo.nat -> fixedpoint
+val fixedpoint_exp : fixedpoint -> fixedpoint
 
 (* Conversions to/from other types. *)
-val of_int : Ligo.int -> t
-val to_ratio : t -> Ratio.ratio
-val of_ratio_ceil : Ratio.ratio -> t
-val of_ratio_floor : Ratio.ratio -> t
+val fixedpoint_of_int : Ligo.int -> fixedpoint
+val fixedpoint_to_ratio : fixedpoint  -> Ratio.ratio
+val fixedpoint_of_ratio_ceil : Ratio.ratio -> fixedpoint
+val fixedpoint_of_ratio_floor : Ratio.ratio -> fixedpoint
 
 (* BEGIN_OCAML *)
-val of_hex_string : string -> t
-val show : t -> string
-val pp : Format.formatter -> t -> unit
+val fixedpoint_of_hex_string : string -> fixedpoint
+val show : fixedpoint  -> string
+val pp : Format.formatter -> fixedpoint  -> unit
+val pp_fixedpoint : Format.formatter -> fixedpoint  -> unit
 (* END_OCAML *)

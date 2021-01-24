@@ -1,8 +1,9 @@
 open OUnit2
 open Ratio
+open FixedPoint
 
 type kt = Kit.t [@@deriving show]
-type fp = FixedPoint.t [@@deriving show]
+type fp = fixedpoint[@@deriving show]
 
 let suite =
   "KitTests" >::: [
@@ -28,19 +29,19 @@ let suite =
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal "15_370_401"))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "5_123_467")) (FixedPoint.of_ratio_floor (ratio_of_int (Ligo.int_from_literal "3"))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "5_123_467")) (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "3"))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal "-15_370_401"))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "5_123_467")) (FixedPoint.of_ratio_floor (ratio_of_int (Ligo.int_from_literal "-3"))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "5_123_467")) (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "-3"))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal "-15_370_401"))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "-5_123_467")) (FixedPoint.of_ratio_floor (ratio_of_int (Ligo.int_from_literal "3"))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "-5_123_467")) (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "3"))));
        assert_equal
          ~printer:show_kt
          (Kit.of_mukit (Ligo.int_from_literal "15_370_401"))
-         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "-5_123_467")) (FixedPoint.of_ratio_floor (ratio_of_int (Ligo.int_from_literal "-3"))));
+         (Kit.scale (Kit.of_mukit (Ligo.int_from_literal "-5_123_467")) (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "-3"))));
 
        (* compare *)
        assert_equal

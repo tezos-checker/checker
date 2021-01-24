@@ -69,6 +69,7 @@ Utku: Lifecycle of liquidation slices.
 
 open LiquidationAuctionTypes
 open Ratio
+open FixedPoint
 
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
@@ -188,7 +189,7 @@ let take_with_splitting storage queued_slices split_threshold =
     (storage, new_auction)
 
 let start_auction_if_possible
-    (start_price: FixedPoint.t) (auctions: auctions): auctions =
+    (start_price: fixedpoint) (auctions: auctions): auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
@@ -199,7 +200,7 @@ let start_auction_if_possible
         (ratio_to_tez_floor
            (mul_ratio
               (ratio_of_tez queued_amount)
-              (FixedPoint.to_ratio Constants.min_lot_auction_queue_fraction)
+              (fixedpoint_to_ratio Constants.min_lot_auction_queue_fraction)
            )
         ) in
     let (storage, new_auction) =
@@ -214,8 +215,8 @@ let start_auction_if_possible
         let start_value =
           Kit.scale
             Kit.one
-            (FixedPoint.mul
-               (FixedPoint.of_ratio_floor (ratio_of_tez (Avl.avl_tez storage new_auction)))
+            (fixedpoint_mul
+               (fixedpoint_of_ratio_floor (ratio_of_tez (Avl.avl_tez storage new_auction)))
                start_price
             ) in
         Some
@@ -233,15 +234,15 @@ let start_auction_if_possible
 let current_auction_minimum_bid (auction: current_auction) : Kit.t =
   match auction.state with
   | Descending (start_value, start_time) ->
-    let auction_decay_rate = FixedPoint.of_ratio_ceil Constants.auction_decay_rate in
+    let auction_decay_rate = fixedpoint_of_ratio_ceil Constants.auction_decay_rate in
     let decay =
       match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
-      | None -> (failwith "TODO: is this possible?" : FixedPoint.t) (* TODO *)
-      | Some secs -> FixedPoint.pow (FixedPoint.sub FixedPoint.one auction_decay_rate) secs in
+      | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
+      | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
     Kit.scale start_value decay
   | Ascending (leading_bid, _timestamp, _level) ->
-    let bid_improvement_factor = FixedPoint.of_ratio_floor Constants.bid_improvement_factor in
-    Kit.scale leading_bid.kit (FixedPoint.add FixedPoint.one bid_improvement_factor)
+    let bid_improvement_factor = fixedpoint_of_ratio_floor Constants.bid_improvement_factor in
+    Kit.scale leading_bid.kit (fixedpoint_add fixedpoint_one bid_improvement_factor)
 
 (** Check if an auction is complete. A descending auction declines
   * exponentially over time, so it is effectively never complete (George: I
@@ -440,7 +441,7 @@ let reclaim_winning_bid (auctions: auctions) (bid_ticket: bid_ticket) : (Ligo.te
   | None -> failwith "NotAWinningBid"
 
 
-let touch (auctions: auctions) (price: FixedPoint.t) : auctions =
+let touch (auctions: auctions) (price: fixedpoint) : auctions =
   auctions
   |> complete_auction_if_possible
   |> start_auction_if_possible price

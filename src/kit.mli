@@ -1,9 +1,11 @@
+open FixedPoint
+
 type t
 
 (* Basic operations. *)
 val add : t -> t -> t
 val sub : t -> t -> t
-val scale : t -> FixedPoint.t -> t
+val scale : t -> fixedpoint -> t
 
 val min : t -> t -> t
 val max : t -> t -> t

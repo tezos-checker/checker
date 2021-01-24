@@ -1,3 +1,5 @@
+open FixedPoint
+
 type liquidation_slices =
   { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
 
@@ -30,7 +32,7 @@ val make_for_test :
   collateral:Ligo.tez ->
   outstanding_kit:Kit.t ->
   excess_kit:Kit.t ->
-  adjustment_index:FixedPoint.t ->
+  adjustment_index:fixedpoint ->
   collateral_at_auction:Ligo.tez ->
   liquidation_slices:(liquidation_slices option) ->
   last_touched:Ligo.timestamp ->

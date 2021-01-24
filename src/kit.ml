@@ -1,4 +1,5 @@
 open Ratio
+open FixedPoint
 
 (* TODO: Perhaps we should represent this as a Ligo.nat, instead of an integer. It
  * all boils down to what we wish to use when calculating (e.g. negative kit
@@ -28,7 +29,7 @@ let of_ratio_floor amount = Common.fdiv_int_int (Ligo.mul_int_int (ratio_num amo
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let scale amount fp =
-  of_ratio_floor (mul_ratio (FixedPoint.to_ratio fp) (to_ratio amount))
+  of_ratio_floor (mul_ratio (fixedpoint_to_ratio fp) (to_ratio amount))
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit [@@deriving show]
