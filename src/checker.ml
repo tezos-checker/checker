@@ -1,6 +1,7 @@
 open FixedPoint
 open Ptr
 open Ratio
+open Kit
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -633,7 +634,7 @@ let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
   * contract. We use a bracketed calculation, where for the first
   * touch_reward_low_bracket seconds the reward increases by touch_low_reward
   * per second, and after that by touch_high_reward per second. *)
-let calculate_touch_reward (state:t) : Kit.t =
+let calculate_touch_reward (state:t) : kit =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now);
   let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now state.parameters.last_touched in
   let low_duration = Common.min_int duration_in_seconds Constants.touch_reward_low_bracket in

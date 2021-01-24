@@ -1,44 +1,45 @@
 open FixedPoint
 
-type t
+type kit
 
 (* Basic operations. *)
-val add : t -> t -> t
-val sub : t -> t -> t
-val scale : t -> fixedpoint -> t
+val add : kit -> kit -> kit
+val sub : kit -> kit -> kit
+val scale : kit -> fixedpoint -> kit
 
-val min : t -> t -> t
-val max : t -> t -> t
+val min : kit -> kit -> kit
+val max : kit -> kit -> kit
 
-val zero : t
-val one : t
+val zero : kit
+val one : kit
 
 (* Conversions to/from other types. *)
-val of_mukit : Ligo.int -> t
-val to_mukit : t -> Ligo.int
-val to_ratio : t -> Ratio.ratio
-val of_ratio_ceil : Ratio.ratio -> t
-val of_ratio_floor : Ratio.ratio -> t
+val of_mukit : Ligo.int -> kit
+val to_mukit : kit -> Ligo.int
+val to_ratio : kit -> Ratio.ratio
+val of_ratio_ceil : Ratio.ratio -> kit
+val of_ratio_floor : Ratio.ratio -> kit
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit
 type token = kit_token_content Ligo.ticket
 
-val issue : t -> token
+val issue : kit -> token
 
 val assert_valid_kit_token : token -> token
 
-(* George: I really didn't want to have these here, but the clutter without
+(* George: I really didn'kit want to have these here, but the clutter without
  * them was unbearable. They should be inlined, eventually. *)
-val read_kit : token -> t * token
-val split_or_fail : token -> t -> t -> token * token
+val read_kit : token -> kit * token
+val split_or_fail : token -> kit -> kit -> token * token
 val join_or_fail : token -> token -> token
 
 (* BEGIN_OCAML *)
-val compare : t -> t -> int
+val compare : kit -> kit -> int
 
-val pp : Format.formatter -> t -> unit
-val show : t -> string
+val pp : Format.formatter -> kit -> unit
+val pp_kit : Format.formatter -> kit -> unit
+val show : kit -> string
 
 val pp_token : Format.formatter -> token -> unit
 val show_token : token -> string

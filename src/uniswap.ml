@@ -212,7 +212,7 @@ let add_liquidity (uniswap: t) ~amount ~pending_accrual ~max_kit_deposited ~min_
       let updated = { uniswap with
                       kit = new_all_kit_in_uniswap;
                       tez = Ligo.add_tez_tez uniswap.tez amount;
-                      lqt = Option.get (Ligo.Tezos.join_tickets uniswap.lqt liq_tokens) } in (* NOTE: SHOULD NEVER FAIL!! *)
+                      lqt = Option.get (Ligo.Tezos.join_tickets (uniswap.lqt, liq_tokens)) } in (* NOTE: SHOULD NEVER FAIL!! *)
       (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
       (liq_tokens, kit_to_return, updated)
 

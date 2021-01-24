@@ -1,8 +1,9 @@
 open OUnit2
 open Ratio
 open FixedPoint
+open Kit
 
-type kt = Kit.t [@@deriving show]
+type kt = kit [@@deriving show]
 type fp = fixedpoint[@@deriving show]
 
 let suite =

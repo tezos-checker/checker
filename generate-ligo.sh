@@ -14,6 +14,7 @@ inputs=(
   delegationAuction
   ratio
   fixedPoint
+  kit
 )
 
 for name in "${inputs[@]}"; do
@@ -33,7 +34,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/^(open .*)/(* \1 *)/g' |
 
     # Remove deriving directives
-    sed -E 's/^([[]@@deriving .*])/(* \1 *)/g' |
+    sed -E 's/([[]@@deriving .*])/(* \1 *)/g' |
 
     # delete assertions
     sed 's/^ *assert.*//g' |

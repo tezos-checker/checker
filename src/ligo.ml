@@ -244,7 +244,7 @@ module Tezos = struct
       let r = {issuer = ticket.issuer; content = ticket.content; amount = right;} in
       Some (l, r)
 
-  let join_tickets t1 t2 =
+  let join_tickets (t1, t2) =
     if (t1.content <> t2.content) || (t1.issuer <> t2.issuer)
     then None
     else Some {issuer = t1.issuer; content = t1.content; amount = add_nat_nat t1.amount t2.amount;}

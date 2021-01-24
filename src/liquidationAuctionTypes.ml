@@ -1,4 +1,5 @@
 open Ptr
+open Kit
 
 type avl_ptr = AVLPtr of ptr
 [@@deriving show]
@@ -9,14 +10,14 @@ type leaf_ptr = LeafPtr of ptr
 type liquidation_slice = {
   burrow: ptr;
   tez: Ligo.tez;
-  (* BEGIN_OCAML *) min_kit_for_unwarranted: Kit.t; (* END_OCAML *)
+  (* BEGIN_OCAML *) min_kit_for_unwarranted: kit; (* END_OCAML *)
   older: leaf_ptr option;
   younger: leaf_ptr option;
 }
 [@@deriving show]
 
 (* BEGIN_OCAML *) (*FIXME after moving kit *)
-type bid = { address: Ligo.address; kit: Kit.t }
+type bid = { address: Ligo.address; kit: kit }
 [@@deriving show]
 (* END_OCAML *)
 

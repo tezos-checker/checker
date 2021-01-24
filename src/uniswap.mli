@@ -1,3 +1,5 @@
+open Kit
+
 (* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
  * the product a * b constant. So if someone wants to sell a quantity da of
@@ -47,7 +49,7 @@ val kit_in_tez_in_prev_block : t -> Ratio.ratio
 val buy_kit :
   t ->
   amount:Ligo.tez ->
-  min_kit_expected:Kit.t ->
+  min_kit_expected:kit ->
   deadline:Ligo.timestamp ->
   (Kit.token * t)
 
@@ -96,7 +98,7 @@ val remove_liquidity :
   amount:Ligo.tez ->
   lqt_burned:liquidity ->
   min_tez_withdrawn:Ligo.tez ->
-  min_kit_withdrawn:Kit.t ->
+  min_kit_withdrawn:kit ->
   deadline:Ligo.timestamp ->
   (Ligo.tez * Kit.token * t)
 

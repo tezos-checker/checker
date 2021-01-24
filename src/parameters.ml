@@ -1,3 +1,4 @@
+open Kit
 open Ratio
 open FixedPoint
 
@@ -15,8 +16,8 @@ type t =
      * (the total amount of kit needed to close all burrows). Errors of a few
      * percents per year are NOT acceptable. Errors of 0.1% or so per year
      * would be tolerable. *)
-    outstanding_kit: Kit.t;
-    circulating_kit: Kit.t;
+    outstanding_kit: kit;
+    circulating_kit: kit;
     last_touched: Ligo.timestamp;
   }
 [@@deriving show]
@@ -84,7 +85,7 @@ let clamp (v: ratio) (lower: ratio) (upper: ratio) : 'a =
   * NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
-let compute_imbalance ~(burrowed: Kit.t) ~(circulating: Kit.t) : ratio =
+let compute_imbalance ~(burrowed: kit) ~(circulating: kit) : ratio =
   assert (burrowed >= Kit.zero);
   assert (circulating >= Kit.zero);
   if burrowed = Kit.zero && circulating = Kit.zero then
@@ -169,7 +170,7 @@ let touch
     (current_index: Ligo.tez)
     (current_kit_in_tez: ratio)
     (parameters: t)
-  : Kit.t * t =
+  : kit * t =
   let duration_in_seconds =
     ratio_of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
     @@ Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched
@@ -311,23 +312,23 @@ let touch
   )
 
 (** Add some kit to the total amount of kit in circulation. *)
-let add_circulating_kit (parameters: t) (kit: Kit.t) : t =
+let add_circulating_kit (parameters: t) (kit: kit) : t =
   assert (kit >= Kit.zero);
   { parameters with circulating_kit = Kit.add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
-let remove_circulating_kit (parameters: t) (kit: Kit.t) : t =
+let remove_circulating_kit (parameters: t) (kit: kit) : t =
   assert (kit >= Kit.zero);
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = Kit.sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
-let add_outstanding_kit (parameters: t) (kit: Kit.t) : t =
+let add_outstanding_kit (parameters: t) (kit: kit) : t =
   assert (kit >= Kit.zero);
   { parameters with outstanding_kit = Kit.add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
-let remove_outstanding_kit (parameters: t) (kit: Kit.t) : t =
+let remove_outstanding_kit (parameters: t) (kit: kit) : t =
   assert (kit >= Kit.zero);
   assert (parameters.outstanding_kit >= kit);
   { parameters with outstanding_kit = Kit.sub parameters.outstanding_kit kit; }

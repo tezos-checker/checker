@@ -70,6 +70,7 @@ Utku: Lifecycle of liquidation slices.
 open LiquidationAuctionTypes
 open Ratio
 open FixedPoint
+open Kit
 
 type auction_id = avl_ptr
 type bid_details = { auction_id: auction_id; bid: bid; }
@@ -89,7 +90,7 @@ let assert_valid_bid_ticket (bid_ticket: bid_ticket) : bid_ticket =
   if is_valid then same_ticket else failwith "InvalidLiquidationAuctionTicket"
 
 type auction_state =
-  | Descending of Kit.t * Ligo.timestamp
+  | Descending of kit * Ligo.timestamp
   | Ascending of bid * Ligo.timestamp * Ligo.nat
 [@@deriving show]
 
@@ -231,7 +232,7 @@ let start_auction_if_possible
   * auction this amounts to the reserve price (which is exponentially
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
-let current_auction_minimum_bid (auction: current_auction) : Kit.t =
+let current_auction_minimum_bid (auction: current_auction) : kit =
   match auction.state with
   | Descending (start_value, start_time) ->
     let auction_decay_rate = fixedpoint_of_ratio_ceil Constants.auction_decay_rate in
@@ -349,7 +350,7 @@ let completed_auction_won_by
   | _ -> None
 
 (* If successful, it consumes the ticket. *)
-let reclaim_bid (auctions: auctions) (bid_ticket: bid_ticket) : Kit.t =
+let reclaim_bid (auctions: auctions) (bid_ticket: bid_ticket) : kit =
   let bid_ticket = assert_valid_bid_ticket bid_ticket in
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if is_leading_current_auction auctions bid_details

@@ -1,4 +1,5 @@
 open Ptr
+open Kit
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
@@ -56,7 +57,7 @@ val mint_kit :
   t ->
   permission:Permission.t ->
   burrow_id:burrow_id ->
-  kit:Kit.t ->
+  kit:kit ->
   (Kit.token * t)
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is
@@ -150,7 +151,7 @@ val invalidate_all_permissions :
   * cannot be bought or if the deadline has passed. *)
 val buy_kit :
   t ->
-  min_kit_expected:Kit.t ->
+  min_kit_expected:kit ->
   deadline:Ligo.timestamp ->
   (Kit.token * t)
 
@@ -181,7 +182,7 @@ val remove_liquidity :
   t ->
   lqt_burned:Uniswap.liquidity ->
   min_tez_withdrawn:Ligo.tez ->
-  min_kit_withdrawn:Kit.t ->
+  min_kit_withdrawn:kit ->
   deadline:Ligo.timestamp ->
   (Tez.payment * Kit.token * t)
 
@@ -210,7 +211,7 @@ val liquidation_auction_reclaim_winning_bid :
   (Tez.payment * t)
 
 (* (\** Increase a failed bid for the current auction. *\)
- * val increase_bid : t -> address:Ligo.address -> increase:Kit.t -> bid_ticket:LiquidationAuction.bid_ticket
+ * val increase_bid : t -> address:Ligo.address -> increase:kit -> bid_ticket:LiquidationAuction.bid_ticket
  *   -> LiquidationAuction.bid_ticket *)
 
 (* ************************************************************************* *)

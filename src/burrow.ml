@@ -1,5 +1,6 @@
 open FixedPoint
 open Ratio
+open Kit
 
 type liquidation_slices =
   { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
@@ -19,9 +20,9 @@ type t =
     (* Collateral currently stored in the burrow. *)
     collateral : Ligo.tez;
     (* Outstanding kit minted out of the burrow. *)
-    outstanding_kit : Kit.t;
+    outstanding_kit : kit;
     (* Excess kit returned by auctions. *)
-    excess_kit : Kit.t;
+    excess_kit : kit;
     (* The imbalance adjustment index observed the last time the burrow was
      * touched. *)
     adjustment_index : fixedpoint;
@@ -213,7 +214,7 @@ let return_slice_from_auction
 let return_kit_from_auction
     (leaf_ptr: LiquidationAuctionTypes.leaf_ptr)
     (leaf: LiquidationAuctionTypes.liquidation_slice)
-    (kit: Kit.t)
+    (kit: kit)
     (burrow: t) : t =
   assert_invariants burrow;
   assert (kit >= Kit.zero);
@@ -260,7 +261,7 @@ let withdraw_tez (p: Parameters.t) (t: Ligo.tez) (b: t) : (t * Ligo.tez) =
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t) =
+let mint_kit (p: Parameters.t) (kit: kit) (b: t) : (t * kit) =
   assert_invariants b;
   assert (kit >= Kit.zero);
   assert (p.last_touched = b.last_touched);
@@ -271,7 +272,7 @@ let mint_kit (p: Parameters.t) (kit: Kit.t) (b: t) : (t * Kit.t) =
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
-let burn_kit (p: Parameters.t) (k: Kit.t) (b: t) : t =
+let burn_kit (p: Parameters.t) (k: kit) (b: t) : t =
   assert_invariants b;
   assert (k >= Kit.zero);
   assert (p.last_touched = b.last_touched);
@@ -393,7 +394,7 @@ let compute_tez_to_auction (p: Parameters.t) (b: t) : Ligo.tez =
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
-let compute_expected_kit (p: Parameters.t) (tez_to_auction: Ligo.tez) : Kit.t =
+let compute_expected_kit (p: Parameters.t) (tez_to_auction: Ligo.tez) : kit =
   Kit.of_ratio_ceil
     (div_ratio
        (mul_ratio
@@ -439,8 +440,8 @@ let is_optimistically_overburrowed (p: Parameters.t) (b: t) : bool =
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
-    expected_kit : Kit.t;
-    min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
+    expected_kit : kit;
+    min_kit_for_unwarranted : kit; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : t;
   }
 [@@deriving show]
@@ -456,7 +457,7 @@ type liquidation_result =
   | Close of liquidation_details
 [@@deriving show]
 
-let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Ligo.tez) : Kit.t =
+let compute_min_kit_for_unwarranted (p: Parameters.t) (b: t) (tez_to_auction: Ligo.tez) : kit =
   assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in

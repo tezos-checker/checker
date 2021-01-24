@@ -1,3 +1,4 @@
+open Kit
 open FixedPoint
 
 type liquidation_slices =
@@ -30,8 +31,8 @@ val make_for_test :
   allow_all_kit_burnings:bool ->
   delegate:(Ligo.address option) ->
   collateral:Ligo.tez ->
-  outstanding_kit:Kit.t ->
-  excess_kit:Kit.t ->
+  outstanding_kit:kit ->
+  excess_kit:kit ->
   adjustment_index:fixedpoint ->
   collateral_at_auction:Ligo.tez ->
   liquidation_slices:(liquidation_slices option) ->
@@ -80,7 +81,7 @@ val touch : Parameters.t -> t -> t
   * pointers to the liquidation queue accordingly (which is a no-op if we are
   * not deleting the youngest or the oldest liquidation slice). *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val return_kit_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> Kit.t -> t -> t
+val return_kit_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> kit -> t -> t
 
 (** Cancel the liquidation of a slice. That is, (a) return the tez that is part
   * of a liquidation slice back to the burrow and (b) adjust the burrow's
@@ -103,11 +104,11 @@ val withdraw_tez : Parameters.t -> Ligo.tez -> t -> (t * Ligo.tez)
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
-val mint_kit : Parameters.t -> Kit.t -> t -> (t * Kit.t)
+val mint_kit : Parameters.t -> kit -> t -> (t * kit)
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
-val burn_kit : Parameters.t -> Kit.t -> t -> t
+val burn_kit : Parameters.t -> kit -> t -> t
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
@@ -150,8 +151,8 @@ val increase_permission_version : Parameters.t -> t -> (int * t)
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
-    expected_kit : Kit.t;
-    min_kit_for_unwarranted : Kit.t; (* If we get this many kit or more, the liquidation was unwarranted *)
+    expected_kit : kit;
+    min_kit_for_unwarranted : kit; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : t;
   }
 
