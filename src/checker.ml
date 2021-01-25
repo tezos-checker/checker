@@ -7,6 +7,10 @@ open Permission
 open Parameters
 open Uniswap
 
+(* Tez payments (operations, really) *)
+type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
+[@@deriving show]
+
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
@@ -186,7 +190,7 @@ let withdraw_tez (state:t) ~permission ~tez ~burrow_id =
     let (updated_burrow, withdrawn) = Burrow.withdraw_tez state.parameters tez burrow in
     assert (tez = withdrawn);
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = withdrawn} in
+    let tez_payment = {destination = !Ligo.Tezos.sender; amount = withdrawn} in
     (tez_payment, updated_state)
   else
     failwith "InsufficientPermission"
@@ -247,7 +251,7 @@ let deactivate_burrow (state:t) ~permission ~burrow_id ~recipient =
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = Burrow.deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let tez_payment = Tez.{destination = recipient; amount = returned_tez} in
+    let tez_payment = {destination = recipient; amount = returned_tez} in
     (tez_payment, updated_state)
   else
     failwith "InsufficientPermission"
@@ -349,7 +353,7 @@ let mark_for_liquidation (state:t) ~burrow_id =
          | None -> Some Burrow.{ oldest=leaf_ptr; youngest=leaf_ptr; }
          | Some s -> Some { s with youngest=leaf_ptr; })
     in
-    ( Tez.{destination = !Ligo.Tezos.sender; amount = details.liquidation_reward},
+    ( {destination = !Ligo.Tezos.sender; amount = details.liquidation_reward},
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
        liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
@@ -559,7 +563,7 @@ let delegation_auction_claim_win state ~bid_ticket =
 let delegation_auction_reclaim_bid state ~bid_ticket =
   assert_no_tez_given ();
   let tez, auction = DelegationAuction.reclaim_bid state.delegation_auction bid_ticket in
-  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez} in
+  let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez} in
   (tez_payment, updated_delegation_auction state auction)
 
 let touch_delegation_auction state =
@@ -578,7 +582,7 @@ let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
   let state = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
-  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
   (tez_payment, updated_state)
 
@@ -594,7 +598,7 @@ let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn
   let state = touch_delegation_auction state in
   let (tez, kit, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
   (tez_payment, kit, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
@@ -631,7 +635,7 @@ let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
   assert_no_tez_given ();
   let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket in
-  let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
+  let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   (tez_payment, {state with liquidation_auctions })
 
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.

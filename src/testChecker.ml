@@ -193,8 +193,8 @@ let suite =
            ~bid_ticket:bid in
 
        assert_equal
-         (Tez.{destination = alice_addr; amount = Ligo.tez_from_literal "3_155_960mutez";})
+         {destination = alice_addr; amount = Ligo.tez_from_literal "3_155_960mutez";}
          tez_from_bid
-         ~printer:Tez.show_payment;
+         ~printer:Checker.show_tez_payment;
     );
   ]
