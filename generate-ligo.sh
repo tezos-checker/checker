@@ -7,14 +7,14 @@ cd "$(realpath "$(dirname "$0")")"
 
 inputs=(
   ptr
-  liquidationAuctionTypes
-  mem
-  avl
   common
-  delegationAuction
   ratio
   fixedPoint
   kit
+  liquidationAuctionTypes
+  mem
+  avl
+  delegationAuction
   constants
 )
 

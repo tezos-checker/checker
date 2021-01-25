@@ -10,20 +10,18 @@ type leaf_ptr = LeafPtr of ptr
 type liquidation_slice = {
   burrow: ptr;
   tez: Ligo.tez;
-  (* BEGIN_OCAML *) min_kit_for_unwarranted: kit; (* END_OCAML *)
+  min_kit_for_unwarranted: kit;
   older: leaf_ptr option;
   younger: leaf_ptr option;
 }
 [@@deriving show]
 
-(* BEGIN_OCAML *) (*FIXME after moving kit *)
 type bid = { address: Ligo.address; kit: kit }
 [@@deriving show]
-(* END_OCAML *)
 
 type auction_outcome = {
   sold_tez: Ligo.tez;
-  (* BEGIN_OCAML *) winning_bid: bid; (* END_OCAML *) (* FIXME after moving kit *)
+  winning_bid: bid;
   younger_auction: avl_ptr option;
   older_auction: avl_ptr option;
 }
