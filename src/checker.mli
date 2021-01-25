@@ -1,5 +1,6 @@
 open Ptr
 open Kit
+open Permission
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
@@ -33,19 +34,19 @@ val touch : t -> index:Ligo.tez -> (kit_token * t)
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
   * sender. *)
-val create_burrow : t -> (burrow_id * Permission.t * t)
+val create_burrow : t -> (burrow_id * permission * t)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
   * anyone and the permission ticket given is insufficient. *)
-val deposit_tez : t -> permission:(Permission.t option) -> burrow_id:burrow_id -> t
+val deposit_tez : t -> permission:(permission option) -> burrow_id:burrow_id -> t
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
   * does not exist, if this action would overburrow it, or if the permission
   * ticket given is insufficient. *)
 val withdraw_tez :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   tez:Ligo.tez ->
   burrow_id:burrow_id ->
   (Tez.payment * t)
@@ -55,7 +56,7 @@ val withdraw_tez :
   * insufficient. *)
 val mint_kit :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
   kit:kit ->
   (kit_token * t)
@@ -66,7 +67,7 @@ val mint_kit :
   * permission ticket given is insufficient. *)
 val burn_kit :
   t ->
-  permission:(Permission.t option) ->
+  permission:(permission option) ->
   burrow_id:burrow_id ->
   kit:kit_token ->
   t
@@ -75,7 +76,7 @@ val burn_kit :
   * if the burrow is already active, if the amount of tez given is less than
   * the creation deposit, or if the permission ticket given is not an admin
   * ticket. *)
-val activate_burrow : t -> permission:Permission.t -> burrow_id:burrow_id -> t
+val activate_burrow : t -> permission:permission -> burrow_id:burrow_id -> t
 
 (** Deativate a currently active burrow. Fail if the burrow does not exist,
   * if it is already inactive, if it is overburrowed, if it has kit
@@ -84,7 +85,7 @@ val activate_burrow : t -> permission:Permission.t -> burrow_id:burrow_id -> t
   * successful, make a tez payment to the given address. *)
 val deactivate_burrow :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
   recipient:Ligo.address ->
   (Tez.payment * t)
@@ -110,7 +111,7 @@ val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
 *)
 val cancel_liquidation_slice :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
   LiquidationAuctionTypes.leaf_ptr ->
   t
@@ -121,7 +122,7 @@ val touch_burrow : t -> burrow_id -> t
 (** Set the delegate of a burrow. *)
 val set_burrow_delegate :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
   delegate:Ligo.address ->
   t
@@ -129,19 +130,19 @@ val set_burrow_delegate :
 (** Requires admin. Create a new permission for a burrow. *)
 val make_permission :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
-  rights:Permission.rights ->
-  Permission.t
+  right:right ->
+  permission
 
 (** Requires admin. Increments a counter so that all previous permissions are
   * now invalid and returns a new admin permission. This makes it easy to
   * transfer an admin permission to another party. *)
 val invalidate_all_permissions :
   t ->
-  permission:Permission.t ->
+  permission:permission ->
   burrow_id:burrow_id ->
-  (Permission.t * t)
+  (permission * t)
 
 (* ************************************************************************* *)
 (**                                UNISWAP                                   *)

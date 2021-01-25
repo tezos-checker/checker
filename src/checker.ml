@@ -3,6 +3,7 @@ open Ptr
 open Ratio
 open Kit
 open Avl
+open Permission
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -84,7 +85,7 @@ let find_burrow (state: t) (burrow_id: burrow_id) : Burrow.t =
   | None -> failwith "NonExistentBurrow"
   | Some burrow -> burrow
 
-let assert_permission_is_present (permission: Permission.t option) : Permission.t =
+let assert_permission_is_present (permission: permission option) : permission =
   match permission with
   | None -> failwith "MissingPermission"
   | Some permission -> permission
@@ -106,18 +107,18 @@ let assert_no_tez_given () =
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
 let assert_valid_permission
-    ~(permission: Permission.t)
+    ~(permission: permission)
     ~(burrow_id:burrow_id)
     ~(burrow: Burrow.t)
-  : Permission.rights =
-  let (issuer, ((rights, id, version), amount)), _ = Ligo.Tezos.read_ticket permission in
+  : right =
+  let (issuer, ((right, id, version), amount)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
     issuer = Ligo.Tezos.self_address
     && amount = Ligo.nat_from_literal "0n"
     && version = Burrow.permission_version burrow
     && id = burrow_id in
   if validity_condition
-  then rights
+  then right
   else failwith "InvalidPermission"
 
 let create_burrow (state:t) =
@@ -125,7 +126,7 @@ let create_burrow (state:t) =
   let burrow = Burrow.create state.parameters !Ligo.Tezos.amount in
   let admin_ticket =
     Ligo.Tezos.create_ticket
-      (Permission.Admin, burrow_id, 0)
+      (Admin, burrow_id, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n") in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
@@ -145,7 +146,7 @@ let deposit_tez (state:t) ~permission ~burrow_id =
   else
     let permission = assert_permission_is_present permission in
     let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-    if Permission.does_right_allow_tez_deposits r then
+    if does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = Burrow.deposit_tez state.parameters !Ligo.Tezos.amount burrow in
       {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
@@ -157,7 +158,7 @@ let mint_kit (state:t) ~permission ~burrow_id ~kit =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.does_right_allow_kit_minting r then
+  if does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
     let (updated_burrow, minted) = Burrow.mint_kit state.parameters kit burrow in
     assert (kit = minted);
@@ -178,7 +179,7 @@ let withdraw_tez (state:t) ~permission ~tez ~burrow_id =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.does_right_allow_tez_withdrawals r then
+  if does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
     let (updated_burrow, withdrawn) = Burrow.withdraw_tez state.parameters tez burrow in
     assert (tez = withdrawn);
@@ -209,7 +210,7 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
   else
     let permission = assert_permission_is_present permission in
     let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-    if Permission.does_right_allow_kit_burning r then
+    if does_right_allow_kit_burning r then
       (* the permission should support burning kit. *)
       let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
       (* TODO: What should happen if the following is violated? *)
@@ -228,7 +229,7 @@ let activate_burrow (state:t) ~permission ~burrow_id =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.is_admin_right r then
+  if is_admin_right r then
     (* only admins can activate burrows. *)
     let updated_burrow = Burrow.activate state.parameters !Ligo.Tezos.amount burrow in
     {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
@@ -240,7 +241,7 @@ let deactivate_burrow (state:t) ~permission ~burrow_id ~recipient =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.is_admin_right r then
+  if is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = Burrow.deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
@@ -254,22 +255,22 @@ let set_burrow_delegate (state:t) ~permission ~burrow_id ~delegate =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.does_right_allow_setting_delegate r then
+  if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = Burrow.set_delegate state.parameters delegate burrow in
     {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
   else
     failwith "InsufficientPermission"
 
-let make_permission (state:t) ~permission ~burrow_id ~rights =
+let make_permission (state:t) ~permission ~burrow_id ~right =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.is_admin_right r then
+  if is_admin_right r then
     (* only admins can create permissions. *)
     Ligo.Tezos.create_ticket
-      (rights, burrow_id, 0)
+      (right, burrow_id, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n")
   else
     failwith "InsufficientPermission"
@@ -279,13 +280,13 @@ let invalidate_all_permissions (state:t) ~permission ~burrow_id =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if Permission.is_admin_right r then
+  if is_admin_right r then
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = Burrow.increase_permission_version state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let admin_ticket =
       Ligo.Tezos.create_ticket
-        (Permission.Admin, burrow_id, updated_version)
+        (Admin, burrow_id, updated_version)
         (Ligo.nat_from_literal "0n") in
     (admin_ticket, updated_state)
   else
@@ -400,7 +401,7 @@ let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: Liquid
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   let r = assert_valid_permission ~permission ~burrow_id ~burrow in
-  if not (Permission.does_right_allow_cancelling_liquidations r) then
+  if not (does_right_allow_cancelling_liquidations r) then
     failwith "InsufficientPermission"
   else
     let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in

@@ -17,6 +17,7 @@ inputs=(
   constants
   liquidationAuction
   delegationAuction
+  permission
 )
 
 for name in "${inputs[@]}"; do

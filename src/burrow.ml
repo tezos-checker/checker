@@ -13,7 +13,7 @@ type t =
      * a "closed" burrow. *)
     active : bool;
     (* Permission-related *)
-    permission_version : int;
+    permission_version : Ligo.nat;
     allow_all_tez_deposits : bool;
     allow_all_kit_burnings : bool;
     delegate : Ligo.address option;
@@ -228,7 +228,7 @@ let create (p: Parameters.t) (tez: Ligo.tez) : t =
   then failwith "InsufficientFunds"
   else
     { active = true;
-      permission_version = 0;
+      permission_version = Ligo.nat_from_literal "0n";
       allow_all_tez_deposits = false;
       allow_all_kit_burnings = false;
       delegate = None;
@@ -345,7 +345,7 @@ let set_allow_all_kit_burns (p: Parameters.t) (b: t) (on: bool) =
 let increase_permission_version (p: Parameters.t) (b: t) =
   assert_invariants b;
   assert (p.last_touched = b.last_touched);
-  let new_version = b.permission_version + 1 in
+  let new_version = Ligo.add_nat_nat b.permission_version (Ligo.nat_from_literal "1n") in
   (new_version, {b with permission_version = new_version;})
 
 (* ************************************************************************* *)

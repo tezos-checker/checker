@@ -20,13 +20,13 @@ val set_liquidation_slices : t -> liquidation_slices option -> t
 val collateral_at_auction : t -> Ligo.tez
 val active : t -> bool
 
-val permission_version : t -> int
+val permission_version : t -> Ligo.nat
 val allow_all_tez_deposits : t -> bool
 val allow_all_kit_burnings : t -> bool
 
 val make_for_test :
   active:bool ->
-  permission_version:int ->
+  permission_version:Ligo.nat ->
   allow_all_tez_deposits:bool ->
   allow_all_kit_burnings:bool ->
   delegate:(Ligo.address option) ->
@@ -137,7 +137,7 @@ val set_allow_all_kit_burns : Parameters.t -> t -> bool -> t
 
 (** Requires admin. Increases the permission version so that all previous
   * permissions are now invalid. Returns the new permission version. *)
-val increase_permission_version : Parameters.t -> t -> (int * t)
+val increase_permission_version : Parameters.t -> t -> (Ligo.nat * t)
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)

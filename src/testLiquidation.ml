@@ -46,7 +46,7 @@ let arbitrary_burrow (params: Parameters.t) =
   QCheck.map
     (fun (tez, kit) ->
        Burrow.make_for_test
-         ~permission_version:0
+         ~permission_version:(Ligo.nat_from_literal "0n")
          ~allow_all_tez_deposits:false
          ~allow_all_kit_burnings:false
          ~delegate:None
@@ -266,7 +266,7 @@ let test_general_liquidation_properties =
 
 let initial_burrow =
   Burrow.make_for_test
-    ~permission_version:0
+    ~permission_version:(Ligo.nat_from_literal "0n")
     ~allow_all_tez_deposits:false
     ~allow_all_kit_burnings:false
     ~delegate:None
@@ -284,7 +284,7 @@ let barely_not_overburrowed_test =
   "barely_not_overburrowed_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -314,7 +314,7 @@ let barely_overburrowed_test =
   "barely_overburrowed_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -344,7 +344,7 @@ let barely_non_liquidatable_test =
   "barely_non_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -374,7 +374,7 @@ let barely_liquidatable_test =
   "barely_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -400,7 +400,7 @@ let barely_liquidatable_test =
           burrow_state =
             Burrow.make_for_test
               ~active:true
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -431,7 +431,7 @@ let barely_non_complete_liquidatable_test =
   "barely_non_complete_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -457,7 +457,7 @@ let barely_non_complete_liquidatable_test =
           burrow_state =
             Burrow.make_for_test
               ~active:true
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -486,7 +486,7 @@ let barely_complete_liquidatable_test =
   "barely_complete_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -512,7 +512,7 @@ let barely_complete_liquidatable_test =
           burrow_state =
             Burrow.make_for_test
               ~active:true
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -541,7 +541,7 @@ let barely_non_close_liquidatable_test =
   "barely_non_close_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -567,7 +567,7 @@ let barely_non_close_liquidatable_test =
           burrow_state =
             Burrow.make_for_test
               ~active:true
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -596,7 +596,7 @@ let barely_close_liquidatable_test =
   "barely_close_liquidatable_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -622,7 +622,7 @@ let barely_close_liquidatable_test =
           burrow_state =
             Burrow.make_for_test
               ~active:false
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -649,7 +649,7 @@ let unwarranted_liquidation_unit_test =
   "unwarranted_liquidation_unit_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -682,7 +682,7 @@ let partial_liquidation_unit_test =
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "27_141_390");
           burrow_state =
             Burrow.make_for_test
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -714,7 +714,7 @@ let complete_liquidation_unit_test =
   "complete_liquidation_unit_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -736,7 +736,7 @@ let complete_liquidation_unit_test =
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "170_810_019");
           burrow_state =
             Burrow.make_for_test
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
@@ -770,7 +770,7 @@ let complete_and_close_liquidation_test =
   "complete_and_close_liquidation_test" >:: fun _ ->
     let burrow =
       Burrow.make_for_test
-        ~permission_version:0
+        ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
         ~delegate:None
@@ -792,7 +792,7 @@ let complete_and_close_liquidation_test =
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "189_810_190");
           burrow_state =
             Burrow.make_for_test
-              ~permission_version:0
+              ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
               ~delegate:None
