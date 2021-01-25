@@ -20,6 +20,7 @@ inputs=(
   permission
   parameters
   uniswap
+  burrow
 )
 
 for name in "${inputs[@]}"; do

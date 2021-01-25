@@ -1,4 +1,5 @@
 open Kit
+open Burrow
 open OUnit2
 open TestCommon
 
@@ -60,7 +61,7 @@ let suite =
        assert_bool
          "should not be overburrowed right after minting"
          (not
-          @@ Burrow.is_overburrowed
+          @@ burrow_is_overburrowed
             checker.parameters
             (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))
          );
@@ -89,7 +90,7 @@ let suite =
 
        assert_bool
          "if the index goes up, then burrows should become overburrowed"
-         (Burrow.is_overburrowed
+         (burrow_is_overburrowed
             checker.parameters
             (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))
          );
@@ -167,7 +168,7 @@ let suite =
        (*
        let slice =
          (PtrMap.find burrow_id checker.burrows)
-         |> Burrow.liquidation_slices
+         |> burrow_liquidation_slices
          |> Option.get
          |> fun i -> i.youngest in
 
@@ -179,11 +180,11 @@ let suite =
 
        let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_bool "burrow should have no liquidation slices"
-         (Option.is_none (Burrow.liquidation_slices result));
+         (Option.is_none (burrow_liquidation_slices result));
 
        assert_equal
          (Ligo.tez_from_literal "0mutez")
-         (Burrow.collateral_at_auction result)
+         (burrow_collateral_at_auction result)
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");

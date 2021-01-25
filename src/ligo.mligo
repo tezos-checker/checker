@@ -2,6 +2,7 @@
   [%Michelson ({| { DROP ; LEVEL } |} : unit -> nat) ] ()
 
 [@inline] let add_int_int (i: int) (j: int) : int = i + j
+[@inline] let add_nat_nat (i: nat) (j: nat) : nat = i + j
 [@inline] let add_tez_tez (i: tez) (j: tez) : tez = i + j
 
 [@inline] let sub_int_int (i: int) (j: int) : int = i - j

@@ -46,7 +46,7 @@ let arbitrary_burrow (params: parameters) =
       (QCheck.triple arb_smart_tez_kit_1 arb_smart_tez_kit_2 QCheck.int) in
   QCheck.map
     (fun (tez, kit) ->
-       Burrow.make_for_test
+       make_burrow_for_test
          ~permission_version:(Ligo.nat_from_literal "0n")
          ~allow_all_tez_deposits:false
          ~allow_all_kit_burnings:false
@@ -96,8 +96,8 @@ let liquidatable_implies_overburrowed =
   (* several cases fail the premise but we we have quite some cases
    * succeeding as well, so it should be okay. *)
   QCheck.(
-    Burrow.is_liquidatable params burrow
-    ==> Burrow.is_overburrowed params burrow
+    burrow_is_liquidatable params burrow
+    ==> burrow_is_overburrowed params burrow
   )
 
 (* If a burrow is optimistically_overburrowed, then it is also overburrowed. *)
@@ -109,8 +109,8 @@ let optimistically_overburrowed_implies_overburrowed =
     (arbitrary_burrow params)
   @@ fun burrow ->
   QCheck.(
-    Burrow.is_optimistically_overburrowed params burrow
-    ==> Burrow.is_overburrowed params burrow
+    burrow_is_optimistically_overburrowed params burrow
+    ==> burrow_is_overburrowed params burrow
   )
 
 (* If a liquidation was deemed Partial:
@@ -130,30 +130,30 @@ let assert_properties_of_partial_liquidation burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "partial liquidation means overburrowed input burrow"
-    (Burrow.is_overburrowed params burrow_in);
+    (burrow_is_overburrowed params burrow_in);
   assert_bool
     "partial liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow_in);
+    (burrow_is_liquidatable params burrow_in);
   assert_bool
     "partial liquidation means non-liquidatable output burrow"
-    (not (Burrow.is_liquidatable params burrow_out));
+    (not (burrow_is_liquidatable params burrow_out));
   assert_bool
     "partial liquidation means overburrowed output burrow"
-    (Burrow.is_overburrowed params burrow_out);
+    (burrow_is_overburrowed params burrow_out);
   assert_bool
     "partial liquidation means non-optimistically-overburrowed output burrow"
-    (not (Burrow.is_optimistically_overburrowed params burrow_out));
+    (not (burrow_is_optimistically_overburrowed params burrow_out));
   assert_equal
-    (Burrow.collateral burrow_in)
-    (Ligo.add_tez_tez (Ligo.add_tez_tez (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
+    (burrow_collateral burrow_in)
+    (Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Ligo.string_of_tez;
   assert_equal
-    (Burrow.collateral_at_auction burrow_in)
-    (Ligo.sub_tez_tez (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
+    (burrow_collateral_at_auction burrow_in)
+    (Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Ligo.string_of_tez;
   assert_bool
     "partial liquidation does not deactivate burrows"
-    (Burrow.active burrow_out)
+    (burrow_active burrow_out)
 
 (* If a liquidation was deemed Complete:
  * - is_liquidatable is true for the given burrow
@@ -173,33 +173,33 @@ let assert_properties_of_complete_liquidation burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "complete liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow_in);
+    (burrow_is_liquidatable params burrow_in);
   assert_bool
     "complete liquidation means overburrowed input burrow"
-    (Burrow.is_overburrowed params burrow_in);
+    (burrow_is_overburrowed params burrow_in);
   assert_bool
     "complete liquidation means liquidatable output burrow"
-    (Burrow.is_liquidatable params burrow_out);
+    (burrow_is_liquidatable params burrow_out);
   assert_bool
     "complete liquidation means overburrowed output burrow"
-    (Burrow.is_overburrowed params burrow_out);
+    (burrow_is_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means optimistically-overburrowed output burrow"
-    (Burrow.is_optimistically_overburrowed params burrow_out);
+    (burrow_is_optimistically_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means no collateral in the output burrow"
-    (Burrow.collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
+    (burrow_collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
   assert_equal
-    (Burrow.collateral burrow_in)
-    (Ligo.add_tez_tez (Ligo.add_tez_tez (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
+    (burrow_collateral burrow_in)
+    (Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Ligo.string_of_tez;
   assert_equal
-    (Burrow.collateral_at_auction burrow_in)
-    (Ligo.sub_tez_tez (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
+    (burrow_collateral_at_auction burrow_in)
+    (Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Ligo.string_of_tez;
   assert_bool
     "complete liquidation does not deactivate burrows"
-    (Burrow.active burrow_out)
+    (burrow_active burrow_out)
 
 (* If a liquidation was deemed Close:
  * - is_overburrowed is true for the given burrow
@@ -218,29 +218,29 @@ let assert_properties_of_close_liquidation burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "close liquidation means overburrowed input burrow"
-    (Burrow.is_overburrowed params burrow_in);
+    (burrow_is_overburrowed params burrow_in);
   assert_bool
     "close liquidation means liquidatable input burrow"
-    (Burrow.is_liquidatable params burrow_in);
+    (burrow_is_liquidatable params burrow_in);
   assert_bool
     "close liquidation means overburrowed output burrow"
-    (Burrow.is_overburrowed params burrow_out);
+    (burrow_is_overburrowed params burrow_out);
   assert_bool
     "close liquidation means non-liquidatable output burrow"
-    (not (Burrow.is_liquidatable params burrow_out));
+    (not (burrow_is_liquidatable params burrow_out));
   assert_bool
     "close liquidation means no collateral in the output burrow"
-    (Burrow.collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
+    (burrow_collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
   assert_bool
     "close liquidation means inactive output burrow"
-    (not (Burrow.active burrow_out));
+    (not (burrow_active burrow_out));
   assert_equal
-    (Ligo.add_tez_tez (Burrow.collateral burrow_in) Constants.creation_deposit)
-    (Ligo.add_tez_tez (Ligo.add_tez_tez (Burrow.collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
+    (Ligo.add_tez_tez (burrow_collateral burrow_in) Constants.creation_deposit)
+    (Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward)
     ~printer:Ligo.string_of_tez;
   assert_equal
-    (Burrow.collateral_at_auction burrow_in)
-    (Ligo.sub_tez_tez (Burrow.collateral_at_auction burrow_out) details.tez_to_auction)
+    (burrow_collateral_at_auction burrow_in)
+    (Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction)
     ~printer:Ligo.string_of_tez
 
 let test_general_liquidation_properties =
@@ -250,13 +250,13 @@ let test_general_liquidation_properties =
     ~count:property_test_count
     (arbitrary_burrow params)
   @@ fun burrow ->
-  match Burrow.request_liquidation params burrow with
+  match burrow_request_liquidation params burrow with
   (* If a liquidation was deemed Unnecessary then is_liquidatable
    * must be false for the input burrow. *)
   | Unnecessary ->
     assert_bool
       "unnecessary liquidation means non-liquidatable input burrow"
-      (not (Burrow.is_liquidatable params burrow));
+      (not (burrow_is_liquidatable params burrow));
     true
   | Partial details ->
     assert_properties_of_partial_liquidation burrow details; true
@@ -266,7 +266,7 @@ let test_general_liquidation_properties =
     assert_properties_of_close_liquidation burrow details; true
 
 let initial_burrow =
-  Burrow.make_for_test
+  make_burrow_for_test
     ~permission_version:(Ligo.nat_from_literal "0n")
     ~allow_all_tez_deposits:false
     ~allow_all_kit_burnings:false
@@ -284,7 +284,7 @@ let initial_burrow =
 let barely_not_overburrowed_test =
   "barely_not_overburrowed_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -298,23 +298,23 @@ let barely_not_overburrowed_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
-    assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
-    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+    assert_bool "is not overburrowed" (not (burrow_is_overburrowed params burrow));
+    assert_bool "is not optimistically overburrowed" (not (burrow_is_optimistically_overburrowed params burrow));
+    assert_bool "is not liquidatable" (not (burrow_is_liquidatable params burrow));
 
     let expected_liquidation_result = Unnecessary in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result
+      ~printer:show_liquidation_result
 
 (* Maximum amount of collateral for the burrow to be considered
  * under-collateralized, but not liquidatable. *)
 let barely_overburrowed_test =
   "barely_overburrowed_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -328,23 +328,23 @@ let barely_overburrowed_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is not liquidatable" (not (burrow_is_liquidatable params burrow));
 
     let expected_liquidation_result = Unnecessary in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result
+      ~printer:show_liquidation_result
 
 (* Minimum amount of collateral for the burrow to be considered
  * under-collateralized, but not liquidatable. *)
 let barely_non_liquidatable_test =
   "barely_non_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -358,23 +358,23 @@ let barely_non_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is not liquidatable" (not (burrow_is_liquidatable params burrow));
 
     let expected_liquidation_result = Unnecessary in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result
+      ~printer:show_liquidation_result
 
 (* Maximum amount of collateral for the burrow to be considered partially
  * liquidatable. *)
 let barely_liquidatable_test =
   "barely_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -388,9 +388,9 @@ let barely_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (burrow_is_liquidatable params burrow);
 
     let expected_liquidation_result =
       Partial
@@ -399,7 +399,7 @@ let barely_liquidatable_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "6_941_863");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "8_677_329");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~active:true
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
@@ -413,11 +413,11 @@ let barely_liquidatable_test =
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Complete _ | Close _ -> failwith "impossible"
@@ -431,7 +431,7 @@ let barely_liquidatable_test =
 let barely_non_complete_liquidatable_test =
   "barely_non_complete_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -445,9 +445,9 @@ let barely_non_complete_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (burrow_is_liquidatable params burrow);
 
     let expected_liquidation_result =
       Partial
@@ -456,7 +456,7 @@ let barely_non_complete_liquidatable_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "10_000_001");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "15_229_815");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~active:true
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
@@ -470,11 +470,11 @@ let barely_non_complete_liquidatable_test =
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Complete _ | Close _ -> failwith "impossible"
@@ -486,7 +486,7 @@ let barely_non_complete_liquidatable_test =
 let barely_complete_liquidatable_test =
   "barely_complete_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -500,9 +500,9 @@ let barely_complete_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (burrow_is_liquidatable params burrow);
 
     let expected_liquidation_result =
       Complete
@@ -511,7 +511,7 @@ let barely_complete_liquidatable_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "9_999_998");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "15_229_814");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~active:true
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
@@ -525,11 +525,11 @@ let barely_complete_liquidatable_test =
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Partial _ | Close _ -> failwith "impossible"
@@ -541,7 +541,7 @@ let barely_complete_liquidatable_test =
 let barely_non_close_liquidatable_test =
   "barely_non_close_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -555,9 +555,9 @@ let barely_non_close_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (burrow_is_liquidatable params burrow);
 
     let expected_liquidation_result =
       Complete
@@ -566,7 +566,7 @@ let barely_non_close_liquidatable_test =
           expected_kit = kit_zero;
           min_kit_for_unwarranted = kit_zero;
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~active:true
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
@@ -580,11 +580,11 @@ let barely_non_close_liquidatable_test =
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Partial _ | Close _ -> failwith "impossible"
@@ -596,7 +596,7 @@ let barely_non_close_liquidatable_test =
 let barely_close_liquidatable_test =
   "barely_close_liquidatable_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -610,9 +610,9 @@ let barely_close_liquidatable_test =
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         ~liquidation_slices:None
     in
-    assert_bool "is overburrowed" (Burrow.is_overburrowed params burrow);
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
-    assert_bool "is liquidatable" (Burrow.is_liquidatable params burrow);
+    assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
+    assert_bool "is liquidatable" (burrow_is_liquidatable params burrow);
 
     let expected_liquidation_result =
       Close
@@ -621,7 +621,7 @@ let barely_close_liquidatable_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "2_463_052");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "18_981_019");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~active:false
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
@@ -635,11 +635,11 @@ let barely_close_liquidatable_test =
               ~liquidation_slices:None
               ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
         } in
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Partial _ | Complete _ -> failwith "impossible"
@@ -649,7 +649,7 @@ let barely_close_liquidatable_test =
 let unwarranted_liquidation_unit_test =
   "unwarranted_liquidation_unit_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -664,12 +664,12 @@ let unwarranted_liquidation_unit_test =
         ~liquidation_slices:None
     in
 
-    assert_bool "is not overburrowed" (not (Burrow.is_overburrowed params burrow));
-    assert_bool "is not optimistically overburrowed" (not (Burrow.is_optimistically_overburrowed params burrow));
-    assert_bool "is not liquidatable" (not (Burrow.is_liquidatable params burrow));
+    assert_bool "is not overburrowed" (not (burrow_is_overburrowed params burrow));
+    assert_bool "is not optimistically overburrowed" (not (burrow_is_optimistically_overburrowed params burrow));
+    assert_bool "is not liquidatable" (not (burrow_is_liquidatable params burrow));
 
-    let liquidation_result = Burrow.request_liquidation params burrow in
-    assert_equal Unnecessary liquidation_result ~printer:Burrow.show_liquidation_result
+    let liquidation_result = burrow_request_liquidation params burrow in
+    assert_equal Unnecessary liquidation_result ~printer:show_liquidation_result
 
 let partial_liquidation_unit_test =
   "partial_liquidation_unit_test" >:: fun _ ->
@@ -682,7 +682,7 @@ let partial_liquidation_unit_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "17_592_294");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "27_141_390");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
@@ -697,24 +697,24 @@ let partial_liquidation_unit_test =
               ~liquidation_slices:None
         } in
 
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
 
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Complete _ | Close _ -> failwith "impossible"
       | Partial details -> details in
 
-    assert_bool "is optimistically overburrowed" (Burrow.is_optimistically_overburrowed params burrow);
+    assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
     assert_properties_of_partial_liquidation burrow details
 
 let complete_liquidation_unit_test =
   "complete_liquidation_unit_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -736,7 +736,7 @@ let complete_liquidation_unit_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "22_142_860");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "170_810_019");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
@@ -751,12 +751,12 @@ let complete_liquidation_unit_test =
               ~liquidation_slices:None
         } in
 
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
 
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Partial _ | Close _ -> failwith "impossible"
@@ -764,13 +764,13 @@ let complete_liquidation_unit_test =
 
     assert_bool
       "input burrow is optimistically overburrowed"
-      (Burrow.is_optimistically_overburrowed params burrow);
+      (burrow_is_optimistically_overburrowed params burrow);
     assert_properties_of_complete_liquidation burrow details
 
 let complete_and_close_liquidation_test =
   "complete_and_close_liquidation_test" >:: fun _ ->
     let burrow =
-      Burrow.make_for_test
+      make_burrow_for_test
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
@@ -792,7 +792,7 @@ let complete_and_close_liquidation_test =
           expected_kit = kit_of_mukit (Ligo.int_from_literal "2_460_594");
           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "189_810_190");
           burrow_state =
-            Burrow.make_for_test
+            make_burrow_for_test
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
@@ -807,12 +807,12 @@ let complete_and_close_liquidation_test =
               ~liquidation_slices:None
         } in
 
-    let liquidation_result = Burrow.request_liquidation params burrow in
+    let liquidation_result = burrow_request_liquidation params burrow in
 
     assert_equal
       expected_liquidation_result
       liquidation_result
-      ~printer:Burrow.show_liquidation_result;
+      ~printer:show_liquidation_result;
 
     let details = match liquidation_result with
       | Unnecessary | Partial _ | Complete _ -> failwith "impossible"
@@ -820,10 +820,10 @@ let complete_and_close_liquidation_test =
 
     assert_bool
       "input burrow is optimistically overburrowed"
-      (Burrow.is_optimistically_overburrowed params burrow);
+      (burrow_is_optimistically_overburrowed params burrow);
     assert_bool
       "output burrow is optimistically overburrowed"
-      (Burrow.is_optimistically_overburrowed params details.burrow_state);
+      (burrow_is_optimistically_overburrowed params details.burrow_state);
     assert_properties_of_close_liquidation burrow details
 
 let suite =

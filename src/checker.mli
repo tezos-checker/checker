@@ -3,6 +3,7 @@ open Kit
 open Permission
 open Parameters
 open Uniswap
+open Burrow
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
@@ -15,7 +16,7 @@ val show_tez_payment : tez_payment -> string
 type burrow_id = Ptr.t
 
 type t =
-  { burrows : (ptr, Burrow.t) Ligo.big_map;
+  { burrows : (ptr, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
