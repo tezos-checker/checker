@@ -1,6 +1,7 @@
 open Ptr
 open Kit
 open Permission
+open Parameters
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
@@ -9,7 +10,7 @@ type burrow_id = Ptr.t
 type t =
   { burrows : (ptr, Burrow.t) Ligo.big_map;
     uniswap : Uniswap.t;
-    parameters : Parameters.t;
+    parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
     delegate : Ligo.address option;

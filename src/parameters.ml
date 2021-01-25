@@ -1,8 +1,10 @@
 open Kit
 open Ratio
 open FixedPoint
+open Common
+open Constants
 
-type t =
+type parameters =
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
     q : fixedpoint; (* 1/kit, really *)
     index: Ligo.tez;
@@ -23,7 +25,7 @@ type t =
 [@@deriving show]
 
 (** Initial state of the parameters. TODO: Contents TBD. *)
-let initial_parameters : t =
+let initial_parameters : parameters =
   { q = fixedpoint_one;
     index = Ligo.tez_from_literal "1_000_000mutez";
     protected_index = Ligo.tez_from_literal "1_000_000mutez";
@@ -40,22 +42,24 @@ let initial_parameters : t =
   }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: t) : Ligo.tez = Common.max_tez p.index p.protected_index
+let tz_minting (p: parameters) : Ligo.tez = max_tez p.index p.protected_index
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: t) : Ligo.tez = Common.min_tez p.index p.protected_index
+let tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
-let minting_price (p: t) : ratio =
+let minting_price (p: parameters) : ratio =
   mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_minting p))
 
 (** Current liquidation price (tez/kit). *)
-let liquidation_price (p: t) : ratio =
+let liquidation_price (p: parameters) : ratio =
   mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_liquidation p))
 
-let qexp amount = add_ratio one_ratio amount
+(* TODO: move this into ratio.ml *)
+let qexp (x: ratio) : ratio = add_ratio one_ratio x
 
-let clamp (v: ratio) (lower: ratio) (upper: ratio) : 'a =
+(* TODO: move this into ratio.ml *)
+let clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
   assert (leq_ratio_ratio lower upper);
   min_ratio upper (max_ratio v lower)
 
@@ -85,7 +89,7 @@ let clamp (v: ratio) (lower: ratio) (upper: ratio) : 'a =
   * NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
-let compute_imbalance ~(burrowed: kit) ~(circulating: kit) : ratio =
+let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   assert (burrowed >= kit_zero);
   assert (circulating >= kit_zero);
   if burrowed = kit_zero && circulating = kit_zero then
@@ -103,7 +107,7 @@ let compute_imbalance ~(burrowed: kit) ~(circulating: kit) : ratio =
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
-let compute_adjustment_index (p: t) : fixedpoint=
+let compute_adjustment_index (p: parameters) : fixedpoint =
   let burrow_fee_index = fixedpoint_to_ratio p.burrow_fee_index in
   let imbalance_index = fixedpoint_to_ratio p.imbalance_index in
   fixedpoint_of_ratio_floor (mul_ratio burrow_fee_index imbalance_index)
@@ -144,23 +148,29 @@ let compute_adjustment_index (p: t) : fixedpoint=
 let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
   let target = fixedpoint_to_ratio target in
-  let target_low_bracket  = Constants.target_low_bracket in
-  let target_high_bracket = Constants.target_high_bracket in
+  let target_low_bracket  = target_low_bracket in
+  let target_high_bracket = target_high_bracket in
   let cnp_001 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
   let cnp_005 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
-  let secs_in_a_day = fixedpoint_of_int Constants.seconds_in_a_day in
-  match () with
-  (* No acceleration (0) *)
-  | () when lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) -> fixedpoint_zero
-  (* Low acceleration (-/+) *)
-  | () when lt_ratio_ratio (qexp (neg_ratio target_high_bracket)) target && leq_ratio_ratio target (qexp (neg_ratio target_low_bracket))
-    -> fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  | () when gt_ratio_ratio (qexp (          target_high_bracket)) target && geq_ratio_ratio target (qexp (          target_low_bracket))
-    ->                (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  (* High acceleration (-/+) *)
-  | () when leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) -> fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  | () when geq_ratio_ratio target (qexp (          target_high_bracket)) ->                (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
-  | _ -> (failwith "impossible" : fixedpoint)
+  let secs_in_a_day = fixedpoint_of_int seconds_in_a_day in
+
+  if lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) then
+    (* No acceleration (0) *)
+    fixedpoint_zero
+  else if lt_ratio_ratio (qexp (neg_ratio target_high_bracket)) target && leq_ratio_ratio target (qexp (neg_ratio target_low_bracket)) then
+    (* Low acceleration (-) *)
+    fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  else if gt_ratio_ratio (qexp (          target_high_bracket)) target && geq_ratio_ratio target (qexp (          target_low_bracket)) then
+    (* Low acceleration (+) *)
+    (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  else if leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) then
+    (* High acceleration (-) *)
+    fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  else if geq_ratio_ratio target (qexp (          target_high_bracket)) then
+    (* High acceleration (+) *)
+    (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+  else
+    (failwith "impossible" : fixedpoint)
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
@@ -169,22 +179,20 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
 let touch
     (current_index: Ligo.tez)
     (current_kit_in_tez: ratio)
-    (parameters: t)
-  : kit * t =
-  let duration_in_seconds =
-    ratio_of_int (* NOTE: can it be negative? Does the protocol ensure this? *)
-    @@ Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched
-  in
+    (parameters: parameters)
+  : kit * parameters =
+  let duration_in_seconds = (* NOTE: can it be negative? Does the protocol ensure this? *)
+    ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched) in
 
   let current_protected_index =
-    let upper_lim = qexp (mul_ratio           (Constants.protected_index_epsilon) duration_in_seconds) in
-    let lower_lim = qexp (mul_ratio (neg_ratio Constants.protected_index_epsilon) duration_in_seconds) in
+    let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
+    let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
 
     ratio_to_tez_floor
       (mul_ratio
          (ratio_of_tez parameters.protected_index)
          (clamp
-            (make_ratio (Common.tez_to_mutez current_index) (Common.tez_to_mutez parameters.protected_index))
+            (make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters.protected_index))
             lower_lim
             upper_lim
          )
@@ -248,8 +256,8 @@ let touch
          (add_ratio
             one_ratio
             (div_ratio
-               (mul_ratio Constants.burrow_fee_percentage duration_in_seconds)
-               (ratio_of_int Constants.seconds_in_a_year)
+               (mul_ratio burrow_fee_percentage duration_in_seconds)
+               (ratio_of_int seconds_in_a_year)
             )
          )
       ) in
@@ -257,8 +265,8 @@ let touch
   let current_imbalance_index =
     let imbalance_rate =
       compute_imbalance
-        ~burrowed:parameters.outstanding_kit
-        ~circulating:parameters.circulating_kit in
+        parameters.outstanding_kit (* burrowed *)
+        parameters.circulating_kit (* circulating *) in
     fixedpoint_of_ratio_floor
       (mul_ratio
          (fixedpoint_to_ratio parameters.imbalance_index)
@@ -266,7 +274,7 @@ let touch
             one_ratio
             (div_ratio
                (mul_ratio imbalance_rate duration_in_seconds)
-               (ratio_of_int Constants.seconds_in_a_year)
+               (ratio_of_int seconds_in_a_year)
             )
          )
       ) in
@@ -312,23 +320,23 @@ let touch
   )
 
 (** Add some kit to the total amount of kit in circulation. *)
-let add_circulating_kit (parameters: t) (kit: kit) : t =
+let add_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (kit >= kit_zero);
   { parameters with circulating_kit = kit_add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
-let remove_circulating_kit (parameters: t) (kit: kit) : t =
+let remove_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (kit >= kit_zero);
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
-let add_outstanding_kit (parameters: t) (kit: kit) : t =
+let add_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
   assert (kit >= kit_zero);
   { parameters with outstanding_kit = kit_add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
-let remove_outstanding_kit (parameters: t) (kit: kit) : t =
+let remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
   assert (kit >= kit_zero);
   assert (parameters.outstanding_kit >= kit);
   { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }

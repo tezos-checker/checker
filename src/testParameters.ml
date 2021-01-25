@@ -3,6 +3,7 @@ open TestCommon
 open Ratio
 open FixedPoint
 open Kit
+open Parameters
 
 (*
 Parameter-related things we might want to add tests for:
@@ -17,13 +18,13 @@ let rec call_touch_times
     (index: Ligo.tez)
     (kit_in_tez: ratio)
     (n: int)
-    (params: Parameters.t)
-  : Parameters.t =
+    (params: parameters)
+  : parameters =
   if n <= 0
   then params
   else begin
     Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let _total_accrual_to_uniswap, new_params = Parameters.touch index kit_in_tez params in
+    let _total_accrual_to_uniswap, new_params = touch index kit_in_tez params in
     call_touch_times index kit_in_tez (pred n) new_params
   end
 
@@ -50,21 +51,21 @@ let test_compute_drift_derivative_no_acceleration =
     assert_equal
       ~printer:FixedPoint.show
       fixedpoint_zero
-      (Parameters.compute_drift_derivative target);
+      (compute_drift_derivative target);
 
     (* exp( low ): 201/200 = 1.005 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0147AE147AE147AE" in
     assert_equal
       ~printer:FixedPoint.show
       fixedpoint_zero
-      (Parameters.compute_drift_derivative target);
+      (compute_drift_derivative target);
 
     (* exp(-low ): 199/200 = 0.995 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.FEB851EB851EB852" in
     assert_equal
       ~printer:FixedPoint.show
       fixedpoint_zero
-      (Parameters.compute_drift_derivative target)
+      (compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_positive_acceleration =
   "test_compute_drift_derivative_low_positive_acceleration" >:: fun _ ->
@@ -73,14 +74,14 @@ let test_compute_drift_derivative_low_positive_acceleration =
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "0.000000000003C547")
-      (Parameters.compute_drift_derivative target);
+      (compute_drift_derivative target);
 
     (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCC" in
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "0.000000000003C547")
-      (Parameters.compute_drift_derivative target)
+      (compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_negative_acceleration =
   "test_compute_drift_derivative_low_negative_acceleration" >:: fun _ ->
@@ -89,14 +90,14 @@ let test_compute_drift_derivative_low_negative_acceleration =
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "-0.000000000003C547")
-      (Parameters.compute_drift_derivative target);
+      (compute_drift_derivative target);
 
     (* exp(-high): 19/20   = 0.95 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.F333333333333334" in
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "-0.000000000003C547")
-      (Parameters.compute_drift_derivative target)
+      (compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_positive_acceleration =
   "test_compute_drift_derivative_high_positive_acceleration" >:: fun _ ->
@@ -105,7 +106,7 @@ let test_compute_drift_derivative_high_positive_acceleration =
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "0.000000000012DA63")
-      (Parameters.compute_drift_derivative target)
+      (compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_negative_acceleration =
   "test_compute_drift_derivative_high_negative_acceleration" >:: fun _ ->
@@ -114,7 +115,7 @@ let test_compute_drift_derivative_high_negative_acceleration =
     assert_equal
       ~printer:FixedPoint.show
       (fixedpoint_of_hex_string "-0.000000000012DA63")
-      (Parameters.compute_drift_derivative target)
+      (compute_drift_derivative target)
 
 (* ************************************************************************* *)
 (*                     compute_imbalance (unit tests)                        *)
@@ -127,7 +128,7 @@ let test_compute_imbalance_all_zero =
     assert_equal
       ~printer:show_ratio
       zero_ratio
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_zero_burrowed =
   "test_compute_imbalance_zero_burrowed" >:: fun _ ->
@@ -136,7 +137,7 @@ let test_compute_imbalance_zero_burrowed =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
@@ -145,7 +146,7 @@ let test_compute_imbalance_equal =
     assert_equal
       ~printer:show_ratio
       zero_ratio
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
@@ -154,7 +155,7 @@ let test_compute_imbalance_positive_small =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
@@ -163,7 +164,7 @@ let test_compute_imbalance_positive_big =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
@@ -172,7 +173,7 @@ let test_compute_imbalance_positive_capped =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
@@ -181,7 +182,7 @@ let test_compute_imbalance_negative_small =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
@@ -190,7 +191,7 @@ let test_compute_imbalance_negative_big =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
@@ -199,7 +200,7 @@ let test_compute_imbalance_negative_capped =
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (Parameters.compute_imbalance ~burrowed ~circulating)
+      (compute_imbalance burrowed circulating)
 
 (* ************************************************************************* *)
 (*                compute_imbalance (property-based tests)                   *)
@@ -214,7 +215,7 @@ let test_imbalance_upper_bound =
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
   leq_ratio_ratio
-    (Parameters.compute_imbalance ~burrowed ~circulating)
+    (compute_imbalance burrowed circulating)
     (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
 
 (* Imbalance can never go below -5% *)
@@ -226,7 +227,7 @@ let test_imbalance_lower_bound =
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
   geq_ratio_ratio
-    (Parameters.compute_imbalance ~burrowed ~circulating)
+    (compute_imbalance burrowed circulating)
     (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
 
 (* The sign of imbalance is the same as of (burrowed - circulating).
@@ -241,7 +242,7 @@ let test_imbalance_sign_preservation =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  sign_ratio (Parameters.compute_imbalance ~burrowed ~circulating)
+  sign_ratio (compute_imbalance burrowed circulating)
   = sign_ratio (kit_to_ratio (kit_sub burrowed circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
@@ -253,7 +254,7 @@ let test_imbalance_is_zero_when_equal =
     TestArbitrary.arb_kit
   @@ fun kit ->
   eq_ratio_ratio
-    (Parameters.compute_imbalance ~burrowed:kit ~circulating:kit)
+    (compute_imbalance kit (* burrowed *) kit (* circulating *))
     zero_ratio
 
 (* For a fixed amount of kit in circulation, increasing the burrowed kit
@@ -274,8 +275,8 @@ let test_imbalance_positive_tendencies =
     | _ -> failwith "impossible"
   ) in
   geq_ratio_ratio
-    (Parameters.compute_imbalance ~burrowed:burrowed1 ~circulating)
-    (Parameters.compute_imbalance ~burrowed:burrowed2 ~circulating)
+    (compute_imbalance burrowed1 circulating)
+    (compute_imbalance burrowed2 circulating)
 
 (* For a fixed amount of burrowed kit, increasing the kit in circulation
  * decreases the imbalance. *)
@@ -295,8 +296,8 @@ let test_imbalance_negative_tendencies =
     | _ -> failwith "impossible"
   ) in
   leq_ratio_ratio
-    (Parameters.compute_imbalance ~burrowed ~circulating:circulating1)
-    (Parameters.compute_imbalance ~burrowed ~circulating:circulating2)
+    (compute_imbalance burrowed circulating1)
+    (compute_imbalance burrowed circulating2)
 
 (* ************************************************************************* *)
 (*                          Index/Protected Index                            *)
@@ -306,7 +307,7 @@ let test_imbalance_negative_tendencies =
  * independently of whether that happens fast or slowly. *)
 let test_protected_index_follows_index =
   (* initial *)
-  let params = Parameters.initial_parameters in
+  let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
   let kit_in_tez = one_ratio in
@@ -324,7 +325,7 @@ let test_protected_index_follows_index =
   Ligo.Tezos.new_transaction ~seconds_passed:(lvl*60) ~blocks_passed:lvl ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_uniswap, new_params =
-    Parameters.touch index kit_in_tez params in
+    touch index kit_in_tez params in
 
   assert_equal
     (compare new_params.index params.index)
@@ -339,7 +340,7 @@ let test_protected_index_pace =
   "test_protected_index_pace" >:: fun _ ->
     (* initial *)
 
-    let params = Parameters.initial_parameters in
+    let params = initial_parameters in
 
     (* Neutral kit_in_tez (same as initial) *)
     let kit_in_tez = one_ratio in
@@ -383,7 +384,7 @@ let test_protected_index_pace =
  * current quantity q)? *)
 let test_minting_index_low_bounded =
   (* initial *)
-  let params = Parameters.initial_parameters in
+  let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
   let kit_in_tez = one_ratio in
@@ -400,16 +401,16 @@ let test_minting_index_low_bounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_uniswap, new_params =
-    Parameters.touch index kit_in_tez params in
+    touch index kit_in_tez params in
 
-  (Parameters.tz_minting new_params >= Ligo.tez_from_literal "999_500mutez") (* 0.05% down, at "best" *)
+  (tz_minting new_params >= Ligo.tez_from_literal "999_500mutez") (* 0.05% down, at "best" *)
 
 (* The pace of change of the minting index is unbounded on the high side.
  * George: What about the pace of change of the minting price (affected also by
  * the current quantity q)? *)
 let test_minting_index_high_unbounded =
   (* initial *)
-  let params = Parameters.initial_parameters in
+  let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
   let kit_in_tez = one_ratio in
@@ -425,10 +426,10 @@ let test_minting_index_high_unbounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_uniswap, new_params =
-    Parameters.touch index kit_in_tez params in
+    touch index kit_in_tez params in
   assert_equal
     index
-    (Parameters.tz_minting new_params)
+    (tz_minting new_params)
     ~printer:Ligo.string_of_tez;
   true
 
@@ -437,7 +438,7 @@ let test_minting_index_high_unbounded =
  * also by the current quantity q)? *)
 let test_liquidation_index_high_bounded =
   (* initial *)
-  let params = Parameters.initial_parameters in
+  let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
   let kit_in_tez = one_ratio in
@@ -453,10 +454,10 @@ let test_liquidation_index_high_bounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_uniswap, new_params =
-    Parameters.touch index kit_in_tez params in
+    touch index kit_in_tez params in
   (* not very likely to hit the < case here I think;
    * perhaps we need a different generator *)
-  (Parameters.tz_liquidation new_params <= Ligo.tez_from_literal "1_000_500mutez") (* 0.05% up, at "best" *)
+  (tz_liquidation new_params <= Ligo.tez_from_literal "1_000_500mutez") (* 0.05% up, at "best" *)
 
 (* The pace of change of the liquidation index is unbounded on the low side.
  * George: What about the pace of change of the liquidation price (affected
@@ -464,7 +465,7 @@ let test_liquidation_index_high_bounded =
 let test_liquidation_index_low_unbounded =
   (* initial *)
   Ligo.Tezos.reset ();
-  let params = Parameters.initial_parameters in
+  let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
   let kit_in_tez = one_ratio in
@@ -479,10 +480,10 @@ let test_liquidation_index_low_unbounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_uniswap, new_params =
-    Parameters.touch index kit_in_tez params in
+    touch index kit_in_tez params in
   assert_equal
     index
-    (Parameters.tz_liquidation new_params)
+    (tz_liquidation new_params)
     ~printer:Ligo.string_of_tez;
   true
 
@@ -501,7 +502,7 @@ let test_liquidation_index_low_unbounded =
    let test_touch_identity =
    (* initial *)
    Ligo.Tezos.reset ();
-   let params = Parameters.initial_parameters in
+   let params = initial_parameters in
 
    (* neutral arguments *)
    let index = params.index in
@@ -513,7 +514,7 @@ let test_liquidation_index_low_unbounded =
     ~count:property_test_count
     TestArbitrary.arb_tezos
    @@ fun new_tezos ->
-   let _total_accrual_to_uniswap, new_params = Parameters.touch index kit_in_tez params in
+   let _total_accrual_to_uniswap, new_params = touch index kit_in_tez params in
 
    (* Most of the parameters remain the same *)
    assert_equal
@@ -524,7 +525,7 @@ let test_liquidation_index_low_unbounded =
       circulating_kit = new_params.circulating_kit;
     }
     new_params
-    ~printer:Parameters.show;
+    ~printer:show_parameters;
 
    (* Burrow fee index though is ever increasing (if time passes!) *)
    assert_equal
@@ -543,11 +544,11 @@ let test_liquidation_index_low_unbounded =
    assert_bool
     "imbalance should not increase or decrease over time"
     (let new_imbalance =
-       Parameters.compute_imbalance
+       compute_imbalance
          ~burrowed:new_params.outstanding_kit
          ~circulating:new_params.circulating_kit in
      let old_imbalance =
-       Parameters.compute_imbalance
+       compute_imbalance
          ~burrowed:params.outstanding_kit
          ~circulating:params.circulating_kit in
      new_imbalance = old_imbalance);
@@ -557,7 +558,7 @@ let test_liquidation_index_low_unbounded =
 (* Just a simple unit test, testing nothing specific, really. *)
 let test_touch =
   "test_touch" >:: fun _ ->
-    let initial_parameters : Parameters.t =
+    let initial_parameters : parameters =
       { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
         index = Ligo.tez_from_literal "360_000mutez";
         target = fixedpoint_of_hex_string "1.147AE147AE147AE1"; (* 1.08 *)
@@ -575,7 +576,7 @@ let test_touch =
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
-    let total_accrual_to_uniswap, new_parameters = Parameters.touch new_index kit_in_tez initial_parameters in
+    let total_accrual_to_uniswap, new_parameters = touch new_index kit_in_tez initial_parameters in
     assert_equal
       { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
         index = Ligo.tez_from_literal "340_000mutez";
@@ -590,7 +591,7 @@ let test_touch =
         last_touched = !Ligo.Tezos.now;
       }
       new_parameters
-      ~printer:Parameters.show;
+      ~printer:show_parameters;
     assert_equal
       kit_zero (* NOTE: I'd expect this to be higher I think. *)
       total_accrual_to_uniswap

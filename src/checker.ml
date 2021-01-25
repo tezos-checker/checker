@@ -4,6 +4,7 @@ open Ratio
 open Kit
 open Avl
 open Permission
+open Parameters
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -14,7 +15,7 @@ type burrow_id = Ptr.t
 type t =
   { burrows : (ptr, Burrow.t) Ligo.big_map;
     uniswap : Uniswap.t;
-    parameters : Parameters.t;
+    parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
     delegate : Ligo.address option;
@@ -23,7 +24,7 @@ type t =
 let initial_checker =
   { burrows = Ligo.Big_map.empty;
     uniswap = Uniswap.make_initial;
-    parameters = Parameters.initial_parameters;
+    parameters = initial_parameters;
     liquidation_auctions = LiquidationAuction.empty;
     delegation_auction = DelegationAuction.empty;
     delegate = None;
@@ -166,8 +167,8 @@ let mint_kit (state:t) ~permission ~burrow_id ~kit =
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
        parameters =
-         Parameters.add_outstanding_kit
-           (Parameters.add_circulating_kit state.parameters minted)
+         add_outstanding_kit
+           (add_circulating_kit state.parameters minted)
            minted;
       }
     )
@@ -203,8 +204,8 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
      parameters =
-       Parameters.remove_outstanding_kit
-         (Parameters.remove_circulating_kit state.parameters kit)
+       remove_outstanding_kit
+         (remove_circulating_kit state.parameters kit)
          kit;
     }
   else
@@ -218,8 +219,8 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
        parameters =
-         Parameters.remove_outstanding_kit
-           (Parameters.remove_circulating_kit state.parameters kit)
+         remove_outstanding_kit
+           (remove_circulating_kit state.parameters kit)
            kit;
       }
     else
@@ -471,7 +472,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
     (* Burn the kit by removing it from circulation. *)
     let state =
       { state with
-        parameters = Parameters.remove_circulating_kit state.parameters kit_to_burn } in
+        parameters = remove_circulating_kit state.parameters kit_to_burn } in
 
     (* Now we delete the slice from the lot, so it cannot be
      * withdrawn twice, also to save storage. This might cause
@@ -675,14 +676,14 @@ let touch (state:t) ~(index:Ligo.tez) : (kit_token * t) =
      * to the contract toucher, and update the circulating kit accordingly.*)
     let reward = calculate_touch_reward state in
     let state = { state with parameters =
-                               Parameters.add_circulating_kit state.parameters reward } in
+                               add_circulating_kit state.parameters reward } in
 
     (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the uniswap *)
     let state = touch_delegation_auction state in
 
     (* 2: Update the system parameters *)
     let total_accrual_to_uniswap, updated_parameters =
-      Parameters.touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
+      touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
     let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in
@@ -697,7 +698,7 @@ let touch (state:t) ~(index:Ligo.tez) : (kit_token * t) =
          * feed as (tz_t * q_t), or use the current minting price, but using
          * the liquidation price is the safest option. *)
         (* George: I use ceil, to stay on the safe side (higher-price) *)
-        (fixedpoint_of_ratio_ceil (Parameters.minting_price updated_parameters)) in
+        (fixedpoint_of_ratio_ceil (minting_price updated_parameters)) in
 
     (* 6: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step

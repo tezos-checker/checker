@@ -1,5 +1,6 @@
 open Kit
 open FixedPoint
+open Parameters
 
 type liquidation_slices =
   { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
@@ -46,13 +47,13 @@ val make_for_test :
   * The quantity tez_collateral / (fminting * minting_price) we call the burrowing
   * limit (normally kit_outstanding <= burrowing_limit).
 *)
-val is_overburrowed : Parameters.t -> t -> bool
+val is_overburrowed : parameters -> t -> bool
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
   * current minting price, but that all these liquidations were actually
   * warranted. *)
-val is_optimistically_overburrowed : Parameters.t -> t -> bool
+val is_optimistically_overburrowed : parameters -> t -> bool
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
@@ -65,7 +66,7 @@ val is_optimistically_overburrowed : Parameters.t -> t -> bool
   * price) when computing the outstanding kit. Note that only active burrows
   * can be liquidated; inactive ones are dormant, until either all pending
   * auctions finish or if their creation deposit is restored. *)
-val is_liquidatable : Parameters.t -> t -> bool
+val is_liquidatable : parameters -> t -> bool
 
 (** Perform housekeeping tasks on the burrow. This includes:
   * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
@@ -74,7 +75,7 @@ val is_liquidatable : Parameters.t -> t -> bool
   * - Rebalance outstanding_kit/excess_kit
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : Parameters.t -> t -> t
+val touch : parameters -> t -> t
 
 (** Deposit the kit earnings from the liquidation of a slice into the burrow.
   * That is, (a) update the outstanding kit, and (b) adjust the burrow's
@@ -93,35 +94,35 @@ val return_slice_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationA
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
   * is less than the creation deposit. *)
-val create : Parameters.t -> Ligo.tez -> t
+val create : parameters -> Ligo.tez -> t
 
 (** Add non-negative collateral to a burrow. *)
-val deposit_tez : Parameters.t -> Ligo.tez -> t -> t
+val deposit_tez : parameters -> Ligo.tez -> t -> t
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-val withdraw_tez : Parameters.t -> Ligo.tez -> t -> (t * Ligo.tez)
+val withdraw_tez : parameters -> Ligo.tez -> t -> (t * Ligo.tez)
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
-val mint_kit : Parameters.t -> kit -> t -> (t * kit)
+val mint_kit : parameters -> kit -> t -> (t * kit)
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
-val burn_kit : Parameters.t -> kit -> t -> t
+val burn_kit : parameters -> kit -> t -> t
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
   * the creation deposit. *)
-val activate : Parameters.t -> Ligo.tez -> t -> t
+val activate : parameters -> Ligo.tez -> t -> t
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-val deactivate : Parameters.t -> t -> (t * Ligo.tez)
+val deactivate : parameters -> t -> (t * Ligo.tez)
 
 (** Set the delegate of a burrow. *)
-val set_delegate : Parameters.t -> Ligo.address -> t -> t
+val set_delegate : parameters -> Ligo.address -> t -> t
 
 (* ************************************************************************* *)
 (*                           Permission-related                              *)
@@ -129,15 +130,15 @@ val set_delegate : Parameters.t -> Ligo.address -> t -> t
 
 (** Requires admin. Sets whether or not to accept all tez deposits without
   * permissions. *)
-val set_allow_all_tez_deposits : Parameters.t -> t -> bool -> t
+val set_allow_all_tez_deposits : parameters -> t -> bool -> t
 
 (** Requires admin. Sets whether or not to accept all kit burns without
   * permissions. *)
-val set_allow_all_kit_burns : Parameters.t -> t -> bool -> t
+val set_allow_all_kit_burns : parameters -> t -> bool -> t
 
 (** Requires admin. Increases the permission version so that all previous
   * permissions are now invalid. Returns the new permission version. *)
-val increase_permission_version : Parameters.t -> t -> (Ligo.nat * t)
+val increase_permission_version : parameters -> t -> (Ligo.nat * t)
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)
@@ -172,7 +173,7 @@ type liquidation_result =
 val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
-val request_liquidation : Parameters.t -> t -> liquidation_result
+val request_liquidation : parameters -> t -> liquidation_result
 val oldest_liquidation_ptr : t -> LiquidationAuctionTypes.leaf_ptr option
 
 val assert_invariants : t -> unit
