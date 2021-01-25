@@ -29,39 +29,39 @@ type liquidity = liquidity_token_content Ligo.ticket
 
 val issue_liquidity_tokens : Ligo.nat -> liquidity
 
-type t
+type uniswap
 
 (** The initial state of the uniswap contract. We always start with 1mukit,
   * 1mutez, and 1lqt token (effectively setting the starting price to 1
   * tez/kit). The price will eventually reach the value it should, but this
   * saves us from having the first/non-first liquidity provider separation, and
   * all division-by-zero checks. *)
-val make_initial : t
+val uniswap_make_initial : uniswap
 
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
   * required for the calculation of the drift derivative instead of up-to-date
   * kit_in_tez, because it is a little harder to manipulate. *)
-val kit_in_tez_in_prev_block : t -> Ratio.ratio
+val uniswap_kit_in_tez_in_prev_block : uniswap -> Ratio.ratio
 
-(** Buy some kit from the uniswap contract. Fail if the desired amount of kit
-  * cannot be bought or if the deadline has passed. *)
-val buy_kit :
-  t ->
-  amount:Ligo.tez ->
-  min_kit_expected:kit ->
-  deadline:Ligo.timestamp ->
-  (kit_token * t)
+(** Buy some kit from the uniswap contract by providing some tez. Fail if the
+  * desired amount of kit cannot be bought or if the deadline has passed. *)
+val uniswap_buy_kit :
+  uniswap ->
+  Ligo.tez (* amount *) ->
+  kit (* min kit expected *) ->
+  Ligo.timestamp (* deadline *) ->
+  (kit_token * uniswap)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
-val sell_kit :
-  t ->
-  amount:Ligo.tez ->
+val uniswap_sell_kit :
+  uniswap ->
+  Ligo.tez (* amount: must be zero *) ->
   kit_token ->
-  min_tez_expected:Ligo.tez ->
-  deadline:Ligo.timestamp ->
-  (Ligo.tez * t)
+  Ligo.tez (* min tez expected *) ->
+  Ligo.timestamp (* deadline *) ->
+  (Ligo.tez * uniswap)
 
 (** Buy some liquidity from the uniswap contract, by giving it some tez and
   * some kit. If the given amounts does not have the right ratio, we
@@ -78,63 +78,63 @@ val sell_kit :
  * to do it in huxian is that the kit balance of the uniswap contract is
  * continuously credited with the burrow fee taken from burrow holders.
 *)
-val add_liquidity :
-  t ->
-  amount:Ligo.tez ->
+val uniswap_add_liquidity :
+  uniswap ->
+  Ligo.tez (* amount *) ->
   (** This amount is temporarily treated as if it is part of the tez balance *)
-  pending_accrual:Ligo.tez ->
-  max_kit_deposited:kit_token ->
-  min_lqt_minted:Ligo.nat ->
-  deadline:Ligo.timestamp ->
-  (liquidity * kit_token * t)
+  Ligo.tez (* pending accrual *) ->
+  kit_token (* max kit deposited *) ->
+  Ligo.nat (* min lqt minted *) ->
+  Ligo.timestamp (* deadline *) ->
+  (liquidity * kit_token * uniswap)
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
   * sells their liquidity. I think it is unlikely to happen, since the last
   * liquidity holders wouldn't want to lose the burrow fees.
 *)
-val remove_liquidity :
-  t ->
-  amount:Ligo.tez ->
-  lqt_burned:liquidity ->
-  min_tez_withdrawn:Ligo.tez ->
-  min_kit_withdrawn:kit ->
-  deadline:Ligo.timestamp ->
-  (Ligo.tez * kit_token * t)
+val uniswap_remove_liquidity :
+  uniswap ->
+  Ligo.tez (* amount: should be zero *) ->
+  liquidity (* lqt burned *) ->
+  Ligo.tez (* min tez withdrawn *) ->
+  kit (* min kit withdrawn *) ->
+  Ligo.timestamp (* deadline *) ->
+  (Ligo.tez * kit_token * uniswap)
 
 (** Add accrued burrowing fees to the uniswap contract. *)
-val add_accrued_kit : t ->  kit_token -> t
+val uniswap_add_accrued_kit : uniswap -> kit_token -> uniswap
 
 (** Add accrued tez to the uniswap contract. *)
-val add_accrued_tez : t -> Ligo.tez -> t
+val uniswap_add_accrued_tez : uniswap -> Ligo.tez -> uniswap
 
 (* BEGIN_OCAML *)
 val show_liquidity : liquidity -> string
 val pp_liquidity : Format.formatter -> liquidity -> unit
 
-val show : t -> string
-val pp : Format.formatter -> t -> unit
+val show_uniswap : uniswap -> string
+val pp_uniswap : Format.formatter -> uniswap -> unit
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
-val make_for_test :
+val uniswap_make_for_test :
   tez:Ligo.tez ->
   kit:kit_token ->
   lqt:liquidity ->
   kit_in_tez_in_prev_block:Ratio.ratio ->
   last_level: Ligo.nat ->
-  t
+  uniswap
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
  * current price of kit in tez, as estimated using the ratio of tez and kit
  * currently in the uniswap contract. *)
-val kit_in_tez : t -> Ratio.ratio
+val uniswap_kit_in_tez : uniswap -> Ratio.ratio
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
  * current product of kit and tez, using the current contents of the uniswap
  * contract. *)
-val kit_times_tez : t -> Ratio.ratio
+val uniswap_kit_times_tez : uniswap -> Ratio.ratio
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
  * current number of liquidity tokens extant. *)
-val liquidity_tokens_extant : t -> liquidity
+val uniswap_liquidity_tokens_extant : uniswap -> liquidity
 (* END_OCAML *)

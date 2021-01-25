@@ -5,6 +5,7 @@ open Kit
 open Avl
 open Permission
 open Parameters
+open Uniswap
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -14,7 +15,7 @@ type burrow_id = Ptr.t
 
 type t =
   { burrows : (ptr, Burrow.t) Ligo.big_map;
-    uniswap : Uniswap.t;
+    uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
@@ -23,7 +24,7 @@ type t =
 
 let initial_checker =
   { burrows = Ligo.Big_map.empty;
-    uniswap = Uniswap.make_initial;
+    uniswap = uniswap_make_initial;
     parameters = initial_parameters;
     liquidation_auctions = LiquidationAuction.empty;
     delegation_auction = DelegationAuction.empty;
@@ -540,7 +541,7 @@ let updated_delegation_auction state new_auction =
   { state with
     delegation_auction = new_auction;
     delegate = DelegationAuction.delegate new_auction;
-    uniswap = Uniswap.add_accrued_tez state.uniswap accrued_tez;
+    uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
   }
 
 let delegation_auction_place_bid (state: t) =
@@ -570,13 +571,13 @@ let touch_delegation_auction state =
 
 let buy_kit (state:t) ~min_kit_expected ~deadline =
   let state = touch_delegation_auction state in
-  let (kit, updated_uniswap) = Uniswap.buy_kit state.uniswap ~amount:!Ligo.Tezos.amount ~min_kit_expected ~deadline in
+  let (kit, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
   (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
 let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
   let state = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
-  let (tez, updated_uniswap) = Uniswap.sell_kit state.uniswap ~amount:!Ligo.Tezos.amount kit ~min_tez_expected ~deadline in
+  let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
   (tez_payment, updated_state)
@@ -586,13 +587,13 @@ let add_liquidity (state:t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_literal "0mutez") in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
   let (tokens, leftover_kit, updated_uniswap) =
-    Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
+    uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
 
 let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline =
   let state = touch_delegation_auction state in
   let (tez, kit, updated_uniswap) =
-    Uniswap.remove_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn ~deadline in
+    uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
   (tez_payment, kit, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
@@ -683,11 +684,11 @@ let touch (state:t) ~(index:Ligo.tez) : (kit_token * t) =
 
     (* 2: Update the system parameters *)
     let total_accrual_to_uniswap, updated_parameters =
-      parameters_touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
+      parameters_touch index (uniswap_kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
     let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in
-    let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
+    let updated_uniswap = uniswap_add_accrued_kit state.uniswap total_accrual_to_uniswap in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)
     let updated_liquidation_auctions =

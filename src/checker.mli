@@ -2,6 +2,7 @@ open Ptr
 open Kit
 open Permission
 open Parameters
+open Uniswap
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
@@ -9,7 +10,7 @@ type burrow_id = Ptr.t
 
 type t =
   { burrows : (ptr, Burrow.t) Ligo.big_map;
-    uniswap : Uniswap.t;
+    uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
@@ -176,13 +177,13 @@ val add_liquidity :
   max_kit_deposited:kit_token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
-  (Uniswap.liquidity * kit_token * t)
+  (liquidity * kit_token * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
 val remove_liquidity :
   t ->
-  lqt_burned:Uniswap.liquidity ->
+  lqt_burned:liquidity ->
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:kit ->
   deadline:Ligo.timestamp ->
