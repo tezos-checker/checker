@@ -1,3 +1,4 @@
+open Kit
 open OUnit2
 open TestCommon
 
@@ -14,7 +15,7 @@ let suite =
        let _lqt_minted, _ret_kit, checker =
          Checker.add_liquidity
            checker
-           ~max_kit_deposited:(Kit.issue Kit.one)
+           ~max_kit_deposited:(kit_issue kit_one)
            ~min_lqt_minted:(Ligo.nat_from_literal "1n")
            ~deadline:(Ligo.timestamp_from_seconds_literal 1) in (* barely on time *)
 
@@ -52,9 +53,9 @@ let suite =
            checker
            ~permission:admin_permission
            ~burrow_id:burrow_id
-           ~kit:(Kit.of_mukit (Ligo.int_from_literal "4_285_714")) in
-       let kit, _same_token = Kit.read_kit kit_token in
-       assert_equal (Kit.of_mukit (Ligo.int_from_literal "4_285_714")) kit;
+           ~kit:(kit_of_mukit (Ligo.int_from_literal "4_285_714")) in
+       let kit, _same_token = read_kit kit_token in
+       assert_equal (kit_of_mukit (Ligo.int_from_literal "4_285_714")) kit;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -73,7 +74,7 @@ let suite =
               checker
               ~permission:admin_permission
               ~burrow_id:burrow_id
-              ~kit:(Kit.of_mukit (Ligo.int_from_literal "1"))
+              ~kit:(kit_of_mukit (Ligo.int_from_literal "1"))
          );
 
        (* Over time the burrows with outstanding kit should be overburrowed
@@ -102,9 +103,9 @@ let suite =
        let checker = Checker.touch_burrow checker burrow_id in
 
        assert_equal
-         (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "202_000_000"))) (* wow, high reward, many blocks have passed. *)
+         (kit_issue (kit_of_mukit (Ligo.int_from_literal "202_000_000"))) (* wow, high reward, many blocks have passed. *)
          touch_reward
-         ~printer:Kit.show_token;
+         ~printer:show_kit_token;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (reward_payment, checker) =
@@ -119,7 +120,7 @@ let suite =
          (fun () ->
             Checker.liquidation_auction_place_bid
               checker
-              ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "1_000")))
+              ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "1_000")))
          );
 
        let touch_reward, checker =
@@ -129,9 +130,9 @@ let suite =
          (Option.is_some checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000")))
+         (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000")))
          touch_reward
-         ~printer:Kit.show_token;
+         ~printer:show_kit_token;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -141,12 +142,12 @@ let suite =
        let (bid, checker) =
          Checker.liquidation_auction_place_bid
            checker
-           ~kit:(Kit.issue (Kit.of_mukit (Ligo.int_from_literal "4_200_000"))) in
+           ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "4_200_000"))) in
 
        assert_equal
-         (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "500_000")))
+         (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000")))
          touch_reward
-         ~printer:Kit.show_token;
+         ~printer:show_kit_token;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -157,9 +158,9 @@ let suite =
          (Option.is_none checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (Kit.issue (Kit.of_mukit (Ligo.int_from_literal "21_000_000")))
+         (kit_issue (kit_of_mukit (Ligo.int_from_literal "21_000_000")))
          touch_reward
-         ~printer:Kit.show_token;
+         ~printer:show_kit_token;
 
        (* We don't need to touch the slice on this test case since Checker.touch
         * already touches the oldest 5 slices. *)

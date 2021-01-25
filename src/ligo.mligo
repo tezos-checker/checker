@@ -7,6 +7,7 @@
 [@inline] let sub_int_int (i: int) (j: int) : int = i - j
 [@inline] let sub_tez_tez (i: tez) (j: tez) : tez = i - j
 [@inline] let sub_nat_nat (i: nat) (j: nat) : int = i - j
+[@inline] let sub_timestamp_timestamp (i: timestamp) (j: timestamp) : int = i - j
 
 [@inline] let mul_int_int (i: int) (j: int) : int = i * j
 [@inline] let mul_nat_tez (i: nat) (j: tez) : tez = i * j

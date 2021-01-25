@@ -34,8 +34,8 @@ let initial_parameters : t =
     imbalance_index = fixedpoint_one;
     (* Cannot be zero because then it stays
      * zero forever; only multiplications occur. *)
-    outstanding_kit = Kit.of_mukit (Ligo.int_from_literal "1");
-    circulating_kit = Kit.of_mukit (Ligo.int_from_literal "1");
+    outstanding_kit = kit_of_mukit (Ligo.int_from_literal "1");
+    circulating_kit = kit_of_mukit (Ligo.int_from_literal "1");
     last_touched = !Ligo.Tezos.now;
   }
 
@@ -86,20 +86,20 @@ let clamp (v: ratio) (lower: ratio) (upper: ratio) : 'a =
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
 let compute_imbalance ~(burrowed: kit) ~(circulating: kit) : ratio =
-  assert (burrowed >= Kit.zero);
-  assert (circulating >= Kit.zero);
-  if burrowed = Kit.zero && circulating = Kit.zero then
+  assert (burrowed >= kit_zero);
+  assert (circulating >= kit_zero);
+  if burrowed = kit_zero && circulating = kit_zero then
     zero_ratio
-  else if burrowed = Kit.zero && circulating <> Kit.zero then
+  else if burrowed = kit_zero && circulating <> kit_zero then
     make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
   else if burrowed >= circulating then
     div_ratio
-      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (Kit.to_ratio (Kit.sub burrowed circulating))) (          (Kit.to_ratio burrowed)))
-      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (Kit.to_ratio burrowed))
+      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (          (kit_to_ratio burrowed)))
+      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
   else (* burrowed < circulating *)
     div_ratio
-      (max_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (Kit.to_ratio (Kit.sub burrowed circulating))) (neg_ratio (Kit.to_ratio burrowed)))
-      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (Kit.to_ratio burrowed))
+      (max_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (neg_ratio (kit_to_ratio burrowed)))
+      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
@@ -272,28 +272,28 @@ let touch
       ) in
 
   let outstanding_with_fees =
-    Kit.of_ratio_floor
+    kit_of_ratio_floor
       (div_ratio
          (mul_ratio
-            (Kit.to_ratio parameters.outstanding_kit)
+            (kit_to_ratio parameters.outstanding_kit)
             (fixedpoint_to_ratio current_burrow_fee_index)
          )
          (fixedpoint_to_ratio parameters.burrow_fee_index)
       ) in
 
-  let accrual_to_uniswap = Kit.sub outstanding_with_fees parameters.outstanding_kit in
+  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters.outstanding_kit in
 
   let current_outstanding_kit =
-    Kit.of_ratio_floor
+    kit_of_ratio_floor
       (div_ratio
          (mul_ratio
-            (Kit.to_ratio outstanding_with_fees)
+            (kit_to_ratio outstanding_with_fees)
             (fixedpoint_to_ratio current_imbalance_index)
          )
          (fixedpoint_to_ratio parameters.imbalance_index)
       ) in
 
-  let current_circulating_kit = Kit.add parameters.circulating_kit accrual_to_uniswap in
+  let current_circulating_kit = kit_add parameters.circulating_kit accrual_to_uniswap in
 
   ( accrual_to_uniswap
   , {
@@ -313,22 +313,22 @@ let touch
 
 (** Add some kit to the total amount of kit in circulation. *)
 let add_circulating_kit (parameters: t) (kit: kit) : t =
-  assert (kit >= Kit.zero);
-  { parameters with circulating_kit = Kit.add parameters.circulating_kit kit; }
+  assert (kit >= kit_zero);
+  { parameters with circulating_kit = kit_add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
 let remove_circulating_kit (parameters: t) (kit: kit) : t =
-  assert (kit >= Kit.zero);
+  assert (kit >= kit_zero);
   assert (parameters.circulating_kit >= kit);
-  { parameters with circulating_kit = Kit.sub parameters.circulating_kit kit; }
+  { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
 let add_outstanding_kit (parameters: t) (kit: kit) : t =
-  assert (kit >= Kit.zero);
-  { parameters with outstanding_kit = Kit.add parameters.outstanding_kit kit; }
+  assert (kit >= kit_zero);
+  { parameters with outstanding_kit = kit_add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
 let remove_outstanding_kit (parameters: t) (kit: kit) : t =
-  assert (kit >= Kit.zero);
+  assert (kit >= kit_zero);
   assert (parameters.outstanding_kit >= kit);
-  { parameters with outstanding_kit = Kit.sub parameters.outstanding_kit kit; }
+  { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }

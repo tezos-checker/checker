@@ -14,8 +14,9 @@ inputs=(
   liquidationAuctionTypes
   mem
   avl
-  delegationAuction
   constants
+  liquidationAuction
+  delegationAuction
 )
 
 for name in "${inputs[@]}"; do

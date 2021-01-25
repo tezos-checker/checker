@@ -2,6 +2,7 @@ open FixedPoint
 open Ptr
 open Ratio
 open Kit
+open Avl
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -50,7 +51,7 @@ let assert_invariants (state: 't) : unit =
              (curr: LiquidationAuctionTypes.leaf_ptr)
              (prev: LiquidationAuctionTypes.leaf_ptr option) : Ligo.tez =
            let slice =
-             Avl.read_leaf
+             avl_read_leaf
                (state.liquidation_auctions.avl_storage)
                curr in
            assert (slice.burrow = burrow_address);
@@ -74,8 +75,8 @@ let is_burrow_done_with_liquidations (state: t) (burrow: Burrow.t) =
   match Burrow.oldest_liquidation_ptr burrow with
   | None -> true
   | Some ls ->
-    let root = Avl.find_root state.liquidation_auctions.avl_storage ls in
-    let outcome = Avl.root_data state.liquidation_auctions.avl_storage root in
+    let root = avl_find_root state.liquidation_auctions.avl_storage ls in
+    let outcome = avl_root_data state.liquidation_auctions.avl_storage root in
     Option.is_none outcome
 
 let find_burrow (state: t) (burrow_id: burrow_id) : Burrow.t =
@@ -160,7 +161,7 @@ let mint_kit (state:t) ~permission ~burrow_id ~kit =
     (* the permission should support minting kit. *)
     let (updated_burrow, minted) = Burrow.mint_kit state.parameters kit burrow in
     assert (kit = minted);
-    ( Kit.issue minted,
+    ( kit_issue minted,
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
        parameters =
@@ -191,8 +192,8 @@ let burn_kit (state:t) ~permission ~burrow_id ~kit =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
-  let kit = Kit.assert_valid_kit_token kit in
-  let kit, _ (* destroyed *) = Kit.read_kit kit in
+  let kit = assert_valid_kit_token kit in
+  let kit, _ (* destroyed *) = read_kit kit in
   if Burrow.allow_all_kit_burnings burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = Burrow.burn_kit state.parameters kit burrow in
@@ -329,7 +330,7 @@ let mark_for_liquidation (state:t) ~burrow_id =
       | Some older_ptr ->
         Mem.mem_update
           updated_liquidation_auctions.avl_storage
-          (Avl.ptr_of_leaf_ptr older_ptr) @@ fun older ->
+          (ptr_of_leaf_ptr older_ptr) @@ fun older ->
         match older with
         | Leaf l -> Leaf
                       { l with value = { l.value with younger = Some leaf_ptr; }; }
@@ -365,7 +366,7 @@ let update_immediate_neighbors state (leaf_ptr: LiquidationAuctionTypes.leaf_ptr
       { state with
         liquidation_auctions = { state.liquidation_auctions with
                                  avl_storage =
-                                   Avl.update_leaf
+                                   avl_update_leaf
                                      state.liquidation_auctions.avl_storage
                                      younger_ptr
                                      (fun younger ->
@@ -382,7 +383,7 @@ let update_immediate_neighbors state (leaf_ptr: LiquidationAuctionTypes.leaf_ptr
       { state with
         liquidation_auctions = { state.liquidation_auctions with
                                  avl_storage =
-                                   Avl.update_leaf
+                                   avl_update_leaf
                                      state.liquidation_auctions.avl_storage
                                      older_ptr
                                      (fun older ->
@@ -402,11 +403,11 @@ let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: Liquid
   if not (Permission.does_right_allow_cancelling_liquidations r) then
     failwith "InsufficientPermission"
   else
-    let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
+    let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
     if root <> state.liquidation_auctions.queued_slices
     then failwith "UnwarrantedCancellation"
     else
-      let leaf = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+      let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
       match Ligo.Big_map.find_opt leaf.burrow state.burrows with
       | None -> (failwith "invariant violation" : t)
@@ -416,7 +417,7 @@ let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: Liquid
         failwith "UnwarrantedCancellation"
       | Some _ ->
         let state =
-          let (new_storage, _) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+          let (new_storage, _) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
           { state with
             liquidation_auctions = {
               state.liquidation_auctions with
@@ -434,8 +435,8 @@ let cancel_liquidation_slice (state: t) ~permission ~burrow_id (leaf_ptr: Liquid
         state
 
 let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_ptr): t =
-  let root = Avl.find_root state.liquidation_auctions.avl_storage leaf_ptr in
-  match Avl.root_data state.liquidation_auctions.avl_storage root with
+  let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
+  match avl_root_data state.liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
   (* NOTE: Perhaps failing would be better than silently doing nothing here?
    * Not sure if there is any danger though. *)
@@ -443,7 +444,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
   (* If it belongs to a completed auction, we delete the slice *)
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
-    let leaf = Avl.read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+    let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
     (* How much kit should be given to the burrow and how much should be burned. *)
     (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
@@ -452,18 +453,18 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
      * small, must be dealt with (e.g. be removed from the circulating kit). *)
     let kit_to_repay, kit_to_burn =
       let corresponding_kit =
-        Kit.of_ratio_floor
+        kit_of_ratio_floor
           (mul_ratio
              (make_ratio (Common.tez_to_mutez leaf.tez) (Common.tez_to_mutez outcome.sold_tez))
-             (Kit.to_ratio outcome.winning_bid.kit)
+             (kit_to_ratio outcome.winning_bid.kit)
           ) in
       let penalty =
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          Kit.of_ratio_ceil (mul_ratio (Kit.to_ratio corresponding_kit) Constants.liquidation_penalty)
+          kit_of_ratio_ceil (mul_ratio (kit_to_ratio corresponding_kit) Constants.liquidation_penalty)
         else
-          Kit.zero
+          kit_zero
       in
-      (Kit.sub corresponding_kit penalty, penalty)
+      (kit_sub corresponding_kit penalty, penalty)
     in
 
     (* Burn the kit by removing it from circulation. *)
@@ -478,7 +479,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
      *
      * Deletion process also returns the tree root. *)
     let (state, auction) =
-      let (new_storage, auction) = Avl.del state.liquidation_auctions.avl_storage leaf_ptr in
+      let (new_storage, auction) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
       let new_state = { state with liquidation_auctions = { state.liquidation_auctions with avl_storage = new_storage }} in
       (new_state, auction) in
 
@@ -486,7 +487,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
      * delete the auction itself from the storage, since we still want the winner to be able
      * to claim its result. *)
     let state =
-      if Avl.is_empty state.liquidation_auctions.avl_storage auction then
+      if avl_is_empty state.liquidation_auctions.avl_storage auction then
         { state with
           liquidation_auctions = LiquidationAuction.pop_completed_auction state.liquidation_auctions auction;
         }
@@ -572,7 +573,7 @@ let buy_kit (state:t) ~min_kit_expected ~deadline =
 
 let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
   let state = touch_delegation_auction state in
-  let kit = Kit.assert_valid_kit_token kit in
+  let kit = assert_valid_kit_token kit in
   let (tez, updated_uniswap) = Uniswap.sell_kit state.uniswap ~amount:!Ligo.Tezos.amount kit ~min_tez_expected ~deadline in
   let tez_payment = Tez.{destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
@@ -581,7 +582,7 @@ let sell_kit (state:t) ~kit ~min_tez_expected ~deadline =
 let add_liquidity (state:t) ~max_kit_deposited ~min_lqt_minted ~deadline =
   let state = touch_delegation_auction state in
   let pending_accrual = Option.value (DelegationAuction.winning_amount state.delegation_auction) ~default:(Ligo.tez_from_literal "0mutez") in
-  let max_kit_deposited = Kit.assert_valid_kit_token max_kit_deposited in
+  let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
   let (tokens, leftover_kit, updated_uniswap) =
     Uniswap.add_liquidity state.uniswap ~amount:!Ligo.Tezos.amount ~pending_accrual ~max_kit_deposited ~min_lqt_minted ~deadline in
   (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
@@ -600,21 +601,28 @@ let remove_liquidity (state:t) ~lqt_burned ~min_tez_withdrawn ~min_kit_withdrawn
 
 let liquidation_auction_place_bid state ~kit =
   assert_no_tez_given ();
-  let kit = Kit.assert_valid_kit_token kit in
-  let kit, _ = Kit.read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
+  let kit = assert_valid_kit_token kit in
+  let kit, _ = read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
 
   let bid = LiquidationAuctionTypes.{ address=(!Ligo.Tezos.sender); kit=kit; } in
-  let (new_auctions, bid_ticket) =
-    LiquidationAuction.with_current_auction state.liquidation_auctions @@
-    fun auction -> LiquidationAuction.place_bid auction bid
-  in
-  (bid_ticket, {state with liquidation_auctions=new_auctions;})
+  let current_auction = LiquidationAuction.get_current_auction state.liquidation_auctions in
+
+  let (new_current_auction, bid_ticket) = LiquidationAuction.place_bid current_auction bid in
+
+  ( bid_ticket,
+    { state with
+      liquidation_auctions=
+        { state.liquidation_auctions with
+          current_auction = Some new_current_auction;
+        };
+    }
+  )
 
 let liquidation_auction_reclaim_bid state ~bid_ticket =
   assert_no_tez_given ();
   let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
   let kit = LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket in
-  Kit.issue kit (* TODO: should not issue; should change the auction logic instead! *)
+  kit_issue kit (* TODO: should not issue; should change the auction logic instead! *)
 
 let liquidation_auction_reclaim_winning_bid state ~bid_ticket =
   assert_no_tez_given ();
@@ -645,17 +653,17 @@ let calculate_touch_reward (state:t) : kit =
 
   let touch_low_reward = fixedpoint_of_ratio_ceil Constants.touch_low_reward in
   let touch_high_reward = fixedpoint_of_ratio_ceil Constants.touch_high_reward in
-  Kit.scale
-    Kit.one
+  kit_scale
+    kit_one
     (fixedpoint_add
        (fixedpoint_mul (fixedpoint_of_int low_duration) touch_low_reward)
        (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
-let touch (state:t) ~(index:Ligo.tez) : (Kit.token * t) =
+let touch (state:t) ~(index:Ligo.tez) : (kit_token * t) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    (Kit.issue Kit.zero, state)
+    (kit_issue kit_zero, state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
@@ -676,7 +684,7 @@ let touch (state:t) ~(index:Ligo.tez) : (Kit.token * t) =
       Parameters.touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-    let total_accrual_to_uniswap = Kit.issue total_accrual_to_uniswap in
+    let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in
     let updated_uniswap = Uniswap.add_accrued_kit state.uniswap total_accrual_to_uniswap in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)
@@ -713,4 +721,4 @@ let touch (state:t) ~(index:Ligo.tez) : (Kit.token * t) =
     assert_invariants state;
 
     (* TODO: Add more tasks here *)
-    (Kit.issue reward, state)
+    (kit_issue reward, state)

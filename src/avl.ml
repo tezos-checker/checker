@@ -160,7 +160,7 @@ let update_matching_child
  * a concept of a `Root` node.
  *)
 
-let mk_empty (mem: mem) (r: auction_outcome option): mem * avl_ptr =
+let avl_mk_empty (mem: mem) (r: auction_outcome option): mem * avl_ptr =
   let (mem, ptr) = mem_new mem (Root ((None: ptr option), r)) in
   (mem, AVLPtr ptr)
 
@@ -424,7 +424,7 @@ let ref_join
 
 (* ************************** *)
 
-let push_back
+let avl_push_back
     (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice)
   : mem * leaf_ptr =
   let root_ptr = match root_ptr with AVLPtr root_ptr -> root_ptr in
@@ -452,7 +452,7 @@ let push_back
  * is the order of parameters on 'join'. We should probably combine
  * these.
 *)
-let push_front
+let avl_push_front
     (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice)
   : mem * leaf_ptr =
   let (root, root_data) = deref_avl_ptr mem root_ptr in
@@ -516,19 +516,19 @@ let ref_del (mem: mem) (ptr: ptr): mem * avl_ptr =
         sibling_ptr in
     balance_bottom_up (mem, grandparent_ptr)
 
-let del (mem: mem) (ptr: leaf_ptr): mem * avl_ptr =
+let avl_del (mem: mem) (ptr: leaf_ptr): mem * avl_ptr =
   match ptr with LeafPtr ptr -> ref_del mem ptr
 
-let read_leaf (mem: mem) (ptr: leaf_ptr): liquidation_slice =
+let avl_read_leaf (mem: mem) (ptr: leaf_ptr): liquidation_slice =
   let l = deref_leaf_ptr mem ptr in
   l.value
 
-let update_leaf (mem: mem) (ptr: leaf_ptr) (f: liquidation_slice -> liquidation_slice): mem =
+let avl_update_leaf (mem: mem) (ptr: leaf_ptr) (f: liquidation_slice -> liquidation_slice): mem =
   let l = deref_leaf_ptr mem ptr in
   let ptr = match ptr with LeafPtr p -> p in
   mem_set mem ptr (Leaf { l with value = f l.value })
 
-let is_empty (mem: mem) (ptr: avl_ptr) : bool =
+let avl_is_empty (mem: mem) (ptr: avl_ptr) : bool =
   let (r, _) = deref_avl_ptr mem ptr in
   (match r with | None -> true | Some _ -> false)
 
@@ -545,11 +545,17 @@ let rec ref_delete_tree (mem: mem) (ptrs: ptr list): mem =
      | Root (Some p, _) -> ref_delete_tree mem (p :: ptrs)
      | Branch branch -> ref_delete_tree mem (branch.left :: branch.right :: ptrs))
 
-let delete_tree (mem: mem) (AVLPtr ptr): mem =
+let avl_delete_tree (mem: mem) (AVLPtr ptr): mem =
   ref_delete_tree mem [ptr]
 (* END_OCAML *)
 
-let find_root (mem: mem) (leaf: leaf_ptr) : avl_ptr =
+let avl_delete_empty_tree (mem: mem) (ptr: avl_ptr): mem =
+  let (r, _) = deref_avl_ptr mem ptr in
+  match r with
+  | Some _ -> (failwith "tree not empty": mem)
+  | None -> mem_del mem (ptr_of_avl_ptr ptr)
+
+let avl_find_root (mem: mem) (leaf: leaf_ptr) : avl_ptr =
   let leaf = match leaf with LeafPtr p -> p in
   let rec go (ptr: ptr) : avl_ptr =
     match mem_get mem ptr with
@@ -565,20 +571,20 @@ let rec ref_peek_front (mem, ptr: mem * ptr) : leaf_ptr * leaf =
   | Branch b -> ref_peek_front (mem, b.left)
   | Root _ -> (failwith "node is not leaf or branch" : leaf_ptr * leaf)
 
-let peek_front (mem: mem) (ptr: avl_ptr) : (leaf_ptr * leaf) option =
+let avl_peek_front (mem: mem) (ptr: avl_ptr) : (leaf_ptr * leaf) option =
   let (p, _) = deref_avl_ptr mem ptr in
   match p with
   | None -> (None: (leaf_ptr * leaf) option)
   | Some r -> Some (ref_peek_front (mem, r))
 
 (* FIXME: needs an efficient reimplementation *)
-let pop_front (mem: mem) (root_ptr: avl_ptr) : mem * liquidation_slice option =
+let avl_pop_front (mem: mem) (root_ptr: avl_ptr) : mem * liquidation_slice option =
   let (r, _) = deref_avl_ptr mem root_ptr in
   match r with
   | None -> (mem, (None: liquidation_slice option))
   | Some r ->
     let (leafptr, leaf) = ref_peek_front (mem, r) in
-    let (mem, _) = del mem leafptr in
+    let (mem, _) = avl_del mem leafptr in
     (mem, Some leaf.value)
 
 (* ************************** *)
@@ -690,7 +696,7 @@ let ref_split
 (* Split the longest prefix of the tree with less than
  * given amount of tez.
 *)
-let take (mem: mem) (root_ptr: avl_ptr) (limit: Ligo.tez) (root_data: auction_outcome option)
+let avl_take (mem: mem) (root_ptr: avl_ptr) (limit: Ligo.tez) (root_data: auction_outcome option)
   : mem * avl_ptr =
   let (r, old_root_data) = deref_avl_ptr mem root_ptr  in
   let root_ptr = match root_ptr with AVLPtr r -> r in
@@ -719,10 +725,10 @@ let avl_height (mem: mem) (ptr: avl_ptr): Ligo.int =
   | Some ptr -> node_height (mem_get mem ptr)
   | None -> Ligo.int_from_literal "0"
 
-let root_data (mem: mem) (ptr: avl_ptr) : auction_outcome option =
+let avl_root_data (mem: mem) (ptr: avl_ptr) : auction_outcome option =
   let (_, d) = deref_avl_ptr mem ptr in d
 
-let modify_root_data (mem: mem) (ptr: avl_ptr) (f: auction_outcome option -> auction_outcome option) =
+let avl_modify_root_data (mem: mem) (ptr: avl_ptr) (f: auction_outcome option -> auction_outcome option) =
   let (r, d) = deref_avl_ptr mem ptr in
   let ptr = match ptr with AVLPtr p -> p in
   mem_set mem ptr (Root (r, f d))
@@ -733,7 +739,7 @@ let modify_root_data (mem: mem) (ptr: avl_ptr) (f: auction_outcome option -> auc
 (* This is not going to be used in the final implementation, but it allows
  * testing some useful properties (mainly about `join` function).
 *)
-let append (mem: mem) (AVLPtr left_ptr) (AVLPtr right_ptr): mem =
+let avl_append (mem: mem) (AVLPtr left_ptr) (AVLPtr right_ptr): mem =
   let mem = match (mem_get mem left_ptr, mem_get mem right_ptr) with
     | (Root _, Root (None, _)) ->
       mem
@@ -757,7 +763,7 @@ let debug_mem (mem: mem) : unit =
     )
     (Ligo.Big_map.bindings mem.mem)
 
-let assert_invariants (mem: mem) (AVLPtr root) : unit =
+let avl_assert_invariants (mem: mem) (AVLPtr root) : unit =
   let rec go (parent: ptr) (curr: ptr) =
     match mem_get mem curr with
     | Root _ ->
@@ -780,8 +786,8 @@ let assert_invariants (mem: mem) (AVLPtr root) : unit =
   | Root (Some r, _) -> go root r
   | _ -> (failwith "assert_invariants needs a root." : unit)
 
-let assert_dangling_pointers (mem: mem) (roots: avl_ptr list) : unit =
-  let mem = List.fold_left delete_tree mem roots in
+let avl_assert_dangling_pointers (mem: mem) (roots: avl_ptr list) : unit =
+  let mem = List.fold_left avl_delete_tree mem roots in
   assert (List.length (Ligo.Big_map.bindings mem.mem) = 0)
 
 (* END_OCAML *)

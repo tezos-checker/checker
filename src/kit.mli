@@ -3,44 +3,45 @@ open FixedPoint
 type kit
 
 (* Basic operations. *)
-val add : kit -> kit -> kit
-val sub : kit -> kit -> kit
-val scale : kit -> fixedpoint -> kit
+val kit_add : kit -> kit -> kit
+val kit_sub : kit -> kit -> kit
+val kit_scale : kit -> fixedpoint -> kit
 
-val min : kit -> kit -> kit
-val max : kit -> kit -> kit
+val kit_min : kit -> kit -> kit
+val kit_max : kit -> kit -> kit
 
-val zero : kit
-val one : kit
+val kit_zero : kit
+val kit_one : kit
 
 (* Conversions to/from other types. *)
-val of_mukit : Ligo.int -> kit
-val to_mukit : kit -> Ligo.int
-val to_ratio : kit -> Ratio.ratio
-val of_ratio_ceil : Ratio.ratio -> kit
-val of_ratio_floor : Ratio.ratio -> kit
+val kit_of_mukit : Ligo.int -> kit
+val kit_to_mukit : kit -> Ligo.int
+val kit_to_ratio : kit -> Ratio.ratio
+val kit_of_ratio_ceil : Ratio.ratio -> kit
+val kit_of_ratio_floor : Ratio.ratio -> kit
 
 (* Kit are really tickets. *)
 type kit_token_content = Kit
-type token = kit_token_content Ligo.ticket
+type kit_token = kit_token_content Ligo.ticket
 
-val issue : kit -> token
+val kit_issue : kit -> kit_token
 
-val assert_valid_kit_token : token -> token
+val assert_valid_kit_token : kit_token -> kit_token
 
 (* George: I really didn'kit want to have these here, but the clutter without
  * them was unbearable. They should be inlined, eventually. *)
-val read_kit : token -> kit * token
-val split_or_fail : token -> kit -> kit -> token * token
-val join_or_fail : token -> token -> token
+val read_kit : kit_token -> kit * kit_token
+val kit_split_or_fail : kit_token -> kit -> kit -> kit_token * kit_token
+val kit_join_or_fail : kit_token -> kit_token -> kit_token
 
 (* BEGIN_OCAML *)
-val compare : kit -> kit -> int
+val kit_compare : kit -> kit -> int
 
 val pp : Format.formatter -> kit -> unit
 val pp_kit : Format.formatter -> kit -> unit
 val show : kit -> string
+val show_kit : kit -> string
 
-val pp_token : Format.formatter -> token -> unit
-val show_token : token -> string
+val pp_kit_token : Format.formatter -> kit_token -> unit
+val show_kit_token : kit_token -> string
 (* END_OCAML *)

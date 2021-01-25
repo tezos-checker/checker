@@ -23,7 +23,7 @@ val initial_checker : t
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : t -> index:Ligo.tez -> (Kit.token * t)
+val touch : t -> index:Ligo.tez -> (kit_token * t)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -58,7 +58,7 @@ val mint_kit :
   permission:Permission.t ->
   burrow_id:burrow_id ->
   kit:kit ->
-  (Kit.token * t)
+  (kit_token * t)
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is
   * excess kit, simply store it into the burrow. Fail if the burrow does not
@@ -68,7 +68,7 @@ val burn_kit :
   t ->
   permission:(Permission.t option) ->
   burrow_id:burrow_id ->
-  kit:Kit.token ->
+  kit:kit_token ->
   t
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
@@ -153,13 +153,13 @@ val buy_kit :
   t ->
   min_kit_expected:kit ->
   deadline:Ligo.timestamp ->
-  (Kit.token * t)
+  (kit_token * t)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
 val sell_kit :
   t ->
-  kit:Kit.token ->
+  kit:kit_token ->
   min_tez_expected:Ligo.tez ->
   deadline:Ligo.timestamp ->
   (Tez.payment * t)
@@ -171,10 +171,10 @@ val sell_kit :
   * the liquidity tokens. *)
 val add_liquidity :
   t ->
-  max_kit_deposited:Kit.token ->
+  max_kit_deposited:kit_token ->
   min_lqt_minted:Ligo.nat ->
   deadline:Ligo.timestamp ->
-  (Uniswap.liquidity * Kit.token * t)
+  (Uniswap.liquidity * kit_token * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
@@ -184,7 +184,7 @@ val remove_liquidity :
   min_tez_withdrawn:Ligo.tez ->
   min_kit_withdrawn:kit ->
   deadline:Ligo.timestamp ->
-  (Tez.payment * Kit.token * t)
+  (Tez.payment * kit_token * t)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -195,14 +195,14 @@ val remove_liquidity :
   * reclaim the kit when outbid. *)
 val liquidation_auction_place_bid :
   t ->
-  kit:Kit.token ->
+  kit:kit_token ->
   (LiquidationAuction.bid_ticket * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_bid :
   t ->
   bid_ticket:LiquidationAuction.bid_ticket ->
-  Kit.token
+  kit_token
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_winning_bid :

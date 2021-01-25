@@ -2,6 +2,7 @@ open OUnit2
 open TestCommon
 open Ratio
 open FixedPoint
+open Kit
 
 (*
 Parameter-related things we might want to add tests for:
@@ -121,8 +122,8 @@ let test_compute_drift_derivative_high_negative_acceleration =
 
 let test_compute_imbalance_all_zero =
   "test_compute_imbalance_all_zero" >:: fun _ ->
-    let burrowed    = Kit.zero in
-    let circulating = Kit.zero in
+    let burrowed    = kit_zero in
+    let circulating = kit_zero in
     assert_equal
       ~printer:show_ratio
       zero_ratio
@@ -130,8 +131,8 @@ let test_compute_imbalance_all_zero =
 
 let test_compute_imbalance_zero_burrowed =
   "test_compute_imbalance_zero_burrowed" >:: fun _ ->
-    let burrowed    = Kit.zero in
-    let circulating = Kit.one in
+    let burrowed    = kit_zero in
+    let circulating = kit_one in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
@@ -139,8 +140,8 @@ let test_compute_imbalance_zero_burrowed =
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
       ~printer:show_ratio
       zero_ratio
@@ -148,8 +149,8 @@ let test_compute_imbalance_equal =
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal   "800_000_001") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal   "800_000_001") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
@@ -157,8 +158,8 @@ let test_compute_imbalance_positive_small =
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal   "800_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal   "800_000_000") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
@@ -166,8 +167,8 @@ let test_compute_imbalance_positive_big =
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal             "1") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal             "1") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
@@ -175,8 +176,8 @@ let test_compute_imbalance_positive_capped =
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal   "833_333_334") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal   "833_333_334") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
@@ -184,8 +185,8 @@ let test_compute_imbalance_negative_small =
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal   "833_333_333") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal   "833_333_333") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
@@ -193,8 +194,8 @@ let test_compute_imbalance_negative_big =
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
-    let burrowed    = Kit.of_mukit (Ligo.int_from_literal             "1") in
-    let circulating = Kit.of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.int_from_literal             "1") in
+    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
@@ -241,7 +242,7 @@ let test_imbalance_sign_preservation =
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
   sign_ratio (Parameters.compute_imbalance ~burrowed ~circulating)
-  = sign_ratio (Kit.to_ratio (Kit.sub burrowed circulating))
+  = sign_ratio (kit_to_ratio (kit_sub burrowed circulating))
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =
@@ -268,7 +269,7 @@ let test_imbalance_positive_tendencies =
    * (compute_imbalance burrowed1 circulating) >= (compute_imbalance burrowed2 circulating) *)
   let (circulating, burrowed2, burrowed1) = (
     (* Just using sorting, to avoid expensive assume-conditionals. *)
-    match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+    match List.stable_sort kit_compare [kit1;kit2;kit3;] with
     | [circulating; burrowed2; burrowed1] -> (circulating, burrowed2, burrowed1)
     | _ -> failwith "impossible"
   ) in
@@ -289,7 +290,7 @@ let test_imbalance_negative_tendencies =
    * (compute_imbalance burrowed circulating1) <= (compute_imbalance burrowed circulating2) *)
   let (burrowed, circulating2, circulating1) = (
     (* Just using sorting, to avoid expensive assume-conditionals. *)
-    match List.stable_sort Kit.compare [kit1;kit2;kit3;] with
+    match List.stable_sort kit_compare [kit1;kit2;kit3;] with
     | [burrowed; circulating2; circulating1] -> (burrowed, circulating2, circulating1)
     | _ -> failwith "impossible"
   ) in
@@ -565,8 +566,8 @@ let test_touch =
         drift_derivative = fixedpoint_zero;
         burrow_fee_index = fixedpoint_one;
         imbalance_index = fixedpoint_one;
-        outstanding_kit = Kit.one;
-        circulating_kit = Kit.zero;
+        outstanding_kit = kit_one;
+        circulating_kit = kit_zero;
         last_touched = Ligo.timestamp_from_seconds_literal 0;
       } in
     Ligo.Tezos.reset ();
@@ -584,16 +585,16 @@ let test_touch =
         drift  = fixedpoint_of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
         burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
         imbalance_index = fixedpoint_of_hex_string "1.00005FB2608FF99D"; (* 1.000005703972931226 *)
-        outstanding_kit = Kit.of_mukit (Ligo.int_from_literal "1_000_005");
-        circulating_kit = Kit.of_mukit (Ligo.int_from_literal "0_000_000"); (* NOTE that it ends up being identical to the one we started with *)
+        outstanding_kit = kit_of_mukit (Ligo.int_from_literal "1_000_005");
+        circulating_kit = kit_of_mukit (Ligo.int_from_literal "0_000_000"); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = !Ligo.Tezos.now;
       }
       new_parameters
       ~printer:Parameters.show;
     assert_equal
-      Kit.zero (* NOTE: I'd expect this to be higher I think. *)
+      kit_zero (* NOTE: I'd expect this to be higher I think. *)
       total_accrual_to_uniswap
-      ~printer:Kit.show
+      ~printer:show_kit
 
 let suite =
   "Parameters tests" >::: [
