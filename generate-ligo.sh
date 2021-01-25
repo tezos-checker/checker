@@ -15,6 +15,7 @@ inputs=(
   ratio
   fixedPoint
   kit
+  constants
 )
 
 for name in "${inputs[@]}"; do
