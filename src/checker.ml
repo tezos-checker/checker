@@ -683,7 +683,7 @@ let touch (state:t) ~(index:Ligo.tez) : (kit_token * t) =
 
     (* 2: Update the system parameters *)
     let total_accrual_to_uniswap, updated_parameters =
-      touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
+      parameters_touch index (Uniswap.kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
     let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in

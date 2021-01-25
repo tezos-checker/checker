@@ -176,7 +176,7 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
   * sub-contract. *)
-let touch
+let parameters_touch
     (current_index: Ligo.tez)
     (current_kit_in_tez: ratio)
     (parameters: parameters)
