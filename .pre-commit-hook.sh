@@ -18,6 +18,6 @@ while read fname; do
 done < <(echo "$relevant_files")
 
 if [[ $has_error = true ]]; then
-  echo "Found files with incorrect indentation. Please run 'make indent' under 'src/'." >&2
+  echo "Found files with incorrect indentation. Please run 'make indent'." >&2
   exit 1
 fi
