@@ -98,7 +98,7 @@ let permutations (xs: 't list): ('t list) Stream.t =
     then (
       if c.(!i) < !i
       then (
-        (if !i mod 2 == 0
+        (if !i mod 2 = 0
          then swap 0 !i
          else swap c.(!i) !i);
         c.(!i) <- c.(!i) + 1;
@@ -112,7 +112,7 @@ let permutations (xs: 't list): ('t list) Stream.t =
     ) else None in
 
   Stream.from (fun _ ->
-      if !i == -1
+      if !i = -1
       then (i := 0; Some (Array.to_list a))
       else loop ())
 

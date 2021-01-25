@@ -39,7 +39,8 @@ let empty = {
 
 let cycle (t: t) : Ligo.nat = t.cycle
 
-let winning_amount (t: t) = match t.winner with
+let winning_amount (t: t) : Ligo.tez option =
+  match t.winner with
   | None -> (None: Ligo.tez option)
   | Some bid -> Some bid.amount
 
