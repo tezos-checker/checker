@@ -4,6 +4,7 @@ open Permission
 open Parameters
 open Uniswap
 open Burrow
+open DelegationAuction
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
@@ -20,7 +21,7 @@ type t =
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
-    delegation_auction : DelegationAuction.t;
+    delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
   }
 
@@ -164,10 +165,10 @@ val liquidation_auction_reclaim_winning_bid : t -> LiquidationAuction.bid_ticket
   * too low. If successful, return a token which can be used to either
   * reclaim the tez when outbid, or claim the auction result. *)
 val delegation_auction_place_bid :
-  t -> Ligo.key_hash -> (DelegationAuction.bid_ticket * Ligo.operation list * t)
+  t -> Ligo.key_hash -> (delegation_auction_bid_ticket * Ligo.operation list * t)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val delegation_auction_claim_win : t -> DelegationAuction.bid_ticket -> (Ligo.operation list * t)
+val delegation_auction_claim_win : t -> delegation_auction_bid_ticket -> (Ligo.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val delegation_auction_reclaim_bid : t -> DelegationAuction.bid_ticket -> tez_payment * Ligo.operation list * t
+val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> tez_payment * Ligo.operation list * t

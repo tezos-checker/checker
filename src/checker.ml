@@ -7,6 +7,7 @@ open Permission
 open Parameters
 open Uniswap
 open Burrow
+open DelegationAuction
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
@@ -23,7 +24,7 @@ type t =
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
-    delegation_auction : DelegationAuction.t;
+    delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
   }
 
@@ -32,7 +33,7 @@ let initial_checker =
     uniswap = uniswap_make_initial;
     parameters = initial_parameters;
     liquidation_auctions = LiquidationAuction.empty;
-    delegation_auction = DelegationAuction.empty;
+    delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
   }
 
@@ -546,14 +547,14 @@ let updated_delegation_auction state new_auction=
   (* When we move to a new cycle, we accrue the amount that won delegation for
      the previous cycle to uniswap. *)
   let accrued_tez =
-    if DelegationAuction.cycle prev_auction <> DelegationAuction.cycle new_auction then
-      match DelegationAuction.winning_amount prev_auction with
+    if delegation_auction_cycle prev_auction <> delegation_auction_cycle new_auction then
+      match delegation_auction_winning_amount prev_auction with
       | None -> Ligo.tez_from_literal "0mutez"
       | Some tez -> tez
     else
       Ligo.tez_from_literal "0mutez"
   in
-  let new_delegate = DelegationAuction.delegate new_auction in
+  let new_delegate = delegation_auction_delegate new_auction in
 
   let ops = if state.delegate = new_delegate then
       []
@@ -563,13 +564,13 @@ let updated_delegation_auction state new_auction=
 
    { state with
      delegation_auction = new_auction;
-     delegate = DelegationAuction.delegate new_auction;
+     delegate = delegation_auction_delegate new_auction;
      uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
    })
 
 let delegation_auction_place_bid (state: t) (for_delegate: Ligo.key_hash) =
   let ticket, auction =
-    DelegationAuction.place_bid
+    delegation_auction_place_bid
       state.delegation_auction
       !Ligo.Tezos.sender
       !Ligo.Tezos.amount
@@ -579,19 +580,19 @@ let delegation_auction_place_bid (state: t) (for_delegate: Ligo.key_hash) =
   in
   (ticket, ops, new_state)
 
-let delegation_auction_claim_win (state: t) (bid_ticket: DelegationAuction.bid_ticket) : (Ligo.operation list * t) =
-  let auction = DelegationAuction.claim_win state.delegation_auction bid_ticket in
+let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) : (Ligo.operation list * t) =
+  let auction = delegation_auction_claim_win state.delegation_auction bid_ticket in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: t) (bid_ticket: DelegationAuction.bid_ticket) : tez_payment * Ligo.operation list * t =
+let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : tez_payment * Ligo.operation list * t =
   assert_no_tez_given ();
-  let tez, auction = DelegationAuction.reclaim_bid state.delegation_auction bid_ticket in
+  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
   let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez} in
   let ops, new_auction = updated_delegation_auction state auction in
   (tez_payment, ops, new_auction)
 
 let touch_delegation_auction state =
-  updated_delegation_auction state (DelegationAuction.touch state.delegation_auction)
+  updated_delegation_auction state (delegation_auction_touch state.delegation_auction)
 
 (* ************************************************************************* *)
 (**                                UNISWAP                                   *)
@@ -612,7 +613,7 @@ let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline:
 
 let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * Ligo.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
-  let pending_accrual = match DelegationAuction.winning_amount state.delegation_auction with
+  let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in

@@ -1,24 +1,24 @@
-type bid_ticket
+type delegation_auction_bid_ticket
 
-type t
+type delegation_auction
 
-val empty : t
+val delegation_auction_empty : delegation_auction
 
-val touch : t -> t
+val delegation_auction_touch : delegation_auction -> delegation_auction
 
 (** Retrieve the delegate for this cycle *)
-val delegate : t -> Ligo.key_hash option
+val delegation_auction_delegate : delegation_auction -> Ligo.key_hash option
 
-val cycle : t -> Ligo.nat
+val delegation_auction_cycle : delegation_auction -> Ligo.nat
 
-val winning_amount : t -> Ligo.tez option
+val delegation_auction_winning_amount : delegation_auction -> Ligo.tez option
 
 (* TODO: can we bid to nominate someone else as a baker? *)
-val place_bid : t -> Ligo.address -> Ligo.tez -> Ligo.key_hash -> bid_ticket * t
+val delegation_auction_place_bid : delegation_auction -> Ligo.address -> Ligo.tez -> Ligo.key_hash -> delegation_auction_bid_ticket * delegation_auction
 
-val claim_win : t -> bid_ticket -> t
+val delegation_auction_claim_win : delegation_auction -> delegation_auction_bid_ticket -> delegation_auction
 
-val reclaim_bid : t -> bid_ticket -> Ligo.tez * t
+val delegation_auction_reclaim_bid : delegation_auction -> delegation_auction_bid_ticket -> Ligo.tez * delegation_auction
 
-val show : t -> string
-val pp : Format.formatter -> t -> unit
+val show_delegation_auction : delegation_auction -> string
+val pp_delegation_auction : Format.formatter -> delegation_auction -> unit
