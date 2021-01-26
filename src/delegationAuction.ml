@@ -1,6 +1,6 @@
 open Common
 
-type delegation_auction_bid = { bidder: Ligo.address; for_delegate: Ligo.key_hash; cycle: Ligo.nat; amount: Ligo.tez }
+type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
 
 type delegation_auction_bid_ticket = delegation_auction_bid Ligo.ticket
@@ -63,7 +63,7 @@ let delegation_auction_touch (t: delegation_auction) =
 
 let delegation_auction_delegate (t: delegation_auction) = t.delegate
 
-let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.address) (amt: Ligo.tez) (for_delegate: Ligo.key_hash) =
+let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.address) (amt: Ligo.tez) =
   let t = delegation_auction_touch t in
   let _ = match t.leading_bid with
     | Some current ->
@@ -72,7 +72,7 @@ let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.a
       else ()
     | None -> () in
   (* Either there is no bid or this is the highest *)
-  let bid = {bidder=sender_address; cycle=t.cycle; amount=amt; for_delegate=for_delegate} in
+  let bid = {bidder=sender_address; cycle=t.cycle; amount=amt} in
   let ticket = issue_delegation_auction_bid_ticket bid in
   (ticket, {t with leading_bid = Some bid;})
 
@@ -80,18 +80,17 @@ let same_delegation_auction_bid (t1: delegation_auction_bid option) (t2: delegat
   match t1 with
   | None -> false
   | Some t1 ->
-    let { bidder=b1; cycle=c1; amount=a1; for_delegate=d1 } = t1 in
-    let { bidder=b2; cycle=c2; amount=a2; for_delegate=d2 } = t2 in
-    b1 = b2 && c1 = c2 && a1 = a2 && d1 = d2
+    let { bidder=b1; cycle=c1; amount=a1 } = t1 in
+    let { bidder=b2; cycle=c2; amount=a2 } = t2 in
+    b1 = b2 && c1 = c2 && a1 = a2
 
 (* If successful, it consumes the ticket. *)
-(* TODO: allow winner to nominate a different address as the delegate? *)
-let delegation_auction_claim_win (t: delegation_auction) (bid_ticket: delegation_auction_bid_ticket) =
+let delegation_auction_claim_win (t: delegation_auction) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) =
   let t = delegation_auction_touch t in
   let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
   let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if same_delegation_auction_bid t.winner bid
-  then { t with delegate = Some bid.for_delegate }
+  then { t with delegate = Some for_delegate }
   else (failwith "NotAWinningBid": delegation_auction)
 
 (* If successful, it consumes the ticket. *)

@@ -140,7 +140,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let touch_reward, ops, checker =
+       let touch_reward, _ops, checker =
          Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        assert_bool "auction should be completed"
@@ -189,13 +189,13 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker charles_key_hash in
+       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
 
        assert_equal [] ops;
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.delegation_auction_claim_win checker ticket in
+           let _checker = Checker.delegation_auction_claim_win checker ticket charles_key_hash in
            ());
     );
 
@@ -204,13 +204,13 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker charles_key_hash in
+       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
 
        assert_equal [] ops;
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.delegation_auction_claim_win checker ticket in
+           let _checker = Checker.delegation_auction_claim_win checker ticket charles_key_hash in
            ());
     );
 
@@ -219,12 +219,12 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker charles_key_hash in
+       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
 
        assert_equal [] ops;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _checker = Checker.delegation_auction_claim_win checker ticket in
+       let ops, _checker = Checker.delegation_auction_claim_win checker ticket  charles_key_hash in
        assert_equal [Ligo.SetDelegate (Some charles_key_hash)] ops;
     );
   ]

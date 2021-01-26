@@ -569,20 +569,19 @@ let updated_delegation_auction state new_auction=
      uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
    })
 
-let delegation_auction_place_bid (state: t) (for_delegate: Ligo.key_hash) =
+let delegation_auction_place_bid (state: t) =
   let ticket, auction =
     delegation_auction_place_bid
       state.delegation_auction
       !Ligo.Tezos.sender
       !Ligo.Tezos.amount
-      for_delegate
   in
   let (ops, new_state) = updated_delegation_auction state auction
   in
   (ticket, ops, new_state)
 
-let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) : (Ligo.operation list * t) =
-  let auction = delegation_auction_claim_win state.delegation_auction bid_ticket in
+let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (Ligo.operation list * t) =
+  let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
   updated_delegation_auction state auction
 
 let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : tez_payment * Ligo.operation list * t =
