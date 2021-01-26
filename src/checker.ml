@@ -8,6 +8,7 @@ open Parameters
 open Uniswap
 open Burrow
 open DelegationAuction
+open LiquidationAuction
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
@@ -23,7 +24,7 @@ type t =
   { burrows : (ptr, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
-    liquidation_auctions : LiquidationAuction.auctions;
+    liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
   }
@@ -32,7 +33,7 @@ let initial_checker =
   { burrows = Ligo.Big_map.empty;
     uniswap = uniswap_make_initial;
     parameters = initial_parameters;
-    liquidation_auctions = LiquidationAuction.empty;
+    liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
   }
@@ -43,7 +44,7 @@ let mk_burrow_id () : burrow_id =
 
 let assert_invariants (state: t) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
-  LiquidationAuction.assert_invariants state.liquidation_auctions;
+  liquidation_auction_assert_invariants state.liquidation_auctions;
   (* Per-burrow assertions *)
   List.iter
     (fun (burrow_address, burrow) ->
@@ -329,7 +330,7 @@ let mark_for_liquidation (state: t) (burrow_id: burrow_id) : (tez_payment * t) =
       younger = None;
     } in
   let (updated_liquidation_auctions, leaf_ptr) =
-    LiquidationAuction.send_to_auction state.liquidation_auctions liquidation_slice in
+    liquidation_auction_send_to_auction state.liquidation_auctions liquidation_slice in
 
   (* Fixup the previous youngest pointer since the newly added slice
    * is even younger.
@@ -505,7 +506,7 @@ let touch_liquidation_slice (state: t) (leaf_ptr: LiquidationAuctionTypes.leaf_p
     let state =
       if avl_is_empty state.liquidation_auctions.avl_storage auction then
         { state with
-          liquidation_auctions = LiquidationAuction.pop_completed_auction state.liquidation_auctions auction;
+          liquidation_auctions = liquidation_auction_pop_completed_auction state.liquidation_auctions auction;
         }
       else state in
 
@@ -633,15 +634,15 @@ let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-let liquidation_auction_place_bid (state: t) (kit: kit_token) : LiquidationAuction.bid_ticket * t =
+let liquidation_auction_place_bid (state: t) (kit: kit_token) : liquidation_auction_bid_ticket * t =
   assert_no_tez_given ();
   let kit = assert_valid_kit_token kit in
   let kit, _ = read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
 
   let bid = LiquidationAuctionTypes.{ address=(!Ligo.Tezos.sender); kit=kit; } in
-  let current_auction = LiquidationAuction.get_current_auction state.liquidation_auctions in
+  let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
-  let (new_current_auction, bid_ticket) = LiquidationAuction.place_bid current_auction bid in
+  let (new_current_auction, bid_ticket) = liquidation_auction_place_bid current_auction bid in
 
   ( bid_ticket,
     { state with
@@ -652,16 +653,16 @@ let liquidation_auction_place_bid (state: t) (kit: kit_token) : LiquidationAucti
     }
   )
 
-let liquidation_auction_reclaim_bid (state: t) (bid_ticket: LiquidationAuction.bid_ticket) : kit_token =
+let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : kit_token =
   assert_no_tez_given ();
-  let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
-  let kit = LiquidationAuction.reclaim_bid state.liquidation_auctions bid_ticket in
+  let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
+  let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_ticket in
   kit_issue kit (* TODO: should not issue; should change the auction logic instead! *)
 
-let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: LiquidationAuction.bid_ticket) : tez_payment * t =
+let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : tez_payment * t =
   assert_no_tez_given ();
-  let bid_ticket = LiquidationAuction.assert_valid_bid_ticket bid_ticket in
-  let (tez, liquidation_auctions) = LiquidationAuction.reclaim_winning_bid state.liquidation_auctions bid_ticket in
+  let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
+  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_ticket in
   let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   (tez_payment, {state with liquidation_auctions })
 
@@ -723,7 +724,7 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * Ligo.operation list * t) =
 
     (* 5: Update auction-related info (e.g. start a new auction) *)
     let updated_liquidation_auctions =
-      LiquidationAuction.touch
+      liquidation_auction_touch
         state.liquidation_auctions
         (* Start the auction using the current liquidation price. We could
          * also have calculated the price right now directly using the oracle
@@ -746,7 +747,7 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * Ligo.operation list * t) =
     let rec touch_oldest (maximum: int) (st: t) : t =
       if maximum <= 0 then st
       else
-        match LiquidationAuction.oldest_completed_liquidation_slice st.liquidation_auctions with
+        match liquidation_auction_oldest_completed_liquidation_slice st.liquidation_auctions with
         | None -> st
         | Some leaf -> touch_oldest (maximum - 1) (touch_liquidation_slice st leaf) in
 

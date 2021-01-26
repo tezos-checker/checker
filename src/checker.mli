@@ -5,6 +5,7 @@ open Parameters
 open Uniswap
 open Burrow
 open DelegationAuction
+open LiquidationAuction
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
@@ -20,7 +21,7 @@ type t =
   { burrows : (ptr, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
-    liquidation_auctions : LiquidationAuction.auctions;
+    liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
   }
@@ -145,17 +146,17 @@ val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (t
 (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a ticket which can be used to
   * reclaim the kit when outbid. *)
-val liquidation_auction_place_bid : t -> kit_token -> (LiquidationAuction.bid_ticket * t)
+val liquidation_auction_place_bid : t -> kit_token -> (liquidation_auction_bid_ticket * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_bid : t -> LiquidationAuction.bid_ticket -> kit_token
+val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_winning_bid : t -> LiquidationAuction.bid_ticket -> (tez_payment * t)
+val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticket -> (tez_payment * t)
 
 (* (\** Increase a failed bid for the current auction. *\)
- * val increase_bid : t -> address:Ligo.address -> increase:kit -> bid_ticket:LiquidationAuction.bid_ticket
- *   -> LiquidationAuction.bid_ticket *)
+ * val increase_bid : t -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
+ *   -> liquidation_auction_bid_ticket *)
 
 (* ************************************************************************* *)
 (**                          DELEGATION AUCTIONS                             *)
