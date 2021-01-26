@@ -1,3 +1,9 @@
+(* This file mimics the various Ligo libraries, and will not be
+   included in the Ligo output.
+
+   https://ligolang.org/docs/reference/current-reference/
+*)
+
 (* big_map's have two type parameters, but the ocaml's map type only has one (just for the value,
    the key is a parameter to the Map.Make module). Below is the shortest way I was able to think of
    to have an associative array with two type parameters. We abuse the polymorphic 'Hashtbl.hash :: 'a -> int'
@@ -66,19 +72,15 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
 (* key_hash *)
 
 type key_hash = string
-(* BEGIN_OCAML *)
 let pp_key_hash = Format.pp_print_string
-(* END_OCAML *)
 let key_hash_from_literal s = s
 
 (* address *)
 
 type address = string
 
-(* BEGIN_OCAML *)
 let string_of_address s = s
 let pp_address = Format.pp_print_string
-(* END_OCAML *)
 
 let address_from_literal s = s
 
@@ -122,10 +124,8 @@ let of_string_base_int = Z.of_string_base
 
 type nat = Z.t
 
-(* BEGIN_OCAML *)
 let string_of_nat = Z.to_string
 let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
-(* END_OCAML *)
 
 let add_nat_nat = Z.add
 
@@ -279,7 +279,6 @@ module Tezos = struct
 end
 let tezos_level: nat ref = Tezos.level
 
-(* BEGIN_OCAML *)
 let string_of_int = Z.to_string
 let string_of_tez x = Z.to_string x ^ "mutez"
 let string_of_timestamp = Z.to_string
@@ -290,4 +289,3 @@ let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
 
 let format_int = Z.format
 let div_rem_int_int = Z.div_rem
-(* END_OCAML *)
