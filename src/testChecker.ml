@@ -183,4 +183,15 @@ let suite =
          tez_from_bid
          ~printer:Checker.show_tez_payment;
     );
+
+    ("Can claim delegation after winning delegation auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = Checker.initial_checker in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let ticket, checker = Checker.delegation_auction_place_bid checker in
+       Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _checker = Checker.delegation_auction_claim_win checker ticket in
+       ();
+    );
   ]
