@@ -63,6 +63,14 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
       Z.of_string prefix
   with exc -> raise (Invalid_argument ("parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix ^ ", input = " ^ s ^ ") " ^ Printexc.to_string exc))
 
+(* key_hash *)
+
+type key_hash = string
+(* BEGIN_OCAML *)
+let pp_key_hash = Format.pp_print_string
+(* END_OCAML *)
+let key_hash_from_literal s = s
+
 (* address *)
 
 type address = string
@@ -211,6 +219,10 @@ let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
 
+(* operation *)
+
+type operation = SetDelegate of key_hash option
+
 (* tickets *)
 
 type 'a ticket =
@@ -262,6 +274,8 @@ module Tezos = struct
     level := Z.(!level + Z.of_int blocks_passed);
     sender := address_;
     amount := amount_
+
+  let set_delegate hash_option = SetDelegate hash_option
 end
 let tezos_level: nat ref = Tezos.level
 

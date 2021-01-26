@@ -6,6 +6,7 @@ let checker_amount = Ligo.tez_from_literal "0mutez"
 let checker_sender = Ligo.address_from_literal "somebody"
 
 type address_option = Ligo.address option [@@deriving show]
+type key_hash_option = Ligo.key_hash option [@@deriving show]
 
 let suite =
   "Delegation auction tests" >::: [
@@ -14,7 +15,7 @@ let suite =
        Ligo.Tezos.reset ();
        let auction = DelegationAuction.empty in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option
+       assert_equal None delegate ~printer:show_key_hash_option
     );
 
     ("test single bidder" >::
@@ -22,11 +23,12 @@ let suite =
        Ligo.Tezos.reset ();
        let auction = DelegationAuction.empty in
        let bidder = Ligo.address_from_literal "5678" in
+       let for_delegate = Ligo.key_hash_from_literal "sdfasdfasdf" in
        let amount = Ligo.tez_from_literal "1mutez" in
-       let (ticket, auction) = DelegationAuction.place_bid auction bidder amount in
+       let (ticket, auction) = DelegationAuction.place_bid auction bidder amount for_delegate in
        (* New bidder does not immediately become the delegate and cannot claim the win *)
        let (delegate) = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option;
+       assert_equal None delegate ~printer:show_key_hash_option;
 
        assert_raises
          (Failure "CannotReclaimLeadingBid")
@@ -40,7 +42,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option;
+       assert_equal None delegate ~printer:show_key_hash_option;
 
        assert_raises
          (Failure "CannotReclaimLeadingBid")
@@ -54,19 +56,19 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option;
+       assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
          (Failure "CannotReclaimWinningBid")
          (fun () -> DelegationAuction.reclaim_bid auction ticket);
        let auction = DelegationAuction.claim_win auction ticket in
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal (Some bidder) delegate ~printer:show_address_option;
+       assert_equal (Some for_delegate) delegate ~printer:show_key_hash_option;
        (* And in the subsequent cycle they cease to be the delegate again *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option;
+       assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
          (Failure "BidTicketExpired")
          (fun () -> DelegationAuction.reclaim_bid auction ticket);
@@ -84,18 +86,22 @@ let suite =
        let bidder2 = Ligo.address_from_literal "2222" in
        let bidder3 = Ligo.address_from_literal "3333" in
        let bidder4 = Ligo.address_from_literal "4444" in
+       let for_delegate1 = Ligo.key_hash_from_literal "delegate1111" in
+       let for_delegate2 = Ligo.key_hash_from_literal "delegate2222" in
+       let for_delegate3 = Ligo.key_hash_from_literal "delegate3333" in
+       let for_delegate4 = Ligo.key_hash_from_literal "delegate4444" in
        let amount1 = Ligo.tez_from_literal "1mutez" in
        let amount2 = Ligo.tez_from_literal "2mutez" in
        let amount3 = Ligo.tez_from_literal "3mutez" in
        let amount4 = Ligo.tez_from_literal "4mutez" in
-       let (ticket1, auction) = DelegationAuction.place_bid auction bidder1 amount1 in
+       let (ticket1, auction) = DelegationAuction.place_bid auction bidder1 amount1 for_delegate1 in
        assert_raises
          (Failure "BidTooLow")
-         (fun () -> DelegationAuction.place_bid auction bidder2 amount1);
+         (fun () -> DelegationAuction.place_bid auction bidder2 amount1 for_delegate2);
 
-       let (ticket2, auction) = DelegationAuction.place_bid auction bidder2 amount2 in
-       let (ticket3, auction) = DelegationAuction.place_bid auction bidder3 amount3 in
-       let (ticket4, auction) = DelegationAuction.place_bid auction bidder4 amount4 in
+       let (ticket2, auction) = DelegationAuction.place_bid auction bidder2 amount2 for_delegate2 in
+       let (ticket3, auction) = DelegationAuction.place_bid auction bidder3 amount3 for_delegate3 in
+       let (ticket4, auction) = DelegationAuction.place_bid auction bidder4 amount4 for_delegate4 in
        (* First bidder can now reclaim their bid *)
        let (refund, auction) = DelegationAuction.reclaim_bid auction ticket1 in
        assert_equal amount1 refund;
@@ -112,7 +118,7 @@ let suite =
        let auction = DelegationAuction.claim_win auction ticket4 in
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal (Some bidder4) delegate ~printer:show_address_option;
+       assert_equal (Some for_delegate4) delegate ~printer:show_key_hash_option;
        (* But in the following cycle... *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:4104 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* Refunds can no longer be claimed *)
@@ -126,13 +132,14 @@ let suite =
        Ligo.Tezos.reset ();
        let auction = DelegationAuction.empty in
        let bidder = Ligo.address_from_literal "5678" in
+       let for_delegate = Ligo.key_hash_from_literal "asdfalkjlsjdf" in
        let amount = Ligo.tez_from_literal "1mutez" in
-       let (ticket, auction) = DelegationAuction.place_bid auction bidder amount in
+       let (ticket, auction) = DelegationAuction.place_bid auction bidder amount for_delegate in
        (* And in the subsequent cycle they cease to be the delegate again *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:(3 * 4096) ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let auction = DelegationAuction.touch auction in
        let delegate = DelegationAuction.delegate auction in
-       assert_equal None delegate ~printer:show_address_option;
+       assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
          (Failure "CannotReclaimLeadingBid")
          (fun () -> DelegationAuction.reclaim_bid auction ticket)

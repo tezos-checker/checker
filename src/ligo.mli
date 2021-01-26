@@ -66,7 +66,7 @@ type tez
     A public cryptographic key.
 *)
 
-(* type key_hash *)
+type key_hash
 (**
     The hash of a public cryptographic key.
 *)
@@ -81,7 +81,8 @@ type tez
     The type of a map from values of type key to values of type value is map (key, value).
 *)
 
-(* type operation *)
+type operation = SetDelegate of key_hash option
+
 (**
     An operation emitted by the contract
 *)
@@ -149,6 +150,8 @@ module Tezos : sig
 
   val reset: unit -> unit
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
+
+  val set_delegate : key_hash option -> operation
 end
 
 (* VALUE CREATION *)
@@ -156,6 +159,7 @@ val int_from_literal : String.t -> int         (* IN LIGO: drop int_from_literal
 val nat_from_literal : String.t -> nat         (* IN LIGO: drop nat_from_literal and the double quotes. *)
 val tez_from_literal : String.t -> tez         (* IN LIGO: drop tez_from_literal and the double quotes. *)
 val address_from_literal : String.t -> address (* IN LIGO: type-annotate with "address". *)
+val key_hash_from_literal : String.t -> key_hash (* IN LIGO: type-annotate with "key_hash". *)
 
 val int_from_int64: Int64.t -> int                      (* NON-LIGO, temporary*)
 val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)
@@ -233,6 +237,7 @@ val string_of_timestamp : timestamp -> String.t
 val string_of_address : address -> String.t
 
 val pp_address : Format.formatter -> address -> unit
+val pp_key_hash : Format.formatter -> key_hash -> unit
 val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
 val pp_tez : Format.formatter -> tez -> unit

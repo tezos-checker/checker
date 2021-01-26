@@ -1,6 +1,6 @@
 open Common
 
-type bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
+type bid = { bidder: Ligo.address; for_delegate: Ligo.key_hash; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
 
 type bid_ticket = bid Ligo.ticket
@@ -27,14 +27,14 @@ let assert_valid_bid_ticket
   | None -> (failwith "InvalidDelegationAuctionTicket": bid_ticket)
   | Some ticket -> ticket
 
-type t = { cycle: Ligo.nat; winner: bid option; leading_bid: bid option; delegate: Ligo.address option; }
+type t = { cycle: Ligo.nat; winner: bid option; leading_bid: bid option; delegate: Ligo.key_hash option; }
 [@@deriving show]
 
 let empty = {
   cycle = level_to_cycle !Ligo.tezos_level;
   winner = (None: bid option);
   leading_bid = (None: bid option);
-  delegate = (None: Ligo.address option);
+  delegate = (None: Ligo.key_hash option);
 }
 
 let cycle (t: t) : Ligo.nat = t.cycle
@@ -51,7 +51,7 @@ let touch (t: t) =
     (* We're on a new cycle, so reset state, and save the winner pending their claim. *)
     { cycle = current_cycle; winner = t.leading_bid;
       leading_bid = (None: bid option);
-      delegate = (None: Ligo.address option); }
+      delegate = (None: Ligo.key_hash option); }
     (* TODO what if we somehow skip a level? *)
   else
     { t with cycle = current_cycle; }
@@ -59,7 +59,7 @@ let touch (t: t) =
 let delegate (t: t)  =
   t.delegate
 
-let place_bid (t: t) (sender_address: Ligo.address) (amt: Ligo.tez) =
+let place_bid (t: t) (sender_address: Ligo.address) (amt: Ligo.tez) (for_delegate: Ligo.key_hash) =
   let t = touch t in
   let _ = match t.leading_bid with
     | Some current ->
@@ -68,7 +68,7 @@ let place_bid (t: t) (sender_address: Ligo.address) (amt: Ligo.tez) =
       else ()
     | None -> () in
   (* Either there is no bid or this is the highest *)
-  let bid = {bidder=sender_address; cycle=t.cycle; amount=amt} in
+  let bid = {bidder=sender_address; cycle=t.cycle; amount=amt; for_delegate=for_delegate} in
   let ticket = issue_bid_ticket bid in
   (ticket, {t with leading_bid = Some bid;})
 
@@ -76,9 +76,9 @@ let same_bid (t1: bid option) (t2: bid) =
   match t1 with
   | None -> false
   | Some t1 ->
-    let { bidder=b1; cycle=c1; amount=a1 } = t1 in
-    let { bidder=b2; cycle=c2; amount=a2 } = t2 in
-    b1 = b2 && c1 = c2 && a1 = a2
+    let { bidder=b1; cycle=c1; amount=a1; for_delegate=d1 } = t1 in
+    let { bidder=b2; cycle=c2; amount=a2; for_delegate=d2 } = t2 in
+    b1 = b2 && c1 = c2 && a1 = a2 && d1 = d2
 
 (* If successful, it consumes the ticket. *)
 (* TODO: allow winner to nominate a different address as the delegate? *)
@@ -87,7 +87,7 @@ let claim_win (t: t) (bid_ticket: bid_ticket) =
   let bid_ticket = assert_valid_bid_ticket bid_ticket in
   let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if same_bid t.winner bid
-  then { t with delegate = Some bid.bidder }
+  then { t with delegate = Some bid.for_delegate }
   else (failwith "NotAWinningBid": t)
 
 (* If successful, it consumes the ticket. *)

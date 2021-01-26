@@ -21,7 +21,7 @@ type t =
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
-    delegate : Ligo.address option;
+    delegate : Ligo.key_hash option;
   }
 
 (** Make a fresh state. *)
@@ -33,7 +33,7 @@ val initial_checker : t
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : t -> Ligo.tez -> (kit_token * t)
+val touch : t -> Ligo.tez -> (kit_token * Ligo.operation list * t)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -120,22 +120,22 @@ val invalidate_all_permissions : t -> permission -> burrow_id -> (permission * t
 
 (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)
-val buy_kit : t -> kit -> Ligo.timestamp -> (kit_token * t)
+val buy_kit : t -> kit -> Ligo.timestamp -> (kit_token * Ligo.operation list * t)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
-val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (tez_payment * t)
+val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (tez_payment * Ligo.operation list * t)
 
 (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
   * giving it some tez and some kit. If the given amounts do not have the
   * right ratio, the uniswap contract keeps as much of the given tez and kit
   * as possible with the right ratio, and returns the leftovers, along with
   * the liquidity tokens. *)
-val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity * kit_token * t)
+val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity * kit_token * Ligo.operation list * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
-val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (tez_payment * kit_token * t)
+val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (tez_payment * kit_token * Ligo.operation list * t)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -164,10 +164,10 @@ val liquidation_auction_reclaim_winning_bid : t -> LiquidationAuction.bid_ticket
   * too low. If successful, return a token which can be used to either
   * reclaim the tez when outbid, or claim the auction result. *)
 val delegation_auction_place_bid :
-  t -> DelegationAuction.bid_ticket * t
+  t -> Ligo.key_hash -> (DelegationAuction.bid_ticket * Ligo.operation list * t)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val delegation_auction_claim_win : t -> DelegationAuction.bid_ticket -> t
+val delegation_auction_claim_win : t -> DelegationAuction.bid_ticket -> (Ligo.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val delegation_auction_reclaim_bid : t -> DelegationAuction.bid_ticket -> tez_payment * t
+val delegation_auction_reclaim_bid : t -> DelegationAuction.bid_ticket -> tez_payment * Ligo.operation list * t

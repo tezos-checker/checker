@@ -24,7 +24,7 @@ type t =
     parameters : parameters;
     liquidation_auctions : LiquidationAuction.auctions;
     delegation_auction : DelegationAuction.t;
-    delegate : Ligo.address option;
+    delegate : Ligo.key_hash option;
   }
 
 let initial_checker =
@@ -33,7 +33,7 @@ let initial_checker =
     parameters = initial_parameters;
     liquidation_auctions = LiquidationAuction.empty;
     delegation_auction = DelegationAuction.empty;
-    delegate = (None : Ligo.address option);
+    delegate = (None : Ligo.key_hash option);
   }
 
 (* Utility function to give us burrow addresses *)
@@ -541,7 +541,7 @@ let touch_liquidation_slices (state: t) (slices: LiquidationAuctionTypes.leaf_pt
 (**                          DELEGATION AUCTIONS                             *)
 (* ************************************************************************* *)
 
-let updated_delegation_auction state new_auction =
+let updated_delegation_auction state new_auction=
   let prev_auction = state.delegation_auction in
   (* When we move to a new cycle, we accrue the amount that won delegation for
      the previous cycle to uniswap. *)
@@ -553,29 +553,42 @@ let updated_delegation_auction state new_auction =
     else
       Ligo.tez_from_literal "0mutez"
   in
-  { state with
-    delegation_auction = new_auction;
-    delegate = DelegationAuction.delegate new_auction;
-    uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
-  }
+  let new_delegate = DelegationAuction.delegate new_auction in
 
-let delegation_auction_place_bid (state: t) =
+  let ops = if state.delegate = new_delegate then
+      []
+    else [Ligo.Tezos.set_delegate new_delegate]
+  in
+  (ops,
+
+   { state with
+     delegation_auction = new_auction;
+     delegate = DelegationAuction.delegate new_auction;
+     uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
+   })
+
+let delegation_auction_place_bid (state: t) (for_delegate: Ligo.key_hash) =
   let ticket, auction =
     DelegationAuction.place_bid
       state.delegation_auction
       !Ligo.Tezos.sender
-      !Ligo.Tezos.amount in
-  (ticket, updated_delegation_auction state auction)
+      !Ligo.Tezos.amount
+      for_delegate
+  in
+  let (ops, new_state) = updated_delegation_auction state auction
+  in
+  (ticket, ops, new_state)
 
-let delegation_auction_claim_win (state: t) (bid_ticket: DelegationAuction.bid_ticket) : t =
+let delegation_auction_claim_win (state: t) (bid_ticket: DelegationAuction.bid_ticket) : (Ligo.operation list * t) =
   let auction = DelegationAuction.claim_win state.delegation_auction bid_ticket in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: t) (bid_ticket: DelegationAuction.bid_ticket) : tez_payment * t =
+let delegation_auction_reclaim_bid (state: t) (bid_ticket: DelegationAuction.bid_ticket) : tez_payment * Ligo.operation list * t =
   assert_no_tez_given ();
   let tez, auction = DelegationAuction.reclaim_bid state.delegation_auction bid_ticket in
   let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez} in
-  (tez_payment, updated_delegation_auction state auction)
+  let ops, new_auction = updated_delegation_auction state auction in
+  (tez_payment, ops, new_auction)
 
 let touch_delegation_auction state =
   updated_delegation_auction state (DelegationAuction.touch state.delegation_auction)
@@ -584,36 +597,36 @@ let touch_delegation_auction state =
 (**                                UNISWAP                                   *)
 (* ************************************************************************* *)
 
-let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit_token * t) =
-  let state = touch_delegation_auction state in
+let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit_token * Ligo.operation list * t) =
+  let (ops, state) = touch_delegation_auction state in
   let (kit, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
-  (kit, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  (kit, ops, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
-let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (tez_payment * t) =
-  let state = touch_delegation_auction state in
+let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (tez_payment * Ligo.operation list * t) =
+  let (ops, state) = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
-  (tez_payment, updated_state)
+  (tez_payment, ops, updated_state)
 
-let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * t) =
-  let state = touch_delegation_auction state in
+let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * Ligo.operation list * t) =
+  let (ops, state) = touch_delegation_auction state in
   let pending_accrual = match DelegationAuction.winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
   let (tokens, leftover_kit, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  (tokens, leftover_kit, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
+  (tokens, leftover_kit, ops, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
 
-let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (tez_payment * kit_token * t) =
-  let state = touch_delegation_auction state in
+let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (tez_payment * kit_token * Ligo.operation list * t) =
+  let (ops, state) = touch_delegation_auction state in
   let (tez, kit, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let tez_payment = {destination = !Ligo.Tezos.sender; amount = tez;} in
   let updated_state = {state with uniswap = updated_uniswap} in
-  (tez_payment, kit, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  (tez_payment, kit, ops, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -680,10 +693,10 @@ let calculate_touch_reward (state: t) : kit =
        (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
-let touch (state: t) (index:Ligo.tez) : (kit_token * t) =
+let touch (state: t) (index:Ligo.tez) : (kit_token * Ligo.operation list * t) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    (kit_issue kit_zero, state)
+    (kit_issue kit_zero, [], state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
@@ -697,7 +710,7 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * t) =
                                add_circulating_kit state.parameters reward } in
 
     (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the uniswap *)
-    let state = touch_delegation_auction state in
+    let (ops, state) = touch_delegation_auction state in
 
     (* 2: Update the system parameters *)
     let total_accrual_to_uniswap, updated_parameters =
@@ -741,4 +754,4 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * t) =
     assert_invariants state;
 
     (* TODO: Add more tasks here *)
-    (kit_issue reward, state)
+    (kit_issue reward, ops, state)
