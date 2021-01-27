@@ -51,6 +51,7 @@ for name in "${inputs[@]}"; do
 
     # replace "_" with ignored
     sed 's/ _ / ignored /g' |
+    sed -E 's/([^a-z])_([a-z]+)/\1ignored_\2/g' |
 
     # replace 'int_from_literal' with its argument and replace
     # the double quotes with parentheses (for the potential sign)

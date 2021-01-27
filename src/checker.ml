@@ -435,30 +435,26 @@ let cancel_liquidation_slice (state: t) (permission: permission) (leaf_ptr: leaf
     then (failwith "UnwarrantedCancellation": t)
     else
       let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+      if burrow_is_overburrowed state.parameters burrow then
+        (failwith "UnwarrantedCancellation": t)
+      else
+        let state =
+          let (new_storage, _) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
+          { state with
+            liquidation_auctions = {
+              state.liquidation_auctions with
+              avl_storage = new_storage }} in
 
-      match Ligo.Big_map.find_opt leaf.burrow state.burrows with
-      | None -> (failwith "invariant violation" : t)
-      | Some b ->
-        if burrow_is_overburrowed state.parameters burrow then
-          (failwith "UnwarrantedCancellation": t)
-        else
-          let state =
-            let (new_storage, _) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
-            { state with
-              liquidation_auctions = {
-                state.liquidation_auctions with
-                avl_storage = new_storage }} in
+        (* Return the tez to the burrow and update its pointers to liq. slices. *)
+        let burrow = burrow_return_slice_from_auction leaf_ptr leaf burrow in
+        let state =
+          { state with
+            burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
 
-          (* Return the tez to the burrow and update its pointers to liq. slices. *)
-          let burrow = burrow_return_slice_from_auction leaf_ptr leaf burrow in
-          let state =
-            { state with
-              burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
-
-          (* And we update the slices around it *)
-          let state = update_immediate_neighbors state leaf_ptr leaf in
-          assert_invariants state;
-          state
+        (* And we update the slices around it *)
+        let state = update_immediate_neighbors state leaf_ptr leaf in
+        assert_invariants state;
+        state
 
 let touch_liquidation_slice (state: t) (leaf_ptr: leaf_ptr): t =
   let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in

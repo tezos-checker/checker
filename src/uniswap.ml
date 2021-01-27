@@ -14,7 +14,7 @@ let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket 
   * is issued by checker, and it is tagged appropriately (this is already
   * enforced by its type). *)
 let assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, (content, lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
   if issuer = checker_address
   then liquidity
   else (failwith "InvalidLiquidityToken" : liquidity)
@@ -47,7 +47,7 @@ let uniswap_make_initial =
  * *)
 let uniswap_assert_initialized (u: uniswap) : uniswap =
   let kit, u_kit = read_kit u.kit in
-  let (issuer, (content, lqt)), u_lqt = Ligo.Tezos.read_ticket u.lqt in
+  let (_issuer, (_content, lqt)), u_lqt = Ligo.Tezos.read_ticket u.lqt in
   assert (not (u.tez = Ligo.tez_from_literal "0mutez"));
   assert (not (kit = kit_zero));
   assert (not (lqt = Ligo.nat_from_literal "0n"));
@@ -198,7 +198,7 @@ let uniswap_add_liquidity
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     (failwith "AddLiquidityNoLiquidityToBeAdded" : (liquidity * kit_token * uniswap))
   else
-    let (issuer, (content, uniswap_lqt)), same_uniswap_lqt = Ligo.Tezos.read_ticket uniswap.lqt in
+    let (_issuer, (_content, uniswap_lqt)), same_uniswap_lqt = Ligo.Tezos.read_ticket uniswap.lqt in
     let uniswap = {uniswap with lqt = same_uniswap_lqt;} in
 
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
@@ -283,7 +283,7 @@ let uniswap_remove_liquidity
     else if kit_withdrawn > uniswap_kit then
       (failwith "RemoveLiquidityTooMuchKitWithdrawn" : (Ligo.tez * kit_token * uniswap))
     else
-      let remaining_lqt, burned = (
+      let remaining_lqt, _burned = (
         match Ligo.is_nat (Ligo.sub_nat_nat uniswap_lqt lqt_burned) with
         | None -> (failwith "uniswap_remove_liquidity: impossible" : (liquidity * liquidity))
         | Some remaining -> (

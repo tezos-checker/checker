@@ -89,7 +89,7 @@ let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_d
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
 let liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
-  let (issuer, (bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
   if is_valid
   then same_ticket
@@ -244,7 +244,7 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
       | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
     kit_scale start_value decay
   | Ascending params ->
-    let (leading_bid, timestamp, level) = params in
+    let (leading_bid, _timestamp, _level) = params in
     let bid_improvement_factor = fixedpoint_of_ratio_floor bid_improvement_factor in
     kit_scale leading_bid.kit (fixedpoint_add fixedpoint_one bid_improvement_factor)
 
@@ -347,7 +347,7 @@ let is_leading_current_liquidation_auction
     then
       (match auction.state with
        | Ascending params ->
-         let (bid, timestamp, level) = params in
+         let (bid, _timestamp, _level) = params in
          bid_eq bid bid_details.bid
        | Descending _ -> false)
     else false
@@ -405,7 +405,9 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
           assert (completed_auctions.youngest <> tree);
           assert (completed_auctions.oldest = tree);
           Some {completed_auctions with oldest = younger }
-        | Some older ->
+        | Some _older ->
+          assert (completed_auctions.youngest <> tree);
+          assert (completed_auctions.oldest <> tree);
           Some completed_auctions
       end in
 

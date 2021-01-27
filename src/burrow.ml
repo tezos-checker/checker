@@ -165,7 +165,7 @@ let burrow_remove_liquidation_slice
           | None ->
             assert (slices.oldest = leaf_ptr);
             { burrow with liquidation_slices = Some {slices with oldest = younger} }
-          | Some older ->
+          | Some _older ->
             assert (slices.oldest <> leaf_ptr);
             assert (slices.youngest <> leaf_ptr);
             burrow
