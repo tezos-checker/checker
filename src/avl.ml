@@ -85,6 +85,12 @@ let node_branch (n: node) : branch =
   | Root _ -> (failwith "node_branch found Root" : branch)
   | Leaf _ -> (failwith "node_branch found Leaf" : branch)
 
+let node_leaf (n: node) : leaf =
+  match n with
+  | Leaf leaf -> leaf
+  | Root _ -> (failwith "node_leaf found Root" : leaf)
+  | Branch _ -> (failwith "node_leaf found Branch" : leaf)
+
 let deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
   let p = match p with AVLPtr p -> p in
   match mem_get mem p with
@@ -94,11 +100,7 @@ let deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
 
 let deref_leaf_ptr (mem: mem) (p: leaf_ptr): leaf =
   let p = match p with LeafPtr p -> p in
-  match mem_get mem p with
-  | Leaf l -> l
-  | Branch _ -> (failwith "deref_leaf_ptr found Branch" : leaf)
-  | Root _ -> (failwith "deref_leaf_ptr found Root" : leaf)
-
+  node_leaf (mem_get mem p)
 
 let node_left (n: node) : ptr =
   let b = node_branch n in b.left

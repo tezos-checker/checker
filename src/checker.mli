@@ -8,7 +8,7 @@ open DelegationAuction
 open LiquidationAuction
 
 (* Tez payments (operations, really) *)
-type tez_payment = {destination: Ligo.address; amount: Ligo.tez;}
+type tez_payment = {destination: Ligo.address; amnt: Ligo.tez;}
 
 val pp_tez_payment : Format.formatter -> tez_payment -> unit
 val show_tez_payment : tez_payment -> string
@@ -24,6 +24,7 @@ type t =
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
+    last_burrow_id: ptr;
   }
 
 (** Make a fresh state. *)
@@ -89,7 +90,7 @@ val mark_for_liquidation : t -> burrow_id -> (tez_payment * t)
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
+val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> t
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
@@ -100,7 +101,7 @@ val touch_liquidation_slices : t -> LiquidationAuctionTypes.leaf_ptr list -> t
   * - if the slice is part of an already completed auction,
   * - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : t -> permission -> burrow_id -> LiquidationAuctionTypes.leaf_ptr -> t
+val cancel_liquidation_slice : t -> permission -> LiquidationAuctionTypes.leaf_ptr -> t
 
 (** Perform maintainance tasks for the burrow. *)
 val touch_burrow : t -> burrow_id -> t

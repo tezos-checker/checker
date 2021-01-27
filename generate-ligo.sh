@@ -21,6 +21,7 @@ inputs=(
   parameters
   uniswap
   burrow
+  checker
 )
 
 for name in "${inputs[@]}"; do
@@ -78,10 +79,5 @@ echo '#include "ligo.mligo"' > generated/ligo/main.mligo
 ( IFS=$'\n'; echo "${inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/main.mligo
-
-cat <<EOF >> generated/ligo/main.mligo
-let main (i, storage: int * int): operation list * int =
-  (([]: operation list), i+1)
-EOF
 
 echo "done." 1>&2
