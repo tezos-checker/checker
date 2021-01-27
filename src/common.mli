@@ -1,5 +1,6 @@
 (* Tezos utilities *)
 val level_to_cycle : Ligo.nat -> Ligo.nat
+val checker_address : Ligo.address
 
 (* OPERATIONS ON int *)
 val min_int : Ligo.int -> Ligo.int -> Ligo.int

@@ -15,7 +15,7 @@ let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket 
   * enforced by its type). *)
 let assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
   let (issuer, (content, lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = Ligo.Tezos.self_address
+  if issuer = checker_address
   then liquidity
   else (failwith "InvalidLiquidityToken" : liquidity)
 

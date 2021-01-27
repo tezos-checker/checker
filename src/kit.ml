@@ -46,7 +46,7 @@ let kit_issue (kit: kit) : kit_token =
   * enforced by its type). *)
 let assert_valid_kit_token (token: kit_token) : kit_token =
   let (issuer, (content, amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = Ligo.Tezos.self_address && amnt >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
+  let is_valid = issuer = checker_address && amnt >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
   if is_valid
   then same_ticket
   else (failwith "InvalidKitToken": kit_token)

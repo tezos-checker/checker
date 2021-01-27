@@ -90,7 +90,7 @@ let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_d
   * end up having contents clearly distinguished by type. *)
 let liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
   let (issuer, (bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = Ligo.Tezos.self_address && amnt = Ligo.nat_from_literal "1n" in
+  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
   if is_valid
   then same_ticket
   else (failwith "InvalidLiquidationAuctionTicket": liquidation_auction_bid_ticket)

@@ -133,7 +133,7 @@ let assert_valid_permission
   : right =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
-    issuer = Ligo.Tezos.self_address
+    issuer = checker_address
     && amnt = Ligo.nat_from_literal "0n"
     && version = burrow_permission_version burrow
     && id = burrow_id in

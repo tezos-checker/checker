@@ -8,8 +8,6 @@ type delegation_auction_bid_ticket = delegation_auction_bid Ligo.ticket
 let issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) =
   Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
 
-let self_addr = Ligo.Tezos.self_address
-
 (** Check whether a delegation auction bid ticket is valid. A delegation bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
   * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
@@ -19,7 +17,7 @@ let is_delegation_auction_bid_ticket_valid
     (bid_ticket: delegation_auction_bid_ticket)
   : delegation_auction_bid_ticket option =
   let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = self_addr && amt = Ligo.nat_from_literal "1n" in
+  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
   if is_valid then Some same_ticket else (None: delegation_auction_bid_ticket option)
 
 let assert_valid_delegation_auction_bid_ticket
