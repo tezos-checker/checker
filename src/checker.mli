@@ -174,3 +174,10 @@ val delegation_auction_claim_win : t -> delegation_auction_bid_ticket -> Ligo.ke
 
 (** Reclaim a failed bid for the current or a completed auction. *)
 val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> tez_payment * Ligo.operation list * t
+
+(* ENTRYPOINTS *)
+
+type params =
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+
+val main : params * t -> Ligo.operation list * t
