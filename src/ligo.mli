@@ -81,7 +81,9 @@ type key_hash
     The type of a map from values of type key to values of type value is map (key, value).
 *)
 
-type operation = SetDelegate of key_hash option
+type operation =
+  | SetDelegate of key_hash option
+  | NotImplementedYet
 
 (**
     An operation emitted by the contract

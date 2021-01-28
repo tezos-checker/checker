@@ -221,7 +221,9 @@ let geq_tez_tez = Z.geq
 
 (* operation *)
 
-type operation = SetDelegate of key_hash option
+type operation =
+  | SetDelegate of key_hash option
+  | NotImplementedYet
 
 (* tickets *)
 

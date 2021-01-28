@@ -178,6 +178,7 @@ val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> tez_p
 (* ENTRYPOINTS *)
 
 type params =
+  | Touch
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
 
 val main : params * t -> Ligo.operation list * t

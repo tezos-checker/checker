@@ -773,15 +773,20 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * Ligo.operation list * t) =
     assert_invariants state;
 
     (* TODO: Add more tasks here *)
+    (* TODO: Issued kit should end up in ops instead *)
     (kit_issue reward, ops, state)
 
 (* ENTRYPOINTS *)
 
 type params =
+  | Touch
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
 
 let main (op, state: params * t): Ligo.operation list * t =
   match op with
-  | DelegationAuctionClaimWin p->
+  | DelegationAuctionClaimWin p ->
     let (ticket, key) = p in
     delegation_auction_claim_win state ticket key
+  | Touch ->
+    let _kit_token, ops, state = touch state (Ligo.tez_from_literal "0mutez") in
+    (ops, state)
