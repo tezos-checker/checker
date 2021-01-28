@@ -45,8 +45,8 @@ let kit_issue (kit: kit) : kit_token =
   * issued by checker, and (b) is tagged appropriately (this is already
   * enforced by its type). *)
 let assert_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, (_content, amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address && amnt >= Ligo.nat_from_literal "0n" in (* TODO: > Nat.zero perhaps? *)
+  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
+  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
   if is_valid
   then same_ticket
   else (failwith "InvalidKitToken": kit_token)

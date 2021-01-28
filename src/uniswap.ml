@@ -83,7 +83,7 @@ let uniswap_buy_kit
   : (kit_token * uniswap) =
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
-  if (tez_amount <= Ligo.tez_from_literal "0mutez") then
+  if (tez_amount = Ligo.tez_from_literal "0mutez") then
     (failwith "UniswapNonPositiveInput" : (kit_token * uniswap))
   else if (!Ligo.Tezos.now >= deadline) then
     (failwith "UniswapTooLate" : (kit_token * uniswap))
@@ -136,7 +136,7 @@ let uniswap_sell_kit
     (failwith "UniswapTooLate" : (Ligo.tez * uniswap))
   else if tez_amount <> Ligo.tez_from_literal "0mutez" then
     (failwith "SellKitNonEmptyAmount" : (Ligo.tez * uniswap))
-  else if (min_tez_expected <= Ligo.tez_from_literal "0mutez") then
+  else if (min_tez_expected = Ligo.tez_from_literal "0mutez") then
     (failwith "SellKitTooLowExpectedTez" : (Ligo.tez * uniswap))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
@@ -262,7 +262,7 @@ let uniswap_remove_liquidity
     (failwith "UniswapTooLate" : (Ligo.tez * kit_token * uniswap))
   else if lqt_burned = Ligo.nat_from_literal "0n" then
     (failwith "RemoveLiquidityNoLiquidityBurned" : (Ligo.tez * kit_token * uniswap))
-  else if min_tez_withdrawn <= Ligo.tez_from_literal "0mutez" then
+  else if min_tez_withdrawn = Ligo.tez_from_literal "0mutez" then
     (failwith "RemoveLiquidityNoTezWithdrawnExpected" : (Ligo.tez * kit_token * uniswap))
   else if min_kit_withdrawn <= kit_zero then
     (failwith "RemoveLiquidityNoKitWithdrawnExpected" : (Ligo.tez * kit_token * uniswap))

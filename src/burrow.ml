@@ -40,8 +40,6 @@ type burrow =
 [@@deriving show]
 
 let assert_burrow_invariants (b: burrow) : unit =
-  assert (b.collateral >= Ligo.tez_from_literal "0mutez");
-  assert (b.collateral_at_auction >= Ligo.tez_from_literal "0mutez");
   assert (b.outstanding_kit >= kit_zero);
   assert (b.excess_kit >= kit_zero);
   assert (b.outstanding_kit = kit_zero || b.excess_kit = kit_zero);
@@ -139,7 +137,6 @@ let burrow_remove_liquidation_slice
     (leaf_ptr: leaf_ptr)
     (leaf : liquidation_slice) (* NOTE: derived from the leaf_ptr *)
   : burrow =
-  assert (leaf.tez >= Ligo.tez_from_literal "0mutez");
   assert (burrow.collateral_at_auction >= leaf.tez);
   (* (a) the slice's tez is no longer in auctions, subtract it. *)
   let burrow = { burrow with
@@ -179,7 +176,6 @@ let burrow_return_slice_from_auction
   : burrow =
   assert_burrow_invariants burrow;
   assert burrow.active;
-  assert (leaf.tez >= Ligo.tez_from_literal "0mutez");
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = burrow_remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) return the tez into the burrow's collateral *)
@@ -218,7 +214,6 @@ let burrow_create (p: parameters) (tez: Ligo.tez) : burrow =
 (** Add non-negative collateral to a burrow. *)
 let burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
   assert_burrow_invariants b;
-  assert (t >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   { b with collateral = Ligo.add_tez_tez b.collateral t }
 
@@ -226,7 +221,6 @@ let burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
   * not overburrow it. *)
 let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : (burrow * Ligo.tez) =
   assert_burrow_invariants b;
-  assert (t >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
   if burrow_is_overburrowed p new_burrow
@@ -262,7 +256,6 @@ let burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   * the creation deposit. *)
 let burrow_activate (p: parameters) (tez: Ligo.tez) (b: burrow) : burrow =
   assert_burrow_invariants b;
-  assert (tez >= Ligo.tez_from_literal "0mutez");
   assert (p.last_touched = b.last_touched);
   if tez < creation_deposit then
     (failwith "InsufficientFunds" : burrow)
