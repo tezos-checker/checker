@@ -28,8 +28,10 @@ let suite =
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
          let (burrow_id, admin_permission, checker0) = Checker.create_burrow checker in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (payment, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
-         assert_equal tez payment.amnt ~printer:Ligo.string_of_tez;
+         let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
+         assert_equal
+           [LigoOp.Tezos.unit_transaction () tez (Option.get (LigoOp.Tezos.get_contract_opt bob_addr))]
+           ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
          let checker2 = Checker.activate_burrow checker1 admin_permission burrow_id in
@@ -101,8 +103,10 @@ let suite =
          ~printer:show_kit_token;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (reward_payment, checker) = Checker.mark_for_liquidation checker burrow_id in
-       assert_equal (Ligo.tez_from_literal "1_008_999mutez") reward_payment.amnt ~printer:Ligo.string_of_tez;
+       let (ops, checker) = Checker.mark_for_liquidation checker burrow_id in
+       assert_equal
+         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "1_008_999mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         ops;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
@@ -177,12 +181,11 @@ let suite =
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (tez_from_bid, _checker) = Checker.liquidation_auction_reclaim_winning_bid checker bid in
+       let (ops, _checker) = Checker.liquidation_auction_reclaim_winning_bid checker bid in
 
        assert_equal
-         {destination = alice_addr; amnt = Ligo.tez_from_literal "3_155_960mutez";}
-         tez_from_bid
-         ~printer:Checker.show_tez_payment;
+         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_960mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         ops;
     );
 
     ("Can't claim delegation too soon after winning delegation auction" >::

@@ -15,10 +15,6 @@ open Common
 open Constants
 open TokenTypes
 
-(* Tez payments (operations, really) *)
-type tez_payment = {destination: Ligo.address; amnt: Ligo.tez;}
-[@@deriving show]
-
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
@@ -195,7 +191,7 @@ let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: ki
   else
     (failwith "InsufficientPermission": kit_token * t)
 
-let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (tez_payment * t) =
+let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
@@ -205,10 +201,12 @@ let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id:
     let (updated_burrow, withdrawn) = burrow_withdraw_tez state.parameters tez burrow in
     assert (tez = withdrawn);
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let tez_payment = {destination = !Ligo.Tezos.sender; amnt = withdrawn} in
-    (tez_payment, updated_state)
+    let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+      | Some c -> [LigoOp.Tezos.unit_transaction () withdrawn c]
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    (ops, updated_state)
   else
-    (failwith "InsufficientPermission": tez_payment * t)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let burn_kit (state: t) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : t =
   assert_no_tez_given ();
@@ -257,7 +255,7 @@ let activate_burrow (state: t) (permission: permission) (burrow_id: burrow_id) :
   else
     (failwith "InsufficientPermission": t)
 
-let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id) (recipient: Ligo.address) : (tez_payment * t) =
+let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id) (recipient: Ligo.address) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
@@ -266,10 +264,12 @@ let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id)
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let tez_payment = {destination = recipient; amnt = returned_tez} in
-    (tez_payment, updated_state)
+    let ops = match (LigoOp.Tezos.get_contract_opt recipient : unit LigoOp.contract option) with
+      | Some c -> [LigoOp.Tezos.unit_transaction () returned_tez c]
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    (ops, updated_state)
   else
-    (failwith "InsufficientPermission": tez_payment * t)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_id) (delegate: Ligo.address) : t =
   assert_no_tez_given ();
@@ -319,7 +319,7 @@ let invalidate_all_permissions (state: t) (permission: permission) (burrow_id: b
  * there are degenerate cases where the queue starts growing much faster that
  * the auctions are happening and in those instances it could grow unbounded,
  * but roughly speaking in most cases it should average out) *)
-let mark_for_liquidation (state: t) (burrow_id: burrow_id) : (tez_payment * t) =
+let mark_for_liquidation (state: t) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
 
@@ -372,7 +372,12 @@ let mark_for_liquidation (state: t) (burrow_id: burrow_id) : (tez_payment * t) =
        | None -> Some { oldest=leaf_ptr; youngest=leaf_ptr; }
        | Some s -> Some { s with youngest=leaf_ptr; })
   in
-  ( {destination = !Ligo.Tezos.sender; amnt = details.liquidation_reward},
+
+  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> [LigoOp.Tezos.unit_transaction () details.liquidation_reward c]
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+
+  ( ops,
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
      liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
@@ -603,12 +608,14 @@ let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_
   let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : tez_payment * LigoOp.operation list * t =
+let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : LigoOp.operation list * t =
   assert_no_tez_given ();
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
-  let tez_payment = {destination = !Ligo.Tezos.sender; amnt = tez} in
   let ops, new_auction = updated_delegation_auction state auction in
-  (tez_payment, ops, new_auction)
+  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  (ops, new_auction)
 
 let touch_delegation_auction (state: t) =
   updated_delegation_auction state (delegation_auction_touch state.delegation_auction)
@@ -622,13 +629,15 @@ let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit
   let (kit, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
   (kit, ops, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
-let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (tez_payment * LigoOp.operation list * t) =
+let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
-  let tez_payment = {destination = !Ligo.Tezos.sender; amnt = tez;} in
+  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
-  (tez_payment, ops, updated_state)
+  (ops, updated_state)
 
 let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
@@ -640,13 +649,15 @@ let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Lig
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   (tokens, leftover_kit, ops, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
 
-let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (tez_payment * kit_token * LigoOp.operation list * t) =
+let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (kit_token * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let (tez, kit, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  let tez_payment = {destination = !Ligo.Tezos.sender; amnt = tez;} in
+  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
-  (tez_payment, kit, ops, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  (kit, ops, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -677,12 +688,14 @@ let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_ticket in
   kit_issue kit (* TODO: should not issue; should change the auction logic instead! *)
 
-let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : tez_payment * t =
+let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_ticket in
-  let tez_payment = {destination = !Ligo.Tezos.sender; amnt = tez;} in
-  (tez_payment, {state with liquidation_auctions = liquidation_auctions })
+  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> [LigoOp.Tezos.unit_transaction () tez c]
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  (ops, {state with liquidation_auctions = liquidation_auctions })
 
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
  * *)

@@ -8,12 +8,6 @@ open DelegationAuction
 open LiquidationAuction
 open TokenTypes
 
-(* Tez payments (operations, really) *)
-type tez_payment = {destination: Ligo.address; amnt: Ligo.tez;}
-
-val pp_tez_payment : Format.formatter -> tez_payment -> unit
-val show_tez_payment : tez_payment -> string
-
 (* TODO: Actually, at the end, this should be a Michelson address, which we
  * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
 type burrow_id = Ptr.t
@@ -57,7 +51,7 @@ val deposit_tez : t -> permission option -> burrow_id -> t
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
   * does not exist, if this action would overburrow it, or if the permission
   * ticket given is insufficient. *)
-val withdraw_tez : t -> permission -> Ligo.tez -> burrow_id -> (tez_payment * t)
+val withdraw_tez : t -> permission -> Ligo.tez -> burrow_id -> (LigoOp.operation list * t)
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
   * there is not enough collateral, or if the permission ticket given is
@@ -81,12 +75,12 @@ val activate_burrow : t -> permission -> burrow_id -> t
   * outstanding, if it has collateral sent off to auctions, or if the
   * permission ticket given is not an admin ticket. If deactivation is
   * successful, make a tez payment to the given address. *)
-val deactivate_burrow : t -> permission -> burrow_id -> Ligo.address -> (tez_payment * t)
+val deactivate_burrow : t -> permission -> burrow_id -> Ligo.address -> (LigoOp.operation list * t)
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
   * liquidation or if the burrow does not exist. If successful, return the
   * reward, to be credited to the liquidator. *)
-val mark_for_liquidation : t -> burrow_id -> (tez_payment * t)
+val mark_for_liquidation : t -> burrow_id -> (LigoOp.operation list * t)
 
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
@@ -128,7 +122,7 @@ val buy_kit : t -> kit -> Ligo.timestamp -> (kit_token * LigoOp.operation list *
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
-val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (tez_payment * LigoOp.operation list * t)
+val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (LigoOp.operation list * t)
 
 (** Buy some liquidity (liquidity tokens) from the uniswap contract, by
   * giving it some tez and some kit. If the given amounts do not have the
@@ -139,7 +133,7 @@ val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity *
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
-val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (tez_payment * kit_token * LigoOp.operation list * t)
+val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (kit_token * LigoOp.operation list * t)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -154,7 +148,7 @@ val liquidation_auction_place_bid : t -> kit_token -> (liquidation_auction_bid_t
 val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticket -> (tez_payment * t)
+val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticket -> (LigoOp.operation list * t)
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : t -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
@@ -174,7 +168,7 @@ val delegation_auction_place_bid :
 val delegation_auction_claim_win : t -> delegation_auction_bid_ticket -> Ligo.key_hash -> (LigoOp.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> tez_payment * LigoOp.operation list * t
+val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> LigoOp.operation list * t
 
 (* ENTRYPOINTS *)
 

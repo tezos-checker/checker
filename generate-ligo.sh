@@ -69,6 +69,14 @@ for name in "${inputs[@]}"; do
     sed -E 's/!(Tezos\..*)/\1/g' |
     sed -E 's/!(tezos_level)/\1/g' |
 
+    # forget separate kinds of transfers
+    sed -E 's/Tezos\.unit_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.kit_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.lqt_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.da_bid_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.la_bid_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.perm_transaction/Tezos\.transaction/g' |
+
     cat > "$to"
 done
 
