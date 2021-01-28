@@ -80,6 +80,7 @@ let key_hash_from_literal s = s
 type address = string
 
 let string_of_address s = s
+let address_of_string s = s
 let pp_address = Format.pp_print_string
 
 let address_from_literal s = s
