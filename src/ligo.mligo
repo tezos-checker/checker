@@ -32,7 +32,9 @@
 [@inline] let gt_int_int (i: int) (j: int) : bool = i > j
 
 [@inline] let leq_int_int (i: int) (j: int) : bool = i <= j
+[@inline] let leq_nat_nat (i: nat) (j: nat) : bool = i <= j
 [@inline] let leq_tez_tez (i: tez) (j: tez) : bool = i <= j
 
 [@inline] let geq_int_int (i: int) (j: int) : bool = i >= j
+[@inline] let geq_nat_nat (i: nat) (j: nat) : bool = i >= j
 [@inline] let geq_tez_tez (i: tez) (j: tez) : bool = i >= j

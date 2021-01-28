@@ -23,7 +23,7 @@ let suite =
          liquidation_auction_send_to_auction auctions {
            burrow = burrow_id_1;
            tez = Ligo.tez_from_literal "2_000_000mutez";
-           min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "4_000_000"); (* note: randomly chosen *)
+           min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_000n"); (* note: randomly chosen *)
            younger = None; older = None;
          } in
        let start_price = fixedpoint_one in
@@ -33,32 +33,32 @@ let suite =
          (Some (Ligo.tez_from_literal "2_000_000mutez"))
          (liquidation_auction_current_auction_tez auctions);
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "2_000_000"))
+         (kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "2_000_000"))
+         (kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        (* Price of descending auction should go down... *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "1_999_666"))
+         (kit_of_mukit (Ligo.nat_from_literal "1_999_666n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "1_999_333"))
+         (kit_of_mukit (Ligo.nat_from_literal "1_999_333n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        Ligo.Tezos.new_transaction ~seconds_passed:58 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "1_980_098"))
+         (kit_of_mukit (Ligo.nat_from_literal "1_980_098n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "1_960_394"))
+         (kit_of_mukit (Ligo.nat_from_literal "1_960_394n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
     );
@@ -71,19 +71,19 @@ let suite =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "5_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_001"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_001n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_002"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_002n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "5_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_003"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_003n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_price = fixedpoint_one in
        let auctions = liquidation_auction_touch auctions start_price in
@@ -98,19 +98,19 @@ let suite =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "4_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_004"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_004n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_005"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_005n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "3_000_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "9_000_006"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_006n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_price = fixedpoint_one in
        let auctions = liquidation_auction_touch auctions start_price in
@@ -125,7 +125,7 @@ let suite =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "2_000_000mutez";
-             min_kit_for_unwarranted = kit_of_mukit (Ligo.int_from_literal "4_000_007"); (* note: randomly chosen *)
+             min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_007n"); (* note: randomly chosen *)
              younger = None; older = None; } in
        let start_price = fixedpoint_one in
        let auctions = liquidation_auction_touch auctions start_price in
@@ -135,25 +135,25 @@ let suite =
        (* Below minimum bid *)
        assert_raises
          (Failure "BidTooLow")
-         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.int_from_literal "1_000_000"); });
+         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_000_000n"); });
        (* Right below minimum bid *)
        assert_raises
          (Failure "BidTooLow")
-         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.int_from_literal "1_999_999"); });
+         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_999_999n"); });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
-       let (current, _) = liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.int_from_literal "2_000_000"); } in
+       let (current, _) = liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "2_000_000n"); } in
        assert_equal
-         (kit_of_mukit (Ligo.int_from_literal "2_006_599"))
+         (kit_of_mukit (Ligo.nat_from_literal "2_006_599n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
        (* Minimum bid does not drop over time *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* Can increase the bid.*)
-       let (current, _) = liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.int_from_literal "4_000_000")} in
+       let (current, _) = liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "4_000_000n")} in
        (* Does not allow a lower bid.*)
        assert_raises
          (Failure "BidTooLow")
-         (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.int_from_literal "3_000_000")});
+         (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
 
        ()
     );

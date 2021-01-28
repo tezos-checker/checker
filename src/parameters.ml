@@ -36,8 +36,8 @@ let initial_parameters : parameters =
     imbalance_index = fixedpoint_one;
     (* Cannot be zero because then it stays
      * zero forever; only multiplications occur. *)
-    outstanding_kit = kit_of_mukit (Ligo.int_from_literal "1");
-    circulating_kit = kit_of_mukit (Ligo.int_from_literal "1");
+    outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "1n");
+    circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1n");
     last_touched = !Ligo.Tezos.now;
   }
 
@@ -98,12 +98,14 @@ let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
     make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
   else if burrowed >= circulating then
     div_ratio
-      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (          (kit_to_ratio burrowed)))
+      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (kit_to_ratio burrowed))
       (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
   else (* burrowed < circulating *)
-    div_ratio
-      (max_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (neg_ratio (kit_to_ratio burrowed)))
-      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
+    neg_ratio
+      (div_ratio
+         (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub circulating burrowed))) (kit_to_ratio burrowed))
+         (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
+      )
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index. *)
@@ -289,7 +291,7 @@ let parameters_touch
          (fixedpoint_to_ratio parameters.burrow_fee_index)
       ) in
 
-  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters.outstanding_kit in
+  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters.outstanding_kit in (* NOTE: can this be negative? *)
 
   let current_outstanding_kit =
     kit_of_ratio_floor

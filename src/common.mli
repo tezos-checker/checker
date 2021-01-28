@@ -21,4 +21,5 @@ val tez_to_mutez : Ligo.tez -> Ligo.int
 
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t
+val compare_nat : Ligo.nat -> Ligo.nat -> Int.t
 (* END_OCAML *)

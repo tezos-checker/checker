@@ -10,8 +10,8 @@ let arb_small_tez =
     (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez"))
     QCheck.(1 -- ((max_int / 479_988_656_967) / 4))
 
-let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.int_from_literal (string_of_int x))) QCheck.(0 -- max_int)
-let arb_positive_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.int_from_literal (string_of_int x))) QCheck.(1 -- max_int)
+let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(0 -- max_int)
+let arb_positive_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
 
 let arb_liquidation_slice =
   QCheck.map

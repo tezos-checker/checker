@@ -141,8 +141,8 @@ let test_compute_imbalance_zero_burrowed =
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       zero_ratio
@@ -150,8 +150,8 @@ let test_compute_imbalance_equal =
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal   "800_000_001") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_001n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
@@ -159,8 +159,8 @@ let test_compute_imbalance_positive_small =
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal   "800_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_000n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
@@ -168,8 +168,8 @@ let test_compute_imbalance_positive_big =
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal             "1") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
@@ -177,8 +177,8 @@ let test_compute_imbalance_positive_capped =
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal   "833_333_334") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal   "833_333_334n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
@@ -186,8 +186,8 @@ let test_compute_imbalance_negative_small =
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal   "833_333_333") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal   "833_333_333n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
@@ -195,8 +195,8 @@ let test_compute_imbalance_negative_big =
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.int_from_literal             "1") in
-    let circulating = kit_of_mukit (Ligo.int_from_literal "1_000_000_000") in
+    let burrowed    = kit_of_mukit (Ligo.nat_from_literal             "1n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
@@ -242,8 +242,7 @@ let test_imbalance_sign_preservation =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
   @@ fun (burrowed, circulating) ->
-  sign_ratio (compute_imbalance burrowed circulating)
-  = sign_ratio (kit_to_ratio (kit_sub burrowed circulating))
+  sign_ratio (compute_imbalance burrowed circulating) = kit_compare burrowed circulating
 
 (* If burrowed = circulating then imbalance = 0. *)
 let test_imbalance_is_zero_when_equal =
@@ -581,8 +580,8 @@ let test_touch =
         drift  = fixedpoint_of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
         burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
         imbalance_index = fixedpoint_of_hex_string "1.00005FB2608FF99D"; (* 1.000005703972931226 *)
-        outstanding_kit = kit_of_mukit (Ligo.int_from_literal "1_000_005");
-        circulating_kit = kit_of_mukit (Ligo.int_from_literal "0_000_000"); (* NOTE that it ends up being identical to the one we started with *)
+        outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "1_000_005n");
+        circulating_kit = kit_of_mukit (Ligo.nat_from_literal "0_000_000n"); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = !Ligo.Tezos.now;
       }
       new_parameters

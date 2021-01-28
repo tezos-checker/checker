@@ -67,4 +67,12 @@ let compare_int (i: Ligo.int) (j: Ligo.int) : Int.t =
     0
   else
     -1
+
+let compare_nat (i: Ligo.nat) (j: Ligo.nat) : Int.t =
+  if Ligo.gt_nat_nat i j then
+    1
+  else if Ligo.eq_nat_nat i j then
+    0
+  else
+    -1
 (* END_OCAML *)

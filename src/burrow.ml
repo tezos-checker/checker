@@ -386,7 +386,10 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
+  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
+    if b.outstanding_kit < expected_kit
+    then zero_ratio
+    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
   let liquidation_price = liquidation_price p in
   let collateral = ratio_of_tez b.collateral in
   b.active && lt_ratio_ratio collateral (mul_ratio (mul_ratio fliquidation optimistic_outstanding) liquidation_price)
@@ -415,7 +418,10 @@ let compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction:
   assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
+  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
+    if b.outstanding_kit < expected_kit
+    then zero_ratio
+    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
   let collateral = ratio_of_tez b.collateral in
   kit_of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
     (div_ratio
@@ -557,7 +563,10 @@ let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
-  let optimistic_outstanding = kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
+  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
+    if b.outstanding_kit < expected_kit
+    then zero_ratio
+    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
   let collateral = ratio_of_tez b.collateral in
   let minting_price = minting_price p in
   lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting optimistic_outstanding) minting_price)

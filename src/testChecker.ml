@@ -45,9 +45,9 @@ let suite =
            checker
            admin_permission
            burrow_id
-           (kit_of_mukit (Ligo.int_from_literal "4_285_714")) in
+           (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) in
        let kit, _same_token = read_kit kit_token in
-       assert_equal (kit_of_mukit (Ligo.int_from_literal "4_285_714")) kit;
+       assert_equal (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) kit;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -66,7 +66,7 @@ let suite =
               checker
               admin_permission
               burrow_id
-              (kit_of_mukit (Ligo.int_from_literal "1"))
+              (kit_of_mukit (Ligo.nat_from_literal "1n"))
          );
 
        (* Over time the burrows with outstanding kit should be overburrowed
@@ -95,7 +95,7 @@ let suite =
        let checker = Checker.touch_burrow checker burrow_id in
 
        assert_equal
-         (kit_issue (kit_of_mukit (Ligo.int_from_literal "202_000_000"))) (* wow, high reward, many blocks have passed. *)
+         (kit_issue (kit_of_mukit (Ligo.nat_from_literal "202_000_000n"))) (* wow, high reward, many blocks have passed. *)
          touch_reward
          ~printer:show_kit_token;
 
@@ -109,7 +109,7 @@ let suite =
          (fun () ->
             Checker.liquidation_auction_place_bid
               checker
-              (kit_issue (kit_of_mukit (Ligo.int_from_literal "1_000")))
+              (kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000n")))
          );
 
        let touch_reward, _ops, checker =
@@ -119,7 +119,7 @@ let suite =
          (Option.is_some checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000")))
+         (kit_issue (kit_of_mukit (Ligo.nat_from_literal "500_000n")))
          touch_reward
          ~printer:show_kit_token;
 
@@ -131,10 +131,10 @@ let suite =
        let (bid, checker) =
          Checker.liquidation_auction_place_bid
            checker
-           (kit_issue (kit_of_mukit (Ligo.int_from_literal "4_200_000"))) in
+           (kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))) in
 
        assert_equal
-         (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000")))
+         (kit_issue (kit_of_mukit (Ligo.nat_from_literal "500_000n")))
          touch_reward
          ~printer:show_kit_token;
 
@@ -147,7 +147,7 @@ let suite =
          (Option.is_none checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (kit_issue (kit_of_mukit (Ligo.int_from_literal "21_000_000")))
+         (kit_issue (kit_of_mukit (Ligo.nat_from_literal "21_000_000n")))
          touch_reward
          ~printer:show_kit_token;
 

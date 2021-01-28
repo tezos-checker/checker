@@ -29,7 +29,7 @@ let make_inputs_for_buy_kit_to_succeed =
     (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
     (fun (tez, _kit, _lqt, uniswap) ->
        let amount = ratio_to_tez_ceil (div_ratio (mul_ratio (ratio_of_tez tez) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee) in
-       let min_kit_expected = kit_of_mukit (Ligo.int_from_literal "1") in (* absolute minimum *)
+       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, min_kit_expected, deadline)
     )
@@ -97,7 +97,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let lqt_burned, min_tez_withdrawn, min_kit_withdrawn =
          if lqt_to_burn = Ligo.nat_from_literal "0n" || min_tez_withdrawn = (Ligo.tez_from_literal "0mutez") || min_kit_withdrawn = kit_zero then
            let lqt_to_burn =
-             let least_kit_percentage = (div_ratio (kit_to_ratio (kit_of_mukit (Ligo.int_from_literal "1"))) (kit_to_ratio kit)) in
+             let least_kit_percentage = (div_ratio (kit_to_ratio (kit_of_mukit (Ligo.nat_from_literal "1n"))) (kit_to_ratio kit)) in
              let least_tez_percentage = make_ratio (Common.tez_to_mutez (Ligo.tez_from_literal "1mutez")) (Common.tez_to_mutez tez) in
              let as_q = (mul_ratio (ratio_of_nat lqt) (max_ratio least_kit_percentage least_tez_percentage)) in
              Option.get (Ligo.is_nat (Common.cdiv_int_int (ratio_num as_q) (ratio_den as_q))) in
@@ -169,17 +169,17 @@ let buy_kit_unit_test =
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "5_000_000")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "5_000_000n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
-    let expected_returned_kit = kit_issue (kit_of_mukit (Ligo.int_from_literal "453_636")) in
+    let expected_returned_kit = kit_issue (kit_of_mukit (Ligo.nat_from_literal "453_636n")) in
     let expected_updated_uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "11_000_000mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "4_546_364")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_546_364n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
         ~kit_in_tez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
@@ -192,7 +192,7 @@ let buy_kit_unit_test =
       uniswap_buy_kit
         uniswap
         (Ligo.tez_from_literal "1_000_000mutez")
-        (kit_of_mukit (Ligo.int_from_literal "1"))
+        (kit_of_mukit (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:show_kit_token expected_returned_kit returned_kit;
     assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
@@ -204,7 +204,7 @@ let buy_kit_unit_test =
       uniswap_buy_kit
         uniswap
         (Ligo.tez_from_literal "1_000_000mutez")
-        (kit_of_mukit (Ligo.int_from_literal "453_636"))
+        (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_equal ~printer:show_kit_token expected_returned_kit returned_kit;
     assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
@@ -218,7 +218,7 @@ let buy_kit_unit_test =
          uniswap_buy_kit
            uniswap
            (Ligo.tez_from_literal "1_000_000mutez")
-           (kit_of_mukit (Ligo.int_from_literal "453_637"))
+           (kit_of_mukit (Ligo.nat_from_literal "453_637n"))
            (Ligo.timestamp_from_seconds_literal 2)
       );
 
@@ -231,7 +231,7 @@ let buy_kit_unit_test =
          uniswap_buy_kit
            uniswap
            (Ligo.tez_from_literal "1_000_000mutez")
-           (kit_of_mukit (Ligo.int_from_literal "453_636"))
+           (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
       )
 
@@ -288,7 +288,7 @@ let sell_kit_unit_test =
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "5_000_000")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "5_000_000n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
@@ -297,7 +297,7 @@ let sell_kit_unit_test =
     let expected_updated_uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "6_000_000")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "6_000_000n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
         ~kit_in_tez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
@@ -412,17 +412,17 @@ let add_liquidity_unit_test =
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "6_000_000")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "6_000_000n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1n"))
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
     let expected_returned_liquidity = issue_liquidity_tokens (Ligo.nat_from_literal "2n") in
-    let expected_returned_kit = kit_issue (kit_of_mukit (Ligo.int_from_literal "5_605_758")) in
+    let expected_returned_kit = kit_issue (kit_of_mukit (Ligo.nat_from_literal "5_605_758n")) in
     let expected_updated_uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "28_336_667mutez")
-        ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "20_394_242")))
+        ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "20_394_242n")))
         ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "3n"))
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
@@ -433,7 +433,7 @@ let add_liquidity_unit_test =
         uniswap
         (Ligo.tez_from_literal "20_000_000mutez")
         (Ligo.tez_from_literal "0mutez")
-        (kit_issue (kit_of_mukit (Ligo.int_from_literal "20_000_000")))
+        (kit_issue (kit_of_mukit (Ligo.nat_from_literal "20_000_000n")))
         (Ligo.nat_from_literal "2n")
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:show_liquidity expected_returned_liquidity returned_liquidity;
@@ -486,7 +486,7 @@ let pending_tez_deposit_test =
      let uniswap =
        uniswap_make_for_test
          ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
-         ~kit:(kit_issue (kit_of_mukit (Ligo.int_from_literal "5000_000_000")))
+         ~kit:(kit_issue (kit_of_mukit (Ligo.nat_from_literal "5000_000_000n")))
          ~lqt:(issue_liquidity_tokens (Ligo.nat_from_literal "1000n"))
          ~kit_in_tez_in_prev_block:one_ratio
          ~last_level:(Ligo.nat_from_literal "0n") in
@@ -497,7 +497,7 @@ let pending_tez_deposit_test =
          uniswap
          (Ligo.tez_from_literal "101_000_000mutez")
          (Ligo.tez_from_literal "10_000_000mutez")
-         (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000_000")))
+         (kit_issue (kit_of_mukit (Ligo.nat_from_literal "500_000_000n")))
          (Ligo.nat_from_literal "1n")
          (Ligo.timestamp_from_seconds_literal 1) in
      let (tez, kit, _) =
@@ -505,9 +505,9 @@ let pending_tez_deposit_test =
          (Ligo.tez_from_literal "0mutez")
          liq
          (Ligo.tez_from_literal "1mutez")
-         (kit_of_mukit (Ligo.int_from_literal "1"))
+         (kit_of_mukit (Ligo.nat_from_literal "1n"))
          (Ligo.timestamp_from_seconds_literal 100) in
-     assert_equal ~printer:show_kit_token (kit_issue (kit_of_mukit (Ligo.int_from_literal "500_000_000"))) kit;
+     assert_equal ~printer:show_kit_token (kit_issue (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))) kit;
      assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "100_090_909mutez") tez;
   )
 

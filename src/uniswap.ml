@@ -33,7 +33,7 @@ type uniswap =
 
 let uniswap_make_initial =
   { tez = Ligo.tez_from_literal "1mutez";
-    kit = kit_issue (kit_of_mukit (Ligo.int_from_literal "1"));
+    kit = kit_issue (kit_of_mukit (Ligo.nat_from_literal "1n"));
     lqt = issue_liquidity_tokens (Ligo.nat_from_literal "1n");
     kit_in_tez_in_prev_block = one_ratio; (* Same as tez/kit now. *)
     last_level = !Ligo.tezos_level;
