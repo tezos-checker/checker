@@ -161,19 +161,18 @@ val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticke
 (** Bid in current auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a token which can be used to either
   * reclaim the tez when outbid, or claim the auction result. *)
-val delegation_auction_place_bid :
-  t -> (delegation_auction_bid_ticket * LigoOp.operation list * t)
+val delegation_auction_place_bid : t -> (LigoOp.operation list * t)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val delegation_auction_claim_win : t -> delegation_auction_bid_ticket -> Ligo.key_hash -> (LigoOp.operation list * t)
+val delegation_auction_claim_win : t -> delegation_auction_bid Ligo.ticket -> Ligo.key_hash -> (LigoOp.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val delegation_auction_reclaim_bid : t -> delegation_auction_bid_ticket -> LigoOp.operation list * t
+val delegation_auction_reclaim_bid : t -> delegation_auction_bid Ligo.ticket -> (LigoOp.operation list * t)
 
 (* ENTRYPOINTS *)
 
 type params =
   | Touch
-  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
 
 val main : params * t -> LigoOp.operation list * t

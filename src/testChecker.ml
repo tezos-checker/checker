@@ -193,9 +193,16 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.delegation_auction_place_bid checker in
 
-       assert_equal [] ops;
+       let ticket = match ops with
+         | [op] -> (
+             match op with
+             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
+           )
+         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -208,9 +215,16 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.delegation_auction_place_bid checker in
 
-       assert_equal [] ops;
+       let ticket = match ops with
+         | [op] -> (
+             match op with
+             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
+           )
+         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -223,9 +237,16 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ticket, ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.delegation_auction_place_bid checker in
 
-       assert_equal [] ops;
+       let ticket = match ops with
+         | [op] -> (
+             match op with
+             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
+           )
+         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _checker = Checker.delegation_auction_claim_win checker ticket  charles_key_hash in

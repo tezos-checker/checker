@@ -593,22 +593,24 @@ let updated_delegation_auction (state: t) (new_auction: delegation_auction) =
      uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
    })
 
-let delegation_auction_place_bid (state: t) =
+let delegation_auction_place_bid (state: t) : (LigoOp.operation list * t) =
   let ticket, auction =
     delegation_auction_place_bid
       state.delegation_auction
       !Ligo.Tezos.sender
       !Ligo.Tezos.amount
   in
-  let (ops, new_state) = updated_delegation_auction state auction
-  in
-  (ticket, ops, new_state)
+  let (ops, new_state) = updated_delegation_auction state auction in
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_da_bid_ticket" !Ligo.Tezos.sender : delegation_auction_bid Ligo.ticket LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  (ops, new_state)
 
-let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * t) =
+let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * t) =
   let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : LigoOp.operation list * t =
+let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * t =
   assert_no_tez_given ();
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
   let ops, new_auction = updated_delegation_auction state auction in
@@ -794,7 +796,7 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * LigoOp.operation list * t) 
 
 type params =
   | Touch
-  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
 
 let main (op, state: params * t): LigoOp.operation list * t =
   match op with
