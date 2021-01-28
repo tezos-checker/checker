@@ -87,7 +87,7 @@ let uniswap_buy_kit
     (failwith "UniswapNonPositiveInput" : (kit_token * uniswap))
   else if (!Ligo.Tezos.now >= deadline) then
     (failwith "UniswapTooLate" : (kit_token * uniswap))
-  else if (min_kit_expected <= kit_zero) then
+  else if (min_kit_expected = kit_zero) then
     (failwith "BuyKitTooLowExpectedKit" : (kit_token * uniswap))
   else
     let uniswap_kit, all_kit_in_uniswap = read_kit uniswap.kit in
@@ -130,7 +130,7 @@ let uniswap_sell_kit
   let kit, token = read_kit token in
   let uniswap_kit, all_kit_in_uniswap = read_kit uniswap.kit in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
-  if (kit <= kit_zero) then
+  if (kit = kit_zero) then
     (failwith "UniswapNonPositiveInput" : (Ligo.tez * uniswap))
   else if !Ligo.Tezos.now >= deadline then
     (failwith "UniswapTooLate" : (Ligo.tez * uniswap))
@@ -264,7 +264,7 @@ let uniswap_remove_liquidity
     (failwith "RemoveLiquidityNoLiquidityBurned" : (Ligo.tez * kit_token * uniswap))
   else if min_tez_withdrawn = Ligo.tez_from_literal "0mutez" then
     (failwith "RemoveLiquidityNoTezWithdrawnExpected" : (Ligo.tez * kit_token * uniswap))
-  else if min_kit_withdrawn <= kit_zero then
+  else if min_kit_withdrawn = kit_zero then
     (failwith "RemoveLiquidityNoKitWithdrawnExpected" : (Ligo.tez * kit_token * uniswap))
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else

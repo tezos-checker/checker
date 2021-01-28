@@ -90,8 +90,6 @@ let clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
 let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
-  assert (burrowed >= kit_zero);
-  assert (circulating >= kit_zero);
   if burrowed = kit_zero && circulating = kit_zero then
     zero_ratio
   else if burrowed = kit_zero && circulating <> kit_zero then
@@ -323,22 +321,18 @@ let parameters_touch
 
 (** Add some kit to the total amount of kit in circulation. *)
 let add_circulating_kit (parameters: parameters) (kit: kit) : parameters =
-  assert (kit >= kit_zero);
   { parameters with circulating_kit = kit_add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
 let remove_circulating_kit (parameters: parameters) (kit: kit) : parameters =
-  assert (kit >= kit_zero);
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
 let add_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
-  assert (kit >= kit_zero);
   { parameters with outstanding_kit = kit_add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
 let remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
-  assert (kit >= kit_zero);
   assert (parameters.outstanding_kit >= kit);
   { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }

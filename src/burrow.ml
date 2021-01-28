@@ -40,8 +40,6 @@ type burrow =
 [@@deriving show]
 
 let assert_burrow_invariants (b: burrow) : unit =
-  assert (b.outstanding_kit >= kit_zero);
-  assert (b.excess_kit >= kit_zero);
   assert (b.outstanding_kit = kit_zero || b.excess_kit = kit_zero);
   ()
 
@@ -90,8 +88,6 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
 let rebalance_kit (b: burrow) : burrow =
-  assert (b.outstanding_kit >= kit_zero);
-  assert (b.excess_kit >= kit_zero);
   let kit_to_move = kit_min b.outstanding_kit b.excess_kit in
   { b with
     outstanding_kit = kit_sub b.outstanding_kit kit_to_move;
@@ -187,7 +183,6 @@ let burrow_return_kit_from_auction
     (kit: kit)
     (burrow: burrow) : burrow =
   assert_burrow_invariants burrow;
-  assert (kit >= kit_zero);
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
   let burrow = burrow_remove_liquidation_slice burrow leaf_ptr leaf in
   (* (b) burn/deposit the kit received from auctioning the slice *)
@@ -231,7 +226,6 @@ let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : (burrow * Li
   * not overburrow it *)
 let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : (burrow * kit) =
   assert_burrow_invariants b;
-  assert (kit >= kit_zero);
   assert (p.last_touched = b.last_touched);
   let new_burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
   if burrow_is_overburrowed p new_burrow
@@ -242,7 +236,6 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : (burrow * kit) =
   * excess kit, simply store it into the burrow. *)
 let burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   assert_burrow_invariants b;
-  assert (k >= kit_zero);
   assert (p.last_touched = b.last_touched);
   let kit_to_burn = kit_min b.outstanding_kit k in
   let kit_to_store = kit_sub k kit_to_burn in
