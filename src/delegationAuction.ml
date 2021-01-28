@@ -1,7 +1,5 @@
 open Common
-
-type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
-[@@deriving show]
+open TokenTypes
 
 type delegation_auction_bid_ticket = delegation_auction_bid Ligo.ticket
 

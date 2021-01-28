@@ -2,9 +2,7 @@ open Ratio
 open Kit
 open Common
 open Constants
-
-(* To be used as the content in liquidity tokens for disambiguation. *)
-type liquidity_token_content = Lqt [@@deriving show]
+open TokenTypes
 
 type liquidity = liquidity_token_content Ligo.ticket [@@deriving show]
 

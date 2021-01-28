@@ -1,4 +1,5 @@
 open Kit
+open TokenTypes
 
 (* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
@@ -24,7 +25,6 @@ open Kit
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
-type liquidity_token_content
 type liquidity = liquidity_token_content Ligo.ticket
 
 val issue_liquidity_tokens : Ligo.nat -> liquidity

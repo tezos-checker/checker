@@ -13,6 +13,7 @@ open LiquidationAuction
 open LiquidationAuctionTypes
 open Common
 open Constants
+open TokenTypes
 
 (* Tez payments (operations, really) *)
 type tez_payment = {destination: Ligo.address; amnt: Ligo.tez;}
@@ -576,8 +577,8 @@ let updated_delegation_auction (state: t) (new_auction: delegation_auction) =
   let new_delegate = delegation_auction_delegate new_auction in
 
   let ops = if option_delegate_eq state.delegate new_delegate then
-      ([]: Ligo.operation list)
-    else [Ligo.Tezos.set_delegate new_delegate]
+      ([]: LigoOp.operation list)
+    else [LigoOp.Tezos.set_delegate new_delegate]
   in
   (ops,
 
@@ -598,11 +599,11 @@ let delegation_auction_place_bid (state: t) =
   in
   (ticket, ops, new_state)
 
-let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (Ligo.operation list * t) =
+let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * t) =
   let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : tez_payment * Ligo.operation list * t =
+let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bid_ticket) : tez_payment * LigoOp.operation list * t =
   assert_no_tez_given ();
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
   let tez_payment = {destination = !Ligo.Tezos.sender; amnt = tez} in
@@ -616,12 +617,12 @@ let touch_delegation_auction (state: t) =
 (**                                UNISWAP                                   *)
 (* ************************************************************************* *)
 
-let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit_token * Ligo.operation list * t) =
+let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit_token * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let (kit, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
   (kit, ops, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
 
-let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (tez_payment * Ligo.operation list * t) =
+let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (tez_payment * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
@@ -629,7 +630,7 @@ let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline:
   let updated_state = {state with uniswap = updated_uniswap} in
   (tez_payment, ops, updated_state)
 
-let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * Ligo.operation list * t) =
+let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
@@ -639,7 +640,7 @@ let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Lig
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   (tokens, leftover_kit, ops, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
 
-let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (tez_payment * kit_token * Ligo.operation list * t) =
+let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (tez_payment * kit_token * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let (tez, kit, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
@@ -712,10 +713,10 @@ let calculate_touch_reward (state: t) : kit =
        (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
-let touch (state: t) (index:Ligo.tez) : (kit_token * Ligo.operation list * t) =
+let touch (state: t) (index:Ligo.tez) : (kit_token * LigoOp.operation list * t) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    (kit_issue kit_zero, ([]: Ligo.operation list), state)
+    (kit_issue kit_zero, ([]: LigoOp.operation list), state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
@@ -782,7 +783,7 @@ type params =
   | Touch
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
 
-let main (op, state: params * t): Ligo.operation list * t =
+let main (op, state: params * t): LigoOp.operation list * t =
   match op with
   | DelegationAuctionClaimWin p ->
     let (ticket, key) = p in

@@ -14,6 +14,7 @@ inputs=(
   liquidationAuctionTypes
   mem
   avl
+  tokenTypes
   constants
   liquidationAuction
   delegationAuction
@@ -34,8 +35,9 @@ for name in "${inputs[@]}"; do
     sed -E 's/([(]\* BEGIN_OCAML )\*[)]/\1  /g' |
     sed -E 's/[(]\*( END_OCAML \*[)])/  \1/g' |
 
-    # Remove ligo qualifier from identifiers
+    # Remove ligo qualifiers from identifiers
     sed -E 's/Ligo\.//g' |
+    sed -E 's/LigoOp\.//g' |
 
     # Comment out 'open's
     sed -E 's/^(open .*)/(* \1 *)/g' |

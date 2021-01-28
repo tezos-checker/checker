@@ -2,6 +2,7 @@ open Kit
 open Burrow
 open OUnit2
 open TestCommon
+open TokenTypes
 
 module PtrMap = Map.Make(Ptr)
 
@@ -225,6 +226,6 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _checker = Checker.delegation_auction_claim_win checker ticket  charles_key_hash in
-       assert_equal [Ligo.SetDelegate (Some charles_key_hash)] ops;
+       assert_equal [LigoOp.SetDelegate (Some charles_key_hash)] ops;
     );
   ]

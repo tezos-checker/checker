@@ -81,14 +81,6 @@ type key_hash
     The type of a map from values of type key to values of type value is map (key, value).
 *)
 
-type operation =
-  | SetDelegate of key_hash option
-  | NotImplementedYet
-
-(**
-    An operation emitted by the contract
-*)
-
 (* type 'value set *)
 
 (* type signature *)
@@ -152,8 +144,6 @@ module Tezos : sig
 
   val reset: unit -> unit
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
-
-  val set_delegate : key_hash option -> operation
 end
 
 (* VALUE CREATION *)

@@ -219,12 +219,6 @@ let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
 
-(* operation *)
-
-type operation =
-  | SetDelegate of key_hash option
-  | NotImplementedYet
-
 (* tickets *)
 
 type 'a ticket =
@@ -276,8 +270,6 @@ module Tezos = struct
     level := Z.(!level + Z.of_int blocks_passed);
     sender := address_;
     amount := amount_
-
-  let set_delegate hash_option = SetDelegate hash_option
 end
 let tezos_level: nat ref = Tezos.level
 

@@ -42,36 +42,6 @@ let kit_of_ratio_floor (amnt: ratio) : kit =
 let kit_scale (amnt: kit) (fp: fixedpoint) =
   kit_of_ratio_floor (mul_ratio (fixedpoint_to_ratio fp) (kit_to_ratio amnt))
 
-(* Kit are really tickets. *)
-type kit_token_content = Kit [@@deriving show]
-type kit_token = kit_token_content Ligo.ticket [@@deriving show]
-
-let kit_issue (kit: kit) : kit_token = Ligo.Tezos.create_ticket (Kit) kit
-
-(** Check whether a kit token is valid. A kit token is valid if (a) it is
-  * issued by checker, and (b) is tagged appropriately (this is already
-  * enforced by its type). *)
-let assert_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
-  if is_valid
-  then same_ticket
-  else (failwith "InvalidKitToken": kit_token)
-
-let read_kit (token: kit_token) : kit * kit_token =
-  let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
-  (mukit, same_token)
-
-let kit_split_or_fail (token: kit_token) (left: kit) (right: kit) : kit_token * kit_token =
-  match Ligo.Tezos.split_ticket token (left, right) with
-  | Some a -> a
-  | None -> (failwith "split_or_fail: failed": kit_token * kit_token)
-
-let kit_join_or_fail (left: kit_token) (right: kit_token) : kit_token =
-  match Ligo.Tezos.join_tickets (left, right) with
-  | Some a -> a
-  | None -> (failwith "join_or_fail: failed": kit_token)
-
 (* BEGIN_OCAML *)
 let kit_compare x y = compare_nat x y
 
