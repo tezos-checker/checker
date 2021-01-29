@@ -41,7 +41,7 @@ val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
   * sender. *)
-val create_burrow : t -> (burrow_id * permission * t)
+val create_burrow : t -> (burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
@@ -68,7 +68,7 @@ val burn_kit : t -> permission option -> burrow_id -> kit_token -> (LigoOp.opera
   * if the burrow is already active, if the amount of tez given is less than
   * the creation deposit, or if the permission ticket given is not an admin
   * ticket. *)
-val activate_burrow : t -> permission -> burrow_id -> t
+val activate_burrow : t -> permission -> burrow_id -> (LigoOp.operation list * t)
 
 (** Deativate a currently active burrow. Fail if the burrow does not exist,
   * if it is already inactive, if it is overburrowed, if it has kit
@@ -85,7 +85,7 @@ val mark_for_liquidation : t -> burrow_id -> (LigoOp.operation list * t)
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> t
+val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> (LigoOp.operation list * t)
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
@@ -96,21 +96,21 @@ val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> t
   * - if the slice is part of an already completed auction,
   * - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : t -> permission -> LiquidationAuctionTypes.leaf_ptr -> t
+val cancel_liquidation_slice : t -> permission -> LiquidationAuctionTypes.leaf_ptr -> (LigoOp.operation list * t)
 
 (** Perform maintainance tasks for the burrow. *)
-val touch_burrow : t -> burrow_id -> t
+val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
 
 (** Set the delegate of a burrow. *)
-val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t
+val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t (* TODO: yield an (SetDelegate) operation here! *)
 
 (** Requires admin. Create a new permission for a burrow. *)
-val make_permission : t -> permission -> burrow_id -> right -> permission
+val make_permission : t -> permission -> burrow_id -> right -> permission (* TODO: why not returning the new storage? *)
 
 (** Requires admin. Increments a counter so that all previous permissions are
   * now invalid and returns a new admin permission. This makes it easy to
   * transfer an admin permission to another party. *)
-val invalidate_all_permissions : t -> permission -> burrow_id -> (permission * t)
+val invalidate_all_permissions : t -> permission -> burrow_id -> (LigoOp.operation list * t)
 
 (* ************************************************************************* *)
 (**                                UNISWAP                                   *)
@@ -129,7 +129,7 @@ val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (LigoOp.operation
   * right ratio, the uniswap contract keeps as much of the given tez and kit
   * as possible with the right ratio, and returns the leftovers, along with
   * the liquidity tokens. *)
-val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity * LigoOp.operation list * t)
+val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (LigoOp.operation list * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
@@ -142,7 +142,7 @@ val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (L
 (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a ticket which can be used to
   * reclaim the kit when outbid. *)
-val liquidation_auction_place_bid : t -> kit_token -> (liquidation_auction_bid_ticket * t)
+val liquidation_auction_place_bid : t -> kit_token -> (LigoOp.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token (* TODO: why not returning the new storage? *)

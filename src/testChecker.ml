@@ -14,7 +14,7 @@ let suite =
        let checker = Checker.initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let _lqt_minted, _ret_kit_ops, checker =
+       let _lqt_minted_ret_kit_ops, checker =
          Checker.add_liquidity
            checker
            (kit_issue kit_one)
@@ -34,7 +34,7 @@ let suite =
            ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let checker2 = Checker.activate_burrow checker1 admin_permission burrow_id in
+         let _ops, checker2 = Checker.activate_burrow checker1 admin_permission burrow_id in
          assert_equal checker0 checker2;
          () in
 
@@ -90,7 +90,8 @@ let suite =
        let _ops, checker =
          Checker.touch checker (Ligo.tez_from_literal "1_000_001mutez") in
 
-       let checker = Checker.touch_burrow checker burrow_id in
+       let ops, checker = Checker.touch_burrow checker burrow_id in
+       assert_equal [] ops;
 
        assert_bool
          "if the index goes up, then burrows should become overburrowed"
@@ -113,7 +114,8 @@ let suite =
          | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
        in
 
-       let checker = Checker.touch_burrow checker burrow_id in
+       let ops, checker = Checker.touch_burrow checker burrow_id in
+       assert_equal [] ops;
 
        assert_equal
          (kit_issue (kit_of_mukit (Ligo.nat_from_literal "202_000_000n"))) (* wow, high reward, many blocks have passed. *)
@@ -167,10 +169,19 @@ let suite =
          | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
        in
 
-       let (bid, checker) =
+       let (ops, checker) =
          Checker.liquidation_auction_place_bid
            checker
            (kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))) in
+
+       let bid = match ops with
+         | (op :: _) -> (
+             match op with
+             | Transaction (LaBidTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (LaBidTransactionValue _, _, _) but didn't get it"
+           )
+         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        assert_equal
          (kit_issue (kit_of_mukit (Ligo.nat_from_literal "500_000n")))
