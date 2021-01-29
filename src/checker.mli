@@ -31,7 +31,7 @@ val initial_checker : t
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : t -> Ligo.tez -> (kit_token * LigoOp.operation list * t)
+val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)

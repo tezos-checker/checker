@@ -728,10 +728,11 @@ let calculate_touch_reward (state: t) : kit =
        (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
-let touch (state: t) (index:Ligo.tez) : (kit_token * LigoOp.operation list * t) =
+let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    (kit_issue kit_zero, ([]: LigoOp.operation list), state)
+    (* NOTE: Shall we send zero kit (kit_issue kit_zero) or shall we have no operation at all (what we do now)? *)
+    (([]: LigoOp.operation list), state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
@@ -789,8 +790,13 @@ let touch (state: t) (index:Ligo.tez) : (kit_token * LigoOp.operation list * t) 
     assert_invariants state;
 
     (* TODO: Add more tasks here *)
-    (* TODO: Issued kit should end up in ops instead *)
-    (kit_issue reward, ops, state)
+
+    let kit_tokens = kit_issue reward in
+    let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+      | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+
+    (ops, state)
 
 (* ENTRYPOINTS *)
 
@@ -804,5 +810,5 @@ let main (op, state: params * t): LigoOp.operation list * t =
     let (ticket, key) = p in
     delegation_auction_claim_win state ticket key
   | Touch ->
-    let _kit_token, ops, state = touch state (Ligo.tez_from_literal "0mutez") in
+    let ops, state = touch state (Ligo.tez_from_literal "0mutez") in
     (ops, state)

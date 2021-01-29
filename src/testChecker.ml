@@ -77,7 +77,7 @@ let suite =
           	* take more time I guess). *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let _touch_reward, _ops, checker =
+       let _ops, checker =
          Checker.touch checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let checker = Checker.touch_burrow checker burrow_id in
@@ -92,8 +92,16 @@ let suite =
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let touch_reward, _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+
+       let touch_reward = match ops with
+         | (op :: _) -> (
+             match op with
+             | Transaction (KitTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
+           )
+         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        let checker = Checker.touch_burrow checker burrow_id in
 
@@ -117,8 +125,16 @@ let suite =
               (kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000n")))
          );
 
-       let touch_reward, _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+
+       let touch_reward = match ops with
+         | (op :: _) -> (
+             match op with
+             | Transaction (KitTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
+           )
+         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
@@ -130,8 +146,16 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let touch_reward, _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+
+       let touch_reward = match ops with
+         | (op :: _) -> (
+             match op with
+             | Transaction (KitTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
+           )
+         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        let (bid, checker) =
          Checker.liquidation_auction_place_bid
@@ -145,8 +169,16 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let touch_reward, _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+
+       let touch_reward = match ops with
+         | (op :: _) -> (
+             match op with
+             | Transaction (KitTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
+           )
+         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
