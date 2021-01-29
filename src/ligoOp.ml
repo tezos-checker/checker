@@ -20,18 +20,6 @@ type operation =
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
   | NotImplementedYet : operation
 
-(* for tests *)
-let eq_transaction_values : type a. a transaction_value -> a transaction_value -> bool =
-  fun x y ->
-    match x, y with
-    | UnitTransactionValue, UnitTransactionValue -> true
-    | KitTransactionValue x, KitTransactionValue y -> x = y
-    | LqtTransactionValue x, LqtTransactionValue y -> x = y
-    | DaBidTransactionValue x, DaBidTransactionValue y -> x = y
-    | LaBidTransactionValue x, LaBidTransactionValue y -> x = y
-    | PermTransactionValue x, PermTransactionValue y -> x = y
-    | _, _ -> failwith "eq_transaction_values: impossible"
-
 module Tezos = struct
   let set_delegate hash_option = SetDelegate hash_option
 

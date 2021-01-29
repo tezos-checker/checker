@@ -18,9 +18,6 @@ type 'parameter transaction_value = (* GADT *)
   | LaBidTransactionValue : liquidation_auction_bid_details ticket -> liquidation_auction_bid_details ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
 
-(* for tests *)
-val eq_transaction_values : 'a transaction_value -> 'a transaction_value -> bool
-
 (* operation *)
 
 type operation =

@@ -765,8 +765,11 @@ let calculate_touch_reward (state: t) : kit =
 let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    (* NOTE: Shall we send zero kit (kit_issue kit_zero) or shall we have no operation at all (what we do now)? *)
-    (([]: LigoOp.operation list), state)
+    let kit_tokens = kit_issue kit_zero in (* zero reward *)
+    let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+      | Some c -> [LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c]
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    (ops, state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
