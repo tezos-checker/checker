@@ -14,7 +14,7 @@ let suite =
        let checker = Checker.initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let _lqt_minted, _ret_kit, _ops, checker =
+       let _lqt_minted, _ret_kit_ops, checker =
          Checker.add_liquidity
            checker
            (kit_issue kit_one)
@@ -43,12 +43,22 @@ let suite =
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (kit_token, checker) =
+       let (ops, checker) =
          Checker.mint_kit
            checker
            admin_permission
            burrow_id
            (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) in
+
+       let kit_token = match ops with
+         | [op] -> (
+             match op with
+             | Transaction (KitTransactionValue ticket, _, _) -> ticket
+             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
+           )
+         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+       in
+
        let kit, _same_token = read_kit kit_token in
        assert_equal (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) kit;
 

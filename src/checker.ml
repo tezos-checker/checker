@@ -153,24 +153,25 @@ let touch_burrow (state: t) (burrow_id: burrow_id) =
   let updated_burrow = burrow_touch state.parameters burrow in
   {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
 
-let deposit_tez (state: t) (permission: permission option) (burrow_id: burrow_id) : t =
+let deposit_tez (state: t) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
+  let ops : LigoOp.operation list = [] in
   if burrow_allow_all_tez_deposits burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-    {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+    (ops, {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
     let permission = assert_permission_is_present permission in
     let r = assert_valid_permission permission burrow_id burrow in
     if does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-      {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+      (ops, {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
     else
-      (failwith "InsufficientPermission": t)
+      (failwith "InsufficientPermission": LigoOp.operation list * t)
 
-let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (kit_token * t) =
+let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
@@ -179,7 +180,12 @@ let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: ki
     (* the permission should support minting kit. *)
     let (updated_burrow, minted) = burrow_mint_kit state.parameters kit burrow in
     assert (kit = minted);
-    ( kit_issue minted,
+
+    let kit_tokens = kit_issue minted in
+    let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+      | Some c -> [LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c]
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    ( ops,
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
        parameters =
@@ -189,7 +195,7 @@ let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: ki
       }
     )
   else
-    (failwith "InsufficientPermission": kit_token * t)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
@@ -208,7 +214,8 @@ let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id:
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
-let burn_kit (state: t) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : t =
+let burn_kit (state: t) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : (LigoOp.operation list * t) =
+  let ops : LigoOp.operation list = [] in
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
@@ -219,13 +226,16 @@ let burn_kit (state: t) (permission: permission option) (burrow_id: burrow_id) (
     let updated_burrow = burrow_burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
-    {state with
-     burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-     parameters =
-       remove_outstanding_kit
-         (remove_circulating_kit state.parameters kit)
-         kit;
-    }
+
+    let state =
+      {state with
+       burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+       parameters =
+         remove_outstanding_kit
+           (remove_circulating_kit state.parameters kit)
+           kit;
+      } in
+    (ops, state)
   else
     let permission = assert_permission_is_present permission in
     let r = assert_valid_permission permission burrow_id burrow in
@@ -234,15 +244,17 @@ let burn_kit (state: t) (permission: permission option) (burrow_id: burrow_id) (
       let updated_burrow = burrow_burn_kit state.parameters kit burrow in
       (* TODO: What should happen if the following is violated? *)
       assert (state.parameters.circulating_kit >= kit);
-      {state with
-       burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-       parameters =
-         remove_outstanding_kit
-           (remove_circulating_kit state.parameters kit)
-           kit;
-      }
+      let state =
+        {state with
+         burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+         parameters =
+           remove_outstanding_kit
+             (remove_circulating_kit state.parameters kit)
+             kit;
+        } in
+      (ops, state)
     else
-      (failwith "InsufficientPermission": t)
+      (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let activate_burrow (state: t) (permission: permission) (burrow_id: burrow_id) : t =
   let burrow = find_burrow state burrow_id in
@@ -626,10 +638,13 @@ let touch_delegation_auction (state: t) =
 (**                                UNISWAP                                   *)
 (* ************************************************************************* *)
 
-let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (kit_token * LigoOp.operation list * t) =
+let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
-  let (kit, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
-  (kit, ops, {state with uniswap = updated_uniswap}) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  let (kit_tokens, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  (ops, {state with uniswap = updated_uniswap})
 
 let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
@@ -641,25 +656,31 @@ let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline:
   let updated_state = {state with uniswap = updated_uniswap} in
   (ops, updated_state)
 
-let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * kit_token * LigoOp.operation list * t) =
+let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Ligo.nat) (deadline: Ligo.timestamp) : (liquidity * LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
   let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
-  let (tokens, leftover_kit, updated_uniswap) =
+  let (lqt_tokens, kit_tokens, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  (tokens, leftover_kit, ops, {state with uniswap = updated_uniswap}) (* TODO: tokens must be given to sender *)
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  (lqt_tokens, ops, {state with uniswap = updated_uniswap})
 
-let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (kit_token * LigoOp.operation list * t) =
+let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
   let (ops, state) = touch_delegation_auction state in
-  let (tez, kit, updated_uniswap) =
+  let (tez, kit_tokens, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
     | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
-  (kit, ops, updated_state) (* TODO: kit must be given to !Ligo.Tezos.sender *)
+  (ops, updated_state)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)

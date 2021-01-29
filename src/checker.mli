@@ -46,7 +46,7 @@ val create_burrow : t -> (burrow_id * permission * t)
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
   * anyone and the permission ticket given is insufficient. *)
-val deposit_tez : t -> permission option -> burrow_id -> t
+val deposit_tez : t -> permission option -> burrow_id -> (LigoOp.operation list * t)
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
   * does not exist, if this action would overburrow it, or if the permission
@@ -56,13 +56,13 @@ val withdraw_tez : t -> permission -> Ligo.tez -> burrow_id -> (LigoOp.operation
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
   * there is not enough collateral, or if the permission ticket given is
   * insufficient. *)
-val mint_kit : t -> permission -> burrow_id -> kit -> (kit_token * t)
+val mint_kit : t -> permission -> burrow_id -> kit -> (LigoOp.operation list * t)
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is
   * excess kit, simply store it into the burrow. Fail if the burrow does not
   * exist, or if the burrow does not allow kit burnings from anyone and the
   * permission ticket given is insufficient. *)
-val burn_kit : t -> permission option -> burrow_id -> kit_token -> t
+val burn_kit : t -> permission option -> burrow_id -> kit_token -> (LigoOp.operation list * t)
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
   * if the burrow is already active, if the amount of tez given is less than
@@ -118,7 +118,7 @@ val invalidate_all_permissions : t -> permission -> burrow_id -> (permission * t
 
 (** Buy some kit from the uniswap contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)
-val buy_kit : t -> kit -> Ligo.timestamp -> (kit_token * LigoOp.operation list * t)
+val buy_kit : t -> kit -> Ligo.timestamp -> (LigoOp.operation list * t)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
@@ -129,11 +129,11 @@ val sell_kit : t -> kit_token -> Ligo.tez -> Ligo.timestamp -> (LigoOp.operation
   * right ratio, the uniswap contract keeps as much of the given tez and kit
   * as possible with the right ratio, and returns the leftovers, along with
   * the liquidity tokens. *)
-val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity * kit_token * LigoOp.operation list * t)
+val add_liquidity : t -> kit_token -> Ligo.nat -> Ligo.timestamp -> (liquidity * LigoOp.operation list * t)
 
 (** Sell some liquidity (liquidity tokens) to the uniswap contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
-val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (kit_token * LigoOp.operation list * t)
+val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (LigoOp.operation list * t)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -145,7 +145,7 @@ val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (k
 val liquidation_auction_place_bid : t -> kit_token -> (liquidation_auction_bid_ticket * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token
+val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token (* TODO: why not returning the new storage? *)
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticket -> (LigoOp.operation list * t)
