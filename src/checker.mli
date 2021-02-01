@@ -102,10 +102,10 @@ val cancel_liquidation_slice : t -> permission -> LiquidationAuctionTypes.leaf_p
 val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
 
 (** Set the delegate of a burrow. *)
-val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t (* TODO: yield an (SetDelegate) operation here! *)
+val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t (* TODO: we need to signal the burrow contract to set its own delegate here! *)
 
 (** Requires admin. Create a new permission for a burrow. *)
-val make_permission : t -> permission -> burrow_id -> rights -> permission (* TODO: why not returning the new storage? *)
+val make_permission : t -> permission -> burrow_id -> rights -> (LigoOp.operation list * t)
 
 (** Requires admin. Increments a counter so that all previous permissions are
   * now invalid and returns a new admin permission. This makes it easy to

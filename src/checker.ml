@@ -299,18 +299,23 @@ let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_i
   else
     (failwith "InsufficientPermission": t)
 
-let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : permission =
+let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission permission burrow_id burrow in
   if is_admin_right r then
     (* only admins can create permissions. *)
-    Ligo.Tezos.create_ticket
-      (right, burrow_id, Ligo.nat_from_literal "0n")
-      (Ligo.nat_from_literal "0n")
+    let ticket =
+      Ligo.Tezos.create_ticket
+        (right, burrow_id, burrow_permission_version burrow)
+        (Ligo.nat_from_literal "0n") in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_permission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+    ([op], state) (* unchanged state *)
   else
-    (failwith "InsufficientPermission": permission)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let invalidate_all_permissions (state: t) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
