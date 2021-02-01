@@ -848,6 +848,21 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
 
 type params =
   | Touch
+  (* Burrows *)
+  | CreateBurrow
+  | DepositTez of (permission option * burrow_id)
+  | WithdrawTez of (permission * Ligo.tez * burrow_id)
+  | MintKit of (permission * burrow_id * kit)
+  | BurnKit of (permission option * burrow_id * kit_token)
+  | ActivateBurrow of (permission * burrow_id)
+  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | MarkBurrowForLiquidation of burrow_id
+  | TouchLiquidationSlices of leaf_ptr list
+  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | TouchBurrow of burrow_id
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.address)
+  | MakePermission of (permission * burrow_id * rights)
+  | InvalidateAllPermissions of (permission * burrow_id)
   (* Uniswap *)
   | BuyKit of (kit * Ligo.timestamp)
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
@@ -866,6 +881,45 @@ let main (op, state: params * t): LigoOp.operation list * t =
   match op with
   | Touch ->
     touch state (Ligo.tez_from_literal "0mutez") (* FIXME: medianizer input?? *)
+  (* Burrows *)
+  | CreateBurrow ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: origination operation *)
+  | DepositTez p ->
+    let (permission_option, burrow_id) = p in
+    deposit_tez state permission_option burrow_id
+  | WithdrawTez p ->
+    let (permission, tez, burrow_id) = p in
+    withdraw_tez state permission tez burrow_id
+  | MintKit p ->
+    let (permission, burrow_id, kit) = p in
+    mint_kit state permission burrow_id kit
+  | BurnKit p ->
+    let (permission_option, burrow_id, kit_token) = p in
+    burn_kit state permission_option burrow_id kit_token
+  | ActivateBurrow p ->
+    let (permission, burrow_id) = p in
+    activate_burrow state permission burrow_id
+  | DeactivateBurrow p ->
+    let (permission, burrow_id, addr) = p in
+    deactivate_burrow state permission burrow_id addr
+  | MarkBurrowForLiquidation burrow_id ->
+    mark_for_liquidation state burrow_id
+  | TouchLiquidationSlices slices ->
+    touch_liquidation_slices (state, slices)
+  | CancelSliceLiquidation p ->
+    let (permission, leaf_ptr) = p in
+    cancel_liquidation_slice state permission leaf_ptr
+  | TouchBurrow burrow_id ->
+    touch_burrow state burrow_id
+  | SetBurrowDelegate p ->
+    let (_permission, _burrow_id, _addr) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: burrow contract entrypoints *)
+  | MakePermission p ->
+    let (permission, burrow_id, rights) = p in
+    make_permission state permission burrow_id rights
+  | InvalidateAllPermissions p ->
+    let (permission, burrow_id) = p in
+    invalidate_all_permissions state permission burrow_id
   (* Uniswap *)
   | BuyKit p ->
     let (min_kit, deadline) = p in

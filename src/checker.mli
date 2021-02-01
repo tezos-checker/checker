@@ -6,10 +6,11 @@ open Uniswap
 open Burrow
 open DelegationAuction
 open LiquidationAuction
+open LiquidationAuctionTypes
 open TokenTypes
 
 (* TODO: Actually, at the end, this should be a Michelson address, which we
- * receive when we originate the burrow contract (Tezos.create_ticket_contract). *)
+ * receive when we originate the burrow contract (Tezos.create_contract). *)
 type burrow_id = Ptr.t
 
 type t =
@@ -85,7 +86,7 @@ val mark_for_liquidation : t -> burrow_id -> (LigoOp.operation list * t)
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> (LigoOp.operation list * t)
+val touch_liquidation_slices : t * leaf_ptr list -> (LigoOp.operation list * t)
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
@@ -96,7 +97,7 @@ val touch_liquidation_slices : t * LiquidationAuctionTypes.leaf_ptr list -> (Lig
   * - if the slice is part of an already completed auction,
   * - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : t -> permission -> LiquidationAuctionTypes.leaf_ptr -> (LigoOp.operation list * t)
+val cancel_liquidation_slice : t -> permission -> leaf_ptr -> (LigoOp.operation list * t)
 
 (** Perform maintainance tasks for the burrow. *)
 val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
@@ -173,6 +174,21 @@ val delegation_auction_reclaim_bid : t -> delegation_auction_bid Ligo.ticket -> 
 
 type params =
   | Touch
+  (* Burrows *)
+  | CreateBurrow
+  | DepositTez of (permission option * burrow_id)
+  | WithdrawTez of (permission * Ligo.tez * burrow_id)
+  | MintKit of (permission * burrow_id * kit)
+  | BurnKit of (permission option * burrow_id * kit_token)
+  | ActivateBurrow of (permission * burrow_id)
+  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | MarkBurrowForLiquidation of burrow_id
+  | TouchLiquidationSlices of leaf_ptr list
+  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | TouchBurrow of burrow_id
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.address)
+  | MakePermission of (permission * burrow_id * rights)
+  | InvalidateAllPermissions of (permission * burrow_id)
   (* Uniswap *)
   | BuyKit of (kit * Ligo.timestamp)
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
