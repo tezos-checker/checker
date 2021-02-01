@@ -80,6 +80,7 @@ let key_hash_from_literal s = s
 type address = string
 
 let string_of_address s = s
+let address_of_string s = s
 let pp_address = Format.pp_print_string
 
 let address_from_literal s = s
@@ -219,12 +220,6 @@ let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
 
-(* operation *)
-
-type operation =
-  | SetDelegate of key_hash option
-  | NotImplementedYet
-
 (* tickets *)
 
 type 'a ticket =
@@ -276,8 +271,6 @@ module Tezos = struct
     level := Z.(!level + Z.of_int blocks_passed);
     sender := address_;
     amount := amount_
-
-  let set_delegate hash_option = SetDelegate hash_option
 end
 let tezos_level: nat ref = Tezos.level
 

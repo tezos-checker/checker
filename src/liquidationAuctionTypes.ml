@@ -16,6 +16,9 @@ type liquidation_slice = {
 }
 [@@deriving show]
 
+type liquidation_auction_id = avl_ptr
+[@@deriving show]
+
 type bid = { address: Ligo.address; kit: kit }
 [@@deriving show]
 

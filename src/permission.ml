@@ -1,26 +1,4 @@
-open Ptr
-
-(* todo: please find a better name for this. *)
-type right_collection =
-  { deposit_tez: bool;
-    withdraw_tez: bool;
-    mint_kit: bool;
-    burn_kit: bool;
-    set_delegate: bool;
-    cancel_liquidation: bool;
-  }
-[@@deriving show]
-
-(** A right can be an admin right (which implies all right), or a user right,
-  * which can include depositing/withdrawing tez, minting/burning kit, setting
-  * the delegate, and/or canceling liquidations. *)
-type right =
-  | Admin
-  | User of right_collection
-[@@deriving show]
-
-type permission_content = right * ptr * Ligo.nat
-[@@deriving show]
+open TokenTypes
 
 (** A permission is a ticket containing a right. *)
 type permission = permission_content Ligo.ticket

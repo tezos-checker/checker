@@ -75,9 +75,8 @@ open Kit
 open Avl
 open Constants
 open Common
+open TokenTypes
 
-type liquidation_auction_id = avl_ptr
-type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid: bid; }
 type liquidation_auction_bid_ticket = liquidation_auction_bid_details Ligo.ticket
 
 let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_details) =
