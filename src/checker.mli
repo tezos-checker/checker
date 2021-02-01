@@ -178,6 +178,10 @@ type params =
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
   | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid of kit_token
+  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)

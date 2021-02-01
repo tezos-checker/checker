@@ -853,6 +853,10 @@ type params =
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
   | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid of kit_token
+  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
@@ -861,8 +865,7 @@ type params =
 let main (op, state: params * t): LigoOp.operation list * t =
   match op with
   | Touch ->
-    let ops, state = touch state (Ligo.tez_from_literal "0mutez") in
-    (ops, state)
+    touch state (Ligo.tez_from_literal "0mutez") (* FIXME: medianizer input?? *)
   (* Uniswap *)
   | BuyKit p ->
     let (min_kit, deadline) = p in
@@ -876,6 +879,13 @@ let main (op, state: params * t): LigoOp.operation list * t =
   | RemoveLiquidity p ->
     let (liquidity, min_tez, min_kit, deadline) = p in
     remove_liquidity state liquidity min_tez min_kit deadline
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid kit_token ->
+    liquidation_auction_place_bid state kit_token
+  | LiqAuctionReclaimBid ticket ->
+    liquidation_auction_reclaim_bid state ticket
+  | LiqAuctionReclaimWinningBid ticket ->
+    liquidation_auction_reclaim_winning_bid state ticket
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid ->
     delegation_auction_place_bid state
