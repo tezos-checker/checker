@@ -6,6 +6,9 @@ open TokenTypes
 
 module PtrMap = Map.Make(Ptr)
 
+type operation_list = LigoOp.operation list
+[@@deriving show]
+
 let suite =
   "Checker tests" >::: [
     ("can complete a liquidation auction" >::
@@ -51,12 +54,8 @@ let suite =
            (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) in
 
        let kit_token = match ops with
-         | [op] -> (
-             match op with
-             | Transaction (KitTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
-           )
-         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
 
        let kit, _same_token = read_kit kit_token in
@@ -106,12 +105,8 @@ let suite =
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (op :: _) -> (
-             match op with
-             | Transaction (KitTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
-           )
-         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
@@ -140,12 +135,8 @@ let suite =
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (op :: _) -> (
-             match op with
-             | Transaction (KitTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
-           )
-         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_bool "should start an auction"
@@ -161,12 +152,8 @@ let suite =
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (op :: _) -> (
-             match op with
-             | Transaction (KitTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
-           )
-         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        let (ops, checker) =
@@ -175,12 +162,8 @@ let suite =
            (kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))) in
 
        let bid = match ops with
-         | (op :: _) -> (
-             match op with
-             | Transaction (LaBidTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (LaBidTransactionValue _, _, _) but didn't get it"
-           )
-         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | (Transaction (LaBidTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (Transaction (LaBidTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_equal
@@ -193,12 +176,8 @@ let suite =
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (op :: _) -> (
-             match op with
-             | Transaction (KitTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (KitTransactionValue _, _, _) but didn't get it"
-           )
-         | [] -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_bool "auction should be completed"
@@ -249,12 +228,8 @@ let suite =
        let ops, checker = Checker.delegation_auction_place_bid checker in
 
        let ticket = match ops with
-         | [op] -> (
-             match op with
-             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
-           )
-         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
@@ -271,12 +246,8 @@ let suite =
        let ops, checker = Checker.delegation_auction_place_bid checker in
 
        let ticket = match ops with
-         | [op] -> (
-             match op with
-             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
-           )
-         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
@@ -293,12 +264,8 @@ let suite =
        let ops, checker = Checker.delegation_auction_place_bid checker in
 
        let ticket = match ops with
-         | [op] -> (
-             match op with
-             | Transaction (DaBidTransactionValue ticket, _, _) -> ticket
-             | _ ->  assert_failure "Expected Transaction (DaBidTransactionValue _, _, _) but didn't get it"
-           )
-         | [] | (_ :: _ :: _) -> assert_failure "expected exactly one operation but got zero, or more than one"
+         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
        Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
