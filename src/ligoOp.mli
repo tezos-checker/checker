@@ -10,6 +10,9 @@ type 'parameter contract = Contract of address
    Use unit as parameter to indicate an implicit account.
 *)
 
+val pp_contract : Format.formatter -> 'parameter contract -> unit
+val show_contract : 'parameter contract -> String.t
+
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
@@ -27,6 +30,9 @@ type operation =
   (**
       An operation emitted by the contract
   *)
+
+val pp_operation : Format.formatter -> operation -> unit
+val show_operation : operation -> String.t
 
 module Tezos : sig
   val set_delegate : key_hash option -> operation
