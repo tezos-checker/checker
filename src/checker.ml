@@ -839,13 +839,21 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
 
 type params =
   | Touch
+  (* Delegation Auction *)
+  | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
 
 let main (op, state: params * t): LigoOp.operation list * t =
   match op with
-  | DelegationAuctionClaimWin p ->
-    let (ticket, key) = p in
-    delegation_auction_claim_win state ticket key
   | Touch ->
     let ops, state = touch state (Ligo.tez_from_literal "0mutez") in
     (ops, state)
+  (* Delegation Auction *)
+  | DelegationAuctionPlaceBid ->
+    delegation_auction_place_bid state
+  | DelegationAuctionClaimWin p ->
+    let (ticket, key) = p in
+    delegation_auction_claim_win state ticket key
+  | DelegationAuctionReclaimBid ticket ->
+    delegation_auction_reclaim_bid state ticket
