@@ -723,11 +723,15 @@ let liquidation_auction_place_bid (state: t) (kit: kit_token) : LigoOp.operation
     }
   )
 
-let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : kit_token =
+let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_ticket in
-  kit_issue kit (* TODO: should not issue; should change the auction logic instead! *)
+  let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+  ([op], state) (* NOTE: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
 let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
   assert_no_tez_given ();

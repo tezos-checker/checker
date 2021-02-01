@@ -145,7 +145,7 @@ val remove_liquidity : t -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp -> (L
 val liquidation_auction_place_bid : t -> kit_token -> (LigoOp.operation list * t)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> kit_token (* TODO: why not returning the new storage? *)
+val liquidation_auction_reclaim_bid : t -> liquidation_auction_bid_ticket -> (LigoOp.operation list * t)
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 val liquidation_auction_reclaim_winning_bid : t -> liquidation_auction_bid_ticket -> (LigoOp.operation list * t)
