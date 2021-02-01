@@ -173,6 +173,11 @@ val delegation_auction_reclaim_bid : t -> delegation_auction_bid Ligo.ticket -> 
 
 type params =
   | Touch
+  (* Uniswap *)
+  | BuyKit of (kit * Ligo.timestamp)
+  | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
+  | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
+  | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)

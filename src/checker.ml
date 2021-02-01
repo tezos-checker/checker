@@ -839,6 +839,11 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
 
 type params =
   | Touch
+  (* Uniswap *)
+  | BuyKit of (kit * Ligo.timestamp)
+  | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
+  | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
+  | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
@@ -849,6 +854,19 @@ let main (op, state: params * t): LigoOp.operation list * t =
   | Touch ->
     let ops, state = touch state (Ligo.tez_from_literal "0mutez") in
     (ops, state)
+  (* Uniswap *)
+  | BuyKit p ->
+    let (min_kit, deadline) = p in
+    buy_kit state min_kit deadline
+  | SellKit p ->
+    let (kit_token, min_tez, deadline) = p in
+    sell_kit state kit_token min_tez deadline
+  | AddLiquidity p ->
+    let (max_kit_token, min_liquidity, deadline) = p in
+    add_liquidity state max_kit_token min_liquidity deadline
+  | RemoveLiquidity p ->
+    let (liquidity, min_tez, min_kit, deadline) = p in
+    remove_liquidity state liquidity min_tez min_kit deadline
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid ->
     delegation_auction_place_bid state
