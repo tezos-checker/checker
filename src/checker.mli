@@ -105,7 +105,7 @@ val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
 val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t (* TODO: yield an (SetDelegate) operation here! *)
 
 (** Requires admin. Create a new permission for a burrow. *)
-val make_permission : t -> permission -> burrow_id -> right -> permission (* TODO: why not returning the new storage? *)
+val make_permission : t -> permission -> burrow_id -> rights -> permission (* TODO: why not returning the new storage? *)
 
 (** Requires admin. Increments a counter so that all previous permissions are
   * now invalid and returns a new admin permission. This makes it easy to

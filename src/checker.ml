@@ -127,7 +127,7 @@ let assert_valid_permission
     (permission: permission)
     (burrow_id: burrow_id)
     (burrow: burrow)
-  : right =
+  : rights =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
     issuer = checker_address
@@ -136,7 +136,7 @@ let assert_valid_permission
     && id = burrow_id in
   if validity_condition
   then right
-  else (failwith "InvalidPermission": right)
+  else (failwith "InvalidPermission": rights)
 
 let create_burrow (state: t) =
   let (burrow_id, state) = mk_burrow_id state in
@@ -299,7 +299,7 @@ let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_i
   else
     (failwith "InsufficientPermission": t)
 
-let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: right) : permission =
+let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : permission =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
