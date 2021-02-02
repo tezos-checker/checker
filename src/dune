@@ -33,6 +33,7 @@
   DelegationAuction
   Permission
   Ratio
+  BurrowTypes
   TokenTypes
   Ligo
   LigoOp

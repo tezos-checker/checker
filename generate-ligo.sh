@@ -15,6 +15,7 @@ inputs=(
   mem
   avl
   tokenTypes
+  burrowTypes
   constants
   liquidationAuction
   delegationAuction
