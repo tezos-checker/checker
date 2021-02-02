@@ -11,7 +11,8 @@ generate-ligo:
 
 build-ligo: generate-ligo
 	mkdir -p generated/michelson
-	ligo compile-contract --protocol edo generated/ligo/main.mligo main --output-file generated/michelson/main.tz --disable-michelson-typechecking
+	ligo compile-contract --protocol edo --disable-michelson-typechecking generated/ligo/main.mligo main --output-file generated/michelson/main.tz
+	# ligo compile-storage --protocol edo generated/ligo/main.mligo main initial_checker --output generated/michelson/storage.tz
 
 test:
 	dune runtest .
