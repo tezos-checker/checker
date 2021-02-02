@@ -299,18 +299,23 @@ let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_i
   else
     (failwith "InsufficientPermission": t)
 
-let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : permission =
+let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission permission burrow_id burrow in
   if is_admin_right r then
     (* only admins can create permissions. *)
-    Ligo.Tezos.create_ticket
-      (right, burrow_id, Ligo.nat_from_literal "0n")
-      (Ligo.nat_from_literal "0n")
+    let ticket =
+      Ligo.Tezos.create_ticket
+        (right, burrow_id, burrow_permission_version burrow)
+        (Ligo.nat_from_literal "0n") in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_permission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+    ([op], state) (* unchanged state *)
   else
-    (failwith "InsufficientPermission": permission)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let invalidate_all_permissions (state: t) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
@@ -718,11 +723,15 @@ let liquidation_auction_place_bid (state: t) (kit: kit_token) : LigoOp.operation
     }
   )
 
-let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : kit_token =
+let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_ticket in
-  kit_issue kit (* TODO: should not issue; should change the auction logic instead! *)
+  let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+  ([op], state) (* NOTE: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
 let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
@@ -839,13 +848,103 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
 
 type params =
   | Touch
+  (* Burrows *)
+  | CreateBurrow
+  | DepositTez of (permission option * burrow_id)
+  | WithdrawTez of (permission * Ligo.tez * burrow_id)
+  | MintKit of (permission * burrow_id * kit)
+  | BurnKit of (permission option * burrow_id * kit_token)
+  | ActivateBurrow of (permission * burrow_id)
+  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | MarkBurrowForLiquidation of burrow_id
+  | TouchLiquidationSlices of leaf_ptr list
+  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | TouchBurrow of burrow_id
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.address)
+  | MakePermission of (permission * burrow_id * rights)
+  | InvalidateAllPermissions of (permission * burrow_id)
+  (* Uniswap *)
+  | BuyKit of (kit * Ligo.timestamp)
+  | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
+  | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
+  | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid of kit_token
+  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
+  (* Delegation Auction *)
+  | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
 
 let main (op, state: params * t): LigoOp.operation list * t =
   match op with
+  | Touch ->
+    touch state (Ligo.tez_from_literal "0mutez") (* FIXME: oracle (medianizer?) input here. *)
+  (* Burrows *)
+  | CreateBurrow ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: origination operation *)
+  | DepositTez p ->
+    let (_permission_option, _burrow_id) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved to the burrow. *)
+  | WithdrawTez p ->
+    let (_permission, _tez, _burrow_id) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
+  | MintKit p ->
+    let (permission, burrow_id, kit) = p in
+    mint_kit state permission burrow_id kit
+  | BurnKit p ->
+    let (permission_option, burrow_id, kit_token) = p in
+    burn_kit state permission_option burrow_id kit_token
+  | ActivateBurrow p ->
+    let (_permission, _burrow_id) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved to the burrow. *)
+  | DeactivateBurrow p ->
+    let (_permission, _burrow_id, _addr) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
+  | MarkBurrowForLiquidation _burrow_id ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
+  | TouchLiquidationSlices _slices ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
+  | CancelSliceLiquidation p ->
+    let (_permission, _leaf_ptr) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
+  | TouchBurrow burrow_id ->
+    touch_burrow state burrow_id
+  | SetBurrowDelegate p ->
+    let (_permission, _burrow_id, _addr) = p in
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: burrow contract entrypoints *)
+  | MakePermission p ->
+    let (permission, burrow_id, rights) = p in
+    make_permission state permission burrow_id rights
+  | InvalidateAllPermissions p ->
+    let (permission, burrow_id) = p in
+    invalidate_all_permissions state permission burrow_id
+  (* Uniswap *)
+  | BuyKit p ->
+    let (min_kit, deadline) = p in
+    buy_kit state min_kit deadline
+  | SellKit p ->
+    let (kit_token, min_tez, deadline) = p in
+    sell_kit state kit_token min_tez deadline
+  | AddLiquidity p ->
+    let (max_kit_token, min_liquidity, deadline) = p in
+    add_liquidity state max_kit_token min_liquidity deadline
+  | RemoveLiquidity p ->
+    let (liquidity, min_tez, min_kit, deadline) = p in
+    remove_liquidity state liquidity min_tez min_kit deadline
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid _kit_token ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
+  | LiqAuctionReclaimBid _ticket ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
+  | LiqAuctionReclaimWinningBid _ticket ->
+    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
+  (* Delegation Auction *)
+  | DelegationAuctionPlaceBid ->
+    delegation_auction_place_bid state
   | DelegationAuctionClaimWin p ->
     let (ticket, key) = p in
     delegation_auction_claim_win state ticket key
-  | Touch ->
-    let ops, state = touch state (Ligo.tez_from_literal "0mutez") in
-    (ops, state)
+  | DelegationAuctionReclaimBid ticket ->
+    delegation_auction_reclaim_bid state ticket
