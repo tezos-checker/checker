@@ -4,6 +4,8 @@ let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "m
 
 let arb_positive_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(1 -- max_int)
 
+let arb_address = QCheck.map Ligo.address_of_string QCheck.(string_of_size (Gen.return 36))
+
 (* somewhere between 0 and 3 tez *)
 let arb_small_tez =
   QCheck.map
@@ -20,7 +22,7 @@ let arb_liquidation_slice =
          ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
           ; older = None
           ; younger = None
-          ; burrow = Ptr.ptr_null
+          ; burrow = Ligo.address_of_string ""
           ; min_kit_for_unwarranted = kit_zero
           })
     )

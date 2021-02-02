@@ -9,18 +9,15 @@ open LiquidationAuction
 open LiquidationAuctionTypes
 open TokenTypes
 
-(* TODO: Actually, at the end, this should be a Michelson address, which we
- * receive when we originate the burrow contract (Tezos.create_contract). *)
-type burrow_id = Ptr.t
+type burrow_id = Ligo.address
 
 type t =
-  { burrows : (ptr, burrow) Ligo.big_map;
+  { burrows : (burrow_id, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
-    last_burrow_id: ptr;
   }
 
 (** Make a fresh state. *)

@@ -69,7 +69,7 @@ let mk_liquidation_slice (n: int): liquidation_slice =
   { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
   ; older = None
   ; younger = None
-  ; burrow = Ptr.ptr_null
+  ; burrow = Ligo.address_of_string "someburrow"
   ; min_kit_for_unwarranted = kit_zero
   }
 
