@@ -14,6 +14,7 @@ open LiquidationAuctionTypes
 open Common
 open Constants
 open TokenTypes
+open BurrowTypes
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -145,6 +146,27 @@ let create_burrow (state: t) =
     Ligo.Tezos.create_ticket
       (Admin, burrow_id, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n") in
+  let _op1, _address =
+    LigoOp.Tezos.create_contract
+      (fun (p, s : burrow_parameter * burrow_storage) ->
+         if !Ligo.Tezos.sender <> s then
+           (failwith "AuthenticationError" : LigoOp.operation list * burrow_storage)
+         else
+           match p with
+           | BurrowSetDelegate kho ->
+             ([LigoOp.Tezos.set_delegate kho], s)
+           | BurrowStoreTez ->
+             (([] : LigoOp.operation list), s)
+           | BurrowSendTezTo p ->
+             let (tez, addr) = p in
+             let op = match (LigoOp.Tezos.get_contract_opt addr : unit LigoOp.contract option) with
+               | Some c -> LigoOp.Tezos.unit_transaction () tez c
+               | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+             ([op], s)
+      )
+      (None : Ligo.key_hash option)
+      !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
+      checker_address in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
 
