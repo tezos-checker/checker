@@ -288,9 +288,11 @@ let activate_burrow (state: t) (permission: permission) (burrow_id: burrow_id) :
   if is_admin_right r then
     (* only admins can activate burrows. *)
     let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
-    let ops : LigoOp.operation list = [] in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
+      | None -> (failwith "GetEntrypointOptFailure (%burrowStoreTez)" : LigoOp.operation) in
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    (ops, state)
+    ([op], state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
@@ -920,8 +922,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
     let (permission_option, burrow_id, kit_token) = p in
     burn_kit state permission_option burrow_id kit_token
   | ActivateBurrow p ->
-    let (_permission, _burrow_id) = p in
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved to the burrow. *)
+    let (permission, burrow_id) = p in
+    activate_burrow state permission burrow_id
   | DeactivateBurrow p ->
     let (_permission, _burrow_id, _addr) = p in
     (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
