@@ -78,11 +78,11 @@ val burrow_deposit_tez : parameters -> Ligo.tez -> burrow -> burrow
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-val burrow_withdraw_tez : parameters -> Ligo.tez -> burrow -> (burrow * Ligo.tez)
+val burrow_withdraw_tez : parameters -> Ligo.tez -> burrow -> burrow
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
-val burrow_mint_kit : parameters -> kit -> burrow -> (burrow * kit)
+val burrow_mint_kit : parameters -> kit -> burrow -> burrow
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)

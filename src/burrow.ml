@@ -214,23 +214,23 @@ let burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
   * not overburrow it. *)
-let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : (burrow * Ligo.tez) =
+let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
-  let new_burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
-  if burrow_is_overburrowed p new_burrow
-  then (failwith "WithdrawTezFailure" : (burrow * Ligo.tez))
-  else (new_burrow, t)
+  let burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
+  if burrow_is_overburrowed p burrow
+  then (failwith "WithdrawTezFailure" : burrow)
+  else burrow
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
   * not overburrow it *)
-let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : (burrow * kit) =
+let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
-  let new_burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
-  if burrow_is_overburrowed p new_burrow
-  then (failwith "MintKitFailure" : (burrow * kit))
-  else (new_burrow, kit)
+  let burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
+  if burrow_is_overburrowed p burrow
+  then (failwith "MintKitFailure" : burrow)
+  else burrow
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
