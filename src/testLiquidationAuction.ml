@@ -1,4 +1,3 @@
-open Ptr
 open Kit
 open OUnit2
 open TestCommon
@@ -10,9 +9,9 @@ let checker_amount = Ligo.tez_from_literal "0mutez"
 let checker_sender = Ligo.address_from_literal "somebody"
 
 let suite =
-  let burrow_id_1 = ptr_init in
-  let burrow_id_2 = ptr_next burrow_id_1 in
-  let burrow_id_3 = ptr_next burrow_id_2 in
+  let burrow_id_1 = Ligo.address_of_string "burrow_1" in
+  let burrow_id_2 = Ligo.address_of_string "burrow_2" in
+  let burrow_id_3 = Ligo.address_of_string "burrow_3" in
 
   "Liquidation auction tests" >::: [
     ("test starts descending auction" >::

@@ -1,5 +1,6 @@
 open Ligo
 open TokenTypes
+open BurrowTypes
 
 (* contract *)
 
@@ -18,20 +19,24 @@ type 'parameter transaction_value = (* GADT *)
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
-    match tv with
-    | UnitTransactionValue -> "()"
-    | KitTransactionValue c -> show_ticket pp_kit_token_content c
-    | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-    | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
-    | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
-    | PermTransactionValue c -> show_ticket pp_permission_content c
+  match tv with
+  | UnitTransactionValue -> "()"
+  | KitTransactionValue c -> show_ticket pp_kit_token_content c
+  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
+  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
+  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
+  | PermTransactionValue c -> show_ticket pp_permission_content c
 
 (* operation *)
 
 type operation =
   | SetDelegate of key_hash option
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
-  | NotImplementedYet : operation
+  | CreateContract of
+      ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
+      Ligo.key_hash option *
+      Ligo.tez *
+      Ligo.address
 
 type key_hash_option = key_hash option
 [@@deriving show]
@@ -41,11 +46,19 @@ let show_operation (op: operation) : String.t =
   | SetDelegate kho -> "SetDelegate (" ^ show_key_hash_option kho ^ ")"
   | Transaction (tv,tz,c) ->
     "Transaction " ^ "(" ^ show_transaction_value tv ^ ", " ^ string_of_tez tz ^ ", " ^ show_contract c ^ ")"
-  | NotImplementedYet -> "NotImplementedYet"
+  | CreateContract (_code, kho, init_tez, init_store) ->
+    "CreateContract (<code>, " ^ show_key_hash_option kho ^ ", " ^ string_of_tez init_tez ^ ", " ^ show_burrow_storage init_store ^ ")"
 
 let pp_operation fmt op = Format.pp_print_string fmt (show_operation op)
 
 module Tezos = struct
+  let address_counter = ref (nat_from_literal "0n")
+
+  let get_next_address () =
+    let cnt = !address_counter in
+    address_counter := add_nat_nat !address_counter (nat_from_literal "1n");
+    address_of_string ("tz1" ^ string_of_nat cnt)
+
   let set_delegate hash_option = SetDelegate hash_option
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
@@ -59,4 +72,9 @@ module Tezos = struct
     Some (Contract (address_of_string (string_of_address address ^ "%" ^ ep)))
 
   let get_contract_opt address = Some (Contract address)
+
+  let create_contract code delegate tez store =
+    let contract = CreateContract (code, delegate, tez, store) in
+    let address = get_next_address () in
+    (contract, address)
 end

@@ -8,7 +8,7 @@ type leaf_ptr = LeafPtr of ptr
 [@@deriving show]
 
 type liquidation_slice = {
-  burrow: ptr;
+  burrow: Ligo.address;
   tez: Ligo.tez;
   min_kit_for_unwarranted: kit;
   older: leaf_ptr option;

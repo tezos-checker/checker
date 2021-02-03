@@ -1,4 +1,3 @@
-open Ptr
 open Kit
 open Permission
 open Parameters
@@ -9,18 +8,15 @@ open LiquidationAuction
 open LiquidationAuctionTypes
 open TokenTypes
 
-(* TODO: Actually, at the end, this should be a Michelson address, which we
- * receive when we originate the burrow contract (Tezos.create_contract). *)
-type burrow_id = Ptr.t
+type burrow_id = Ligo.address
 
 type t =
-  { burrows : (ptr, burrow) Ligo.big_map;
+  { burrows : (burrow_id, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
-    last_burrow_id: ptr;
   }
 
 (** Make a fresh state. *)
@@ -41,8 +37,11 @@ val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
 (** Create and return a new burrow containing the given tez as collateral,
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
-  * sender. *)
-val create_burrow : t -> (burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
+  * sender.
+  *
+  * TODO: We should probably ask for an (optional) initial delegate here.
+*)
+val create_burrow : t -> (LigoOp.operation list * burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from

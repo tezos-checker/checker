@@ -1,5 +1,4 @@
 open FixedPoint
-open Ptr
 open Ratio
 open Kit
 open Mem
@@ -14,37 +13,31 @@ open LiquidationAuctionTypes
 open Common
 open Constants
 open TokenTypes
+open BurrowTypes
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
 
-type burrow_id = ptr
+type burrow_id = Ligo.address
 
 type t =
-  { burrows : (ptr, burrow) Ligo.big_map;
+  { burrows : (burrow_id, burrow) Ligo.big_map;
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
-    last_burrow_id: ptr;
   }
 
 let initial_checker =
-  { burrows = (Ligo.Big_map.empty: (ptr, burrow) Ligo.big_map);
+  { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
     uniswap = uniswap_make_initial;
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
-    last_burrow_id = ptr_null; (* FIXME: this will be unnecessary when we start to use addresses as keys *)
   }
-
-(* Utility function to give us burrow addresses *)
-let mk_burrow_id (state: t) : (burrow_id * t) =
-  let n = ptr_next state.last_burrow_id in
-  (n, { state with last_burrow_id = n; })
 
 (* BEGIN_OCAML *)
 let assert_invariants (state: t) : unit =
@@ -139,14 +132,36 @@ let assert_valid_permission
   else (failwith "InvalidPermission": rights)
 
 let create_burrow (state: t) =
-  let (burrow_id, state) = mk_burrow_id state in
   let burrow = burrow_create state.parameters !Ligo.Tezos.amount in
+  let op, burrow_address =
+    LigoOp.Tezos.create_contract
+      (fun (p, s : burrow_parameter * burrow_storage) ->
+         if !Ligo.Tezos.sender <> s then
+           (failwith "AuthenticationError" : LigoOp.operation list * burrow_storage)
+         else
+           match p with
+           | BurrowSetDelegate kho ->
+             ([LigoOp.Tezos.set_delegate kho], s)
+           | BurrowStoreTez ->
+             (([] : LigoOp.operation list), s)
+           | BurrowSendTezTo p ->
+             let (tez, addr) = p in
+             let op = match (LigoOp.Tezos.get_contract_opt addr : unit LigoOp.contract option) with
+               | Some c -> LigoOp.Tezos.unit_transaction () tez c
+               | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+             ([op], s)
+      )
+      (None : Ligo.key_hash option)
+      !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
+      checker_address in
+  let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
+
   let admin_ticket =
     Ligo.Tezos.create_ticket
-      (Admin, burrow_id, Ligo.nat_from_literal "0n")
+      (Admin, burrow_address, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n") in
-  let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
-  (burrow_id, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
+
+  ([op], burrow_address, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
 
 let touch_burrow (state: t) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   let burrow = find_burrow state burrow_id in

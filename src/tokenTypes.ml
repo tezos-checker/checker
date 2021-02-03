@@ -83,5 +83,5 @@ type rights =
   | User of specific_rights
 [@@deriving show]
 
-type permission_content = rights * ptr * Ligo.nat
+type permission_content = rights * Ligo.address * Ligo.nat
 [@@deriving show]
