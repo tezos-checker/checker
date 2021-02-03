@@ -234,10 +234,10 @@ let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id:
     let (updated_burrow, withdrawn) = burrow_withdraw_tez state.parameters tez burrow in
     assert (tez = withdrawn);
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-      | Some c -> [LigoOp.Tezos.unit_transaction () withdrawn c]
-      | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
-    (ops, updated_state)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.tez_address_transaction (withdrawn, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "GetEntrypointOptFailure (%burrowSendTezTo)" : LigoOp.operation) in
+    ([op], updated_state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
@@ -915,8 +915,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
     let (permission_option, burrow_id) = p in
     deposit_tez state permission_option burrow_id
   | WithdrawTez p ->
-    let (_permission, _tez, _burrow_id) = p in
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
+    let (permission, tez, burrow_id) = p in
+    withdraw_tez state permission tez burrow_id
   | MintKit p ->
     let (permission, burrow_id, kit) = p in
     mint_kit state permission burrow_id kit
