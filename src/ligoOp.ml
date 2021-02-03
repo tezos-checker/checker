@@ -19,13 +19,13 @@ type 'parameter transaction_value = (* GADT *)
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
-    match tv with
-    | UnitTransactionValue -> "()"
-    | KitTransactionValue c -> show_ticket pp_kit_token_content c
-    | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-    | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
-    | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
-    | PermTransactionValue c -> show_ticket pp_permission_content c
+  match tv with
+  | UnitTransactionValue -> "()"
+  | KitTransactionValue c -> show_ticket pp_kit_token_content c
+  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
+  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
+  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
+  | PermTransactionValue c -> show_ticket pp_permission_content c
 
 (* operation *)
 
@@ -73,8 +73,8 @@ module Tezos = struct
 
   let get_contract_opt address = Some (Contract address)
 
-  let create_contract code kho tez store =
-    let contract = CreateContract (code, kho, tez, store) in
+  let create_contract code delegate tez store =
+    let contract = CreateContract (code, delegate, tez, store) in
     let address = get_next_address () in
     (contract, address)
 end

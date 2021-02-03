@@ -29,20 +29,26 @@ let suite =
          (* Creation/deactivation does not incur any costs. *)
          let tez = Ligo.tez_from_literal "12_345_678mutez" in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let (burrow_id, admin_permission, checker0) = Checker.create_burrow checker in
-         Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
-         assert_equal
-           [LigoOp.Tezos.unit_transaction () tez (Option.get (LigoOp.Tezos.get_contract_opt bob_addr))]
-           ops;
-         (* deactivation/activation = identity (if conditions are met ofc). *)
-         Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let _ops, checker2 = Checker.activate_burrow checker1 admin_permission burrow_id in
-         assert_equal checker0 checker2;
-         () in
+         let (ops, burrow_id, admin_permission, checker0) = Checker.create_burrow checker in
+
+         (* created burrow should be deposited (incl. the creation deposit) *)
+         match ops with
+         | [CreateContract (_, _, sent_tez, _)] -> assert_equal tez sent_tez ~printer:Ligo.string_of_tez;
+         | _ -> (assert_failure ("Expected CreateContract but got " ^ show_operation_list ops): unit);
+
+           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+           let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
+           assert_equal
+             [LigoOp.Tezos.unit_transaction () tez (Option.get (LigoOp.Tezos.get_contract_opt bob_addr))]
+             ops;
+           (* deactivation/activation = identity (if conditions are met ofc). *)
+           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
+           let _ops, checker2 = Checker.activate_burrow checker1 admin_permission burrow_id in
+           assert_equal checker0 checker2;
+           () in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let (burrow_id, admin_permission, checker) = Checker.create_burrow checker in
+       let (_ops, burrow_id, admin_permission, checker) = Checker.create_burrow checker in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");

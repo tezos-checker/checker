@@ -1,4 +1,3 @@
-open Ptr
 open Kit
 open Permission
 open Parameters
@@ -38,8 +37,11 @@ val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
 (** Create and return a new burrow containing the given tez as collateral,
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
-  * sender. *)
-val create_burrow : t -> (burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
+  * sender.
+  *
+  * TODO: We should probably ask for an (optional) initial delegate here.
+*)
+val create_burrow : t -> (LigoOp.operation list * burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from

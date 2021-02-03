@@ -133,7 +133,7 @@ let assert_valid_permission
 
 let create_burrow (state: t) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.amount in
-  let _op1, burrow_address =
+  let op, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
          if !Ligo.Tezos.sender <> s then
@@ -161,7 +161,7 @@ let create_burrow (state: t) =
       (Admin, burrow_address, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n") in
 
-  (burrow_address, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
+  ([op], burrow_address, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
 
 let touch_burrow (state: t) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   let burrow = find_burrow state burrow_id in
