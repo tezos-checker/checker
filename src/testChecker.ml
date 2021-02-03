@@ -45,7 +45,8 @@ let suite =
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
          let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
          assert_equal
-           [LigoOp.Tezos.unit_transaction () tez (Option.get (LigoOp.Tezos.get_contract_opt bob_addr))]
+           ~printer:show_operation_list
+           [LigoOp.Tezos.tez_address_transaction (tez, bob_addr) (Ligo.tez_from_literal "0mutez") (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id))]
            ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;

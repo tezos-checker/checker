@@ -17,6 +17,10 @@ type 'parameter transaction_value = (* GADT *)
   | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
   | LaBidTransactionValue : liquidation_auction_bid_details ticket -> liquidation_auction_bid_details ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
+  | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
+
+type tez_and_address = (tez * address)
+[@@deriving show]
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
@@ -28,6 +32,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
     | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
     | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
     | PermTransactionValue c -> show_ticket pp_permission_content c
+    | TezAddressTransactionValue ta -> show_tez_and_address ta
 
 (* operation *)
 
@@ -70,9 +75,10 @@ module Tezos = struct
   let da_bid_transaction value tez contract = Transaction (DaBidTransactionValue value, tez, contract)
   let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
   let perm_transaction value tez contract = Transaction (PermTransactionValue value, tez, contract)
+  let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
-    Some (Contract (address_of_string (string_of_address address ^ "%" ^ ep)))
+    Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
 
   let get_contract_opt address = Some (Contract address)
 

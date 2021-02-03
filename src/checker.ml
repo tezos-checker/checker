@@ -305,10 +305,10 @@ let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id)
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let ops = match (LigoOp.Tezos.get_contract_opt recipient : unit LigoOp.contract option) with
-      | Some c -> [LigoOp.Tezos.unit_transaction () returned_tez c]
-      | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
-    (ops, updated_state)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, recipient) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
+      | None -> (failwith "GetEntrypointOptFailure (%burrowSendTezTo)" : LigoOp.operation) in
+    ([op], updated_state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
@@ -925,8 +925,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
     let (permission, burrow_id) = p in
     activate_burrow state permission burrow_id
   | DeactivateBurrow p ->
-    let (_permission, _burrow_id, _addr) = p in
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
+    let (permission, burrow_id, addr) = p in
+    deactivate_burrow state permission burrow_id addr
   | MarkBurrowForLiquidation _burrow_id ->
     (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
   | TouchLiquidationSlices _slices ->

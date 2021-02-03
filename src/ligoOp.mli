@@ -22,6 +22,7 @@ type 'parameter transaction_value = (* GADT *)
   | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
   | LaBidTransactionValue : liquidation_auction_bid_details ticket -> liquidation_auction_bid_details ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
+  | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
 
 (* operation *)
 
@@ -53,6 +54,7 @@ module Tezos : sig
   val da_bid_transaction : delegation_auction_bid ticket -> tez -> delegation_auction_bid ticket contract -> operation
   val la_bid_transaction : liquidation_auction_bid_details ticket -> tez -> liquidation_auction_bid_details ticket contract -> operation
   val perm_transaction : permission_content ticket -> tez -> permission_content ticket contract -> operation
+  val tez_address_transaction : (tez * address) -> tez -> (tez * address) contract -> operation
 
   val get_entrypoint_opt : string -> address -> 'parameter contract option
   val get_contract_opt : address -> unit contract option (* could also leave it as a parameter *)
