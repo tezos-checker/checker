@@ -1,6 +1,5 @@
 open Kit
 open LiquidationAuctionTypes
-open Ptr
 open Common
 
 (*
