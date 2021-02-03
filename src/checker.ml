@@ -181,18 +181,20 @@ let touch_burrow (state: t) (burrow_id: burrow_id) : (LigoOp.operation list * t)
 let deposit_tez (state: t) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
-  let ops : LigoOp.operation list = [] in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
+    | None -> (failwith "GetEntrypointOptFailure (%burrowStoreTez)" : LigoOp.operation) in
   if burrow_allow_all_tez_deposits burrow then
     (* no need to check the permission argument at all *)
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-    (ops, {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
+    ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
     let permission = assert_permission_is_present permission in
     let r = assert_valid_permission permission burrow_id burrow in
     if does_right_allow_tez_deposits r then
       (* the permission should support depositing tez. *)
       let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-      (ops, {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
+      ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
     else
       (failwith "InsufficientPermission": LigoOp.operation list * t)
 
@@ -910,8 +912,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
   | CreateBurrow delegate_opt ->
     create_burrow state delegate_opt
   | DepositTez p ->
-    let (_permission_option, _burrow_id) = p in
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved to the burrow. *)
+    let (permission_option, burrow_id) = p in
+    deposit_tez state permission_option burrow_id
   | WithdrawTez p ->
     let (_permission, _tez, _burrow_id) = p in
     (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved from the burrow to Tezos.sender. *)
