@@ -133,7 +133,7 @@ let assert_valid_permission
 
 let create_burrow (state: t) (delegate_opt: Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
-  let op, burrow_address =
+  let op1, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
          if !Ligo.Tezos.sender <> s then
@@ -154,14 +154,22 @@ let create_burrow (state: t) (delegate_opt: Ligo.key_hash option) =
       delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       checker_address in
-  let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
 
   let admin_ticket =
     Ligo.Tezos.create_ticket
       (Admin, burrow_address, Ligo.nat_from_literal "0n")
       (Ligo.nat_from_literal "0n") in
+  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_permission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_permission)" : LigoOp.operation) in
 
-  ([op], burrow_address, admin_ticket, updated_state) (* TODO: send the id and the ticket to sender! *)
+  let op3 = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_address" !Ligo.Tezos.sender : Ligo.address LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.address_transaction burrow_address (Ligo.tez_from_literal "0mutez") c
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_address)" : LigoOp.operation) in
+
+  let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
+
+  ([op1; op2; op3], updated_state)
 
 let touch_burrow (state: t) (burrow_id: burrow_id) : (LigoOp.operation list * t) =
   let burrow = find_burrow state burrow_id in
@@ -864,7 +872,7 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
 type params =
   | Touch
   (* Burrows *)
-  | CreateBurrow
+  | CreateBurrow of Ligo.key_hash option
   | DepositTez of (permission option * burrow_id)
   | WithdrawTez of (permission * Ligo.tez * burrow_id)
   | MintKit of (permission * burrow_id * kit)
@@ -897,8 +905,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
   | Touch ->
     touch state (Ligo.tez_from_literal "0mutez") (* FIXME: oracle (medianizer?) input here. *)
   (* Burrows *)
-  | CreateBurrow ->
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: origination operation *)
+  | CreateBurrow delegate_opt ->
+    create_burrow state delegate_opt
   | DepositTez p ->
     let (_permission_option, _burrow_id) = p in
     (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: tez needs to be moved to the burrow. *)

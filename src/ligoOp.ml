@@ -11,6 +11,7 @@ let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contrac
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
+  | AddressTransactionValue : address -> address transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
   | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
   | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
@@ -19,13 +20,14 @@ type 'parameter transaction_value = (* GADT *)
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
-  match tv with
-  | UnitTransactionValue -> "()"
-  | KitTransactionValue c -> show_ticket pp_kit_token_content c
-  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
-  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
-  | PermTransactionValue c -> show_ticket pp_permission_content c
+    match tv with
+    | UnitTransactionValue -> "()"
+    | AddressTransactionValue a -> string_of_address a
+    | KitTransactionValue c -> show_ticket pp_kit_token_content c
+    | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
+    | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
+    | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
+    | PermTransactionValue c -> show_ticket pp_permission_content c
 
 (* operation *)
 
@@ -34,9 +36,9 @@ type operation =
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
   | CreateContract of
       ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
-      Ligo.key_hash option *
-      Ligo.tez *
-      Ligo.address
+      key_hash option *
+      tez *
+      address
 
 type key_hash_option = key_hash option
 [@@deriving show]
@@ -62,6 +64,7 @@ module Tezos = struct
   let set_delegate hash_option = SetDelegate hash_option
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
+  let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
   let kit_transaction value tez contract = Transaction (KitTransactionValue value, tez, contract)
   let lqt_transaction value tez contract = Transaction (LqtTransactionValue value, tez, contract)
   let da_bid_transaction value tez contract = Transaction (DaBidTransactionValue value, tez, contract)

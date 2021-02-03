@@ -38,7 +38,7 @@ val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
   * sender. *)
-val create_burrow : t -> Ligo.key_hash option -> (LigoOp.operation list * burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
+val create_burrow : t -> Ligo.key_hash option -> (LigoOp.operation list * t)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
@@ -171,7 +171,7 @@ val delegation_auction_reclaim_bid : t -> delegation_auction_bid Ligo.ticket -> 
 type params =
   | Touch
   (* Burrows *)
-  | CreateBurrow
+  | CreateBurrow of Ligo.key_hash option
   | DepositTez of (permission option * burrow_id)
   | WithdrawTez of (permission * Ligo.tez * burrow_id)
   | MintKit of (permission * burrow_id * kit)

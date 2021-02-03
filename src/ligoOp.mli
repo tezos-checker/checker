@@ -16,6 +16,7 @@ val show_contract : 'parameter contract -> String.t
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
+  | AddressTransactionValue : address -> address transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
   | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
   | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
@@ -29,9 +30,9 @@ type operation =
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
   | CreateContract of
       ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
-      Ligo.key_hash option *
-      Ligo.tez *
-      Ligo.address
+      key_hash option *
+      tez *
+      address
   (**
       An operation emitted by the contract
   *)
@@ -46,6 +47,7 @@ module Tezos : sig
   val set_delegate : key_hash option -> operation
 
   val unit_transaction : unit -> tez -> unit contract -> operation
+  val address_transaction : address -> tez -> address contract -> operation
   val kit_transaction : kit_token_content ticket -> tez -> kit_token_content ticket contract -> operation
   val lqt_transaction : liquidity_token_content ticket -> tez -> liquidity_token_content ticket contract -> operation
   val da_bid_transaction : delegation_auction_bid ticket -> tez -> delegation_auction_bid ticket contract -> operation
@@ -57,8 +59,8 @@ module Tezos : sig
 
   val create_contract :
     ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) ->
-    Ligo.key_hash option ->
-    Ligo.tez ->
-    Ligo.address ->
+    key_hash option ->
+    tez ->
+    address ->
     (operation * address)
 end

@@ -72,6 +72,7 @@ for name in "${inputs[@]}"; do
 
     # forget separate kinds of transfers
     sed -E 's/Tezos\.unit_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.address_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.kit_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.lqt_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.da_bid_transaction/Tezos\.transaction/g' |
