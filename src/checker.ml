@@ -965,10 +965,10 @@ let main (op, state: params * t): LigoOp.operation list * t =
     let (liquidity, min_tez, min_kit, deadline) = p in
     remove_liquidity state liquidity min_tez min_kit deadline
   (* Liquidation Auction *)
-  | LiqAuctionPlaceBid _kit_token ->
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
-  | LiqAuctionReclaimBid _ticket ->
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
+  | LiqAuctionPlaceBid kit_token ->
+    liquidation_auction_place_bid state kit_token
+  | LiqAuctionReclaimBid ticket ->
+    liquidation_auction_reclaim_bid state ticket
   | LiqAuctionReclaimWinningBid _ticket ->
     (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: ensure tez is being moved appropriately *)
   (* Delegation Auction *)
