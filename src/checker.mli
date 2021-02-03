@@ -99,7 +99,7 @@ val cancel_liquidation_slice : t -> permission -> leaf_ptr -> (LigoOp.operation 
 val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
 
 (** Set the delegate of a burrow. *)
-val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.key_hash -> t (* TODO: we need to signal the burrow contract to set its own delegate here! *)
+val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.key_hash option -> (LigoOp.operation list * t)
 
 (** Requires admin. Create a new permission for a burrow. *)
 val make_permission : t -> permission -> burrow_id -> rights -> (LigoOp.operation list * t)
@@ -182,7 +182,7 @@ type params =
   | TouchLiquidationSlices of leaf_ptr list
   | CancelSliceLiquidation of (permission * leaf_ptr)
   | TouchBurrow of burrow_id
-  | SetBurrowDelegate of (permission * burrow_id * Ligo.address)
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
   | InvalidateAllPermissions of (permission * burrow_id)
   (* Uniswap *)

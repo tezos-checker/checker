@@ -99,7 +99,7 @@ val burrow_activate : parameters -> Ligo.tez -> burrow -> burrow
 val burrow_deactivate : parameters -> burrow -> (burrow * Ligo.tez)
 
 (** Set the delegate of a burrow. *)
-val burrow_set_delegate : parameters -> Ligo.key_hash -> burrow -> burrow
+val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
 
 (* ************************************************************************* *)
 (*                           Permission-related                              *)

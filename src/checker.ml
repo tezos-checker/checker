@@ -314,17 +314,21 @@ let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
-let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_id) (delegate: Ligo.key_hash) : t =
+let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_id) (delegate_opt: Ligo.key_hash option) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;
   let r = assert_valid_permission permission burrow_id burrow in
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
-    let updated_burrow = burrow_set_delegate state.parameters delegate burrow in
-    {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows}
+    let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" burrow_id : Ligo.key_hash option LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "GetEntrypointOptFailure (%burrowSetDelegate)" : LigoOp.operation) in
+    let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+    ([op], state)
   else
-    (failwith "InsufficientPermission": t)
+    (failwith "InsufficientPermission": LigoOp.operation list * t)
 
 let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * t) =
   assert_no_tez_given ();
@@ -887,7 +891,7 @@ type params =
   | TouchLiquidationSlices of leaf_ptr list
   | CancelSliceLiquidation of (permission * leaf_ptr)
   | TouchBurrow of burrow_id
-  | SetBurrowDelegate of (permission * burrow_id * Ligo.address)
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
   | InvalidateAllPermissions of (permission * burrow_id)
   (* Uniswap *)
@@ -939,8 +943,8 @@ let main (op, state: params * t): LigoOp.operation list * t =
   | TouchBurrow burrow_id ->
     touch_burrow state burrow_id
   | SetBurrowDelegate p ->
-    let (_permission, _burrow_id, _addr) = p in
-    (failwith "FIXME" : LigoOp.operation list * t) (* FIXME: burrow contract entrypoints *)
+    let (permission, burrow_id, delegate_opt) = p in
+    set_burrow_delegate state permission burrow_id delegate_opt
   | MakePermission p ->
     let (permission, burrow_id, rights) = p in
     make_permission state permission burrow_id rights

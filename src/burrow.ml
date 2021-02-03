@@ -283,10 +283,10 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
       } in
     (updated_burrow, return)
 
-let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash) (b: burrow) : burrow =
+let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash option) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
-  { b with delegate = Some new_delegate; }
+  { b with delegate = new_delegate; }
 
 (* ************************************************************************* *)
 (*                           PERMISSION-RELATED                              *)

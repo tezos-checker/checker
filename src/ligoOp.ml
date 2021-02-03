@@ -18,8 +18,12 @@ type 'parameter transaction_value = (* GADT *)
   | LaBidTransactionValue : liquidation_auction_bid_details ticket -> liquidation_auction_bid_details ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
+  | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
 
 type tez_and_address = (tez * address)
+[@@deriving show]
+
+type key_hash_option = key_hash option
 [@@deriving show]
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
@@ -33,6 +37,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
     | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
     | PermTransactionValue c -> show_ticket pp_permission_content c
     | TezAddressTransactionValue ta -> show_tez_and_address ta
+    | OptKeyHashTransactionValue kho -> show_key_hash_option kho
 
 (* operation *)
 
@@ -44,9 +49,6 @@ type operation =
       key_hash option *
       tez *
       address
-
-type key_hash_option = key_hash option
-[@@deriving show]
 
 let show_operation (op: operation) : String.t =
   match op with
@@ -76,6 +78,7 @@ module Tezos = struct
   let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
   let perm_transaction value tez contract = Transaction (PermTransactionValue value, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
+  let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
