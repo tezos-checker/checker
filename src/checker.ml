@@ -131,8 +131,8 @@ let assert_valid_permission
   then right
   else (failwith "InvalidPermission": rights)
 
-let create_burrow (state: t) =
-  let burrow = burrow_create state.parameters !Ligo.Tezos.amount in
+let create_burrow (state: t) (delegate_opt: Ligo.key_hash option) =
+  let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
   let op, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
@@ -151,7 +151,7 @@ let create_burrow (state: t) =
                | None -> (failwith "GetContractOptFailure" : LigoOp.operation) in
              ([op], s)
       )
-      (None : Ligo.key_hash option)
+      delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       checker_address in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
@@ -302,7 +302,7 @@ let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
 
-let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_id) (delegate: Ligo.address) : t =
+let set_burrow_delegate (state: t) (permission: permission) (burrow_id: burrow_id) (delegate: Ligo.key_hash) : t =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
   assert_burrow_has_no_unclaimed_slices state burrow;

@@ -71,7 +71,7 @@ val burrow_return_slice_from_auction : LiquidationAuctionTypes.leaf_ptr -> Liqui
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
   * is less than the creation deposit. *)
-val burrow_create : parameters -> Ligo.tez -> burrow
+val burrow_create : parameters -> Ligo.tez -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
 val burrow_deposit_tez : parameters -> Ligo.tez -> burrow -> burrow
@@ -99,7 +99,7 @@ val burrow_activate : parameters -> Ligo.tez -> burrow -> burrow
 val burrow_deactivate : parameters -> burrow -> (burrow * Ligo.tez)
 
 (** Set the delegate of a burrow. *)
-val burrow_set_delegate : parameters -> Ligo.address -> burrow -> burrow
+val burrow_set_delegate : parameters -> Ligo.key_hash -> burrow -> burrow
 
 (* ************************************************************************* *)
 (*                           Permission-related                              *)
@@ -164,7 +164,7 @@ val make_burrow_for_test :
   permission_version:Ligo.nat ->
   allow_all_tez_deposits:bool ->
   allow_all_kit_burnings:bool ->
-  delegate:(Ligo.address option) ->
+  delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->
   excess_kit:kit ->

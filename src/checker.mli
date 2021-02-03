@@ -37,11 +37,8 @@ val touch : t -> Ligo.tez -> (LigoOp.operation list * t)
 (** Create and return a new burrow containing the given tez as collateral,
   * minus the creation deposit. Fail if the tez is not enough to cover the
   * creation deposit. Additionally, return an Admin permission ticket to the
-  * sender.
-  *
-  * TODO: We should probably ask for an (optional) initial delegate here.
-*)
-val create_burrow : t -> (LigoOp.operation list * burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
+  * sender. *)
+val create_burrow : t -> Ligo.key_hash option -> (LigoOp.operation list * burrow_id * permission * t) (* TODO: what should the operations be for this one? *)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
   * the burrow does not exist, or if the burrow does not allow deposits from
@@ -102,7 +99,7 @@ val cancel_liquidation_slice : t -> permission -> leaf_ptr -> (LigoOp.operation 
 val touch_burrow : t -> burrow_id -> (LigoOp.operation list * t)
 
 (** Set the delegate of a burrow. *)
-val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.address -> t (* TODO: we need to signal the burrow contract to set its own delegate here! *)
+val set_burrow_delegate : t -> permission -> burrow_id -> Ligo.key_hash -> t (* TODO: we need to signal the burrow contract to set its own delegate here! *)
 
 (** Requires admin. Create a new permission for a burrow. *)
 val make_permission : t -> permission -> burrow_id -> rights -> (LigoOp.operation list * t)

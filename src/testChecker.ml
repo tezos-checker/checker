@@ -29,7 +29,7 @@ let suite =
          (* Creation/deactivation does not incur any costs. *)
          let tez = Ligo.tez_from_literal "12_345_678mutez" in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let (ops, burrow_id, admin_permission, checker0) = Checker.create_burrow checker in
+         let (ops, burrow_id, admin_permission, checker0) = Checker.create_burrow checker None in
 
          (* created burrow should be deposited (incl. the creation deposit) *)
          match ops with
@@ -48,7 +48,7 @@ let suite =
            () in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let (_ops, burrow_id, admin_permission, checker) = Checker.create_burrow checker in
+       let (_ops, burrow_id, admin_permission, checker) = Checker.create_burrow checker None in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");

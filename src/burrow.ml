@@ -18,7 +18,7 @@ type burrow =
     permission_version : Ligo.nat;
     allow_all_tez_deposits : bool;
     allow_all_kit_burnings : bool;
-    delegate : Ligo.address option; (* NOTE: this is part of the burrow contract actually *)
+    delegate : Ligo.key_hash option;
     (* Collateral currently stored in the burrow. *)
     collateral : Ligo.tez;
     (* Outstanding kit minted out of the burrow. *)
@@ -188,7 +188,7 @@ let burrow_return_kit_from_auction
   (* (b) burn/deposit the kit received from auctioning the slice *)
   rebalance_kit { burrow with excess_kit = kit_add burrow.excess_kit kit; }
 
-let burrow_create (p: parameters) (tez: Ligo.tez) : burrow =
+let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
   if tez < creation_deposit
   then (failwith "InsufficientFunds" : burrow)
   else
@@ -196,7 +196,7 @@ let burrow_create (p: parameters) (tez: Ligo.tez) : burrow =
       permission_version = Ligo.nat_from_literal "0n";
       allow_all_tez_deposits = false;
       allow_all_kit_burnings = false;
-      delegate = (None : Ligo.address option);
+      delegate = delegate_opt;
       collateral = Ligo.sub_tez_tez tez creation_deposit;
       outstanding_kit = kit_zero;
       excess_kit = kit_zero;
@@ -283,7 +283,7 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
       } in
     (updated_burrow, return)
 
-let burrow_set_delegate (p: parameters) (new_delegate: Ligo.address) (b: burrow) : burrow =
+let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   { b with delegate = Some new_delegate; }
