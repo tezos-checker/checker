@@ -148,7 +148,7 @@ let create_burrow (state: t) =
              let (tez, addr) = p in
              let op = match (LigoOp.Tezos.get_contract_opt addr : unit LigoOp.contract option) with
                | Some c -> LigoOp.Tezos.unit_transaction () tez c
-               | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+               | None -> (failwith "GetContractOptFailure" : LigoOp.operation) in
              ([op], s)
       )
       (None : Ligo.key_hash option)
@@ -201,7 +201,7 @@ let mint_kit (state: t) (permission: permission) (burrow_id: burrow_id) (kit: ki
     let kit_tokens = kit_issue minted in
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
       | Some c -> [LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c]
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
     ( ops,
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
@@ -226,7 +226,7 @@ let withdraw_tez (state: t) (permission: permission) (tez: Ligo.tez) (burrow_id:
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
       | Some c -> [LigoOp.Tezos.unit_transaction () withdrawn c]
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
     (ops, updated_state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
@@ -297,7 +297,7 @@ let deactivate_burrow (state: t) (permission: permission) (burrow_id: burrow_id)
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let ops = match (LigoOp.Tezos.get_contract_opt recipient : unit LigoOp.contract option) with
       | Some c -> [LigoOp.Tezos.unit_transaction () returned_tez c]
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
     (ops, updated_state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
@@ -327,7 +327,7 @@ let make_permission (state: t) (permission: permission) (burrow_id: burrow_id) (
         (Ligo.nat_from_literal "0n") in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_permission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+      | None -> (failwith "GetEntrypointOptFailure (%transfer_permission)" : LigoOp.operation) in
     ([op], state) (* unchanged state *)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
@@ -347,7 +347,7 @@ let invalidate_all_permissions (state: t) (permission: permission) (burrow_id: b
         (Ligo.nat_from_literal "0n") in
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_permission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> [LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c]
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetEntrypointOptFailure (%transfer_permission)" : LigoOp.operation list) in
     (ops, updated_state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * t)
@@ -414,7 +414,7 @@ let mark_for_liquidation (state: t) (burrow_id: burrow_id) : (LigoOp.operation l
 
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> [LigoOp.Tezos.unit_transaction () details.liquidation_reward c]
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
 
   ( ops,
     {state with
@@ -643,7 +643,7 @@ let delegation_auction_place_bid (state: t) : (LigoOp.operation list * t) =
   let (ops, new_state) = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_da_bid_ticket" !Ligo.Tezos.sender : delegation_auction_bid Ligo.ticket LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_da_bid_ticket)" : LigoOp.operation list) in
   (ops, new_state)
 
 let delegation_auction_claim_win (state: t) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * t) =
@@ -656,7 +656,7 @@ let delegation_auction_reclaim_bid (state: t) (bid_ticket: delegation_auction_bi
   let ops, new_auction = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
   (ops, new_auction)
 
 let touch_delegation_auction (state: t) =
@@ -671,7 +671,7 @@ let buy_kit (state: t) (min_kit_expected: kit) (deadline: Ligo.timestamp) : (Lig
   let (kit_tokens, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
   (ops, {state with uniswap = updated_uniswap})
 
 let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
@@ -680,7 +680,7 @@ let sell_kit (state: t) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline:
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
   (ops, updated_state)
 
@@ -694,10 +694,10 @@ let add_liquidity (state: t) (max_kit_deposited: kit_token) (min_lqt_minted: Lig
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_lqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_lqt)" : LigoOp.operation list) in
   (ops, {state with uniswap = updated_uniswap})
 
 let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * t) =
@@ -706,10 +706,10 @@ let remove_liquidity (state: t) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
   (ops, updated_state)
 
@@ -728,7 +728,7 @@ let liquidation_auction_place_bid (state: t) (kit: kit_token) : LigoOp.operation
   let (new_current_auction, bid_ticket) = liquidation_auction_place_bid current_auction bid in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_la_bid_ticket" !Ligo.Tezos.sender : liquidation_auction_bid_details Ligo.ticket LigoOp.contract option) with
     | Some c -> [LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c]
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_la_bid_ticket)" : LigoOp.operation list) in
   ( ops,
     { state with
       liquidation_auctions=
@@ -745,7 +745,7 @@ let liquidation_auction_reclaim_bid (state: t) (bid_ticket: liquidation_auction_
   let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation) in
+    | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation) in
   ([op], state) (* NOTE: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
 let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * t) =
@@ -754,7 +754,7 @@ let liquidation_auction_reclaim_winning_bid (state: t) (bid_ticket: liquidation_
   let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_ticket in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> [LigoOp.Tezos.unit_transaction () tez c]
-    | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+    | None -> (failwith "GetContractOptFailure" : LigoOp.operation list) in
   (ops, {state with liquidation_auctions = liquidation_auctions })
 
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
@@ -792,7 +792,7 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
     let kit_tokens = kit_issue kit_zero in (* zero reward *)
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
       | Some c -> [LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c]
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
     (ops, state)
   else
     (* TODO: What is the right order in which to do things here? We use the
@@ -855,7 +855,7 @@ let touch (state: t) (index:Ligo.tez) : (LigoOp.operation list * t) =
     let kit_tokens = kit_issue reward in
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transfer_kit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
       | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
-      | None -> (failwith "unsupported operation, looks like" : LigoOp.operation list) in
+      | None -> (failwith "GetEntrypointOptFailure (%transfer_kit)" : LigoOp.operation list) in
 
     (ops, state)
 
