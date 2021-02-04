@@ -30,6 +30,7 @@ inputs=(
   delegationAuction
   tickets
   checker
+  oracle
 )
 
 for name in "${inputs[@]}"; do
@@ -98,6 +99,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/Tezos\.tez_address_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.opt_key_hash_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.tez_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.nat_contract_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done
