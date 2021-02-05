@@ -515,13 +515,13 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
         let ops : LigoOp.operation list = [] in
         (ops, state)
 
-let touch_liquidation_slice (state: checker) (leaf_ptr: leaf_ptr): checker =
+let touch_liquidation_slice (ops: LigoOp.operation list) (state: checker) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * checker) =
   let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
   match avl_root_data state.liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
   (* NOTE: Perhaps failing would be better than silently doing nothing here?
    * Not sure if there is any danger though. *)
-  | None -> state
+  | None -> (ops, state)
   (* If it belongs to a completed auction, we delete the slice *)
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
@@ -598,12 +598,24 @@ let touch_liquidation_slice (state: checker) (leaf_ptr: leaf_ptr): checker =
     (* And we update the slices around it *)
     let state = update_immediate_neighbors state leaf_ptr leaf in
     assert_invariants state;
-    state
 
-let rec touch_liquidation_slices (state, slices: checker * leaf_ptr list) : (LigoOp.operation list * checker) =
+    (* Signal the burrow to send the tez to checker. *)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" leaf.burrow : (Ligo.tez * Ligo.address) LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.tez_address_transaction (leaf.tez, checker_address) (Ligo.tez_from_literal "0mutez") c (* FIXME: we need a checker entrypoint to receive tez from burrows actually. *)
+      | None -> (failwith "GetEntrypointOptFailure (%burrowSendTezTo)" : LigoOp.operation) in
+    ((op :: ops), state)
+
+let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list * checker * leaf_ptr list) : (LigoOp.operation list * checker) =
   match slices with
-  | [] -> (([] : LigoOp.operation list), state)
-  | x::xs -> touch_liquidation_slices (touch_liquidation_slice state x, xs)
+  | [] -> (ops, state)
+  | x::xs ->
+    let new_ops, new_state = touch_liquidation_slice ops state x in
+    touch_liquidation_slices_rec (new_ops, new_state, xs)
+
+let touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
+  (* NOTE: the order of the operations is reversed here (wrt to the order of
+   * the slices), but hopefully we don't care in this instance about this. *)
+  touch_liquidation_slices_rec (([]: LigoOp.operation list), state, slices)
 
 (* ************************************************************************* *)
 (**                          DELEGATION AUCTIONS                             *)
@@ -799,12 +811,22 @@ let calculate_touch_reward (state: checker) : kit =
        (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
     )
 
+let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int) : (LigoOp.operation list * checker) =
+  if maximum <= 0 then
+    (ops, state)
+  else
+    match liquidation_auction_oldest_completed_liquidation_slice state.liquidation_auctions with
+    | None -> (ops, state)
+    | Some leaf ->
+      let new_ops, new_state = touch_liquidation_slice ops state leaf in
+      touch_oldest (new_ops, new_state, maximum - 1)
+
 let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     let kit_tokens = kit_issue kit_zero in (* zero reward *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+      | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c (* TODO: perhaps don't transfer anything at all?? *)
       | None -> (failwith "GetEntrypointOptFailure (%transferKit)" : LigoOp.operation) in
     ([op], state)
   else
@@ -852,15 +874,10 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
-    let rec touch_oldest (maximum, st: int * checker) : checker =
-      if maximum <= 0 then st
-      else
-        match liquidation_auction_oldest_completed_liquidation_slice st.liquidation_auctions with
-        | None -> st
-        | Some leaf -> touch_oldest (maximum - 1, touch_liquidation_slice st leaf) in
-
     (* TODO: Figure out how many slices we can process per checker touch.*)
-    let state = touch_oldest (number_of_slices_to_process, state) in
+    (* NOTE: the order of the operations is reversed here (wrt to the order of
+     * the slices), but hopefully we don't care in this instance about this. *)
+    let ops, state = touch_oldest (ops, state, number_of_slices_to_process) in
     assert_invariants state;
 
     (* TODO: Add more tasks here *)
@@ -930,13 +947,13 @@ let main (op, state: params * checker): LigoOp.operation list * checker =
   | DeactivateBurrow p ->
     let (permission, burrow_id, addr) = p in
     deactivate_burrow state permission burrow_id addr
-  | MarkBurrowForLiquidation _burrow_id ->
-    (failwith "FIXME" : LigoOp.operation list * checker) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
-  | TouchLiquidationSlices _slices ->
-    (failwith "FIXME" : LigoOp.operation list * checker) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
+  | MarkBurrowForLiquidation burrow_id ->
+    mark_for_liquidation state burrow_id
+  | TouchLiquidationSlices slices ->
+    touch_liquidation_slices state slices
   | CancelSliceLiquidation p ->
-    let (_permission, _leaf_ptr) = p in
-    (failwith "FIXME" : LigoOp.operation list * checker) (* FIXME: do we move the tez at the end or the beginning of auctions? *)
+    let (permission, leaf_ptr) = p in
+    cancel_liquidation_slice state permission leaf_ptr
   | TouchBurrow burrow_id ->
     touch_burrow state burrow_id
   | SetBurrowDelegate p ->
@@ -966,8 +983,8 @@ let main (op, state: params * checker): LigoOp.operation list * checker =
     liquidation_auction_place_bid state kit_token
   | LiqAuctionReclaimBid ticket ->
     liquidation_auction_reclaim_bid state ticket
-  | LiqAuctionReclaimWinningBid _ticket ->
-    (failwith "FIXME" : LigoOp.operation list * checker) (* FIXME: ensure tez is being moved appropriately *)
+  | LiqAuctionReclaimWinningBid ticket ->
+    liquidation_auction_reclaim_winning_bid state ticket
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid ->
     delegation_auction_place_bid state

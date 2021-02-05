@@ -82,7 +82,7 @@ val mark_for_liquidation : checker -> burrow_id -> (LigoOp.operation list * chec
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.operation list * checker)
+val touch_liquidation_slices : checker -> leaf_ptr list -> (LigoOp.operation list * checker)
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
