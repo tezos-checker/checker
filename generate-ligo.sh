@@ -85,6 +85,9 @@ for name in "${inputs[@]}"; do
     # replace 'tez_from_literal' with its argument and remove the double quotes
     sed -E 's/tez_from_literal \"([0-9_]+)mutez\"/\1mutez/g' |
 
+    # replace 'address_from_literal' with its argument (keep the double quotes)
+    sed -E 's/address_from_literal \"([0-9a-zA-Z]+)\"/\"\1\"/g' |
+
     # remove the dereferences from Ligo.Tezos values
     sed -E 's/!(Tezos\.)/\1/g' |
 
@@ -100,6 +103,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/Tezos\.opt_key_hash_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.tez_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.nat_contract_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.nat_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done
