@@ -150,6 +150,11 @@ let create_burrow (state: checker) (delegate_opt: Ligo.key_hash option) =
                | Some c -> LigoOp.Tezos.unit_transaction () tez c
                | None -> (failwith "GetContractOptFailure" : LigoOp.operation) in
              ([op], s)
+           | BurrowSendSliceToChecker tz ->
+             let op = match (LigoOp.Tezos.get_entrypoint_opt "%receiveLiquidationSlice" !Ligo.Tezos.sender : unit LigoOp.contract option) with
+               | Some c -> LigoOp.Tezos.unit_transaction () tz c
+               | None -> (failwith "GetEntrypointOptFailure (%receiveLiquidationSlice)" : LigoOp.operation) in
+             ([op], s)
       )
       delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
@@ -600,9 +605,9 @@ let touch_liquidation_slice (ops: LigoOp.operation list) (state: checker) (leaf_
     assert_invariants state;
 
     (* Signal the burrow to send the tez to checker. *)
-    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" leaf.burrow : (Ligo.tez * Ligo.address) LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.tez_address_transaction (leaf.tez, checker_address) (Ligo.tez_from_literal "0mutez") c (* FIXME: we need a checker entrypoint to receive tez from burrows actually. *)
-      | None -> (failwith "GetEntrypointOptFailure (%burrowSendTezTo)" : LigoOp.operation) in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.tez_transaction leaf.tez (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "GetEntrypointOptFailure (%burrowSendSliceToChecker)" : LigoOp.operation) in
     ((op :: ops), state)
 
 let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list * checker * leaf_ptr list) : (LigoOp.operation list * checker) =
@@ -785,6 +790,11 @@ let liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquid
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
  * *)
 
+let receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
+  (* NOTE: do we have to register somewhere that we have received this tez? *)
+  let _burrow = find_burrow state !Ligo.Tezos.sender in (* only accept from burrows! *)
+  (([]: LigoOp.operation list), state)
+
 (* ************************************************************************* *)
 (**                              TOUCHING                                    *)
 (* ************************************************************************* *)
@@ -917,6 +927,7 @@ type params =
   | LiqAuctionPlaceBid of kit_token
   | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
+  | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
@@ -985,6 +996,8 @@ let main (op, state: params * checker): LigoOp.operation list * checker =
     liquidation_auction_reclaim_bid state ticket
   | LiqAuctionReclaimWinningBid ticket ->
     liquidation_auction_reclaim_winning_bid state ticket
+  | ReceiveLiquidationSlice ->
+    receive_slice_from_burrow state
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid ->
     delegation_auction_place_bid state

@@ -80,6 +80,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/Tezos\.perm_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.tez_address_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.opt_key_hash_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.tez_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done

@@ -151,6 +151,11 @@ val liquidation_auction_reclaim_winning_bid : checker -> liquidation_auction_bid
  * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
  *   -> liquidation_auction_bid_ticket *)
 
+(** Receive a liquidation slice from a burrow; we gather the slices in the
+  * checker contract, and the checker contract is responsible for transfering
+  * the lot to the liquidation auction winner. *)
+val receive_slice_from_burrow : checker -> (LigoOp.operation list * checker)
+
 (* ************************************************************************* *)
 (**                          DELEGATION AUCTIONS                             *)
 (* ************************************************************************* *)
@@ -194,6 +199,7 @@ type params =
   | LiqAuctionPlaceBid of kit_token
   | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
+  | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)

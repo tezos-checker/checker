@@ -19,6 +19,7 @@ type 'parameter transaction_value = (* GADT *)
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
+  | TezTransactionValue : tez -> tez transaction_value
 
 type tez_and_address = (tez * address)
 [@@deriving show]
@@ -38,6 +39,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
     | PermTransactionValue c -> show_ticket pp_permission_content c
     | TezAddressTransactionValue ta -> show_tez_and_address ta
     | OptKeyHashTransactionValue kho -> show_key_hash_option kho
+    | TezTransactionValue tz -> string_of_tez tz
 
 (* operation *)
 
@@ -79,6 +81,7 @@ module Tezos = struct
   let perm_transaction value tez contract = Transaction (PermTransactionValue value, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
+  let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
