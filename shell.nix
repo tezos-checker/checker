@@ -12,10 +12,35 @@ let
     };
     in (import "${ligoSrc}/nix/pkgs.nix" {});
   tezosClient =
-    let tezosPackaging = import "${sources.tezos-packaging}/nix" {};
+    let tezosSrcs = import "${sources.tezos-packaging}/nix/nix/sources.nix";
+        patchedSrcs = tezosSrcs // {
+          tezos = pkgs.applyPatches
+            { name = "tezos-patched";
+              src = tezosSrcs.tezos;
+              patches = [
+                ./patches/max_operation_data_length.patch
+                # ./patches/michelson_maximum_type_size.patch
+              ];
+            };
+          opam-nix = pkgs.applyPatches
+            { name = "tezos-patched";
+              src = tezosSrcs.opam-nix;
+              patches = [
+                # To fix issue: https://github.com/serokell/opam-nix/issues/3
+                (pkgs.fetchpatch {
+                   url = "https://github.com/serokell/opam-nix/commit/3d82a0811ec89b3c2e05cfc259cfc5c537560ed6.patch";
+                   sha256 = "sha256-MYQk23kRx6r4th61YLmrwXYBLTAjSksgUjy/JzkCaK4=";
+                   revert = true;
+                })
+              ];
+            };
+        };
+        tezosPkgs = import "${sources.tezos-packaging}/nix/build/pkgs.nix" { sources = patchedSrcs; };
     in  pkgs.runCommand "tezos-client" {} ''
       mkdir -p $out/bin
-      ln -s "${tezosPackaging.binaries.tezos-client.bin}/tezos-client" $out/bin/tezos-client
+      ln -s \
+        "${tezosPkgs.ocamlPackages.tezos-client.bin}/tezos-client" \
+        $out/bin/tezos-client
     '';
 in
 pkgs.mkShell {
