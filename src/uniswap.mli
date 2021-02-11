@@ -51,7 +51,7 @@ val uniswap_buy_kit :
   Ligo.tez (* amount *) ->
   kit (* min kit expected *) ->
   Ligo.timestamp (* deadline *) ->
-  (kit_token * uniswap)
+  (kit * uniswap)
 
 (** Sell some kit to the uniswap contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
@@ -86,7 +86,7 @@ val uniswap_add_liquidity :
   kit_token (* max kit deposited *) ->
   Ligo.nat (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
-  (liquidity * kit_token * uniswap)
+  (Ligo.nat * kit * uniswap)
 
 (** Sell some liquidity to the uniswap contract. Selling liquidity always
   * succeeds, but might leave the contract without tez and kit if everybody
@@ -100,7 +100,7 @@ val uniswap_remove_liquidity :
   Ligo.tez (* min tez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->
-  (Ligo.tez * kit_token * uniswap)
+  (Ligo.tez * kit * uniswap)
 
 (** Add accrued burrowing fees to the uniswap contract. *)
 val uniswap_add_accrued_kit : uniswap -> kit_token -> uniswap
@@ -118,8 +118,8 @@ val pp_uniswap : Format.formatter -> uniswap -> unit
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
 val uniswap_make_for_test :
   tez:Ligo.tez ->
-  kit:kit_token ->
-  lqt:liquidity ->
+  kit:kit ->
+  lqt:Ligo.nat ->
   kit_in_tez_in_prev_block:Ratio.ratio ->
   last_level: Ligo.nat ->
   uniswap
@@ -136,5 +136,5 @@ val uniswap_kit_times_tez : uniswap -> Ratio.ratio
 
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
  * current number of liquidity tokens extant. *)
-val uniswap_liquidity_tokens_extant : uniswap -> liquidity
+val uniswap_liquidity_tokens_extant : uniswap -> Ligo.nat
 (* END_OCAML *)
