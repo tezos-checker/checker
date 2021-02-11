@@ -11,7 +11,7 @@ let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket 
 (** Check whether a liquidity token is valid. A liquidity token is valid if it
   * is issued by checker, and it is tagged appropriately (this is already
   * enforced by its type). *)
-let assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
+let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
   let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
   if issuer = checker_address
   then liquidity

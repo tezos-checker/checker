@@ -49,6 +49,9 @@ for name in "${inputs[@]}"; do
     # Remove printer directives
     sed -E 's/([[]@printer .*])/(* \1 *)/g' |
 
+    # Transform inlining directives to ligo-style
+    sed -E 's/let([[]@inline])/\1 let/g' |
+
     # delete assertions
     sed 's/^ *assert.*//g' |
 

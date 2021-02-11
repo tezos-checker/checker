@@ -116,10 +116,10 @@ let assert_no_tez_given () =
 
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
-let assert_valid_permission
-    (permission: permission)
-    (burrow_id: burrow_id)
-    (burrow: burrow)
+let[@inline] assert_valid_permission
+      (permission: permission)
+      (burrow_id: burrow_id)
+      (burrow: burrow)
   : rights =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
@@ -775,7 +775,8 @@ let liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.ope
 let liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
-  let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_ticket in
+  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_details in
   let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
@@ -785,7 +786,8 @@ let liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_au
 let liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
-  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_ticket in
+  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (failwith "GetContractOptFailure" : LigoOp.operation) in
@@ -937,7 +939,8 @@ type params =
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
 
-let main (op, state: params * checker): LigoOp.operation list * checker =
+let main (op_and_state: params * checker): LigoOp.operation list * checker =
+  let op, state = op_and_state in
   match op with
   | Touch ->
     touch state (Ligo.tez_from_literal "0mutez") (* FIXME: oracle (medianizer?) input here. *)

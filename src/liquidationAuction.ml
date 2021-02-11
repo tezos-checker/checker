@@ -87,7 +87,7 @@ let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_d
   * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
-let liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
+let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
   let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
   if is_valid
@@ -362,9 +362,7 @@ let completed_liquidation_auction_won_by
   | None -> (None: auction_outcome option)
 
 (* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : kit =
-  let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
   then (failwith "CannotReclaimLeadingBid": kit)
   else
@@ -443,9 +441,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
   }
 
 (* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : (Ligo.tez * liquidation_auctions) =
-  let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by auctions bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
