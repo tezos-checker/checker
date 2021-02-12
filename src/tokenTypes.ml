@@ -36,16 +36,6 @@ let[@inline] read_kit (token: kit_token) : kit * kit_token =
   let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
   (kit_of_mukit mukit, same_token)
 
-let kit_split_or_fail (token: kit_token) (left: kit) (right: kit) : kit_token * kit_token =
-  match Ligo.Tezos.split_ticket token (kit_to_mukit left, kit_to_mukit right) with
-  | Some a -> a
-  | None -> (failwith "split_or_fail: failed": kit_token * kit_token)
-
-let kit_join_or_fail (left: kit_token) (right: kit_token) : kit_token =
-  match Ligo.Tezos.join_tickets (left, right) with
-  | Some a -> a
-  | None -> (failwith "join_or_fail: failed": kit_token)
-
 (* LIQUIDITY TOKENS *)
 
 type liquidity_token_content = Lqt
