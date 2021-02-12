@@ -28,6 +28,27 @@ inputs=(
   checker
 )
 
+storage_inputs=(
+  ptr
+  common
+  ratio
+  fixedPoint
+  kit
+  liquidationAuctionTypes
+  mem
+  avl
+  tokenTypes
+  burrowTypes
+  constants
+  liquidationAuction
+  delegationAuction
+  permission
+  parameters
+  uniswap
+  burrow
+  checkerTypes
+)
+
 for name in "${inputs[@]}"; do
   from=src/"$name".ml
   to=generated/ligo/"$name".mligo
@@ -100,5 +121,12 @@ echo '#include "ligo.mligo"' > generated/ligo/main.mligo
 ( IFS=$'\n'; echo "${inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/main.mligo
+
+# Do everything again to generate the initial storage
+echo '#include "ligo.mligo"' > generated/ligo/storagemain.mligo
+
+( IFS=$'\n'; echo "${storage_inputs[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> generated/ligo/storagemain.mligo
 
 echo "done." 1>&2
