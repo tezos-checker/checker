@@ -1,6 +1,5 @@
 open Kit
 open Permission
-open LiquidationAuction
 open LiquidationAuctionTypes
 open TokenTypes
 open CheckerTypes

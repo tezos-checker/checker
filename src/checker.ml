@@ -90,6 +90,18 @@ let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
   then liquidity
   else (failwith "InvalidLiquidityToken" : liquidity)
 
+(** Check whether a liquidation auction bid ticket is valid. An auction bid
+  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
+  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
+  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
+  * end up having contents clearly distinguished by type. *)
+let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
+  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
+  if is_valid
+  then same_ticket
+  else (failwith "InvalidLiquidationAuctionTicket": liquidation_auction_bid_ticket)
+
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
@@ -756,7 +768,8 @@ let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_to
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
-  let (new_current_auction, bid_ticket) = liquidation_auction_place_bid current_auction bid in
+  let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
+  let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_details Ligo.ticket LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "GetEntrypointOptFailure (%transferLABidTicket)" : LigoOp.operation) in

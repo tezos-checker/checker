@@ -77,23 +77,6 @@ open Constants
 open Common
 open TokenTypes
 
-type liquidation_auction_bid_ticket = liquidation_auction_bid_details Ligo.ticket
-
-let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_details) =
-  Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal "1n")
-
-(** Check whether a liquidation auction bid ticket is valid. An auction bid
-  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
-let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
-  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
-  if is_valid
-  then same_ticket
-  else (failwith "InvalidLiquidationAuctionTicket": liquidation_auction_bid_ticket)
-
 type liquidation_auction_state =
   | Descending of (kit * Ligo.timestamp)
   | Ascending of (bid * Ligo.timestamp * Ligo.nat)
@@ -325,13 +308,13 @@ let complete_liquidation_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
-let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid_ticket) =
+let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid_details) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.tezos_level); },
-      issue_liquidation_auction_bid_ticket { auction_id = auction.contents; bid = bid; }
+      { auction_id = auction.contents; bid = bid; }
     )
-  else (failwith "BidTooLow": current_liquidation_auction * liquidation_auction_bid_ticket)
+  else (failwith "BidTooLow": current_liquidation_auction * liquidation_auction_bid_details)
 
 let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : current_liquidation_auction =
   match auctions.current_auction with
