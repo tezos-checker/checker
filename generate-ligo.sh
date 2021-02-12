@@ -24,6 +24,7 @@ inputs=(
   uniswap
   burrow
   checkerTypes
+  tickets
   checker
 )
 
