@@ -5,7 +5,7 @@ set -o pipefail
 
 cd "$(realpath "$(dirname "$0")")"
 
-inputs=(
+simple_inputs=(
   ptr
   common
   ratio
@@ -24,30 +24,15 @@ inputs=(
   uniswap
   burrow
   checkerTypes
+)
+
+# These modules use tickets (come last)
+inputs_with_tickets=(
   tickets
   checker
 )
 
-storage_inputs=(
-  ptr
-  common
-  ratio
-  fixedPoint
-  kit
-  liquidationAuctionTypes
-  mem
-  avl
-  tokenTypes
-  burrowTypes
-  constants
-  liquidationAuction
-  delegationAuction
-  permission
-  parameters
-  uniswap
-  burrow
-  checkerTypes
-)
+inputs=( "${simple_inputs[@]}" "${inputs_with_tickets[@]}" )
 
 for name in "${inputs[@]}"; do
   from=src/"$name".ml
@@ -125,7 +110,7 @@ echo '#include "ligo.mligo"' > generated/ligo/main.mligo
 # Do everything again to generate the initial storage
 echo '#include "ligo.mligo"' > generated/ligo/storagemain.mligo
 
-( IFS=$'\n'; echo "${storage_inputs[*]}" ) |
+( IFS=$'\n'; echo "${simple_inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/storagemain.mligo
 
