@@ -2,8 +2,8 @@ open Kit
 open Burrow
 open OUnit2
 open TestCommon
-open TokenTypes
 open CheckerTypes
+open Tickets
 
 module PtrMap = Map.Make(Ptr)
 

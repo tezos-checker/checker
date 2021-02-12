@@ -27,7 +27,6 @@ let suite =
        let for_delegate = Ligo.key_hash_from_literal "sdfasdfasdf" in
        let amount = Ligo.tez_from_literal "1mutez" in
        let (ticket, auction) = delegation_auction_place_bid auction bidder amount in
-       let (_, (ticket, _)), _ = Ligo.Tezos.read_ticket ticket in
 
        (* New bidder does not immediately become the delegate and cannot claim the win *)
        let (delegate) = delegation_auction_delegate auction in
@@ -95,19 +94,13 @@ let suite =
        let amount3 = Ligo.tez_from_literal "3mutez" in
        let amount4 = Ligo.tez_from_literal "4mutez" in
        let (ticket1, auction) = delegation_auction_place_bid auction bidder1 amount1 in
-       let (_, (ticket1, _)), _ = Ligo.Tezos.read_ticket ticket1 in
        assert_raises
          (Failure "BidTooLow")
          (fun () -> delegation_auction_place_bid auction bidder2 amount1);
 
        let (ticket2, auction) = delegation_auction_place_bid auction bidder2 amount2 in
-       let (_, (ticket2, _)), _ = Ligo.Tezos.read_ticket ticket2 in
-
        let (ticket3, auction) = delegation_auction_place_bid auction bidder3 amount3 in
-       let (_, (ticket3, _)), _ = Ligo.Tezos.read_ticket ticket3 in
-
        let (ticket4, auction) = delegation_auction_place_bid auction bidder4 amount4 in
-       let (_, (ticket4, _)), _ = Ligo.Tezos.read_ticket ticket4 in
 
        (* First bidder can now reclaim their bid *)
        let (refund, auction) = delegation_auction_reclaim_bid auction ticket1 in
@@ -141,7 +134,6 @@ let suite =
        let bidder = Ligo.address_from_literal "5678" in
        let amount = Ligo.tez_from_literal "1mutez" in
        let (ticket, auction) = delegation_auction_place_bid auction bidder amount in
-       let (_, (ticket, _)), _ = Ligo.Tezos.read_ticket ticket in
        (* And in the subsequent cycle they cease to be the delegate again *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:(3 * 4096) ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let auction = delegation_auction_touch auction in

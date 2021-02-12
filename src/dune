@@ -38,6 +38,7 @@
   TokenTypes
   Ligo
   LigoOp
+  Tickets
   Common)
  (libraries str zarith)
  (wrapped false)

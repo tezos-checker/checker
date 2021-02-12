@@ -47,8 +47,7 @@ let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.a
     | None -> () in
   (* Either there is no bid or this is the highest *)
   let bid = {bidder=sender_address; cycle=t.cycle; amount=amt} in
-  let ticket = issue_delegation_auction_bid_ticket bid in
-  (ticket, {t with leading_bid = Some bid;})
+  (bid, {t with leading_bid = Some bid;})
 
 let same_delegation_auction_bid (t1: delegation_auction_bid option) (t2: delegation_auction_bid) =
   match t1 with

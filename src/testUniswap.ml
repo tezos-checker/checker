@@ -3,7 +3,7 @@ open TestCommon
 open Ratio
 open Kit
 open Uniswap
-open TokenTypes
+open Tickets
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
