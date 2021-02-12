@@ -39,31 +39,31 @@ type burrow =
   }
 [@@deriving show]
 
-let assert_burrow_invariants (b: burrow) : unit =
+let[@inline] assert_burrow_invariants (b: burrow) : unit =
   assert (b.outstanding_kit = kit_zero || b.excess_kit = kit_zero);
   ()
 
-let burrow_liquidation_slices (b: burrow) : liquidation_slices option =
+let[@inline] burrow_liquidation_slices (b: burrow) : liquidation_slices option =
   assert_burrow_invariants b;
   b.liquidation_slices
 
-let burrow_set_liquidation_slices (b: burrow) (s: liquidation_slices option) : burrow =
+let[@inline] burrow_set_liquidation_slices (b: burrow) (s: liquidation_slices option) : burrow =
   assert_burrow_invariants b;
   {b with liquidation_slices = s}
 
-let burrow_collateral_at_auction (b: burrow) : Ligo.tez =
+let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral_at_auction
 
-let burrow_permission_version (b: burrow) : Ligo.nat =
+let[@inline] burrow_permission_version (b: burrow) : Ligo.nat =
   assert_burrow_invariants b;
   b.permission_version
 
-let burrow_allow_all_tez_deposits (b: burrow) : bool =
+let[@inline] burrow_allow_all_tez_deposits (b: burrow) : bool =
   assert_burrow_invariants b;
   b.allow_all_tez_deposits
 
-let burrow_allow_all_kit_burnings (b: burrow) : bool =
+let[@inline] burrow_allow_all_kit_burnings (b: burrow) : bool =
   assert_burrow_invariants b;
   b.allow_all_kit_burnings
 
@@ -506,7 +506,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
         burrow_state = final_burrow }
 
-let burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
+let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
   assert_burrow_invariants b;
   match b.liquidation_slices with
   | None -> (None : leaf_ptr option)

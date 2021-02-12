@@ -29,17 +29,17 @@ type key_hash_option = key_hash option
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
-    match tv with
-    | UnitTransactionValue -> "()"
-    | AddressTransactionValue a -> string_of_address a
-    | KitTransactionValue c -> show_ticket pp_kit_token_content c
-    | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-    | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
-    | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
-    | PermTransactionValue c -> show_ticket pp_permission_content c
-    | TezAddressTransactionValue ta -> show_tez_and_address ta
-    | OptKeyHashTransactionValue kho -> show_key_hash_option kho
-    | TezTransactionValue tz -> string_of_tez tz
+  match tv with
+  | UnitTransactionValue -> "()"
+  | AddressTransactionValue a -> string_of_address a
+  | KitTransactionValue c -> show_ticket pp_kit_token_content c
+  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
+  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
+  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
+  | PermTransactionValue c -> show_ticket pp_permission_content c
+  | TezAddressTransactionValue ta -> show_tez_and_address ta
+  | OptKeyHashTransactionValue kho -> show_key_hash_option kho
+  | TezTransactionValue tz -> string_of_tez tz
 
 (* operation *)
 

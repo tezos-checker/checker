@@ -117,9 +117,9 @@ let assert_no_tez_given () =
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
 let[@inline] assert_valid_permission
-      (permission: permission)
-      (burrow_id: burrow_id)
-      (burrow: burrow)
+    (permission: permission)
+    (burrow_id: burrow_id)
+    (burrow: burrow)
   : rights =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =
@@ -131,7 +131,7 @@ let[@inline] assert_valid_permission
   then right
   else (failwith "InvalidPermission": rights)
 
-let create_burrow (state: checker) (delegate_opt: Ligo.key_hash option) =
+let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
     LigoOp.Tezos.create_contract
@@ -376,7 +376,7 @@ let invalidate_all_permissions (state: checker) (permission: permission) (burrow
  * there are degenerate cases where the queue starts growing much faster that
  * the auctions are happening and in those instances it could grow unbounded,
  * but roughly speaking in most cases it should average out) *)
-let mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
+let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
   let burrow = find_burrow state burrow_id in
 
@@ -520,7 +520,10 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
         let ops : LigoOp.operation list = [] in
         (ops, state)
 
-let touch_liquidation_slice (ops: LigoOp.operation list) (state: checker) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * checker) =
+(* FIXME: Below function shouldn't be inlined, since it's huge and used in multiple places. However otherwise `touch_oldest` function
+ * throws a "type too large" error that I couldn't solve.
+*)
+let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation list * checker * leaf_ptr) : (LigoOp.operation list * checker) =
   let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
   match avl_root_data state.liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
@@ -614,10 +617,10 @@ let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list 
   match slices with
   | [] -> (ops, state)
   | x::xs ->
-    let new_ops, new_state = touch_liquidation_slice ops state x in
+    let new_ops, new_state = touch_liquidation_slice (ops, state, x) in
     touch_liquidation_slices_rec (new_ops, new_state, xs)
 
-let touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
+let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
   touch_liquidation_slices_rec (([]: LigoOp.operation list), state, slices)
@@ -663,7 +666,7 @@ let updated_delegation_auction (state: checker) (new_auction: delegation_auction
      uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
    })
 
-let delegation_auction_place_bid (state: checker) : (LigoOp.operation list * checker) =
+let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation list * checker) =
   let ticket, auction =
     delegation_auction_place_bid
       state.delegation_auction
@@ -676,11 +679,11 @@ let delegation_auction_place_bid (state: checker) : (LigoOp.operation list * che
     | None -> (failwith "GetEntrypointOptFailure (%transferDABidTicket)" : LigoOp.operation list) in
   (ops, new_state)
 
-let delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
+let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
   let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
   updated_delegation_auction state auction
 
-let delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
+let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
   assert_no_tez_given ();
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
   let ops, new_auction = updated_delegation_auction state auction in
@@ -751,7 +754,7 @@ let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-let liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.operation list * checker =
+let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.operation list * checker =
   assert_no_tez_given ();
   let kit = assert_valid_kit_token kit in
   let kit, _ = read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
@@ -772,7 +775,7 @@ let liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.ope
     }
   )
 
-let liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
+let[@inline] checker_liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
@@ -783,7 +786,7 @@ let liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_au
     | None -> (failwith "GetEntrypointOptFailure (%transferKit)" : LigoOp.operation) in
   ([op], state) (* NOTE: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
-let liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
+let[@inline] checker_liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
   let bid_ticket = liquidation_auction_assert_valid_bid_ticket bid_ticket in
   let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
@@ -796,7 +799,7 @@ let liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquid
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
  * *)
 
-let receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
+let[@inline]  receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
   (* NOTE: do we have to register somewhere that we have received this tez? *)
   let _burrow = find_burrow state !Ligo.Tezos.sender in (* only accept from burrows! *)
   (([]: LigoOp.operation list), state)
@@ -834,7 +837,7 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
     match liquidation_auction_oldest_completed_liquidation_slice state.liquidation_auctions with
     | None -> (ops, state)
     | Some leaf ->
-      let new_ops, new_state = touch_liquidation_slice ops state leaf in
+      let new_ops, new_state = touch_liquidation_slice (ops, state, leaf) in
       touch_oldest (new_ops, new_state, maximum - 1)
 
 let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
@@ -998,18 +1001,18 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     remove_liquidity state liquidity min_tez min_kit deadline
   (* Liquidation Auction *)
   | LiqAuctionPlaceBid kit_token ->
-    liquidation_auction_place_bid state kit_token
+    checker_liquidation_auction_place_bid state kit_token
   | LiqAuctionReclaimBid ticket ->
-    liquidation_auction_reclaim_bid state ticket
+    checker_liquidation_auction_reclaim_bid state ticket
   | LiqAuctionReclaimWinningBid ticket ->
-    liquidation_auction_reclaim_winning_bid state ticket
+    checker_liquidation_auction_reclaim_winning_bid state ticket
   | ReceiveLiquidationSlice ->
     receive_slice_from_burrow state
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid ->
-    delegation_auction_place_bid state
+    checker_delegation_auction_place_bid state
   | DelegationAuctionClaimWin p ->
     let (ticket, key) = p in
-    delegation_auction_claim_win state ticket key
+    checker_delegation_auction_claim_win state ticket key
   | DelegationAuctionReclaimBid ticket ->
-    delegation_auction_reclaim_bid state ticket
+    checker_delegation_auction_reclaim_bid state ticket

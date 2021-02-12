@@ -139,13 +139,13 @@ val remove_liquidity : checker -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp
 (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a ticket which can be used to
   * reclaim the kit when outbid. *)
-val liquidation_auction_place_bid : checker -> kit_token -> (LigoOp.operation list * checker)
+val checker_liquidation_auction_place_bid : checker -> kit_token -> (LigoOp.operation list * checker)
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
+val checker_liquidation_auction_reclaim_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val liquidation_auction_reclaim_winning_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
+val checker_liquidation_auction_reclaim_winning_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
@@ -163,13 +163,13 @@ val receive_slice_from_burrow : checker -> (LigoOp.operation list * checker)
 (** Bid in current auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a token which can be used to either
   * reclaim the tez when outbid, or claim the auction result. *)
-val delegation_auction_place_bid : checker -> (LigoOp.operation list * checker)
+val checker_delegation_auction_place_bid : checker -> (LigoOp.operation list * checker)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val delegation_auction_claim_win : checker -> delegation_auction_bid Ligo.ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
+val checker_delegation_auction_claim_win : checker -> delegation_auction_bid Ligo.ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val delegation_auction_reclaim_bid : checker -> delegation_auction_bid Ligo.ticket -> (LigoOp.operation list * checker)
+val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid Ligo.ticket -> (LigoOp.operation list * checker)
 
 (* ENTRYPOINTS *)
 

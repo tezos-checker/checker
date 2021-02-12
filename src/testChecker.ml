@@ -148,7 +148,7 @@ let suite =
        assert_raises
          (Failure "NoOpenAuction")
          (fun () ->
-            Checker.liquidation_auction_place_bid
+            Checker.checker_liquidation_auction_place_bid
               checker
               (kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000n")))
          );
@@ -178,7 +178,7 @@ let suite =
        in
 
        let (ops, checker) =
-         Checker.liquidation_auction_place_bid
+         Checker.checker_liquidation_auction_place_bid
            checker
            (kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))) in
 
@@ -234,7 +234,7 @@ let suite =
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) = Checker.liquidation_auction_reclaim_winning_bid checker bid in
+       let (ops, _checker) = Checker.checker_liquidation_auction_reclaim_winning_bid checker bid in
 
        assert_equal
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_960mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
@@ -246,7 +246,7 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 
        let ticket = match ops with
          | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
@@ -255,7 +255,7 @@ let suite =
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.delegation_auction_claim_win checker ticket charles_key_hash in
+           let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());
     );
 
@@ -264,7 +264,7 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 
        let ticket = match ops with
          | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
@@ -273,7 +273,7 @@ let suite =
 
        assert_raises (Failure "NotAWinningBid") (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.delegation_auction_claim_win checker ticket charles_key_hash in
+           let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());
     );
 
@@ -282,7 +282,7 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = Checker.initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.delegation_auction_place_bid checker in
+       let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 
        let ticket = match ops with
          | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
@@ -290,7 +290,7 @@ let suite =
        in
 
        Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _checker = Checker.delegation_auction_claim_win checker ticket  charles_key_hash in
+       let ops, _checker = Checker.checker_delegation_auction_claim_win checker ticket  charles_key_hash in
        assert_equal [LigoOp.SetDelegate (Some charles_key_hash)] ops;
     );
   ]

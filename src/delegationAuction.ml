@@ -10,7 +10,7 @@ let issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) =
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
 let[@inline] assert_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid Ligo.ticket)
+    (bid_ticket: delegation_auction_bid Ligo.ticket)
   : delegation_auction_bid Ligo.ticket =
   let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
