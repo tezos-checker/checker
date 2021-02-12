@@ -81,6 +81,15 @@ let assert_permission_is_present (permission: permission option) : permission =
   | None -> (failwith "MissingPermission": permission)
   | Some permission -> permission
 
+(** Check whether a liquidity token is valid. A liquidity token is valid if it
+  * is issued by checker, and it is tagged appropriately (this is already
+  * enforced by its type). *)
+let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
+  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+  if issuer = checker_address
+  then liquidity
+  else (failwith "InvalidLiquidityToken" : liquidity)
+
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
@@ -692,6 +701,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
 let sell_kit (state: checker) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let (ops, state) = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
+  let kit, _token = read_kit kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -705,6 +715,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
+  let max_kit_deposited, _token = read_kit max_kit_deposited in
   let (lqt_tokens, kit_tokens, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
@@ -719,6 +730,8 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
 
 let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let (ops, state) = touch_delegation_auction state in
+  let lqt_burned = assert_valid_liquidity_token lqt_burned in
+  let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
   let (tez, kit_tokens, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
@@ -849,7 +862,6 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
       parameters_touch index (uniswap_kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-    let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in
     let updated_uniswap = uniswap_add_accrued_kit state.uniswap total_accrual_to_uniswap in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)

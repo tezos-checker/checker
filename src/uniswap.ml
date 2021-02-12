@@ -2,20 +2,6 @@ open Ratio
 open Kit
 open Common
 open Constants
-open TokenTypes
-
-type liquidity = liquidity_token_content Ligo.ticket [@@deriving show]
-
-let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
-
-(** Check whether a liquidity token is valid. A liquidity token is valid if it
-  * is issued by checker, and it is tagged appropriately (this is already
-  * enforced by its type). *)
-let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = checker_address
-  then liquidity
-  else (failwith "InvalidLiquidityToken" : liquidity)
 
 type uniswap =
   { tez: Ligo.tez;
@@ -115,12 +101,11 @@ let uniswap_buy_kit
 let uniswap_sell_kit
     (uniswap: uniswap)
     (tez_amount: Ligo.tez)
-    (token: kit_token)
+    (kit: kit)
     (min_tez_expected: Ligo.tez)
     (deadline: Ligo.timestamp)
   : (Ligo.tez * uniswap) =
   let uniswap = uniswap_sync_last_observed uniswap in
-  let kit, token = read_kit token in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (kit = kit_zero) then
     (failwith "UniswapNonPositiveInput" : (Ligo.tez * uniswap))
@@ -152,8 +137,7 @@ let uniswap_sell_kit
     else if return > uniswap.tez then
       (failwith "SellKitTooMuchTezBought" : (Ligo.tez * uniswap))
     else
-      let token, _same_ticket = read_kit token in
-      let new_all_kit_in_uniswap = kit_add uniswap.kit token in
+      let new_all_kit_in_uniswap = kit_add uniswap.kit kit in
       ( return,
         { uniswap with
           kit = new_all_kit_in_uniswap;
@@ -174,12 +158,11 @@ let uniswap_add_liquidity
     (uniswap: uniswap)
     (tez_amount: Ligo.tez)
     (pending_accrual: Ligo.tez)
-    (max_kit_deposited: kit_token)
+    (max_kit_deposited: kit)
     (min_lqt_minted: Ligo.nat)
     (deadline: Ligo.timestamp)
   : (Ligo.nat * kit * uniswap) =
   let uniswap = uniswap_sync_last_observed uniswap in
-  let max_kit_deposited, all_kit_deposited = read_kit max_kit_deposited in
   let uniswap = uniswap_assert_initialized uniswap in
   if !Ligo.Tezos.now >= deadline then
     (failwith "UniswapTooLate" : (Ligo.nat * kit * uniswap))
@@ -210,13 +193,7 @@ let uniswap_add_liquidity
     else if kit_deposited = kit_zero then
       (failwith "AddLiquidityZeroKitDeposited" : (Ligo.nat * kit * uniswap))
     else
-      let kit_deposited, kit_to_return =
-        kit_split_or_fail
-          all_kit_deposited
-          kit_deposited
-          (kit_sub max_kit_deposited kit_deposited) in
-      let kit_to_return, _same_ticket = read_kit kit_to_return in
-      let kit_deposited, _same_ticket = read_kit kit_deposited in
+      let kit_deposited, kit_to_return = (kit_deposited, kit_sub max_kit_deposited kit_deposited) in
       let updated = { uniswap with
                       kit = kit_add uniswap.kit kit_deposited;
                       tez = Ligo.add_tez_tez uniswap.tez tez_amount;
@@ -233,15 +210,13 @@ let uniswap_add_liquidity
 let uniswap_remove_liquidity
     (uniswap: uniswap)
     (tez_amount: Ligo.tez)
-    (lqt_burned: liquidity)
+    (lqt_burned: Ligo.nat)
     (min_tez_withdrawn: Ligo.tez)
     (min_kit_withdrawn: kit)
     (deadline: Ligo.timestamp)
   : (Ligo.tez * kit * uniswap) =
-  let lqt_burned = assert_valid_liquidity_token lqt_burned in
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
-  let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
   if tez_amount <> Ligo.tez_from_literal "0mutez" then
     (failwith "RemoveLiquidityNonEmptyAmount" : (Ligo.tez * kit * uniswap))
   else if !Ligo.Tezos.now >= deadline then
@@ -281,9 +256,8 @@ let uniswap_remove_liquidity
                       lqt = remaining_lqt } in
       (tez_withdrawn, kit_withdrawn, updated)
 
-let uniswap_add_accrued_kit (uniswap: uniswap) (accrual: kit_token) : uniswap =
+let uniswap_add_accrued_kit (uniswap: uniswap) (accrual: kit) : uniswap =
   let uniswap = uniswap_sync_last_observed uniswap in
-  let accrual, _same_ticket = read_kit accrual in
   { uniswap with kit = kit_add uniswap.kit accrual }
 
 let uniswap_add_accrued_tez (uniswap: uniswap) (accrual: Ligo.tez) : uniswap =

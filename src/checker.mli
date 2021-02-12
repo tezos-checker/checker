@@ -1,6 +1,5 @@
 open Kit
 open Permission
-open Uniswap
 open LiquidationAuction
 open LiquidationAuctionTypes
 open TokenTypes

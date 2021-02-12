@@ -51,6 +51,11 @@ let kit_join_or_fail (left: kit_token) (right: kit_token) : kit_token =
 type liquidity_token_content = Lqt
 [@@deriving show]
 
+type liquidity = liquidity_token_content Ligo.ticket
+[@@deriving show]
+
+let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
+
 (* DELEGATION AUCTION BID TICKETS *)
 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
