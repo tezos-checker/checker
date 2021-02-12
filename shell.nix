@@ -7,8 +7,8 @@ let
     # a version slightly newer than 0.9, including the "uncurry" optimisation
     let ligoSrc = pkgs.fetchgit {
       url = "https://gitlab.com/ligolang/ligo";
-      rev = "da018e9aee21b612ac8136a3f78bb3728a31ba7a";
-      sha256 = "sha256-EqgtQtvFOk+DModB4SOAd+YlBXC/tkuOYMoYtU5WLXU=";
+      rev = "6a052f5fd45a4300b818169e9d589a609d09632e";
+      sha256 = "1685z4gnqavifvivk5k0j2a83k2zj35pbidx4pz0cxpjkh945p6b";
     };
     in (import "${ligoSrc}/nix/pkgs.nix" {});
   tezosClient =
