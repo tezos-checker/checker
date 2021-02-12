@@ -51,6 +51,9 @@ let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
 
+let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) =
+  Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
+
 (* LIQUIDATION AUCTION BID TICKETS *)
 
 type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid: bid; }
@@ -58,7 +61,7 @@ type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid
 
 type liquidation_auction_bid_ticket = liquidation_auction_bid_details Ligo.ticket
 
-let issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_details) =
+let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_details) =
   Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal "1n")
 
 (* PERMISSION TICKETS *)

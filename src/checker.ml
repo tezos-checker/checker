@@ -102,6 +102,20 @@ let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidatio
   then same_ticket
   else (failwith "InvalidLiquidationAuctionTicket": liquidation_auction_bid_ticket)
 
+(** Ensure that a delegation auction bid ticket is valid. A delegation bid
+  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
+  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
+  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
+  * end up having contents clearly distinguished by type. *)
+let[@inline] assert_valid_delegation_auction_bid_ticket
+      (bid_ticket: delegation_auction_bid Ligo.ticket)
+  : delegation_auction_bid Ligo.ticket =
+  let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
+  if is_valid
+  then same_ticket
+  else (failwith "InvalidDelegationAuctionTicket": delegation_auction_bid Ligo.ticket)
+
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
@@ -682,12 +696,16 @@ let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation li
   (ops, new_state)
 
 let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
-  let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
+  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
+  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
   updated_delegation_auction state auction
 
 let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
   assert_no_tez_given ();
-  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
+  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
+  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid in
   let ops, new_auction = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
