@@ -14,30 +14,11 @@ open Common
 open Constants
 open TokenTypes
 open BurrowTypes
+open CheckerTypes
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
-
-type burrow_id = Ligo.address
-
-type checker =
-  { burrows : (burrow_id, burrow) Ligo.big_map;
-    uniswap : uniswap;
-    parameters : parameters;
-    liquidation_auctions : liquidation_auctions;
-    delegation_auction : delegation_auction;
-    delegate : Ligo.key_hash option;
-  }
-
-let initial_checker =
-  { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
-    uniswap = uniswap_make_initial;
-    parameters = initial_parameters;
-    liquidation_auctions = liquidation_auction_empty;
-    delegation_auction = delegation_auction_empty;
-    delegate = (None : Ligo.key_hash option);
-  }
 
 (* BEGIN_OCAML *)
 let assert_invariants (state: checker) : unit =
@@ -117,9 +98,9 @@ let assert_no_tez_given () =
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
 let[@inline] assert_valid_permission
-    (permission: permission)
-    (burrow_id: burrow_id)
-    (burrow: burrow)
+      (permission: permission)
+      (burrow_id: burrow_id)
+      (burrow: burrow)
   : rights =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =

@@ -23,6 +23,7 @@ inputs=(
   parameters
   uniswap
   burrow
+  checkerTypes
   checker
 )
 

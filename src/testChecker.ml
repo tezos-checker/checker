@@ -3,6 +3,7 @@ open Burrow
 open OUnit2
 open TestCommon
 open TokenTypes
+open CheckerTypes
 
 module PtrMap = Map.Make(Ptr)
 
@@ -14,7 +15,7 @@ let suite =
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = Checker.initial_checker in
+       let checker = initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let _lqt_minted_ret_kit_ops, checker =
@@ -244,7 +245,7 @@ let suite =
     ("Can't claim delegation too soon after winning delegation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = Checker.initial_checker in
+       let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 
@@ -262,7 +263,7 @@ let suite =
     ("Can't claim delegation too late after winning delegation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = Checker.initial_checker in
+       let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 
@@ -280,7 +281,7 @@ let suite =
     ("Can claim delegation after winning delegation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = Checker.initial_checker in
+       let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in
 

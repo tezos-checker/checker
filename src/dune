@@ -19,6 +19,7 @@
  (public_name src)
  (modules
   Checker
+  CheckerTypes
   Constants
   Mem
   Avl
