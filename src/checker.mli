@@ -1,5 +1,5 @@
 open Kit
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open TokenTypes
 open CheckerTypes
 open Tickets

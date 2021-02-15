@@ -1,5 +1,5 @@
 open Mem
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Avl
 open Kit
 open OUnit2

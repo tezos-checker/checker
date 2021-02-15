@@ -10,7 +10,7 @@ open Burrow
 open DelegationAuction
 open DelegationAuctionTypes
 open LiquidationAuction
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Common
 open Constants
 open TokenTypes

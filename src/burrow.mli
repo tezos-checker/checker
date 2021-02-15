@@ -3,7 +3,7 @@ open FixedPoint
 open Parameters
 
 type liquidation_slices =
-  { oldest: LiquidationAuctionTypes.leaf_ptr; youngest: LiquidationAuctionTypes.leaf_ptr }
+  { oldest: LiquidationAuctionPrimitiveTypes.leaf_ptr; youngest: LiquidationAuctionPrimitiveTypes.leaf_ptr }
 
 val show_liquidation_slices : liquidation_slices -> string
 val pp_liquidation_slices : Format.formatter -> liquidation_slices -> unit
@@ -59,14 +59,14 @@ val burrow_touch : parameters -> burrow -> burrow
   * pointers to the liquidation queue accordingly (which is a no-op if we are
   * not deleting the youngest or the oldest liquidation slice). *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val burrow_return_kit_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> kit -> burrow -> burrow
+val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.leaf_ptr -> LiquidationAuctionPrimitiveTypes.liquidation_slice -> kit -> burrow -> burrow
 
 (** Cancel the liquidation of a slice. That is, (a) return the tez that is part
   * of a liquidation slice back to the burrow and (b) adjust the burrow's
   * pointers to the liquidation queue accordingly (which is a no-op if we are
   * not deleting the youngest or the oldest liquidation slice). *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val burrow_return_slice_from_auction : LiquidationAuctionTypes.leaf_ptr -> LiquidationAuctionTypes.liquidation_slice -> burrow -> burrow
+val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.leaf_ptr -> LiquidationAuctionPrimitiveTypes.liquidation_slice -> burrow -> burrow
 
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
@@ -151,7 +151,7 @@ val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
 val burrow_request_liquidation : parameters -> burrow -> liquidation_result
-val burrow_oldest_liquidation_ptr : burrow -> LiquidationAuctionTypes.leaf_ptr option
+val burrow_oldest_liquidation_ptr : burrow -> LiquidationAuctionPrimitiveTypes.leaf_ptr option
 
 val assert_burrow_invariants : burrow -> unit
 

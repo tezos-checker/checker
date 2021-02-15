@@ -67,7 +67,7 @@ Utku: Lifecycle of liquidation slices.
    this case, we transfer the result to the callee, and remove the auction alltogether.
 *)
 
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Mem
 open Ratio
 open FixedPoint
@@ -485,7 +485,7 @@ let liquidation_auction_assert_invariants (auctions: liquidation_auctions) : uni
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
   let roots = Ligo.Big_map.bindings mem.mem
-              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionTypes.Root _ -> true; | _ -> false)
+              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
               |> List.map (fun (p, _) -> AVLPtr p) in
   List.iter (avl_assert_invariants mem) roots;
 

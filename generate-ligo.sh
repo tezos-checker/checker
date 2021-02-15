@@ -13,7 +13,7 @@ inputs_delphi=(
   fixedPoint
   kit
   uniswapTypes
-  liquidationAuctionTypes
+  liquidationAuctionPrimitiveTypes
   mem
   avl
   tokenTypes

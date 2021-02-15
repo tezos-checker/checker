@@ -1,4 +1,4 @@
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 
 (*
 Ticket-based entitities in checker and their expected value/mechanics:
