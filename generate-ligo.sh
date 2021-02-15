@@ -99,19 +99,24 @@ for name in "${all_inputs[@]}"; do
     cat > "$to"
 done
 
-echo "src/ligo.mligo => generated/ligo.mligo" 2>&1
-cp src/ligo.mligo generated/ligo/ligo.mligo
+echo "src/ligoDelphi.mligo => generated/ligoDelphi.mligo" 2>&1
+cp src/ligoDelphi.mligo generated/ligo/ligoDelphi.mligo
+
+echo "src/ligoEdo.mligo => generated/ligoEdo.mligo" 2>&1
+cp src/ligoEdo.mligo generated/ligo/ligoEdo.mligo
 
 echo "=> main.mligo" 2>&1
 
-echo '#include "ligo.mligo"' > generated/ligo/main.mligo
+echo '#include "ligoDelphi.mligo"' > generated/ligo/main.mligo
+echo '#include "ligoEdo.mligo"' >> generated/ligo/main.mligo
 
 ( IFS=$'\n'; echo "${all_inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/main.mligo
 
 # Do everything again to generate the initial storage
-echo '#include "ligo.mligo"' > generated/ligo/storagemain.mligo
+echo '#include "ligoDelphi.mligo"' > generated/ligo/storagemain.mligo
+echo '#include "ligoEdo.mligo"' >> generated/ligo/storagemain.mligo
 
 ( IFS=$'\n'; echo "${inputs_delphi[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
