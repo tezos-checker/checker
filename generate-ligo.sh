@@ -117,11 +117,10 @@ echo '#include "ligoEdo.mligo"' >> generated/ligo/main.mligo
   cat >> generated/ligo/main.mligo
 
 # Do everything again to generate the initial storage
-echo '#include "ligoDelphi.mligo"' > generated/ligo/storagemain.mligo
-echo '#include "ligoEdo.mligo"' >> generated/ligo/storagemain.mligo
+echo '#include "ligoDelphi.mligo"' > generated/ligo/storage.mligo
 
 ( IFS=$'\n'; echo "${inputs_delphi[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
-  cat >> generated/ligo/storagemain.mligo
+  cat >> generated/ligo/storage.mligo
 
 echo "done." 1>&2

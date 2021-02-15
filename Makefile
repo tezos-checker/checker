@@ -13,7 +13,7 @@ build-ligo: generate-ligo
 	mkdir -p generated/michelson
 	ligo compile-contract --protocol edo --disable-michelson-typechecking generated/ligo/main.mligo main --output-file generated/michelson/main.tz
 	tezos-client --mode mockup --protocol PtEdoTez typecheck script generated/michelson/main.tz
-	ligo compile-expression --protocol edo --init-file generated/ligo/storagemain.mligo cameligo initial_checker # --output generated/michelson/storage.tz
+	ligo compile-expression --protocol edo --init-file generated/ligo/storage.mligo cameligo initial_checker > generated/michelson/storage.tz
 
 test:
 	dune runtest .
