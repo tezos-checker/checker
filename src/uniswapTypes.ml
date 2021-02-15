@@ -24,5 +24,5 @@ let uniswap_make_initial : uniswap =
     kit = kit_of_mukit (Ligo.nat_from_literal "1n");
     lqt = Ligo.nat_from_literal "1n";
     kit_in_tez_in_prev_block = one_ratio; (* Same as tez/kit now. *)
-    last_level = Ligo.nat_from_literal "172032n"; (* FIXME: must be !Ligo.tezos_level *)
+    last_level = Ligo.nat_from_literal "0n"; (* FIXME: must be !Ligo.tezos_level *)
   }
