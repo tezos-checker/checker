@@ -1,6 +1,7 @@
 open OUnit2
 open TestCommon
 open DelegationAuction
+open DelegationAuctionTypes
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"

@@ -33,6 +33,7 @@
   LiquidationAuctionTypes
   Ptr
   DelegationAuction
+  DelegationAuctionTypes
   Permission
   Ratio
   BurrowTypes

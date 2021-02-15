@@ -8,6 +8,7 @@ open Parameters
 open Uniswap
 open Burrow
 open DelegationAuction
+open DelegationAuctionTypes
 open LiquidationAuction
 open LiquidationAuctionTypes
 open Common

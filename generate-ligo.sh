@@ -17,6 +17,7 @@ inputs_delphi=(
   mem
   avl
   tokenTypes
+  delegationAuctionTypes
   burrowTypes
   constants
   liquidationAuction

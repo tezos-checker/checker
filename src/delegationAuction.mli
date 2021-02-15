@@ -1,8 +1,5 @@
 open TokenTypes
-
-type delegation_auction
-
-val delegation_auction_empty : delegation_auction
+open DelegationAuctionTypes
 
 val delegation_auction_touch : delegation_auction -> delegation_auction
 
@@ -19,6 +16,3 @@ val delegation_auction_place_bid : delegation_auction -> Ligo.address -> Ligo.te
 val delegation_auction_claim_win : delegation_auction -> delegation_auction_bid -> Ligo.key_hash -> delegation_auction
 
 val delegation_auction_reclaim_bid : delegation_auction -> delegation_auction_bid -> Ligo.tez * delegation_auction
-
-val show_delegation_auction : delegation_auction -> string
-val pp_delegation_auction : Format.formatter -> delegation_auction -> unit
