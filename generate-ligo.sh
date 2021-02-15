@@ -16,6 +16,7 @@ inputs_delphi=(
   liquidationAuctionPrimitiveTypes
   mem
   avl
+  liquidationAuctionTypes
   tokenTypes
   delegationAuctionTypes
   burrowTypes

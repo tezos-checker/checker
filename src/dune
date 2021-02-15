@@ -30,6 +30,7 @@
   Uniswap
   UniswapTypes
   LiquidationAuction
+  LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes
   Ptr
   DelegationAuction

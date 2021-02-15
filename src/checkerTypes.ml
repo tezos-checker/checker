@@ -1,7 +1,7 @@
 open Burrow
 open UniswapTypes
 open Parameters
-open LiquidationAuction
+open LiquidationAuctionTypes
 open DelegationAuctionTypes
 
 type burrow_id = Ligo.address
