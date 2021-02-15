@@ -21,11 +21,8 @@ inputs_delphi=(
   delegationAuctionTypes
   burrowTypes
   constants
-  liquidationAuction
-  delegationAuction
   permission
   parameters
-  uniswap
   burrow
   checkerTypes
 )
@@ -33,6 +30,9 @@ inputs_delphi=(
 # These modules generate edo-compatible michelson
 # (delphi-incompatible, due to LEVEL and TICKETs).
 inputs_edo=(
+  uniswap
+  liquidationAuction
+  delegationAuction
   tickets
   checker
 )
