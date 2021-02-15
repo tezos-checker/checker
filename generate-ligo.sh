@@ -5,7 +5,8 @@ set -o pipefail
 
 cd "$(realpath "$(dirname "$0")")"
 
-simple_inputs=(
+# These modules generate delphi-compatible michelson
+inputs_delphi=(
   ptr
   common
   ratio
@@ -26,15 +27,16 @@ simple_inputs=(
   checkerTypes
 )
 
-# These modules use tickets (come last)
-inputs_with_tickets=(
+# These modules generate edo-compatible michelson
+# (delphi-incompatible, due to LEVEL and TICKETs).
+inputs_edo=(
   tickets
   checker
 )
 
-inputs=( "${simple_inputs[@]}" "${inputs_with_tickets[@]}" )
+all_inputs=( "${inputs_delphi[@]}" "${inputs_edo[@]}" )
 
-for name in "${inputs[@]}"; do
+for name in "${all_inputs[@]}"; do
   from=src/"$name".ml
   to=generated/ligo/"$name".mligo
   echo "$from -> $to" 1>&2
@@ -103,14 +105,14 @@ echo "=> main.mligo" 2>&1
 
 echo '#include "ligo.mligo"' > generated/ligo/main.mligo
 
-( IFS=$'\n'; echo "${inputs[*]}" ) |
+( IFS=$'\n'; echo "${all_inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/main.mligo
 
 # Do everything again to generate the initial storage
 echo '#include "ligo.mligo"' > generated/ligo/storagemain.mligo
 
-( IFS=$'\n'; echo "${simple_inputs[*]}" ) |
+( IFS=$'\n'; echo "${inputs_delphi[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/storagemain.mligo
 
