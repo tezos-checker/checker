@@ -12,6 +12,7 @@ inputs_delphi=(
   ratio
   fixedPoint
   kit
+  uniswapTypes
   liquidationAuctionTypes
   mem
   avl

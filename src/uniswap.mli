@@ -1,4 +1,5 @@
 open Kit
+open UniswapTypes
 
 (* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
@@ -24,15 +25,6 @@ open Kit
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
-
-type uniswap
-
-(** The initial state of the uniswap contract. We always start with 1mukit,
-  * 1mutez, and 1lqt token (effectively setting the starting price to 1
-  * tez/kit). The price will eventually reach the value it should, but this
-  * saves us from having the first/non-first liquidity provider separation, and
-  * all division-by-zero checks. *)
-val uniswap_make_initial : uniswap
 
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
@@ -105,9 +97,6 @@ val uniswap_add_accrued_kit : uniswap -> kit -> uniswap
 val uniswap_add_accrued_tez : uniswap -> Ligo.tez -> uniswap
 
 (* BEGIN_OCAML *)
-val show_uniswap : uniswap -> string
-val pp_uniswap : Format.formatter -> uniswap -> unit
-
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
 val uniswap_make_for_test :
   tez:Ligo.tez ->

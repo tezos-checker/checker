@@ -2,26 +2,7 @@ open Ratio
 open Kit
 open Common
 open Constants
-
-type uniswap =
-  { tez: Ligo.tez;
-    kit: kit;
-    lqt: Ligo.nat;
-    (* George: I don't expect this to get really big in size cause it's
-     * always derived by dividing uniswap.tez / uniswap.kit (i.e. even if they
-     * are relatively prime, we are OK). *)
-    kit_in_tez_in_prev_block: ratio [@printer pp_ratio];
-    last_level: Ligo.nat;
-  }
-[@@deriving show]
-
-let uniswap_make_initial =
-  { tez = Ligo.tez_from_literal "1mutez";
-    kit = kit_of_mukit (Ligo.nat_from_literal "1n");
-    lqt = Ligo.nat_from_literal "1n";
-    kit_in_tez_in_prev_block = one_ratio; (* Same as tez/kit now. *)
-    last_level = !Ligo.tezos_level;
-  }
+open UniswapTypes
 
 (* When the uniswap is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow

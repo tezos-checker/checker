@@ -1,5 +1,5 @@
 open Burrow
-open Uniswap
+open UniswapTypes
 open Parameters
 open LiquidationAuction
 open DelegationAuction
