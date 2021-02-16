@@ -119,4 +119,7 @@ val uniswap_kit_times_tez : uniswap -> Ratio.ratio
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
  * current number of liquidity tokens extant. *)
 val uniswap_liquidity_tokens_extant : uniswap -> Ligo.nat
+
+(* FOR TESTING PURPOSES *)
+val eq_uniswap : uniswap -> uniswap -> bool
 (* END_OCAML *)

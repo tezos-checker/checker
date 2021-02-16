@@ -261,4 +261,11 @@ let uniswap_kit_times_tez (u: uniswap) =
   mul_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
 
 let uniswap_liquidity_tokens_extant (u: uniswap) = u.lqt
+
+let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
+  Ligo.eq_tez_tez u1.tez u2.tez
+  && kit_compare u1.kit u2.kit = 0
+  && Ligo.eq_nat_nat u1.lqt u2.lqt
+  && eq_ratio_ratio u1.kit_in_tez_in_prev_block u2.kit_in_tez_in_prev_block
+  && Ligo.eq_nat_nat u1.last_level u2.last_level
 (* END_OCAML *)

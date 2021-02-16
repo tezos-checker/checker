@@ -10,26 +10,11 @@ type ratio = {
 let ratio_num (x: ratio) : Ligo.int = x.num
 let ratio_den (x: ratio) : Ligo.int = x.den
 
-let rec gcd_rec (x, y: Ligo.int * Ligo.int) : Ligo.int =
-  if y = Ligo.int_from_literal "0"
-  then x
-  else gcd_rec (y, Ligo.int (Ligo.mod_int_int x y))
-
-let gcd_int_int (x: Ligo.int) (y: Ligo.int) : Ligo.int =
-  gcd_rec (abs_int x, abs_int y)
-
-(* normalize n/d, assuming d > 0 *)
-let normalize (n: Ligo.int) (d: Ligo.int) : ratio =
-  let g = gcd_int_int n d in
-  if g = Ligo.int_from_literal "1"
-  then { num = n; den = d }
-  else { num = Ligo.div_int_int n g; den = Ligo.div_int_int d g; }
-
 (* make and normalize n/d, assuming d > 0 *)
 let make_real (n: Ligo.int) (d: Ligo.int) : ratio =
   if n = Ligo.int_from_literal "0" || d = Ligo.int_from_literal "1"
   then { num = n; den = Ligo.int_from_literal "1" }
-  else normalize n d
+  else { num = n; den = d; }
 
 (* make and normalize any fraction *)
 let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =

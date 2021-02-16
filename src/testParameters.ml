@@ -127,6 +127,7 @@ let test_compute_imbalance_all_zero =
     let circulating = kit_zero in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       zero_ratio
       (compute_imbalance burrowed circulating)
 
@@ -136,6 +137,7 @@ let test_compute_imbalance_zero_burrowed =
     let circulating = kit_one in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
       (compute_imbalance burrowed circulating)
 
@@ -145,6 +147,7 @@ let test_compute_imbalance_equal =
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       zero_ratio
       (compute_imbalance burrowed circulating)
 
@@ -154,6 +157,7 @@ let test_compute_imbalance_positive_small =
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_001n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
       (compute_imbalance burrowed circulating)
 
@@ -163,6 +167,7 @@ let test_compute_imbalance_positive_big =
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_000n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       (compute_imbalance burrowed circulating)
 
@@ -172,6 +177,7 @@ let test_compute_imbalance_positive_capped =
     let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
       (compute_imbalance burrowed circulating)
 
@@ -181,6 +187,7 @@ let test_compute_imbalance_negative_small =
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
       (compute_imbalance burrowed circulating)
 
@@ -190,6 +197,7 @@ let test_compute_imbalance_negative_big =
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       (compute_imbalance burrowed circulating)
 
@@ -199,6 +207,7 @@ let test_compute_imbalance_negative_capped =
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
       (compute_imbalance burrowed circulating)
 
