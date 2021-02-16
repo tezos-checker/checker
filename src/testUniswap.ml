@@ -192,7 +192,7 @@ let buy_kit_unit_test =
         (kit_of_mukit (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
@@ -204,7 +204,7 @@ let buy_kit_unit_test =
         (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -311,7 +311,7 @@ let sell_kit_unit_test =
         (Ligo.tez_from_literal "1mutez")
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
-    assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
@@ -324,7 +324,7 @@ let sell_kit_unit_test =
         (Ligo.tez_from_literal "1_663_333mutez")
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
-    assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -435,7 +435,7 @@ let add_liquidity_unit_test =
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Ligo.string_of_nat expected_returned_liquidity returned_liquidity;
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap expected_updated_uniswap updated_uniswap
+    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap
 
 (* ************************************************************************* *)
 (*                 remove_liquidity (property-based tests)                   *)
