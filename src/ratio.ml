@@ -105,18 +105,18 @@ let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
     (Ligo.mul_int_int x.num y.den)
     (Ligo.mul_int_int y.num x.den)
 
-let geq_ratio_ratio (x: ratio) (y: ratio) : bool = leq_ratio_ratio y x
+let[@inline] geq_ratio_ratio (x: ratio) (y: ratio) : bool = leq_ratio_ratio y x
 
-let gt_ratio_ratio (x: ratio) (y: ratio) : bool = lt_ratio_ratio y x
+let[@inline] gt_ratio_ratio (x: ratio) (y: ratio) : bool = lt_ratio_ratio y x
 
 let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else b
 
 let max_ratio (a: ratio) (b: ratio) : ratio = if geq_ratio_ratio a b then a else b
 
-let ratio_to_int (x: ratio) : Ligo.int = Ligo.div_int_int x.num x.den
+let[@inline] ratio_to_int (x: ratio) : Ligo.int = Ligo.div_int_int x.num x.den
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let neg_ratio (x: ratio) : ratio = { num = neg_int x.num; den = x.den; }
+let[@inline] neg_ratio (x: ratio) : ratio = { num = neg_int x.num; den = x.den; }
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
