@@ -234,7 +234,7 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
   * excess kit, simply store it into the burrow. *)
-let burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
+let[@inline] burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   let kit_to_burn = kit_min b.outstanding_kit k in

@@ -282,12 +282,18 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
   assert_burrow_has_no_unclaimed_slices state burrow;
   let kit = assert_valid_kit_token kit in
   let kit, _ (* destroyed *) = read_kit kit in
-  if burrow_allow_all_kit_burnings burrow then
-    (* no need to check the permission argument at all *)
+  let is_allowed =
+    if burrow_allow_all_kit_burnings burrow then
+      true
+    else
+      let permission = assert_permission_is_present permission in
+      let r = assert_valid_permission permission burrow_id burrow in
+      does_right_allow_kit_burning r
+  in
+  if is_allowed then
     let updated_burrow = burrow_burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
-
     let state =
       {state with
        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
@@ -298,24 +304,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
       } in
     (ops, state)
   else
-    let permission = assert_permission_is_present permission in
-    let r = assert_valid_permission permission burrow_id burrow in
-    if does_right_allow_kit_burning r then
-      (* the permission should support burning kit. *)
-      let updated_burrow = burrow_burn_kit state.parameters kit burrow in
-      (* TODO: What should happen if the following is violated? *)
-      assert (state.parameters.circulating_kit >= kit);
-      let state =
-        {state with
-         burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-         parameters =
-           remove_outstanding_kit
-             (remove_circulating_kit state.parameters kit)
-             kit;
-        } in
-      (ops, state)
-    else
-      (failwith "InsufficientPermission": LigoOp.operation list * checker)
+    (failwith "InsufficientPermission": LigoOp.operation list * checker)
 
 let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state burrow_id in
