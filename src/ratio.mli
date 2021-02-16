@@ -38,7 +38,6 @@ val max_ratio: ratio -> ratio -> ratio
 
 (* Basic unary operations. *)
 val neg_ratio: ratio -> ratio
-val abs_ratio: ratio -> ratio
 
 (* Basic binary operations. *)
 val add_ratio: ratio -> ratio -> ratio
