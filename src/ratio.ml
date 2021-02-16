@@ -118,9 +118,6 @@ let ratio_to_int (x: ratio) : Ligo.int = Ligo.div_int_int x.num x.den
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let neg_ratio (x: ratio) : ratio = { num = neg_int x.num; den = x.den; }
 
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let abs_ratio (x: ratio) : ratio = { num = abs_int x.num; den = x.den; }
-
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let add_ratio (x: ratio) (y: ratio) : ratio =
