@@ -89,30 +89,21 @@ let one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_l
  * have rationals be lightweight. We always return to fixed-point, tez, and
  * kit, at the end anyway. *)
 let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
-  if x.den = y.den (* avoid multiplication, for performance. *)
-  then Ligo.eq_int_int x.num y.num
-  else
-    Ligo.eq_int_int
-      (Ligo.mul_int_int x.num y.den)
-      (Ligo.mul_int_int y.num x.den)
+  Ligo.eq_int_int
+    (Ligo.mul_int_int x.num y.den)
+    (Ligo.mul_int_int y.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
-  if x.den = y.den (* avoid multiplication, for performance. *)
-  then Ligo.leq_int_int x.num y.num
-  else
-    Ligo.leq_int_int
-      (Ligo.mul_int_int x.num y.den)
-      (Ligo.mul_int_int y.num x.den)
+  Ligo.leq_int_int
+    (Ligo.mul_int_int x.num y.den)
+    (Ligo.mul_int_int y.num x.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
-  if x.den = y.den (* avoid multiplication, for performance. *)
-  then Ligo.lt_int_int x.num y.num
-  else
-    Ligo.lt_int_int
-      (Ligo.mul_int_int x.num y.den)
-      (Ligo.mul_int_int y.num x.den)
+  Ligo.lt_int_int
+    (Ligo.mul_int_int x.num y.den)
+    (Ligo.mul_int_int y.num x.den)
 
 let geq_ratio_ratio (x: ratio) (y: ratio) : bool = leq_ratio_ratio y x
 
@@ -133,29 +124,24 @@ let abs_ratio (x: ratio) : ratio = { num = abs_int x.num; den = x.den; }
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let add_ratio (x: ratio) (y: ratio) : ratio =
-  if x.den = y.den then (* avoid multiplication, for performance. *)
-    make_real (Ligo.add_int_int x.num y.num) x.den
-  else
-    make_real
-      (Ligo.add_int_int
-         (Ligo.mul_int_int x.num y.den)
-         (Ligo.mul_int_int y.num x.den))
-      (Ligo.mul_int_int x.den y.den)
+  make_real
+    (Ligo.add_int_int
+       (Ligo.mul_int_int x.num y.den)
+       (Ligo.mul_int_int y.num x.den))
+    (Ligo.mul_int_int x.den y.den)
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let sub_ratio (x: ratio) (y: ratio) : ratio =
-  if x.den = y.den then
-    make_real (Ligo.sub_int_int x.num y.num) x.den (* avoid multiplication, for performance. *)
-  else
-    make_real
-      (Ligo.sub_int_int
-         (Ligo.mul_int_int x.num y.den)
-         (Ligo.mul_int_int y.num x.den))
-      (Ligo.mul_int_int x.den y.den)
+  make_real
+    (Ligo.sub_int_int
+       (Ligo.mul_int_int x.num y.den)
+       (Ligo.mul_int_int y.num x.den))
+    (Ligo.mul_int_int x.den y.den)
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
+(* FIXME: I think we can shorten this one *)
 let mul_ratio (x: ratio) (y: ratio) : ratio = make_real (Ligo.mul_int_int x.num y.num) (Ligo.mul_int_int x.den y.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
