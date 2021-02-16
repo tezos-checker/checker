@@ -4,16 +4,16 @@ open Common
 type fixedpoint = Ligo.int
 
 (* let scaling_base = Ligo.int_from_literal 2 *)
-let fixedpoint_scaling_exponent = 64
-let fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let[@inline] fixedpoint_scaling_exponent = 64
+let[@inline] fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
-let fixedpoint_zero = Ligo.int_from_literal "0"
-let fixedpoint_one = fixedpoint_scaling_factor
+let[@inline] fixedpoint_zero = Ligo.int_from_literal "0"
+let[@inline] fixedpoint_one = fixedpoint_scaling_factor
 
 (* Arithmetic operations. *)
-let fixedpoint_add (x: fixedpoint) (y: fixedpoint) = Ligo.add_int_int x y
-let fixedpoint_sub (x: fixedpoint) (y: fixedpoint) = Ligo.sub_int_int x y
+let[@inline] fixedpoint_add (x: fixedpoint) (y: fixedpoint) = Ligo.add_int_int x y
+let[@inline] fixedpoint_sub (x: fixedpoint) (y: fixedpoint) = Ligo.sub_int_int x y
 let fixedpoint_mul (x: fixedpoint) (y: fixedpoint) = Ligo.div_int_int (Ligo.mul_int_int x y) fixedpoint_scaling_factor
 
 (* We round towards 0, for fixedpoint calculation, measuring things which are
@@ -21,7 +21,7 @@ let fixedpoint_mul (x: fixedpoint) (y: fixedpoint) = Ligo.div_int_int (Ligo.mul_
  * accounting (e.g. uniswap)... for measuring things like drift, targets,
  * imbalances etc which are naturally imprecise this is fine. *)
 let fixedpoint_div (x: fixedpoint) (y: fixedpoint) = Ligo.div_int_int (Ligo.mul_int_int x fixedpoint_scaling_factor) y
-let fixedpoint_neg (x: fixedpoint) = neg_int x
+let[@inline] fixedpoint_neg (x: fixedpoint) = neg_int x
 
 let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
   if Ligo.eq_nat_nat y (Ligo.nat_from_literal "0n") then
@@ -33,10 +33,10 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
 
 (* NOTE: Use another term from the taylor sequence for more accuracy:
  *   one + amnt + (amnt * amnt) / (one + one) *)
-let fixedpoint_exp (amnt: fixedpoint) = fixedpoint_add fixedpoint_one amnt
+let[@inline] fixedpoint_exp (amnt: fixedpoint) = fixedpoint_add fixedpoint_one amnt
 
 (* Conversions to/from other types. *)
-let fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
+let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
 
 let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int (ratio_num amnt) fixedpoint_scaling_factor) (ratio_den amnt)
