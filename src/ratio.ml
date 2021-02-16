@@ -26,9 +26,9 @@ let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
     make_real (neg_int n) (neg_int d)
 
 (* Conversions to/from other types. *)
-let ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
+let[@inline] ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
 
-let ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
+let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_floor (x: ratio) : Ligo.nat =
@@ -44,7 +44,7 @@ let ratio_to_nat_ceil (x: ratio) : Ligo.nat =
   else
     Ligo.abs (cdiv_int_int x.num x.den)
 
-let ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
+let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_tez_floor (x: ratio) : Ligo.tez =
@@ -77,8 +77,8 @@ let ratio_to_tez_ceil (x: ratio) : Ligo.tez =
     )
 
 (* Predefined values *)
-let zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
-let one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
+let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
+let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* If we wish to rely on the fact that the rationals are normalized, we could
  * instead implement equality very efficiently as
