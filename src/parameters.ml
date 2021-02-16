@@ -159,16 +159,16 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
     fixedpoint_zero
   else if lt_ratio_ratio (qexp (neg_ratio target_high_bracket)) target && leq_ratio_ratio target (qexp (neg_ratio target_low_bracket)) then
     (* Low acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
   else if gt_ratio_ratio (qexp (          target_high_bracket)) target && geq_ratio_ratio target (qexp (          target_low_bracket)) then
     (* Low acceleration (+) *)
-    (fixedpoint_div cnp_001 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
   else if leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) then
     (* High acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
   else if geq_ratio_ratio target (qexp (          target_high_bracket)) then
     (* High acceleration (+) *)
-    (fixedpoint_div cnp_005 (fixedpoint_pow secs_in_a_day (Ligo.nat_from_literal "2n")))
+    (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
   else
     (failwith "impossible" : fixedpoint)
 
