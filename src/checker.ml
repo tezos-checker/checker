@@ -221,19 +221,19 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (failwith "GetEntrypointOptFailure (%burrowStoreTez)" : LigoOp.operation) in
-  if burrow_allow_all_tez_deposits burrow then
-    (* no need to check the permission argument at all *)
+  let is_allowed =
+    if burrow_allow_all_tez_deposits burrow then
+      true
+    else
+      let permission = assert_permission_is_present permission in
+      let r = assert_valid_permission permission burrow_id burrow in
+      does_right_allow_tez_deposits r
+  in
+  if is_allowed then
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
     ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
-    let permission = assert_permission_is_present permission in
-    let r = assert_valid_permission permission burrow_id burrow in
-    if does_right_allow_tez_deposits r then
-      (* the permission should support depositing tez. *)
-      let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
-      ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
-    else
-      (failwith "InsufficientPermission": LigoOp.operation list * checker)
+    (failwith "InsufficientPermission": LigoOp.operation list * checker)
 
 let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (LigoOp.operation list * checker) =
   assert_no_tez_given ();
