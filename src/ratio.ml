@@ -1,7 +1,7 @@
 open Common
 
 (** A rational is represented as a pair numerator/denominator, reduced to have
-  * a positive denominator and no common factor. This form is canonical. *)
+  * a positive denominator. This form is canonical. *)
 type ratio = {
   num: Ligo.int; (** Numerator. *)
   den: Ligo.int; (** Denominator, > 0 *)
