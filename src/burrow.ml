@@ -207,7 +207,7 @@ let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash o
     }
 
 (** Add non-negative collateral to a burrow. *)
-let burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
+let[@inline] burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   { b with collateral = Ligo.add_tez_tez b.collateral t }
