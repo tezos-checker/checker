@@ -5,28 +5,41 @@ set -o pipefail
 
 cd "$(realpath "$(dirname "$0")")"
 
-inputs=(
+# These modules generate delphi-compatible michelson
+inputs_delphi=(
   ptr
   common
   ratio
   fixedPoint
   kit
-  liquidationAuctionTypes
+  uniswapTypes
+  liquidationAuctionPrimitiveTypes
   mem
   avl
+  liquidationAuctionTypes
   tokenTypes
+  delegationAuctionTypes
   burrowTypes
   constants
-  liquidationAuction
-  delegationAuction
   permission
   parameters
-  uniswap
   burrow
+  checkerTypes
+)
+
+# These modules generate edo-compatible michelson
+# (delphi-incompatible, due to LEVEL and TICKETs).
+inputs_edo=(
+  uniswap
+  liquidationAuction
+  delegationAuction
+  tickets
   checker
 )
 
-for name in "${inputs[@]}"; do
+all_inputs=( "${inputs_delphi[@]}" "${inputs_edo[@]}" )
+
+for name in "${all_inputs[@]}"; do
   from=src/"$name".ml
   to=generated/ligo/"$name".mligo
   echo "$from -> $to" 1>&2
@@ -88,15 +101,26 @@ for name in "${inputs[@]}"; do
     cat > "$to"
 done
 
-echo "src/ligo.mligo => generated/ligo.mligo" 2>&1
-cp src/ligo.mligo generated/ligo/ligo.mligo
+echo "src/ligoDelphi.mligo => generated/ligoDelphi.mligo" 2>&1
+cp src/ligoDelphi.mligo generated/ligo/ligoDelphi.mligo
+
+echo "src/ligoEdo.mligo => generated/ligoEdo.mligo" 2>&1
+cp src/ligoEdo.mligo generated/ligo/ligoEdo.mligo
 
 echo "=> main.mligo" 2>&1
 
-echo '#include "ligo.mligo"' > generated/ligo/main.mligo
+echo '#include "ligoDelphi.mligo"' > generated/ligo/main.mligo
+echo '#include "ligoEdo.mligo"' >> generated/ligo/main.mligo
 
-( IFS=$'\n'; echo "${inputs[*]}" ) |
+( IFS=$'\n'; echo "${all_inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> generated/ligo/main.mligo
+
+# Do everything again to generate the initial storage
+echo '#include "ligoDelphi.mligo"' > generated/ligo/storage.mligo
+
+( IFS=$'\n'; echo "${inputs_delphi[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> generated/ligo/storage.mligo
 
 echo "done." 1>&2

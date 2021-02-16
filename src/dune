@@ -19,6 +19,7 @@
  (public_name src)
  (modules
   Checker
+  CheckerTypes
   Constants
   Mem
   Avl
@@ -27,16 +28,20 @@
   Parameters
   Burrow
   Uniswap
+  UniswapTypes
   LiquidationAuction
   LiquidationAuctionTypes
+  LiquidationAuctionPrimitiveTypes
   Ptr
   DelegationAuction
+  DelegationAuctionTypes
   Permission
   Ratio
   BurrowTypes
   TokenTypes
   Ligo
   LigoOp
+  Tickets
   Common)
  (libraries str zarith)
  (wrapped false)

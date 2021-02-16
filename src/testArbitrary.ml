@@ -18,7 +18,7 @@ let arb_positive_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal 
 let arb_liquidation_slice =
   QCheck.map
     (fun tz ->
-       LiquidationAuctionTypes.
+       LiquidationAuctionPrimitiveTypes.
          ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
           ; older = None
           ; younger = None

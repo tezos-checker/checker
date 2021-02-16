@@ -1,9 +1,5 @@
 open TokenTypes
 
-(** A permission is a ticket containing a right. *)
-type permission = permission_content Ligo.ticket
-[@@deriving show]
-
 let does_right_allow_tez_deposits (right: rights) : bool =
   match right with
   | Admin -> true

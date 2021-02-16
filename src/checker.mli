@@ -1,26 +1,8 @@
 open Kit
-open Permission
-open Parameters
-open Uniswap
-open Burrow
-open DelegationAuction
-open LiquidationAuction
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open TokenTypes
-
-type burrow_id = Ligo.address
-
-type checker =
-  { burrows : (burrow_id, burrow) Ligo.big_map;
-    uniswap : uniswap;
-    parameters : parameters;
-    liquidation_auctions : liquidation_auctions;
-    delegation_auction : delegation_auction;
-    delegate : Ligo.key_hash option;
-  }
-
-(** Make a fresh state. *)
-val initial_checker : checker
+open CheckerTypes
+open Tickets
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters

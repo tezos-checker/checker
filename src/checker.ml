@@ -8,36 +8,19 @@ open Parameters
 open Uniswap
 open Burrow
 open DelegationAuction
+open DelegationAuctionTypes
 open LiquidationAuction
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Common
 open Constants
 open TokenTypes
 open BurrowTypes
+open CheckerTypes
+open Tickets
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
  * where possible. *)
-
-type burrow_id = Ligo.address
-
-type checker =
-  { burrows : (burrow_id, burrow) Ligo.big_map;
-    uniswap : uniswap;
-    parameters : parameters;
-    liquidation_auctions : liquidation_auctions;
-    delegation_auction : delegation_auction;
-    delegate : Ligo.key_hash option;
-  }
-
-let initial_checker =
-  { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
-    uniswap = uniswap_make_initial;
-    parameters = initial_parameters;
-    liquidation_auctions = liquidation_auction_empty;
-    delegation_auction = delegation_auction_empty;
-    delegate = (None : Ligo.key_hash option);
-  }
 
 (* BEGIN_OCAML *)
 let assert_invariants (state: checker) : unit =
@@ -77,6 +60,77 @@ let assert_invariants (state: checker) : unit =
 (* END_OCAML *)
 
 (* ************************************************************************* *)
+(**                                CHECKS                                    *)
+(* ************************************************************************* *)
+
+(** Check whether a kit token is valid. A kit token is valid if (a) it is
+  * issued by checker, and (b) is tagged appropriately (this is already
+  * enforced by its type). *)
+let[@inline] assert_valid_kit_token (token: kit_token) : kit_token =
+  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
+  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
+  if is_valid
+  then same_ticket
+  else (failwith "InvalidKitToken": kit_token)
+
+(** Check whether a liquidity token is valid. A liquidity token is valid if it
+  * is issued by checker, and it is tagged appropriately (this is already
+  * enforced by its type). *)
+let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
+  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+  if issuer = checker_address
+  then liquidity
+  else (failwith "InvalidLiquidityToken" : liquidity)
+
+(** Ensure that a delegation auction bid ticket is valid. A delegation bid
+  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
+  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
+  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
+  * end up having contents clearly distinguished by type. *)
+let[@inline] assert_valid_delegation_auction_bid_ticket
+      (bid_ticket: delegation_auction_bid Ligo.ticket)
+  : delegation_auction_bid Ligo.ticket =
+  let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
+  if is_valid
+  then same_ticket
+  else (failwith "InvalidDelegationAuctionTicket": delegation_auction_bid Ligo.ticket)
+
+(** Check whether a liquidation auction bid ticket is valid. An auction bid
+  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
+  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
+  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
+  * end up having contents clearly distinguished by type. *)
+let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
+  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
+  if is_valid
+  then same_ticket
+  else (failwith "InvalidLiquidationAuctionTicket": liquidation_auction_bid_ticket)
+
+(* NOTE: It totally consumes the ticket. It's the caller's responsibility to
+ * replicate the permission ticket if they don't want to lose it. *)
+let[@inline] assert_valid_permission
+      (permission: permission)
+      (burrow_id: burrow_id)
+      (burrow: burrow)
+  : rights =
+  let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
+  let validity_condition =
+    issuer = checker_address
+    && amnt = Ligo.nat_from_literal "0n"
+    && version = burrow_permission_version burrow
+    && id = burrow_id in
+  if validity_condition
+  then right
+  else (failwith "InvalidPermission": rights)
+
+let assert_permission_is_present (permission: permission option) : permission =
+  match permission with
+  | None -> (failwith "MissingPermission": permission)
+  | Some permission -> permission
+
+(* ************************************************************************* *)
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
 
@@ -95,11 +149,6 @@ let find_burrow (state: checker) (burrow_id: burrow_id) : burrow =
   | None -> (failwith "NonExistentBurrow": burrow)
   | Some burrow -> burrow
 
-let assert_permission_is_present (permission: permission option) : permission =
-  match permission with
-  | None -> (failwith "MissingPermission": permission)
-  | Some permission -> permission
-
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
@@ -113,23 +162,6 @@ let assert_no_tez_given () =
   if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
   then failwith "UnwantedTezGiven"
   else ()
-
-(* NOTE: It totally consumes the ticket. It's the caller's responsibility to
- * replicate the permission ticket if they don't want to lose it. *)
-let[@inline] assert_valid_permission
-    (permission: permission)
-    (burrow_id: burrow_id)
-    (burrow: burrow)
-  : rights =
-  let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
-  let validity_condition =
-    issuer = checker_address
-    && amnt = Ligo.nat_from_literal "0n"
-    && version = burrow_permission_version burrow
-    && id = burrow_id in
-  if validity_condition
-  then right
-  else (failwith "InvalidPermission": rights)
 
 let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
@@ -667,12 +699,13 @@ let updated_delegation_auction (state: checker) (new_auction: delegation_auction
    })
 
 let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation list * checker) =
-  let ticket, auction =
+  let bid, auction =
     delegation_auction_place_bid
       state.delegation_auction
       !Ligo.Tezos.sender
       !Ligo.Tezos.amount
   in
+  let ticket = issue_delegation_auction_bid_ticket bid in
   let (ops, new_state) = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid Ligo.ticket LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -680,12 +713,16 @@ let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation li
   (ops, new_state)
 
 let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
-  let auction = delegation_auction_claim_win state.delegation_auction bid_ticket for_delegate in
+  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
+  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
   updated_delegation_auction state auction
 
 let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
   assert_no_tez_given ();
-  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid_ticket in
+  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
+  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid in
   let ops, new_auction = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -711,6 +748,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
 let sell_kit (state: checker) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let (ops, state) = touch_delegation_auction state in
   let kit = assert_valid_kit_token kit in
+  let kit, _token = read_kit kit in
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -724,6 +762,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
   let max_kit_deposited = assert_valid_kit_token max_kit_deposited in
+  let max_kit_deposited, _token = read_kit max_kit_deposited in
   let (lqt_tokens, kit_tokens, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
@@ -738,6 +777,8 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
 
 let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let (ops, state) = touch_delegation_auction state in
+  let lqt_burned = assert_valid_liquidity_token lqt_burned in
+  let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
   let (tez, kit_tokens, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
@@ -762,7 +803,8 @@ let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_to
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
-  let (new_current_auction, bid_ticket) = liquidation_auction_place_bid current_auction bid in
+  let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
+  let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_details Ligo.ticket LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "GetEntrypointOptFailure (%transferLABidTicket)" : LigoOp.operation) in
@@ -868,7 +910,6 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
       parameters_touch index (uniswap_kit_in_tez_in_prev_block state.uniswap) state.parameters
     in
     (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-    let total_accrual_to_uniswap = kit_issue total_accrual_to_uniswap in
     let updated_uniswap = uniswap_add_accrued_kit state.uniswap total_accrual_to_uniswap in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)

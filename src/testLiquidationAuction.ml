@@ -3,6 +3,7 @@ open OUnit2
 open TestCommon
 open FixedPoint
 open LiquidationAuction
+open LiquidationAuctionTypes
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"

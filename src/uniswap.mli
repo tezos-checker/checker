@@ -1,5 +1,5 @@
 open Kit
-open TokenTypes
+open UniswapTypes
 
 (* The general concept of uniswap is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
@@ -25,18 +25,6 @@ open TokenTypes
 (* Remaining TODO for uniswap.mli:
  * - Ensure that the balances and prices in uniswap do not go too far off.
 *)
-type liquidity = liquidity_token_content Ligo.ticket
-
-val issue_liquidity_tokens : Ligo.nat -> liquidity
-
-type uniswap
-
-(** The initial state of the uniswap contract. We always start with 1mukit,
-  * 1mutez, and 1lqt token (effectively setting the starting price to 1
-  * tez/kit). The price will eventually reach the value it should, but this
-  * saves us from having the first/non-first liquidity provider separation, and
-  * all division-by-zero checks. *)
-val uniswap_make_initial : uniswap
 
 (** Compute the price of kit in tez (ratio of tez and kit in the uniswap
   * contract), as it was at the end of the last block. This is to be used when
@@ -58,7 +46,7 @@ val uniswap_buy_kit :
 val uniswap_sell_kit :
   uniswap ->
   Ligo.tez (* amount: must be zero *) ->
-  kit_token ->
+  kit ->
   Ligo.tez (* min tez expected *) ->
   Ligo.timestamp (* deadline *) ->
   (Ligo.tez * uniswap)
@@ -83,7 +71,7 @@ val uniswap_add_liquidity :
   Ligo.tez (* amount *) ->
   (** This amount is temporarily treated as if it is part of the tez balance *)
   Ligo.tez (* pending accrual *) ->
-  kit_token (* max kit deposited *) ->
+  kit (* max kit deposited *) ->
   Ligo.nat (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
   (Ligo.nat * kit * uniswap)
@@ -96,25 +84,19 @@ val uniswap_add_liquidity :
 val uniswap_remove_liquidity :
   uniswap ->
   Ligo.tez (* amount: should be zero *) ->
-  liquidity (* lqt burned *) ->
+  Ligo.nat (* lqt burned *) ->
   Ligo.tez (* min tez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->
   (Ligo.tez * kit * uniswap)
 
 (** Add accrued burrowing fees to the uniswap contract. *)
-val uniswap_add_accrued_kit : uniswap -> kit_token -> uniswap
+val uniswap_add_accrued_kit : uniswap -> kit -> uniswap
 
 (** Add accrued tez to the uniswap contract. *)
 val uniswap_add_accrued_tez : uniswap -> Ligo.tez -> uniswap
 
 (* BEGIN_OCAML *)
-val show_liquidity : liquidity -> string
-val pp_liquidity : Format.formatter -> liquidity -> unit
-
-val show_uniswap : uniswap -> string
-val pp_uniswap : Format.formatter -> uniswap -> unit
-
 (* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
 val uniswap_make_for_test :
   tez:Ligo.tez ->

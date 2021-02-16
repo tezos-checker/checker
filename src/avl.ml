@@ -53,7 +53,7 @@
 
 open Mem
 open Ptr
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 
 let[@inline] ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 let[@inline] ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l

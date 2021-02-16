@@ -1,6 +1,4 @@
-open Kit
-open LiquidationAuctionTypes
-open Common
+open LiquidationAuctionPrimitiveTypes
 
 (*
 Ticket-based entitities in checker and their expected value/mechanics:
@@ -17,34 +15,8 @@ Ticket-based entitities in checker and their expected value/mechanics:
 (* KIT TOKENS *)
 
 (* Kit are really tickets. *)
-type kit_token_content = Kit [@@deriving show]
-type kit_token = kit_token_content Ligo.ticket [@@deriving show]
-
-let kit_issue (kit: kit) : kit_token = Ligo.Tezos.create_ticket (Kit) (kit_to_mukit kit)
-
-(** Check whether a kit token is valid. A kit token is valid if (a) it is
-  * issued by checker, and (b) is tagged appropriately (this is already
-  * enforced by its type). *)
-let[@inline] assert_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
-  if is_valid
-  then same_ticket
-  else (failwith "InvalidKitToken": kit_token)
-
-let[@inline] read_kit (token: kit_token) : kit * kit_token =
-  let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
-  (kit_of_mukit mukit, same_token)
-
-let kit_split_or_fail (token: kit_token) (left: kit) (right: kit) : kit_token * kit_token =
-  match Ligo.Tezos.split_ticket token (kit_to_mukit left, kit_to_mukit right) with
-  | Some a -> a
-  | None -> (failwith "split_or_fail: failed": kit_token * kit_token)
-
-let kit_join_or_fail (left: kit_token) (right: kit_token) : kit_token =
-  match Ligo.Tezos.join_tickets (left, right) with
-  | Some a -> a
-  | None -> (failwith "join_or_fail: failed": kit_token)
+type kit_token_content = Kit
+[@@deriving show]
 
 (* LIQUIDITY TOKENS *)
 
@@ -63,7 +35,6 @@ type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid
 
 (* PERMISSION TICKETS *)
 
-(* todo: please find a better name for this. *)
 type specific_rights =
   { deposit_tez: bool;
     withdraw_tez: bool;

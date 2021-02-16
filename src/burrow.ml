@@ -2,7 +2,7 @@ open FixedPoint
 open Ratio
 open Kit
 open Parameters
-open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Constants
 
 type liquidation_slices = {oldest: leaf_ptr; youngest: leaf_ptr;}

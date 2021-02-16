@@ -1,6 +1,7 @@
 open OUnit2
 open TestCommon
 open DelegationAuction
+open DelegationAuctionTypes
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -27,6 +28,7 @@ let suite =
        let for_delegate = Ligo.key_hash_from_literal "sdfasdfasdf" in
        let amount = Ligo.tez_from_literal "1mutez" in
        let (ticket, auction) = delegation_auction_place_bid auction bidder amount in
+
        (* New bidder does not immediately become the delegate and cannot claim the win *)
        let (delegate) = delegation_auction_delegate auction in
        assert_equal None delegate ~printer:show_key_hash_option;
@@ -100,6 +102,7 @@ let suite =
        let (ticket2, auction) = delegation_auction_place_bid auction bidder2 amount2 in
        let (ticket3, auction) = delegation_auction_place_bid auction bidder3 amount3 in
        let (ticket4, auction) = delegation_auction_place_bid auction bidder4 amount4 in
+
        (* First bidder can now reclaim their bid *)
        let (refund, auction) = delegation_auction_reclaim_bid auction ticket1 in
        assert_equal amount1 refund;

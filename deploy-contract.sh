@@ -5,15 +5,12 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-make checker.tz
-make storage.tz
-
 tezos-client originate contract \
   testcontract \
   transferring 1 \
   from bob \
-  running checker.tz \
-  --init "$(cat storage.tz)" \
+  running generated/michelson/main.tz \
+  --init "$(cat generated/michelson/storage.tz)" \
   --no-print-source \
-  --burn-cap 8
-
+  --burn-cap 25 \
+  --force

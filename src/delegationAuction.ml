@@ -1,37 +1,6 @@
 open Common
 open TokenTypes
-
-let issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) =
-  Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
-
-(** Ensure that a delegation auction bid ticket is valid. A delegation bid
-  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
-let[@inline] assert_valid_delegation_auction_bid_ticket
-    (bid_ticket: delegation_auction_bid Ligo.ticket)
-  : delegation_auction_bid Ligo.ticket =
-  let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
-  if is_valid
-  then same_ticket
-  else (failwith "InvalidDelegationAuctionTicket": delegation_auction_bid Ligo.ticket)
-
-type delegation_auction =
-  { cycle: Ligo.nat;
-    winner: delegation_auction_bid option;
-    leading_bid: delegation_auction_bid option;
-    delegate: Ligo.key_hash option;
-  }
-[@@deriving show]
-
-let delegation_auction_empty = {
-  cycle = level_to_cycle !Ligo.tezos_level;
-  winner = (None: delegation_auction_bid option);
-  leading_bid = (None: delegation_auction_bid option);
-  delegate = (None: Ligo.key_hash option);
-}
+open DelegationAuctionTypes
 
 let delegation_auction_cycle (t: delegation_auction) : Ligo.nat = t.cycle
 
@@ -64,8 +33,7 @@ let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.a
     | None -> () in
   (* Either there is no bid or this is the highest *)
   let bid = {bidder=sender_address; cycle=t.cycle; amount=amt} in
-  let ticket = issue_delegation_auction_bid_ticket bid in
-  (ticket, {t with leading_bid = Some bid;})
+  (bid, {t with leading_bid = Some bid;})
 
 let same_delegation_auction_bid (t1: delegation_auction_bid option) (t2: delegation_auction_bid) =
   match t1 with
@@ -76,19 +44,15 @@ let same_delegation_auction_bid (t1: delegation_auction_bid option) (t2: delegat
     b1 = b2 && c1 = c2 && a1 = a2
 
 (* If successful, it consumes the ticket. *)
-let delegation_auction_claim_win (t: delegation_auction) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) =
+let delegation_auction_claim_win (t: delegation_auction) (bid: delegation_auction_bid) (for_delegate: Ligo.key_hash) =
   let t = delegation_auction_touch t in
-  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if same_delegation_auction_bid t.winner bid
   then { t with delegate = Some for_delegate }
   else (failwith "NotAWinningBid": delegation_auction)
 
 (* If successful, it consumes the ticket. *)
-let delegation_auction_reclaim_bid (t: delegation_auction) (bid_ticket: delegation_auction_bid Ligo.ticket) =
+let delegation_auction_reclaim_bid (t: delegation_auction) (bid: delegation_auction_bid) =
   let t = delegation_auction_touch t in
-  let bid_ticket = assert_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   if same_delegation_auction_bid t.leading_bid bid then
     (failwith "CannotReclaimLeadingBid": Ligo.tez * delegation_auction)
   else if same_delegation_auction_bid t.winner bid then
