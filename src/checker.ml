@@ -88,7 +88,7 @@ let[@inline] assert_valid_liquidity_token (liquidity: liquidity) : liquidity =
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
 let[@inline] assert_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid Ligo.ticket)
+    (bid_ticket: delegation_auction_bid Ligo.ticket)
   : delegation_auction_bid Ligo.ticket =
   let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
@@ -111,9 +111,9 @@ let[@inline] liquidation_auction_assert_valid_bid_ticket (bid_ticket: liquidatio
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)
 let[@inline] assert_valid_permission
-      (permission: permission)
-      (burrow_id: burrow_id)
-      (burrow: burrow)
+    (permission: permission)
+    (burrow_id: burrow_id)
+    (burrow: burrow)
   : rights =
   let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let validity_condition =

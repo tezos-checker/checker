@@ -12,6 +12,13 @@ type operation_list = LigoOp.operation list
 
 let suite =
   "Checker tests" >::: [
+    ("initial touch" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = initial_checker in
+       let _ = Checker.touch checker (Ligo.tez_from_literal "0mutez"); in
+       ()
+    );
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
