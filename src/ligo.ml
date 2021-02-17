@@ -272,7 +272,6 @@ module Tezos = struct
     sender := address_;
     amount := amount_
 end
-let tezos_level: nat ref = Tezos.level
 
 let string_of_int = Z.to_string
 let string_of_tez x = Z.to_string x ^ "mutez"

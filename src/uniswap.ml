@@ -26,14 +26,14 @@ let uniswap_kit_in_tez_in_prev_block (uniswap: uniswap) =
  * that this is not be the previous block, but the last block in which the
  * uniswap contract was touched. *)
 let uniswap_sync_last_observed (uniswap: uniswap) : uniswap =
-  assert (!Ligo.tezos_level >= uniswap.last_level); (* TODO: can it be later?? *)
-  if uniswap.last_level = !Ligo.tezos_level then
+  assert (!Ligo.Tezos.level >= uniswap.last_level); (* TODO: can it be later?? *)
+  if uniswap.last_level = !Ligo.Tezos.level then
     (* do nothing if it's been touched already in this block *)
     uniswap
   else
     { uniswap with
       kit_in_tez_in_prev_block = div_ratio (ratio_of_tez uniswap.tez) (kit_to_ratio uniswap.kit);
-      last_level = !Ligo.tezos_level;
+      last_level = !Ligo.Tezos.level;
     }
 
 let uniswap_buy_kit

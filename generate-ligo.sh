@@ -75,8 +75,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/tez_from_literal \"([0-9_]+)mutez\"/\1mutez/g' |
 
     # remove the dereferences from Ligo.Tezos values
-    sed -E 's/!(Tezos\..*)/\1/g' |
-    sed -E 's/!(tezos_level)/\1/g' |
+    sed -E 's/!(Tezos\.)/\1/g' |
 
     # forget separate kinds of transfers
     sed -E 's/Tezos\.unit_transaction/Tezos\.transaction/g' |

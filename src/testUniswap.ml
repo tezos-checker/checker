@@ -35,7 +35,7 @@ let make_inputs_for_buy_kit_to_succeed =
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, min_kit_expected, deadline)
     )
-    (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level)
+    (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level)
 
 (* kit >= uniswap_kit * (1 - fee) / fee *)
 (* 1mutez <= min_tez_expected < FLOOR{kit * (uniswap_tez / (uniswap_kit + kit)) * FACTOR} *)
@@ -51,7 +51,7 @@ let make_inputs_for_sell_kit_to_succeed =
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, deadline)
     )
-    (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level)
+    (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level)
 
 (* amount > 0xtz *)
 (* max_kit_deposited = CEIL{kit * amount / tez} *)
@@ -69,7 +69,7 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level) TestArbitrary.arb_positive_tez)
+    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level) TestArbitrary.arb_positive_tez)
 
 (* NB: some values are fixed *)
 let make_inputs_for_remove_liquidity_to_succeed =
@@ -108,7 +108,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.tezos_level) QCheck.pos_int)
+    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level) QCheck.pos_int)
 
 (* TODO: Write down for which inputs are the uniswap functions to succeed and
  * test the corresponding edge cases. *)

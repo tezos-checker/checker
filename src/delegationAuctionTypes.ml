@@ -10,7 +10,7 @@ type delegation_auction =
 [@@deriving show]
 
 let delegation_auction_empty = {
-  cycle = level_to_cycle (Ligo.nat_from_literal "0n"); (* FIXME: must be (level_to_cycle !Ligo.tezos_level) *)
+  cycle = level_to_cycle !Ligo.Tezos.level;
   winner = (None: delegation_auction_bid option);
   leading_bid = (None: delegation_auction_bid option);
   delegate = (None: Ligo.key_hash option);

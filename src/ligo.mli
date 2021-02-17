@@ -126,13 +126,9 @@ type key_hash
 
 type 'a ticket
 
-val tezos_level: nat ref
 module Tezos : sig
   val now: timestamp ref
-  (* val level: nat ref
-     TODO: this is not exported yet on LIGO, so we drop down to michelson on
-     tezos_level function
-  *)
+  val level: nat ref
   val self_address: address (* NOTE: is of type contract, really, not address *)
   val sender: address ref
   val amount: tez ref

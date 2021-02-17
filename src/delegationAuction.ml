@@ -10,7 +10,7 @@ let delegation_auction_winning_amount (t: delegation_auction) : Ligo.tez option 
   | Some bid -> Some bid.amount
 
 let delegation_auction_touch (t: delegation_auction) =
-  let current_cycle = level_to_cycle !Ligo.tezos_level in
+  let current_cycle = level_to_cycle !Ligo.Tezos.level in
   let cycles_elapsed = Ligo.sub_nat_nat current_cycle t.cycle in
   if cycles_elapsed = Ligo.int_from_literal "1" then
     (* We're on a new cycle, so reset state, and save the winner pending their claim. *)

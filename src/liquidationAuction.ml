@@ -212,7 +212,7 @@ let is_liquidation_auction_complete
     if Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t
        > max_bid_interval_in_seconds
     && Ligo.gt_int_int
-         (Ligo.sub_nat_nat !Ligo.tezos_level h)
+         (Ligo.sub_nat_nat !Ligo.Tezos.level h)
          (Ligo.int max_bid_interval_in_blocks)
     then Some b
     else (None: bid option)
@@ -278,7 +278,7 @@ let complete_liquidation_auction_if_possible
 let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid_details) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
-    ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.tezos_level); },
+    ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
       { auction_id = auction.contents; bid = bid; }
     )
   else (failwith "BidTooLow": current_liquidation_auction * liquidation_auction_bid_details)
