@@ -3,14 +3,12 @@
 let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
-  ligoPkgs =
-    # a version slightly newer than 0.9, including the "uncurry" optimisation
-    let ligoSrc = pkgs.fetchgit {
-      url = "https://gitlab.com/ligolang/ligo";
-      rev = "6a052f5fd45a4300b818169e9d589a609d09632e";
-      sha256 = "1685z4gnqavifvivk5k0j2a83k2zj35pbidx4pz0cxpjkh945p6b";
-    };
-    in (import "${ligoSrc}/nix/pkgs.nix" {});
+  ligoBinary =
+    # Run 'niv update ligo-artifacts.zip -r <git_rev>' to update
+    pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
+      mkdir -p $out/bin
+      unzip ${sources.ligo-artifacts} ligo -d $out/bin
+    '';
   tezosClient =
     let tezosSrcs = import "${sources.tezos-packaging}/nix/nix/sources.nix";
         patchedSrcs = tezosSrcs // {
@@ -49,9 +47,10 @@ pkgs.mkShell {
     # ligo does not compile on macos, also we don't want to
     # compile it in CI
     pkgs.lib.optionals (pkgs.stdenv.isLinux && !ci)
-      [ ligoPkgs.ligo
+      [ ligoBinary
         tezosClient
       ]
+    ++ [ pkgs.niv ]
     ++ (with pkgs.ocamlPackages; [
       ocaml
       dune_2

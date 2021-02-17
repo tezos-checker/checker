@@ -1,4 +1,11 @@
 {
+    "ligo-artifacts": {
+        "rev": "422a61cec86df9115b802caac5a9bf712a369450",
+        "sha256": "1gp3jhcn2m96v085zg1yy65lgkssyq0a3qj7rv9zxvp9abqj8sqm",
+        "type": "file",
+        "url": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/422a61cec86df9115b802caac5a9bf712a369450/download?job=docker_extract",
+        "url_template": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/<rev>/download?job=docker_extract"
+    },
     "nixpkgs": {
         "branch": "master",
         "description": "Nix Packages collection",
