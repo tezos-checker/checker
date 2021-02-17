@@ -24,8 +24,8 @@ tezos-sandbox \
   --add-bootstrap-account "$(tezos-sandbox key alice)@2_000_000_000" \
   --add-bootstrap-account "$(tezos-sandbox key bob)@2_000_000_000" \
   --no-daemons-for alice --no-daemons-for bob \
-  --tezos-baker-alpha-binary tezos-baker-008-PtEdoTez \
-  --tezos-accuser-alpha-binary tezos-accuser-008-PtEdoTez \
-  --tezos-endorser-alpha-binary tezos-endorser-008-PtEdoTez \
+  --tezos-baker-alpha-binary tezos-baker-008-PtEdo2Zk \
+  --tezos-accuser-alpha-binary tezos-accuser-008-PtEdo2Zk \
+  --tezos-endorser-alpha-binary tezos-endorser-008-PtEdo2Zk \
   --protocol-kind Edo \
   --protocol-hash PtEdo2ZkT9oKpimTah6x2embF25oss54njMuPzkJTEi5RqfdZFA
