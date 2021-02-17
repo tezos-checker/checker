@@ -12,7 +12,7 @@
 (env
  (dev
   (flags
-   (:standard -warn-error -A))))
+   (:standard -warn-error -A -w -53))))
 
 (library
  (name huxian)
