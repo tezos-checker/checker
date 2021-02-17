@@ -9,11 +9,15 @@ generate-ligo:
 	mkdir -p generated/ligo
 	./generate-ligo.sh
 
-build-ligo: generate-ligo
+build-ligo: generated/michelson/main.tz generated/michelson/storage.tz
+
+generated/michelson/main.tz: generate-ligo
 	mkdir -p generated/michelson
-	ligo compile-contract --protocol edo --disable-michelson-typechecking generated/ligo/main.mligo main --output-file generated/michelson/main.tz
-	tezos-client --mode mockup --protocol PtEdoTez typecheck script generated/michelson/main.tz
-	ligo compile-expression --protocol edo --init-file generated/ligo/storage.mligo cameligo initial_checker > generated/michelson/storage.tz
+	ligo compile-contract --protocol edo generated/ligo/main.mligo main --output-file generated/michelson/main.tz
+
+generated/michelson/storage.tz: generate-ligo
+	mkdir -p generated/michelson
+	ligo compile-storage --protocol edo generated/ligo/main.mligo main initial_checker > generated/michelson/storage.tz
 
 test:
 	dune runtest .
@@ -33,4 +37,4 @@ distclean: clean
 install-git-hooks:
 	@[ -x .git/hooks/pre-commit ] || (cd .git/hooks && rm -f pre-commit && ln -s ../.pre-commit-hook.sh pre-commit && echo "pre-commit hook installed")
 
-.PHONY: all tests clean indent docs distclean install-git-hooks
+.PHONY: all build build-ocaml generate-ligo build-ligo tests clean indent docs distclean install-git-hooks
