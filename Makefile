@@ -14,6 +14,7 @@ build-ligo: generated/michelson/main.tz generated/michelson/storage.tz
 generated/michelson/main.tz: generate-ligo
 	mkdir -p generated/michelson
 	ligo compile-contract --protocol edo generated/ligo/main.mligo main --output-file generated/michelson/main.tz
+	ligo measure-contract generated/ligo/main.mligo main
 
 generated/michelson/storage.tz: generate-ligo
 	mkdir -p generated/michelson
