@@ -182,7 +182,12 @@ let parameters_touch
     (parameters: parameters)
   : kit * parameters =
   let duration_in_seconds = (* NOTE: can it be negative? Does the protocol ensure this? *)
-    ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched) in
+    let duration =
+      ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched) in
+    if lt_ratio_ratio duration zero_ratio
+    then (failwith "parameters_touch: negative time difference" : ratio)
+    else duration
+  in
 
   let current_protected_index =
     let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
@@ -267,6 +272,17 @@ let parameters_touch
       compute_imbalance
         parameters.outstanding_kit (* burrowed *)
         parameters.circulating_kit (* circulating *) in
+    (* NOTE: Even if the imbalance_rate is bounded (from -5 cNp to +5 cNp), the
+     * following calculation of the balance index is not. We use the formula
+     *
+     *   imbalance_index_{i+1} = imbalance_index_i
+     *                         * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
+     *
+     * which for imbalance = -5cNp and 20 years time in seconds elapsed gives
+     * imbalance_index_{i+1} = 0 (for longer time it gives
+     * imbalance_index_{i+1} < 0). This can make calculations below fail. All
+     * of this of course refers to the possibility of nobody touching checker
+     * for over 20 years, which I guess should be practically impossible. *)
     fixedpoint_of_ratio_floor
       (mul_ratio
          (fixedpoint_to_ratio parameters.imbalance_index)
