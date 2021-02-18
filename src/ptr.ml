@@ -1,9 +1,9 @@
 type ptr = Ligo.int
 (* BEGIN_OCAML *) [@@deriving show] (* END_OCAML *)
 
-let ptr_null = Ligo.int_from_literal "0"
-let ptr_init = Ligo.int_from_literal "1"
-let ptr_next (t: ptr) = Ligo.add_int_int t (Ligo.int_from_literal "1")
+let[@inline] ptr_null = Ligo.int_from_literal "0"
+let[@inline] ptr_init = Ligo.int_from_literal "1"
+let[@inline] ptr_next (t: ptr) = Ligo.add_int_int t (Ligo.int_from_literal "1")
 
 (* BEGIN_OCAML *)
 type t = ptr
