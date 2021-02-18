@@ -8,11 +8,11 @@ open FixedPoint
  * negative). Leave an int for now, but we should make an explicit decision on
  * this. *)
 type kit = Ligo.nat
-let kit_scaling_factor = Ligo.nat_from_literal "1_000_000n"
+let[@inline] kit_scaling_factor = Ligo.nat_from_literal "1_000_000n"
 
 (* Basic arithmetic operations. *)
 let[@inline] kit_add (x: kit) (y: kit) = Ligo.add_nat_nat x y
-let[@inline] kit_sub (x: kit) (y: kit) =
+let kit_sub (x: kit) (y: kit) =
   match Ligo.is_nat (Ligo.sub_nat_nat x y) with
   | Some n -> n
   | None -> (failwith "Kit.kit_sub: negative" : kit)
@@ -20,8 +20,8 @@ let[@inline] kit_sub (x: kit) (y: kit) =
 let[@inline] kit_min (x: kit) (y: kit) = if Ligo.leq_nat_nat x y then x else y
 let[@inline] kit_max (x: kit) (y: kit) = if Ligo.geq_nat_nat x y then x else y
 
-let kit_zero = Ligo.nat_from_literal "0n"
-let kit_one = kit_scaling_factor
+let[@inline] kit_zero = Ligo.nat_from_literal "0n"
+let[@inline] kit_one = kit_scaling_factor
 
 (* Conversions to/from other types. *)
 let[@inline] kit_of_mukit (amnt: Ligo.nat) : kit = amnt
@@ -29,12 +29,12 @@ let[@inline] kit_to_mukit (amnt: kit) : Ligo.nat = amnt
 
 let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) (Ligo.int kit_scaling_factor)
 
-let[@inline] kit_of_ratio_ceil  (amnt: ratio) : kit =
+let kit_of_ratio_ceil  (amnt: ratio) : kit =
   if lt_ratio_ratio amnt zero_ratio
   then (failwith "Kit.kit_of_ratio_ceil: negative" : kit)
   else Ligo.abs (cdiv_int_int (Ligo.mul_int_int (ratio_num amnt) (Ligo.int kit_scaling_factor)) (ratio_den amnt))
 
-let[@inline] kit_of_ratio_floor (amnt: ratio) : kit =
+let kit_of_ratio_floor (amnt: ratio) : kit =
   if lt_ratio_ratio amnt zero_ratio
   then (failwith "Kit.kit_of_ratio_floor: negative" : kit)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int (ratio_num amnt) (Ligo.int kit_scaling_factor)) (ratio_den amnt))
