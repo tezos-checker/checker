@@ -58,13 +58,13 @@ open LiquidationAuctionPrimitiveTypes
 let[@inline] ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 let[@inline] ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l
 
-let[@inline] node_tez (n: node) : Ligo.tez =
+let node_tez (n: node) : Ligo.tez =
   match n with
   | Leaf leaf -> leaf.value.tez
   | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
   | Root _ -> (failwith "node_tez found Root" : Ligo.tez)
 
-let[@inline] node_height (n: node) : Ligo.int =
+let node_height (n: node) : Ligo.int =
   match n with
   | Leaf _ -> Ligo.int_from_literal "1"
   | Branch branch ->
@@ -91,7 +91,7 @@ let[@inline] node_leaf (n: node) : leaf =
   | Root _ -> (failwith "node_leaf found Root" : leaf)
   | Branch _ -> (failwith "node_leaf found Branch" : leaf)
 
-let[@inline] deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
+let deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
   let p = match p with AVLPtr p -> p in
   match mem_get mem p with
   | Root p -> p
@@ -99,8 +99,7 @@ let[@inline] deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome
   | Leaf _ -> (failwith "deref_avl_ptr found Leaf" : ptr option * auction_outcome option)
 
 let[@inline] deref_leaf_ptr (mem: mem) (p: leaf_ptr): leaf =
-  let p = match p with LeafPtr p -> p in
-  node_leaf (mem_get mem p)
+  match p with LeafPtr p -> node_leaf (mem_get mem p)
 
 let[@inline] node_left (n: node) : ptr =
   let b = node_branch n in b.left
