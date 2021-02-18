@@ -336,19 +336,19 @@ let parameters_touch
   )
 
 (** Add some kit to the total amount of kit in circulation. *)
-let add_circulating_kit (parameters: parameters) (kit: kit) : parameters =
+let[@inline] add_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   { parameters with circulating_kit = kit_add parameters.circulating_kit kit; }
 
 (** Remove some kit from the total amount of kit in circulation. *)
-let remove_circulating_kit (parameters: parameters) (kit: kit) : parameters =
+let[@inline] remove_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows. *)
-let add_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
+let[@inline] add_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
   { parameters with outstanding_kit = kit_add parameters.outstanding_kit kit; }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
-let remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
+let[@inline] remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
   assert (parameters.outstanding_kit >= kit);
   { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }
