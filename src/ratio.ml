@@ -7,14 +7,11 @@ type ratio = {
   den: Ligo.int; (** Denominator, > 0 *)
 }
 
-let ratio_num (x: ratio) : Ligo.int = x.num
-let ratio_den (x: ratio) : Ligo.int = x.den
+let[@inline] ratio_num (x: ratio) : Ligo.int = x.num
+let[@inline] ratio_den (x: ratio) : Ligo.int = x.den
 
 (* make and normalize n/d, assuming d > 0 *)
-let make_real (n: Ligo.int) (d: Ligo.int) : ratio =
-  if n = Ligo.int_from_literal "0" || d = Ligo.int_from_literal "1"
-  then { num = n; den = Ligo.int_from_literal "1" }
-  else { num = n; den = d; }
+let[@inline] make_real (n: Ligo.int) (d: Ligo.int) : ratio = { num = n; den = d; }
 
 (* make and normalize any fraction *)
 let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
