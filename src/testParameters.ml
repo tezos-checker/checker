@@ -49,21 +49,21 @@ let test_compute_drift_derivative_no_acceleration =
     (* exp( 0 ): 1 *)
     let target = fixedpoint_one in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       fixedpoint_zero
       (compute_drift_derivative target);
 
     (* exp( low ): 201/200 = 1.005 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0147AE147AE147AE" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       fixedpoint_zero
       (compute_drift_derivative target);
 
     (* exp(-low ): 199/200 = 0.995 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.FEB851EB851EB852" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       fixedpoint_zero
       (compute_drift_derivative target)
 
@@ -72,14 +72,14 @@ let test_compute_drift_derivative_low_positive_acceleration =
     (* exp( low ): 201/200 = 1.005 (rounded UP) *)
     let target = fixedpoint_of_hex_string "1.0147AE147AE147AF" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "0.000000000003C547")
       (compute_drift_derivative target);
 
     (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCC" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "0.000000000003C547")
       (compute_drift_derivative target)
 
@@ -88,14 +88,14 @@ let test_compute_drift_derivative_low_negative_acceleration =
     (* exp(-low ): 199/200 = 0.995 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "0.FEB851EB851EB851" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "-0.000000000003C547")
       (compute_drift_derivative target);
 
     (* exp(-high): 19/20   = 0.95 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.F333333333333334" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "-0.000000000003C547")
       (compute_drift_derivative target)
 
@@ -104,7 +104,7 @@ let test_compute_drift_derivative_high_positive_acceleration =
     (* exp( high): 21/20   = 1.05 (rounded UP) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCD" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "0.000000000012DA63")
       (compute_drift_derivative target)
 
@@ -113,7 +113,7 @@ let test_compute_drift_derivative_high_negative_acceleration =
     (* exp(-high): 19/20   = 0.95 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "0.F333333333333333" in
     assert_equal
-      ~printer:FixedPoint.show
+      ~printer:show_fixedpoint
       (fixedpoint_of_hex_string "-0.000000000012DA63")
       (compute_drift_derivative target)
 

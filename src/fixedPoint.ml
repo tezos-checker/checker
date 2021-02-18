@@ -52,7 +52,7 @@ let fixedpoint_of_hex_string str =
     | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in (* FIXME: NOT LEGITIMATE *)
   Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) fixedpoint_scaling_factor) mantissa
 
-let show amnt =
+let show_fixedpoint amnt =
   let zfill s width =
     let to_fill = (width - (String.length s)) in
     if to_fill <= 0
@@ -68,6 +68,5 @@ let show amnt =
     (Ligo.format_int "%X" upper)
     (zfill (Ligo.format_int "%X" lower) (fixedpoint_scaling_exponent / 4))
 
-let pp ppf amnt = Format.fprintf ppf "%s" (show amnt)
-let pp_fixedpoint = pp
+let pp_fixedpoint ppf amnt = Format.fprintf ppf "%s" (show_fixedpoint amnt)
 (* END_OCAML *)

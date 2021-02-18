@@ -22,7 +22,6 @@ val fixedpoint_of_ratio_floor : Ratio.ratio -> fixedpoint
 
 (* BEGIN_OCAML *)
 val fixedpoint_of_hex_string : string -> fixedpoint
-val show : fixedpoint  -> string
-val pp : Format.formatter -> fixedpoint  -> unit
+val show_fixedpoint : fixedpoint  -> string
 val pp_fixedpoint : Format.formatter -> fixedpoint  -> unit
 (* END_OCAML *)
