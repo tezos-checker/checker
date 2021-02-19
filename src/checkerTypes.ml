@@ -24,13 +24,3 @@ let initial_checker =
     delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
   }
-
-(*
-(* FIXME: DUMMY, JUST SO THAT WE CAN CALL compile-storage. Until the upgrade to
- * edo is complete
- * (https://gitlab.com/ligolang/ligo/-/issues/1096#note_503486776), we have to
- * stick with this patch. *)
-let main (op_and_state: unit * checker): LigoOp.operation list * checker =
-  let _op, state = op_and_state in
-  (([]: LigoOp.operation list), state)
-*)

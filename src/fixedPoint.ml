@@ -49,7 +49,7 @@ let fixedpoint_of_hex_string str =
   let dotpos = String.rindex_opt str '.' in
   let mantissa = match dotpos with
     | None -> Ligo.int_from_literal "1"
-    | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in (* FIXME: NOT LEGITIMATE *)
+    | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in
   Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) fixedpoint_scaling_factor) mantissa
 
 let show_fixedpoint amnt =
