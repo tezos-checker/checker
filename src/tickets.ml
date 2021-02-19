@@ -18,7 +18,7 @@ Ticket-based entitities in checker and their expected value/mechanics:
 type kit_token = kit_token_content Ligo.ticket
 [@@deriving show]
 
-let kit_issue (kit: kit) : kit_token = Ligo.Tezos.create_ticket (Kit) (kit_to_mukit kit)
+let[@inline] kit_issue (kit: kit) : kit_token = Ligo.Tezos.create_ticket (Kit) (kit_to_mukit kit)
 
 let[@inline] read_kit (token: kit_token) : kit * kit_token =
   let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
@@ -29,7 +29,7 @@ let[@inline] read_kit (token: kit_token) : kit * kit_token =
 type liquidity = liquidity_token_content Ligo.ticket
 [@@deriving show]
 
-let issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
+let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
 
 (* DELEGATION AUCTION BID TICKETS *)
 
