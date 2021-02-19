@@ -9,7 +9,7 @@ let fliquidation : ratio = make_ratio (Ligo.int_from_literal "19") (Ligo.int_fro
 
 (** Number of tez needed to be given for the creation of a burrow; it does
   * not count towards the burrow's collateral. *)
-let creation_deposit : Ligo.tez = Ligo.tez_from_literal "1_000_000mutez"
+let[@inline] creation_deposit : Ligo.tez = Ligo.tez_from_literal "1_000_000mutez"
 
 (** Yearly burrow fee percentage. *)
 let burrow_fee_percentage : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") (* 0.005 *)
@@ -28,7 +28,7 @@ let uniswap_fee : ratio = make_ratio (Ligo.int_from_literal "2") (Ligo.int_from_
 let protected_index_epsilon : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "600000")
 
 (** The maximum number of tez that can be in an auction lot. *)
-let max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"
+let[@inline] max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
 let min_lot_auction_queue_fraction : fixedpoint =
@@ -40,11 +40,11 @@ let liquidation_penalty : ratio = make_ratio (Ligo.int_from_literal "1") (Ligo.i
 
 (** For convenience. The number of seconds in a year, taking into account
   * leap years. Basically (365 + 1/4 - 1/100 + 1/400) days * 24 * 60 * 60. *)
-let seconds_in_a_year : Ligo.int = Ligo.int_from_literal "31556952"
+let[@inline] seconds_in_a_year : Ligo.int = Ligo.int_from_literal "31556952"
 
 (** For convenience. The number of seconds in a day. Basically
   * 24h * 60min/h * 60sec/min = 86400. *)
-let seconds_in_a_day : Ligo.int = Ligo.int_from_literal "86400"
+let[@inline] seconds_in_a_day : Ligo.int = Ligo.int_from_literal "86400"
 
 (** Low bracket used for the calculation of the drift derivative. *)
 let target_low_bracket : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") (* 0.005 *)
@@ -60,12 +60,12 @@ let auction_decay_rate : ratio = make_ratio (Ligo.int_from_literal "1") (Ligo.in
 (** The maximum number of seconds that can pass between two (ascending) bids
   * during an auction. The auction should expire if more than this many seconds
   * pass between two bids. Currently set to 20min (20min * 60sec/min = 1200s). *)
-let max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1200"
+let[@inline] max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1200"
 
 (** The maximum number of blocks that can pass between two (ascending) bids
   * during an auction. The auction should expire if more blocks than this
   * number pass between two bids. Currently set to 20. *)
-let max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "20n"
+let[@inline] max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "20n"
 
 (** Every bid in an ascending auction needs to improve over the previous bid by
   * at least 0.33 cNp. *)
@@ -73,7 +73,7 @@ let bid_improvement_factor : ratio = make_ratio (Ligo.int_from_literal "33") (Li
 
 (** Parameter used for calculating the current reward for touching the checker
   * contract. See calculate_touch_reward for their use. *)
-let touch_reward_low_bracket : Ligo.int = Ligo.int_from_literal "600" (* = 60 * 10 = 10 minutes *)
+let[@inline] touch_reward_low_bracket : Ligo.int = Ligo.int_from_literal "600" (* = 60 * 10 = 10 minutes *)
 
 (** We want the reward in the first bracket to be 0.1 kit / minute, so we just
   * divide by 60 to get roughly how much should it be per second. *)
@@ -85,10 +85,9 @@ let touch_high_reward : ratio = make_ratio (Ligo.int_from_literal "1") (Ligo.int
 
 (** The number of liquidation slices to process every time the checker
   * contract is touched. *)
-let number_of_slices_to_process : int = 5
+let[@inline] number_of_slices_to_process : int = 5
 
 (** Maximum height of the tree used as liquidation queue.
   * The maximum number of elements will be between 2**(n-1) and 2**(n-2).
-  * TODO: Decide on the number here.
-*)
-let max_liquidation_queue_height: Ligo.int = Ligo.int_from_literal "12"
+  * TODO: Decide on the number here. *)
+let[@inline] max_liquidation_queue_height: Ligo.int = Ligo.int_from_literal "12"

@@ -12,7 +12,6 @@ val fixedpoint_div : fixedpoint -> fixedpoint -> fixedpoint
 
 val fixedpoint_neg : fixedpoint -> fixedpoint
 val fixedpoint_pow : fixedpoint -> Ligo.nat -> fixedpoint
-val fixedpoint_exp : fixedpoint -> fixedpoint
 
 (* Conversions to/from other types. *)
 val fixedpoint_of_int : Ligo.int -> fixedpoint

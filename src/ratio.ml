@@ -135,7 +135,6 @@ let sub_ratio (x: ratio) (y: ratio) : ratio =
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
-(* FIXME: I think we can shorten this one *)
 let mul_ratio (x: ratio) (y: ratio) : ratio = make_real (Ligo.mul_int_int x.num y.num) (Ligo.mul_int_int x.den y.den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
@@ -146,6 +145,14 @@ let div_ratio (x: ratio) (y: ratio) : ratio =
     mul_ratio x { num = y.den; den = y.num; }
   else
     mul_ratio x { num = neg_int y.den; den = neg_int y.num; }
+
+let qexp (x: ratio) : ratio =
+  { num = Ligo.add_int_int x.num x.den; den = x.den; }
+
+(* NOTE: It's only used once *)
+let[@inline] clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
+  assert (leq_ratio_ratio lower upper);
+  min_ratio upper (max_ratio v lower)
 
 (* BEGIN_OCAML *)
 let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)

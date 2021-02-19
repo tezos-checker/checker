@@ -155,18 +155,9 @@ let uniswap_add_liquidity
     (failwith "AddLiquidityNoLiquidityToBeAdded" : (Ligo.nat * kit * uniswap))
   else
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
-    let lqt_minted =
-      ratio_to_nat_floor
-        (mul_ratio
-           (ratio_of_nat uniswap.lqt)
-           (make_ratio (tez_to_mutez tez_amount) (tez_to_mutez effective_tez_balance))
-        ) in
-    let kit_deposited =
-      kit_of_ratio_ceil
-        (mul_ratio
-           (kit_to_ratio uniswap.kit)
-           (make_ratio (tez_to_mutez tez_amount) (tez_to_mutez effective_tez_balance))
-        ) in
+    let tez_ratio = make_ratio (tez_to_mutez tez_amount) (tez_to_mutez effective_tez_balance) in
+    let lqt_minted = ratio_to_nat_floor (mul_ratio (ratio_of_nat uniswap.lqt) tez_ratio) in
+    let kit_deposited = kit_of_ratio_ceil (mul_ratio (kit_to_ratio uniswap.kit) tez_ratio) in
     if lqt_minted < min_lqt_minted then
       (failwith "AddLiquidityTooLowLiquidityMinted" : (Ligo.nat * kit * uniswap))
     else if max_kit_deposited < kit_deposited then

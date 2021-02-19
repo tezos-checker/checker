@@ -4,7 +4,9 @@ open Common
 type fixedpoint = Ligo.int
 
 (* let scaling_base = Ligo.int_from_literal 2 *)
+(* BEGIN_OCAML *)
 let[@inline] fixedpoint_scaling_exponent = 64
+(* END_OCAML *)
 let[@inline] fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
@@ -31,10 +33,6 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
       (pow_int_nat x y)
       (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_int_int (Ligo.int y) (Ligo.int_from_literal "1"))))
 
-(* NOTE: Use another term from the taylor sequence for more accuracy:
- *   one + amnt + (amnt * amnt) / (one + one) *)
-let[@inline] fixedpoint_exp (amnt: fixedpoint) = fixedpoint_add fixedpoint_one amnt
-
 (* Conversions to/from other types. *)
 let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
 
@@ -49,7 +47,7 @@ let fixedpoint_of_hex_string str =
   let dotpos = String.rindex_opt str '.' in
   let mantissa = match dotpos with
     | None -> Ligo.int_from_literal "1"
-    | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in (* FIXME: NOT LEGITIMATE *)
+    | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in
   Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) fixedpoint_scaling_factor) mantissa
 
 let show_fixedpoint amnt =
