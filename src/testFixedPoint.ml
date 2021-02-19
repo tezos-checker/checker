@@ -17,10 +17,6 @@ let suite =
        let two = fixedpoint_of_hex_string "2" in
        assert_equal
          ~printer:show_fp
-         (fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "11") (Ligo.int_from_literal "10")))
-         (fixedpoint_exp fp6);
-       assert_equal
-         ~printer:show_fp
          (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "8")))
          (fixedpoint_add fp1 fp2);
        assert_equal
