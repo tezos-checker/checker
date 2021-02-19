@@ -103,19 +103,21 @@ let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liqui
   assert (amnt < slice.tez);
   (* left slice *)
   let ltez = amnt in
+  let min_kit_for_unwarranted = kit_to_ratio slice.min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez slice.tez in
   let lkit =
     kit_of_ratio_ceil
       (mul_ratio
-         (kit_to_ratio slice.min_kit_for_unwarranted)
-         (make_ratio (tez_to_mutez ltez) (tez_to_mutez slice.tez))
+         min_kit_for_unwarranted
+         (make_ratio (tez_to_mutez ltez) slice_tez)
       ) in
   (* right slice *)
   let rtez = Ligo.sub_tez_tez slice.tez amnt in
   let rkit =
     kit_of_ratio_ceil
       (mul_ratio
-         (kit_to_ratio slice.min_kit_for_unwarranted)
-         (make_ratio (tez_to_mutez rtez) (tez_to_mutez slice.tez))
+         min_kit_for_unwarranted
+         (make_ratio (tez_to_mutez rtez) slice_tez)
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
