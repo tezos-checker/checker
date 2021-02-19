@@ -13,7 +13,6 @@ let suite =
        let fp3 = fixedpoint_of_hex_string "5.1F972474538EF34D" in
        let fp4 = fixedpoint_of_hex_string "1389" in
        let fp5 = fixedpoint_of_hex_string "-28" in
-       let fp6 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "10")) in
        let two = fixedpoint_of_hex_string "2" in
        assert_equal
          ~printer:show_fp
