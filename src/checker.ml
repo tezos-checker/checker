@@ -660,16 +660,10 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
 (**                          DELEGATION AUCTIONS                             *)
 (* ************************************************************************* *)
 
-let option_delegate_eq (o1: Ligo.key_hash option) (o2: Ligo.key_hash option) =
-  match o1 with
-  | None -> (match o2 with
-      | None -> true
-      | Some _ -> false
-    )
-  | Some h1 -> (match o2 with
-      | None -> false
-      | Some h2 -> h1 = h2
-    )
+let[@inline] is_delegate_none (opt_kho: Ligo.key_hash option) : bool =
+  match opt_kho with
+  | None -> true
+  | Some _ -> false
 
 let updated_delegation_auction (state: checker) (new_auction: delegation_auction) =
   let prev_auction = state.delegation_auction in
@@ -685,15 +679,14 @@ let updated_delegation_auction (state: checker) (new_auction: delegation_auction
   in
   let new_delegate = delegation_auction_delegate new_auction in
 
-  let ops = if option_delegate_eq state.delegate new_delegate then
-      ([]: LigoOp.operation list)
-    else [LigoOp.Tezos.set_delegate new_delegate]
-  in
+  let ops = if is_delegate_none new_delegate then
+      [LigoOp.Tezos.set_delegate (None : Ligo.key_hash option)]
+    else
+      [LigoOp.Tezos.set_delegate (None : Ligo.key_hash option); LigoOp.Tezos.set_delegate new_delegate] in
   (ops,
 
    { state with
      delegation_auction = new_auction;
-     delegate = delegation_auction_delegate new_auction;
      uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
    })
 
