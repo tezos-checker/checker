@@ -23,6 +23,11 @@ generated/michelson/storage.tz: generate-ligo
 test:
 	dune runtest .
 
+test-coverage:
+	dune runtest --instrument-with bisect_ppx --force .
+	bisect-ppx-report html
+	bisect-ppx-report summary
+
 clean:
 	$(RM) -r _build generated
 
