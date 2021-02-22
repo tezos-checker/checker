@@ -45,6 +45,7 @@
   Common)
  (libraries str zarith)
  (wrapped false)
+ (instrumentation (backend bisect_ppx))
  (preprocess
   (pps ppx_deriving.std)))
 

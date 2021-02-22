@@ -12,10 +12,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e61a96d70af29ace8cd78d01af66fbfa8218c018",
-        "sha256": "0l47gas2bj3ag600yg23vq7rc9j7y4r0gf27wrx3n6bqypsm07vs",
+        "rev": "8f1302995ec820e175db9c91b08a08541964df12",
+        "sha256": "07a5i67jxlv08aaj3cay5hgsx5i6slwpabbqwz6167xdini60f8b",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/e61a96d70af29ace8cd78d01af66fbfa8218c018.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/8f1302995ec820e175db9c91b08a08541964df12.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "tezos-packaging": {
