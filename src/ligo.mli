@@ -110,7 +110,7 @@ type key_hash
    A helper to create a unit.
 *)
 
-(* val failwith : 'a -> unit *)
+val failwith : int -> 'a
 (**
    Cause the contract to fail with an error message or integer. Other types are not supported at the moment.
 

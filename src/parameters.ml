@@ -55,14 +55,6 @@ let minting_price (p: parameters) : ratio =
 let liquidation_price (p: parameters) : ratio =
   mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_liquidation p))
 
-(* TODO: move this into ratio.ml *)
-let qexp (x: ratio) : ratio = add_ratio one_ratio x
-
-(* TODO: move this into ratio.ml *)
-let clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
-  assert (leq_ratio_ratio lower upper);
-  min_ratio upper (max_ratio v lower)
-
 (** Given the amount of kit necessary to close all existing burrows
   * (burrowed) and the amount of kit that are currently in circulation,
   * compute the current imbalance adjustment (can be either a fee or a
@@ -192,15 +184,11 @@ let parameters_touch
   let current_protected_index =
     let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
     let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
-
+    let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters.protected_index) in
     ratio_to_tez_floor
       (mul_ratio
          (ratio_of_tez parameters.protected_index)
-         (clamp
-            (make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters.protected_index))
-            lower_lim
-            upper_lim
-         )
+         (clamp ratio lower_lim upper_lim)
       ) in
   let current_drift_derivative =
     compute_drift_derivative parameters.target in

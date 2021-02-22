@@ -41,6 +41,10 @@ for name in "${inputs[@]}"; do
     sed -E 's/([(]\* BEGIN_OCAML )\*[)]/\1  /g' |
     sed -E 's/[(]\*( END_OCAML \*[)])/  \1/g' |
 
+    # Replace all "vocal" failwiths with integer failures
+    # FIXME: would be nice to be able to hardwire the line instead.
+    sed -E 's/failwith \"([^\"])*\"/Ligo\.failwith 42/g' |
+
     # Remove ligo qualifiers from identifiers
     sed -E 's/Ligo\.//g' |
     sed -E 's/LigoOp\.//g' |

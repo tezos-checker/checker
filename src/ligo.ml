@@ -283,3 +283,5 @@ let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
 
 let format_int = Z.format
 let div_rem_int_int = Z.div_rem
+
+let failwith i = Stdlib.failwith (string_of_int i)
