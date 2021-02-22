@@ -18,7 +18,6 @@ type burrow =
     permission_version : Ligo.nat;
     allow_all_tez_deposits : bool;
     allow_all_kit_burnings : bool;
-    delegate : Ligo.key_hash option;
     (* Collateral currently stored in the burrow. *)
     collateral : Ligo.tez;
     (* Outstanding kit minted out of the burrow. *)
@@ -188,7 +187,7 @@ let burrow_return_kit_from_auction
   (* (b) burn/deposit the kit received from auctioning the slice *)
   rebalance_kit { burrow with excess_kit = kit_add burrow.excess_kit kit; }
 
-let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
+let burrow_create (p: parameters) (tez: Ligo.tez) : burrow =
   if tez < creation_deposit
   then (failwith "InsufficientFunds" : burrow)
   else
@@ -196,7 +195,6 @@ let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash o
       permission_version = Ligo.nat_from_literal "0n";
       allow_all_tez_deposits = false;
       allow_all_kit_burnings = false;
-      delegate = delegate_opt;
       collateral = Ligo.sub_tez_tez tez creation_deposit;
       outstanding_kit = kit_zero;
       excess_kit = kit_zero;
@@ -282,11 +280,6 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
         collateral = Ligo.tez_from_literal "0mutez";
       } in
     (updated_burrow, return)
-
-let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash option) (b: burrow) : burrow =
-  assert_burrow_invariants b;
-  assert (p.last_touched = b.last_touched);
-  { b with delegate = new_delegate; }
 
 (* ************************************************************************* *)
 (*                           PERMISSION-RELATED                              *)
@@ -526,7 +519,6 @@ let make_burrow_for_test
     ~permission_version
     ~allow_all_tez_deposits
     ~allow_all_kit_burnings
-    ~delegate
     ~collateral
     ~outstanding_kit
     ~excess_kit
@@ -537,7 +529,6 @@ let make_burrow_for_test
   { permission_version = permission_version;
     allow_all_tez_deposits = allow_all_tez_deposits;
     allow_all_kit_burnings = allow_all_kit_burnings;
-    delegate = delegate;
     active = active;
     collateral = collateral;
     outstanding_kit = outstanding_kit;

@@ -50,7 +50,6 @@ let arbitrary_burrow (params: parameters) =
          ~permission_version:(Ligo.nat_from_literal "0n")
          ~allow_all_tez_deposits:false
          ~allow_all_kit_burnings:false
-         ~delegate:None
          ~active:true
          ~collateral:tez
          ~outstanding_kit:kit
@@ -270,7 +269,6 @@ let initial_burrow =
     ~permission_version:(Ligo.nat_from_literal "0n")
     ~allow_all_tez_deposits:false
     ~allow_all_kit_burnings:false
-    ~delegate:None
     ~active:true
     ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
     ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
@@ -288,7 +286,6 @@ let barely_not_overburrowed_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -318,7 +315,6 @@ let barely_overburrowed_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_399mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -348,7 +344,6 @@ let barely_non_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "6_171_200mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -378,7 +373,6 @@ let barely_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "6_171_199mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -404,7 +398,6 @@ let barely_liquidatable_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~collateral:(Ligo.tez_from_literal "2_346_632mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
               ~excess_kit:kit_zero
@@ -435,7 +428,6 @@ let barely_non_complete_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "5_065_065mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -461,7 +453,6 @@ let barely_non_complete_liquidatable_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
               ~excess_kit:kit_zero
@@ -490,7 +481,6 @@ let barely_complete_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "5_065_064mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -516,7 +506,6 @@ let barely_complete_liquidatable_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
               ~excess_kit:kit_zero
@@ -545,7 +534,6 @@ let barely_non_close_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_001_000mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -571,7 +559,6 @@ let barely_non_close_liquidatable_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
               ~excess_kit:kit_zero
@@ -600,7 +587,6 @@ let barely_close_liquidatable_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_000_999mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -626,7 +612,6 @@ let barely_close_liquidatable_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
               ~excess_kit:kit_zero
@@ -653,7 +638,6 @@ let unwarranted_liquidation_unit_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
@@ -686,7 +670,6 @@ let partial_liquidation_unit_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~active:true
               ~collateral:(Ligo.tez_from_literal "1_847_530mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
@@ -718,7 +701,6 @@ let complete_liquidation_unit_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
@@ -740,7 +722,6 @@ let complete_liquidation_unit_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~active:true
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
@@ -774,7 +755,6 @@ let complete_and_close_liquidation_test =
         ~permission_version:(Ligo.nat_from_literal "0n")
         ~allow_all_tez_deposits:false
         ~allow_all_kit_burnings:false
-        ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_000_000mutez")
         ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
@@ -796,7 +776,6 @@ let complete_and_close_liquidation_test =
               ~permission_version:(Ligo.nat_from_literal "0n")
               ~allow_all_tez_deposits:false
               ~allow_all_kit_burnings:false
-              ~delegate:None
               ~active:false
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))

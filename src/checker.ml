@@ -164,7 +164,7 @@ let ensure_no_tez_given () =
   else ()
 
 let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option) =
-  let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
+  let burrow = burrow_create state.parameters !Ligo.Tezos.amount in
   let op1, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
@@ -344,11 +344,11 @@ let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: bu
   let r = ensure_valid_permission permission burrow_id burrow in
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
-    let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
+    (* FIXME: I'd still like to check here that burrow.last_updated is up-to-date. *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" burrow_id : Ligo.key_hash option LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
       | None -> (failwith "GetEntrypointOptFailure (%burrowSetDelegate)" : LigoOp.operation) in
-    let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+    let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     ([op], state)
   else
     (failwith "InsufficientPermission": LigoOp.operation list * checker)
