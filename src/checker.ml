@@ -541,8 +541,18 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
         let ops : LigoOp.operation list = [] in
         (ops, state)
 
-(* FIXME: Below function shouldn't be inlined, since it's huge and used in multiple places. However otherwise `touch_oldest` function
- * throws a "type too large" error that I couldn't solve.
+(* FIXME: Below function shouldn't be inlined, since it's huge and used in
+ * multiple places. However otherwise `touch_oldest` function throws a
+ * "type too large" error that I couldn't solve.
+ * NOTE: Since the above comment was written, the error has regressed; now it
+ * gives instead:
+ *
+ *   $ ligo compile-contract --protocol edo generated/ligo/main.mligo main --output-file generated/michelson/main.tz
+ *   ligo: internal error, uncaught exception:
+ *         Stack overflow
+ *         Raised by primitive operation at file "list.ml", line 96, characters 34-50
+ *
+ * Perhaps we should report this?
 *)
 let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation list * checker * leaf_ptr) : (LigoOp.operation list * checker) =
   let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
