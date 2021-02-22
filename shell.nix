@@ -27,6 +27,9 @@ pkgs.mkShell {
       merlin
       ounit
       qcheck
+      ppxlib
+      bisect_ppx
+      ppx_tools_versioned
       ppx_deriving
       zarith
       odoc

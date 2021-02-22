@@ -15,6 +15,9 @@ Within a `nix-shell` (the first time this might take a while, since it must fetc
 * `make test` to run all the (OCaml) tests ([./src/tests.ml](./src/tests.ml)). (note: this might take a while. If you're in a hurry you might want to comment out `TestAvl.suite` in `tests.ml` temporarily).
 * `make` to do all the above.
 
+For test coverage report using bisect_ppx, type
+*  `make test-coverage` (report in `./_coverage/index.html`) 
+
 For extracting (haddock-style) documentation from the code using dune, type
 *  `make docs` (docs entrypoint: `./_build/default/_doc/_html/index.html`)
 
