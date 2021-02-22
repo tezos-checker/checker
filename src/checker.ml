@@ -554,13 +554,13 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
  *
  * Perhaps we should report this?
 *)
-let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation list * checker * leaf_ptr) : (LigoOp.operation list * checker) =
+let[@inline] touch_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation option * checker) =
   let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
   match avl_root_data state.liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
   (* NOTE: Perhaps failing would be better than silently doing nothing here?
    * Not sure if there is any danger though. *)
-  | None -> (ops, state)
+  | None -> ((None : LigoOp.operation option), state)
   (* If it belongs to a completed auction, we delete the slice *)
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
@@ -642,14 +642,17 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.tez_transaction leaf.tez (Ligo.tez_from_literal "0mutez") c
       | None -> (failwith "GetEntrypointOptFailure (%burrowSendSliceToChecker)" : LigoOp.operation) in
-    ((op :: ops), state)
+    (Some op, state)
 
 let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list * checker * leaf_ptr list) : (LigoOp.operation list * checker) =
   match slices with
   | [] -> (ops, state)
   | x::xs ->
-    let new_ops, new_state = touch_liquidation_slice (ops, state, x) in
-    touch_liquidation_slices_rec (new_ops, new_state, xs)
+    let op_opt, new_state = touch_liquidation_slice (state, x) in
+    (match op_opt with
+     | None -> touch_liquidation_slices_rec (ops, new_state, xs)
+     | Some op -> touch_liquidation_slices_rec (op :: ops, new_state, xs)
+    )
 
 let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
   (* NOTE: the order of the operations is reversed here (wrt to the order of
@@ -871,8 +874,11 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
     match liquidation_auction_oldest_completed_liquidation_slice state.liquidation_auctions with
     | None -> (ops, state)
     | Some leaf ->
-      let new_ops, new_state = touch_liquidation_slice (ops, state, leaf) in
-      touch_oldest (new_ops, new_state, maximum - 1)
+      let op_opt, new_state = touch_liquidation_slice (state, leaf) in
+      (match op_opt with
+       | None -> touch_oldest (ops, new_state, maximum - 1)
+       | Some op -> touch_oldest (op :: ops, new_state, maximum - 1)
+      )
 
 let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   if state.parameters.last_touched = !Ligo.Tezos.now then
