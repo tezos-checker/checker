@@ -4,7 +4,7 @@ let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
   ligoBinary =
-    # Run 'niv update ligo-artifacts.zip -r <git_rev>' to update
+    # Run 'niv update ligo-artifacts -r <git_rev>' to update
     pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
       mkdir -p $out/bin
       unzip ${sources.ligo-artifacts} ligo -d $out/bin
