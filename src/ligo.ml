@@ -60,7 +60,13 @@ end
 type ('key, 'value) map = ('key * 'value) list
 
 module Map = struct
-  let literal ps = List.stable_sort (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps
+  let literal ps =
+    let v1 = List.sort (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps in
+    let v2 = List.sort_uniq (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps in
+    if v1 <> v2 then
+      failwith "Map.literal: list of duplicates"
+    else
+      v1
 
   let find_opt key m = List.assoc_opt key m
 
