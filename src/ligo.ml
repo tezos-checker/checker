@@ -12,6 +12,7 @@
    Please do refactor if you find a nice solution.
 *)
 module IntMap = Map.Make(Int)
+
 type ('key, 'value) big_map = ('key * 'value) list IntMap.t
 
 module Big_map = struct
@@ -49,6 +50,23 @@ module Big_map = struct
     IntMap.bindings i |> List.concat_map snd
 
   let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
+end
+
+(* Represent them like big maps internally. *)
+type ('key, 'value) map = ('key, 'value) big_map
+
+module Map = struct
+  let literal ps =
+    List.fold_left
+      (fun m (k, v) -> Big_map.update k (Some v) m)
+      Big_map.empty
+      ps
+
+  let find_opt = Big_map.find_opt
+
+  let update = Big_map.update
+
+  let mem = Big_map.mem
 end
 
 (* UTILITY FUNCTIONS *)
