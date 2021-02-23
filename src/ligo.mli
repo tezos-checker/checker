@@ -25,7 +25,7 @@ module Map : sig
   val find_opt : 'key -> ('key, 'value) map -> 'value option
   val update: 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
   val mem : 'key -> ('key, 'value) map -> bool
-  val fold : ('accumulator -> ('key * 'value) -> 'accumulator) -> ('key, 'value) map -> 'accumulator -> 'accumulator
+  val fold : ('accumulator * ('key * 'value) -> 'accumulator) -> ('key, 'value) map -> 'accumulator -> 'accumulator
 end
 
 (* type bool *)

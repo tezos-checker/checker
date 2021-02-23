@@ -73,7 +73,7 @@ module Map = struct
 
   let mem k m = Option.is_some (find_opt k m)
 
-  let fold fn m acc = List.fold_left fn acc m
+  let fold fn m acc = List.fold_left (fun acc (k,v) -> fn (acc, (k, v))) acc m
 end
 
 (* UTILITY FUNCTIONS *)
