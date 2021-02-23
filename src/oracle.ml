@@ -18,7 +18,7 @@ let oracle3_addr : Ligo.address = (Ligo.address_from_literal "oracle3TODO" : Lig
  * - The entrypoint of oracle3_addr is "%getPrice3"
 *)
 
-type storage =
+type oracle_storage =
   { p1: Ligo.nat;
     p2: Ligo.nat;
     p3: Ligo.nat;
@@ -31,7 +31,7 @@ let median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
   let _small, medium = min_max_nat small medium in
   medium
 
-let get_median (storage: storage) (callback: Ligo.nat LigoOp.contract) : LigoOp.operation list * storage =
+let get_median (storage: oracle_storage) (callback: Ligo.nat LigoOp.contract) : LigoOp.operation list * oracle_storage =
   let oracle1 = match (LigoOp.Tezos.get_entrypoint_opt "%getPrice1" oracle1_addr : (Ligo.nat LigoOp.contract) LigoOp.contract option) with
     | Some c -> c
     | None -> (failwith "GetEntrypointOptFailure (%getPrice1)" : (Ligo.nat LigoOp.contract) LigoOp.contract) in
@@ -42,7 +42,7 @@ let get_median (storage: storage) (callback: Ligo.nat LigoOp.contract) : LigoOp.
   let storage = {storage with cb = callback} in
   ([op], storage)
 
-let receive_first_price (storage: storage) (price1: Ligo.nat): LigoOp.operation list * storage =
+let receive_first_price (storage: oracle_storage) (price1: Ligo.nat): LigoOp.operation list * oracle_storage =
   let oracle2 = match (LigoOp.Tezos.get_entrypoint_opt "%getPrice2" oracle2_addr : (Ligo.nat LigoOp.contract) LigoOp.contract option) with
     | Some c -> c
     | None -> (failwith "GetEntrypointOptFailure (%getPrice2)" : (Ligo.nat LigoOp.contract) LigoOp.contract) in
@@ -53,7 +53,7 @@ let receive_first_price (storage: storage) (price1: Ligo.nat): LigoOp.operation 
   let storage = {storage with p1 = price1} in
   ([op], storage)
 
-let receive_second_price (storage: storage) (price2: Ligo.nat): LigoOp.operation list * storage =
+let receive_second_price (storage: oracle_storage) (price2: Ligo.nat): LigoOp.operation list * oracle_storage =
   let oracle3 = match (LigoOp.Tezos.get_entrypoint_opt "%getPrice3" oracle3_addr : (Ligo.nat LigoOp.contract) LigoOp.contract option) with
     | Some c -> c
     | None -> (failwith "GetEntrypointOptFailure (%getPrice3)" : (Ligo.nat LigoOp.contract) LigoOp.contract) in
@@ -64,19 +64,19 @@ let receive_second_price (storage: storage) (price2: Ligo.nat): LigoOp.operation
   let storage = {storage with p2 = price2} in
   ([op], storage)
 
-let receive_third_price (storage: storage) (price3: Ligo.nat): LigoOp.operation list * storage =
+let receive_third_price (storage: oracle_storage) (price3: Ligo.nat): LigoOp.operation list * oracle_storage =
   let storage = {storage with p3 = price3} in
   let median_price = median storage.p1 storage.p2 storage.p3 in
   let op = LigoOp.Tezos.nat_transaction median_price (Ligo.tez_from_literal "0mutez") storage.cb in
   ([op], storage)
 
-type param =
+type oracle_param =
   | GetMedian of Ligo.nat LigoOp.contract
   | ReceiveFirstPrice of Ligo.nat
   | ReceiveSecondPrice of Ligo.nat
   | ReceiveThirdPrice of Ligo.nat
 
-let main (op, state: param * storage): LigoOp.operation list * storage =
+let oracle_main (op, state: oracle_param * oracle_storage): LigoOp.operation list * oracle_storage =
   match op with
   | GetMedian cb ->
     get_median state cb
