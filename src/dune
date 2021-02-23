@@ -43,6 +43,7 @@
   LigoOp
   Tickets
   Error
+  Oracle
   Common)
  (libraries str zarith)
  (wrapped false)

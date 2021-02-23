@@ -19,6 +19,9 @@ val min_tez : Ligo.tez -> Ligo.tez -> Ligo.tez
 val max_tez : Ligo.tez -> Ligo.tez -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
 
+(* OPERATIONS ON nat *)
+val min_max_nat : Ligo.nat -> Ligo.nat -> Ligo.nat * Ligo.nat
+
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t
 val compare_nat : Ligo.nat -> Ligo.nat -> Int.t
