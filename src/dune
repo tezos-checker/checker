@@ -42,6 +42,7 @@
   Ligo
   LigoOp
   Tickets
+  Error
   Common)
  (libraries str zarith)
  (wrapped false)

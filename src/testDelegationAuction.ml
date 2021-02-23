@@ -2,6 +2,7 @@ open OUnit2
 open TestCommon
 open DelegationAuction
 open DelegationAuctionTypes
+open Error
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -34,11 +35,11 @@ let suite =
        assert_equal None delegate ~printer:show_key_hash_option;
 
        assert_raises
-         (Failure "CannotReclaimLeadingBid")
+         (Failure (Ligo.string_of_int error_CannotReclaimLeadingBid))
          (fun () -> delegation_auction_reclaim_bid auction ticket);
 
        assert_raises
-         (Failure "NotAWinningBid")
+         (Failure (Ligo.string_of_int error_NotAWinningBid))
          (fun () -> delegation_auction_claim_win auction ticket for_delegate);
 
        (* Nor at any time in the current cycle... *)
@@ -48,11 +49,11 @@ let suite =
        assert_equal None delegate ~printer:show_key_hash_option;
 
        assert_raises
-         (Failure "CannotReclaimLeadingBid")
+         (Failure (Ligo.string_of_int error_CannotReclaimLeadingBid))
          (fun () -> delegation_auction_reclaim_bid auction ticket);
 
        assert_raises
-         (Failure "NotAWinningBid")
+         (Failure (Ligo.string_of_int error_NotAWinningBid))
          (fun () -> delegation_auction_claim_win auction ticket for_delegate);
 
        (* But in the next cycle they can claim the win... *)
@@ -61,7 +62,7 @@ let suite =
        let delegate = delegation_auction_delegate auction in
        assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
-         (Failure "CannotReclaimWinningBid")
+         (Failure (Ligo.string_of_int error_CannotReclaimWinningBid))
          (fun () -> delegation_auction_reclaim_bid auction ticket);
        let auction = delegation_auction_claim_win auction ticket for_delegate in
        let auction = delegation_auction_touch auction in
@@ -73,11 +74,11 @@ let suite =
        let delegate = delegation_auction_delegate auction in
        assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
-         (Failure "BidTicketExpired")
+         (Failure (Ligo.string_of_int error_BidTicketExpired))
          (fun () -> delegation_auction_reclaim_bid auction ticket);
 
        assert_raises
-         (Failure "NotAWinningBid")
+         (Failure (Ligo.string_of_int error_NotAWinningBid))
          (fun () -> delegation_auction_claim_win auction ticket for_delegate);
     );
 
@@ -96,7 +97,7 @@ let suite =
        let amount4 = Ligo.tez_from_literal "4mutez" in
        let (ticket1, auction) = delegation_auction_place_bid auction bidder1 amount1 in
        assert_raises
-         (Failure "BidTooLow")
+         (Failure (Ligo.string_of_int error_BidTooLow))
          (fun () -> delegation_auction_place_bid auction bidder2 amount1);
 
        let (ticket2, auction) = delegation_auction_place_bid auction bidder2 amount2 in
@@ -108,7 +109,7 @@ let suite =
        assert_equal amount1 refund;
        (* But new leading bidder cannot reclaim their bid *)
        assert_raises
-         (Failure "CannotReclaimLeadingBid")
+         (Failure (Ligo.string_of_int error_CannotReclaimLeadingBid))
          (fun () -> delegation_auction_reclaim_bid auction ticket4);
        (* Then in the next cycle... *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -124,7 +125,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:4104 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* Refunds can no longer be claimed *)
        assert_raises
-         (Failure "BidTicketExpired")
+         (Failure (Ligo.string_of_int error_BidTicketExpired))
          (fun () -> delegation_auction_reclaim_bid auction ticket3)
     );
 
@@ -141,7 +142,7 @@ let suite =
        let delegate = delegation_auction_delegate auction in
        assert_equal None delegate ~printer:show_key_hash_option;
        assert_raises
-         (Failure "CannotReclaimLeadingBid")
+         (Failure (Ligo.string_of_int error_CannotReclaimLeadingBid))
          (fun () -> delegation_auction_reclaim_bid auction ticket)
     )
   ]

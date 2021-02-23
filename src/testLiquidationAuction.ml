@@ -4,6 +4,7 @@ open TestCommon
 open FixedPoint
 open LiquidationAuction
 open LiquidationAuctionTypes
+open Error
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -134,11 +135,11 @@ let suite =
 
        (* Below minimum bid *)
        assert_raises
-         (Failure "BidTooLow")
+         (Failure (Ligo.string_of_int error_BidTooLow))
          (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_000_000n"); });
        (* Right below minimum bid *)
        assert_raises
-         (Failure "BidTooLow")
+         (Failure (Ligo.string_of_int error_BidTooLow))
          (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_999_999n"); });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
        let (current, _) = liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "2_000_000n"); } in
@@ -152,7 +153,7 @@ let suite =
        let (current, _) = liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "4_000_000n")} in
        (* Does not allow a lower bid.*)
        assert_raises
-         (Failure "BidTooLow")
+         (Failure (Ligo.string_of_int error_BidTooLow))
          (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
 
        ()

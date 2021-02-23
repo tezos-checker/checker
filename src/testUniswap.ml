@@ -5,6 +5,7 @@ open Kit
 open Uniswap
 open Tickets
 open UniswapTypes
+open Error
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -210,7 +211,7 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure "BuyKitPriceFailure")
+      (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
       (fun () ->
          uniswap_buy_kit
            uniswap
@@ -223,7 +224,7 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure "UniswapTooLate")
+      (Failure (Ligo.string_of_int error_UniswapTooLate))
       (fun () ->
          uniswap_buy_kit
            uniswap
@@ -330,7 +331,7 @@ let sell_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure "SellKitPriceFailure")
+      (Failure (Ligo.string_of_int error_SellKitPriceFailure))
       (fun () ->
          uniswap_sell_kit
            uniswap
@@ -343,7 +344,7 @@ let sell_kit_unit_test =
     (* Low expectations but too late (tight): fail *)
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure "UniswapTooLate")
+      (Failure (Ligo.string_of_int error_UniswapTooLate))
       (fun () ->
          uniswap_sell_kit
            uniswap

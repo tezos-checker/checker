@@ -4,6 +4,7 @@ open Kit
 open Parameters
 open LiquidationAuctionPrimitiveTypes
 open Constants
+open Error
 
 type liquidation_slices = {oldest: leaf_ptr; youngest: leaf_ptr;}
 [@@deriving show]
@@ -190,7 +191,7 @@ let burrow_return_kit_from_auction
 
 let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
   if tez < creation_deposit
-  then (failwith "InsufficientFunds" : burrow)
+  then (Ligo.failwith error_InsufficientFunds : burrow)
   else
     { active = true;
       permission_version = Ligo.nat_from_literal "0n";
@@ -219,7 +220,7 @@ let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
   assert (p.last_touched = b.last_touched);
   let burrow = { b with collateral = Ligo.sub_tez_tez b.collateral t } in
   if burrow_is_overburrowed p burrow
-  then (failwith "WithdrawTezFailure" : burrow)
+  then (Ligo.failwith error_WithdrawTezFailure : burrow)
   else burrow
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
@@ -229,7 +230,7 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
   assert (p.last_touched = b.last_touched);
   let burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
   if burrow_is_overburrowed p burrow
-  then (failwith "MintKitFailure" : burrow)
+  then (Ligo.failwith error_MintKitFailure : burrow)
   else burrow
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
@@ -251,9 +252,9 @@ let burrow_activate (p: parameters) (tez: Ligo.tez) (b: burrow) : burrow =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   if tez < creation_deposit then
-    (failwith "InsufficientFunds" : burrow)
+    (Ligo.failwith error_InsufficientFunds : burrow)
   else if b.active then
-    (failwith "BurrowIsAlreadyActive" : burrow)
+    (Ligo.failwith error_BurrowIsAlreadyActive : burrow)
   else
     { b with
       active = true;
@@ -267,13 +268,13 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
   assert_burrow_invariants b;
   assert (p.last_touched = b.last_touched);
   if burrow_is_overburrowed p b then
-    (failwith "DeactivatingAnOverburrowedBurrow" : (burrow * Ligo.tez))
+    (Ligo.failwith error_DeactivatingAnOverburrowedBurrow : (burrow * Ligo.tez))
   else if (not b.active) then
-    (failwith "DeactivatingAnInactiveBurrow" : (burrow * Ligo.tez))
+    (Ligo.failwith error_DeactivatingAnInactiveBurrow : (burrow * Ligo.tez))
   else if (b.outstanding_kit > kit_zero) then
-    (failwith "DeactivatingWithOutstandingKit" : (burrow * Ligo.tez))
+    (Ligo.failwith error_DeactivatingWithOutstandingKit : (burrow * Ligo.tez))
   else if (b.collateral_at_auction > Ligo.tez_from_literal "0mutez") then
-    (failwith "DeactivatingWithCollateralAtAuctions" : (burrow * Ligo.tez))
+    (Ligo.failwith error_DeactivatingWithCollateralAtAuctions : (burrow * Ligo.tez))
   else
     let return = Ligo.add_tez_tez b.collateral creation_deposit in
     let updated_burrow =

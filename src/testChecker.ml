@@ -4,6 +4,7 @@ open OUnit2
 open TestCommon
 open CheckerTypes
 open Tickets
+open Error
 
 module PtrMap = Map.Make(Ptr)
 
@@ -101,7 +102,7 @@ let suite =
        (* Minting another kit should fail *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
-         (Failure "MintKitFailure")
+         (Failure (Ligo.string_of_int error_MintKitFailure))
          (fun () ->
             Checker.mint_kit
               checker
@@ -154,7 +155,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
-         (Failure "NoOpenAuction")
+         (Failure (Ligo.string_of_int error_NoOpenAuction))
          (fun () ->
             Checker.checker_liquidation_auction_place_bid
               checker
@@ -261,7 +262,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_raises (Failure "NotAWinningBid") (fun _ ->
+       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
            let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());
@@ -279,7 +280,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_raises (Failure "NotAWinningBid") (fun _ ->
+       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
            let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());
