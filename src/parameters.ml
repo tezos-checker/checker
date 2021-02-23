@@ -3,6 +3,7 @@ open Ratio
 open FixedPoint
 open Common
 open Constants
+open Error
 
 type parameters =
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
@@ -177,7 +178,7 @@ let parameters_touch
     let duration =
       ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched) in
     if lt_ratio_ratio duration zero_ratio
-    then (failwith "parameters_touch: negative time difference" : ratio)
+    then (Ligo.failwith error_TouchParametersInThePast : ratio)
     else duration
   in
 

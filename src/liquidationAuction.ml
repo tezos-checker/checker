@@ -77,6 +77,7 @@ open Constants
 open Common
 open TokenTypes
 open LiquidationAuctionTypes
+open Error
 
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
@@ -85,7 +86,7 @@ open LiquidationAuctionTypes
 let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice) : (liquidation_auctions * leaf_ptr) =
   if avl_height auctions.avl_storage auctions.queued_slices
      >= max_liquidation_queue_height then
-    (failwith "LiquidationQueueTooLong": liquidation_auctions * leaf_ptr)
+    (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let (new_storage, ret) =
       avl_push_back auctions.avl_storage auctions.queued_slices slice in
@@ -283,11 +284,11 @@ let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: b
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
       { auction_id = auction.contents; bid = bid; }
     )
-  else (failwith "BidTooLow": current_liquidation_auction * liquidation_auction_bid_details)
+  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * liquidation_auction_bid_details)
 
 let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : current_liquidation_auction =
   match auctions.current_auction with
-  | None -> (failwith "NoOpenAuction": current_liquidation_auction)
+  | None -> (Ligo.failwith error_NoOpenAuction : current_liquidation_auction)
   | Some curr -> curr
 
 let is_leading_current_liquidation_auction
@@ -316,10 +317,10 @@ let completed_liquidation_auction_won_by
 (* If successful, it consumes the ticket. *)
 let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
-  then (failwith "CannotReclaimLeadingBid": kit)
+  then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
     match completed_liquidation_auction_won_by auctions bid_details with
-    | Some _ -> (failwith "CannotReclaimWinningBid": kit)
+    | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
     | None -> bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
@@ -399,7 +400,7 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
     if not (avl_is_empty auctions.avl_storage bid_details.auction_id)
-    then (failwith "NotAllSlicesClaimed": Ligo.tez * liquidation_auctions)
+    then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
     else (
       (* When the winner reclaims their bid, we finally remove
          every reference to the auction. This is just to
@@ -414,7 +415,7 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
             avl_delete_empty_tree auctions.avl_storage bid_details.auction_id } in
       (outcome.sold_tez, auctions)
     )
-  | None -> (failwith "NotAWinningBid": Ligo.tez * liquidation_auctions)
+  | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
 
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: fixedpoint) : liquidation_auctions =
