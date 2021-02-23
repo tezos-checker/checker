@@ -142,6 +142,10 @@ module Tezos : sig
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
 end
 
+module Meta : sig
+  val current_delegate : key_hash option ref
+end
+
 (* VALUE CREATION *)
 val int_from_literal : String.t -> int         (* IN LIGO: drop int_from_literal and replace the double quotes with parentheses. *)
 val nat_from_literal : String.t -> nat         (* IN LIGO: drop nat_from_literal and the double quotes. *)

@@ -273,6 +273,10 @@ module Tezos = struct
     amount := amount_
 end
 
+module Meta = struct
+  let current_delegate = ref None
+end
+
 let string_of_int = Z.to_string
 let string_of_tez x = Z.to_string x ^ "mutez"
 let string_of_timestamp = Z.to_string
