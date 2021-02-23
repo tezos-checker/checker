@@ -52,21 +52,28 @@ module Big_map = struct
   let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
 end
 
-(* Represent them like big maps internally. *)
-type ('key, 'value) map = ('key, 'value) big_map
+(* Represent them like lists internally. This means that performance can be
+ * horrible, but since we use them only for the oracles, this should not be a
+ * problem. Why lists? Because Map.fold in LIGO works in increasing key order,
+ * which we cannot ensure if we use the hash-based implementation of big_map;
+ * the semantics would be wrong. List might be slow, but they are correct. *)
+type ('key, 'value) map = ('key * 'value) list
 
 module Map = struct
-  let literal ps =
-    List.fold_left
-      (fun m (k, v) -> Big_map.update k (Some v) m)
-      Big_map.empty
-      ps
+  let literal ps = List.stable_sort (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps
 
-  let find_opt = Big_map.find_opt
+  let find_opt key m = List.assoc_opt key m
 
-  let update = Big_map.update
+  (* Horrible performance of course, but hopefull won't be a problem. *)
+  let update key opt_val m =
+    let m = List.remove_assoc key m in (* the old binding should go away anyway *)
+    match opt_val with
+    | None -> m
+    | Some v -> List.merge (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) [(key, v)] m
 
-  let mem = Big_map.mem
+  let mem k m = Option.is_some (find_opt k m)
+
+  let fold fn m acc = List.fold_left fn acc m
 end
 
 (* UTILITY FUNCTIONS *)
