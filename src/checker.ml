@@ -18,6 +18,7 @@ open BurrowTypes
 open CheckerTypes
 open Tickets
 open Error
+open Oracle
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
  * that we mainly deal with integers directly. Hardwire the constants too,
@@ -844,6 +845,15 @@ let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list
 (**                              TOUCHING                                    *)
 (* ************************************************************************* *)
 
+let compute_current_index (state: checker) : Ligo.tez =
+  match compute_current_median state.prices with
+  | None -> state.parameters.index (* use the old one *)
+  | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") (* FIXME: Is the nat supposed to represent tez? *)
+
+(* ************************************************************************* *)
+(**                              TOUCHING                                    *)
+(* ************************************************************************* *)
+
 (** Calculate how much is right now the reward for touching the main checker
   * contract. We use a bracketed calculation, where for the first
   * touch_reward_low_bracket seconds the reward increases by touch_low_reward
@@ -984,7 +994,8 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
   let op, state = op_and_state in
   match op with
   | Touch ->
-    touch state (Ligo.tez_from_literal "0mutez") (* FIXME: oracle (medianizer?) input here. *)
+    let index = compute_current_index state in
+    touch state index
   (* Burrows *)
   | CreateBurrow delegate_opt ->
     create_burrow state delegate_opt

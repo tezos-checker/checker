@@ -73,22 +73,3 @@ let compute_current_median (* (oracles: oracles) *) (price_map: price_map) : Lig
         | Some p3 -> Some (median p1 p2 p3)
        )
     )
-
-(*
-type oracle_param =
-  | GetMedian of Ligo.nat LigoOp.contract
-  | ReceiveFirstPrice of Ligo.nat
-  | ReceiveSecondPrice of Ligo.nat
-  | ReceiveThirdPrice of Ligo.nat
-
-let oracle_main (op, state: oracle_param * oracle_storage): LigoOp.operation list * oracle_storage =
-  match op with
-  | GetMedian cb ->
-    get_median state cb
-  | ReceiveFirstPrice price1 ->
-    receive_first_price state price1
-  | ReceiveSecondPrice price2 ->
-    receive_second_price state price2
-  | ReceiveThirdPrice price3 ->
-    receive_third_price state price3
-*)
