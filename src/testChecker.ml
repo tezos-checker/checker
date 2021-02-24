@@ -136,19 +136,9 @@ let suite =
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
-(*
-Expected
-  (Transaction (KitTransactionValue ticket, _, _) :: _)
-but got
-  [Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr%getPrice1TODO);
-   Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1Jr5t9UvGiqkvvsuUbPJHaYx24NzdUwNW9%getPrice2TODO);
-   Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1AdbYiPYb5hDuEuVrfxmFehtnBCXv4Np7r%getPrice3TODO);
-   Transaction ({ Ligo.issuer = self_address; content = TokenTypes.Kit; amount = 202000000 }, 0mutez, Contract bob_addr%transferKit)
-   ]
-*)
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
        assert_equal [] ops;
@@ -176,8 +166,8 @@ but got
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        assert_bool "should start an auction"
@@ -193,8 +183,8 @@ but got
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        let (ops, checker) =
@@ -217,8 +207,8 @@ but got
        let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (_ :: _ :: _ :: Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_bool "auction should be completed"
