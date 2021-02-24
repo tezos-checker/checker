@@ -7,7 +7,7 @@ index 9159bab6e..0d1bc849c 100644
  let max_proposals_per_delegate = 20
 
 -let max_operation_data_length = 16 * 1024 (* 16kB *)
-+let max_operation_data_length = 32 * 1024 (* 32 kB *) (* UPDATED *)
++let max_operation_data_length = 64 * 1024 (* 64 kB *) (* UPDATED *)
 
  type fixed = {
    proof_of_work_nonce_size : int;

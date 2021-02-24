@@ -7,7 +7,7 @@ index 16666b024..fe56e9ed3 100644
        proof_of_work_threshold = Int64.(sub (shift_left 1L 46) 1L);
        tokens_per_roll = Tez_repr.(mul_exn one 8_000);
 -      michelson_maximum_type_size = 1000;
-+      michelson_maximum_type_size = 2000; (* UPDATED *)
++      michelson_maximum_type_size = 4000; (* UPDATED *)
        seed_nonce_revelation_tip =
          (match Tez_repr.(one /? 8L) with Ok c -> c | Error _ -> assert false);
        origination_size = 257;

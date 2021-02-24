@@ -15,7 +15,7 @@ let
               src = tezosSrcs.tezos;
               patches = [
                 ./patches/max_operation_data_length.patch
-                # ./patches/michelson_maximum_type_size.patch
+                ./patches/michelson_maximum_type_size.patch
               ];
             };
           opam-nix = pkgs.applyPatches
