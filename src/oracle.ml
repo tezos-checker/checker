@@ -6,16 +6,15 @@ open Error
 (* Map of oracle addresses and their entrypoints. *)
 type oracles = (Ligo.address, string) Ligo.map
 
-(* TODO: Figure out the real values for the following. *)
-let oracle1 : Ligo.address = (Ligo.address_from_literal "oracle1TODO" : Ligo.address)
-let oracle2 : Ligo.address = (Ligo.address_from_literal "oracle2TODO" : Ligo.address)
-let oracle3 : Ligo.address = (Ligo.address_from_literal "oracle3TODO" : Ligo.address)
+let oracle1 : Ligo.address = (Ligo.address_from_literal "KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr" : Ligo.address) (* FIXME: Use real address *)
+let oracle2 : Ligo.address = (Ligo.address_from_literal "KT1Jr5t9UvGiqkvvsuUbPJHaYx24NzdUwNW9" : Ligo.address) (* FIXME: Use real address *)
+let oracle3 : Ligo.address = (Ligo.address_from_literal "KT1AdbYiPYb5hDuEuVrfxmFehtnBCXv4Np7r" : Ligo.address) (* FIXME: Use real address *)
 
 let initial_oracles : oracles =
   Ligo.Map.literal [
-    (oracle1, "%getPrice1TODO");
-    (oracle2, "%getPrice2TODO");
-    (oracle3, "%getPrice3TODO");
+    (oracle1, "%getPrice1TODO"); (* FIXME: Use real entrypoint *)
+    (oracle2, "%getPrice2TODO"); (* FIXME: Use real entrypoint *)
+    (oracle3, "%getPrice3TODO"); (* FIXME: Use real entrypoint *)
   ]
 
 (* Last observed prices from oracles. *)
