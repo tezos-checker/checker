@@ -21,6 +21,7 @@ type ('key, 'value) map
 *)
 
 module Map : sig
+  val empty : ('key, 'value) map
   val literal : ('key * 'value) list -> ('key, 'value) map
   val find_opt : 'key -> ('key, 'value) map -> 'value option
   val update : 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map

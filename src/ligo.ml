@@ -60,6 +60,8 @@ end
 type ('key, 'value) map = ('key * 'value) list
 
 module Map = struct
+  let empty = []
+
   let literal ps =
     let v1 = List.sort (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps in
     let v2 = List.sort_uniq (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2) ps in
