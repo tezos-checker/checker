@@ -9,11 +9,15 @@ open Error
 type oracles = (Ligo.address, string) Ligo.map
 
 (* TODO: Figure out the real values for the following. *)
+let oracle1 : Ligo.address = (Ligo.address_from_literal "oracle1TODO" : Ligo.address)
+let oracle2 : Ligo.address = (Ligo.address_from_literal "oracle2TODO" : Ligo.address)
+let oracle3 : Ligo.address = (Ligo.address_from_literal "oracle3TODO" : Ligo.address)
+
 let initial_oracles : oracles =
   Ligo.Map.literal [
-    ((Ligo.address_from_literal "oracle1TODO" : Ligo.address), "%getPrice1TODO");
-    ((Ligo.address_from_literal "oracle2TODO" : Ligo.address), "%getPrice2TODO");
-    ((Ligo.address_from_literal "oracle3TODO" : Ligo.address), "%getPrice3TODO");
+    (oracle1, "%getPrice1TODO");
+    (oracle2, "%getPrice2TODO");
+    (oracle3, "%getPrice3TODO");
   ]
 
 (* Last observed prices from oracles. *)
@@ -44,6 +48,10 @@ let ask_oracle_values (oracles: oracles) : LigoOp.operation list =
     )
     oracles
     ([]: LigoOp.operation list)
+
+(* FIXME: This only works for the three oracle addresses we have above. At the
+ * end we should either make it all extensible, or totally hardwired. *)
+
 
 (*
 type oracle_param =
