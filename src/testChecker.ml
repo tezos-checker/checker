@@ -10,6 +10,40 @@ module PtrMap = Map.Make(Ptr)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
+
+(* Helpers for setting up test environment *)
+
+(* Calls a function using a clean, reset contract state *)
+let with_clean_checker_contract f = 
+  Ligo.Tezos.reset ();
+  Printf.eprintf "Wrapping f with reset\n";
+  f ()
+
+(* Calls a function after sending a single transaction to the contract *)
+  let with_initial_transaction sender amount f = 
+  let run_with_trans = fun () -> 
+    Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:amount;
+    f ()
+  in with_clean_checker_contract run_with_trans
+
+  (* Calls a function which operates on a new burrow created for the sender *)
+let with_burrow : Ligo.address -> Ligo.tez -> ((operation_list * checker) -> 'a) -> 'a = fun sender initial_amount f -> 
+  let run_with_burrow = fun () ->
+    f (Checker.create_burrow initial_checker None) in 
+  with_initial_transaction sender initial_amount run_with_burrow
+
+  (* Calls a function which operates on the burrow_id of a new burrow created for the sender *)
+let with_burrow_id : Ligo.address -> Ligo.tez -> ((burrow_id * checker) -> 'a) -> 'a = fun sender initial_amount f -> 
+  let run_with_burrow = fun () ->
+    let ops, checker = Checker.create_burrow initial_checker None in match ops with
+        | [ CreateContract _ ;
+            Transaction _ ;
+            Transaction (AddressTransactionValue burrow_id, _, _) ;
+          ] -> f (burrow_id, checker)
+       | _ -> failwith ("Expected CreateContract, PermTransaction, and AddressTransaction but got " ^ show_operation_list ops)
+  in with_initial_transaction sender initial_amount run_with_burrow
+
+
 let suite =
   "Checker tests" >::: [
     ("initial touch" >::
@@ -19,6 +53,32 @@ let suite =
        let _ = Checker.touch checker (Ligo.tez_from_literal "0mutez"); in
        ()
     );
+    ("create burrow updates checker storage" >::
+      fun _ -> 
+        with_burrow_id 
+          alice_addr 
+          (Ligo.tez_from_literal "1_000_000mutez") 
+          (fun (burrow_id, checker) -> 
+            assert_bool 
+              "No matching burrow found after calling create_burrow" 
+              (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows))
+          )
+        
+    );
+    ("deposit some tez" >::
+      fun _ -> 
+        with_burrow_id 
+          alice_addr 
+          (Ligo.tez_from_literal "1_000_000mutez") 
+          (fun (burrow_id, checker) -> 
+            let 
+              _ = () in 
+              (match Ligo.Big_map.find_opt burrow_id checker.burrows with | Some burrow -> Burrow.pp_burrow Format.std_formatter burrow | None -> ());
+              ()
+            (* TODO: Assert tez was actually deposited *)
+          )
+    );
+
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
