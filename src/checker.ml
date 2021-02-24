@@ -1073,5 +1073,6 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     checker_delegation_auction_reclaim_bid state ticket
 *)
   (* Oracles *)
-  | ReceivePrice _price ->
-    (failwith "YOU HAVE TO BE IMPLEMENTED!" : LigoOp.operation list * checker)
+  | ReceivePrice price ->
+    let prices = receive_price state.prices price in
+    (([]: LigoOp.operation list), {state with prices = prices})
