@@ -31,7 +31,9 @@ let receive_price (* (oracles: oracles) *) (price_map: price_map) (price: Ligo.n
  * not change the state. Note that the order of the operations is the reverse
  * of what one would expect, but the order here is irrelevant and it costs gas
  * to reverse it. *)
-let ask_oracle_values (oracles: oracles) : LigoOp.operation list =
+(* FIXME: Adds the operations to the front. The order of operations has been
+ * totally random until now in general actually; we have to discuss this. *)
+let[@inline] ask_oracle_values (oracles: oracles) (starting: LigoOp.operation list) : LigoOp.operation list =
   (* NOTE: EXPECTATION: type params = ... | ReceivePrice of Ligo.nat *)
   let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receivePrice" Ligo.Tezos.self_address : (Ligo.nat LigoOp.contract) option) with
     | Some cb -> cb
@@ -45,7 +47,7 @@ let ask_oracle_values (oracles: oracles) : LigoOp.operation list =
        (op :: ops)
     )
     oracles
-    ([]: LigoOp.operation list)
+    starting
 
 let[@inline] median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
   (* FIXME: probably we should hardwire the decision tree here. Not bothering

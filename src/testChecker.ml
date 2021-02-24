@@ -139,6 +139,16 @@ let suite =
          | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
          | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
+(*
+Expected
+  (Transaction (KitTransactionValue ticket, _, _) :: _)
+but got
+  [Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr%getPrice1TODO);
+   Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1Jr5t9UvGiqkvvsuUbPJHaYx24NzdUwNW9%getPrice2TODO);
+   Transaction (Contract self_address%receivePrice, 0mutez, Contract KT1AdbYiPYb5hDuEuVrfxmFehtnBCXv4Np7r%getPrice3TODO);
+   Transaction ({ Ligo.issuer = self_address; content = TokenTypes.Kit; amount = 202000000 }, 0mutez, Contract bob_addr%transferKit)
+   ]
+*)
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
        assert_equal [] ops;

@@ -842,7 +842,7 @@ let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list
   (([]: LigoOp.operation list), state)
 
 (* ************************************************************************* *)
-(**                              TOUCHING                                    *)
+(**                               ORACLE                                     *)
 (* ************************************************************************* *)
 
 let compute_current_index (state: checker) : Ligo.tez =
@@ -951,6 +951,9 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
       | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
+
+    (* Create operations to ask the oracles to send updated values. *)
+    let ops = ask_oracle_values initial_oracles ops in
 
     (ops, state)
 
