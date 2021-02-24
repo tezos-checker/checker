@@ -8,8 +8,8 @@ type ('key, 'value) big_map
 module Big_map : sig
   val empty : ('key, 'value) big_map
   val find_opt : 'key -> ('key, 'value) big_map -> 'value option
-  val update: 'key -> 'value option -> ('key, 'value) big_map -> ('key, 'value) big_map
-  val mem: 'key -> ('key, 'value) big_map -> bool
+  val update : 'key -> 'value option -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val mem : 'key -> ('key, 'value) big_map -> bool
 
   (* NON-LIGO *)
   val bindings : ('key, 'value) big_map -> ('key * 'value) list
@@ -23,7 +23,7 @@ type ('key, 'value) map
 module Map : sig
   val literal : ('key * 'value) list -> ('key, 'value) map
   val find_opt : 'key -> ('key, 'value) map -> 'value option
-  val update: 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
+  val update : 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
   val mem : 'key -> ('key, 'value) map -> bool
   val fold : ('accumulator * ('key * 'value) -> 'accumulator) -> ('key, 'value) map -> 'accumulator -> 'accumulator
 end
