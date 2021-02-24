@@ -26,7 +26,6 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | NatTransactionValue : nat -> nat transaction_value
 
 (* operation *)
 
@@ -62,7 +61,6 @@ module Tezos : sig
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
   val tez_transaction : tez -> tez -> tez contract -> operation
   val nat_contract_transaction : nat contract -> tez -> nat contract contract -> operation
-  val nat_transaction : nat -> tez -> nat contract -> operation
 
   val get_entrypoint_opt : string -> address -> 'parameter contract option
   val get_contract_opt : address -> unit contract option (* could also leave it as a parameter *)
