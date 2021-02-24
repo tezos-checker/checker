@@ -22,9 +22,9 @@ let initial_oracles : oracles =
 type price_map = (Ligo.address, Ligo.nat) Ligo.map
 
 (* ENTRYPOINT. Emits no operations but changes the state. *)
-let receive_price (oracles: oracles) (price_map: price_map) (price: Ligo.nat): price_map =
+let receive_price (* (oracles: oracles) *) (price_map: price_map) (price: Ligo.nat): price_map =
   (* FIXME: also assert no tez sent. *)
-  if Ligo.Map.mem !Ligo.Tezos.sender oracles
+  if Ligo.Map.mem !Ligo.Tezos.sender initial_oracles (* oracles *)
   then Ligo.Map.update !Ligo.Tezos.sender (Some price) price_map
   else (Ligo.failwith error_UnauthorisedCaller : price_map)
 
@@ -48,7 +48,7 @@ let ask_oracle_values (oracles: oracles) : LigoOp.operation list =
     oracles
     ([]: LigoOp.operation list)
 
-let median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
+let[@inline] median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
   (* FIXME: probably we should hardwire the decision tree here. Not bothering
    * to do that just yet. *)
   let small, medium = min_max_nat x y in

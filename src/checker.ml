@@ -977,6 +977,8 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  (* Oracles *)
+  | ReceivePrice of Ligo.nat
 
 let main (op_and_state: params * checker): LigoOp.operation list * checker =
   let op, state = op_and_state in
@@ -1052,3 +1054,6 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     checker_delegation_auction_claim_win state ticket key
   | DelegationAuctionReclaimBid ticket ->
     checker_delegation_auction_reclaim_bid state ticket
+  (* Oracles *)
+  | ReceivePrice _price ->
+    (failwith "YOU HAVE TO BE IMPLEMENTED!" : LigoOp.operation list * checker)

@@ -9,6 +9,7 @@ inputs=(
   error
   ptr
   common
+  oracle
   ratio
   fixedPoint
   kit

@@ -3,6 +3,7 @@ open UniswapTypes
 open Parameters
 open LiquidationAuctionTypes
 open DelegationAuctionTypes
+open Oracle
 
 type burrow_id = Ligo.address
 
@@ -15,6 +16,7 @@ type checker =
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
+    prices : price_map;
   }
 
 (** Make a fresh state. *)
@@ -25,4 +27,5 @@ let initial_checker =
     liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
+    prices = (Ligo.Map.empty : price_map);
   }

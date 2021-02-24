@@ -186,5 +186,7 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  (* Oracles *)
+  | ReceivePrice of Ligo.nat
 
 val main : params * checker -> LigoOp.operation list * checker
