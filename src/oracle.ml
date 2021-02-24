@@ -1,5 +1,3 @@
-(* Medianizer *)
-
 open Common
 open Error
 

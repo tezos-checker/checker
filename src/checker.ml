@@ -961,7 +961,6 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
 
 type params =
   | Touch
-(*
   (* Burrows *)
   | CreateBurrow of Ligo.key_hash option
   | DepositTez of (permission option * burrow_id)
@@ -991,7 +990,6 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
-*)
   (* Oracles *)
   | ReceivePrice of Ligo.nat
 
@@ -999,9 +997,7 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
   let op, state = op_and_state in
   match op with
   | Touch ->
-    let index = compute_current_index state in
-    touch state index
-(*
+    touch state (compute_current_index state)
   (* Burrows *)
   | CreateBurrow delegate_opt ->
     create_burrow state delegate_opt
@@ -1071,7 +1067,6 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     checker_delegation_auction_claim_win state ticket key
   | DelegationAuctionReclaimBid ticket ->
     checker_delegation_auction_reclaim_bid state ticket
-*)
   (* Oracles *)
   | ReceivePrice price ->
     let prices = receive_price state.prices price in
