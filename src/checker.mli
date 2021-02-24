@@ -157,6 +157,7 @@ val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid L
 
 type params =
   | Touch
+(*
   (* Burrows *)
   | CreateBurrow of Ligo.key_hash option
   | DepositTez of (permission option * burrow_id)
@@ -186,6 +187,7 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+*)
   (* Oracles *)
   | ReceivePrice of Ligo.nat
 
