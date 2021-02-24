@@ -1,8 +1,6 @@
 (* Medianizer *)
 
-(*
 open Common
-*)
 open Error
 
 (* Map of oracle addresses and their entrypoints. *)
@@ -25,6 +23,7 @@ type price_map = (Ligo.address, Ligo.nat) Ligo.map
 
 (* ENTRYPOINT. Emits no operations but changes the state. *)
 let receive_price (oracles: oracles) (price_map: price_map) (price: Ligo.nat): price_map =
+  (* FIXME: also assert no tez sent. *)
   if Ligo.Map.mem !Ligo.Tezos.sender oracles
   then Ligo.Map.update !Ligo.Tezos.sender (Some price) price_map
   else (Ligo.failwith error_UnauthorisedCaller : price_map)
@@ -49,9 +48,31 @@ let ask_oracle_values (oracles: oracles) : LigoOp.operation list =
     oracles
     ([]: LigoOp.operation list)
 
-(* FIXME: This only works for the three oracle addresses we have above. At the
- * end we should either make it all extensible, or totally hardwired. *)
+let median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
+  (* FIXME: probably we should hardwire the decision tree here. Not bothering
+   * to do that just yet. *)
+  let small, medium = min_max_nat x y in
+  let medium, _large = min_max_nat medium z in
+  let _small, medium = min_max_nat small medium in
+  medium
 
+(* FIXME: This only works for the three oracle addresses we have above. At the
+ * end we should either make it all extensible, or totally hardwired.
+ * FIXME: This is also an all-or-nothing approach (either we have all values
+ * and thus we have a result, or some are missing and we have no result). Might
+ * be what we want, just leaving this here for us to make sure. *)
+let compute_current_median (* (oracles: oracles) *) (price_map: price_map) : Ligo.nat option =
+  match Ligo.Map.find_opt oracle1 price_map with
+  | None -> (None : Ligo.nat option)
+  | Some p1 ->
+    (match Ligo.Map.find_opt oracle2 price_map with
+     | None -> (None : Ligo.nat option)
+     | Some p2 ->
+       (match Ligo.Map.find_opt oracle3 price_map with
+        | None -> (None : Ligo.nat option)
+        | Some p3 -> Some (median p1 p2 p3)
+       )
+    )
 
 (*
 type oracle_param =
