@@ -944,7 +944,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
 
     (* Create operations to ask the oracles to send updated values. *)
-    let ops = ask_oracle_values initial_oracles ops in
+    let ops = ask_oracle_values ops in
 
     (ops, state)
 
@@ -960,7 +960,7 @@ let touch (state: checker) : (LigoOp.operation list * checker) =
 
 let receive_price (state: checker) (price: Ligo.nat) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let prices = receive_price state.prices price in
+  let prices = receive_oracle_price state.prices price in
   (([]: LigoOp.operation list), {state with prices = prices})
 
 (* ENTRYPOINTS *)

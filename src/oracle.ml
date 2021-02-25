@@ -8,7 +8,7 @@ let oracle1 : Ligo.address = (Ligo.address_from_literal "KT1NNfziS5orym8pLvp2qsT
 let oracle2 : Ligo.address = (Ligo.address_from_literal "KT1Jr5t9UvGiqkvvsuUbPJHaYx24NzdUwNW9" : Ligo.address) (* FIXME: Use real address *)
 let oracle3 : Ligo.address = (Ligo.address_from_literal "KT1AdbYiPYb5hDuEuVrfxmFehtnBCXv4Np7r" : Ligo.address) (* FIXME: Use real address *)
 
-let initial_oracles : oracles =
+let oracles : oracles =
   Ligo.Map.literal [
     (oracle1, "%getPrice1TODO"); (* FIXME: Use real entrypoint *)
     (oracle2, "%getPrice2TODO"); (* FIXME: Use real entrypoint *)
@@ -19,18 +19,17 @@ let initial_oracles : oracles =
 type price_map = (Ligo.address, Ligo.nat) Ligo.map
 
 (* ENTRYPOINT. Emits no operations but changes the state. *)
-let receive_price (* (oracles: oracles) *) (price_map: price_map) (price: Ligo.nat): price_map =
-  if Ligo.Map.mem !Ligo.Tezos.sender initial_oracles (* oracles *)
+let[@inline] receive_oracle_price (price_map: price_map) (price: Ligo.nat): price_map =
+  if Ligo.Map.mem !Ligo.Tezos.sender oracles
   then Ligo.Map.update !Ligo.Tezos.sender (Some price) price_map
   else (Ligo.failwith error_UnauthorisedCaller : price_map)
 
 (* TO BE CALLED BY TOUCH IN A NON-BLOCKING WAY. Only emits operations but does
  * not change the state. Note that the order of the operations is the reverse
  * of what one would expect, but the order here is irrelevant and it costs gas
- * to reverse it. *)
-(* FIXME: Adds the operations to the front. The order of operations has been
- * totally random until now in general actually; we have to discuss this. *)
-let[@inline] ask_oracle_values (oracles: oracles) (starting: LigoOp.operation list) : LigoOp.operation list =
+ * to reverse it. Note that we add the operations to the front of the given
+ * list of operations, but this should not matter. *)
+let[@inline] ask_oracle_values (starting: LigoOp.operation list) : LigoOp.operation list =
   (* NOTE: EXPECTATION: type params = ... | ReceivePrice of Ligo.nat *)
   let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receivePrice" Ligo.Tezos.self_address : (Ligo.nat LigoOp.contract) option) with
     | Some cb -> cb
@@ -59,7 +58,7 @@ let[@inline] median (x: Ligo.nat) (y: Ligo.nat) (z: Ligo.nat) : Ligo.nat =
  * FIXME: This is also an all-or-nothing approach (either we have all values
  * and thus we have a result, or some are missing and we have no result). Might
  * be what we want, just leaving this here for us to make sure. *)
-let compute_current_median (* (oracles: oracles) *) (price_map: price_map) : Ligo.nat option =
+let compute_current_median (price_map: price_map) : Ligo.nat option =
   match Ligo.Map.find_opt oracle1 price_map with
   | None -> (None : Ligo.nat option)
   | Some p1 ->
