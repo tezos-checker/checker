@@ -13,35 +13,28 @@ type operation_list = LigoOp.operation list
 
 (* Helpers for setting up test environment *)
 
-(* Calls a function using a clean, reset contract state *)
-let with_clean_checker_contract f = 
+(* Calls a function using a clean, reset context *)
+let with_clean_context f = 
   Ligo.Tezos.reset ();
-  Printf.eprintf "Wrapping f with reset\n";
   f ()
 
-(* Calls a function after sending a single transaction to the contract *)
-  let with_initial_transaction sender amount f = 
+(* Calls a function after registering the specified transaction in the context *)
+  let with_transaction sender amount f = 
   let run_with_trans = fun () -> 
     Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:amount;
     f ()
-  in with_clean_checker_contract run_with_trans
+  in with_clean_context run_with_trans
 
-  (* Calls a function which operates on a new burrow created for the sender *)
-let with_burrow : Ligo.address -> Ligo.tez -> ((operation_list * checker) -> 'a) -> 'a = fun sender initial_amount f -> 
+  (* Calls a function which operates on the burrow_id of a new burrow created for the sender and has access to the admin ticket *)
+let with_burrow : checker -> Ligo.address -> Ligo.tez -> ((burrow_id * permission * checker) -> 'a) -> 'a = fun checker sender initial_amount f -> 
   let run_with_burrow = fun () ->
-    f (Checker.create_burrow initial_checker None) in 
-  with_initial_transaction sender initial_amount run_with_burrow
-
-  (* Calls a function which operates on the burrow_id of a new burrow created for the sender *)
-let with_burrow_id : Ligo.address -> Ligo.tez -> ((burrow_id * checker) -> 'a) -> 'a = fun sender initial_amount f -> 
-  let run_with_burrow = fun () ->
-    let ops, checker = Checker.create_burrow initial_checker None in match ops with
+    let ops, checker = Checker.create_burrow checker None in match ops with
         | [ CreateContract _ ;
-            Transaction _ ;
+            Transaction (PermTransactionValue burrow_permission, _, _) ;
             Transaction (AddressTransactionValue burrow_id, _, _) ;
-          ] -> f (burrow_id, checker)
+          ] -> f (burrow_id, burrow_permission, checker)
        | _ -> failwith ("Expected CreateContract, PermTransaction, and AddressTransaction but got " ^ show_operation_list ops)
-  in with_initial_transaction sender initial_amount run_with_burrow
+  in with_transaction sender initial_amount run_with_burrow
 
 
 let suite =
@@ -53,30 +46,169 @@ let suite =
        let _ = Checker.touch checker (Ligo.tez_from_literal "0mutez"); in
        ()
     );
-    ("create burrow updates checker storage" >::
+    ("create_burrow - updates checker storage" >::
       fun _ -> 
-        with_burrow_id 
+        with_burrow 
+          initial_checker
           alice_addr 
           (Ligo.tez_from_literal "1_000_000mutez") 
-          (fun (burrow_id, checker) -> 
+          (fun (burrow_id, _, checker) -> 
             assert_bool 
               "No matching burrow found after calling create_burrow" 
               (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows))
           )
-        
     );
-    ("deposit some tez" >::
+    ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
       fun _ -> 
-        with_burrow_id 
+        let (burrow_id, _, checker) = with_burrow 
+          initial_checker
           alice_addr 
-          (Ligo.tez_from_literal "1_000_000mutez") 
-          (fun (burrow_id, checker) -> 
-            let 
-              _ = () in 
-              (match Ligo.Big_map.find_opt burrow_id checker.burrows with | Some burrow -> Burrow.pp_burrow Format.std_formatter burrow | None -> ());
-              ()
-            (* TODO: Assert tez was actually deposited *)
-          )
+          Constants.creation_deposit
+          (fun x -> x) in
+
+        let expected_collateral = Ligo.tez_from_literal "0mutez" in
+        match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+          | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+          | None -> assert_failure "Expected a burrow representation to exist but none was found"
+    );
+    ("create_burrow - fails when minimum deposit is not provided" >::
+      fun _ ->
+        assert_raises 
+        (Failure "InsufficientFunds")
+        (fun () -> with_burrow
+          initial_checker 
+          alice_addr 
+          (Ligo.tez_from_literal "42mutez")
+          (fun _ -> ())
+        )
+    );
+    ("deposit_tez - admin ticket holder can deposit" >::
+      fun _ -> 
+        (* Create burrow *)
+        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
+        let deposit = Ligo.tez_from_literal "3_000_000mutez" in
+        let expected_collateral = Ligo.add_tez_tez deposit (Ligo.sub_tez_tez  initial_deposit Constants.creation_deposit) in
+        let (burrow_id, admin_ticket, checker) = with_burrow 
+          initial_checker
+          alice_addr 
+          initial_deposit
+          (fun x -> x) in
+
+        (* Make a deposit *)
+        let _, checker = with_transaction 
+          alice_addr 
+          deposit
+          (fun () ->  (Checker.deposit_tez checker (Some admin_ticket) burrow_id)) in  
+
+        match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+        | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+        | None -> assert_failure "Expected a burrow representation to exist but none was found"
+    );
+    ("deposit_tez - non-ticket holder can not deposit by default" >::
+    fun _ -> 
+      let (burrow_id, _, checker) = with_burrow 
+        initial_checker
+        alice_addr 
+        (Ligo.tez_from_literal "3_000_000mutez")
+        (fun x -> x) in
+
+       assert_raises 
+        (Failure "MissingPermission")
+        (fun () -> with_transaction 
+          alice_addr 
+          (Ligo.tez_from_literal "3_000_000mutez")
+          (fun () -> Checker.deposit_tez checker None burrow_id)
+        )
+    );
+    ("deposit_tez - fail if the ticket to another burrow is submitted" >::
+    fun _ -> 
+      let (burrow_id, _, checker) = with_burrow 
+        initial_checker
+        alice_addr 
+        (Ligo.tez_from_literal "3_000_000mutez")
+        (fun x -> x) in
+      let (_, some_other_ticket, checker) = with_burrow 
+        checker
+        alice_addr 
+        (Ligo.tez_from_literal "3_000_000mutez")
+        (fun x -> x) in
+
+       assert_raises 
+        (Failure "InvalidPermission")
+        (fun () -> with_transaction 
+          alice_addr 
+          (Ligo.tez_from_literal "3_000_000mutez")
+          (fun () -> Checker.deposit_tez checker (Some some_other_ticket) burrow_id)
+        )
+    );
+
+    ("withdraw_tez - admin ticket holder can withdraw" >::
+      fun _ -> 
+        (* Create burrow *)
+        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
+        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
+        let expected_collateral = Ligo.sub_tez_tez initial_deposit (Ligo.add_tez_tez Constants.creation_deposit withdrawal) in
+        let (burrow_id, admin_ticket, checker) = with_burrow 
+          initial_checker
+          alice_addr 
+          initial_deposit
+          (fun x -> x) in
+
+        let (_, checker) = with_transaction
+          alice_addr
+          (Ligo.tez_from_literal "0mutez")
+          (fun () -> Checker.withdraw_tez checker admin_ticket withdrawal burrow_id) in
+        
+        match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+        | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+        | None -> assert_failure "Expected a burrow representation to exist but none was found"
+    );
+
+    ("withdraw_tez - transaction with value > 0 fails" >::
+    fun _ -> 
+      (* Create burrow *)
+      let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
+      let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
+      let (burrow_id, admin_ticket, checker) = with_burrow 
+        initial_checker
+        alice_addr 
+        initial_deposit
+        (fun x -> x) in
+
+       assert_raises
+        (Failure "UnwantedTezGiven")
+        (fun () -> 
+          with_transaction
+            alice_addr
+            (Ligo.tez_from_literal "42mutez")
+            (fun () -> Checker.withdraw_tez checker admin_ticket withdrawal burrow_id) 
+        )
+    );
+
+    ("withdraw_tez - fail if the ticket to another burrow is submitted" >::
+    fun _ -> 
+      (* Create burrow *)
+      let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
+      let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
+      let (burrow_id, _, checker) = with_burrow 
+        initial_checker
+        alice_addr 
+        initial_deposit
+        (fun x -> x) in
+      let (_, some_other_ticket, checker) = with_burrow 
+        checker
+        alice_addr 
+        (Ligo.tez_from_literal "3_000_000mutez")
+        (fun x -> x) in
+
+       assert_raises
+        (Failure "InvalidPermission")
+        (fun () -> 
+          with_transaction
+            alice_addr
+            (Ligo.tez_from_literal "0mutez")
+            (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id) 
+        )
     );
 
     ("can complete a liquidation auction" >::
