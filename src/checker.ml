@@ -210,6 +210,7 @@ let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option)
   ([op1; op2; op3], updated_state)
 
 let touch_burrow (state: checker) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state burrow_id in
   let updated_burrow = burrow_touch state.parameters burrow in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
@@ -277,7 +278,6 @@ let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burr
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
 
 let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : (LigoOp.operation list * checker) =
-  let ops : LigoOp.operation list = [] in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
@@ -303,7 +303,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
            (remove_circulating_kit state.parameters kit)
            kit;
       } in
-    (ops, state)
+    (([]: LigoOp.operation list), state)
   else
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
 
@@ -643,6 +643,7 @@ let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list 
     touch_liquidation_slices_rec (new_ops, new_state, xs)
 
 let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
   touch_liquidation_slices_rec (([]: LigoOp.operation list), state, slices)
@@ -703,6 +704,7 @@ let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation li
   (ops, new_state)
 
 let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   let bid_ticket = ensure_valid_delegation_auction_bid_ticket bid_ticket in
   let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
   let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
@@ -736,6 +738,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
   (ops, {state with uniswap = updated_uniswap})
 
 let sell_kit (state: checker) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
   let kit = ensure_valid_kit_token kit in
   let kit, _token = read_kit kit in
@@ -766,6 +769,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
   (ops, {state with uniswap = updated_uniswap})
 
 let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn: Ligo.tez) (min_kit_withdrawn: kit) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
   let lqt_burned = ensure_valid_liquidity_token lqt_burned in
   let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
@@ -831,7 +835,7 @@ let[@inline] checker_liquidation_auction_reclaim_winning_bid (state: checker) (b
 (* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
  * *)
 
-let[@inline]  receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
+let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
   (* NOTE: do we have to register somewhere that we have received this tez? *)
   let _burrow = find_burrow state !Ligo.Tezos.sender in (* only accept from burrows! *)
   (([]: LigoOp.operation list), state)
@@ -873,6 +877,7 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
       touch_oldest (new_ops, new_state, maximum - 1)
 
 let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     let kit_tokens = kit_issue kit_zero in (* zero reward *)
