@@ -20,7 +20,6 @@ type price_map = (Ligo.address, Ligo.nat) Ligo.map
 
 (* ENTRYPOINT. Emits no operations but changes the state. *)
 let receive_price (* (oracles: oracles) *) (price_map: price_map) (price: Ligo.nat): price_map =
-  (* FIXME: also assert no tez sent. *)
   if Ligo.Map.mem !Ligo.Tezos.sender initial_oracles (* oracles *)
   then Ligo.Map.update !Ligo.Tezos.sender (Some price) price_map
   else (Ligo.failwith error_UnauthorisedCaller : price_map)

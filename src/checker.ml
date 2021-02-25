@@ -954,6 +954,15 @@ let touch (state: checker) : (LigoOp.operation list * checker) =
     | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") in (* FIXME: Is the nat supposed to represent tez? *)
   touch_with_index state index
 
+(* ************************************************************************* *)
+(**                               ORACLE                                     *)
+(* ************************************************************************* *)
+
+let receive_price (state: checker) (price: Ligo.nat) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
+  let prices = receive_price state.prices price in
+  (([]: LigoOp.operation list), {state with prices = prices})
+
 (* ENTRYPOINTS *)
 
 type params =
@@ -1066,5 +1075,4 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     checker_delegation_auction_reclaim_bid state ticket
   (* Oracles *)
   | ReceivePrice price ->
-    let prices = receive_price state.prices price in
-    (([]: LigoOp.operation list), {state with prices = prices})
+    receive_price state price
