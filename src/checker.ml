@@ -842,15 +842,6 @@ let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list
   (([]: LigoOp.operation list), state)
 
 (* ************************************************************************* *)
-(**                               ORACLE                                     *)
-(* ************************************************************************* *)
-
-let compute_current_index (state: checker) : Ligo.tez =
-  match compute_current_median state.prices with
-  | None -> state.parameters.index (* use the old one *)
-  | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") (* FIXME: Is the nat supposed to represent tez? *)
-
-(* ************************************************************************* *)
 (**                              TOUCHING                                    *)
 (* ************************************************************************* *)
 
@@ -885,7 +876,7 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
       let new_ops, new_state = touch_liquidation_slice (ops, state, leaf) in
       touch_oldest (new_ops, new_state, maximum - 1)
 
-let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
   let _ = ensure_no_tez_given () in
   if state.parameters.last_touched = !Ligo.Tezos.now then
@@ -957,6 +948,12 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
 
     (ops, state)
 
+let touch (state: checker) : (LigoOp.operation list * checker) =
+  let index = match compute_current_median state.prices with
+    | None -> state.parameters.index (* use the old one *)
+    | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") in (* FIXME: Is the nat supposed to represent tez? *)
+  touch_with_index state index
+
 (* ENTRYPOINTS *)
 
 type params =
@@ -997,7 +994,7 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
   let op, state = op_and_state in
   match op with
   | Touch ->
-    touch state (compute_current_index state)
+    touch state
   (* Burrows *)
   | CreateBurrow delegate_opt ->
     create_burrow state delegate_opt
