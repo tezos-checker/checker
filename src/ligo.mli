@@ -1,4 +1,9 @@
 type ('key, 'value) big_map
+(**
+   The type of a big map from values of type key to values of type value is big_map (key, value).
+
+   Be aware that a big_map cannot appear inside another big_map.
+*)
 
 module Big_map : sig
   val empty : ('key, 'value) big_map
@@ -10,11 +15,17 @@ module Big_map : sig
   val bindings : ('key, 'value) big_map -> ('key * 'value) list
 end
 
+type ('key, 'value) map
 (**
-   The type of a big map from values of type key to values of type value is big_map (key, value).
-
-   Be aware that a big_map cannot appear inside another big_map.
+    The type of a map from values of type key to values of type value is map (key, value).
 *)
+
+module Map : sig
+  val literal : ('key * 'value) list -> ('key, 'value) map
+  val find_opt : 'key -> ('key, 'value) map -> 'value option
+  val update: 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
+  val mem : 'key -> ('key, 'value) map -> bool
+end
 
 (* type bool *)
 
@@ -74,11 +85,6 @@ type key_hash
 (* type 't list *)
 (**
     A sequence of elements of the same type.
-*)
-
-(* type ('key, 'value) map *)
-(**
-    The type of a map from values of type key to values of type value is map (key, value).
 *)
 
 (* type 'value set *)
