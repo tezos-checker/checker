@@ -6,8 +6,10 @@ open DelegationAuctionTypes
 
 type burrow_id = Ligo.address
 
+type burrow_map = (burrow_id, burrow) Ligo.big_map
+
 type checker =
-  { burrows : (burrow_id, burrow) Ligo.big_map;
+  { burrows : burrow_map;
     uniswap : uniswap;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;

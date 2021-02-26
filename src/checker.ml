@@ -145,8 +145,8 @@ let is_burrow_done_with_liquidations (state: checker) (burrow: burrow) =
      | None -> true
      | Some _ -> false)
 
-let find_burrow (state: checker) (burrow_id: burrow_id) : burrow =
-  match Ligo.Big_map.find_opt burrow_id state.burrows with
+let find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
+  match Ligo.Big_map.find_opt burrow_id burrows with
   | None -> (Ligo.failwith error_NonExistentBurrow : burrow)
   | Some burrow -> burrow
 
@@ -211,14 +211,14 @@ let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option)
 
 let touch_burrow (state: checker) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let updated_burrow = burrow_touch state.parameters burrow in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
   let ops : LigoOp.operation list = [] in
   (ops, state)
 
 let deposit_tez (state: checker) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
@@ -239,7 +239,7 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
 
 let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if does_right_allow_kit_minting r then
@@ -263,7 +263,7 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
 
 let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if does_right_allow_tez_withdrawals r then
@@ -279,7 +279,7 @@ let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burr
 
 let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let kit = ensure_valid_kit_token kit in
   let kit, _ (* destroyed *) = read_kit kit in
@@ -308,7 +308,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
 
 let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if is_admin_right r then
@@ -324,7 +324,7 @@ let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow
 
 let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) (recipient: Ligo.address) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if is_admin_right r then
@@ -340,7 +340,7 @@ let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burr
 
 let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: burrow_id) (delegate_opt: Ligo.key_hash option) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if does_right_allow_setting_delegate r then
@@ -356,7 +356,7 @@ let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: bu
 
 let make_permission (state: checker) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if is_admin_right r then
@@ -374,7 +374,7 @@ let make_permission (state: checker) (permission: permission) (burrow_id: burrow
 
 let invalidate_all_permissions (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state burrow in
   let r = ensure_valid_permission permission burrow_id burrow in
   if is_admin_right r then
@@ -400,7 +400,7 @@ let invalidate_all_permissions (state: checker) (permission: permission) (burrow
  * but roughly speaking in most cases it should average out) *)
 let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
 
   let details = match burrow_request_liquidation state.parameters burrow with
     | Unnecessary -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
@@ -510,7 +510,7 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
   let _ = ensure_no_tez_given () in
   let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
   let burrow_id = leaf.burrow in
-  let burrow = find_burrow state burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
   let r = ensure_valid_permission permission burrow_id burrow in
   if not (does_right_allow_cancelling_liquidations r) then
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
@@ -837,7 +837,7 @@ let[@inline] checker_liquidation_auction_reclaim_winning_bid (state: checker) (b
 
 let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list * checker) =
   (* NOTE: do we have to register somewhere that we have received this tez? *)
-  let _burrow = find_burrow state !Ligo.Tezos.sender in (* only accept from burrows! *)
+  let _burrow = find_burrow state.burrows !Ligo.Tezos.sender in (* only accept from burrows! *)
   (([]: LigoOp.operation list), state)
 
 (* ************************************************************************* *)
