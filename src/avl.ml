@@ -759,7 +759,7 @@ let debug_mem (mem: mem) : unit =
     (fun (k, v) ->
        Format.printf
          "%s -> %s\n"
-         (Ptr.show k)
+         (show_ptr k)
          (show_node v);
     )
     (Ligo.Big_map.bindings mem.mem)

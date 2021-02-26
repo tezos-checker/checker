@@ -4,9 +4,7 @@ val ptr_null : ptr
 val ptr_init : ptr
 val ptr_next : ptr -> ptr
 
-type t = ptr
-val compare : ptr -> ptr -> int
-val show : ptr -> string
-val pp : Format.formatter -> ptr -> unit
+val compare_ptr : ptr -> ptr -> int
+val show_ptr : ptr -> string
 val pp_ptr : Format.formatter -> ptr -> unit
 val random_ptr : unit -> ptr

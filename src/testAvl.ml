@@ -4,6 +4,7 @@ open Avl
 open Kit
 open OUnit2
 open Format
+open Ptr
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]
@@ -22,13 +23,13 @@ let add_all (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
 let debug_avl (mem: mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-    sprintf "%s: " (Ptr.show curr) ^
+    sprintf "%s: " (show_ptr curr) ^
     match Mem.mem_get mem curr with
     | Root (None, r) -> "Root(" ^ show_auction_outcome_option r ^ ") Empty"
     | Root (Some r, r') -> "Root(" ^ show_auction_outcome_option r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
       sprintf "Leaf { value: %s; parent: %s }"
-        (show_liquidation_slice leaf.value) (Ptr.show leaf.parent)
+        (show_liquidation_slice leaf.value) (show_ptr leaf.parent)
     | Branch branch ->
       "Branch " ^ show_branch branch ^ "\n"
       ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"

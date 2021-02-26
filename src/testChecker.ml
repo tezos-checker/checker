@@ -5,8 +5,9 @@ open TestCommon
 open CheckerTypes
 open Tickets
 open Error
+open Ptr
 
-module PtrMap = Map.Make(Ptr)
+module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 
 type operation_list = LigoOp.operation list
 [@@deriving show]
