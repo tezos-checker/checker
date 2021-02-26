@@ -206,8 +206,8 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_liquidation_auction_complete
-    (auction: current_liquidation_auction) : bid option =
-  match auction.state with
+    (auction_state: liquidation_auction_state) : bid option =
+  match auction_state with
   | Descending _ ->
     (None: bid option)
   | Ascending params ->
@@ -225,7 +225,7 @@ let complete_liquidation_auction_if_possible
   match auctions.current_auction with
   | None -> auctions
   | Some curr -> begin
-      match is_liquidation_auction_complete curr with
+      match is_liquidation_auction_complete curr.state with
       | None -> auctions
       | Some winning_bid ->
         let (storage, completed_auctions) = match auctions.completed_auctions with
