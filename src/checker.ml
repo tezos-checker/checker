@@ -135,12 +135,12 @@ let ensure_permission_is_present (permission: permission option) : permission =
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
 
-let is_burrow_done_with_liquidations (state: checker) (burrow: burrow) =
+let is_burrow_done_with_liquidations (avl_storage: mem) (burrow: burrow) =
   match burrow_oldest_liquidation_ptr burrow with
   | None -> true
   | Some ls ->
-    let root = avl_find_root state.liquidation_auctions.avl_storage ls in
-    let outcome = avl_root_data state.liquidation_auctions.avl_storage root in
+    let root = avl_find_root avl_storage ls in
+    let outcome = avl_root_data avl_storage root in
     (match outcome with
      | None -> true
      | Some _ -> false)
@@ -154,7 +154,7 @@ let find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
 let ensure_burrow_has_no_unclaimed_slices (state: checker) (burrow: burrow) : unit =
-  if is_burrow_done_with_liquidations state burrow
+  if is_burrow_done_with_liquidations state.liquidation_auctions.avl_storage burrow
   then ()
   else Ligo.failwith error_BurrowHasCompletedLiquidation
 
