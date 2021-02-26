@@ -306,8 +306,8 @@ let is_leading_current_liquidation_auction
   | None -> false
 
 let completed_liquidation_auction_won_by
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details): auction_outcome option =
-  match avl_root_data auctions.avl_storage bid_details.auction_id with
+    (avl_storage: mem) (bid_details: liquidation_auction_bid_details): auction_outcome option =
+  match avl_root_data avl_storage bid_details.auction_id with
   | Some outcome ->
     if bid_eq outcome.winning_bid bid_details.bid
     then Some outcome
@@ -319,7 +319,7 @@ let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_detail
   if is_leading_current_liquidation_auction auctions bid_details
   then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
-    match completed_liquidation_auction_won_by auctions bid_details with
+    match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
     | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
     | None -> bid_details.bid.kit
 
@@ -395,7 +395,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
 
 (* If successful, it consumes the ticket. *)
 let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by auctions bid_details with
+  match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
