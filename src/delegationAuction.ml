@@ -22,7 +22,7 @@ let delegation_auction_touch (t: delegation_auction) =
   else
     { t with cycle = current_cycle; }
 
-let delegation_auction_delegate (t: delegation_auction) = t.delegate
+let[@inline] delegation_auction_delegate (t: delegation_auction) = t.delegate
 
 let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.address) (amt: Ligo.tez) =
   let t = delegation_auction_touch t in

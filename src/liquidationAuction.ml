@@ -206,8 +206,8 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_liquidation_auction_complete
-    (auction: current_liquidation_auction) : bid option =
-  match auction.state with
+    (auction_state: liquidation_auction_state) : bid option =
+  match auction_state with
   | Descending _ ->
     (None: bid option)
   | Ascending params ->
@@ -225,7 +225,7 @@ let complete_liquidation_auction_if_possible
   match auctions.current_auction with
   | None -> auctions
   | Some curr -> begin
-      match is_liquidation_auction_complete curr with
+      match is_liquidation_auction_complete curr.state with
       | None -> auctions
       | Some winning_bid ->
         let (storage, completed_auctions) = match auctions.completed_auctions with
@@ -306,8 +306,8 @@ let is_leading_current_liquidation_auction
   | None -> false
 
 let completed_liquidation_auction_won_by
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details): auction_outcome option =
-  match avl_root_data auctions.avl_storage bid_details.auction_id with
+    (avl_storage: mem) (bid_details: liquidation_auction_bid_details): auction_outcome option =
+  match avl_root_data avl_storage bid_details.auction_id with
   | Some outcome ->
     if bid_eq outcome.winning_bid bid_details.bid
     then Some outcome
@@ -319,7 +319,7 @@ let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_detail
   if is_leading_current_liquidation_auction auctions bid_details
   then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
-    match completed_liquidation_auction_won_by auctions bid_details with
+    match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
     | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
     | None -> bid_details.bid.kit
 
@@ -395,7 +395,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
 
 (* If successful, it consumes the ticket. *)
 let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by auctions bid_details with
+  match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
