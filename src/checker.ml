@@ -848,9 +848,8 @@ let[@inline] receive_slice_from_burrow (state: checker) : (LigoOp.operation list
   * contract. We use a bracketed calculation, where for the first
   * touch_reward_low_bracket seconds the reward increases by touch_low_reward
   * per second, and after that by touch_high_reward per second. *)
-let calculate_touch_reward (state: checker) : kit =
-  assert (state.parameters.last_touched <= !Ligo.Tezos.now);
-  let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now state.parameters.last_touched in
+let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
+  let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now last_touched in
   let low_duration = min_int duration_in_seconds touch_reward_low_bracket in
   let high_duration =
     max_int
@@ -877,6 +876,7 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
       touch_oldest (new_ops, new_state, maximum - 1)
 
 let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+  assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
   let _ = ensure_no_tez_given () in
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
@@ -893,7 +893,7 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
 
     (* 1: Calculate the reward that we should create out of thin air to give
      * to the contract toucher, and update the circulating kit accordingly.*)
-    let reward = calculate_touch_reward state in
+    let reward = calculate_touch_reward state.parameters.last_touched in
     let state = { state with parameters =
                                add_circulating_kit state.parameters reward } in
 
