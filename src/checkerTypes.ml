@@ -21,7 +21,7 @@ type checker =
 (** Make a fresh state. *)
 let initial_checker =
   { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
-    uniswap = uniswap_make_initial;
+    uniswap = initial_uniswap;
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
