@@ -18,7 +18,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
        let checker = initial_checker in
-       let _ = Checker.touch checker (Ligo.tez_from_literal "0mutez"); in
+       let _ = Checker.touch_with_index checker (Ligo.tez_from_literal "0mutez"); in
        ()
     );
     ("can complete a liquidation auction" >::
@@ -118,7 +118,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_000_001mutez") in
+         Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
        assert_equal [] ops;
@@ -133,11 +133,11 @@ let suite =
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
@@ -163,11 +163,11 @@ let suite =
               (kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000n")))
          );
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        assert_bool "should start an auction"
@@ -180,11 +180,11 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        let (ops, checker) =
@@ -204,11 +204,11 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_bool "auction should be completed"
@@ -219,7 +219,7 @@ let suite =
          touch_reward
          ~printer:show_kit_token;
 
-       (* We don't need to touch the slice on this test case since Checker.touch
+       (* We don't need to touch the slice on this test case since Checker.touch_with_index
         * already touches the oldest 5 slices. *)
        (*
        let slice =

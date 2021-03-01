@@ -76,3 +76,7 @@ let[@inline] error_GetEntrypointOptFailureTransferLqt              : Ligo.int = 
 let[@inline] error_GetEntrypointOptFailureTransferLABidTicket      : Ligo.int = Ligo.int_from_literal "65"
 
 let[@inline] error_OperationOnUntouchedBurrow                      : Ligo.int = Ligo.int_from_literal "66"
+
+let[@inline] error_UnauthorisedCaller                              : Ligo.int = Ligo.int_from_literal "67"
+let[@inline] error_GetEntrypointOptFailureReceivePrice             : Ligo.int = Ligo.int_from_literal "68"
+let[@inline] error_GetEntrypointOptFailureOracleEntrypoint         : Ligo.int = Ligo.int_from_literal "69"

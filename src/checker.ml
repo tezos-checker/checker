@@ -875,7 +875,7 @@ let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int
       let new_ops, new_state = touch_liquidation_slice (ops, state, leaf) in
       touch_oldest (new_ops, new_state, maximum - 1)
 
-let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
   let _ = ensure_no_tez_given () in
   if state.parameters.last_touched = !Ligo.Tezos.now then
@@ -942,7 +942,34 @@ let touch (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) 
       | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
 
+    (* Create operations to ask the oracles to send updated values. *)
+    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receivePrice" Ligo.Tezos.self_address : (Ligo.nat LigoOp.contract) option) with
+      | Some cb -> cb
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat LigoOp.contract) in
+    let oracle = match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint oracle_address : (Ligo.nat LigoOp.contract) LigoOp.contract option) with
+      | Some c -> c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint : (Ligo.nat LigoOp.contract) LigoOp.contract) in
+    let op = LigoOp.Tezos.nat_contract_transaction cb (Ligo.tez_from_literal "0mutez") oracle in
+    let ops = (op :: ops) in (* FIXME: op should be at the end, not the beginning *)
+
     (ops, state)
+
+let touch (state: checker) : (LigoOp.operation list * checker) =
+  let index = match state.last_price with
+    | None -> state.parameters.index (* use the old one *)
+    | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") in (* FIXME: Is the nat supposed to represent tez? *)
+  touch_with_index state index
+
+(* ************************************************************************* *)
+(**                               ORACLE                                     *)
+(* ************************************************************************* *)
+
+let receive_price (state: checker) (price: Ligo.nat) : (LigoOp.operation list * checker) =
+  let _ = ensure_no_tez_given () in
+  if !Ligo.Tezos.sender <> oracle_address then
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
+  else
+    (([]: LigoOp.operation list), {state with last_price = Some price})
 
 (* ENTRYPOINTS *)
 
@@ -977,12 +1004,14 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  (* Oracles *)
+  | ReceivePrice of Ligo.nat
 
 let main (op_and_state: params * checker): LigoOp.operation list * checker =
   let op, state = op_and_state in
   match op with
   | Touch ->
-    touch state (Ligo.tez_from_literal "0mutez") (* FIXME: oracle (medianizer?) input here. *)
+    touch state
   (* Burrows *)
   | CreateBurrow delegate_opt ->
     create_burrow state delegate_opt
@@ -1052,3 +1081,6 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     checker_delegation_auction_claim_win state ticket key
   | DelegationAuctionReclaimBid ticket ->
     checker_delegation_auction_reclaim_bid state ticket
+  (* Oracles *)
+  | ReceivePrice price ->
+    receive_price state price

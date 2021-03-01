@@ -1,5 +1,8 @@
-(* Tezos utilities *)
+(* Oracle data *)
+let oracle_address : Ligo.address = (Ligo.address_from_literal "KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr" : Ligo.address) (* FIXME: Use real address *)
+let oracle_entrypoint : string = "%getPriceTODO" (* FIXME: Use real entrypoint, when chosen *)
 
+(* Tezos utilities *)
 let level_to_cycle (t : Ligo.nat) = Ligo.div_nat_nat t (Ligo.nat_from_literal "4096n")
 
 let checker_address : Ligo.address = Ligo.Tezos.self_address
