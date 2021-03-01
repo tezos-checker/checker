@@ -1,0 +1,19 @@
+(test
+ (name tests)
+ (modules
+  Tests
+  TestAvl
+  TestFixedPoint
+  TestTez
+  TestKit
+  TestParameters
+  TestLiquidation
+  TestUniswap
+  TestDelegationAuction
+  TestLiquidationAuction
+  TestChecker
+  TestArbitrary
+  TestCommon)
+ (libraries src ounit2 qcheck) ;; gotta reference the public_name here.
+ (preprocess
+  (pps ppx_deriving.std)))
