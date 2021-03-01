@@ -14,6 +14,10 @@ Some amount of tez, tied to a burrow, which is inserted in the liquidation queue
 A dequeue implemented as a balanced binary tree representing an ordered list of [liquidation slices](#liquidation-slice).
 Slices at the front of the queue are periodically batched into a [liquidation lot](#liquidation-lot)
 
+## Burrow
+
+A contract for a “deposit account” that supports a few operations, e.g. “minting” (ie. borrowing) kit, or “burning” (ie. repaying) kit.
+A fresh burrow contract is created for every depositor, and only checker is allowed to access it.
 
 ## Imbalance
 
