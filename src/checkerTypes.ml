@@ -15,6 +15,7 @@ type checker =
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
     delegate : Ligo.key_hash option;
+    last_price : Ligo.nat option;
   }
 
 (** Make a fresh state. *)
@@ -25,4 +26,5 @@ let initial_checker =
     liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
     delegate = (None : Ligo.key_hash option);
+    last_price = (None : Ligo.nat option);
   }

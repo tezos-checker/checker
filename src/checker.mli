@@ -10,7 +10,10 @@ open Tickets
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : checker -> Ligo.tez -> (LigoOp.operation list * checker)
+val touch : checker -> (LigoOp.operation list * checker)
+
+(* FOR TESTING. *)
+val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -186,5 +189,7 @@ type params =
   | DelegationAuctionPlaceBid
   | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  (* Oracles *)
+  | ReceivePrice of Ligo.nat
 
 val main : params * checker -> LigoOp.operation list * checker

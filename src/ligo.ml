@@ -12,6 +12,7 @@
    Please do refactor if you find a nice solution.
 *)
 module IntMap = Map.Make(Int)
+
 type ('key, 'value) big_map = ('key * 'value) list IntMap.t
 
 module Big_map = struct
