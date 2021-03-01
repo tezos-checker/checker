@@ -1,8 +1,9 @@
 # Huxian
 
 * Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
-* Currently all the action is happening in code in the [src](./src) folder.
-* (obsolete) The initial python sketches are in the [python folder](./python).
+* The source code lives in the [src](./src) folder.
+* The tests live in the [tests](./tests) folder.
+* Documentation, quite underdeveloped at the moment, lives in the [docs](./docs) folder.
 
 ## Development
 
@@ -16,7 +17,7 @@ Within a `nix-shell` (the first time this might take a while, since it must fetc
 * `make` to do all the above.
 
 For test coverage report using bisect_ppx, type
-*  `make test-coverage` (report in `./_coverage/index.html`) 
+*  `make test-coverage` (report in `./_coverage/index.html`)
 
 For extracting (haddock-style) documentation from the code using dune, type
 *  `make docs` (docs entrypoint: `./_build/default/_doc/_html/index.html`)
