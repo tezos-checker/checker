@@ -1,5 +1,3 @@
-{ ci ? false }:
-
 let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
@@ -15,7 +13,7 @@ pkgs.mkShell {
   buildInputs =
     # ligo does not compile on macos, also we don't want to
     # compile it in CI
-    pkgs.lib.optionals (pkgs.stdenv.isLinux && !ci)
+    pkgs.lib.optionals (pkgs.stdenv.isLinux)
       [ ligoBinary
       ]
     ++ [ pkgs.niv ]
