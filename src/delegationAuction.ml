@@ -3,7 +3,7 @@ open TokenTypes
 open DelegationAuctionTypes
 open Error
 
-let delegation_auction_cycle (t: delegation_auction) : Ligo.nat = t.cycle
+let[@inline] delegation_auction_cycle (t: delegation_auction) : Ligo.nat = t.cycle
 
 let delegation_auction_winning_amount (t: delegation_auction) : Ligo.tez option =
   match t.winner with
