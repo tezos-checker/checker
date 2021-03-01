@@ -54,11 +54,16 @@ let delegation_auction_claim_win (t: delegation_auction) (bid: delegation_auctio
 (* If successful, it consumes the ticket. *)
 let delegation_auction_reclaim_bid (t: delegation_auction) (bid: delegation_auction_bid) =
   let t = delegation_auction_touch t in
-  if same_delegation_auction_bid t.leading_bid bid then
+  let { cycle = t_cycle;
+        winner = t_winner;
+        leading_bid = t_leading_bid;
+        delegate = _t_delegage;
+      } = t in
+  if same_delegation_auction_bid t_leading_bid bid then
     (Ligo.failwith error_CannotReclaimLeadingBid : Ligo.tez * delegation_auction)
-  else if same_delegation_auction_bid t.winner bid then
+  else if same_delegation_auction_bid t_winner bid then
     (Ligo.failwith error_CannotReclaimWinningBid : Ligo.tez * delegation_auction)
-  else if Ligo.gt_int_int (Ligo.sub_nat_nat t.cycle bid.cycle) (Ligo.int_from_literal "1") then
+  else if Ligo.gt_int_int (Ligo.sub_nat_nat t_cycle bid.cycle) (Ligo.int_from_literal "1") then
     (Ligo.failwith error_BidTicketExpired : Ligo.tez * delegation_auction)
   else
     (bid.amount, t)
