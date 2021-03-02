@@ -174,9 +174,23 @@ let parameters_touch
     (current_kit_in_tez: ratio)
     (parameters: parameters)
   : kit * parameters =
+  let
+    { q = parameters_q;
+      index = _parameters_index; (* NOTE: unused. Always set to the new one. *)
+      protected_index = parameters_protected_index;
+      target = parameters_target;
+      drift_derivative = parameters_drift_derivative;
+      drift = parameters_drift;
+      burrow_fee_index = parameters_burrow_fee_index;
+      imbalance_index = parameters_imbalance_index;
+      outstanding_kit = parameters_outstanding_kit;
+      circulating_kit = parameters_circulating_kit;
+      last_touched = parameters_last_touched;
+    } = parameters in
+
   let duration_in_seconds = (* NOTE: can it be negative? Does the protocol ensure this? *)
     let duration =
-      ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters.last_touched) in
+      ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched) in
     if lt_ratio_ratio duration zero_ratio
     then (Ligo.failwith error_TouchParametersInThePast : ratio)
     else duration
@@ -185,22 +199,22 @@ let parameters_touch
   let current_protected_index =
     let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
     let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
-    let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters.protected_index) in
+    let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters_protected_index) in
     ratio_to_tez_floor
       (mul_ratio
-         (ratio_of_tez parameters.protected_index)
+         (ratio_of_tez parameters_protected_index)
          (clamp ratio lower_lim upper_lim)
       ) in
   let current_drift_derivative =
-    compute_drift_derivative parameters.target in
+    compute_drift_derivative parameters_target in
   let current_drift =
     fixedpoint_of_ratio_floor
       (add_ratio
-         (fixedpoint_to_ratio parameters.drift)
+         (fixedpoint_to_ratio parameters_drift)
          (mul_ratio
             (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
             (mul_ratio
-               (fixedpoint_to_ratio (fixedpoint_add parameters.drift_derivative current_drift_derivative))
+               (fixedpoint_to_ratio (fixedpoint_add parameters_drift_derivative current_drift_derivative))
                duration_in_seconds
             )
          )
@@ -208,18 +222,18 @@ let parameters_touch
   let current_q =
     fixedpoint_of_ratio_floor
       (mul_ratio
-         (fixedpoint_to_ratio parameters.q)
+         (fixedpoint_to_ratio parameters_q)
          (qexp
             (mul_ratio
                (add_ratio
-                  (fixedpoint_to_ratio parameters.drift)
+                  (fixedpoint_to_ratio parameters_drift)
                   (mul_ratio
                      (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
                      (mul_ratio
                         (add_ratio
                            (mul_ratio
                               (ratio_of_int (Ligo.int_from_literal "2"))
-                              (fixedpoint_to_ratio parameters.drift_derivative)
+                              (fixedpoint_to_ratio parameters_drift_derivative)
                            )
                            (fixedpoint_to_ratio current_drift_derivative)
                         )
@@ -246,7 +260,7 @@ let parameters_touch
     (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
     fixedpoint_of_ratio_floor
       (mul_ratio
-         (fixedpoint_to_ratio parameters.burrow_fee_index)
+         (fixedpoint_to_ratio parameters_burrow_fee_index)
          (add_ratio
             one_ratio
             (div_ratio
@@ -259,8 +273,8 @@ let parameters_touch
   let current_imbalance_index =
     let imbalance_rate =
       compute_imbalance
-        parameters.outstanding_kit (* burrowed *)
-        parameters.circulating_kit (* circulating *) in
+        parameters_outstanding_kit (* burrowed *)
+        parameters_circulating_kit (* circulating *) in
     (* NOTE: Even if the imbalance_rate is bounded (from -5 cNp to +5 cNp), the
      * following calculation of the balance index is not. We use the formula
      *
@@ -274,7 +288,7 @@ let parameters_touch
      * for over 20 years, which I guess should be practically impossible. *)
     fixedpoint_of_ratio_floor
       (mul_ratio
-         (fixedpoint_to_ratio parameters.imbalance_index)
+         (fixedpoint_to_ratio parameters_imbalance_index)
          (add_ratio
             one_ratio
             (div_ratio
@@ -288,13 +302,13 @@ let parameters_touch
     kit_of_ratio_floor
       (div_ratio
          (mul_ratio
-            (kit_to_ratio parameters.outstanding_kit)
+            (kit_to_ratio parameters_outstanding_kit)
             (fixedpoint_to_ratio current_burrow_fee_index)
          )
-         (fixedpoint_to_ratio parameters.burrow_fee_index)
+         (fixedpoint_to_ratio parameters_burrow_fee_index)
       ) in
 
-  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters.outstanding_kit in (* NOTE: can this be negative? *)
+  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
 
   let current_outstanding_kit =
     kit_of_ratio_floor
@@ -303,10 +317,10 @@ let parameters_touch
             (kit_to_ratio outstanding_with_fees)
             (fixedpoint_to_ratio current_imbalance_index)
          )
-         (fixedpoint_to_ratio parameters.imbalance_index)
+         (fixedpoint_to_ratio parameters_imbalance_index)
       ) in
 
-  let current_circulating_kit = kit_add parameters.circulating_kit accrual_to_uniswap in
+  let current_circulating_kit = kit_add parameters_circulating_kit accrual_to_uniswap in
 
   ( accrual_to_uniswap
   , {
