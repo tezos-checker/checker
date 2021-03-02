@@ -438,6 +438,50 @@ let add_liquidity_unit_test =
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap
 
+let add_liquidity_failures_test =
+  "add liquidity failure conditions" >:: fun _ ->
+    Ligo.Tezos.reset ();
+    let uniswap =
+      uniswap_make_for_test
+        ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
+        ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
+        ~lqt:(Ligo.nat_from_literal "1000n")
+        ~kit_in_tez_in_prev_block:one_ratio
+        ~last_level:(Ligo.nat_from_literal "0n") in
+    assert_raises
+      (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+      (fun () ->
+        uniswap_add_liquidity
+          uniswap
+          (Ligo.tez_from_literal "0mutez")
+          (Ligo.tez_from_literal "0mutez")
+          (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
+          (Ligo.nat_from_literal "2n")
+          (Ligo.timestamp_from_seconds_literal 1)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_AddLiquidityNoKitGiven))
+      (fun () ->
+        uniswap_add_liquidity
+          uniswap
+          (Ligo.tez_from_literal "1mutez")
+          (Ligo.tez_from_literal "0mutez")
+          (kit_of_mukit (Ligo.nat_from_literal "0n"))
+          (Ligo.nat_from_literal "2n")
+          (Ligo.timestamp_from_seconds_literal 1)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_AddLiquidityNoLiquidityToBeAdded))
+      (fun () ->
+        uniswap_add_liquidity
+          uniswap
+          (Ligo.tez_from_literal "1mutez")
+          (Ligo.tez_from_literal "0mutez")
+          (kit_of_mukit (Ligo.nat_from_literal "1n"))
+          (Ligo.nat_from_literal "0n")
+          (Ligo.timestamp_from_seconds_literal 1)
+      )
+
 (* ************************************************************************* *)
 (*                 remove_liquidity (property-based tests)                   *)
 (* ************************************************************************* *)
@@ -528,6 +572,7 @@ let suite =
 
     (* add_liquidity (non-first) *)
     add_liquidity_unit_test;
+    add_liquidity_failures_test;
     test_add_liquidity_might_decrease_price;
     test_add_liquidity_increases_product;
     test_add_liquidity_increases_liquidity;
