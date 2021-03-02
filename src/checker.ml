@@ -24,9 +24,9 @@ open Error
  * where possible. *)
 
 (* BEGIN_OCAML *)
-let assert_invariants (state: checker) : unit =
+let assert_checker_invariants (state: checker) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
-  liquidation_auction_assert_invariants state.liquidation_auctions;
+  assert_liquidation_auction_invariants state.liquidation_auctions;
   (* Per-burrow assertions *)
   List.iter
     (fun (burrow_address, burrow) ->
@@ -538,7 +538,7 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
 
         (* And we update the slices around it *)
         let state = update_immediate_neighbors state leaf_ptr leaf in
-        assert_invariants state;
+        assert_checker_invariants state;
         let ops : LigoOp.operation list = [] in
         (ops, state)
 
@@ -627,7 +627,7 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
 
     (* And we update the slices around it *)
     let state = update_immediate_neighbors state leaf_ptr leaf in
-    assert_invariants state;
+    assert_checker_invariants state;
 
     (* Signal the burrow to send the tez to checker. *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
@@ -933,7 +933,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (* NOTE: the order of the operations is reversed here (wrt to the order of
      * the slices), but hopefully we don't care in this instance about this. *)
     let ops, state = touch_oldest (ops, state, number_of_slices_to_process) in
-    assert_invariants state;
+    assert_checker_invariants state;
 
     (* TODO: Add more tasks here *)
 

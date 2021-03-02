@@ -68,7 +68,9 @@ for name in "${inputs[@]}"; do
     sed -E 's/let([[]@inline])/\1 let/g' |
 
     # delete assertions
-    sed 's/^ *assert.*//g' |
+    sed 's/^ *assert .*//g' |
+    sed 's/^ *assert_burrow_invariants .*//g' |
+    sed 's/^ *assert_checker_invariants .*//g' |
 
     # replace "_" with ignored
     sed 's/ _ / ignored /g' |

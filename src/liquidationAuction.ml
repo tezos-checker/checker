@@ -450,14 +450,14 @@ let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : L
   | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
 
 (* Checks if some invariants of auctions structure holds. *)
-let liquidation_auction_assert_invariants (auctions: liquidation_auctions) : unit =
+let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
 
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
   let roots = Ligo.Big_map.bindings mem.mem
               |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
               |> List.map (fun (p, _) -> AVLPtr p) in
-  List.iter (avl_assert_invariants mem) roots;
+  List.iter (assert_avl_invariants mem) roots;
 
   (* There are no dangling pointers in the storage. *)
   avl_assert_dangling_pointers mem roots;

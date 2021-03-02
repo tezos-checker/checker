@@ -764,7 +764,7 @@ let debug_mem (mem: mem) : unit =
     )
     (Ligo.Big_map.bindings mem.mem)
 
-let avl_assert_invariants (mem: mem) (AVLPtr root) : unit =
+let assert_avl_invariants (mem: mem) (AVLPtr root) : unit =
   let rec go (parent: ptr) (curr: ptr) =
     match mem_get mem curr with
     | Root _ ->
