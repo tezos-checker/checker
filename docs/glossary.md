@@ -7,7 +7,7 @@ A coin / token created and destroyed as part of the system.
 ## Burrow
 
 A contract for a “deposit account” that supports a few operations, e.g. “minting” (ie. borrowing) kit, or “burning” (ie. repaying) kit.
-A fresh burrow contract is created for every depositor, and only checker is allowed to access it.
+A fresh burrow contract is created for every depositor, and only Checker is allowed to access it, so operations on burrows are performed via the Checker contract.
 
 ## Circulating kits
 
