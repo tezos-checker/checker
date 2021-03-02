@@ -44,7 +44,7 @@ let add_all_debug (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
        print_string ("Inserting: " ^ show_liquidation_slice value ^ "\n");
        let (mem, _) = avl_push_back mem root value in
        debug_avl mem root;
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        print_newline ();
        mem)
     mem
@@ -147,7 +147,7 @@ let suite =
          (List.map mk_liquidation_slice
             [ 1; 2; 3; 4; 5; 6; 7; 8; ]) in
        let (mem, root) = avl_from_list mem_empty None elements in
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
@@ -196,13 +196,13 @@ let suite =
        let (mem, elem) = avl_push_back mem root mid in
        let mem = add_all mem root snd_elements in
 
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let (mem, root_) = avl_del mem elem in
        assert_equal root root_;
 
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
@@ -221,7 +221,7 @@ let suite =
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list TestArbitrary.arb_liquidation_slice)
      @@ fun xs ->
      let (mem, root) = avl_from_list mem_empty None xs in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
      avl_assert_dangling_pointers mem [root];
 
      let actual = avl_to_list mem root in
@@ -236,13 +236,13 @@ let suite =
      @@ fun (left_items, mid_item, right_items) ->
 
      let (mem, root) = avl_from_list mem_empty None left_items in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let (mem, to_del) = avl_push_back mem root mid_item in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let mem = add_all mem root right_items in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let (mem, root_) = avl_del mem to_del in
      assert_equal root root_;
@@ -253,7 +253,7 @@ let suite =
        (show_liquidation_slice_list right_items);
      debug_avl mem root;
      *)
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let actual = avl_to_list mem root in
      let expected = left_items @ right_items in
@@ -271,7 +271,7 @@ let suite =
 
      let mem = avl_append mem left_tree right_tree in
 
-     avl_assert_invariants mem left_tree;
+     assert_avl_invariants mem left_tree;
      avl_assert_dangling_pointers mem [left_tree];
 
      let actual = avl_to_list mem left_tree in
@@ -286,8 +286,8 @@ let suite =
      let (mem, right) = avl_from_list mem_empty None xs in
      let (mem, left) = avl_take mem right limit None in
 
-     avl_assert_invariants mem left;
-     avl_assert_invariants mem right;
+     assert_avl_invariants mem left;
+     assert_avl_invariants mem right;
      avl_assert_dangling_pointers mem [left; right];
 
      let actual_left = avl_to_list mem left in
@@ -327,7 +327,7 @@ let suite =
      let (mem, left) = avl_take mem right limit None in
 
      let mem = avl_append mem left right in
-     avl_assert_invariants mem left;
+     assert_avl_invariants mem left;
      avl_assert_dangling_pointers mem [left];
 
      let actual = avl_to_list mem left in
@@ -347,7 +347,7 @@ let suite =
            go (i-1) mem in
 
        let mem = go 100_000 mem in
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        Mem.reset_ops ();
@@ -365,7 +365,7 @@ let suite =
        |> Stream.iter (fun xs ->
            let xs = List.map mk_liquidation_slice xs in
            let (mem, root) = avl_from_list mem_empty None xs in
-           avl_assert_invariants mem root;
+           assert_avl_invariants mem root;
            let actual = avl_to_list mem root in
            assert_equal actual xs
          )
