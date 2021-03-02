@@ -518,6 +518,73 @@ let test_remove_liquidity_decreases_liquidity =
   uniswap_liquidity_tokens_extant new_uniswap < uniswap_liquidity_tokens_extant uniswap
 
 (* ************************************************************************* *)
+(*                 remove_liquidity (unit tests)                             *)
+(* ************************************************************************* *)
+
+let test_remove_liquidity_failures =
+  "remove liquidity failure conditions" >:: fun _ ->
+    Ligo.Tezos.reset ();
+    let uniswap =
+      uniswap_make_for_test
+        ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
+        ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
+        ~lqt:(Ligo.nat_from_literal "1000n")
+        ~kit_in_tez_in_prev_block:one_ratio
+        ~last_level:(Ligo.nat_from_literal "0n") in
+     let (liq, _kit, uniswap) =
+       uniswap_add_liquidity
+         uniswap
+         (Ligo.tez_from_literal "101_000_000mutez")
+         (Ligo.tez_from_literal "10_000_000mutez")
+         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
+         (Ligo.nat_from_literal "1n")
+         (Ligo.timestamp_from_seconds_literal 1) in
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNonEmptyAmount))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           liq
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (Ligo.nat_from_literal "0n")
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoTezWithdrawnExpected))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           liq
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoKitWithdrawnExpected))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           liq
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      )
+
+(* ************************************************************************* *)
 (*                 liquidity when accruals are pending                       *)
 (* ************************************************************************* *)
 
@@ -579,6 +646,7 @@ let suite =
 
     (* remove liquidity *)
     (* TODO: add unit tests *)
+    test_remove_liquidity_failures;
     test_remove_liquidity_decreases_product;
     test_remove_liquidity_decreases_liquidity;
 
