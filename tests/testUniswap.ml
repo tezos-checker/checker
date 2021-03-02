@@ -438,7 +438,7 @@ let add_liquidity_unit_test =
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap
 
-let add_liquidity_failures_test =
+let test_add_liquidity_failures =
   "add liquidity failure conditions" >:: fun _ ->
     Ligo.Tezos.reset ();
     let uniswap =
@@ -572,7 +572,7 @@ let suite =
 
     (* add_liquidity (non-first) *)
     add_liquidity_unit_test;
-    add_liquidity_failures_test;
+    test_add_liquidity_failures;
     test_add_liquidity_might_decrease_price;
     test_add_liquidity_increases_product;
     test_add_liquidity_increases_liquidity;
