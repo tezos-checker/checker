@@ -29,27 +29,30 @@ let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_floor (x: ratio) : Ligo.nat =
-  if Ligo.lt_int_int x.num (Ligo.int_from_literal "0") then
+  let { num = x_num; den = x_den; } = x in
+  if Ligo.lt_int_int x_num (Ligo.int_from_literal "0") then
     (failwith "Ratio.ratio_to_nat_floor: negative" : Ligo.nat)
   else
-    Ligo.abs (fdiv_int_int x.num x.den)
+    Ligo.abs (fdiv_int_int x_num x_den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_ceil (x: ratio) : Ligo.nat =
-  if Ligo.lt_int_int x.num (Ligo.int_from_literal "0") then
+  let { num = x_num; den = x_den; } = x in
+  if Ligo.lt_int_int x_num (Ligo.int_from_literal "0") then
     (failwith "Ratio.ratio_to_nat_ceil: negative" : Ligo.nat)
   else
-    Ligo.abs (cdiv_int_int x.num x.den)
+    Ligo.abs (cdiv_int_int x_num x_den)
 
 let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_tez_floor (x: ratio) : Ligo.tez =
-  match Ligo.is_nat x.num with
+  let { num = x_num; den = x_den; } = x in
+  match Ligo.is_nat x_num with
   | None -> (failwith "Ratio.ratio_to_tez_floor: negative" : Ligo.tez)
   | Some n ->
     let n = Ligo.mul_nat_tez n (Ligo.tez_from_literal "1_000_000mutez") in
-    let d = Ligo.abs x.den in
+    let d = Ligo.abs x_den in
     (match Ligo.ediv_tez_nat n d with
      | None -> (failwith "Ratio.ratio_to_tez_floor: zero denominator" : Ligo.tez)
      | Some quot_and_rem ->
@@ -59,11 +62,12 @@ let ratio_to_tez_floor (x: ratio) : Ligo.tez =
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_tez_ceil (x: ratio) : Ligo.tez =
-  match Ligo.is_nat x.num with
+  let { num = x_num; den = x_den; } = x in
+  match Ligo.is_nat x_num with
   | None -> (failwith "Ratio.ratio_to_tez_ceil: negative" : Ligo.tez)
   | Some n ->
     let n = Ligo.mul_nat_tez n (Ligo.tez_from_literal "1_000_000mutez") in
-    let d = Ligo.abs x.den in
+    let d = Ligo.abs x_den in
     (match Ligo.ediv_tez_nat n d with
      | None -> (failwith "Ratio.ratio_to_tez_ceil: zero denominator" : Ligo.tez)
      | Some quot_and_rem ->
@@ -86,21 +90,27 @@ let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.i
  * have rationals be lightweight. We always return to fixed-point, tez, and
  * kit, at the end anyway. *)
 let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
   Ligo.eq_int_int
-    (Ligo.mul_int_int x.num y.den)
-    (Ligo.mul_int_int y.num x.den)
+    (Ligo.mul_int_int x_num y_den)
+    (Ligo.mul_int_int y_num x_den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
   Ligo.leq_int_int
-    (Ligo.mul_int_int x.num y.den)
-    (Ligo.mul_int_int y.num x.den)
+    (Ligo.mul_int_int x_num y_den)
+    (Ligo.mul_int_int y_num x_den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
   Ligo.lt_int_int
-    (Ligo.mul_int_int x.num y.den)
-    (Ligo.mul_int_int y.num x.den)
+    (Ligo.mul_int_int x_num y_den)
+    (Ligo.mul_int_int y_num x_den)
 
 let[@inline] geq_ratio_ratio (x: ratio) (y: ratio) : bool = leq_ratio_ratio y x
 
@@ -110,44 +120,59 @@ let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else
 
 let max_ratio (a: ratio) (b: ratio) : ratio = if geq_ratio_ratio a b then a else b
 
-let[@inline] ratio_to_int (x: ratio) : Ligo.int = Ligo.div_int_int x.num x.den
+let[@inline] ratio_to_int (x: ratio) : Ligo.int =
+  let { num = x_num; den = x_den; } = x in
+  Ligo.div_int_int x_num x_den
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let[@inline] neg_ratio (x: ratio) : ratio = { num = neg_int x.num; den = x.den; }
+let[@inline] neg_ratio (x: ratio) : ratio =
+  let { num = x_num; den = x_den; } = x in
+  { num = neg_int x_num; den = x_den; }
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let add_ratio (x: ratio) (y: ratio) : ratio =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
   make_real
     (Ligo.add_int_int
-       (Ligo.mul_int_int x.num y.den)
-       (Ligo.mul_int_int y.num x.den))
-    (Ligo.mul_int_int x.den y.den)
+       (Ligo.mul_int_int x_num y_den)
+       (Ligo.mul_int_int y_num x_den))
+    (Ligo.mul_int_int x_den y_den)
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
 let sub_ratio (x: ratio) (y: ratio) : ratio =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
   make_real
     (Ligo.sub_int_int
-       (Ligo.mul_int_int x.num y.den)
-       (Ligo.mul_int_int y.num x.den))
-    (Ligo.mul_int_int x.den y.den)
+       (Ligo.mul_int_int x_num y_den)
+       (Ligo.mul_int_int y_num x_den))
+    (Ligo.mul_int_int x_den y_den)
 
 (* NOTE: this implementation does not rely on the fact that the denominator is
  * always positive, but it definitely preserves it. *)
-let mul_ratio (x: ratio) (y: ratio) : ratio = make_real (Ligo.mul_int_int x.num y.num) (Ligo.mul_int_int x.den y.den)
+let mul_ratio (x: ratio) (y: ratio) : ratio =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
+  make_real
+    (Ligo.mul_int_int x_num y_num)
+    (Ligo.mul_int_int x_den y_den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let div_ratio (x: ratio) (y: ratio) : ratio =
-  if Ligo.eq_int_int y.num (Ligo.int_from_literal "0") then
+  let { num = y_num; den = y_den; } = y in
+  if Ligo.eq_int_int y_num (Ligo.int_from_literal "0") then
     (failwith "Ratio.div_ratio: division by zero" : ratio)
-  else if Ligo.gt_int_int y.num (Ligo.int_from_literal "0") then
-    mul_ratio x { num = y.den; den = y.num; }
+  else if Ligo.gt_int_int y_num (Ligo.int_from_literal "0") then
+    mul_ratio x { num = y_den; den = y_num; }
   else
-    mul_ratio x { num = neg_int y.den; den = neg_int y.num; }
+    mul_ratio x { num = neg_int y_den; den = neg_int y_num; }
 
 let qexp (x: ratio) : ratio =
-  { num = Ligo.add_int_int x.num x.den; den = x.den; }
+  let { num = x_num; den = x_den; } = x in
+  { num = Ligo.add_int_int x_num x_den; den = x_den; }
 
 (* NOTE: It's only used once *)
 let[@inline] clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
