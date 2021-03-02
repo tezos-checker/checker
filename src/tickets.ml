@@ -29,7 +29,8 @@ let[@inline] read_kit (token: kit_token) : kit * kit_token =
 type liquidity = liquidity_token_content Ligo.ticket
 [@@deriving show]
 
-let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
+let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
+  Ligo.Tezos.create_ticket (Lqt (Ligo.int_from_literal "63")) n
 
 (* DELEGATION AUCTION BID TICKETS *)
 
