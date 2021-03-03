@@ -400,6 +400,30 @@ let test_add_liquidity_increases_liquidity =
     uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   uniswap_liquidity_tokens_extant new_uniswap > uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_add_liquidity always deposits some kit,
+ * implying kit_to_return = max_kit_deposited - kit_deposited < max_kit_deposited. *)
+let test_add_liquidity_kit_to_return_lt_max_kit_deposited =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_kit_to_return_lt_max_kit_deposited"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, kit_to_return, _new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  kit_to_return < max_kit_deposited
+
+(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+let test_add_liquidity_respects_min_lqt_minted =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_respects_min_lqt_minted"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let lqt_minted, _bought_kit, _new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  lqt_minted >= min_lqt_minted
 (* ************************************************************************* *)
 (*                 add_liquidity (non-first) (unit tests)                    *)
 (* ************************************************************************* *)
@@ -643,6 +667,8 @@ let suite =
     test_add_liquidity_might_decrease_price;
     test_add_liquidity_increases_product;
     test_add_liquidity_increases_liquidity;
+    test_add_liquidity_kit_to_return_lt_max_kit_deposited;
+    test_add_liquidity_respects_min_lqt_minted;
 
     (* remove liquidity *)
     (* TODO: add unit tests *)
