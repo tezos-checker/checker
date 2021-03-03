@@ -17,8 +17,7 @@ type rights =
 type kit_token_content (* opaque *)
 type kit_token = kit_token_content Ligo.ticket
 val kit_issue : kit -> kit_token
-val ensure_valid_kit_token : kit_token -> kit_token
-val read_kit : kit_token -> kit
+val ensure_valid_kit_token : kit_token -> kit
 
 type liquidity_token_content (* opaque *)
 type liquidity = liquidity_token_content Ligo.ticket

@@ -206,8 +206,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let kit = ensure_valid_kit_token kit in
-  let kit = read_kit kit in (* destroyed *)
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
   let is_allowed =
     if burrow_allow_all_kit_burnings burrow then
       true
@@ -659,8 +658,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
 let sell_kit (state: checker) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
-  let kit = ensure_valid_kit_token kit in
-  let kit = read_kit kit in (* destroyed *)
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -673,8 +671,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
   let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
-  let max_kit_deposited = ensure_valid_kit_token max_kit_deposited in
-  let max_kit_deposited = read_kit max_kit_deposited in (* destroyed *)
+  let max_kit_deposited = ensure_valid_kit_token max_kit_deposited in (* destroyed *)
   let (lqt_tokens, kit_tokens, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
@@ -710,8 +707,7 @@ let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn
 
 let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.operation list * checker =
   let _ = ensure_no_tez_given () in
-  let kit = ensure_valid_kit_token kit in
-  let kit = read_kit kit in (* destroyed *)
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in

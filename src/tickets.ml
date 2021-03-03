@@ -37,23 +37,17 @@ type kit_token = kit_token_content Ligo.ticket
 let[@inline] kit_issue (kit: kit) : kit_token =
   Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit kit)
 
-(** Read the amount of kit stored in a kit_token. Note that this function does
-  * not check the validity of the ticket, it only extracts the relevant
-  * information. *)
-let[@inline] read_kit (token: kit_token) : kit =
-  let (_issuer, (_tag_and_content, mukit)), _same_token = Ligo.Tezos.read_ticket token in
-  kit_of_mukit mukit
-
-(** Check whether a kit token is valid. A kit token is valid if (a) it is
-  * issued by checker, and (b) is tagged appropriately. In OCaml/LIGO the type
-  * ensures (b), but in Michelson this is not strictly necessary, hence the
-  * runtime check of the tag. *)
-let[@inline] ensure_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, ((tag, _content), _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
+(** Check whether a kit token is valid and return the amount of kit stored in
+  * it if it is. A kit token is valid if (a) it is issued by checker, and (b)
+  * is tagged appropriately. In OCaml/LIGO the type ensures (b), but in
+  * Michelson this is not strictly necessary, hence the runtime check of the
+  * tag. *)
+let[@inline] ensure_valid_kit_token (token: kit_token) : kit =
+  let (issuer, ((tag, _content), mukit)), _same_ticket = Ligo.Tezos.read_ticket token in
   let is_valid = issuer = checker_address && tag = kit_token_tag in
   if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidKitToken : kit_token)
+  then kit_of_mukit mukit
+  else (Ligo.failwith error_InvalidKitToken : kit)
 
 (* ************************************************************************* *)
 (**                           LIQUIDITY TOKENS                               *)
