@@ -19,7 +19,7 @@ type 'parameter transaction_value = (* GADT *)
   | AddressTransactionValue : address -> address transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
   | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
-  | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
+  | DaBidTransactionValue : delegation_auction_bid_content ticket -> delegation_auction_bid_content ticket transaction_value
   | LaBidTransactionValue : liquidation_auction_bid ticket -> liquidation_auction_bid ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
@@ -54,7 +54,7 @@ module Tezos : sig
   val address_transaction : address -> tez -> address contract -> operation
   val kit_transaction : kit_token_content ticket -> tez -> kit_token_content ticket contract -> operation
   val lqt_transaction : liquidity_token_content ticket -> tez -> liquidity_token_content ticket contract -> operation
-  val da_bid_transaction : delegation_auction_bid ticket -> tez -> delegation_auction_bid ticket contract -> operation
+  val da_bid_transaction : delegation_auction_bid_content ticket -> tez -> delegation_auction_bid_content ticket contract -> operation
   val la_bid_transaction : liquidation_auction_bid ticket -> tez -> liquidation_auction_bid ticket contract -> operation
   val perm_transaction : permission_content ticket -> tez -> permission_content ticket contract -> operation
   val tez_address_transaction : (tez * address) -> tez -> (tez * address) contract -> operation

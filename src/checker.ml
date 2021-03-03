@@ -616,22 +616,20 @@ let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation li
   in
   let ticket = issue_delegation_auction_bid_ticket bid in
   let (ops, new_state) = updated_delegation_auction state auction in
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid Ligo.ticket LigoOp.contract option) with
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid_content Ligo.ticket LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferDABidTicket : LigoOp.operation list) in
   (ops, new_state)
 
-let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
+let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid = ensure_valid_delegation_auction_bid_ticket bid_ticket in
   let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
   updated_delegation_auction state auction
 
-let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
+let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid_ticket) : LigoOp.operation list * checker =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid = ensure_valid_delegation_auction_bid_ticket bid_ticket in
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid in
   let ops, new_auction = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
@@ -917,8 +915,8 @@ type params =
   | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
-  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
   (* Oracles *)
   | ReceivePrice of Ligo.nat
 

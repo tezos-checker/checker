@@ -18,8 +18,9 @@ Ticket-based entitities in checker and their expected value/mechanics:
 type token_tag = Ligo.nat
 [@@deriving show]
 
-let[@inline] kit_token_tag = Ligo.nat_from_literal "1n"
-let[@inline] lqt_token_tag = Ligo.nat_from_literal "2n"
+let[@inline] kit_token_tag       = Ligo.nat_from_literal "1n"
+let[@inline] lqt_token_tag       = Ligo.nat_from_literal "2n"
+let[@inline] del_auction_bid_tag = Ligo.nat_from_literal "3n"
 
 (* ************************************************************************* *)
 (**                              KIT TOKENS                                  *)
@@ -83,24 +84,31 @@ let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
 
-type delegation_auction_bid_ticket = delegation_auction_bid Ligo.ticket
+type delegation_auction_bid_content = token_tag * delegation_auction_bid
+[@@deriving show]
+
+type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket
 
 let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) : delegation_auction_bid_ticket =
-  Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
+  Ligo.Tezos.create_ticket (del_auction_bid_tag, bid) (Ligo.nat_from_literal "1n")
 
 (** Ensure that a delegation auction bid ticket is valid. A delegation bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
+  * (avoids splitting it), and (c) is tagged appropriately. In OCaml/LIGO the
+  * type ensures (c), but in Michelson this is not strictly necessary
+  * (currently is, but the content might change in the future), hence the
+  * runtime check of the tag. *)
 let[@inline] ensure_valid_delegation_auction_bid_ticket
       (bid_ticket: delegation_auction_bid_ticket)
-  : delegation_auction_bid_ticket =
-  let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
+  : delegation_auction_bid =
+  let (issuer, ((tag, bid), amt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid =
+    issuer = checker_address
+    && tag = del_auction_bid_tag
+    && amt = Ligo.nat_from_literal "1n" in
   if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidDelegationAuctionTicket : delegation_auction_bid Ligo.ticket)
+  then bid
+  else (Ligo.failwith error_InvalidDelegationAuctionTicket : delegation_auction_bid)
 
 (* ************************************************************************* *)
 (**                    LIQUIDATION AUCTION BID TICKETS                       *)
