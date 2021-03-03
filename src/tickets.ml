@@ -22,6 +22,7 @@ let[@inline] kit_token_tag       = Ligo.nat_from_literal "1n"
 let[@inline] lqt_token_tag       = Ligo.nat_from_literal "2n"
 let[@inline] del_auction_bid_tag = Ligo.nat_from_literal "3n"
 let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "4n"
+let[@inline] permission_tag      = Ligo.nat_from_literal "5n"
 
 (* ************************************************************************* *)
 (**                              KIT TOKENS                                  *)
@@ -164,7 +165,7 @@ type rights =
   | User of specific_rights
 [@@deriving show]
 
-type permission_content = rights * Ligo.address * Ligo.nat
+type permission_content = token_tag * rights * Ligo.address * Ligo.nat
 [@@deriving show]
 
 (** A permission is a ticket containing a right. *)
@@ -172,22 +173,28 @@ type permission = permission_content Ligo.ticket
 [@@deriving show]
 
 let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm_version: Ligo.nat) =
-  Ligo.Tezos.create_ticket (r, burrow_id, perm_version) (Ligo.nat_from_literal "0n")
+  Ligo.Tezos.create_ticket (permission_tag, r, burrow_id, perm_version) (Ligo.nat_from_literal "0n")
 
-(* NOTE: It totally consumes the ticket. It's the caller's responsibility to
- * replicate the permission ticket if they don't want to lose it. *)
+(** Check whether a permission ticket is valid. A permission ticket is valid if
+  * (a) it is issued by checker, (b) its amount is exactly zero (infinitely
+  * splittable), (c) it matches the given burrow id, (d) it matches the
+  * permission version specified by the burrow, and (e) it is tagged
+  * appropriately. In OCaml/LIGO the type ensures (e), but in Michelson this is
+  * not strictly necessary (currently is, but the content might change in the
+  * future), hence the runtime check of the tag. *)
 let[@inline] ensure_valid_permission
       (permission: permission)
       (burrow_id: Ligo.address)
       (burrow_permission_version: Ligo.nat)
   : rights =
-  let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
-  let validity_condition =
+  let (issuer, ((tag, right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
+  let is_valid =
     issuer = checker_address
+    && tag = permission_tag
     && amnt = Ligo.nat_from_literal "0n"
     && version = burrow_permission_version
     && id = burrow_id in
-  if validity_condition
+  if is_valid
   then right
   else (Ligo.failwith error_InvalidPermission : rights)
 
