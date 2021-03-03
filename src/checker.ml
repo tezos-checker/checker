@@ -13,10 +13,9 @@ open LiquidationAuction
 open LiquidationAuctionPrimitiveTypes
 open Common
 open Constants
-open TokenTypes
+open Tickets
 open BurrowTypes
 open CheckerTypes
-open Tickets
 open Error
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so
@@ -59,77 +58,6 @@ let assert_checker_invariants (state: checker) : unit =
     )
     (Ligo.Big_map.bindings state.burrows)
 (* END_OCAML *)
-
-(* ************************************************************************* *)
-(**                                CHECKS                                    *)
-(* ************************************************************************* *)
-
-(** Check whether a kit token is valid. A kit token is valid if (a) it is
-  * issued by checker, and (b) is tagged appropriately (this is already
-  * enforced by its type). *)
-let[@inline] ensure_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
-  if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidKitToken : kit_token)
-
-(** Check whether a liquidity token is valid. A liquidity token is valid if it
-  * is issued by checker, and it is tagged appropriately (this is already
-  * enforced by its type). *)
-let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = checker_address
-  then liquidity
-  else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
-
-(** Ensure that a delegation auction bid ticket is valid. A delegation bid
-  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
-let[@inline] ensure_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid Ligo.ticket)
-  : delegation_auction_bid Ligo.ticket =
-  let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
-  if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidDelegationAuctionTicket : delegation_auction_bid Ligo.ticket)
-
-(** Check whether a liquidation auction bid ticket is valid. An auction bid
-  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
-let[@inline] liquidation_auction_ensure_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
-  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
-  if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidLiquidationAuctionTicket : liquidation_auction_bid_ticket)
-
-(* NOTE: It totally consumes the ticket. It's the caller's responsibility to
- * replicate the permission ticket if they don't want to lose it. *)
-let[@inline] ensure_valid_permission
-      (permission: permission)
-      (burrow_id: burrow_id)
-      (burrow: burrow)
-  : rights =
-  let (issuer, ((right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
-  let validity_condition =
-    issuer = checker_address
-    && amnt = Ligo.nat_from_literal "0n"
-    && version = burrow_permission_version burrow
-    && id = burrow_id in
-  if validity_condition
-  then right
-  else (Ligo.failwith error_InvalidPermission : rights)
-
-let ensure_permission_is_present (permission: permission option) : permission =
-  match permission with
-  | None -> (Ligo.failwith error_MissingPermission : permission)
-  | Some permission -> permission
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -193,10 +121,7 @@ let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option)
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       checker_address in
 
-  let admin_ticket =
-    Ligo.Tezos.create_ticket
-      (Admin, burrow_address, Ligo.nat_from_literal "0n")
-      (Ligo.nat_from_literal "0n") in
+  let admin_ticket = issue_permission_ticket Admin burrow_address (Ligo.nat_from_literal "0n") in
   let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
@@ -228,7 +153,7 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
       true
     else
       let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission burrow_id burrow in
+      let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
       does_right_allow_tez_deposits r
   in
   if is_allowed then
@@ -241,7 +166,7 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
     let burrow = burrow_mint_kit state.parameters kit burrow in
@@ -265,7 +190,7 @@ let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burr
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
     let burrow = burrow_withdraw_tez state.parameters tez burrow in
@@ -281,14 +206,13 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let kit = ensure_valid_kit_token kit in
-  let kit, _ (* destroyed *) = read_kit kit in
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
   let is_allowed =
     if burrow_allow_all_kit_burnings burrow then
       true
     else
       let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission burrow_id burrow in
+      let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
       does_right_allow_kit_burning r
   in
   if is_allowed then
@@ -310,7 +234,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
 let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can activate burrows. *)
     let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
@@ -326,7 +250,7 @@ let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burr
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
@@ -342,7 +266,7 @@ let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: bu
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
@@ -358,13 +282,10 @@ let make_permission (state: checker) (permission: permission) (burrow_id: burrow
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can create permissions. *)
-    let ticket =
-      Ligo.Tezos.create_ticket
-        (right, burrow_id, burrow_permission_version burrow)
-        (Ligo.nat_from_literal "0n") in
+    let ticket = issue_permission_ticket right burrow_id (burrow_permission_version burrow) in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
@@ -376,15 +297,12 @@ let invalidate_all_permissions (state: checker) (permission: permission) (burrow
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = burrow_increase_permission_version state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let admin_ticket =
-      Ligo.Tezos.create_ticket
-        (Admin, burrow_id, updated_version)
-        (Ligo.nat_from_literal "0n") in
+    let admin_ticket = issue_permission_ticket Admin burrow_id updated_version in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
@@ -511,7 +429,7 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
   let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
   let burrow_id = leaf.burrow in
   let burrow = find_burrow state.burrows burrow_id in
-  let r = ensure_valid_permission permission burrow_id burrow in
+  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if not (does_right_allow_cancelling_liquidations r) then
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
   else
@@ -698,22 +616,20 @@ let checker_delegation_auction_place_bid (state: checker) : (LigoOp.operation li
   in
   let ticket = issue_delegation_auction_bid_ticket bid in
   let (ops, new_state) = updated_delegation_auction state auction in
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid Ligo.ticket LigoOp.contract option) with
+  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid_content Ligo.ticket LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferDABidTicket : LigoOp.operation list) in
   (ops, new_state)
 
-let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
+let checker_delegation_auction_claim_win (state: checker) (bid_ticket: delegation_auction_bid_ticket) (for_delegate: Ligo.key_hash) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid = ensure_valid_delegation_auction_bid_ticket bid_ticket in
   let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
   updated_delegation_auction state auction
 
-let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid Ligo.ticket) : LigoOp.operation list * checker =
+let checker_delegation_auction_reclaim_bid (state: checker) (bid_ticket: delegation_auction_bid_ticket) : LigoOp.operation list * checker =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_delegation_auction_bid_ticket bid_ticket in
-  let (_, (bid, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid = ensure_valid_delegation_auction_bid_ticket bid_ticket in
   let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid in
   let ops, new_auction = updated_delegation_auction state auction in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
@@ -740,8 +656,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
 let sell_kit (state: checker) (kit: kit_token) (min_tez_expected: Ligo.tez) (deadline: Ligo.timestamp) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
-  let kit = ensure_valid_kit_token kit in
-  let kit, _token = read_kit kit in
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
   let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -754,8 +669,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
   let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
-  let max_kit_deposited = ensure_valid_kit_token max_kit_deposited in
-  let max_kit_deposited, _token = read_kit max_kit_deposited in
+  let max_kit_deposited = ensure_valid_kit_token max_kit_deposited in (* destroyed *)
   let (lqt_tokens, kit_tokens, updated_uniswap) =
     uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
@@ -791,15 +705,14 @@ let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn
 
 let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_token) : LigoOp.operation list * checker =
   let _ = ensure_no_tez_given () in
-  let kit = ensure_valid_kit_token kit in
-  let kit, _ = read_kit kit in (* TODO: should not destroy; should change the auction logic instead! *)
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
   let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
   let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_details Ligo.ticket LigoOp.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_content Ligo.ticket LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLABidTicket : LigoOp.operation) in
   ( [op],
@@ -813,8 +726,7 @@ let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_to
 
 let[@inline] checker_liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = liquidation_auction_ensure_valid_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_details in
   let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -824,8 +736,7 @@ let[@inline] checker_liquidation_auction_reclaim_bid (state: checker) (bid_ticke
 
 let[@inline] checker_liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = liquidation_auction_ensure_valid_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
@@ -1002,8 +913,8 @@ type params =
   | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
-  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
   (* Oracles *)
   | ReceivePrice of Ligo.nat
 

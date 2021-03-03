@@ -38,10 +38,9 @@
   Permission
   Ratio
   BurrowTypes
-  TokenTypes
+  Tickets
   Ligo
   LigoOp
-  Tickets
   Error
   Common)
  (libraries str zarith)

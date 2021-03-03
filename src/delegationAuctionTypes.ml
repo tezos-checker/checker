@@ -1,5 +1,5 @@
-open TokenTypes
 open Common
+open Tickets
 
 type delegation_auction =
   { cycle: Ligo.nat;

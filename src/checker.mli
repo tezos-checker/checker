@@ -1,8 +1,7 @@
 open Kit
 open LiquidationAuctionPrimitiveTypes
-open TokenTypes
-open CheckerTypes
 open Tickets
+open CheckerTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters
@@ -151,10 +150,10 @@ val receive_slice_from_burrow : checker -> (LigoOp.operation list * checker)
 val checker_delegation_auction_place_bid : checker -> (LigoOp.operation list * checker)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val checker_delegation_auction_claim_win : checker -> delegation_auction_bid Ligo.ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
+val checker_delegation_auction_claim_win : checker -> delegation_auction_bid_ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid Ligo.ticket -> (LigoOp.operation list * checker)
+val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid_ticket -> (LigoOp.operation list * checker)
 
 (* ENTRYPOINTS *)
 
@@ -187,8 +186,8 @@ type params =
   | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
-  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
   (* Oracles *)
   | ReceivePrice of Ligo.nat
 

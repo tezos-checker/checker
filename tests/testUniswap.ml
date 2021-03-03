@@ -451,35 +451,35 @@ let add_liquidity_failures_test =
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
       (fun () ->
-        uniswap_add_liquidity
-          uniswap
-          (Ligo.tez_from_literal "0mutez")
-          (Ligo.tez_from_literal "0mutez")
-          (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
-          (Ligo.nat_from_literal "2n")
-          (Ligo.timestamp_from_seconds_literal 1)
+         uniswap_add_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
+           (Ligo.nat_from_literal "2n")
+           (Ligo.timestamp_from_seconds_literal 1)
       );
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoKitGiven))
       (fun () ->
-        uniswap_add_liquidity
-          uniswap
-          (Ligo.tez_from_literal "1mutez")
-          (Ligo.tez_from_literal "0mutez")
-          (kit_of_mukit (Ligo.nat_from_literal "0n"))
-          (Ligo.nat_from_literal "2n")
-          (Ligo.timestamp_from_seconds_literal 1)
+         uniswap_add_liquidity
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.nat_from_literal "2n")
+           (Ligo.timestamp_from_seconds_literal 1)
       );
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoLiquidityToBeAdded))
       (fun () ->
-        uniswap_add_liquidity
-          uniswap
-          (Ligo.tez_from_literal "1mutez")
-          (Ligo.tez_from_literal "0mutez")
-          (kit_of_mukit (Ligo.nat_from_literal "1n"))
-          (Ligo.nat_from_literal "0n")
-          (Ligo.timestamp_from_seconds_literal 1)
+         uniswap_add_liquidity
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.nat_from_literal "0n")
+           (Ligo.timestamp_from_seconds_literal 1)
       )
 
 (* ************************************************************************* *)
