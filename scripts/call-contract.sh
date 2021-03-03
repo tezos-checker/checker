@@ -8,5 +8,5 @@ set -o xtrace
 arg="$1"
 
 tezos-client call testcontract from bob \
-  --arg "$(ligo compile-parameter --protocol edo generated/ligo/main.mligo main "$arg")" \
+  --arg "$(ligo compile-parameter --protocol edo $PWD/generated/ligo/main.mligo main "$arg")" \
   --burn-cap 100

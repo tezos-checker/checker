@@ -3,8 +3,6 @@
 set -o errexit
 set -o pipefail
 
-cd "$(realpath "$(dirname "$0")")"
-
 inputs=(
   error
   ptr
@@ -33,8 +31,8 @@ inputs=(
 )
 
 for name in "${inputs[@]}"; do
-  from=src/"$name".ml
-  to=generated/ligo/"$name".mligo
+  from="$PWD/src/$name".ml
+  to="$PWD/generated/ligo/$name".mligo
   echo "$from -> $to" 1>&2
 
   cat "$from" |
@@ -108,15 +106,15 @@ for name in "${inputs[@]}"; do
     cat > "$to"
 done
 
-echo "src/ligo.mligo => generated/ligo.mligo" 2>&1
-cp src/ligo.mligo generated/ligo/ligo.mligo
+echo "$PWD/src/ligo.mligo => $PWD/generated/ligo.mligo" 2>&1
+cp "$PWD/src/ligo.mligo" "$PWD/generated/ligo/ligo.mligo"
 
 echo "=> main.mligo" 2>&1
 
-echo '#include "ligo.mligo"' > generated/ligo/main.mligo
+echo '#include "ligo.mligo"' > "$PWD/generated/ligo/main.mligo"
 
 ( IFS=$'\n'; echo "${inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
-  cat >> generated/ligo/main.mligo
+  cat >> "$PWD/generated/ligo/main.mligo"
 
 echo "done." 1>&2

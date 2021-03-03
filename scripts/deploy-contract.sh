@@ -9,8 +9,8 @@ tezos-client originate contract \
   testcontract \
   transferring 1 \
   from bob \
-  running generated/michelson/main.tz \
-  --init "$(cat generated/michelson/storage.tz)" \
+  running "$PWD/generated/michelson/main.tz" \
+  --init "$(cat $PWD/generated/michelson/storage.tz)" \
   --no-print-source \
   --burn-cap 25 \
   --force
