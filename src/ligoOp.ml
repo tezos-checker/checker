@@ -1,6 +1,6 @@
 open Ligo
-open TokenTypes
 open BurrowTypes
+open Tickets
 
 (* contract *)
 

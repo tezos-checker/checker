@@ -15,7 +15,7 @@ inputs=(
   mem
   avl
   liquidationAuctionTypes
-  tokenTypes
+  tickets
   delegationAuctionTypes
   burrowTypes
   constants

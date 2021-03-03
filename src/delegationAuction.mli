@@ -1,5 +1,5 @@
-open TokenTypes
 open DelegationAuctionTypes
+open Tickets
 
 val delegation_auction_touch : delegation_auction -> delegation_auction
 

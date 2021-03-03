@@ -1,5 +1,5 @@
 open Common
-open TokenTypes
+open Tickets
 open DelegationAuctionTypes
 open Error
 

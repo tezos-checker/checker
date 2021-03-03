@@ -75,7 +75,7 @@ open Kit
 open Avl
 open Constants
 open Common
-open TokenTypes
+open Tickets
 open LiquidationAuctionTypes
 open Error
 

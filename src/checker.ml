@@ -13,7 +13,7 @@ open LiquidationAuction
 open LiquidationAuctionPrimitiveTypes
 open Common
 open Constants
-open TokenTypes
+open Tickets
 open BurrowTypes
 open CheckerTypes
 open Error

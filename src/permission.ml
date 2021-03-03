@@ -1,4 +1,4 @@
-open TokenTypes
+open Tickets
 
 let[@inline] does_right_allow_tez_deposits (right: rights) : bool =
   match right with

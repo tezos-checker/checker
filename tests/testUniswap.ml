@@ -3,7 +3,7 @@ open TestCommon
 open Ratio
 open Kit
 open Uniswap
-open TokenTypes
+open Tickets
 open UniswapTypes
 open Error
 
