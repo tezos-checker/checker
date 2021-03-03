@@ -554,6 +554,54 @@ let test_remove_liquidity_decreases_liquidity =
     uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   uniswap_liquidity_tokens_extant new_uniswap < uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_remove_liquidity removes at least min_tez_withdrawn tez. *)
+let test_remove_liquidity_respects_min_tez_withdrawn =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_min_tez_withdrawn"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_tez >= min_tez_withdrawn
+
+(* If successful, uniswap_remove_liquidity removes at least min_kit_withdrawn kit. *)
+let test_remove_liquidity_respects_min_kit_withdrawn =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_min_kit_withdrawn"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_kit >= min_kit_withdrawn
+
+(* If successful, uniswap_remove_liquidity removes no more tez than it had. *)
+let test_remove_liquidity_respects_tez_limit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_tez_limit"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_tez <= uniswap.tez
+
+(* If successful, uniswap_remove_liquidity removes no more kit than it had. *)
+let test_remove_liquidity_respects_kit_limit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_kit_limit"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_kit <= uniswap.kit
+
 (* ************************************************************************* *)
 (*                 remove_liquidity (unit tests)                             *)
 (* ************************************************************************* *)
@@ -689,6 +737,10 @@ let suite =
     test_remove_liquidity_failures;
     test_remove_liquidity_decreases_product;
     test_remove_liquidity_decreases_liquidity;
+    test_remove_liquidity_respects_min_tez_withdrawn;
+    test_remove_liquidity_respects_min_kit_withdrawn;
+    test_remove_liquidity_respects_tez_limit;
+    test_remove_liquidity_respects_kit_limit;
 
     pending_tez_deposit_test;
   ]
