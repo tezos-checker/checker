@@ -26,7 +26,6 @@ inputs=(
   uniswap
   liquidationAuction
   delegationAuction
-  tickets
   checker
 )
 

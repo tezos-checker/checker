@@ -16,7 +16,6 @@ open Constants
 open TokenTypes
 open BurrowTypes
 open CheckerTypes
-open Tickets
 open Error
 
 (* TODO: At the very end, inline all numeric operations, flatten all ratio so

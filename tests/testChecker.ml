@@ -3,7 +3,7 @@ open Burrow
 open OUnit2
 open TestCommon
 open CheckerTypes
-open Tickets
+open TokenTypes
 open Error
 open Ptr
 

@@ -2,7 +2,6 @@ open Kit
 open LiquidationAuctionPrimitiveTypes
 open TokenTypes
 open CheckerTypes
-open Tickets
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters
