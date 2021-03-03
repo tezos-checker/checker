@@ -21,6 +21,7 @@ type token_tag = Ligo.nat
 let[@inline] kit_token_tag       = Ligo.nat_from_literal "1n"
 let[@inline] lqt_token_tag       = Ligo.nat_from_literal "2n"
 let[@inline] del_auction_bid_tag = Ligo.nat_from_literal "3n"
+let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "4n"
 
 (* ************************************************************************* *)
 (**                              KIT TOKENS                                  *)
@@ -117,22 +118,29 @@ let[@inline] ensure_valid_delegation_auction_bid_ticket
 type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
 [@@deriving show]
 
-type liquidation_auction_bid_ticket = liquidation_auction_bid Ligo.ticket
+type liquidation_auction_bid_content = token_tag * liquidation_auction_bid
+[@@deriving show]
+
+type liquidation_auction_bid_ticket = liquidation_auction_bid_content Ligo.ticket
 
 let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid) =
-  Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal "1n")
+  Ligo.Tezos.create_ticket (liq_auction_bid_tag, bid_details) (Ligo.nat_from_literal "1n")
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
   * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
-  * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
-  * end up having contents clearly distinguished by type. *)
-let[@inline] ensure_valid_liquidation_auction_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
-  let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
+  * (avoids splitting it), and (c) is tagged appropriately. In OCaml/LIGO the
+  * type ensures (c), but in Michelson this is not strictly necessary
+  * (currently is, but the content might change in the future), hence the
+  * runtime check of the tag. *)
+let[@inline] ensure_valid_liquidation_auction_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
+  let (issuer, ((tag, bid_details), amnt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
+  let is_valid =
+    issuer = checker_address
+    && tag = liq_auction_bid_tag
+    && amnt = Ligo.nat_from_literal "1n" in
   if is_valid
-  then same_ticket
-  else (Ligo.failwith error_InvalidLiquidationAuctionTicket : liquidation_auction_bid_ticket)
+  then bid_details
+  else (Ligo.failwith error_InvalidLiquidationAuctionTicket : liquidation_auction_bid)
 
 (* ************************************************************************* *)
 (**                          PERMISSION TICKETS                              *)

@@ -16,6 +16,8 @@ type rights =
 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 
+type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
+
 type kit_token_content (* opaque *)
 type kit_token = kit_token_content Ligo.ticket
 val kit_issue : kit -> kit_token
@@ -31,11 +33,10 @@ type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket
 val issue_delegation_auction_bid_ticket : delegation_auction_bid -> delegation_auction_bid_ticket
 val ensure_valid_delegation_auction_bid_ticket : delegation_auction_bid_ticket -> delegation_auction_bid
 
-(* type liquidation_auction_bid (* opaque? NO *) *)
-type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
-type liquidation_auction_bid_ticket = liquidation_auction_bid Ligo.ticket
+type liquidation_auction_bid_content (* opaque *)
+type liquidation_auction_bid_ticket = liquidation_auction_bid_content Ligo.ticket
 val issue_liquidation_auction_bid_ticket : liquidation_auction_bid -> liquidation_auction_bid_ticket
-val ensure_valid_liquidation_auction_bid_ticket : liquidation_auction_bid_ticket -> liquidation_auction_bid_ticket
+val ensure_valid_liquidation_auction_bid_ticket : liquidation_auction_bid_ticket -> liquidation_auction_bid
 
 type permission_content (* opaque *)
 type permission = permission_content Ligo.ticket
@@ -61,6 +62,9 @@ val pp_delegation_auction_bid_content : Format.formatter -> delegation_auction_b
 
 val show_delegation_auction_bid : delegation_auction_bid -> string
 val pp_delegation_auction_bid : Format.formatter -> delegation_auction_bid -> unit
+
+val show_liquidation_auction_bid_content : liquidation_auction_bid_content -> string
+val pp_liquidation_auction_bid_content : Format.formatter -> liquidation_auction_bid_content -> unit
 
 val show_liquidation_auction_bid : liquidation_auction_bid -> string
 val pp_liquidation_auction_bid : Format.formatter -> liquidation_auction_bid -> unit

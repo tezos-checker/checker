@@ -712,7 +712,7 @@ let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_to
 
   let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
   let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid Ligo.ticket LigoOp.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_content Ligo.ticket LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLABidTicket : LigoOp.operation) in
   ( [op],
@@ -726,8 +726,7 @@ let[@inline] checker_liquidation_auction_place_bid (state: checker) (kit: kit_to
 
 let[@inline] checker_liquidation_auction_reclaim_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_details in
   let kit_tokens = kit_issue kit in (* TODO: should not issue; should change the auction logic instead! *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -737,8 +736,7 @@ let[@inline] checker_liquidation_auction_reclaim_bid (state: checker) (bid_ticke
 
 let[@inline] checker_liquidation_auction_reclaim_winning_bid (state: checker) (bid_ticket: liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let bid_ticket = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
-  let (_, (bid_details, _)), _ = Ligo.Tezos.read_ticket bid_ticket in
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
