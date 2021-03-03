@@ -19,6 +19,7 @@ type token_tag = Ligo.nat
 [@@deriving show]
 
 let[@inline] kit_token_tag = Ligo.nat_from_literal "1n"
+let[@inline] lqt_token_tag = Ligo.nat_from_literal "2n"
 
 (* ************************************************************************* *)
 (**                              KIT TOKENS                                  *)
@@ -49,7 +50,7 @@ let[@inline] read_kit (token: kit_token) : kit =
   * runtime check of the tag. *)
 let[@inline] ensure_valid_kit_token (token: kit_token) : kit_token =
   let (issuer, ((tag, _content), _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address && tag = kit_token_tag in (* TODO: amnt > Nat.zero perhaps? *)
+  let is_valid = issuer = checker_address && tag = kit_token_tag in
   if is_valid
   then same_ticket
   else (Ligo.failwith error_InvalidKitToken : kit_token)
@@ -58,20 +59,26 @@ let[@inline] ensure_valid_kit_token (token: kit_token) : kit_token =
 (**                           LIQUIDITY TOKENS                               *)
 (* ************************************************************************* *)
 
-type liquidity_token_content = Lqt
+type liquidity_content = Lqt (* NOTE: No need for real content. Unit in Michelson. *)
+[@@deriving show]
+
+type liquidity_token_content = token_tag * liquidity_content
 [@@deriving show]
 
 type liquidity = liquidity_token_content Ligo.ticket
 [@@deriving show]
 
-let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity = Ligo.Tezos.create_ticket (Lqt) n
+let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
+  Ligo.Tezos.create_ticket (lqt_token_tag, Lqt) n
 
-(** Check whether a liquidity token is valid. A liquidity token is valid if it
-  * is issued by checker, and it is tagged appropriately (this is already
-  * enforced by its type). *)
+(** Check whether a liquidity token is valid. A liquidity token is valid if (a)
+  * it is issued by checker, and (b) it is tagged appropriately. In OCaml/LIGO
+  * the type ensures (b), but in Michelson this is not strictly necessary,
+  * hence the runtime check of the tag. *)
 let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, (_content, _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  if issuer = checker_address
+  let (issuer, ((tag, _content), _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+  let is_valid = issuer = checker_address && tag = lqt_token_tag in
+  if is_valid
   then liquidity
   else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
 
