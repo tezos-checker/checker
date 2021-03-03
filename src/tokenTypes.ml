@@ -20,12 +20,7 @@ type kit_token_content = Kit
 
 (* LIQUIDITY TOKENS *)
 
-(* Note that we add an int, just to make sure that each token_content has a
- * different Michelson representation than the others. Otherwise one would not
- * be able to tell them apart, given that they are all issued by the same
- * contract (checker). The actual value of the int does not really matter, but
- * let's choose 63, arbitrarily. *)
-type liquidity_token_content = Lqt of Ligo.int
+type liquidity_token_content = Lqt
 [@@deriving show]
 
 (* DELEGATION AUCTION BID TICKETS *)
