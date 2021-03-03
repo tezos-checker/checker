@@ -110,12 +110,12 @@ let[@inline] ensure_valid_delegation_auction_bid_ticket
 (**                    LIQUIDATION AUCTION BID TICKETS                       *)
 (* ************************************************************************* *)
 
-type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid: bid; }
+type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
 [@@deriving show]
 
-type liquidation_auction_bid_ticket = liquidation_auction_bid_details Ligo.ticket
+type liquidation_auction_bid_ticket = liquidation_auction_bid Ligo.ticket
 
-let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid_details) =
+let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid) =
   Ligo.Tezos.create_ticket bid_details (Ligo.nat_from_literal "1n")
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
@@ -123,7 +123,7 @@ let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auct
   * (avoids splitting it), and (c) is tagged appropriately. TODO: (c) is not
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
-let[@inline] liquidation_auction_ensure_valid_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
+let[@inline] ensure_valid_liquidation_auction_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid_ticket =
   let (issuer, (_bid_details, amnt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amnt = Ligo.nat_from_literal "1n" in
   if is_valid

@@ -278,13 +278,13 @@ let complete_liquidation_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
-let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid_details) =
+let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
       { auction_id = auction.contents; bid = bid; }
     )
-  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * liquidation_auction_bid_details)
+  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * liquidation_auction_bid)
 
 let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : current_liquidation_auction =
   match auctions.current_auction with
@@ -292,7 +292,7 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
   | Some curr -> curr
 
 let is_leading_current_liquidation_auction
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details): bool =
+    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid): bool =
   match auctions.current_auction with
   | Some auction ->
     if ptr_of_avl_ptr auction.contents = ptr_of_avl_ptr bid_details.auction_id
@@ -306,7 +306,7 @@ let is_leading_current_liquidation_auction
   | None -> false
 
 let completed_liquidation_auction_won_by
-    (avl_storage: mem) (bid_details: liquidation_auction_bid_details): auction_outcome option =
+    (avl_storage: mem) (bid_details: liquidation_auction_bid): auction_outcome option =
   match avl_root_data avl_storage bid_details.auction_id with
   | Some outcome ->
     if bid_eq outcome.winning_bid bid_details.bid
@@ -315,7 +315,7 @@ let completed_liquidation_auction_won_by
   | None -> (None: auction_outcome option)
 
 (* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : kit =
+let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
   then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
@@ -394,7 +394,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
   }
 
 (* If successful, it consumes the ticket. *)
-let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : (Ligo.tez * liquidation_auctions) =
+let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
