@@ -89,7 +89,9 @@ let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
 
-let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) : delegation_auction_bid Ligo.ticket =
+type delegation_auction_bid_ticket = delegation_auction_bid Ligo.ticket
+
+let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) : delegation_auction_bid_ticket =
   Ligo.Tezos.create_ticket bid (Ligo.nat_from_literal "1n")
 
 (** Ensure that a delegation auction bid ticket is valid. A delegation bid
@@ -98,8 +100,8 @@ let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) :
   * implemented yet. Perhaps it can be avoided, if all checker-issued tickets
   * end up having contents clearly distinguished by type. *)
 let[@inline] ensure_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid Ligo.ticket)
-  : delegation_auction_bid Ligo.ticket =
+      (bid_ticket: delegation_auction_bid_ticket)
+  : delegation_auction_bid_ticket =
   let (issuer, (_, amt)), same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid = issuer = checker_address && amt = Ligo.nat_from_literal "1n" in
   if is_valid
@@ -158,6 +160,9 @@ type permission_content = rights * Ligo.address * Ligo.nat
 (** A permission is a ticket containing a right. *)
 type permission = permission_content Ligo.ticket
 [@@deriving show]
+
+let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm_version: Ligo.nat) =
+  Ligo.Tezos.create_ticket (r, burrow_id, perm_version) (Ligo.nat_from_literal "0n")
 
 (* NOTE: It totally consumes the ticket. It's the caller's responsibility to
  * replicate the permission ticket if they don't want to lose it. *)

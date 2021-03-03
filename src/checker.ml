@@ -121,10 +121,7 @@ let[@inline] create_burrow (state: checker) (delegate_opt: Ligo.key_hash option)
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       checker_address in
 
-  let admin_ticket =
-    Ligo.Tezos.create_ticket
-      (Admin, burrow_address, Ligo.nat_from_literal "0n")
-      (Ligo.nat_from_literal "0n") in
+  let admin_ticket = issue_permission_ticket Admin burrow_address (Ligo.nat_from_literal "0n") in
   let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
@@ -289,10 +286,7 @@ let make_permission (state: checker) (permission: permission) (burrow_id: burrow
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can create permissions. *)
-    let ticket =
-      Ligo.Tezos.create_ticket
-        (right, burrow_id, burrow_permission_version burrow)
-        (Ligo.nat_from_literal "0n") in
+    let ticket = issue_permission_ticket right burrow_id (burrow_permission_version burrow) in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
@@ -309,10 +303,7 @@ let invalidate_all_permissions (state: checker) (permission: permission) (burrow
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = burrow_increase_permission_version state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let admin_ticket =
-      Ligo.Tezos.create_ticket
-        (Admin, burrow_id, updated_version)
-        (Ligo.nat_from_literal "0n") in
+    let admin_ticket = issue_permission_ticket Admin burrow_id updated_version in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
