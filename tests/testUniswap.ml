@@ -424,6 +424,19 @@ let test_add_liquidity_respects_min_lqt_minted =
   let lqt_minted, _bought_kit, _new_uniswap =
     uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   lqt_minted >= min_lqt_minted
+
+(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+let test_add_liquidity_respects_max_kit_deposited =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_respects_max_kit_deposited"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _lqt_minted, _bought_kit, new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  new_uniswap.kit <= kit_add uniswap.kit max_kit_deposited
+
 (* ************************************************************************* *)
 (*                 add_liquidity (non-first) (unit tests)                    *)
 (* ************************************************************************* *)
@@ -669,6 +682,7 @@ let suite =
     test_add_liquidity_increases_liquidity;
     test_add_liquidity_kit_to_return_lt_max_kit_deposited;
     test_add_liquidity_respects_min_lqt_minted;
+    test_add_liquidity_respects_max_kit_deposited;
 
     (* remove liquidity *)
     (* TODO: add unit tests *)
