@@ -6,41 +6,57 @@ open Error
 (*
 Ticket-based entitities in checker and their expected value/mechanics:
 
-| Ticket           | Multiplicity | (Usably) Splittable              |
-|------------------|--------------|----------------------------------|
-| liquidity        | non-negative | Yes (finitely, zero is useless)  |
-| kit              | non-negative | Yes (finitely, zero is useless)  |
-| permission       | always zero  | Yes (infinitely, always zero)    |
-| del. auction bid | always one   | No  (zero is useless)            |
-| col. auction bid | always one   | No  (zero is useless)            |
+| Ticket           | Multiplicity | (Usably) Splittable              | Tag |
+|------------------|--------------|----------------------------------|-----|
+| kit              | non-negative | Yes (finitely, zero is useless)  |  1n |
+| liquidity        | non-negative | Yes (finitely, zero is useless)  |  2n |
+| del. auction bid | always one   | No  (zero is useless)            |  3n |
+| liq. auction bid | always one   | No  (zero is useless)            |  4n |
+| permission       | always zero  | Yes (infinitely, always zero)    |  5n |
 *)
 
-(* KIT TOKENS *)
+type token_tag = Ligo.nat
+[@@deriving show]
 
-(* Kit are really tickets. *)
-type kit_token_content = Kit
+let[@inline] kit_token_tag = Ligo.nat_from_literal "1n"
+
+(* ************************************************************************* *)
+(**                              KIT TOKENS                                  *)
+(* ************************************************************************* *)
+
+type kit_content = Kit (* NOTE: No need for real content. Unit in Michelson. *)
+[@@deriving show]
+
+type kit_token_content = token_tag * kit_content
 [@@deriving show]
 
 type kit_token = kit_token_content Ligo.ticket
 [@@deriving show]
 
-let[@inline] kit_issue (kit: kit) : kit_token = Ligo.Tezos.create_ticket (Kit) (kit_to_mukit kit)
+let[@inline] kit_issue (kit: kit) : kit_token =
+  Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit kit)
 
-let[@inline] read_kit (token: kit_token) : kit * kit_token =
-  let (_issuer, (_content, mukit)), same_token = Ligo.Tezos.read_ticket token in
-  (kit_of_mukit mukit, same_token)
+(** Read the amount of kit stored in a kit_token. Note that this function does
+  * not check the validity of the ticket, it only extracts the relevant
+  * information. *)
+let[@inline] read_kit (token: kit_token) : kit =
+  let (_issuer, (_tag_and_content, mukit)), _same_token = Ligo.Tezos.read_ticket token in
+  kit_of_mukit mukit
 
 (** Check whether a kit token is valid. A kit token is valid if (a) it is
-  * issued by checker, and (b) is tagged appropriately (this is already
-  * enforced by its type). *)
+  * issued by checker, and (b) is tagged appropriately. In OCaml/LIGO the type
+  * ensures (b), but in Michelson this is not strictly necessary, hence the
+  * runtime check of the tag. *)
 let[@inline] ensure_valid_kit_token (token: kit_token) : kit_token =
-  let (issuer, (_content, _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address in (* TODO: amnt > Nat.zero perhaps? *)
+  let (issuer, ((tag, _content), _amnt)), same_ticket = Ligo.Tezos.read_ticket token in
+  let is_valid = issuer = checker_address && tag = kit_token_tag in (* TODO: amnt > Nat.zero perhaps? *)
   if is_valid
   then same_ticket
   else (Ligo.failwith error_InvalidKitToken : kit_token)
 
-(* LIQUIDITY TOKENS *)
+(* ************************************************************************* *)
+(**                           LIQUIDITY TOKENS                               *)
+(* ************************************************************************* *)
 
 type liquidity_token_content = Lqt
 [@@deriving show]
@@ -59,7 +75,9 @@ let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
   then liquidity
   else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
 
-(* DELEGATION AUCTION BID TICKETS *)
+(* ************************************************************************* *)
+(**                    DELEGATION AUCTION BID TICKETS                        *)
+(* ************************************************************************* *)
 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 [@@deriving show]
@@ -81,7 +99,9 @@ let[@inline] ensure_valid_delegation_auction_bid_ticket
   then same_ticket
   else (Ligo.failwith error_InvalidDelegationAuctionTicket : delegation_auction_bid Ligo.ticket)
 
-(* LIQUIDATION AUCTION BID TICKETS *)
+(* ************************************************************************* *)
+(**                    LIQUIDATION AUCTION BID TICKETS                       *)
+(* ************************************************************************* *)
 
 type liquidation_auction_bid_details = { auction_id: liquidation_auction_id; bid: bid; }
 [@@deriving show]
@@ -103,7 +123,9 @@ let[@inline] liquidation_auction_ensure_valid_bid_ticket (bid_ticket: liquidatio
   then same_ticket
   else (Ligo.failwith error_InvalidLiquidationAuctionTicket : liquidation_auction_bid_ticket)
 
-(* PERMISSION TICKETS *)
+(* ************************************************************************* *)
+(**                          PERMISSION TICKETS                              *)
+(* ************************************************************************* *)
 
 type specific_rights =
   { deposit_tez: bool;

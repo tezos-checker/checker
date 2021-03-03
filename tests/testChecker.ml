@@ -89,7 +89,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
 
-       let kit, _same_token = read_kit kit_token in
+       let kit = read_kit kit_token in
        assert_equal (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) kit;
 
        assert_bool
