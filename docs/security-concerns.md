@@ -32,3 +32,4 @@ attacks yet, but it looks like one of the most common weaknesses.
 Just a couple of sources:
 * [camlCase's statement on Dexter](https://camlcase.medium.com/statement-on-dexter-eaa7eecd2147)
 * [Tom's brief description](https://tezos-dev.slack.com/archives/G01AAK05N86/p1614223324016000?thread_ts=1614220765.015800&cid=G01AAK05N86)
+* [Technical description of the Dexter flaw](https://blog.nomadic-labs.com/a-technical-description-of-the-dexter-flaw.html)
