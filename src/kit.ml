@@ -2,11 +2,6 @@ open Ratio
 open Common
 open FixedPoint
 
-(* TODO: Perhaps we should represent this as a Ligo.nat, instead of an integer. It
- * all boils down to what we wish to use when calculating (e.g. negative kit
- * can be useful for the imbalance adjustment, which can be either positive or
- * negative). Leave an int for now, but we should make an explicit decision on
- * this. *)
 type kit = Ligo.nat
 let[@inline] kit_scaling_factor = Ligo.nat_from_literal "1_000_000n"
 
@@ -27,7 +22,7 @@ let[@inline] kit_one = kit_scaling_factor
 let[@inline] kit_of_mukit (amnt: Ligo.nat) : kit = amnt
 let[@inline] kit_to_mukit (amnt: kit) : Ligo.nat = amnt
 
-let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) (Ligo.int kit_scaling_factor)
+let[@inline] kit_to_ratio (amnt: kit) : ratio = make_real_unsafe (Ligo.int amnt) (Ligo.int kit_scaling_factor)
 
 let kit_of_ratio_ceil  (amnt: ratio) : kit =
   if lt_ratio_ratio amnt zero_ratio

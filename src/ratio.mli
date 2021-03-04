@@ -1,6 +1,7 @@
 type ratio
 
 (* Construction/deconstruction. *)
+val make_real_unsafe: Ligo.int -> Ligo.int -> ratio
 val make_ratio: Ligo.int -> Ligo.int -> ratio
 val ratio_num: ratio -> Ligo.int
 val ratio_den: ratio -> Ligo.int

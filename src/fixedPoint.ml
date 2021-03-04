@@ -36,7 +36,7 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
 (* Conversions to/from other types. *)
 let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
 
-let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor
+let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int (ratio_num amnt) fixedpoint_scaling_factor) (ratio_den amnt)
 let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int (ratio_num amnt) fixedpoint_scaling_factor) (ratio_den amnt)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)

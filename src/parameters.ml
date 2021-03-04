@@ -86,7 +86,7 @@ let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   if burrowed = kit_zero && circulating = kit_zero then
     zero_ratio
   else if burrowed = kit_zero && circulating <> kit_zero then
-    make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
+    make_real_unsafe (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
   else if burrowed >= circulating then
     div_ratio
       (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (kit_to_ratio burrowed))
@@ -143,8 +143,8 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   let target = fixedpoint_to_ratio target in
   let target_low_bracket  = target_low_bracket in
   let target_high_bracket = target_high_bracket in
-  let cnp_001 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
-  let cnp_005 = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
+  let cnp_001 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
+  let cnp_005 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
   let secs_in_a_day = fixedpoint_of_int seconds_in_a_day in
 
   if lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) then
@@ -212,7 +212,7 @@ let parameters_touch
       (add_ratio
          (fixedpoint_to_ratio parameters_drift)
          (mul_ratio
-            (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
+            (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
             (mul_ratio
                (fixedpoint_to_ratio (fixedpoint_add parameters_drift_derivative current_drift_derivative))
                duration_in_seconds
@@ -228,7 +228,7 @@ let parameters_touch
                (add_ratio
                   (fixedpoint_to_ratio parameters_drift)
                   (mul_ratio
-                     (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
+                     (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
                      (mul_ratio
                         (add_ratio
                            (mul_ratio

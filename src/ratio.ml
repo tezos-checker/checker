@@ -11,16 +11,18 @@ let[@inline] ratio_num (x: ratio) : Ligo.int = x.num
 let[@inline] ratio_den (x: ratio) : Ligo.int = x.den
 
 (* make and normalize n/d, assuming d > 0 *)
-let[@inline] make_real (n: Ligo.int) (d: Ligo.int) : ratio = { num = n; den = d; }
+let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =
+  assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
+  { num = n; den = d; }
 
 (* make and normalize any fraction *)
 let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
   if Ligo.eq_int_int d (Ligo.int_from_literal "0") then
     (failwith "Ratio.make_ratio: division by zero" : ratio)
   else if Ligo.gt_int_int d (Ligo.int_from_literal "0") then
-    make_real n d
+    make_real_unsafe n d
   else
-    make_real (neg_int n) (neg_int d)
+    make_real_unsafe (neg_int n) (neg_int d)
 
 (* Conversions to/from other types. *)
 let[@inline] ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
@@ -134,7 +136,7 @@ let[@inline] neg_ratio (x: ratio) : ratio =
 let add_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real
+  make_real_unsafe
     (Ligo.add_int_int
        (Ligo.mul_int_int x_num y_den)
        (Ligo.mul_int_int y_num x_den))
@@ -145,7 +147,7 @@ let add_ratio (x: ratio) (y: ratio) : ratio =
 let sub_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real
+  make_real_unsafe
     (Ligo.sub_int_int
        (Ligo.mul_int_int x_num y_den)
        (Ligo.mul_int_int y_num x_den))
@@ -156,7 +158,7 @@ let sub_ratio (x: ratio) (y: ratio) : ratio =
 let mul_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real
+  make_real_unsafe
     (Ligo.mul_int_int x_num y_num)
     (Ligo.mul_int_int x_den y_den)
 
