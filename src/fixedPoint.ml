@@ -34,7 +34,9 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
       (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_int_int (Ligo.int y) (Ligo.int_from_literal "1"))))
 
 (* Conversions to/from other types. *)
-let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
+let[@inline] fixedpoint_of_raw (amnt: Ligo.int) = amnt (* identity *)
+
+let[@inline] fixedpoint_of_int (amnt: Ligo.int) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
 
 let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int (ratio_num amnt) fixedpoint_scaling_factor) (ratio_den amnt)
@@ -65,6 +67,8 @@ let show_fixedpoint amnt =
     sign
     (Ligo.format_int "%X" upper)
     (zfill (Ligo.format_int "%X" lower) (fixedpoint_scaling_exponent / 4))
+
+let show_fixedpoint_raw = Ligo.string_of_int
 
 let pp_fixedpoint ppf amnt = Format.fprintf ppf "%s" (show_fixedpoint amnt)
 (* END_OCAML *)

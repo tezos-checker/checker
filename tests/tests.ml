@@ -2,6 +2,7 @@ open OUnit2
 
 let suite =
   "HuxianTests" >::: [
+    TestConstants.suite;
     TestChecker.suite;
     TestFixedPoint.suite;
     TestTez.suite;

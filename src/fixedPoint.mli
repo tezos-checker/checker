@@ -14,6 +14,7 @@ val fixedpoint_neg : fixedpoint -> fixedpoint
 val fixedpoint_pow : fixedpoint -> Ligo.nat -> fixedpoint
 
 (* Conversions to/from other types. *)
+val fixedpoint_of_raw : Ligo.int -> fixedpoint
 val fixedpoint_of_int : Ligo.int -> fixedpoint
 val fixedpoint_to_ratio : fixedpoint  -> Ratio.ratio
 val fixedpoint_of_ratio_ceil : Ratio.ratio -> fixedpoint
@@ -22,5 +23,6 @@ val fixedpoint_of_ratio_floor : Ratio.ratio -> fixedpoint
 (* BEGIN_OCAML *)
 val fixedpoint_of_hex_string : string -> fixedpoint
 val show_fixedpoint : fixedpoint  -> string
+val show_fixedpoint_raw : fixedpoint -> string
 val pp_fixedpoint : Format.formatter -> fixedpoint  -> unit
 (* END_OCAML *)

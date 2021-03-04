@@ -46,6 +46,17 @@ let[@inline] seconds_in_a_year : Ligo.int = Ligo.int_from_literal "31556952"
   * 24h * 60min/h * 60sec/min = 86400. *)
 let[@inline] seconds_in_a_day : Ligo.int = Ligo.int_from_literal "86400"
 
+(** For convenience. The number of seconds in a day, represented as a
+  * fixedpoint number. *)
+let fixedpoint_seconds_in_a_day : fixedpoint =
+  fixedpoint_of_raw (Ligo.int_from_literal "1593798687968505259622400")
+
+(** For convenience. 0.01 cNp as a fixedpoint number. *)
+let[@inline] cnp_0_01 : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "1844674407370955")
+
+(** For convenience. 0.05 cNp as a fixedpoint number. *)
+let[@inline] cnp_0_05 : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "9223372036854775")
+
 (** Low bracket used for the calculation of the drift derivative. *)
 let target_low_bracket : ratio = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") (* 0.005 *)
 

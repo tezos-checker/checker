@@ -141,27 +141,22 @@ let compute_adjustment_index (p: parameters) : fixedpoint =
 let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
   let target = fixedpoint_to_ratio target in
-  let target_low_bracket  = target_low_bracket in
-  let target_high_bracket = target_high_bracket in
-  let cnp_001 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
-  let cnp_005 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
-  let secs_in_a_day = fixedpoint_of_int seconds_in_a_day in
 
   if lt_ratio_ratio (qexp (neg_ratio target_low_bracket)) target && lt_ratio_ratio target (qexp target_low_bracket) then
     (* No acceleration (0) *)
     fixedpoint_zero
   else if lt_ratio_ratio (qexp (neg_ratio target_high_bracket)) target && leq_ratio_ratio target (qexp (neg_ratio target_low_bracket)) then
     (* Low acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    fixedpoint_neg (fixedpoint_div cnp_0_01 (fixedpoint_mul fixedpoint_seconds_in_a_day fixedpoint_seconds_in_a_day))
   else if gt_ratio_ratio (qexp (          target_high_bracket)) target && geq_ratio_ratio target (qexp (          target_low_bracket)) then
     (* Low acceleration (+) *)
-    (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    (fixedpoint_div cnp_0_01 (fixedpoint_mul fixedpoint_seconds_in_a_day fixedpoint_seconds_in_a_day))
   else if leq_ratio_ratio target (qexp (neg_ratio target_high_bracket)) then
     (* High acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    fixedpoint_neg (fixedpoint_div cnp_0_05 (fixedpoint_mul fixedpoint_seconds_in_a_day fixedpoint_seconds_in_a_day))
   else if geq_ratio_ratio target (qexp (          target_high_bracket)) then
     (* High acceleration (+) *)
-    (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    (fixedpoint_div cnp_0_05 (fixedpoint_mul fixedpoint_seconds_in_a_day fixedpoint_seconds_in_a_day))
   else
     (failwith "impossible" : fixedpoint)
 
