@@ -66,7 +66,8 @@ let target_high_bracket : ratio = make_real_unsafe (Ligo.int_from_literal "5") (
 (** How fast a descending option price drops per second. Currently we want it
   * to drop by around 1cNp per minute, so we just divide by 60 to get roughly
   * how much it should be per second. *)
-let auction_decay_rate : ratio = make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6000") (* 0.01/60 *)
+let auction_decay_rate : fixedpoint =
+  fixedpoint_of_raw (Ligo.int_from_literal "3074457345618259") (* 0.01/60 *)
 
 (** The maximum number of seconds that can pass between two (ascending) bids
   * during an auction. The auction should expire if more than this many seconds

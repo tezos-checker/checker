@@ -27,9 +27,17 @@ let test_correct_fixedpoint_seconds_in_a_day =
       (fixedpoint_of_int seconds_in_a_day)
       fixedpoint_seconds_in_a_day
 
+let test_correct_auction_decay_rate =
+  "test_correct_auction_decay_rate" >:: fun _ ->
+    assert_equal
+      ~printer:show_fixedpoint
+      (fixedpoint_of_ratio_ceil (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6000")))
+      auction_decay_rate
+
 let suite =
   "Constant tests" >::: [
     test_correct_cnp_0_01;
     test_correct_cnp_0_05;
     test_correct_fixedpoint_seconds_in_a_day;
+    test_correct_auction_decay_rate;
   ]

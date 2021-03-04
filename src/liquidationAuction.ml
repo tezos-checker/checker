@@ -189,7 +189,6 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
   match auction.state with
   | Descending params ->
     let (start_value, start_time) = params in
-    let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
     let decay =
       match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
       | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
