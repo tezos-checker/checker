@@ -33,13 +33,13 @@ let mem_bindings (mem: mem) = Ligo.Big_map.bindings mem.mem
 
 let[@inline] mem_set (m: mem) (k: ptr) (v: node) : mem =
   (* BEGIN_OCAML *) ops := { !ops with writes = !ops.writes + 1; }; (* END_OCAML *)
-  { m with mem = Ligo.Big_map.update k (Some v) m.mem }
+  let { mem=m_mem; last_ptr=m_last_ptr; } = m in
+  { mem=Ligo.Big_map.update k (Some v) m_mem; last_ptr=m_last_ptr; }
 
 let[@inline] mem_new (m: mem) (v: node) : mem * ptr =
-  let ptr = ptr_next m.last_ptr in
-  let m =
-    { mem = Ligo.Big_map.update ptr (Some v) m.mem;
-      last_ptr = ptr; } in
+  let { mem=m_mem; last_ptr=m_last_ptr; } = m in
+  let ptr = ptr_next m_last_ptr in
+  let m = { mem=Ligo.Big_map.update ptr (Some v) m_mem; last_ptr=ptr; } in
   (m, ptr)
 
 let[@inline] mem_get (m: mem) (k: ptr) : node =
