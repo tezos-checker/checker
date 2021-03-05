@@ -576,21 +576,22 @@ let ref_split_post_processing
     (data : ref_split_data)
     ((mem, maybe_left, maybe_right) : mem * ptr option * ptr option)
   : mem * ptr option * ptr option =
-  match data.rec_direction with
+  let { rec_direction=rec_direction; branch=branch; } = data in
+  match rec_direction with
   | Left -> (
       match maybe_right with
       | None -> (failwith "impossible" : mem * ptr option * ptr option)
       | Some right ->
-        let (mem, joined) = ref_join mem (Right) right data.branch.right in
+        let (mem, joined) = ref_join mem (Right) right branch.right in
         (mem, maybe_left, Some joined)
     )
   | Right -> (
       match maybe_left with
       | Some left ->
-        let (mem, joined) = ref_join mem (Left) data.branch.left left in
+        let (mem, joined) = ref_join mem (Left) branch.left left in
         (mem, Some joined, maybe_right)
       | None ->
-        (mem, Some data.branch.left, maybe_right)
+        (mem, Some branch.left, maybe_right)
     )
 
 (* Nice and tail-recursive left fold we can write in ligo more or less as-is. *)
