@@ -246,7 +246,7 @@ let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow
   else
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
 
-let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) (recipient: Ligo.address) : (LigoOp.operation list * checker) =
+let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
@@ -256,7 +256,7 @@ let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burr
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, recipient) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
+      | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
     ([op], updated_state)
   else
@@ -893,7 +893,7 @@ type params =
   | MintKit of (permission * burrow_id * kit)
   | BurnKit of (permission option * burrow_id * kit_token)
   | ActivateBurrow of (permission * burrow_id)
-  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
   | CancelSliceLiquidation of (permission * leaf_ptr)
@@ -942,8 +942,8 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     let (permission, burrow_id) = p in
     activate_burrow state permission burrow_id
   | DeactivateBurrow p ->
-    let (permission, burrow_id, addr) = p in
-    deactivate_burrow state permission burrow_id addr
+    let (permission, burrow_id) = p in
+    deactivate_burrow state permission burrow_id
   | MarkBurrowForLiquidation burrow_id ->
     mark_for_liquidation state burrow_id
   | TouchLiquidationSlices slices ->

@@ -55,8 +55,8 @@ val activate_burrow : checker -> permission -> burrow_id -> (LigoOp.operation li
   * if it is already inactive, if it is overburrowed, if it has kit
   * outstanding, if it has collateral sent off to auctions, or if the
   * permission ticket given is not an admin ticket. If deactivation is
-  * successful, make a tez payment to the given address. *)
-val deactivate_burrow : checker -> permission -> burrow_id -> Ligo.address -> (LigoOp.operation list * checker)
+  * successful, make a tez payment to the sender. *)
+val deactivate_burrow : checker -> permission -> burrow_id -> (LigoOp.operation list * checker)
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
   * liquidation or if the burrow does not exist. If successful, return the
@@ -166,7 +166,7 @@ type params =
   | MintKit of (permission * burrow_id * kit)
   | BurnKit of (permission option * burrow_id * kit_token)
   | ActivateBurrow of (permission * burrow_id)
-  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
   | CancelSliceLiquidation of (permission * leaf_ptr)
