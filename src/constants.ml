@@ -17,7 +17,7 @@ let burrow_fee_percentage : ratio = make_real_unsafe (Ligo.int_from_literal "5")
 (** The percentage of a burrow's collateral that we offer to whoever triggers
   * the burrow's liquidation. *)
 let liquidation_reward_percentage : fixedpoint =
-  fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (* 0.001 *)
+  fixedpoint_of_raw (Ligo.int_from_literal "18446744073709551")  (* 0.001 *)
 
 (** Percentage kept by the uniswap contract from the return asset. *)
 let uniswap_fee : ratio = make_real_unsafe (Ligo.int_from_literal "2") (Ligo.int_from_literal "1000") (* 0.002 *)
