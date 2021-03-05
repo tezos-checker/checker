@@ -15,7 +15,7 @@ let add_all (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
   : mem =
   List.fold_left
     (fun mem value ->
-       let (mem, _) = avl_push_back mem root value in
+       let (mem, _) = avl_push mem root value Left in
        mem)
     mem
     xs
@@ -42,7 +42,7 @@ let add_all_debug (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
     (fun mem value ->
        print_string "--------------------------------\n";
        print_string ("Inserting: " ^ show_liquidation_slice value ^ "\n");
-       let (mem, _) = avl_push_back mem root value in
+       let (mem, _) = avl_push mem root value Left in
        debug_avl mem root;
        assert_avl_invariants mem root;
        print_newline ();
@@ -128,7 +128,7 @@ let suite =
     "test_push_back_singleton" >::
     (fun _ ->
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, _) = avl_push_back mem root (mk_liquidation_slice 0) in
+       let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Left in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
        assert_equal expected actual ~printer:show_liquidation_slice_list);
@@ -136,7 +136,7 @@ let suite =
     "test_push_front_singleton" >::
     (fun _ ->
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, _) = avl_push_front mem root (mk_liquidation_slice 0) in
+       let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Right in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
        assert_equal expected actual);
@@ -177,7 +177,7 @@ let suite =
     (fun _ ->
        Mem.reset_ops ();
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, elem) = avl_push_back mem root (mk_liquidation_slice 1) in
+       let (mem, elem) = avl_push mem root (mk_liquidation_slice 1) Left in
        let (mem, root_) = avl_del mem elem in
        assert_equal root root_;
        assert_equal [] (avl_to_list mem root);
@@ -193,7 +193,7 @@ let suite =
          (List.map mk_liquidation_slice [ 7; 8; 9 ]) in
 
        let (mem, root) = avl_from_list mem_empty None fst_elements in
-       let (mem, elem) = avl_push_back mem root mid in
+       let (mem, elem) = avl_push mem root mid Left in
        let mem = add_all mem root snd_elements in
 
        assert_avl_invariants mem root;
@@ -238,7 +238,7 @@ let suite =
      let (mem, root) = avl_from_list mem_empty None left_items in
      assert_avl_invariants mem root;
 
-     let (mem, to_del) = avl_push_back mem root mid_item in
+     let (mem, to_del) = avl_push mem root mid_item Left in
      assert_avl_invariants mem root;
 
      let mem = add_all mem root right_items in
@@ -343,7 +343,7 @@ let suite =
          if i <= 0
          then mem
          else
-           let (mem, _) = avl_push_back mem root (mk_liquidation_slice i) in
+           let (mem, _) = avl_push mem root (mk_liquidation_slice i) Left in
            go (i-1) mem in
 
        let mem = go 100_000 mem in

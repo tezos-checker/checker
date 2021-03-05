@@ -89,7 +89,7 @@ let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice:
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let (new_storage, ret) =
-      avl_push_back auctions.avl_storage auctions.queued_slices slice in
+      avl_push auctions.avl_storage auctions.queued_slices slice Left in
     let new_state = { auctions with avl_storage = new_storage; } in
     (new_state, ret)
 
@@ -134,8 +134,8 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
     match next with
     | Some slice ->
       let (part1, part2) = split_liquidation_slice (Ligo.sub_tez_tez split_threshold queued_amount) slice in
-      let (storage, _) = avl_push_front storage queued_slices part2 in
-      let (storage, _) = avl_push_back storage new_auction part1 in
+      let (storage, _) = avl_push storage queued_slices part2 Right in
+      let (storage, _) = avl_push storage new_auction part1 Left in
       (storage, new_auction)
     | None ->
       (storage, new_auction)

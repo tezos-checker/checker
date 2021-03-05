@@ -425,36 +425,9 @@ let ref_join
 
 (* ************************** *)
 
-let avl_push_back
-    (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice)
-  : mem * leaf_ptr =
-  let root_ptr = match root_ptr with AVLPtr root_ptr -> root_ptr in
-  let node = Leaf { value=value; parent=root_ptr; } in
-  let (mem, leaf_ptr) = mem_new mem node in
-  match mem_get mem root_ptr with
-  | Root root ->
-    let (r, data) = root in
-    (match r with
-     (* When the tree is empty, create the initial leaf. *)
-     | None ->
-       let mem = mem_set mem root_ptr (Root (Some leaf_ptr, data)) in
-       (mem, LeafPtr leaf_ptr)
-     (* When there is already an element, join with the new leaf. *)
-     | Some ptr ->
-       let (mem, ret) = ref_join mem (Left) ptr leaf_ptr in
-       let mem = mem_set mem root_ptr (Root (Some ret, data)) in
-       (mem, LeafPtr leaf_ptr))
-  | Branch _ ->
-    (failwith "push_back is passed a non-root pointer." : mem * leaf_ptr)
-  | Leaf _ ->
-    (failwith "push_back is passed a non-root pointer." : mem * leaf_ptr)
-
-(* The only implementation difference between this and push_back
- * is the order of parameters on 'join'. We should probably combine
- * these.
-*)
-let avl_push_front
-    (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice)
+(* Left for pushing back and Right for pushing front *)
+let avl_push
+    (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) (d: direction)
   : mem * leaf_ptr =
   let (root, root_data) = deref_avl_ptr mem root_ptr in
   let root_ptr = match root_ptr with AVLPtr r -> r in
@@ -468,8 +441,12 @@ let avl_push_front
       let mem = mem_set mem root_ptr (Root (Some leaf_ptr, root_data)) in
       (mem, LeafPtr leaf_ptr)
     (* When there is already an element, join with the new leaf. *)
-    | Some r ->
-      let (mem, ret) = ref_join mem (Right) leaf_ptr r in
+    | Some ptr ->
+      let (mem, ret) =
+        begin match d with
+          | Left -> ref_join mem (Left) ptr leaf_ptr
+          | Right -> ref_join mem (Right) leaf_ptr ptr
+        end in
       let mem = mem_set mem root_ptr (Root (Some ret, root_data)) in
       (mem, LeafPtr leaf_ptr)
   end
