@@ -400,6 +400,43 @@ let test_add_liquidity_increases_liquidity =
     uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   uniswap_liquidity_tokens_extant new_uniswap > uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_add_liquidity always deposits some kit,
+ * implying kit_to_return = max_kit_deposited - kit_deposited < max_kit_deposited. *)
+let test_add_liquidity_kit_to_return_lt_max_kit_deposited =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_kit_to_return_lt_max_kit_deposited"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, kit_to_return, _new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  kit_to_return < max_kit_deposited
+
+(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+let test_add_liquidity_respects_min_lqt_minted =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_respects_min_lqt_minted"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let lqt_minted, _bought_kit, _new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  lqt_minted >= min_lqt_minted
+
+(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+let test_add_liquidity_respects_max_kit_deposited =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_add_liquidity_respects_max_kit_deposited"
+    ~count:property_test_count
+    make_inputs_for_add_liquidity_to_succeed_no_accrual
+  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _lqt_minted, _bought_kit, new_uniswap =
+    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  new_uniswap.kit <= kit_add uniswap.kit max_kit_deposited
+
 (* ************************************************************************* *)
 (*                 add_liquidity (non-first) (unit tests)                    *)
 (* ************************************************************************* *)
@@ -438,7 +475,7 @@ let add_liquidity_unit_test =
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap
 
-let add_liquidity_failures_test =
+let test_add_liquidity_failures =
   "add liquidity failure conditions" >:: fun _ ->
     Ligo.Tezos.reset ();
     let uniswap =
@@ -517,6 +554,121 @@ let test_remove_liquidity_decreases_liquidity =
     uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   uniswap_liquidity_tokens_extant new_uniswap < uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_remove_liquidity removes at least min_tez_withdrawn tez. *)
+let test_remove_liquidity_respects_min_tez_withdrawn =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_min_tez_withdrawn"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_tez >= min_tez_withdrawn
+
+(* If successful, uniswap_remove_liquidity removes at least min_kit_withdrawn kit. *)
+let test_remove_liquidity_respects_min_kit_withdrawn =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_min_kit_withdrawn"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_kit >= min_kit_withdrawn
+
+(* If successful, uniswap_remove_liquidity removes no more tez than it had. *)
+let test_remove_liquidity_respects_tez_limit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_tez_limit"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_tez <= uniswap.tez
+
+(* If successful, uniswap_remove_liquidity removes no more kit than it had. *)
+let test_remove_liquidity_respects_kit_limit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_liquidity_respects_kit_limit"
+    ~count:property_test_count
+    make_inputs_for_remove_liquidity_to_succeed
+  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
+    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_kit <= uniswap.kit
+
+(* ************************************************************************* *)
+(*                 remove_liquidity (unit tests)                             *)
+(* ************************************************************************* *)
+
+let test_remove_liquidity_failures =
+  "remove liquidity failure conditions" >:: fun _ ->
+    Ligo.Tezos.reset ();
+    let uniswap =
+      uniswap_make_for_test
+        ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
+        ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
+        ~lqt:(Ligo.nat_from_literal "1000n")
+        ~kit_in_tez_in_prev_block:one_ratio
+        ~last_level:(Ligo.nat_from_literal "0n") in
+     let (liq, _kit, uniswap) =
+       uniswap_add_liquidity
+         uniswap
+         (Ligo.tez_from_literal "101_000_000mutez")
+         (Ligo.tez_from_literal "10_000_000mutez")
+         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
+         (Ligo.nat_from_literal "1n")
+         (Ligo.timestamp_from_seconds_literal 1) in
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNonEmptyAmount))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           liq
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (Ligo.nat_from_literal "0n")
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoTezWithdrawnExpected))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           liq
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoKitWithdrawnExpected))
+      (fun () ->
+         uniswap_remove_liquidity
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           liq
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.timestamp_from_seconds_literal 100)
+      )
+
 (* ************************************************************************* *)
 (*                 liquidity when accruals are pending                       *)
 (* ************************************************************************* *)
@@ -572,15 +724,23 @@ let suite =
 
     (* add_liquidity (non-first) *)
     add_liquidity_unit_test;
-    add_liquidity_failures_test;
+    test_add_liquidity_failures;
     test_add_liquidity_might_decrease_price;
     test_add_liquidity_increases_product;
     test_add_liquidity_increases_liquidity;
+    test_add_liquidity_kit_to_return_lt_max_kit_deposited;
+    test_add_liquidity_respects_min_lqt_minted;
+    test_add_liquidity_respects_max_kit_deposited;
 
     (* remove liquidity *)
     (* TODO: add unit tests *)
+    test_remove_liquidity_failures;
     test_remove_liquidity_decreases_product;
     test_remove_liquidity_decreases_liquidity;
+    test_remove_liquidity_respects_min_tez_withdrawn;
+    test_remove_liquidity_respects_min_kit_withdrawn;
+    test_remove_liquidity_respects_tez_limit;
+    test_remove_liquidity_respects_kit_limit;
 
     pending_tez_deposit_test;
   ]

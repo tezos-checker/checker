@@ -172,7 +172,11 @@ let uniswap_add_liquidity
                       tez = Ligo.add_tez_tez uniswap.tez tez_amount;
                       lqt = Ligo.add_nat_nat uniswap.lqt lqt_minted;
                     } in
-      (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
+      (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit
+       * which follows from the definitions:
+       *  kit_to_return     = max_kit_deposited   - kit_deposited
+       *  final_uniswap_kit = initial_uniswap_kit + kit_deposited
+       *)
       (lqt_minted, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
