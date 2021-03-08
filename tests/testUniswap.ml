@@ -405,6 +405,48 @@ let sell_kit_unit_test =
            kit_one
            (Ligo.tez_from_literal "1_663_333mutez")
            (Ligo.timestamp_from_seconds_literal 1)
+      );
+
+    (* No kit given: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_UniswapNonPositiveInput))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.tez_from_literal "1_663_333mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* No tez expected: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_SellKitTooLowExpectedTez))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           kit_one
+           (Ligo.tez_from_literal "0mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* Some tez transferred: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_SellKitNonEmptyAmount))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "10mutez")
+           kit_one
+           (Ligo.tez_from_literal "100mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
       )
 
 (* ************************************************************************* *)
