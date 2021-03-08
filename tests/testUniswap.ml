@@ -231,6 +231,32 @@ let buy_kit_unit_test =
            (Ligo.tez_from_literal "1_000_000mutez")
            (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
+      );
+
+    (* No tez given: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_UniswapNonPositiveInput))
+      (fun () ->
+         uniswap_buy_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* No kit expected: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BuyKitTooLowExpectedKit))
+      (fun () ->
+         uniswap_buy_kit
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.timestamp_from_seconds_literal 10)
       )
 
 (* ************************************************************************* *)
