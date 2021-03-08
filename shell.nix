@@ -6,6 +6,7 @@ let
     pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
       mkdir -p $out/bin
       unzip ${sources.ligo-artifacts} ligo -d $out/bin
+      chmod +x $out/bin/ligo
     '';
 in
 pkgs.mkShell {
