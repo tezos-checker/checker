@@ -199,6 +199,7 @@ val ediv_tez_nat : tez -> nat -> (tez * tez) option (* IN LIGO: ediv *)
 
 val eq_tez_tez : tez -> tez -> bool  (* IN LIGO: ( = ) *)
 val lt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( < ) *)
+val gt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( > ) *)
 val leq_tez_tez : tez -> tez -> bool (* IN LIGO: ( <= ) *)
 val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
 

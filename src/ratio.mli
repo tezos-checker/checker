@@ -49,7 +49,6 @@ val sub_ratio: ratio -> ratio -> ratio
 val mul_ratio: ratio -> ratio -> ratio
 val div_ratio: ratio -> ratio -> ratio
 
-val clamp: ratio -> ratio -> ratio -> ratio
 val qexp: ratio -> ratio
 
 (* BEGIN_OCAML *)
@@ -57,4 +56,6 @@ val pp_ratio: Format.formatter -> ratio -> unit
 val show_ratio: ratio -> string
 
 val sign_ratio: ratio -> int
+
+val clamp_ratio: ratio -> ratio -> ratio -> ratio
 (* END_OCAML *)

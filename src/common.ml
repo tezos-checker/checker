@@ -57,6 +57,10 @@ let fdiv_int_int (x: Ligo.int) (y: Ligo.int) =
     else
       Ligo.sub_int_int quot (Ligo.int_from_literal "1")
 
+let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
+  assert (Ligo.leq_int_int lower upper);
+  min_int upper (max_int v lower)
+
 (* OPERATIONS ON tez *)
 let min_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.leq_tez_tez x y then x else y
 let max_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.geq_tez_tez x y then x else y

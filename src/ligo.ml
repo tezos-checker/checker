@@ -217,6 +217,8 @@ let eq_tez_tez = Z.equal
 
 let lt_tez_tez = Z.lt
 
+let gt_tez_tez = Z.gt
+
 let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq

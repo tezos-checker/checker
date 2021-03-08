@@ -25,7 +25,8 @@ let uniswap_fee : ratio = make_real_unsafe (Ligo.int_from_literal "2") (Ligo.int
 (** Protected index epsilon. The higher this value is, the faster the protected
   * index catches up with the actual index. Currently calculated as 0.05 cNp
   * per minute. Basically (0.05 / 100) / 60 = 5/600000. *)
-let protected_index_epsilon : ratio = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "600000")
+let protected_index_epsilon_plus  : ratio = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "600000")
+let protected_index_epsilon_minus : ratio = make_real_unsafe (Ligo.int_from_literal "-5") (Ligo.int_from_literal "600000")
 
 (** The maximum number of tez that can be in an auction lot. *)
 let[@inline] max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"

@@ -196,15 +196,53 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
 
 (** Calculate the current protected index based on the last protected index,
   * the current index (as provided by the oracle), and the number of seconds
-  * that have elapsed. TODO: Give formula. *)
-let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: ratio) : Ligo.tez =
-  let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
-  let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
-  let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez last_protected_index) in
+  * that have elapsed.
+  *
+  *   protected_index_{i+1} = FLOOR (
+  *     protected_index_i * CLAMP (index_{i+1}/protected_index_i, EXP(-epsilon * (t_{i+1} - t_i)), EXP(+epsilon * (t_{i+1} - t_i)))
+  *   )
+  *)
+let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
+  assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
+  (* For the calculations to work out *)
+  assert (Ligo.eq_int_int protected_index_epsilon_plus.num (neg_int protected_index_epsilon_minus.num));
+  assert (Ligo.eq_int_int protected_index_epsilon_plus.den protected_index_epsilon_minus.den);
+  (* TODO: ADD MORE ASSERTIONS: POSITIVE LAST PROTECTED INDEX, POSITIVE DEN *)
+  let { num = nump; den = _den; } = protected_index_epsilon_plus in
+  let { num = numm; den = den; } = protected_index_epsilon_minus in
+  let last_protected_index = tez_to_mutez last_protected_index in
   ratio_to_tez_floor
-    (mul_ratio
-       (ratio_of_tez last_protected_index)
-       (clamp ratio lower_lim upper_lim)
+    (make_real_unsafe
+       (Ligo.mul_int_int
+          last_protected_index
+          (clamp_int
+             (Ligo.mul_int_int
+                (tez_to_mutez current_index)
+                den
+             )
+             (Ligo.mul_int_int
+                (Ligo.add_int_int
+                   (Ligo.mul_int_int numm duration_in_seconds)
+                   den
+                )
+                last_protected_index
+             )
+             (Ligo.mul_int_int
+                (Ligo.add_int_int
+                   (Ligo.mul_int_int nump duration_in_seconds)
+                   den
+                )
+                last_protected_index
+             )
+          )
+       )
+       (Ligo.mul_int_int
+          den
+          (Ligo.mul_int_int
+             last_protected_index
+             (Ligo.int_from_literal "1_000_000")
+          )
+       )
     )
 
 (** Calculate the current drift based on the last drift, the last drift
@@ -365,7 +403,7 @@ let parameters_touch
 
   (* Calculate all parameter updates and accrual to uniswap. *)
   let current_protected_index =
-    compute_current_protected_index parameters_protected_index current_index duration_in_seconds in
+    compute_current_protected_index parameters_protected_index current_index duration_in_seconds_int in
   let current_drift_derivative =
     compute_drift_derivative parameters_target in
   let current_drift =
