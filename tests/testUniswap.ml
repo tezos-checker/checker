@@ -373,6 +373,42 @@ let test_sell_kit_does_not_affect_liquidity =
     uniswap_sell_kit uniswap amount token min_tez_expected deadline in
   uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_sell_kit respects min_tez_expected. *)
+let test_sell_kit_respects_min_tez_expected =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_respects_min_tez_expected"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  let bought_tez, _new_uniswap =
+    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+  bought_tez >= min_tez_expected
+
+(* If successful, selling kit preserves kit. *)
+let test_sell_kit_preserves_kit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_preserves_kit"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  let _bought_tez, new_uniswap =
+    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+  new_uniswap.kit = kit_add uniswap.kit token
+
+(* If successful, selling kit preserves tez. *)
+let test_sell_kit_preserves_tez =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_preserves_tez"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  let bought_tez, new_uniswap =
+    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+  Ligo.add_tez_tez new_uniswap.tez bought_tez = uniswap.tez
+
 (* ************************************************************************* *)
 (*                          sell_kit (unit tests)                            *)
 (* ************************************************************************* *)
@@ -861,6 +897,9 @@ let suite =
     test_sell_kit_decreases_price;
     test_sell_kit_increases_product;
     test_sell_kit_does_not_affect_liquidity;
+    test_sell_kit_respects_min_tez_expected;
+    test_sell_kit_preserves_kit;
+    test_sell_kit_preserves_tez;
 
     (* add_liquidity (first) *)
     (* TODO: add unit tests and property-based random tests *)
