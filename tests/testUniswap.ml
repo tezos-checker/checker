@@ -216,6 +216,18 @@ let test_buy_kit_preserves_kit =
     uniswap_buy_kit uniswap amount min_kit_expected deadline in
   uniswap.kit = kit_add new_uniswap.kit bought_kit
 
+(* If successful, uniswap_buy_kit doesn't lose tez. *)
+let test_buy_kit_preserves_tez =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_preserves_tez"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  Ligo.add_tez_tez uniswap.tez amount = new_uniswap.tez
+
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
 (* ************************************************************************* *)
@@ -842,6 +854,7 @@ let suite =
     test_buy_kit_does_not_affect_liquidity;
     test_buy_kit_respects_lower_bound;
     test_buy_kit_preserves_kit;
+    test_buy_kit_preserves_tez;
 
     (* sell_kit *)
     sell_kit_unit_test;
