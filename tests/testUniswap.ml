@@ -394,6 +394,7 @@ let sell_kit_unit_test =
       );
 
     (* Low expectations but too late (tight): fail *)
+    Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_UniswapTooLate))
