@@ -98,11 +98,19 @@ let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
       )
 
 (** Compute the current adjustment index. Basically this is the product of
-  * the burrow fee index and the imbalance adjustment index. *)
+  * the burrow fee index and the imbalance adjustment index.
+  *
+  *   adjustment_index_i = FLOOR (burrow_fee_index_i * imabalance_index_i)
+  *)
 let compute_adjustment_index (p: parameters) : fixedpoint =
-  let burrow_fee_index = fixedpoint_to_ratio p.burrow_fee_index in
-  let imbalance_index = fixedpoint_to_ratio p.imbalance_index in
-  fixedpoint_of_ratio_floor (mul_ratio burrow_fee_index imbalance_index)
+  fixedpoint_of_raw
+    (fdiv_int_int
+       (Ligo.mul_int_int
+          (fixedpoint_to_raw p.burrow_fee_index)
+          (fixedpoint_to_raw p.imbalance_index)
+       )
+       (fixedpoint_to_raw fixedpoint_one)
+    )
 
 (** Given the current target, calculate the rate of change of the drift (drift
   * derivative). That's how the following calculations came to be:
