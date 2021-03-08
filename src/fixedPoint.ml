@@ -41,6 +41,9 @@ let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int (ra
 let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int (ratio_num amnt) fixedpoint_scaling_factor) (ratio_den amnt)
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
+let[@inline] fixedpoint_of_raw (amnt: Ligo.int) : fixedpoint = amnt
+let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
+
 (* BEGIN_OCAML *)
 let fixedpoint_of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in

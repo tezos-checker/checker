@@ -195,18 +195,21 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
 
 (** Calculate the current drift based on the last drift, the last drift
   * derivative, the current drift derivative, and the number of seconds that
-  * have elapsed. TODO: Give formula. *)
-let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
-  fixedpoint_of_ratio_floor
-    (add_ratio
-       (fixedpoint_to_ratio last_drift)
-       (mul_ratio
-          (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
-          (mul_ratio
-             (fixedpoint_to_ratio (fixedpoint_add last_drift_derivative current_drift_derivative))
+  * have elapsed.
+  *
+  *   drift_{i+1} = FLOOR (drift_i + (1/2) * (drift'_i + drift'_{i+1}) * (t_{i+1} - t_i))
+  *)
+let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
+  fixedpoint_of_raw
+    (fdiv_int_int
+       (Ligo.add_int_int
+          (Ligo.mul_int_int (Ligo.int_from_literal "2") (fixedpoint_to_raw last_drift))
+          (Ligo.mul_int_int
+             (fixedpoint_to_raw (fixedpoint_add last_drift_derivative current_drift_derivative))
              duration_in_seconds
           )
        )
+       (Ligo.int_from_literal "2")
     )
 
 (** Calculate the current quantity based on the last quantity, the last drift,
@@ -311,8 +314,8 @@ let parameters_touch
     } = parameters in
 
   (* Calculate the number of seconds elapsed. *)
-  let duration_in_seconds =
-    ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched) in
+  let duration_in_seconds_int = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched in
+  let duration_in_seconds = ratio_of_int duration_in_seconds_int in
   assert (geq_ratio_ratio duration_in_seconds zero_ratio); (* NOTE: the protocol should ensure this I believe. *)
 
   (* Update the indices *)
@@ -327,7 +330,7 @@ let parameters_touch
   let current_drift_derivative =
     compute_drift_derivative parameters_target in
   let current_drift =
-    compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
+    compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds_int in
   let current_q =
     compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_target =
