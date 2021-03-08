@@ -30,7 +30,6 @@ test-coverage:
 
 clean:
 	$(RM) -r _build generated
-	$(RM) bisect*.coverage
 
 indent:
 	ocp-indent -i src/*.ml src/*.mli

@@ -1,6 +1,5 @@
 _build
 _coverage
-bisect*.coverage
 checker.byte
 generated
 
