@@ -391,25 +391,24 @@ let parameters_touch
     } = parameters in
 
   (* Calculate the number of seconds elapsed. *)
-  let duration_in_seconds_int = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched in
-  let duration_in_seconds = ratio_of_int duration_in_seconds_int in
-  assert (geq_ratio_ratio duration_in_seconds zero_ratio); (* NOTE: the protocol should ensure this I believe. *)
+  let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched in
+  assert (Ligo.geq_int_int duration_in_seconds (Ligo.int_from_literal "0")); (* NOTE: the protocol should ensure this I believe. *)
 
   (* Update the indices *)
   let current_burrow_fee_index =
-    compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds_int in
+    compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds in
   let current_imbalance_index =
-    compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds_int in
+    compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds in
 
   (* Calculate all parameter updates and accrual to uniswap. *)
   let current_protected_index =
-    compute_current_protected_index parameters_protected_index current_index duration_in_seconds_int in
+    compute_current_protected_index parameters_protected_index current_index duration_in_seconds in
   let current_drift_derivative =
     compute_drift_derivative parameters_target in
   let current_drift =
-    compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds_int in
+    compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_q =
-    compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds_int in
+    compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_target =
     compute_current_target current_q current_index current_kit_in_tez in
 
