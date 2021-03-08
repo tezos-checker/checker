@@ -192,6 +192,7 @@ If any of the following holds, the transaction fails
 * If the amount of kit given is zero (`kit_given = 0`), the transaction fails.
 * If we are on or past the deadline (`now >= dealine`), the transaction fails.
 * If no amount of tez is expected (`min_tez_expected = 0`), the transaction fails.
+* If any tez were transferred to the contract (`amount > 0`), the transaction fails.
 
 Otherwise, we compute how much tez can be bought for the `kit_given` as follows:
 ```
