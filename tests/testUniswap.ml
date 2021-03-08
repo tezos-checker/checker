@@ -157,6 +157,32 @@ let test_buy_kit_does_not_affect_liquidity =
     uniswap_buy_kit uniswap amount min_kit_expected deadline in
   uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_buy_kit respects min_kit_expected. *)
+let test_buy_kit_respects_lower_bound =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_respects_lower_bound"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let bought_kit, _new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  bought_kit >= min_kit_expected
+
+(* If successful, uniswap_buy_kit doesn't lose kit.
+ * Note that, because kits are isomorphic to naturals,
+ * this also means that uniswap_buy_kit doesn't return more kit than uniswap had. *)
+let test_buy_kit_preserves_kit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_preserves_kit"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let bought_kit, new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  uniswap.kit = kit_add new_uniswap.kit bought_kit
+
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
 (* ************************************************************************* *)
@@ -738,6 +764,8 @@ let suite =
     test_buy_kit_increases_price;
     test_buy_kit_increases_product;
     test_buy_kit_does_not_affect_liquidity;
+    test_buy_kit_respects_lower_bound;
+    test_buy_kit_preserves_kit;
 
     (* sell_kit *)
     sell_kit_unit_test;
