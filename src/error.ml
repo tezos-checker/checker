@@ -35,7 +35,9 @@ let[@inline] error_NotAllSlicesClaimed                             : Ligo.int = 
 let[@inline] error_NotAWinningBid                                  : Ligo.int = Ligo.int_from_literal "30"
 let[@inline] error_BidTicketExpired                                : Ligo.int = Ligo.int_from_literal "31"
 
+(*
 let[@inline] error_TouchParametersInThePast                        : Ligo.int = Ligo.int_from_literal "32"
+*)
 
 let[@inline] error_InsufficientFunds                               : Ligo.int = Ligo.int_from_literal "33"
 let[@inline] error_WithdrawTezFailure                              : Ligo.int = Ligo.int_from_literal "34"

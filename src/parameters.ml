@@ -3,7 +3,6 @@ open Ratio
 open FixedPoint
 open Common
 open Constants
-open Error
 
 type parameters =
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
@@ -165,6 +164,129 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   else
     (failwith "impossible" : fixedpoint)
 
+(** Calculate the current burrow fee index based on the last index and the
+  * number of seconds that have elapsed. TODO: Give formula. Keep in mind that
+  * this formula means that the burrow fee index is ever-increasing. *)
+let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_burrow_fee_index)
+       (add_ratio
+          one_ratio
+          (div_ratio
+             (mul_ratio burrow_fee_percentage duration_in_seconds)
+             (ratio_of_int seconds_in_a_year)
+          )
+       )
+    )
+
+(** Calculate the current protected index based on the last protected index,
+  * the current index (as provided by the oracle), and the number of seconds
+  * that have elapsed. TODO: Give formula. *)
+let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: ratio) : Ligo.tez =
+  let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
+  let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
+  let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez last_protected_index) in
+  ratio_to_tez_floor
+    (mul_ratio
+       (ratio_of_tez last_protected_index)
+       (clamp ratio lower_lim upper_lim)
+    )
+
+(** Calculate the current drift based on the last drift, the last drift
+  * derivative, the current drift derivative, and the number of seconds that
+  * have elapsed. TODO: Give formula. *)
+let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
+  fixedpoint_of_ratio_floor
+    (add_ratio
+       (fixedpoint_to_ratio last_drift)
+       (mul_ratio
+          (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
+          (mul_ratio
+             (fixedpoint_to_ratio (fixedpoint_add last_drift_derivative current_drift_derivative))
+             duration_in_seconds
+          )
+       )
+    )
+
+(** Calculate the current quantity based on the last quantity, the last drift,
+  * the last drift derivative, the current drift derivative, and the number of
+  * seconds that have elapsed. TODO: Give formula. *)
+let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_q)
+       (qexp
+          (mul_ratio
+             (add_ratio
+                (fixedpoint_to_ratio last_drift)
+                (mul_ratio
+                   (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
+                   (mul_ratio
+                      (add_ratio
+                         (mul_ratio
+                            (ratio_of_int (Ligo.int_from_literal "2"))
+                            (fixedpoint_to_ratio last_drift_derivative)
+                         )
+                         (fixedpoint_to_ratio current_drift_derivative)
+                      )
+                      duration_in_seconds
+                   )
+                )
+             )
+             duration_in_seconds
+          )
+       )
+    )
+
+(** Calculate the current target based on the current quantity, the current
+  * index, and the current price of kit in tez (as provided by the uniswap
+  * sub-contract, from the previous block). TODO: Give formula. *)
+let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.tez) (current_kit_in_tez: ratio) : fixedpoint =
+  fixedpoint_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (fixedpoint_to_ratio current_q)
+          (ratio_of_tez current_index)
+       )
+       current_kit_in_tez
+    )
+
+(** Calculate the current imbalance index based on the last amount of
+  * outstanding (burrowed) kit, the last amount of circulating kit, the last
+  * imbalance index, and the number of seconds that have elapsed, using the
+  * following formula:
+  *
+  *   imbalance_index_{i+1} = imbalance_index_i
+  *                         * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
+  *
+  * (note that the last outstanding kit and circulating kit are used in the
+  * calculation of imbalance; see compute_imbalance).
+  *
+  * This calculation means that even if the imbalance_rate is bounded (from -5
+  * cNp to +5 cNp), the imbalance index is not. The above formula for
+  * imbalance = -5cNp and 20 years time in seconds elapsed gives
+  * imbalance_index_{i+1} = 0 (for longer time it gives
+  * imbalance_index_{i+1} < 0). This can make calculations below fail. All of
+  * this of course refers to the possibility of nobody touching checker for
+  * over 20 years, which I guess should be practically impossible. *)
+let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_circulating_kit: kit) (last_imbalance_index: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
+  let imbalance_rate =
+    compute_imbalance
+      last_outstanding_kit (* burrowed *)
+      last_circulating_kit (* circulating *) in
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_imbalance_index)
+       (add_ratio
+          one_ratio
+          (div_ratio
+             (mul_ratio imbalance_rate duration_in_seconds)
+             (ratio_of_int seconds_in_a_year)
+          )
+       )
+    )
+
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
@@ -188,115 +310,28 @@ let parameters_touch
       last_touched = parameters_last_touched;
     } = parameters in
 
-  let duration_in_seconds = (* NOTE: can it be negative? Does the protocol ensure this? *)
-    let duration =
-      ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched) in
-    if lt_ratio_ratio duration zero_ratio
-    then (Ligo.failwith error_TouchParametersInThePast : ratio)
-    else duration
-  in
+  (* Calculate the number of seconds elapsed. *)
+  let duration_in_seconds =
+    ratio_of_int (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now parameters_last_touched) in
+  assert (geq_ratio_ratio duration_in_seconds zero_ratio); (* NOTE: the protocol should ensure this I believe. *)
 
+  (* Update the indices *)
+  let current_burrow_fee_index =
+    compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds in
+  let current_imbalance_index =
+    compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds in
+
+  (* Calculate all parameter updates and accrual to uniswap. *)
   let current_protected_index =
-    let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
-    let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
-    let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez parameters_protected_index) in
-    ratio_to_tez_floor
-      (mul_ratio
-         (ratio_of_tez parameters_protected_index)
-         (clamp ratio lower_lim upper_lim)
-      ) in
+    compute_current_protected_index parameters_protected_index current_index duration_in_seconds in
   let current_drift_derivative =
     compute_drift_derivative parameters_target in
   let current_drift =
-    fixedpoint_of_ratio_floor
-      (add_ratio
-         (fixedpoint_to_ratio parameters_drift)
-         (mul_ratio
-            (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
-            (mul_ratio
-               (fixedpoint_to_ratio (fixedpoint_add parameters_drift_derivative current_drift_derivative))
-               duration_in_seconds
-            )
-         )
-      ) in
+    compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_q =
-    fixedpoint_of_ratio_floor
-      (mul_ratio
-         (fixedpoint_to_ratio parameters_q)
-         (qexp
-            (mul_ratio
-               (add_ratio
-                  (fixedpoint_to_ratio parameters_drift)
-                  (mul_ratio
-                     (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
-                     (mul_ratio
-                        (add_ratio
-                           (mul_ratio
-                              (ratio_of_int (Ligo.int_from_literal "2"))
-                              (fixedpoint_to_ratio parameters_drift_derivative)
-                           )
-                           (fixedpoint_to_ratio current_drift_derivative)
-                        )
-                        duration_in_seconds
-                     )
-                  )
-               )
-               duration_in_seconds
-            )
-         )
-      ) in
-
+    compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_target =
-    fixedpoint_of_ratio_floor
-      (div_ratio
-         (mul_ratio
-            (fixedpoint_to_ratio current_q)
-            (ratio_of_tez current_index)
-         )
-         current_kit_in_tez
-      ) in
-  (* Update the indices *)
-  let current_burrow_fee_index =
-    (* NOTE: This formula means that burrow_fee_index is ever-increasing. *)
-    fixedpoint_of_ratio_floor
-      (mul_ratio
-         (fixedpoint_to_ratio parameters_burrow_fee_index)
-         (add_ratio
-            one_ratio
-            (div_ratio
-               (mul_ratio burrow_fee_percentage duration_in_seconds)
-               (ratio_of_int seconds_in_a_year)
-            )
-         )
-      ) in
-
-  let current_imbalance_index =
-    let imbalance_rate =
-      compute_imbalance
-        parameters_outstanding_kit (* burrowed *)
-        parameters_circulating_kit (* circulating *) in
-    (* NOTE: Even if the imbalance_rate is bounded (from -5 cNp to +5 cNp), the
-     * following calculation of the balance index is not. We use the formula
-     *
-     *   imbalance_index_{i+1} = imbalance_index_i
-     *                         * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
-     *
-     * which for imbalance = -5cNp and 20 years time in seconds elapsed gives
-     * imbalance_index_{i+1} = 0 (for longer time it gives
-     * imbalance_index_{i+1} < 0). This can make calculations below fail. All
-     * of this of course refers to the possibility of nobody touching checker
-     * for over 20 years, which I guess should be practically impossible. *)
-    fixedpoint_of_ratio_floor
-      (mul_ratio
-         (fixedpoint_to_ratio parameters_imbalance_index)
-         (add_ratio
-            one_ratio
-            (div_ratio
-               (mul_ratio imbalance_rate duration_in_seconds)
-               (ratio_of_int seconds_in_a_year)
-            )
-         )
-      ) in
+    compute_current_target current_q current_index current_kit_in_tez in
 
   let outstanding_with_fees =
     kit_of_ratio_floor
