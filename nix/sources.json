@@ -1,9 +1,9 @@
 {
     "ligo-artifacts": {
-        "rev": "97adf542b63099937d6203ae80b1ef3005a1efdb",
-        "sha256": "0nb508y48jlrmma7pbzd766myrbrqw1j4kkfs5xyw0k4qs2i10ni",
+        "rev": "bd28e134ec66741033fa9828b2ef3fc4443eb356",
+        "sha256": "10lhc7kqdq2lg7pi06c0l5da4m0vrg1iivcwvfx99pyd312kd1f9",
         "type": "file",
-        "url": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/97adf542b63099937d6203ae80b1ef3005a1efdb/download?job=docker_extract",
+        "url": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/bd28e134ec66741033fa9828b2ef3fc4443eb356/download?job=docker_extract",
         "url_template": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/<rev>/download?job=docker_extract"
     },
     "nixpkgs": {
@@ -16,18 +16,6 @@
         "sha256": "07a5i67jxlv08aaj3cay5hgsx5i6slwpabbqwz6167xdini60f8b",
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/8f1302995ec820e175db9c91b08a08541964df12.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "tezos-packaging": {
-        "branch": "master",
-        "description": "Various forms of Tezos software distribution for Linux.",
-        "homepage": "",
-        "owner": "serokell",
-        "repo": "tezos-packaging",
-        "rev": "294394ffce6caa6a72861b112977177c7dba7305",
-        "sha256": "0r6glpq5qg563k9rcj26vf88iqv2j51j4j5jl35iazvrmp7n6ba0",
-        "type": "tarball",
-        "url": "https://github.com/serokell/tezos-packaging/archive/294394ffce6caa6a72861b112977177c7dba7305.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
