@@ -1,4 +1,7 @@
-type ratio
+type ratio = {
+  num: Ligo.int; (** Numerator. *)
+  den: Ligo.int; (** Denominator, > 0 *)
+}
 
 (* Construction/deconstruction. *)
 val make_real_unsafe: Ligo.int -> Ligo.int -> ratio
