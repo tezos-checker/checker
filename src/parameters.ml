@@ -81,7 +81,7 @@ let liquidation_price (p: parameters) : ratio =
   * NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
-let compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
+let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   if burrowed = kit_zero && circulating = kit_zero then
     zero_ratio
   else if burrowed = kit_zero && circulating <> kit_zero then
@@ -297,8 +297,9 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
   * imbalance index, and the number of seconds that have elapsed, using the
   * following formula:
   *
-  *   imbalance_index_{i+1} = imbalance_index_i
-  *                         * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
+  *   imbalance_index_{i+1} = FLOOR (
+  *     imbalance_index_i * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
+  *   )
   *
   * (note that the last outstanding kit and circulating kit are used in the
   * calculation of imbalance; see compute_imbalance).
@@ -310,21 +311,22 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
   * imbalance_index_{i+1} < 0). This can make calculations below fail. All of
   * this of course refers to the possibility of nobody touching checker for
   * over 20 years, which I guess should be practically impossible. *)
-let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_circulating_kit: kit) (last_imbalance_index: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
-  let imbalance_rate =
+let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_circulating_kit: kit) (last_imbalance_index: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
+  let { num = num; den = den; } =
     compute_imbalance
       last_outstanding_kit (* burrowed *)
       last_circulating_kit (* circulating *) in
-  fixedpoint_of_ratio_floor
-    (mul_ratio
-       (fixedpoint_to_ratio last_imbalance_index)
-       (add_ratio
-          one_ratio
-          (div_ratio
-             (mul_ratio imbalance_rate duration_in_seconds)
-             (ratio_of_int seconds_in_a_year)
+  let denom = Ligo.mul_int_int den seconds_in_a_year in
+  fixedpoint_of_raw
+    (fdiv_int_int
+       (Ligo.mul_int_int
+          (fixedpoint_to_raw last_imbalance_index)
+          (Ligo.add_int_int
+             denom
+             (Ligo.mul_int_int num duration_in_seconds)
           )
        )
+       denom
     )
 
 (** Update the checker's parameters, given (a) the current timestamp
@@ -359,7 +361,7 @@ let parameters_touch
   let current_burrow_fee_index =
     compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds_int in
   let current_imbalance_index =
-    compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds in
+    compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds_int in
 
   (* Calculate all parameter updates and accrual to uniswap. *)
   let current_protected_index =
