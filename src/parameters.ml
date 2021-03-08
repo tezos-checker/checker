@@ -165,19 +165,25 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
     (failwith "impossible" : fixedpoint)
 
 (** Calculate the current burrow fee index based on the last index and the
-  * number of seconds that have elapsed. TODO: Give formula. Keep in mind that
-  * this formula means that the burrow fee index is ever-increasing. *)
-let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
-  fixedpoint_of_ratio_floor
-    (mul_ratio
-       (fixedpoint_to_ratio last_burrow_fee_index)
-       (add_ratio
-          one_ratio
-          (div_ratio
-             (mul_ratio burrow_fee_percentage duration_in_seconds)
-             (ratio_of_int seconds_in_a_year)
+  * number of seconds that have elapsed.
+  *
+  * burrow_fee_index_{i+1} = FLOOR (burrow_fee_index_i * (1 + burrow_fee_percentage * (t_{i+1} - t_i)) / <seconds_in_a_year>)
+  *
+  * Keep in mind that this formula means that the burrow fee index is
+  * ever-increasing. *)
+let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
+  let { num = num; den = den; } = burrow_fee_percentage in
+  let denom = Ligo.mul_int_int den seconds_in_a_year in
+  fixedpoint_of_raw
+    (fdiv_int_int
+       (Ligo.mul_int_int
+          (fixedpoint_to_raw last_burrow_fee_index)
+          (Ligo.add_int_int
+             denom
+             (Ligo.mul_int_int num duration_in_seconds)
           )
        )
+       denom
     )
 
 (** Calculate the current protected index based on the last protected index,
@@ -343,7 +349,7 @@ let parameters_touch
 
   (* Update the indices *)
   let current_burrow_fee_index =
-    compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds in
+    compute_current_burrow_fee_index parameters_burrow_fee_index duration_in_seconds_int in
   let current_imbalance_index =
     compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds in
 
