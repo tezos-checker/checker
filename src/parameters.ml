@@ -214,32 +214,45 @@ let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivati
 
 (** Calculate the current quantity based on the last quantity, the last drift,
   * the last drift derivative, the current drift derivative, and the number of
-  * seconds that have elapsed. TODO: Give formula. *)
-let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: ratio) : fixedpoint =
-  fixedpoint_of_ratio_floor
-    (mul_ratio
-       (fixedpoint_to_ratio last_q)
-       (qexp
-          (mul_ratio
-             (add_ratio
-                (fixedpoint_to_ratio last_drift)
-                (mul_ratio
-                   (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
-                   (mul_ratio
-                      (add_ratio
-                         (mul_ratio
-                            (ratio_of_int (Ligo.int_from_literal "2"))
-                            (fixedpoint_to_ratio last_drift_derivative)
+  * seconds that have elapsed.
+  *
+  *   q_{i+1} = FLOOR (q_i * EXP((drift_i + (1/6) * (2*drift'_i + drift'_{i+1}) * (t_{i+1} - t_i)) * (t_{i+1} - t_i)))
+  *
+  * where EXP(X) = X+1.
+  *)
+let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
+  let six_sf =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "6")
+      (fixedpoint_to_raw fixedpoint_one) in
+  fixedpoint_of_raw
+    (fdiv_int_int
+       (Ligo.mul_int_int
+          (fixedpoint_to_raw last_q)
+          (Ligo.add_int_int
+             (Ligo.mul_int_int
+                (Ligo.add_int_int
+                   (Ligo.mul_int_int
+                      (Ligo.int_from_literal "6")
+                      (fixedpoint_to_raw last_drift)
+                   )
+                   (Ligo.mul_int_int
+                      (Ligo.add_int_int
+                         (Ligo.mul_int_int
+                            (Ligo.int_from_literal "2")
+                            (fixedpoint_to_raw last_drift_derivative)
                          )
-                         (fixedpoint_to_ratio current_drift_derivative)
+                         (fixedpoint_to_raw current_drift_derivative)
                       )
                       duration_in_seconds
                    )
                 )
+                duration_in_seconds
              )
-             duration_in_seconds
+             six_sf
           )
        )
+       six_sf
     )
 
 (** Calculate the current target based on the current quantity, the current
@@ -332,7 +345,7 @@ let parameters_touch
   let current_drift =
     compute_current_drift parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds_int in
   let current_q =
-    compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
+    compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds_int in
   let current_target =
     compute_current_target current_q current_index current_kit_in_tez in
 
