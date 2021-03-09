@@ -360,6 +360,29 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
        denom
     )
 
+(** Compute current outstanding kit, taking burrow fees into account:
+  *
+  *   outstanding_with_fees_{i+1} = FLOOR (
+  *     outstanding_kit_i * burrow_fee_index_{i+1} / burrow_fee_index_i
+  *   )
+  *)
+let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
+(*
+  kit_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (kit_to_ratio last_outstanding_kit)
+          (fixedpoint_to_ratio current_burrow_fee_index)
+       )
+       (fixedpoint_to_ratio last_burrow_fee_index)
+    )
+*)
+  kit_of_ratio_floor
+    (make_real_unsafe
+       (Ligo.mul_int_int (Ligo.int (kit_to_mukit last_outstanding_kit)) (fixedpoint_to_raw current_burrow_fee_index))
+       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_burrow_fee_index))
+    )
+
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
@@ -404,24 +427,16 @@ let parameters_touch
     compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_target =
     compute_current_target current_q current_index current_kit_in_tez in
+  let current_outstanding_with_fees =
+    compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
 
-  let outstanding_with_fees =
-    kit_of_ratio_floor
-      (div_ratio
-         (mul_ratio
-            (kit_to_ratio parameters_outstanding_kit)
-            (fixedpoint_to_ratio current_burrow_fee_index)
-         )
-         (fixedpoint_to_ratio parameters_burrow_fee_index)
-      ) in
-
-  let accrual_to_uniswap = kit_sub outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
+  let accrual_to_uniswap = kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
 
   let current_outstanding_kit =
     kit_of_ratio_floor
       (div_ratio
          (mul_ratio
-            (kit_to_ratio outstanding_with_fees)
+            (kit_to_ratio current_outstanding_with_fees)
             (fixedpoint_to_ratio current_imbalance_index)
          )
          (fixedpoint_to_ratio parameters_imbalance_index)
