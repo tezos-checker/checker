@@ -453,9 +453,9 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
   assert_burrow_invariants b;
   let partial_reward =
     ratio_to_tez_floor
-      (mul_ratio
-         (ratio_of_tez b.collateral)
-         (fixedpoint_to_ratio liquidation_reward_percentage)
+      (make_real_unsafe
+         (Ligo.mul_int_int (tez_to_mutez b.collateral) (fixedpoint_to_raw liquidation_reward_percentage))
+         (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") (fixedpoint_to_raw fixedpoint_one))
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
