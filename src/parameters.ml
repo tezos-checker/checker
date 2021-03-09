@@ -383,6 +383,30 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
        (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_burrow_fee_index))
     )
 
+(** Compute current outstanding kit, given that the burrow fees have already
+  * been added (that is, compute the effect of the imbalance index):
+  *
+  *   outstanding_kit_{i+1} = FLOOR (
+  *     outstanding_with_fees_{i+1} * imbalance_index_{i+1} / imbalance_index_i
+  *   )
+  *)
+let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
+(*
+  kit_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (kit_to_ratio current_outstanding_with_fees)
+          (fixedpoint_to_ratio current_imbalance_index)
+       )
+       (fixedpoint_to_ratio last_imbalance_index)
+    )
+*)
+  kit_of_ratio_floor
+    (make_real_unsafe
+       (Ligo.mul_int_int (Ligo.int (kit_to_mukit current_outstanding_with_fees)) (fixedpoint_to_raw current_imbalance_index))
+       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_imbalance_index))
+    )
+
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
   * and (c) the current price of kit in tez, as given by the uniswap
@@ -429,21 +453,14 @@ let parameters_touch
     compute_current_target current_q current_index current_kit_in_tez in
   let current_outstanding_with_fees =
     compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
-
-  let accrual_to_uniswap = kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
-
+  let accrual_to_uniswap =
+    kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
   let current_outstanding_kit =
-    kit_of_ratio_floor
-      (div_ratio
-         (mul_ratio
-            (kit_to_ratio current_outstanding_with_fees)
-            (fixedpoint_to_ratio current_imbalance_index)
-         )
-         (fixedpoint_to_ratio parameters_imbalance_index)
-      ) in
+    compute_current_outstanding_kit current_outstanding_with_fees parameters_imbalance_index current_imbalance_index in
+  let current_circulating_kit =
+    kit_add parameters_circulating_kit accrual_to_uniswap in
 
-  let current_circulating_kit = kit_add parameters_circulating_kit accrual_to_uniswap in
-
+  (* Update all values *)
   ( accrual_to_uniswap
   , {
     index = current_index;
