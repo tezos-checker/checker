@@ -49,7 +49,9 @@ let[@inline] tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.prote
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: parameters) : ratio =
-  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_minting p))
+  make_real_unsafe
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_minting p)))
+    (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Current liquidation price (tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
