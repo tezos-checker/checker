@@ -42,10 +42,10 @@ let initial_parameters : parameters =
   }
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_minting (p: parameters) : Ligo.tez = max_tez p.index p.protected_index
+let[@inline] tz_minting (p: parameters) : Ligo.tez = max_tez p.index p.protected_index
 
 (* tez. To get tez/kit must multiply with q. *)
-let tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.protected_index
+let[@inline] tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.protected_index
 
 (** Current minting price (tez/kit). *)
 let minting_price (p: parameters) : ratio =
@@ -206,7 +206,6 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
   (* TODO: ADD MORE ASSERTIONS: STRICTLY POSITIVE LAST PROTECTED INDEX *)
   let last_protected_index = tez_to_mutez last_protected_index in
-
   ratio_to_tez_floor
     (make_real_unsafe
        (clamp_int
