@@ -367,16 +367,6 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
   *   )
   *)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
-(*
-  kit_of_ratio_floor
-    (div_ratio
-       (mul_ratio
-          (kit_to_ratio last_outstanding_kit)
-          (fixedpoint_to_ratio current_burrow_fee_index)
-       )
-       (fixedpoint_to_ratio last_burrow_fee_index)
-    )
-*)
   kit_of_ratio_floor
     (make_real_unsafe
        (Ligo.mul_int_int (Ligo.int (kit_to_mukit last_outstanding_kit)) (fixedpoint_to_raw current_burrow_fee_index))
@@ -391,16 +381,6 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
   *   )
   *)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
-(*
-  kit_of_ratio_floor
-    (div_ratio
-       (mul_ratio
-          (kit_to_ratio current_outstanding_with_fees)
-          (fixedpoint_to_ratio current_imbalance_index)
-       )
-       (fixedpoint_to_ratio last_imbalance_index)
-    )
-*)
   kit_of_ratio_floor
     (make_real_unsafe
        (Ligo.mul_int_int (Ligo.int (kit_to_mukit current_outstanding_with_fees)) (fixedpoint_to_raw current_imbalance_index))
@@ -494,3 +474,189 @@ let[@inline] add_outstanding_kit (parameters: parameters) (kit: kit) : parameter
 let[@inline] remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
   assert (parameters.outstanding_kit >= kit);
   { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }
+
+(* BEGIN_OCAML *)
+(* NOTE: These are "model" implementations of the functions above, using
+ * ratios. The only reason I left them here is so that we can check that each
+ * function implementation above (which does not use the ratio and fixedpoint
+ * abstractions), gives identical results to the corresponding model
+ * implementation below. If we are not gonna do that, we can drop the model
+ * functions. *)
+let model_minting_price (p: parameters) : ratio =
+  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_minting p))
+
+let model_liquidation_price (p: parameters) : ratio =
+  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_liquidation p))
+
+let model_compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
+  if burrowed = kit_zero && circulating = kit_zero then
+    zero_ratio
+  else if burrowed = kit_zero && circulating <> kit_zero then
+    make_real_unsafe (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
+  else if burrowed >= circulating then
+    div_ratio
+      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (kit_to_ratio burrowed))
+      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
+  else (* burrowed < circulating *)
+    neg_ratio
+      (div_ratio
+         (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub circulating burrowed))) (kit_to_ratio burrowed))
+         (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
+      )
+
+let model_compute_adjustment_index (p: parameters) : fixedpoint =
+  let burrow_fee_index = fixedpoint_to_ratio p.burrow_fee_index in
+  let imbalance_index = fixedpoint_to_ratio p.imbalance_index in
+  fixedpoint_of_ratio_floor (mul_ratio burrow_fee_index imbalance_index)
+
+let model_compute_current_burrow_fee_index
+    (last_burrow_fee_index: fixedpoint)
+    (duration_in_seconds: Ligo.int)
+  : fixedpoint =
+  let duration_in_seconds = ratio_of_int duration_in_seconds in
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_burrow_fee_index)
+       (add_ratio
+          one_ratio
+          (div_ratio
+             (mul_ratio burrow_fee_percentage duration_in_seconds)
+             (ratio_of_int seconds_in_a_year)
+          )
+       )
+    )
+
+let model_compute_current_protected_index
+    (last_protected_index: Ligo.tez)
+    (current_index: Ligo.tez)
+    (duration_in_seconds: Ligo.int)
+  : Ligo.tez =
+  let duration_in_seconds = ratio_of_int duration_in_seconds in
+  let protected_index_epsilon = make_ratio (Ligo.int_from_literal "1") protected_index_inverse_epsilon in
+  let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
+  let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
+  let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez last_protected_index) in
+  ratio_to_tez_floor
+    (mul_ratio
+       (ratio_of_tez last_protected_index)
+       (clamp_ratio ratio lower_lim upper_lim)
+    )
+
+let model_compute_current_drift
+    (last_drift: fixedpoint)
+    (last_drift_derivative: fixedpoint)
+    (current_drift_derivative: fixedpoint)
+    (duration_in_seconds: Ligo.int)
+  : fixedpoint =
+  let duration_in_seconds = ratio_of_int duration_in_seconds in
+  fixedpoint_of_ratio_floor
+    (add_ratio
+       (fixedpoint_to_ratio last_drift)
+       (mul_ratio
+          (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "2"))
+          (mul_ratio
+             (fixedpoint_to_ratio (fixedpoint_add last_drift_derivative current_drift_derivative))
+             duration_in_seconds
+          )
+       )
+    )
+
+let model_compute_current_q
+    (last_q: fixedpoint)
+    (last_drift: fixedpoint)
+    (last_drift_derivative: fixedpoint)
+    (current_drift_derivative: fixedpoint)
+    (duration_in_seconds: Ligo.int)
+  : fixedpoint =
+  let duration_in_seconds = ratio_of_int duration_in_seconds in
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_q)
+       (qexp
+          (mul_ratio
+             (add_ratio
+                (fixedpoint_to_ratio last_drift)
+                (mul_ratio
+                   (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "6"))
+                   (mul_ratio
+                      (add_ratio
+                         (mul_ratio
+                            (ratio_of_int (Ligo.int_from_literal "2"))
+                            (fixedpoint_to_ratio last_drift_derivative)
+                         )
+                         (fixedpoint_to_ratio current_drift_derivative)
+                      )
+                      duration_in_seconds
+                   )
+                )
+             )
+             duration_in_seconds
+          )
+       )
+    )
+
+let model_compute_current_target
+    (current_q: fixedpoint)
+    (current_index: Ligo.tez)
+    (current_kit_in_tez: ratio)
+  : fixedpoint =
+  fixedpoint_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (fixedpoint_to_ratio current_q)
+          (ratio_of_tez current_index)
+       )
+       current_kit_in_tez
+    )
+
+let model_compute_current_imbalance_index
+    (last_outstanding_kit: kit)
+    (last_circulating_kit: kit)
+    (last_imbalance_index: fixedpoint)
+    (duration_in_seconds: Ligo.int)
+  : fixedpoint =
+  let duration_in_seconds = ratio_of_int duration_in_seconds in
+  let imbalance_rate =
+    compute_imbalance
+      last_outstanding_kit (* burrowed *)
+      last_circulating_kit (* circulating *) in
+  fixedpoint_of_ratio_floor
+    (mul_ratio
+       (fixedpoint_to_ratio last_imbalance_index)
+       (add_ratio
+          one_ratio
+          (div_ratio
+             (mul_ratio imbalance_rate duration_in_seconds)
+             (ratio_of_int seconds_in_a_year)
+          )
+       )
+    )
+
+let model_compute_current_outstanding_with_fees
+    (last_outstanding_kit: kit)
+    (last_burrow_fee_index: fixedpoint)
+    (current_burrow_fee_index: fixedpoint)
+  : kit =
+  kit_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (kit_to_ratio last_outstanding_kit)
+          (fixedpoint_to_ratio current_burrow_fee_index)
+       )
+       (fixedpoint_to_ratio last_burrow_fee_index)
+    )
+
+let model_compute_current_outstanding_kit
+    (current_outstanding_with_fees: kit)
+    (last_imbalance_index: fixedpoint)
+    (current_imbalance_index: fixedpoint)
+  : kit =
+  kit_of_ratio_floor
+    (div_ratio
+       (mul_ratio
+          (kit_to_ratio current_outstanding_with_fees)
+          (fixedpoint_to_ratio current_imbalance_index)
+       )
+       (fixedpoint_to_ratio last_imbalance_index)
+    )
+(* END_OCAML *)
