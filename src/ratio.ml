@@ -176,11 +176,6 @@ let qexp (x: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   { num = Ligo.add_int_int x_num x_den; den = x_den; }
 
-(* NOTE: It's only used once *)
-let[@inline] clamp (v: ratio) (lower: ratio) (upper: ratio) : ratio =
-  assert (leq_ratio_ratio lower upper);
-  min_ratio upper (max_ratio v lower)
-
 (* BEGIN_OCAML *)
 let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp_ratio f x = Format.pp_print_string f (show_ratio x)
@@ -193,4 +188,8 @@ let sign_ratio x =
     0
   else
     1
+
+let[@inline] clamp_ratio (v: ratio) (lower: ratio) (upper: ratio) : ratio =
+  assert (leq_ratio_ratio lower upper);
+  min_ratio upper (max_ratio v lower)
 (* END_OCAML *)

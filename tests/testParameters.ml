@@ -559,8 +559,8 @@ let test_liquidation_index_low_unbounded =
 *)
 
 (* Just a simple unit test, testing nothing specific, really. *)
-let test_touch =
-  "test_touch" >:: fun _ ->
+let test_touch_1 =
+  "test_touch_1" >:: fun _ ->
     let initial_parameters : parameters =
       { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
         index = Ligo.tez_from_literal "360_000mutez";
@@ -597,6 +597,48 @@ let test_touch =
       ~printer:show_parameters;
     assert_equal
       kit_zero (* NOTE: I'd expect this to be higher I think. *)
+      total_accrual_to_uniswap
+      ~printer:show_kit
+
+(* Just a simple unit test, testing nothing specific, really. *)
+let test_touch_2 =
+  "test_touch_2" >:: fun _ ->
+    let initial_parameters : parameters =
+      { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
+        index = Ligo.tez_from_literal "360_000mutez";
+        target = fixedpoint_of_hex_string "1.147AE147AE147AE1"; (* 1.08 *)
+        protected_index = Ligo.tez_from_literal "350_000mutez";
+        drift = fixedpoint_zero;
+        drift_derivative = fixedpoint_zero;
+        burrow_fee_index = fixedpoint_one;
+        imbalance_index = fixedpoint_one;
+        outstanding_kit = (kit_of_mukit (Ligo.nat_from_literal "1_753_165n")); (* 1_753_164n should leave as is *)
+        circulating_kit = (kit_of_mukit (Ligo.nat_from_literal "1_000_000n"));
+        last_touched = Ligo.timestamp_from_seconds_literal 0;
+      } in
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+    let new_index = Ligo.tez_from_literal "340_000mutez" in
+    let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let total_accrual_to_uniswap, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
+    assert_equal
+      { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5";
+        index = Ligo.tez_from_literal "340000mutez";
+        protected_index = Ligo.tez_from_literal "340000mutez";
+        target = fixedpoint_of_hex_string "1.00D6E1B366FF4BEE";
+        drift_derivative = fixedpoint_of_hex_string "0.000000000012DA63";
+        drift = fixedpoint_of_hex_string "0.00000000848F8818";
+        burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29";
+        imbalance_index = fixedpoint_of_hex_string "1.00005FB2608FF99D";
+        outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "1_753_176n");
+        circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1_000_001n");
+        last_touched = !Ligo.Tezos.now;
+      }
+      new_parameters
+      ~printer:show_parameters;
+    assert_equal
+      (kit_of_mukit (Ligo.nat_from_literal "1n"))
       total_accrual_to_uniswap
       ~printer:show_kit
 
@@ -644,5 +686,6 @@ let suite =
     (* touch *)
     (* test_touch_identity; *)
 
-    test_touch;
+    test_touch_1;
+    test_touch_2;
   ]
