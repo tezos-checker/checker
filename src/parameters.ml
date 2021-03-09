@@ -55,7 +55,9 @@ let minting_price (p: parameters) : ratio =
 
 (** Current liquidation price (tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
-  mul_ratio (fixedpoint_to_ratio p.q) (ratio_of_tez (tz_liquidation p))
+  make_real_unsafe
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_liquidation p)))
+    (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
   * (burrowed) and the amount of kit that are currently in circulation,
