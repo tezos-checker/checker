@@ -436,17 +436,20 @@ let compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction:
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
-    then zero_ratio
-    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
-  let collateral = ratio_of_tez b.collateral in
+    then kit_zero
+    else kit_sub b.outstanding_kit expected_kit in
+
+  let { num = num_fl; den = den_fl; } = fliquidation in
+  let numerator =
+    Ligo.mul_int_int
+      (tez_to_mutez tez_to_auction)
+      (Ligo.mul_int_int num_fl (Ligo.int (kit_to_mukit optimistic_outstanding))) in
+  let denominator =
+    Ligo.mul_int_int
+      den_fl
+      (Ligo.mul_int_int kit_scaling_factor_int (tez_to_mutez b.collateral)) in
   kit_of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
-    (div_ratio
-       (mul_ratio
-          (ratio_of_tez tez_to_auction)
-          (mul_ratio fliquidation optimistic_outstanding)
-       )
-       collateral
-    )
+    (make_real_unsafe numerator denominator)
 
 let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let _ = ensure_uptodate_burrow p b in
