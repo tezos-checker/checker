@@ -123,17 +123,18 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
   else
     let b = rebalance_kit burrow in
     let current_adjustment_index = compute_adjustment_index p in
-    let last_adjustment_index = fixedpoint_to_ratio b.adjustment_index in
-    let kit_outstanding = kit_to_ratio b.outstanding_kit in
     { b with
       outstanding_kit =
         kit_of_ratio_ceil
-          (div_ratio
-             (mul_ratio
-                kit_outstanding
-                (fixedpoint_to_ratio current_adjustment_index)
+          (make_real_unsafe
+             (Ligo.mul_int_int
+                (Ligo.int (kit_to_mukit b.outstanding_kit))
+                (fixedpoint_to_raw current_adjustment_index)
              )
-             last_adjustment_index
+             (Ligo.mul_int_int
+                kit_scaling_factor_int
+                (fixedpoint_to_raw b.adjustment_index)
+             )
           );
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
