@@ -405,11 +405,19 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
-    then zero_ratio
-    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
-  let liquidation_price = liquidation_price p in
-  let collateral = ratio_of_tez b.collateral in
-  b.active && lt_ratio_ratio collateral (mul_ratio (mul_ratio fliquidation optimistic_outstanding) liquidation_price)
+    then kit_zero
+    else kit_sub b.outstanding_kit expected_kit in
+  let { num = num_fl; den = den_fl; } = fliquidation in
+  let { num = num_lp; den = den_lp; } = liquidation_price p in
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int den_fl (Ligo.mul_int_int kit_scaling_factor_int den_lp)) in
+  let rhs =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "1_000_000")
+      (Ligo.mul_int_int num_fl (Ligo.mul_int_int (Ligo.int (kit_to_mukit optimistic_outstanding)) num_lp)) in
+  b.active && Ligo.lt_int_int lhs rhs
 
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
