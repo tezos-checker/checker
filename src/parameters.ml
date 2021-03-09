@@ -86,20 +86,20 @@ let liquidation_price (p: parameters) : ratio =
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
 let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
-  if burrowed = kit_zero && circulating = kit_zero then
+  let burrowed = Ligo.int (kit_to_mukit burrowed) in
+  let circulating = Ligo.int (kit_to_mukit circulating) in
+  if burrowed = Ligo.int_from_literal "0" && circulating = Ligo.int_from_literal "0" then
     zero_ratio
-  else if burrowed = kit_zero && circulating <> kit_zero then
+  else if burrowed = Ligo.int_from_literal "0" && circulating <> Ligo.int_from_literal "0" then
     make_real_unsafe (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
-  else if burrowed >= circulating then
-    div_ratio
-      (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub burrowed circulating))) (kit_to_ratio burrowed))
-      (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
+  else if Ligo.geq_int_int burrowed circulating then
+    make_real_unsafe
+      (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int burrowed circulating)) burrowed)
+      (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
   else (* burrowed < circulating *)
-    neg_ratio
-      (div_ratio
-         (min_ratio (mul_ratio (ratio_of_int (Ligo.int_from_literal "5")) (kit_to_ratio (kit_sub circulating burrowed))) (kit_to_ratio burrowed))
-         (mul_ratio (ratio_of_int (Ligo.int_from_literal "20")) (kit_to_ratio burrowed))
-      )
+    make_real_unsafe
+      (neg_int (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int circulating burrowed)) burrowed))
+      (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
 
 (** Compute the current adjustment index. Basically this is the product of
   * the burrow fee index and the imbalance adjustment index.
