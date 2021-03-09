@@ -5,6 +5,7 @@ open Parameters
 open LiquidationAuctionPrimitiveTypes
 open Constants
 open Error
+open Common
 
 type liquidation_slices = {oldest: leaf_ptr; youngest: leaf_ptr;}
 [@@deriving show]
@@ -86,10 +87,22 @@ let[@inline] burrow_allow_all_kit_burnings (b: burrow) : bool =
 let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let collateral = ratio_of_tez b.collateral in
-  let minting_price = minting_price p in
-  let outstanding_kit = kit_to_ratio b.outstanding_kit in
-  lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting outstanding_kit) minting_price)
+
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+
+  let kit_sf = Ligo.int (kit_to_mukit kit_one) in (* TODO: should be placed in kit.ml *)
+  let outstanding_kit = Ligo.int (kit_to_mukit b.outstanding_kit) in
+
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int den_fm (Ligo.mul_int_int kit_sf den_mp)) in
+  let rhs =
+    Ligo.mul_int_int
+      (Ligo.mul_int_int num_fm (Ligo.mul_int_int outstanding_kit num_mp))
+      (Ligo.int_from_literal "1_000_000") in
+  Ligo.lt_int_int lhs rhs
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
