@@ -372,14 +372,20 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
 let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
-  kit_of_ratio_ceil
-    (div_ratio
-       (mul_ratio
-          (ratio_of_tez tez_to_auction)
-          (sub_ratio one_ratio liquidation_penalty)
-       )
-       (minting_price p)
-    )
+  let { num = num_lp; den = den_lp; } = liquidation_penalty in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let numerator =
+    Ligo.mul_int_int
+      (tez_to_mutez tez_to_auction)
+      (Ligo.mul_int_int
+         (Ligo.sub_int_int den_lp num_lp)
+         den_mp
+      ) in
+  let denominator =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "1_000_000")
+      (Ligo.mul_int_int den_lp num_mp) in
+  kit_of_ratio_ceil (make_real_unsafe numerator denominator)
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
