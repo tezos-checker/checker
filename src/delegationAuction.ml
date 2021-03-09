@@ -1,8 +1,9 @@
 open Common
-open TokenTypes
+open Tickets
 open DelegationAuctionTypes
+open Error
 
-let delegation_auction_cycle (t: delegation_auction) : Ligo.nat = t.cycle
+let[@inline] delegation_auction_cycle (t: delegation_auction) : Ligo.nat = t.cycle
 
 let delegation_auction_winning_amount (t: delegation_auction) : Ligo.tez option =
   match t.winner with
@@ -21,14 +22,14 @@ let delegation_auction_touch (t: delegation_auction) =
   else
     { t with cycle = current_cycle; }
 
-let delegation_auction_delegate (t: delegation_auction) = t.delegate
+let[@inline] delegation_auction_delegate (t: delegation_auction) = t.delegate
 
 let delegation_auction_place_bid (t: delegation_auction) (sender_address: Ligo.address) (amt: Ligo.tez) =
   let t = delegation_auction_touch t in
   let _ = match t.leading_bid with
     | Some current ->
       if Ligo.leq_tez_tez amt current.amount
-      then failwith "BidTooLow"
+      then Ligo.failwith error_BidTooLow
       else ()
     | None -> () in
   (* Either there is no bid or this is the highest *)
@@ -48,16 +49,21 @@ let delegation_auction_claim_win (t: delegation_auction) (bid: delegation_auctio
   let t = delegation_auction_touch t in
   if same_delegation_auction_bid t.winner bid
   then { t with delegate = Some for_delegate }
-  else (failwith "NotAWinningBid": delegation_auction)
+  else (Ligo.failwith error_NotAWinningBid : delegation_auction)
 
 (* If successful, it consumes the ticket. *)
 let delegation_auction_reclaim_bid (t: delegation_auction) (bid: delegation_auction_bid) =
   let t = delegation_auction_touch t in
-  if same_delegation_auction_bid t.leading_bid bid then
-    (failwith "CannotReclaimLeadingBid": Ligo.tez * delegation_auction)
-  else if same_delegation_auction_bid t.winner bid then
-    (failwith "CannotReclaimWinningBid": Ligo.tez * delegation_auction)
-  else if Ligo.gt_int_int (Ligo.sub_nat_nat t.cycle bid.cycle) (Ligo.int_from_literal "1") then
-    (failwith "BidTicketExpired": Ligo.tez * delegation_auction)
+  let { cycle = t_cycle;
+        winner = t_winner;
+        leading_bid = t_leading_bid;
+        delegate = _t_delegage;
+      } = t in
+  if same_delegation_auction_bid t_leading_bid bid then
+    (Ligo.failwith error_CannotReclaimLeadingBid : Ligo.tez * delegation_auction)
+  else if same_delegation_auction_bid t_winner bid then
+    (Ligo.failwith error_CannotReclaimWinningBid : Ligo.tez * delegation_auction)
+  else if Ligo.gt_int_int (Ligo.sub_nat_nat t_cycle bid.cycle) (Ligo.int_from_literal "1") then
+    (Ligo.failwith error_BidTicketExpired : Ligo.tez * delegation_auction)
   else
     (bid.amount, t)

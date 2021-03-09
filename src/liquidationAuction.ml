@@ -75,8 +75,9 @@ open Kit
 open Avl
 open Constants
 open Common
-open TokenTypes
+open Tickets
 open LiquidationAuctionTypes
+open Error
 
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
@@ -85,10 +86,10 @@ open LiquidationAuctionTypes
 let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice) : (liquidation_auctions * leaf_ptr) =
   if avl_height auctions.avl_storage auctions.queued_slices
      >= max_liquidation_queue_height then
-    (failwith "LiquidationQueueTooLong": liquidation_auctions * leaf_ptr)
+    (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let (new_storage, ret) =
-      avl_push_back auctions.avl_storage auctions.queued_slices slice in
+      avl_push auctions.avl_storage auctions.queued_slices slice Left in
     let new_state = { auctions with avl_storage = new_storage; } in
     (new_state, ret)
 
@@ -133,8 +134,8 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
     match next with
     | Some slice ->
       let (part1, part2) = split_liquidation_slice (Ligo.sub_tez_tez split_threshold queued_amount) slice in
-      let (storage, _) = avl_push_front storage queued_slices part2 in
-      let (storage, _) = avl_push_back storage new_auction part1 in
+      let (storage, _) = avl_push storage queued_slices part2 Right in
+      let (storage, _) = avl_push storage new_auction part1 Left in
       (storage, new_auction)
     | None ->
       (storage, new_auction)
@@ -205,8 +206,8 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
   * that?). If the auction is ascending, then every bid adds the longer of 20
   * minutes or 20 blocks to the time before the auction expires. *)
 let is_liquidation_auction_complete
-    (auction: current_liquidation_auction) : bid option =
-  match auction.state with
+    (auction_state: liquidation_auction_state) : bid option =
+  match auction_state with
   | Descending _ ->
     (None: bid option)
   | Ascending params ->
@@ -224,7 +225,7 @@ let complete_liquidation_auction_if_possible
   match auctions.current_auction with
   | None -> auctions
   | Some curr -> begin
-      match is_liquidation_auction_complete curr with
+      match is_liquidation_auction_complete curr.state with
       | None -> auctions
       | Some winning_bid ->
         let (storage, completed_auctions) = match auctions.completed_auctions with
@@ -277,21 +278,21 @@ let complete_liquidation_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
-let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid_details) =
+let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
       { auction_id = auction.contents; bid = bid; }
     )
-  else (failwith "BidTooLow": current_liquidation_auction * liquidation_auction_bid_details)
+  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * liquidation_auction_bid)
 
 let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : current_liquidation_auction =
   match auctions.current_auction with
-  | None -> (failwith "NoOpenAuction": current_liquidation_auction)
+  | None -> (Ligo.failwith error_NoOpenAuction : current_liquidation_auction)
   | Some curr -> curr
 
 let is_leading_current_liquidation_auction
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details): bool =
+    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid): bool =
   match auctions.current_auction with
   | Some auction ->
     if ptr_of_avl_ptr auction.contents = ptr_of_avl_ptr bid_details.auction_id
@@ -305,8 +306,8 @@ let is_leading_current_liquidation_auction
   | None -> false
 
 let completed_liquidation_auction_won_by
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details): auction_outcome option =
-  match avl_root_data auctions.avl_storage bid_details.auction_id with
+    (avl_storage: mem) (bid_details: liquidation_auction_bid): auction_outcome option =
+  match avl_root_data avl_storage bid_details.auction_id with
   | Some outcome ->
     if bid_eq outcome.winning_bid bid_details.bid
     then Some outcome
@@ -314,12 +315,12 @@ let completed_liquidation_auction_won_by
   | None -> (None: auction_outcome option)
 
 (* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : kit =
+let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
-  then (failwith "CannotReclaimLeadingBid": kit)
+  then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
-    match completed_liquidation_auction_won_by auctions bid_details with
-    | Some _ -> (failwith "CannotReclaimWinningBid": kit)
+    match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
+    | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
     | None -> bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
@@ -393,13 +394,13 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
   }
 
 (* If successful, it consumes the ticket. *)
-let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid_details) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by auctions bid_details with
+let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
+  match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
     if not (avl_is_empty auctions.avl_storage bid_details.auction_id)
-    then (failwith "NotAllSlicesClaimed": Ligo.tez * liquidation_auctions)
+    then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
     else (
       (* When the winner reclaims their bid, we finally remove
          every reference to the auction. This is just to
@@ -414,7 +415,7 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
             avl_delete_empty_tree auctions.avl_storage bid_details.auction_id } in
       (outcome.sold_tez, auctions)
     )
-  | None -> (failwith "NotAWinningBid": Ligo.tez * liquidation_auctions)
+  | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
 
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: fixedpoint) : liquidation_auctions =
@@ -449,14 +450,14 @@ let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : L
   | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
 
 (* Checks if some invariants of auctions structure holds. *)
-let liquidation_auction_assert_invariants (auctions: liquidation_auctions) : unit =
+let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
 
   (* All AVL trees in the storage are valid. *)
   let mem = auctions.avl_storage in
   let roots = Ligo.Big_map.bindings mem.mem
               |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
               |> List.map (fun (p, _) -> AVLPtr p) in
-  List.iter (avl_assert_invariants mem) roots;
+  List.iter (assert_avl_invariants mem) roots;
 
   (* There are no dangling pointers in the storage. *)
   avl_assert_dangling_pointers mem roots;

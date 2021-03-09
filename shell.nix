@@ -1,13 +1,12 @@
-{ ci ? false }:
-
 let
   sources = import ./nix/sources.nix { };
   pkgs = import sources.nixpkgs { };
   ligoBinary =
-    # Run 'niv update ligo-artifacts.zip -r <git_rev>' to update
+    # Run 'niv update ligo-artifacts -r <git_rev>' to update
     pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
       mkdir -p $out/bin
       unzip ${sources.ligo-artifacts} ligo -d $out/bin
+      chmod +x $out/bin/ligo
     '';
 in
 pkgs.mkShell {
@@ -15,7 +14,7 @@ pkgs.mkShell {
   buildInputs =
     # ligo does not compile on macos, also we don't want to
     # compile it in CI
-    pkgs.lib.optionals (pkgs.stdenv.isLinux && !ci)
+    pkgs.lib.optionals (pkgs.stdenv.isLinux)
       [ ligoBinary
       ]
     ++ [ pkgs.niv ]

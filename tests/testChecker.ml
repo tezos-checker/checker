@@ -4,8 +4,10 @@ open OUnit2
 open TestCommon
 open CheckerTypes
 open Tickets
+open Error
+open Ptr
 
-module PtrMap = Map.Make(Ptr)
+module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 
 type operation_list = LigoOp.operation list
 [@@deriving show]
@@ -43,7 +45,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
        let checker = initial_checker in
-       let _ = Checker.touch checker (Ligo.tez_from_literal "0mutez"); in
+       let _ = Checker.touch_with_index checker (Ligo.tez_from_literal "0mutez"); in
        ()
     );
     ("create_burrow - updates checker storage" >::
@@ -256,7 +258,7 @@ let suite =
          in
 
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id bob_addr in
+         let (ops, checker1) = Checker.deactivate_burrow checker0 admin_permission burrow_id in
          assert_equal
            ~printer:show_operation_list
            [LigoOp.Tezos.tez_address_transaction (tez, bob_addr) (Ligo.tez_from_literal "0mutez") (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id))]
@@ -292,8 +294,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
 
-       let kit, _same_token = read_kit kit_token in
-       assert_equal (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) kit;
+       assert_equal (kit_issue (kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))) kit_token;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -306,7 +307,7 @@ let suite =
        (* Minting another kit should fail *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
-         (Failure "MintKitFailure")
+         (Failure (Ligo.string_of_int error_MintKitFailure))
          (fun () ->
             Checker.mint_kit
               checker
@@ -321,7 +322,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let _ops, checker =
-         Checker.touch checker (Ligo.tez_from_literal "1_000_001mutez") in
+         Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
        assert_equal [] ops;
@@ -336,11 +337,11 @@ let suite =
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        let ops, checker = Checker.touch_burrow checker burrow_id in
@@ -359,18 +360,18 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
-         (Failure "NoOpenAuction")
+         (Failure (Ligo.string_of_int error_NoOpenAuction))
          (fun () ->
             Checker.checker_liquidation_auction_place_bid
               checker
               (kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000n")))
          );
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        assert_bool "should start an auction"
@@ -383,11 +384,11 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
        in
 
        let (ops, checker) =
@@ -407,11 +408,11 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
 
        let touch_reward = match ops with
-         | (Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
+         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
+         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
        in
 
        assert_bool "auction should be completed"
@@ -422,7 +423,7 @@ let suite =
          touch_reward
          ~printer:show_kit_token;
 
-       (* We don't need to touch the slice on this test case since Checker.touch
+       (* We don't need to touch the slice on this test case since Checker.touch_with_index
         * already touches the oldest 5 slices. *)
        (*
        let slice =
@@ -466,7 +467,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_raises (Failure "NotAWinningBid") (fun _ ->
+       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
            let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());
@@ -484,7 +485,7 @@ let suite =
          | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_raises (Failure "NotAWinningBid") (fun _ ->
+       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
            Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
            let _checker = Checker.checker_delegation_auction_claim_win checker ticket charles_key_hash in
            ());

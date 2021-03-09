@@ -3,6 +3,7 @@ open Kit
 open Common
 open Constants
 open UniswapTypes
+open Error
 
 (* When the uniswap is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow
@@ -45,11 +46,11 @@ let uniswap_buy_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (tez_amount = Ligo.tez_from_literal "0mutez") then
-    (failwith "UniswapNonPositiveInput" : (kit * uniswap))
+    (Ligo.failwith error_UniswapNonPositiveInput : (kit * uniswap))
   else if (!Ligo.Tezos.now >= deadline) then
-    (failwith "UniswapTooLate" : (kit * uniswap))
+    (Ligo.failwith error_UniswapTooLate : (kit * uniswap))
   else if (min_kit_expected = kit_zero) then
-    (failwith "BuyKitTooLowExpectedKit" : (kit * uniswap))
+    (Ligo.failwith error_BuyKitTooLowExpectedKit : (kit * uniswap))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -68,9 +69,9 @@ let uniswap_buy_kit
            )
         ) in
     if return < min_kit_expected then
-      (failwith "BuyKitPriceFailure" : (kit * uniswap))
+      (Ligo.failwith error_BuyKitPriceFailure : (kit * uniswap))
     else if return > uniswap.kit then
-      (failwith "BuyKitTooMuchKitBought" : (kit * uniswap))
+      (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * uniswap))
     else
       let bought_kit, remaining_kit = (return, kit_sub uniswap.kit return) in
       ( bought_kit,
@@ -89,13 +90,13 @@ let uniswap_sell_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (kit = kit_zero) then
-    (failwith "UniswapNonPositiveInput" : (Ligo.tez * uniswap))
+    (Ligo.failwith error_UniswapNonPositiveInput : (Ligo.tez * uniswap))
   else if !Ligo.Tezos.now >= deadline then
-    (failwith "UniswapTooLate" : (Ligo.tez * uniswap))
+    (Ligo.failwith error_UniswapTooLate : (Ligo.tez * uniswap))
   else if tez_amount <> Ligo.tez_from_literal "0mutez" then
-    (failwith "SellKitNonEmptyAmount" : (Ligo.tez * uniswap))
+    (Ligo.failwith error_SellKitNonEmptyAmount : (Ligo.tez * uniswap))
   else if (min_tez_expected = Ligo.tez_from_literal "0mutez") then
-    (failwith "SellKitTooLowExpectedTez" : (Ligo.tez * uniswap))
+    (Ligo.failwith error_SellKitTooLowExpectedTez : (Ligo.tez * uniswap))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -114,9 +115,9 @@ let uniswap_sell_kit
            )
         ) in
     if return < min_tez_expected then
-      (failwith "SellKitPriceFailure" : (Ligo.tez * uniswap))
+      (Ligo.failwith error_SellKitPriceFailure : (Ligo.tez * uniswap))
     else if return > uniswap.tez then
-      (failwith "SellKitTooMuchTezBought" : (Ligo.tez * uniswap))
+      (Ligo.failwith error_SellKitTooMuchTezBought : (Ligo.tez * uniswap))
     else
       let new_all_kit_in_uniswap = kit_add uniswap.kit kit in
       ( return,
@@ -146,24 +147,24 @@ let uniswap_add_liquidity
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in
   if !Ligo.Tezos.now >= deadline then
-    (failwith "UniswapTooLate" : (Ligo.nat * kit * uniswap))
+    (Ligo.failwith error_UniswapTooLate : (Ligo.nat * kit * uniswap))
   else if tez_amount = Ligo.tez_from_literal "0mutez" then
-    (failwith "AddLiquidityNoTezGiven" : (Ligo.nat * kit * uniswap))
+    (Ligo.failwith error_AddLiquidityNoTezGiven : (Ligo.nat * kit * uniswap))
   else if max_kit_deposited = kit_zero then
-    (failwith "AddLiquidityNoKitGiven" : (Ligo.nat * kit * uniswap))
+    (Ligo.failwith error_AddLiquidityNoKitGiven : (Ligo.nat * kit * uniswap))
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
-    (failwith "AddLiquidityNoLiquidityToBeAdded" : (Ligo.nat * kit * uniswap))
+    (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (Ligo.nat * kit * uniswap))
   else
     let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
     let tez_ratio = make_ratio (tez_to_mutez tez_amount) (tez_to_mutez effective_tez_balance) in
     let lqt_minted = ratio_to_nat_floor (mul_ratio (ratio_of_nat uniswap.lqt) tez_ratio) in
     let kit_deposited = kit_of_ratio_ceil (mul_ratio (kit_to_ratio uniswap.kit) tez_ratio) in
     if lqt_minted < min_lqt_minted then
-      (failwith "AddLiquidityTooLowLiquidityMinted" : (Ligo.nat * kit * uniswap))
+      (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (Ligo.nat * kit * uniswap))
     else if max_kit_deposited < kit_deposited then
-      (failwith "AddLiquidityTooMuchKitRequired" : (Ligo.nat * kit * uniswap))
+      (Ligo.failwith error_AddLiquidityTooMuchKitRequired : (Ligo.nat * kit * uniswap))
     else if kit_deposited = kit_zero then
-      (failwith "AddLiquidityZeroKitDeposited" : (Ligo.nat * kit * uniswap))
+      (Ligo.failwith error_AddLiquidityZeroKitDeposited : (Ligo.nat * kit * uniswap))
     else
       let kit_deposited, kit_to_return = (kit_deposited, kit_sub max_kit_deposited kit_deposited) in
       let updated = { uniswap with
@@ -171,7 +172,11 @@ let uniswap_add_liquidity
                       tez = Ligo.add_tez_tez uniswap.tez tez_amount;
                       lqt = Ligo.add_nat_nat uniswap.lqt lqt_minted;
                     } in
-      (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit *)
+      (* EXPECTED PROPERTY: kit_to_return + final_uniswap_kit = max_kit_deposited + initial_uniswap_kit
+       * which follows from the definitions:
+       *  kit_to_return     = max_kit_deposited   - kit_deposited
+       *  final_uniswap_kit = initial_uniswap_kit + kit_deposited
+       *)
       (lqt_minted, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
@@ -190,15 +195,15 @@ let uniswap_remove_liquidity
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if tez_amount <> Ligo.tez_from_literal "0mutez" then
-    (failwith "RemoveLiquidityNonEmptyAmount" : (Ligo.tez * kit * uniswap))
+    (Ligo.failwith error_RemoveLiquidityNonEmptyAmount : (Ligo.tez * kit * uniswap))
   else if !Ligo.Tezos.now >= deadline then
-    (failwith "UniswapTooLate" : (Ligo.tez * kit * uniswap))
+    (Ligo.failwith error_UniswapTooLate : (Ligo.tez * kit * uniswap))
   else if lqt_burned = Ligo.nat_from_literal "0n" then
-    (failwith "RemoveLiquidityNoLiquidityBurned" : (Ligo.tez * kit * uniswap))
+    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (Ligo.tez * kit * uniswap))
   else if min_tez_withdrawn = Ligo.tez_from_literal "0mutez" then
-    (failwith "RemoveLiquidityNoTezWithdrawnExpected" : (Ligo.tez * kit * uniswap))
+    (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (Ligo.tez * kit * uniswap))
   else if min_kit_withdrawn = kit_zero then
-    (failwith "RemoveLiquidityNoKitWithdrawnExpected" : (Ligo.tez * kit * uniswap))
+    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (Ligo.tez * kit * uniswap))
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _ = assert (lqt_burned <= uniswap.lqt) in (* the ticket mechanism should enforce this *)
@@ -207,13 +212,13 @@ let uniswap_remove_liquidity
     let kit_withdrawn = kit_of_ratio_floor (mul_ratio (kit_to_ratio uniswap.kit) ratio) in
 
     if tez_withdrawn < min_tez_withdrawn then
-      (failwith "RemoveLiquidityCantWithdrawEnoughTez" : (Ligo.tez * kit * uniswap))
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (Ligo.tez * kit * uniswap))
     else if tez_withdrawn > uniswap.tez then
-      (failwith "RemoveLiquidityTooMuchTezWithdrawn" : (Ligo.tez * kit * uniswap))
+      (Ligo.failwith error_RemoveLiquidityTooMuchTezWithdrawn : (Ligo.tez * kit * uniswap))
     else if kit_withdrawn < min_kit_withdrawn then
-      (failwith "RemoveLiquidityCantWithdrawEnoughKit" : (Ligo.tez * kit * uniswap))
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (Ligo.tez * kit * uniswap))
     else if kit_withdrawn > uniswap.kit then
-      (failwith "RemoveLiquidityTooMuchKitWithdrawn" : (Ligo.tez * kit * uniswap))
+      (Ligo.failwith error_RemoveLiquidityTooMuchKitWithdrawn : (Ligo.tez * kit * uniswap))
     else
       let remaining_lqt, _burned = (
         match Ligo.is_nat (Ligo.sub_nat_nat uniswap.lqt lqt_burned) with

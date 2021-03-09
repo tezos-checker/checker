@@ -1,6 +1,6 @@
 open Ligo
-open TokenTypes
 open BurrowTypes
+open Tickets
 
 (* contract *)
 
@@ -14,12 +14,13 @@ type 'parameter transaction_value = (* GADT *)
   | AddressTransactionValue : address -> address transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
   | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
-  | DaBidTransactionValue : delegation_auction_bid ticket -> delegation_auction_bid ticket transaction_value
-  | LaBidTransactionValue : liquidation_auction_bid_details ticket -> liquidation_auction_bid_details ticket transaction_value
+  | DaBidTransactionValue : delegation_auction_bid_content ticket -> delegation_auction_bid_content ticket transaction_value
+  | LaBidTransactionValue : liquidation_auction_bid_content ticket -> liquidation_auction_bid_content ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
+  | NatContractTransactionValue : nat contract -> nat contract transaction_value
 
 type tez_and_address = (tez * address)
 [@@deriving show]
@@ -29,17 +30,18 @@ type key_hash_option = key_hash option
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
   fun tv ->
-  match tv with
-  | UnitTransactionValue -> "()"
-  | AddressTransactionValue a -> string_of_address a
-  | KitTransactionValue c -> show_ticket pp_kit_token_content c
-  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid c
-  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_details c
-  | PermTransactionValue c -> show_ticket pp_permission_content c
-  | TezAddressTransactionValue ta -> show_tez_and_address ta
-  | OptKeyHashTransactionValue kho -> show_key_hash_option kho
-  | TezTransactionValue tz -> string_of_tez tz
+    match tv with
+    | UnitTransactionValue -> "()"
+    | AddressTransactionValue a -> string_of_address a
+    | KitTransactionValue c -> show_ticket pp_kit_token_content c
+    | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
+    | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid_content c
+    | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_content c
+    | PermTransactionValue c -> show_ticket pp_permission_content c
+    | TezAddressTransactionValue ta -> show_tez_and_address ta
+    | OptKeyHashTransactionValue kho -> show_key_hash_option kho
+    | TezTransactionValue tz -> string_of_tez tz
+    | NatContractTransactionValue c -> show_contract c
 
 (* operation *)
 
@@ -82,6 +84,7 @@ module Tezos = struct
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
+  let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)

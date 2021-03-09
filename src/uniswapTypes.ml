@@ -18,8 +18,7 @@ type uniswap =
   * tez/kit). The price will eventually reach the value it should, but this
   * saves us from having the first/non-first liquidity provider separation, and
   * all division-by-zero checks. *)
-(* NOTE: this is not a function but a value (perhaps "make_" is not appropriate here). *)
-let uniswap_make_initial : uniswap =
+let initial_uniswap : uniswap =
   { tez = Ligo.tez_from_literal "1mutez";
     kit = kit_of_mukit (Ligo.nat_from_literal "1n");
     lqt = Ligo.nat_from_literal "1n";

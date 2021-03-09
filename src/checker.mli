@@ -1,8 +1,7 @@
 open Kit
 open LiquidationAuctionPrimitiveTypes
-open TokenTypes
-open CheckerTypes
 open Tickets
+open CheckerTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters
@@ -10,7 +9,10 @@ open Tickets
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
-val touch : checker -> Ligo.tez -> (LigoOp.operation list * checker)
+val touch : checker -> (LigoOp.operation list * checker)
+
+(* FOR TESTING. *)
+val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -53,8 +55,8 @@ val activate_burrow : checker -> permission -> burrow_id -> (LigoOp.operation li
   * if it is already inactive, if it is overburrowed, if it has kit
   * outstanding, if it has collateral sent off to auctions, or if the
   * permission ticket given is not an admin ticket. If deactivation is
-  * successful, make a tez payment to the given address. *)
-val deactivate_burrow : checker -> permission -> burrow_id -> Ligo.address -> (LigoOp.operation list * checker)
+  * successful, make a tez payment to the sender. *)
+val deactivate_burrow : checker -> permission -> burrow_id -> (LigoOp.operation list * checker)
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
   * liquidation or if the burrow does not exist. If successful, return the
@@ -148,10 +150,10 @@ val receive_slice_from_burrow : checker -> (LigoOp.operation list * checker)
 val checker_delegation_auction_place_bid : checker -> (LigoOp.operation list * checker)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val checker_delegation_auction_claim_win : checker -> delegation_auction_bid Ligo.ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
+val checker_delegation_auction_claim_win : checker -> delegation_auction_bid_ticket -> Ligo.key_hash -> (LigoOp.operation list * checker)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid Ligo.ticket -> (LigoOp.operation list * checker)
+val checker_delegation_auction_reclaim_bid : checker -> delegation_auction_bid_ticket -> (LigoOp.operation list * checker)
 
 (* ENTRYPOINTS *)
 
@@ -164,7 +166,7 @@ type params =
   | MintKit of (permission * burrow_id * kit)
   | BurnKit of (permission option * burrow_id * kit_token)
   | ActivateBurrow of (permission * burrow_id)
-  | DeactivateBurrow of (permission * burrow_id * Ligo.address)
+  | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
   | CancelSliceLiquidation of (permission * leaf_ptr)
@@ -184,7 +186,9 @@ type params =
   | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid
-  | DelegationAuctionClaimWin of (delegation_auction_bid Ligo.ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid Ligo.ticket
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
+  (* Oracles *)
+  | ReceivePrice of Ligo.nat
 
 val main : params * checker -> LigoOp.operation list * checker

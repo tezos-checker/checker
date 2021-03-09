@@ -4,6 +4,7 @@ open Avl
 open Kit
 open OUnit2
 open Format
+open Ptr
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]
@@ -14,7 +15,7 @@ let add_all (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
   : mem =
   List.fold_left
     (fun mem value ->
-       let (mem, _) = avl_push_back mem root value in
+       let (mem, _) = avl_push mem root value Left in
        mem)
     mem
     xs
@@ -22,13 +23,13 @@ let add_all (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
 let debug_avl (mem: mem) (AVLPtr root) : unit =
   let rec go curr =
     let indent str = "  " ^ String.concat "\n  " (String.split_on_char '\n' str) in
-    sprintf "%s: " (Ptr.show curr) ^
+    sprintf "%s: " (show_ptr curr) ^
     match Mem.mem_get mem curr with
     | Root (None, r) -> "Root(" ^ show_auction_outcome_option r ^ ") Empty"
     | Root (Some r, r') -> "Root(" ^ show_auction_outcome_option r' ^ ")\n" ^ indent (go r)
     | Leaf leaf ->
       sprintf "Leaf { value: %s; parent: %s }"
-        (show_liquidation_slice leaf.value) (Ptr.show leaf.parent)
+        (show_liquidation_slice leaf.value) (show_ptr leaf.parent)
     | Branch branch ->
       "Branch " ^ show_branch branch ^ "\n"
       ^ indent ("Left:\n" ^ indent (go branch.left)) ^ "\n"
@@ -41,9 +42,9 @@ let add_all_debug (mem: mem) (root: avl_ptr) (xs: liquidation_slice list)
     (fun mem value ->
        print_string "--------------------------------\n";
        print_string ("Inserting: " ^ show_liquidation_slice value ^ "\n");
-       let (mem, _) = avl_push_back mem root value in
+       let (mem, _) = avl_push mem root value Left in
        debug_avl mem root;
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        print_newline ();
        mem)
     mem
@@ -127,7 +128,7 @@ let suite =
     "test_push_back_singleton" >::
     (fun _ ->
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, _) = avl_push_back mem root (mk_liquidation_slice 0) in
+       let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Left in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
        assert_equal expected actual ~printer:show_liquidation_slice_list);
@@ -135,7 +136,7 @@ let suite =
     "test_push_front_singleton" >::
     (fun _ ->
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, _) = avl_push_front mem root (mk_liquidation_slice 0) in
+       let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Right in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
        assert_equal expected actual);
@@ -146,7 +147,7 @@ let suite =
          (List.map mk_liquidation_slice
             [ 1; 2; 3; 4; 5; 6; 7; 8; ]) in
        let (mem, root) = avl_from_list mem_empty None elements in
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
@@ -176,7 +177,7 @@ let suite =
     (fun _ ->
        Mem.reset_ops ();
        let (mem, root) = avl_mk_empty mem_empty None in
-       let (mem, elem) = avl_push_back mem root (mk_liquidation_slice 1) in
+       let (mem, elem) = avl_push mem root (mk_liquidation_slice 1) Left in
        let (mem, root_) = avl_del mem elem in
        assert_equal root root_;
        assert_equal [] (avl_to_list mem root);
@@ -192,16 +193,16 @@ let suite =
          (List.map mk_liquidation_slice [ 7; 8; 9 ]) in
 
        let (mem, root) = avl_from_list mem_empty None fst_elements in
-       let (mem, elem) = avl_push_back mem root mid in
+       let (mem, elem) = avl_push mem root mid Left in
        let mem = add_all mem root snd_elements in
 
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let (mem, root_) = avl_del mem elem in
        assert_equal root root_;
 
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
@@ -220,7 +221,7 @@ let suite =
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list TestArbitrary.arb_liquidation_slice)
      @@ fun xs ->
      let (mem, root) = avl_from_list mem_empty None xs in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
      avl_assert_dangling_pointers mem [root];
 
      let actual = avl_to_list mem root in
@@ -235,13 +236,13 @@ let suite =
      @@ fun (left_items, mid_item, right_items) ->
 
      let (mem, root) = avl_from_list mem_empty None left_items in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
-     let (mem, to_del) = avl_push_back mem root mid_item in
-     avl_assert_invariants mem root;
+     let (mem, to_del) = avl_push mem root mid_item Left in
+     assert_avl_invariants mem root;
 
      let mem = add_all mem root right_items in
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let (mem, root_) = avl_del mem to_del in
      assert_equal root root_;
@@ -252,7 +253,7 @@ let suite =
        (show_liquidation_slice_list right_items);
      debug_avl mem root;
      *)
-     avl_assert_invariants mem root;
+     assert_avl_invariants mem root;
 
      let actual = avl_to_list mem root in
      let expected = left_items @ right_items in
@@ -270,7 +271,7 @@ let suite =
 
      let mem = avl_append mem left_tree right_tree in
 
-     avl_assert_invariants mem left_tree;
+     assert_avl_invariants mem left_tree;
      avl_assert_dangling_pointers mem [left_tree];
 
      let actual = avl_to_list mem left_tree in
@@ -285,8 +286,8 @@ let suite =
      let (mem, right) = avl_from_list mem_empty None xs in
      let (mem, left) = avl_take mem right limit None in
 
-     avl_assert_invariants mem left;
-     avl_assert_invariants mem right;
+     assert_avl_invariants mem left;
+     assert_avl_invariants mem right;
      avl_assert_dangling_pointers mem [left; right];
 
      let actual_left = avl_to_list mem left in
@@ -326,7 +327,7 @@ let suite =
      let (mem, left) = avl_take mem right limit None in
 
      let mem = avl_append mem left right in
-     avl_assert_invariants mem left;
+     assert_avl_invariants mem left;
      avl_assert_dangling_pointers mem [left];
 
      let actual = avl_to_list mem left in
@@ -342,11 +343,11 @@ let suite =
          if i <= 0
          then mem
          else
-           let (mem, _) = avl_push_back mem root (mk_liquidation_slice i) in
+           let (mem, _) = avl_push mem root (mk_liquidation_slice i) Left in
            go (i-1) mem in
 
        let mem = go 100_000 mem in
-       avl_assert_invariants mem root;
+       assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        Mem.reset_ops ();
@@ -364,7 +365,7 @@ let suite =
        |> Stream.iter (fun xs ->
            let xs = List.map mk_liquidation_slice xs in
            let (mem, root) = avl_from_list mem_empty None xs in
-           avl_assert_invariants mem root;
+           assert_avl_invariants mem root;
            let actual = avl_to_list mem root in
            assert_equal actual xs
          )
