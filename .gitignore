@@ -2,6 +2,7 @@ _build
 _coverage
 checker.byte
 generated
+_opam
 
 *.cmi
 *.cmo

@@ -76,7 +76,7 @@ let suite =
     ("create_burrow - fails when transaction does not meet creation deposit" >::
       fun _ ->
         assert_raises 
-        (Failure "InsufficientFunds")
+        (Failure (Ligo.string_of_int error_InsufficientFunds))
         (fun () -> with_burrow
           initial_checker 
           alice_addr 
@@ -115,7 +115,7 @@ let suite =
         (fun x -> x) in
 
        assert_raises 
-        (Failure "MissingPermission")
+       (Failure (Ligo.string_of_int error_MissingPermission))
         (fun () -> with_transaction 
           alice_addr 
           (Ligo.tez_from_literal "3_000_000mutez")
@@ -136,7 +136,7 @@ let suite =
         (fun x -> x) in
 
        assert_raises 
-        (Failure "InvalidPermission")
+       (Failure (Ligo.string_of_int error_InvalidPermission))
         (fun () -> with_transaction 
           alice_addr 
           (Ligo.tez_from_literal "3_000_000mutez")
@@ -177,7 +177,7 @@ let suite =
         (fun x -> x) in
 
        assert_raises
-        (Failure "UnwantedTezGiven")
+       (Failure (Ligo.string_of_int error_UnwantedTezGiven))
         (fun () -> 
           with_transaction
             alice_addr
@@ -202,7 +202,7 @@ let suite =
         (fun x -> x) in
 
        assert_raises
-        (Failure "InvalidPermission")
+       (Failure (Ligo.string_of_int error_InvalidPermission))
         (fun () -> 
           with_transaction
             alice_addr
@@ -211,17 +211,22 @@ let suite =
         )
     );
 
-    (* TODO: Check if more fine-grained tests are required for permissions / tickets *)
-
-    (* TODO: This test isn't working as expected. Is it an issue with the initial state, how I'm calling it, or a bug?  *)
     ("buy_kit - returns updated uniswap state" >::
       fun _ -> with_transaction
         alice_addr
-        (Ligo.tez_from_literal "500_000mutez")
+        (Ligo.tez_from_literal "9_000_000mutez")
         (fun () -> 
-          (* let _ = initial_checker.uniswap *)
-          let _ = Checker.buy_kit initial_checker (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in 
-          ()
+          let uniswap0 = Uniswap.uniswap_make_for_test
+            ~tez:(Ligo.tez_from_literal "10_000_000mutez")
+            ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
+            ~lqt:(Ligo.nat_from_literal "1n")
+            ~kit_in_tez_in_prev_block:Ratio.one_ratio
+            ~last_level:(Ligo.nat_from_literal "0n") in
+          let checker0 = {initial_checker with uniswap=uniswap0} in
+          let _, checker = Checker.buy_kit checker0 (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in 
+          assert_bool
+            "The uniswap returned by buy_kit is equal to the input uniswap but a new state was expected"
+            (not (checker.uniswap = checker0.uniswap))
         )
       );
 
