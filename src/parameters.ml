@@ -370,7 +370,7 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
   kit_of_ratio_floor
     (make_real_unsafe
        (Ligo.mul_int_int (Ligo.int (kit_to_mukit last_outstanding_kit)) (fixedpoint_to_raw current_burrow_fee_index))
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_burrow_fee_index))
+       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
     )
 
 (** Compute current outstanding kit, given that the burrow fees have already
@@ -384,7 +384,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
   kit_of_ratio_floor
     (make_real_unsafe
        (Ligo.mul_int_int (Ligo.int (kit_to_mukit current_outstanding_with_fees)) (fixedpoint_to_raw current_imbalance_index))
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_imbalance_index))
+       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
     )
 
 (** Update the checker's parameters, given (a) the current timestamp

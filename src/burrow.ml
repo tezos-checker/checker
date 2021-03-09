@@ -90,14 +90,12 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
-
-  let kit_sf = Ligo.int (kit_to_mukit kit_one) in (* TODO: should be placed in kit.ml *)
   let outstanding_kit = Ligo.int (kit_to_mukit b.outstanding_kit) in
 
   let lhs =
     Ligo.mul_int_int
       (tez_to_mutez b.collateral)
-      (Ligo.mul_int_int den_fm (Ligo.mul_int_int kit_sf den_mp)) in
+      (Ligo.mul_int_int den_fm (Ligo.mul_int_int kit_scaling_factor_int den_mp)) in
   let rhs =
     Ligo.mul_int_int
       (Ligo.mul_int_int num_fm (Ligo.mul_int_int outstanding_kit num_mp))
