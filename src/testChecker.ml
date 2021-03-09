@@ -71,7 +71,7 @@ let suite =
           | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
           | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
-    ("create_burrow - fails when minimum deposit is not provided" >::
+    ("create_burrow - fails when transaction does not meet creation deposit" >::
       fun _ ->
         assert_raises 
         (Failure "InsufficientFunds")
@@ -166,7 +166,6 @@ let suite =
 
     ("withdraw_tez - transaction with value > 0 fails" >::
     fun _ -> 
-      (* Create burrow *)
       let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
       let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
       let (burrow_id, admin_ticket, checker) = with_burrow 
@@ -187,7 +186,6 @@ let suite =
 
     ("withdraw_tez - fail if the ticket to another burrow is submitted" >::
     fun _ -> 
-      (* Create burrow *)
       let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
       let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
       let (burrow_id, _, checker) = with_burrow 
@@ -210,6 +208,21 @@ let suite =
             (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id) 
         )
     );
+
+    (* TODO: Check if more fine-grained tests are required for permissions / tickets *)
+
+    (* TODO: This test isn't working as expected. Is it an issue with the initial state, how I'm calling it, or a bug?  *)
+    ("buy_kit - returns updated uniswap state" >::
+      fun _ -> with_transaction
+        alice_addr
+        (Ligo.tez_from_literal "500_000mutez")
+        (fun () -> 
+          (* let _ = initial_checker.uniswap *)
+          let _ = Checker.buy_kit initial_checker (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in 
+          ()
+        )
+      );
+
 
     ("can complete a liquidation auction" >::
      fun _ ->
