@@ -98,7 +98,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
              let least_kit_percentage = (div_ratio (kit_to_ratio (kit_of_mukit (Ligo.nat_from_literal "1n"))) (kit_to_ratio kit)) in
              let least_tez_percentage = make_ratio (Common.tez_to_mutez (Ligo.tez_from_literal "1mutez")) (Common.tez_to_mutez tez) in
              let as_q = (mul_ratio (ratio_of_nat lqt) (max_ratio least_kit_percentage least_tez_percentage)) in
-             Option.get (Ligo.is_nat (Common.cdiv_int_int (ratio_num as_q) (ratio_den as_q))) in
+             Option.get (Ligo.is_nat (Common.cdiv_int_int as_q.num as_q.den)) in
            let lqt_burned = lqt_to_burn in
            let min_tez_withdrawn = ratio_to_tez_floor (div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
            let min_kit_withdrawn = kit_of_ratio_floor (div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in

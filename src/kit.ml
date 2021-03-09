@@ -27,12 +27,12 @@ let[@inline] kit_to_ratio (amnt: kit) : ratio = make_real_unsafe (Ligo.int amnt)
 let kit_of_ratio_ceil  (amnt: ratio) : kit =
   if lt_ratio_ratio amnt zero_ratio
   then (failwith "Kit.kit_of_ratio_ceil: negative" : kit)
-  else Ligo.abs (cdiv_int_int (Ligo.mul_int_int (ratio_num amnt) (Ligo.int kit_scaling_factor)) (ratio_den amnt))
+  else Ligo.abs (cdiv_int_int (Ligo.mul_int_int amnt.num (Ligo.int kit_scaling_factor)) amnt.den)
 
 let kit_of_ratio_floor (amnt: ratio) : kit =
   if lt_ratio_ratio amnt zero_ratio
   then (failwith "Kit.kit_of_ratio_floor: negative" : kit)
-  else Ligo.abs (fdiv_int_int (Ligo.mul_int_int (ratio_num amnt) (Ligo.int kit_scaling_factor)) (ratio_den amnt))
+  else Ligo.abs (fdiv_int_int (Ligo.mul_int_int amnt.num (Ligo.int kit_scaling_factor)) amnt.den)
 
 let[@inline] kit_scale (amnt: kit) (fp: fixedpoint) =
   kit_of_ratio_floor (mul_ratio (fixedpoint_to_ratio fp) (kit_to_ratio amnt))
