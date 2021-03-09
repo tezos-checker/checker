@@ -8,3 +8,6 @@ generated
 
 ligo/*.tz
 ligo/bench/*.tz
+
+# editors
+.vscode
