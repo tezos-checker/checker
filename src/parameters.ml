@@ -204,44 +204,34 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
   *)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
-  (* For the calculations to work out *)
-  assert (Ligo.eq_int_int protected_index_epsilon_plus.num (neg_int protected_index_epsilon_minus.num));
-  assert (Ligo.eq_int_int protected_index_epsilon_plus.den protected_index_epsilon_minus.den);
-  (* TODO: ADD MORE ASSERTIONS: POSITIVE LAST PROTECTED INDEX, POSITIVE DEN *)
-  let { num = nump; den = _den; } = protected_index_epsilon_plus in
-  let { num = numm; den = den; } = protected_index_epsilon_minus in
+  (* TODO: ADD MORE ASSERTIONS: STRICTLY POSITIVE LAST PROTECTED INDEX *)
   let last_protected_index = tez_to_mutez last_protected_index in
+
   ratio_to_tez_floor
     (make_real_unsafe
-       (Ligo.mul_int_int
-          last_protected_index
-          (clamp_int
-             (Ligo.mul_int_int
-                (tez_to_mutez current_index)
-                den
+       (clamp_int
+          (Ligo.mul_int_int
+             (tez_to_mutez current_index)
+             protected_index_inverse_epsilon
+          )
+          (Ligo.mul_int_int
+             last_protected_index
+             (Ligo.sub_int_int
+                protected_index_inverse_epsilon
+                duration_in_seconds
              )
-             (Ligo.mul_int_int
-                (Ligo.add_int_int
-                   (Ligo.mul_int_int numm duration_in_seconds)
-                   den
-                )
-                last_protected_index
-             )
-             (Ligo.mul_int_int
-                (Ligo.add_int_int
-                   (Ligo.mul_int_int nump duration_in_seconds)
-                   den
-                )
-                last_protected_index
+          )
+          (Ligo.mul_int_int
+             last_protected_index
+             (Ligo.add_int_int
+                protected_index_inverse_epsilon
+                duration_in_seconds
              )
           )
        )
        (Ligo.mul_int_int
-          den
-          (Ligo.mul_int_int
-             last_protected_index
-             (Ligo.int_from_literal "1_000_000")
-          )
+          protected_index_inverse_epsilon
+          (Ligo.int_from_literal "1_000_000")
        )
     )
 
