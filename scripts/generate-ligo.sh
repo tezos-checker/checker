@@ -13,7 +13,6 @@ inputs=(
   uniswapTypes
   liquidationAuctionPrimitiveTypes
   mem
-  avl
   liquidationAuctionTypes
   tickets
   delegationAuctionTypes

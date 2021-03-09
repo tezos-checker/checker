@@ -2,7 +2,6 @@ open FixedPoint
 open Ratio
 open Kit
 open Mem
-open Avl
 open Permission
 open Parameters
 open Uniswap
@@ -25,38 +24,7 @@ open Error
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
-  assert_liquidation_auction_invariants state.liquidation_auctions;
-  (* Per-burrow assertions *)
-  List.iter
-    (fun (burrow_address, burrow) ->
-       assert_burrow_invariants burrow;
-
-       match burrow_liquidation_slices burrow with
-       | None ->
-         assert (burrow_collateral_at_auction burrow = Ligo.tez_from_literal "0mutez");
-       | Some slices ->
-         (* Check if the linked list of slices are correct, and the amount of
-          * tez inside is consistent with collateral_at_auction.
-         *)
-         let rec go
-             (curr: leaf_ptr)
-             (prev: leaf_ptr option) : Ligo.tez =
-           let slice =
-             avl_read_leaf
-               (state.liquidation_auctions.avl_storage)
-               curr in
-           assert (slice.burrow = burrow_address);
-           assert (slice.younger = prev);
-           match slice.older with
-           | Some next ->
-             Ligo.add_tez_tez slice.tez (go next (Some curr))
-           | None ->
-             assert (curr = slices.oldest);
-             slice.tez in
-         let actual_collateral = go slices.youngest None in
-         assert (burrow_collateral_at_auction burrow = actual_collateral)
-    )
-    (Ligo.Big_map.bindings state.burrows)
+  assert_liquidation_auction_invariants state.liquidation_auctions
 (* END_OCAML *)
 
 (* ************************************************************************* *)
@@ -64,14 +32,7 @@ let assert_checker_invariants (state: checker) : unit =
 (* ************************************************************************* *)
 
 let is_burrow_done_with_liquidations (avl_storage: mem) (burrow: burrow) =
-  match burrow_oldest_liquidation_ptr burrow with
-  | None -> true
-  | Some ls ->
-    let root = avl_find_root avl_storage ls in
-    let outcome = avl_root_data avl_storage root in
-    (match outcome with
-     | None -> true
-     | Some _ -> false)
+  failwith "foo"
 
 let find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
   match Ligo.Big_map.find_opt burrow_id burrows with
@@ -82,9 +43,7 @@ let find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
 let ensure_burrow_has_no_unclaimed_slices (avl_storage: mem) (burrow: burrow) : unit =
-  if is_burrow_done_with_liquidations avl_storage burrow
-  then ()
-  else Ligo.failwith error_BurrowHasCompletedLiquidation
+  failwith "foo"
 
 (* Ensure that there is no tez given. To prevent accidental fund loss. *)
 let ensure_no_tez_given () =
@@ -144,7 +103,6 @@ let touch_burrow (state: checker) (burrow_id: burrow_id) : (LigoOp.operation lis
 
 let deposit_tez (state: checker) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
@@ -165,7 +123,6 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
 let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
@@ -189,7 +146,6 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
 let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
@@ -205,7 +161,6 @@ let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burr
 let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let kit = ensure_valid_kit_token kit in (* destroyed *)
   let is_allowed =
     if burrow_allow_all_kit_burnings burrow then
@@ -233,7 +188,6 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
 
 let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can activate burrows. *)
@@ -249,7 +203,6 @@ let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow
 let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
@@ -265,7 +218,6 @@ let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burr
 let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: burrow_id) (delegate_opt: Ligo.key_hash option) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
@@ -281,7 +233,6 @@ let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: bu
 let make_permission (state: checker) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can create permissions. *)
@@ -296,7 +247,6 @@ let make_permission (state: checker) (permission: permission) (burrow_id: burrow
 let invalidate_all_permissions (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions.avl_storage burrow in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can invalidate all permissions. *)
@@ -347,19 +297,6 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
    * This is hacky, but couldn't figure out a nicer way, please do
    * refactor if you do.
   *)
-  let updated_storage = (
-    match liquidation_slice.older with
-    | None -> updated_liquidation_auctions.avl_storage
-    | Some older_ptr ->
-      mem_update
-        updated_liquidation_auctions.avl_storage
-        (ptr_of_leaf_ptr older_ptr)
-        (fun (older: node) ->
-           let older = node_leaf older in
-           Leaf { older with value = { older.value with younger = Some leaf_ptr; }; }
-        )
-  ) in
-
   (* Update the burrow's liquidation slices with the pointer to the newly
    * created liquidation slice. *)
   let updated_burrow =
@@ -377,181 +314,71 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
   ( [op],
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-     liquidation_auctions = { updated_liquidation_auctions with avl_storage = updated_storage; };
     }
   )
-
-(* Update the immediate neighbors of a slice (i.e. the younger and the older)
- * to point to each other instead of the slice in question, so that it can be
- * removed. *)
-(* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-let update_immediate_neighbors (state: checker) (leaf_ptr: leaf_ptr) (leaf : liquidation_slice) =
-  (* update the younger *)
-  let state = (
-    match leaf.younger with
-    | None -> state
-    | Some younger_ptr ->
-      { state with
-        liquidation_auctions = { state.liquidation_auctions with
-                                 avl_storage =
-                                   avl_update_leaf
-                                     state.liquidation_auctions.avl_storage
-                                     younger_ptr
-                                     (fun (younger: liquidation_slice) ->
-                                        assert (younger.older = Some leaf_ptr);
-                                        { younger with older = leaf.older }
-                                     )
-                               }}
-  ) in
-  (* update the older *)
-  let state = (
-    match leaf.older with
-    | None -> state
-    | Some older_ptr ->
-      { state with
-        liquidation_auctions = { state.liquidation_auctions with
-                                 avl_storage =
-                                   avl_update_leaf
-                                     state.liquidation_auctions.avl_storage
-                                     older_ptr
-                                     (fun (older: liquidation_slice) ->
-                                        assert (older.younger = Some leaf_ptr);
-                                        { older with younger = leaf.younger }
-                                     )
-                               }}
-  ) in
-  state
-
-(* Cancel the liquidation of a slice. The burden is on the caller to provide
- * both the burrow_id and the leaf_ptr. *)
-let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * checker) =
-  let _ = ensure_no_tez_given () in
-  let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
-  let burrow_id = leaf.burrow in
-  let burrow = find_burrow state.burrows burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
-  if not (does_right_allow_cancelling_liquidations r) then
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-  else
-    let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
-    if ptr_of_avl_ptr root <> ptr_of_avl_ptr state.liquidation_auctions.queued_slices
-    then (Ligo.failwith error_UnwarrantedCancellation : LigoOp.operation list * checker)
-    else
-      let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
-      if burrow_is_overburrowed state.parameters burrow then
-        (Ligo.failwith error_UnwarrantedCancellation : LigoOp.operation list * checker)
-      else
-        let state =
-          let (new_storage, _) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
-          { state with
-            liquidation_auctions = {
-              state.liquidation_auctions with
-              avl_storage = new_storage }} in
-
-        (* Return the tez to the burrow and update its pointers to liq. slices. *)
-        let burrow = burrow_return_slice_from_auction leaf_ptr leaf burrow in
-        let state =
-          { state with
-            burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
-
-        (* And we update the slices around it *)
-        let state = update_immediate_neighbors state leaf_ptr leaf in
-        assert_checker_invariants state;
-        let ops : LigoOp.operation list = [] in
-        (ops, state)
 
 (* FIXME: Below function shouldn't be inlined, since it's huge and used in multiple places. However otherwise `touch_oldest` function
  * throws a "type too large" error that I couldn't solve.
 *)
 let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation list * checker * leaf_ptr) : (LigoOp.operation list * checker) =
-  let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
-  match avl_root_data state.liquidation_auctions.avl_storage root with
-  (* The slice does not belong to a completed auction, so we skip it. *)
-  (* NOTE: Perhaps failing would be better than silently doing nothing here?
-   * Not sure if there is any danger though. *)
-  | None -> (ops, state)
-  (* If it belongs to a completed auction, we delete the slice *)
-  | Some outcome ->
-    (* TODO: Check if leaf_ptr's are valid *)
-    let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
-
-    (* How much kit should be given to the burrow and how much should be burned. *)
-    (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
-     * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
-     * to truncation. That could be a problem; the extra kit, no matter how
-     * small, must be dealt with (e.g. be removed from the circulating kit). *)
-    let kit_to_repay, kit_to_burn =
-      let corresponding_kit =
-        kit_of_ratio_floor
-          (mul_ratio
-             (make_ratio (tez_to_mutez leaf.tez) (tez_to_mutez outcome.sold_tez))
-             (kit_to_ratio outcome.winning_bid.kit)
-          ) in
-      let penalty =
-        if corresponding_kit < leaf.min_kit_for_unwarranted then
-          kit_of_ratio_ceil (mul_ratio (kit_to_ratio corresponding_kit) liquidation_penalty)
-        else
-          kit_zero
-      in
-      (kit_sub corresponding_kit penalty, penalty)
+  let outcome = (failwith "foo": auction_outcome) in
+  let leaf = (failwith "foo": liquidation_slice) in
+  (* How much kit should be given to the burrow and how much should be burned. *)
+  (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+   * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
+   * to truncation. That could be a problem; the extra kit, no matter how
+   * small, must be dealt with (e.g. be removed from the circulating kit). *)
+  let kit_to_repay, kit_to_burn =
+    let corresponding_kit =
+      kit_of_ratio_floor
+        (mul_ratio
+           (make_ratio (tez_to_mutez leaf.tez) (tez_to_mutez outcome.sold_tez))
+           (kit_to_ratio outcome.winning_bid.kit)
+        ) in
+    let penalty =
+      if corresponding_kit < leaf.min_kit_for_unwarranted then
+        kit_of_ratio_ceil (mul_ratio (kit_to_ratio corresponding_kit) liquidation_penalty)
+      else
+        kit_zero
     in
+    (kit_sub corresponding_kit penalty, penalty)
+  in
 
-    (* Burn the kit by removing it from circulation. *)
-    let state =
-      { state with
-        parameters = remove_circulating_kit state.parameters kit_to_burn } in
+  (* Burn the kit by removing it from circulation. *)
+  let state =
+    { state with
+      parameters = remove_circulating_kit state.parameters kit_to_burn } in
 
-    (* Now we delete the slice from the lot, so it cannot be
-     * withdrawn twice, also to save storage. This might cause
-     * the lot root to change, so we also update completed_auctions
-     * to reflect that.
-     *
-     * Deletion process also returns the tree root. *)
-    let (state, auction) =
-      let (new_storage, auction) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
-      let new_state = { state with liquidation_auctions = { state.liquidation_auctions with avl_storage = new_storage }} in
-      (new_state, auction) in
 
-    (* When the auction has no slices left, we pop it from the linked list of lots. We do not
-     * delete the auction itself from the storage, since we still want the winner to be able
-     * to claim its result. *)
-    let state =
-      if avl_is_empty state.liquidation_auctions.avl_storage auction then
-        { state with
-          liquidation_auctions = liquidation_auction_pop_completed_auction state.liquidation_auctions auction;
-        }
-      else state in
+  (* When we delete the youngest or the oldest slice, we have to adjust
+   * the burrow pointers accordingly.
+   *
+   * TODO: We might not actually need to store this information, since
+   * on every operation we might expect to get the first and last
+   * elements of the linked list off-chain. However, this means that
+   * the client would have to do a costly search across all the auction
+   * queue to find at least one slice for the burrow.
+  *)
+  let state =
+    { state with burrows =
+                   let burrow = match Ligo.Big_map.find_opt leaf.burrow state.burrows with
+                     | None -> (failwith "TODO: Check if this case can happen." : burrow)
+                     | Some b -> b
+                   in
+                   Ligo.Big_map.update
+                     leaf.burrow
+                     (Some (burrow_return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
+                     state.burrows
+    } in
 
-    (* When we delete the youngest or the oldest slice, we have to adjust
-     * the burrow pointers accordingly.
-     *
-     * TODO: We might not actually need to store this information, since
-     * on every operation we might expect to get the first and last
-     * elements of the linked list off-chain. However, this means that
-     * the client would have to do a costly search across all the auction
-     * queue to find at least one slice for the burrow.
-    *)
-    let state =
-      { state with burrows =
-                     let burrow = match Ligo.Big_map.find_opt leaf.burrow state.burrows with
-                       | None -> (failwith "TODO: Check if this case can happen." : burrow)
-                       | Some b -> b
-                     in
-                     Ligo.Big_map.update
-                       leaf.burrow
-                       (Some (burrow_return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
-                       state.burrows
-      } in
+  (* And we update the slices around it *)
+  assert_checker_invariants state;
 
-    (* And we update the slices around it *)
-    let state = update_immediate_neighbors state leaf_ptr leaf in
-    assert_checker_invariants state;
-
-    (* Signal the burrow to send the tez to checker. *)
-    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.tez_transaction leaf.tez (Ligo.tez_from_literal "0mutez") c
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
-    ((op :: ops), state)
+  (* Signal the burrow to send the tez to checker. *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.tez_transaction leaf.tez (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
+  ((op :: ops), state)
 
 let rec touch_liquidation_slices_rec (ops, state, slices: LigoOp.operation list * checker * leaf_ptr list) : (LigoOp.operation list * checker) =
   match slices with
@@ -896,7 +723,6 @@ type params =
   | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
-  | CancelSliceLiquidation of (permission * leaf_ptr)
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
@@ -948,9 +774,6 @@ let main (op_and_state: params * checker): LigoOp.operation list * checker =
     mark_for_liquidation state burrow_id
   | TouchLiquidationSlices slices ->
     touch_liquidation_slices state slices
-  | CancelSliceLiquidation p ->
-    let (permission, leaf_ptr) = p in
-    cancel_liquidation_slice state permission leaf_ptr
   | TouchBurrow burrow_id ->
     touch_burrow state burrow_id
   | SetBurrowDelegate p ->

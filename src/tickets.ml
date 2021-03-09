@@ -101,7 +101,7 @@ let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) :
   * (currently is, but the content might change in the future), hence the
   * runtime check of the tag. *)
 let[@inline] ensure_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid_ticket)
+    (bid_ticket: delegation_auction_bid_ticket)
   : delegation_auction_bid =
   let (issuer, ((tag, bid), amt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid =
@@ -183,9 +183,9 @@ let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm
   * not strictly necessary (currently is, but the content might change in the
   * future), hence the runtime check of the tag. *)
 let[@inline] ensure_valid_permission
-      (permission: permission)
-      (burrow_id: Ligo.address)
-      (burrow_permission_version: Ligo.nat)
+    (permission: permission)
+    (burrow_id: Ligo.address)
+    (burrow_permission_version: Ligo.nat)
   : rights =
   let (issuer, ((tag, right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let is_valid =

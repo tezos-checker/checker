@@ -77,7 +77,6 @@ val touch_liquidation_slices : checker -> leaf_ptr list -> (LigoOp.operation lis
   * - if the slice is part of an already completed auction,
   * - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : checker -> permission -> leaf_ptr -> (LigoOp.operation list * checker)
 
 (** Perform maintainance tasks for the burrow. *)
 val touch_burrow : checker -> burrow_id -> (LigoOp.operation list * checker)
@@ -169,7 +168,6 @@ type params =
   | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
-  | CancelSliceLiquidation of (permission * leaf_ptr)
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)

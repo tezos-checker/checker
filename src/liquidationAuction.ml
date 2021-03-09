@@ -72,7 +72,6 @@ open Mem
 open Ratio
 open FixedPoint
 open Kit
-open Avl
 open Constants
 open Common
 open Tickets
@@ -84,14 +83,7 @@ open Error
  * when we start auctions.
 *)
 let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice) : (liquidation_auctions * leaf_ptr) =
-  if avl_height auctions.avl_storage auctions.queued_slices
-     >= max_liquidation_queue_height then
-    (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
-  else
-    let (new_storage, ret) =
-      avl_push auctions.avl_storage auctions.queued_slices slice Left in
-    let new_state = { auctions with avl_storage = new_storage; } in
-    (new_state, ret)
+  failwith "foo"
 
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
@@ -124,62 +116,11 @@ let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liqui
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
-let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold: Ligo.tez) =
-  let (storage, new_auction) = avl_take storage queued_slices split_threshold (None: auction_outcome option) in
-  let queued_amount = avl_tez storage new_auction in
-  if queued_amount < split_threshold
-  then
-    (* split next thing *)
-    let (storage, next) = avl_pop_front storage queued_slices in
-    match next with
-    | Some slice ->
-      let (part1, part2) = split_liquidation_slice (Ligo.sub_tez_tez split_threshold queued_amount) slice in
-      let (storage, _) = avl_push storage queued_slices part2 Right in
-      let (storage, _) = avl_push storage new_auction part1 Left in
-      (storage, new_auction)
-    | None ->
-      (storage, new_auction)
-  else
-    (storage, new_auction)
-
 let start_liquidation_auction_if_possible
     (start_price: fixedpoint) (auctions: liquidation_auctions): liquidation_auctions =
   match auctions.current_auction with
   | Some _ -> auctions
-  | None ->
-    let queued_amount = avl_tez auctions.avl_storage auctions.queued_slices in
-    let split_threshold =
-      max_tez
-        max_lot_size
-        (ratio_to_tez_floor
-           (mul_ratio
-              (ratio_of_tez queued_amount)
-              (fixedpoint_to_ratio min_lot_auction_queue_fraction)
-           )
-        ) in
-    let (storage, new_auction) =
-      take_with_splitting
-        auctions.avl_storage
-        auctions.queued_slices
-        split_threshold in
-    let current_auction =
-      if avl_is_empty storage new_auction
-      then (None: current_liquidation_auction option)
-      else
-        let start_value =
-          kit_scale
-            kit_one
-            (fixedpoint_mul
-               (fixedpoint_of_ratio_floor (ratio_of_tez (avl_tez storage new_auction)))
-               start_price
-            ) in
-        Some
-          { contents = new_auction;
-            state = Descending (start_value, !Ligo.Tezos.now); } in
-    { auctions with
-      avl_storage = storage;
-      current_auction = current_auction;
-    }
+  | None -> (failwith "foo": liquidation_auctions)
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
@@ -222,59 +163,7 @@ let is_liquidation_auction_complete
 
 let complete_liquidation_auction_if_possible
     (auctions: liquidation_auctions): liquidation_auctions =
-  match auctions.current_auction with
-  | None -> auctions
-  | Some curr -> begin
-      match is_liquidation_auction_complete curr.state with
-      | None -> auctions
-      | Some winning_bid ->
-        let (storage, completed_auctions) = match auctions.completed_auctions with
-          | None ->
-            let outcome =
-              { winning_bid = winning_bid;
-                sold_tez=avl_tez auctions.avl_storage curr.contents;
-                younger_auction=(None: liquidation_auction_id option);
-                older_auction=(None: liquidation_auction_id option);
-              } in
-            let storage =
-              avl_modify_root_data
-                auctions.avl_storage
-                curr.contents
-                (fun (prev: auction_outcome option) ->
-                   assert (Option.is_none prev);
-                   Some outcome) in
-            (storage, {youngest=curr.contents;oldest=curr.contents})
-          | Some params ->
-            let {youngest=youngest; oldest=oldest} = params in
-            let outcome =
-              { winning_bid = winning_bid;
-                sold_tez=avl_tez auctions.avl_storage curr.contents;
-                younger_auction=Some youngest;
-                older_auction=(None: liquidation_auction_id option);
-              } in
-            let storage =
-              avl_modify_root_data
-                auctions.avl_storage
-                curr.contents
-                (fun (prev: auction_outcome option) ->
-                   assert (Option.is_none prev);
-                   Some outcome) in
-            let storage =
-              avl_modify_root_data
-                storage
-                youngest
-                (fun (prev: auction_outcome option) ->
-                   match prev with
-                   | None -> (failwith "completed auction without outcome" : auction_outcome option)
-                   | Some xs -> Some ({xs with younger_auction=Some curr.contents})
-                ) in
-            (storage, {youngest=curr.contents; oldest=oldest; }) in
-        { auctions with
-          avl_storage = storage;
-          current_auction=(None: current_liquidation_auction option);
-          completed_auctions=Some completed_auctions;
-        }
-    end
+  failwith "foo"
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
@@ -294,129 +183,22 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
 let is_leading_current_liquidation_auction
     (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid): bool =
   match auctions.current_auction with
-  | Some auction ->
-    if ptr_of_avl_ptr auction.contents = ptr_of_avl_ptr bid_details.auction_id
-    then
-      (match auction.state with
-       | Ascending params ->
-         let (bid, _timestamp, _level) = params in
-         bid_eq bid bid_details.bid
-       | Descending _ -> false)
-    else false
+  | Some auction -> (failwith "foo": bool)
   | None -> false
 
 let completed_liquidation_auction_won_by
     (avl_storage: mem) (bid_details: liquidation_auction_bid): auction_outcome option =
-  match avl_root_data avl_storage bid_details.auction_id with
-  | Some outcome ->
-    if bid_eq outcome.winning_bid bid_details.bid
-    then Some outcome
-    else (None: auction_outcome option)
-  | None -> (None: auction_outcome option)
+  (failwith "foo": auction_outcome option)
 
 (* If successful, it consumes the ticket. *)
 let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
   then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
-  else
-    match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
-    | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
-    | None -> bid_details.bid.kit
-
-(* Removes the auction from completed lots list, while preserving the auction itself. *)
-let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (tree: avl_ptr) : liquidation_auctions =
-  let storage = auctions.avl_storage in
-
-  let outcome = match avl_root_data storage tree with
-    | None -> (failwith "auction is not completed" : auction_outcome)
-    | Some r -> r in
-  let completed_auctions = match auctions.completed_auctions with
-    | None -> (failwith "invariant violation" : completed_liquidation_auctions)
-    | Some r -> r in
-
-  (* First, fixup the completed auctions if we're dropping the
-   * youngest or the oldest lot. *)
-  let completed_auctions =
-    match outcome.younger_auction with
-    | None -> begin
-        match outcome.older_auction with
-        | None ->
-          assert (completed_auctions.youngest = tree);
-          assert (completed_auctions.oldest = tree);
-          (None: completed_liquidation_auctions option)
-        | Some older ->
-          assert (completed_auctions.youngest = tree);
-          assert (completed_auctions.oldest <> tree);
-          Some {completed_auctions with youngest = older }
-      end
-    | Some younger -> begin
-        match outcome.older_auction with
-        | None ->
-          assert (completed_auctions.youngest <> tree);
-          assert (completed_auctions.oldest = tree);
-          Some {completed_auctions with oldest = younger }
-        | Some _older ->
-          assert (completed_auctions.youngest <> tree);
-          assert (completed_auctions.oldest <> tree);
-          Some completed_auctions
-      end in
-
-  (* Then, fixup the pointers within the list.*)
-  let storage =
-    match outcome.younger_auction with
-    | None -> storage
-    | Some younger ->
-      avl_modify_root_data storage younger (fun (i: auction_outcome option) ->
-          let i = match i with
-            | None -> (failwith "invariant violation: completed auction does not have outcome": auction_outcome)
-            | Some i -> i in
-          assert (i.older_auction = Some tree);
-          Some {i with older_auction=outcome.older_auction}) in
-  let storage =
-    match outcome.older_auction with
-    | None -> storage
-    | Some older ->
-      avl_modify_root_data storage older (fun (i: auction_outcome option) ->
-          let i = match i with
-            | None -> (failwith "invariant violation: completed auction does not have outcome": auction_outcome)
-            | Some i -> i in
-          assert (i.younger_auction = Some tree);
-          Some {i with younger_auction=outcome.younger_auction}) in
-
-  let storage = avl_modify_root_data storage tree (fun (_: auction_outcome option) ->
-      Some { outcome with
-             younger_auction = (None: liquidation_auction_id option);
-             older_auction = (None: liquidation_auction_id option)}) in
-
-  { auctions with
-    completed_auctions = completed_auctions;
-    avl_storage = storage
-  }
+  else (failwith "foo": kit)
 
 (* If successful, it consumes the ticket. *)
 let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
-  | Some outcome ->
-    (* A winning bid can only be claimed when all the liquidation slices
-     * for that lot is cleaned. *)
-    if not (avl_is_empty auctions.avl_storage bid_details.auction_id)
-    then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
-    else (
-      (* When the winner reclaims their bid, we finally remove
-         every reference to the auction. This is just to
-         save storage, what's forbidding double-claiming
-         is the ticket mechanism, not this.
-      *)
-      assert (outcome.younger_auction = None);
-      assert (outcome.older_auction = None);
-      let auctions =
-        { auctions with
-          avl_storage =
-            avl_delete_empty_tree auctions.avl_storage bid_details.auction_id } in
-      (outcome.sold_tez, auctions)
-    )
-  | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
-
+  (failwith "foo": Ligo.tez * liquidation_auctions)
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: fixedpoint) : liquidation_auctions =
   (start_liquidation_auction_if_possible price
@@ -432,49 +214,14 @@ let liquidation_auction_touch (auctions: liquidation_auctions) (price: fixedpoin
  *)
 
 let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidation_auctions) : leaf_ptr option =
-  match auctions.completed_auctions with
-  | None -> (None: leaf_ptr option)
-  | Some completed_auctions -> begin
-      match avl_peek_front auctions.avl_storage completed_auctions.youngest with
-      | None -> (failwith "invariant violation: empty auction in completed_auctions" : leaf_ptr option)
-      | Some p ->
-        let (leaf_ptr, _) = p in
-        Some leaf_ptr
-    end
+  failwith "foo"
 
 (* BEGIN_OCAML *)
 
 let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : Ligo.tez option =
-  match auctions.current_auction with
-  | None -> (None: Ligo.tez option)
-  | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
+  failwith "foo"
 
 (* Checks if some invariants of auctions structure holds. *)
 let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
-
-  (* All AVL trees in the storage are valid. *)
-  let mem = auctions.avl_storage in
-  let roots = Ligo.Big_map.bindings mem.mem
-              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
-              |> List.map (fun (p, _) -> AVLPtr p) in
-  List.iter (assert_avl_invariants mem) roots;
-
-  (* There are no dangling pointers in the storage. *)
-  avl_assert_dangling_pointers mem roots;
-
-  (* Completed_auctions linked list is correct. *)
-  auctions.completed_auctions
-  |> Option.iter (fun completed_auctions ->
-      let rec go (curr: avl_ptr) (prev: avl_ptr option) =
-        let curr_data = Option.get (avl_root_data mem curr) in
-        assert (curr_data.younger_auction = prev);
-        match curr_data.older_auction with
-        | Some next -> go next (Some curr)
-        | None ->  assert (curr = completed_auctions.oldest) in
-      go (completed_auctions.youngest) None
-    );
-
-  (* TODO: Check if all dangling auctions are empty. *)
-
   ()
 (* END_OCAML *)
