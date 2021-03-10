@@ -22,8 +22,6 @@ let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
     make_real_unsafe (neg_int n) (neg_int d)
 
 (* Conversions to/from other types. *)
-let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
-
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_floor (x: ratio) : Ligo.nat =
   let { num = x_num; den = x_den; } = x in
@@ -160,6 +158,8 @@ let sign_ratio x =
     0
   else
     1
+
+let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
 
 let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else b
 
