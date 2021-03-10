@@ -77,9 +77,10 @@ let uniswap_buy_kit
     else if return > uniswap.kit then
       (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * uniswap))
     else
-      ( return,
+      let bought_kit, remaining_kit = (return, kit_sub uniswap.kit return) in
+      ( bought_kit,
         { uniswap with
-          kit = kit_sub uniswap.kit return;
+          kit = remaining_kit;
           tez = new_uniswap_tez;
         }
       )
@@ -124,10 +125,12 @@ let uniswap_sell_kit
     else if return > uniswap.tez then
       (Ligo.failwith error_SellKitTooMuchTezBought : (Ligo.tez * uniswap))
     else
-      ( return,
+      let bought_tez, remaining_tez = (return, Ligo.sub_tez_tez uniswap.tez return) in
+      ( bought_tez,
         { uniswap with
           kit = new_uniswap_kit;
-          tez = Ligo.sub_tez_tez uniswap.tez return }
+          tez = remaining_tez;
+        }
       )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
