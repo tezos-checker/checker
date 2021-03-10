@@ -41,9 +41,9 @@ let suite =
 
        let burrow_id, _, checker = newly_created_burrow initial_checker in 
 
-        assert_bool 
-          "No matching burrow found after calling create_burrow" 
-          (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows))
+       assert_bool 
+         "No matching burrow found after calling create_burrow" 
+         (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows))
     );
 
     ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
@@ -76,10 +76,10 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
        let burrow_id, _, checker = newly_created_burrow initial_checker in 
-       
+
        match Ligo.Big_map.find_opt burrow_id checker.burrows with 
        | Some burrow -> 
-          assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez"))
+         assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez"))
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
