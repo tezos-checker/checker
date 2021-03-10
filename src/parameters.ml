@@ -86,8 +86,8 @@ let liquidation_price (p: parameters) : ratio =
   *   doing conditionals and save gas costs. Messes only slightly with the
   *   computations, but can save quite some gas. *)
 let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
-  let burrowed = Ligo.int (kit_to_mukit burrowed) in
-  let circulating = Ligo.int (kit_to_mukit circulating) in
+  let burrowed = kit_to_mukit_int burrowed in
+  let circulating = kit_to_mukit_int circulating in
   if burrowed = Ligo.int_from_literal "0" && circulating = Ligo.int_from_literal "0" then
     zero_ratio
   else if burrowed = Ligo.int_from_literal "0" && circulating <> Ligo.int_from_literal "0" then
@@ -369,8 +369,8 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
   kit_of_ratio_floor
     (make_real_unsafe
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit last_outstanding_kit)) (fixedpoint_to_raw current_burrow_fee_index))
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_burrow_fee_index))
+       (Ligo.mul_int_int (kit_to_mukit_int last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
+       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
     )
 
 (** Compute current outstanding kit, given that the burrow fees have already
@@ -383,8 +383,8 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
   kit_of_ratio_floor
     (make_real_unsafe
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit current_outstanding_with_fees)) (fixedpoint_to_raw current_imbalance_index))
-       (Ligo.mul_int_int (Ligo.int (kit_to_mukit kit_one)) (fixedpoint_to_raw last_imbalance_index))
+       (Ligo.mul_int_int (kit_to_mukit_int current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
+       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
     )
 
 (** Update the checker's parameters, given (a) the current timestamp

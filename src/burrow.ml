@@ -5,6 +5,7 @@ open Parameters
 open LiquidationAuctionPrimitiveTypes
 open Constants
 open Error
+open Common
 
 type liquidation_slices = {oldest: leaf_ptr; youngest: leaf_ptr;}
 [@@deriving show]
@@ -86,10 +87,20 @@ let[@inline] burrow_allow_all_kit_burnings (b: burrow) : bool =
 let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let collateral = ratio_of_tez b.collateral in
-  let minting_price = minting_price p in
-  let outstanding_kit = kit_to_ratio b.outstanding_kit in
-  lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting outstanding_kit) minting_price)
+
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let outstanding_kit = kit_to_mukit_int b.outstanding_kit in
+
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int den_fm (Ligo.mul_int_int kit_scaling_factor_int den_mp)) in
+  let rhs =
+    Ligo.mul_int_int
+      (Ligo.mul_int_int num_fm (Ligo.mul_int_int outstanding_kit num_mp))
+      (Ligo.int_from_literal "1_000_000") in
+  Ligo.lt_int_int lhs rhs
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -112,17 +123,18 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
   else
     let b = rebalance_kit burrow in
     let current_adjustment_index = compute_adjustment_index p in
-    let last_adjustment_index = fixedpoint_to_ratio b.adjustment_index in
-    let kit_outstanding = kit_to_ratio b.outstanding_kit in
     { b with
       outstanding_kit =
         kit_of_ratio_ceil
-          (div_ratio
-             (mul_ratio
-                kit_outstanding
-                (fixedpoint_to_ratio current_adjustment_index)
+          (make_real_unsafe
+             (Ligo.mul_int_int
+                (kit_to_mukit_int b.outstanding_kit)
+                (fixedpoint_to_raw current_adjustment_index)
              )
-             last_adjustment_index
+             (Ligo.mul_int_int
+                kit_scaling_factor_int
+                (fixedpoint_to_raw b.adjustment_index)
+             )
           );
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
@@ -326,49 +338,72 @@ let burrow_increase_permission_version (p: parameters) (b: burrow) : (Ligo.nat *
   * liquidation we are no longer "optimistically overburrowed" *)
 let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
-  let oustanding_kit = kit_to_ratio b.outstanding_kit in
-  let collateral = ratio_of_tez b.collateral in
-  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
-  let minting_price = minting_price p in
-  ratio_to_tez_ceil
-    (div_ratio
-       (sub_ratio
-          (sub_ratio
-             (mul_ratio
-                (mul_ratio oustanding_kit fminting)
-                minting_price
-             )
-             (mul_ratio
-                (mul_ratio
-                   (sub_ratio one_ratio liquidation_penalty)
-                   fminting
-                )
-                collateral_at_auction
-             )
-          )
-          collateral
-       )
-       (sub_ratio
-          (mul_ratio
-             (sub_ratio one_ratio liquidation_penalty)
-             fminting
-          )
-          one_ratio
-       )
-    )
+
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let { num = num_lp; den = den_lp; } =
+    let { num = num_lp; den = den_lp; } = liquidation_penalty in
+    { num = Ligo.sub_int_int den_lp num_lp; den = den_lp; }
+  in
+
+  (* numerator = tez_sf * den_lp * num_fm * num_mp * outstanding_kit
+               - kit_sf * den_mp * (num_lp * num_fm * collateral_at_auctions + den_lp * den_fm * collateral) *)
+  let numerator =
+    Ligo.sub_int_int
+      (Ligo.mul_int_int
+         (Ligo.int_from_literal "1_000_000")
+         (Ligo.mul_int_int
+            den_lp
+            (Ligo.mul_int_int
+               num_fm
+               (Ligo.mul_int_int
+                  num_mp
+                  (kit_to_mukit_int b.outstanding_kit)
+               )
+            )
+         )
+      )
+      (Ligo.mul_int_int
+         (Ligo.mul_int_int kit_scaling_factor_int den_mp)
+         (Ligo.add_int_int
+            (Ligo.mul_int_int num_lp (Ligo.mul_int_int num_fm (tez_to_mutez b.collateral_at_auction)))
+            (Ligo.mul_int_int den_lp (Ligo.mul_int_int den_fm (tez_to_mutez b.collateral)))
+         )
+      ) in
+  (* denominator = (kit_sf * den_mp * tez_sf) * (num_lp * num_fm - den_lp * den_fm) *)
+  let denominator =
+    Ligo.mul_int_int
+      kit_scaling_factor_int
+      (Ligo.mul_int_int
+         den_mp
+         (Ligo.mul_int_int
+            (Ligo.int_from_literal "1_000_000")
+            (Ligo.sub_int_int
+               (Ligo.mul_int_int num_lp num_fm)
+               (Ligo.mul_int_int den_lp den_fm)
+            )
+         )
+      ) in
+  ratio_to_tez_ceil (make_real_unsafe numerator denominator)
 
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
 let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
-  kit_of_ratio_ceil
-    (div_ratio
-       (mul_ratio
-          (ratio_of_tez tez_to_auction)
-          (sub_ratio one_ratio liquidation_penalty)
-       )
-       (minting_price p)
-    )
+  let { num = num_lp; den = den_lp; } = liquidation_penalty in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let numerator =
+    Ligo.mul_int_int
+      (tez_to_mutez tez_to_auction)
+      (Ligo.mul_int_int
+         (Ligo.sub_int_int den_lp num_lp)
+         den_mp
+      ) in
+  let denominator =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "1_000_000")
+      (Ligo.mul_int_int den_lp num_mp) in
+  kit_of_ratio_ceil (make_real_unsafe numerator denominator)
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
@@ -387,11 +422,19 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
-    then zero_ratio
-    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
-  let liquidation_price = liquidation_price p in
-  let collateral = ratio_of_tez b.collateral in
-  b.active && lt_ratio_ratio collateral (mul_ratio (mul_ratio fliquidation optimistic_outstanding) liquidation_price)
+    then kit_zero
+    else kit_sub b.outstanding_kit expected_kit in
+  let { num = num_fl; den = den_fl; } = fliquidation in
+  let { num = num_lp; den = den_lp; } = liquidation_price p in
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int den_fl (Ligo.mul_int_int kit_scaling_factor_int den_lp)) in
+  let rhs =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "1_000_000")
+      (Ligo.mul_int_int num_fl (Ligo.mul_int_int (kit_to_mukit_int optimistic_outstanding) num_lp)) in
+  b.active && Ligo.lt_int_int lhs rhs
 
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
@@ -419,26 +462,29 @@ let compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction:
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
-    then zero_ratio
-    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
-  let collateral = ratio_of_tez b.collateral in
+    then kit_zero
+    else kit_sub b.outstanding_kit expected_kit in
+
+  let { num = num_fl; den = den_fl; } = fliquidation in
+  let numerator =
+    Ligo.mul_int_int
+      (tez_to_mutez tez_to_auction)
+      (Ligo.mul_int_int num_fl (kit_to_mukit_int optimistic_outstanding)) in
+  let denominator =
+    Ligo.mul_int_int
+      den_fl
+      (Ligo.mul_int_int kit_scaling_factor_int (tez_to_mutez b.collateral)) in
   kit_of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
-    (div_ratio
-       (mul_ratio
-          (ratio_of_tez tez_to_auction)
-          (mul_ratio fliquidation optimistic_outstanding)
-       )
-       collateral
-    )
+    (make_real_unsafe numerator denominator)
 
 let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   let partial_reward =
     ratio_to_tez_floor
-      (mul_ratio
-         (ratio_of_tez b.collateral)
-         (fixedpoint_to_ratio liquidation_reward_percentage)
+      (make_real_unsafe
+         (Ligo.mul_int_int (tez_to_mutez b.collateral) (fixedpoint_to_raw liquidation_reward_percentage))
+         (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") (fixedpoint_to_raw fixedpoint_one))
       ) in
   (* Only applies if the burrow qualifies for liquidation; it is to be given to
    * the actor triggering the liquidation. *)
@@ -519,6 +565,40 @@ let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
   | Some i -> Some i.oldest
 
 (* BEGIN_OCAML *)
+(* NOTE: Only to be used for testing, otherwise this function is not needed. *)
+let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
+  assert_burrow_invariants b;
+  let oustanding_kit = kit_to_ratio b.outstanding_kit in
+  let collateral = ratio_of_tez b.collateral in
+  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
+  let minting_price = minting_price p in
+  ratio_to_tez_ceil
+    (div_ratio
+       (sub_ratio
+          (sub_ratio
+             (mul_ratio
+                (mul_ratio oustanding_kit fminting)
+                minting_price
+             )
+             (mul_ratio
+                (mul_ratio
+                   (sub_ratio one_ratio liquidation_penalty)
+                   fminting
+                )
+                collateral_at_auction
+             )
+          )
+          collateral
+       )
+       (sub_ratio
+          (mul_ratio
+             (sub_ratio one_ratio liquidation_penalty)
+             fminting
+          )
+          one_ratio
+       )
+    )
+
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral

@@ -7,9 +7,6 @@ type ratio = {
   den: Ligo.int; (** Denominator, > 0 *)
 }
 
-let[@inline] ratio_num (x: ratio) : Ligo.int = x.num
-let[@inline] ratio_den (x: ratio) : Ligo.int = x.den
-
 (* make and normalize n/d, assuming d > 0 *)
 let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =
   assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
@@ -25,8 +22,6 @@ let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
     make_real_unsafe (neg_int n) (neg_int d)
 
 (* Conversions to/from other types. *)
-let[@inline] ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
-
 let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
@@ -83,21 +78,6 @@ let ratio_to_tez_ceil (x: ratio) : Ligo.tez =
 let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
-(* If we wish to rely on the fact that the rationals are normalized, we could
- * instead implement equality very efficiently as
- *
- *   x.num = y.num && x.den = y.den
- *
- * but I'd like to avoid that. Ideally we'll drop all fancy normalization, and
- * have rationals be lightweight. We always return to fixed-point, tez, and
- * kit, at the end anyway. *)
-let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
-  let { num = x_num; den = x_den; } = x in
-  let { num = y_num; den = y_den; } = y in
-  Ligo.eq_int_int
-    (Ligo.mul_int_int x_num y_den)
-    (Ligo.mul_int_int y_num x_den)
-
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
   let { num = x_num; den = x_den; } = x in
@@ -117,14 +97,6 @@ let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
 let[@inline] geq_ratio_ratio (x: ratio) (y: ratio) : bool = leq_ratio_ratio y x
 
 let[@inline] gt_ratio_ratio (x: ratio) (y: ratio) : bool = lt_ratio_ratio y x
-
-let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else b
-
-let max_ratio (a: ratio) (b: ratio) : ratio = if geq_ratio_ratio a b then a else b
-
-let[@inline] ratio_to_int (x: ratio) : Ligo.int =
-  let { num = x_num; den = x_den; } = x in
-  Ligo.div_int_int x_num x_den
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let[@inline] neg_ratio (x: ratio) : ratio =
@@ -189,7 +161,29 @@ let sign_ratio x =
   else
     1
 
+let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else b
+
+let max_ratio (a: ratio) (b: ratio) : ratio = if geq_ratio_ratio a b then a else b
+
 let[@inline] clamp_ratio (v: ratio) (lower: ratio) (upper: ratio) : ratio =
   assert (leq_ratio_ratio lower upper);
   min_ratio upper (max_ratio v lower)
+
+let[@inline] ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
+
+(* If we wish to rely on the fact that the rationals are normalized, we could
+ * instead implement equality very efficiently as
+ *
+ *   x.num = y.num && x.den = y.den
+ *
+ * but I'd like to avoid that. Ideally we'll drop all fancy normalization, and
+ * have rationals be lightweight. We always return to fixed-point, tez, and
+ * kit, at the end anyway. *)
+let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
+  Ligo.eq_int_int
+    (Ligo.mul_int_int x_num y_den)
+    (Ligo.mul_int_int y_num x_den)
+
 (* END_OCAML *)

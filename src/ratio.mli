@@ -6,8 +6,6 @@ type ratio = {
 (* Construction/deconstruction. *)
 val make_real_unsafe: Ligo.int -> Ligo.int -> ratio
 val make_ratio: Ligo.int -> Ligo.int -> ratio
-val ratio_num: ratio -> Ligo.int
-val ratio_den: ratio -> Ligo.int
 
 (* Predefined values *)
 val zero_ratio: ratio
@@ -15,7 +13,6 @@ val one_ratio: ratio
 
 (* Conversions to/from other types. *)
 val ratio_of_int: Ligo.int -> ratio
-val ratio_to_int: ratio -> Ligo.int
 
 val ratio_of_nat: Ligo.nat -> ratio
 val ratio_to_nat_floor: ratio -> Ligo.nat
