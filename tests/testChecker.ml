@@ -186,8 +186,9 @@ let suite =
 
     ("buy_kit - returns updated uniswap state" >::
      fun _ -> 
+       let purchase_amount = Ligo.tez_from_literal "9_000_000mutez" in
        Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "9_000_000mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:purchase_amount;
        let uniswap0 = Uniswap.uniswap_make_for_test
            ~tez:(Ligo.tez_from_literal "10_000_000mutez")
            ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
@@ -199,9 +200,11 @@ let suite =
        let _, checker = Checker.buy_kit checker0 (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in 
 
        assert_bool
-         "The uniswap returned by buy_kit is equal to the input uniswap but a new state was expected"
-         (not (checker.uniswap = checker0.uniswap))
-
+         "The uniswap state returned by buy_kit does not contain the expected amount of kit"
+         ((kit_compare checker.uniswap.kit checker0.uniswap.kit) == -1);
+       assert_bool
+         "The uniswap state returned by buy_kit does not contain the expected amount of tez"
+         ((Ligo.sub_tez_tez checker.uniswap.tez checker0.uniswap.tez) == purchase_amount)
     );
 
     ("can complete a liquidation auction" >::
