@@ -338,6 +338,55 @@ let burrow_increase_permission_version (p: parameters) (b: burrow) : (Ligo.nat *
   * liquidation we are no longer "optimistically overburrowed" *)
 let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
+
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let { num = num_lp; den = den_lp; } = sub_ratio one_ratio liquidation_penalty in
+
+  (* numerator = tez_sf * den_lp * num_fm * num_mp * outstanding_kit
+               - kit_sf * den_mp * (num_lp * num_fm * collateral_at_auctions + den_lp * den_fm * collateral) *)
+  let numerator =
+    Ligo.sub_int_int
+      (Ligo.mul_int_int
+         (Ligo.int_from_literal "1_000_000")
+         (Ligo.mul_int_int
+            den_lp
+            (Ligo.mul_int_int
+               num_fm
+               (Ligo.mul_int_int
+                  num_mp
+                  (kit_to_mukit_int b.outstanding_kit)
+               )
+            )
+         )
+      )
+      (Ligo.mul_int_int
+         (Ligo.mul_int_int kit_scaling_factor_int den_mp)
+         (Ligo.add_int_int
+            (Ligo.mul_int_int num_lp (Ligo.mul_int_int num_fm (tez_to_mutez b.collateral_at_auction)))
+            (Ligo.mul_int_int den_lp (Ligo.mul_int_int den_fm (tez_to_mutez b.collateral)))
+         )
+      ) in
+  (* denominator = (kit_sf * den_mp * tez_sf) * (num_lp * num_fm - den_lp * den_fm) *)
+  let denominator =
+    Ligo.mul_int_int
+      kit_scaling_factor_int
+      (Ligo.mul_int_int
+         den_mp
+         (Ligo.mul_int_int
+            (Ligo.int_from_literal "1_000_000")
+            (Ligo.sub_int_int
+               (Ligo.mul_int_int num_lp num_fm)
+               (Ligo.mul_int_int den_lp den_fm)
+            )
+         )
+      ) in
+  ratio_to_tez_ceil (make_real_unsafe numerator denominator)
+
+(* BEGIN_OCAML *)
+(* NOTE: Only to be used for testing, otherwise this is not needed. *)
+let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
+  assert_burrow_invariants b;
   let oustanding_kit = kit_to_ratio b.outstanding_kit in
   let collateral = ratio_of_tez b.collateral in
   let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
@@ -368,7 +417,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
           one_ratio
        )
     )
-
+(* END_OCAML *)
 
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
