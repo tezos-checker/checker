@@ -61,6 +61,7 @@ let uniswap_buy_kit
       let { num = num_uf; den = den_uf; } = uniswap_fee in
       { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - uniswap_fee *)
     in
+    let new_uniswap_tez = Ligo.add_tez_tez uniswap.tez tez_amount in
     let numerator =
       Ligo.mul_int_int
         (tez_to_mutez tez_amount)
@@ -68,7 +69,7 @@ let uniswap_buy_kit
     let denominator =
       Ligo.mul_int_int
         kit_scaling_factor_int
-        (Ligo.mul_int_int (tez_to_mutez (Ligo.add_tez_tez uniswap.tez tez_amount)) den_uf) in
+        (Ligo.mul_int_int (tez_to_mutez new_uniswap_tez) den_uf) in
     let return = kit_of_ratio_floor (make_real_unsafe numerator denominator) in
 
     if return < min_kit_expected then
@@ -80,7 +81,8 @@ let uniswap_buy_kit
       ( bought_kit,
         { uniswap with
           kit = remaining_kit;
-          tez = Ligo.add_tez_tez uniswap.tez tez_amount }
+          tez = new_uniswap_tez;
+        }
       )
 
 let uniswap_sell_kit
