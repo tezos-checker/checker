@@ -33,7 +33,10 @@ let uniswap_sync_last_observed (uniswap: uniswap) : uniswap =
     uniswap
   else
     { uniswap with
-      kit_in_tez_in_prev_block = div_ratio (ratio_of_tez uniswap.tez) (kit_to_ratio uniswap.kit);
+      kit_in_tez_in_prev_block =
+        make_real_unsafe
+          (Ligo.mul_int_int (tez_to_mutez uniswap.tez) kit_scaling_factor_int)
+          (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) (Ligo.int_from_literal "1_000_000"));
       last_level = !Ligo.Tezos.level;
     }
 
