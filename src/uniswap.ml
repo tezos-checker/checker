@@ -57,20 +57,20 @@ let uniswap_buy_kit
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = div_ratio (kit_to_ratio uniswap.kit) (ratio_of_tez uniswap.tez) in
-    let slippage = make_ratio (tez_to_mutez uniswap.tez) (tez_to_mutez (Ligo.add_tez_tez uniswap.tez tez_amount)) in
-    let return =
-      kit_of_ratio_floor
-        (mul_ratio
-           (ratio_of_tez tez_amount)
-           (mul_ratio
-              price
-              (mul_ratio
-                 slippage
-                 (sub_ratio one_ratio uniswap_fee)
-              )
-           )
-        ) in
+    let { num = num_uf; den = den_uf; } =
+      let { num = num_uf; den = den_uf; } = uniswap_fee in
+      { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - uniswap_fee *)
+    in
+    let numerator =
+      Ligo.mul_int_int
+        (tez_to_mutez tez_amount)
+        (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) num_uf) in
+    let denominator =
+      Ligo.mul_int_int
+        kit_scaling_factor_int
+        (Ligo.mul_int_int (tez_to_mutez (Ligo.add_tez_tez uniswap.tez tez_amount)) den_uf) in
+    let return = kit_of_ratio_floor (make_real_unsafe numerator denominator) in
+
     if return < min_kit_expected then
       (Ligo.failwith error_BuyKitPriceFailure : (kit * uniswap))
     else if return > uniswap.kit then
