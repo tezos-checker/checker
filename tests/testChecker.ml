@@ -59,14 +59,28 @@ let suite =
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
-    ("create_burrow - fails when transaction does not meet creation deposit" >::
+    ("create_burrow - fails when transaction amount is one mutez below creation deposit" >::
      fun _ ->
+
+       let amount = Ligo.sub_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "1mutez") in
        Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "42mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
 
        assert_raises 
          (Failure (Ligo.string_of_int error_InsufficientFunds))
          (fun () -> Checker.create_burrow initial_checker None)
+    );
+
+    ("create_burrow - passes when transaction amount is exactly the creation deposit" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
+       let burrow_id, _, checker = newly_created_burrow initial_checker in 
+       
+       match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+       | Some burrow -> 
+          assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez"))
+       | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
     ("deposit_tez - admin ticket holder can deposit" >::
