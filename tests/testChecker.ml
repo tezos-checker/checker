@@ -184,6 +184,42 @@ let suite =
          (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id) 
     );
 
+
+    (* reclaim bid *)
+    (* 
+        * Fails when tez is submitted
+        * Fails when the bid ticket is "invalid" e.g. not issued by checker contract
+        * Passes when your bid failed and returns the exact amount of tez submitted
+      *)
+
+    ("checker_delegation_auction_reclaim_bid - reclaim losing bid returns expected tez" >::
+     fun _ -> 
+       (* Create a bid *)
+       let our_bid_amount = Ligo.tez_from_literal "1mutez" in 
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:our_bid_amount;
+       let ops, checker = Checker.checker_delegation_auction_place_bid initial_checker in 
+       let ticket, checker = match ops with
+         | [ Transaction (DaBidTransactionValue ticket, _, _) ;
+           ] -> ticket, checker
+         | _ -> failwith ("Expected blarg but got " ^ show_operation_list ops)
+       in 
+       (* Make another bid with a higher value *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "2mutez");
+       let _, checker = Checker.checker_delegation_auction_place_bid checker in 
+
+       (* Reclaim our first bid *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.checker_delegation_auction_reclaim_bid checker ticket in match ops with 
+       | [Transaction (UnitTransactionValue, reclaimed_tez, _)] -> 
+         assert_bool
+           "Reclaimed tez did not match the amount that was bid"
+           (Ligo.eq_tez_tez reclaimed_tez our_bid_amount)
+       | _ -> failwith("Expected blarg but got " ^ show_operation_list ops)       
+    );
+
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
