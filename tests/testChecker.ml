@@ -184,29 +184,6 @@ let suite =
          (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id) 
     );
 
-    ("buy_kit - returns updated uniswap state" >::
-     fun _ -> 
-       let purchase_amount = Ligo.tez_from_literal "9_000_000mutez" in
-       Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:purchase_amount;
-       let uniswap0 = Uniswap.uniswap_make_for_test
-           ~tez:(Ligo.tez_from_literal "10_000_000mutez")
-           ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
-           ~lqt:(Ligo.nat_from_literal "1n")
-           ~kit_in_tez_in_prev_block:Ratio.one_ratio
-           ~last_level:(Ligo.nat_from_literal "0n") in
-       let checker0 = {initial_checker with uniswap=uniswap0} in
-
-       let _, checker = Checker.buy_kit checker0 (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in 
-
-       assert_bool
-         "The uniswap state returned by buy_kit does not contain the expected amount of kit"
-         ((kit_compare checker.uniswap.kit checker0.uniswap.kit) == -1);
-       assert_bool
-         "The uniswap state returned by buy_kit does not contain the expected amount of tez"
-         ((Ligo.sub_tez_tez checker.uniswap.tez checker0.uniswap.tez) == purchase_amount)
-    );
-
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
