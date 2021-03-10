@@ -16,6 +16,34 @@ let arb_positive_kit_token = QCheck.map kit_issue TestArbitrary.arb_positive_kit
 (* Issue an arbitrary number of liquidity tokens (checker-issued) *)
 let arb_liquidity = QCheck.map (fun x -> Ligo.abs (Ligo.int_from_literal (string_of_int x))) QCheck.(0 -- max_int)
 
+let uniswap_make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
+  { tez = tez;
+    kit = kit;
+    lqt = lqt;
+    kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
+    last_level = last_level;
+  }
+
+(* Compute the current price of kit in tez, as estimated using the ratio of tez and kit
+ * currently in the uniswap contract. *)
+let uniswap_kit_in_tez (u: uniswap) =
+  div_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
+
+(* Compute the current product of kit and tez, using the current contents of the uniswap
+ * contract. *)
+let uniswap_kit_times_tez (u: uniswap) =
+  mul_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
+
+(* Reveal the current number of liquidity tokens extant. *)
+let uniswap_liquidity_tokens_extant (u: uniswap) = u.lqt
+
+let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
+  Ligo.eq_tez_tez u1.tez u2.tez
+  && kit_compare u1.kit u2.kit = 0
+  && Ligo.eq_nat_nat u1.lqt u2.lqt
+  && eq_ratio_ratio u1.kit_in_tez_in_prev_block u2.kit_in_tez_in_prev_block
+  && Ligo.eq_nat_nat u1.last_level u2.last_level
+
 (* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
 let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: ratio) (last_level: Ligo.nat) =
   QCheck.map

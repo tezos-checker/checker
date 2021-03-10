@@ -95,31 +95,3 @@ val uniswap_add_accrued_kit : uniswap -> kit -> uniswap
 
 (** Add accrued tez to the uniswap contract. *)
 val uniswap_add_accrued_tez : uniswap -> Ligo.tez -> uniswap
-
-(* BEGIN_OCAML *)
-(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. *)
-val uniswap_make_for_test :
-  tez:Ligo.tez ->
-  kit:kit ->
-  lqt:Ligo.nat ->
-  kit_in_tez_in_prev_block:Ratio.ratio ->
-  last_level: Ligo.nat ->
-  uniswap
-
-(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
- * current price of kit in tez, as estimated using the ratio of tez and kit
- * currently in the uniswap contract. *)
-val uniswap_kit_in_tez : uniswap -> Ratio.ratio
-
-(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Compute the
- * current product of kit and tez, using the current contents of the uniswap
- * contract. *)
-val uniswap_kit_times_tez : uniswap -> Ratio.ratio
-
-(* FOR TESTING PURPOSES ONLY. SHOULD NOT BE EXPORTED REALLY. Reveal the
- * current number of liquidity tokens extant. *)
-val uniswap_liquidity_tokens_extant : uniswap -> Ligo.nat
-
-(* FOR TESTING PURPOSES *)
-val eq_uniswap : uniswap -> uniswap -> bool
-(* END_OCAML *)
