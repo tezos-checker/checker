@@ -2,9 +2,13 @@ _build
 _coverage
 checker.byte
 generated
+_opam
 
 *.cmi
 *.cmo
 
 ligo/*.tz
 ligo/bench/*.tz
+
+# editors
+.vscode
