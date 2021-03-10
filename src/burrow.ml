@@ -341,7 +341,10 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
 
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
-  let { num = num_lp; den = den_lp; } = sub_ratio one_ratio liquidation_penalty in
+  let { num = num_lp; den = den_lp; } =
+    let { num = num_lp; den = den_lp; } = liquidation_penalty in
+    { num = Ligo.sub_int_int den_lp num_lp; den = den_lp; }
+  in
 
   (* numerator = tez_sf * den_lp * num_fm * num_mp * outstanding_kit
                - kit_sf * den_mp * (num_lp * num_fm * collateral_at_auctions + den_lp * den_fm * collateral) *)
