@@ -16,7 +16,9 @@ val kit_scaling_factor_int : Ligo.int
 
 (* Conversions to/from other types. *)
 val kit_of_mukit : Ligo.nat -> kit
-val kit_to_mukit : kit -> Ligo.nat
+val kit_to_mukit_int : kit -> Ligo.int
+val kit_to_mukit_nat : kit -> Ligo.nat
+
 val kit_to_ratio : kit -> Ratio.ratio
 val kit_of_ratio_ceil : Ratio.ratio -> kit
 val kit_of_ratio_floor : Ratio.ratio -> kit

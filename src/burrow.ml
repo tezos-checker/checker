@@ -90,7 +90,7 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
-  let outstanding_kit = Ligo.int (kit_to_mukit b.outstanding_kit) in
+  let outstanding_kit = kit_to_mukit_int b.outstanding_kit in
 
   let lhs =
     Ligo.mul_int_int
@@ -128,7 +128,7 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
         kit_of_ratio_ceil
           (make_real_unsafe
              (Ligo.mul_int_int
-                (Ligo.int (kit_to_mukit b.outstanding_kit))
+                (kit_to_mukit_int b.outstanding_kit)
                 (fixedpoint_to_raw current_adjustment_index)
              )
              (Ligo.mul_int_int
@@ -369,6 +369,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
        )
     )
 
+
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
@@ -416,7 +417,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let rhs =
     Ligo.mul_int_int
       (Ligo.int_from_literal "1_000_000")
-      (Ligo.mul_int_int num_fl (Ligo.mul_int_int (Ligo.int (kit_to_mukit optimistic_outstanding)) num_lp)) in
+      (Ligo.mul_int_int num_fl (Ligo.mul_int_int (kit_to_mukit_int optimistic_outstanding) num_lp)) in
   b.active && Ligo.lt_int_int lhs rhs
 
 type liquidation_details =
@@ -452,7 +453,7 @@ let compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction:
   let numerator =
     Ligo.mul_int_int
       (tez_to_mutez tez_to_auction)
-      (Ligo.mul_int_int num_fl (Ligo.int (kit_to_mukit optimistic_outstanding))) in
+      (Ligo.mul_int_int num_fl (kit_to_mukit_int optimistic_outstanding)) in
   let denominator =
     Ligo.mul_int_int
       den_fl

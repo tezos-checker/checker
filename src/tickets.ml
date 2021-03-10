@@ -38,7 +38,7 @@ type kit_token = kit_token_content Ligo.ticket
 [@@deriving show]
 
 let[@inline] kit_issue (kit: kit) : kit_token =
-  Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit kit)
+  Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit_nat kit)
 
 (** Check whether a kit token is valid and return the amount of kit stored in
   * it if it is. A kit token is valid if (a) it is issued by checker, and (b)

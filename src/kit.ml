@@ -21,7 +21,8 @@ let[@inline] kit_one = kit_scaling_factor_nat
 
 (* Conversions to/from other types. *)
 let[@inline] kit_of_mukit (amnt: Ligo.nat) : kit = amnt
-let[@inline] kit_to_mukit (amnt: kit) : Ligo.nat = amnt
+let[@inline] kit_to_mukit_int (amnt: kit) : Ligo.int = Ligo.int amnt
+let[@inline] kit_to_mukit_nat (amnt: kit) : Ligo.nat = amnt
 
 let[@inline] kit_to_ratio (amnt: kit) : ratio = make_real_unsafe (Ligo.int amnt) kit_scaling_factor_int
 
