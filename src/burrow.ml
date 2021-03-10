@@ -386,42 +386,6 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
       ) in
   ratio_to_tez_ceil (make_real_unsafe numerator denominator)
 
-(* BEGIN_OCAML *)
-(* NOTE: Only to be used for testing, otherwise this is not needed. *)
-let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
-  assert_burrow_invariants b;
-  let oustanding_kit = kit_to_ratio b.outstanding_kit in
-  let collateral = ratio_of_tez b.collateral in
-  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
-  let minting_price = minting_price p in
-  ratio_to_tez_ceil
-    (div_ratio
-       (sub_ratio
-          (sub_ratio
-             (mul_ratio
-                (mul_ratio oustanding_kit fminting)
-                minting_price
-             )
-             (mul_ratio
-                (mul_ratio
-                   (sub_ratio one_ratio liquidation_penalty)
-                   fminting
-                )
-                collateral_at_auction
-             )
-          )
-          collateral
-       )
-       (sub_ratio
-          (mul_ratio
-             (sub_ratio one_ratio liquidation_penalty)
-             fminting
-          )
-          one_ratio
-       )
-    )
-(* END_OCAML *)
-
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
   * rather optimistic here (we overapproximate the expected kit). *)
@@ -601,6 +565,40 @@ let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
   | Some i -> Some i.oldest
 
 (* BEGIN_OCAML *)
+(* NOTE: Only to be used for testing, otherwise this function is not needed. *)
+let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
+  assert_burrow_invariants b;
+  let oustanding_kit = kit_to_ratio b.outstanding_kit in
+  let collateral = ratio_of_tez b.collateral in
+  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
+  let minting_price = minting_price p in
+  ratio_to_tez_ceil
+    (div_ratio
+       (sub_ratio
+          (sub_ratio
+             (mul_ratio
+                (mul_ratio oustanding_kit fminting)
+                minting_price
+             )
+             (mul_ratio
+                (mul_ratio
+                   (sub_ratio one_ratio liquidation_penalty)
+                   fminting
+                )
+                collateral_at_auction
+             )
+          )
+          collateral
+       )
+       (sub_ratio
+          (mul_ratio
+             (sub_ratio one_ratio liquidation_penalty)
+             fminting
+          )
+          one_ratio
+       )
+    )
+
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral
