@@ -221,10 +221,19 @@ let uniswap_remove_liquidity
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _ = assert (lqt_burned <= uniswap.lqt) in (* the ticket mechanism should enforce this *)
-    let ratio = make_ratio (Ligo.int lqt_burned) (Ligo.int uniswap.lqt) in
-    let tez_withdrawn = ratio_to_tez_floor (mul_ratio (ratio_of_tez uniswap.tez) ratio) in
-    let kit_withdrawn = kit_of_ratio_floor (mul_ratio (kit_to_ratio uniswap.kit) ratio) in
 
+    let tez_withdrawn =
+      ratio_to_tez_floor
+        (make_real_unsafe
+           (Ligo.mul_int_int (tez_to_mutez uniswap.tez) (Ligo.int lqt_burned))
+           (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") (Ligo.int uniswap.lqt))
+        ) in
+    let kit_withdrawn =
+      kit_of_ratio_floor
+        (make_real_unsafe
+           (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) (Ligo.int lqt_burned))
+           (Ligo.mul_int_int kit_scaling_factor_int (Ligo.int uniswap.lqt))
+        ) in
     if tez_withdrawn < min_tez_withdrawn then
       (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (Ligo.tez * kit * uniswap))
     else if tez_withdrawn > uniswap.tez then
