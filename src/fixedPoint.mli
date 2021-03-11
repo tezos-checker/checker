@@ -3,6 +3,7 @@ type fixedpoint
 (* Predefined values. *)
 val fixedpoint_zero : fixedpoint
 val fixedpoint_one : fixedpoint
+val fixedpoint_scaling_factor : Ligo.int
 
 (* Arithmetic operations. *)
 val fixedpoint_add : fixedpoint -> fixedpoint -> fixedpoint
