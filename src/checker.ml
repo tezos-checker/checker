@@ -476,20 +476,33 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
     let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
     (* How much kit should be given to the burrow and how much should be burned. *)
-    (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+    (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
      * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
      * to truncation. That could be a problem; the extra kit, no matter how
-     * small, must be dealt with (e.g. be removed from the circulating kit). *)
+     * small, must be dealt with (e.g. be removed from the circulating kit).
+     *
+     *   kit_corresponding_to_slice =
+     *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
+     *   penalty =
+     *     CEIL (kit_corresponding_to_slice * penalty_percentage)  , if (corresponding_kit < leaf.min_kit_for_unwarranted)
+     *     zero                                                    , otherwise
+     *   kit_to_repay = kit_corresponding_to_slice - penalty
+    *)
     let kit_to_repay, kit_to_burn =
       let corresponding_kit =
         kit_of_ratio_floor
-          (mul_ratio
-             (make_ratio (tez_to_mutez leaf.tez) (tez_to_mutez outcome.sold_tez))
-             (kit_to_ratio outcome.winning_bid.kit)
+          (make_real_unsafe
+             (Ligo.mul_int_int (tez_to_mutez leaf.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+             (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
           ) in
       let penalty =
+        let { num = num_lp; den = den_lp; } = liquidation_penalty in
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          kit_of_ratio_ceil (mul_ratio (kit_to_ratio corresponding_kit) liquidation_penalty)
+          kit_of_ratio_ceil
+            (make_real_unsafe
+               (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+               (Ligo.mul_int_int kit_scaling_factor_int den_lp)
+            )
         else
           kit_zero
       in
