@@ -171,7 +171,7 @@ let start_liquidation_auction_if_possible
       else
         let start_value =
           let { num = num_sp; den = den_sp; } = start_price in
-          kit_of_ratio_floor (* FIXME: I'd recommend kit_of_ratio_ceil, perhaps, to be on the safe side. *)
+          kit_of_ratio_ceil
             (make_real_unsafe
                (Ligo.mul_int_int (tez_to_mutez (avl_tez storage new_auction)) num_sp)
                (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
