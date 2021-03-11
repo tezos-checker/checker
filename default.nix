@@ -3,21 +3,16 @@ let
   pkgs = import sources.nixpkgs { };
   ligoBinary =
     # Run 'niv update ligo-artifacts -r <git_rev>' to update
-    pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
+    pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; meta.platforms = [ "x86_64-linux" ];  } ''
       mkdir -p $out/bin
       unzip ${sources.ligo-artifacts} ligo -d $out/bin
       chmod +x $out/bin/ligo
     '';
 in
-pkgs.mkShell {
-  name = "huxian-ocaml";
+pkgs.stdenv.mkDerivation {
+  name = "huxian";
   buildInputs =
-    # ligo does not compile on macos, also we don't want to
-    # compile it in CI
-    pkgs.lib.optionals (pkgs.stdenv.isLinux)
-      [ ligoBinary
-      ]
-    ++ [ pkgs.niv ]
+    [ ligoBinary pkgs.niv pkgs.bash pkgs.coreutils ]
     ++ (with pkgs.ocamlPackages; [
       ocaml
       dune_2
@@ -33,4 +28,12 @@ pkgs.mkShell {
       zarith
       odoc
     ]);
+  src = ./.;
+  buildPhase = ''
+    patchShebangs --build ./scripts/generate-ligo.sh
+    make
+  '';
+  installPhase = ''
+    mv generated $out/
+  '';
 }
