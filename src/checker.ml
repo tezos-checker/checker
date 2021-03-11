@@ -780,13 +780,16 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
       (Ligo.int_from_literal "0")
       (Ligo.sub_int_int duration_in_seconds touch_reward_low_bracket) in
 
-  let touch_low_reward = fixedpoint_of_ratio_ceil touch_low_reward in
-  let touch_high_reward = fixedpoint_of_ratio_ceil touch_high_reward in
-  kit_scale
-    kit_one
-    (fixedpoint_add
-       (fixedpoint_mul (fixedpoint_of_int low_duration) touch_low_reward)
-       (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
+  (* reward = FLOOR (low_duration * touch_low_reward + high_duration * touch_high_reward) *)
+  let { num = num_tlr; den = den_tlr; } = touch_low_reward in
+  let { num = num_thr; den = den_thr; } = touch_high_reward in
+  kit_of_ratio_floor
+    (make_real_unsafe
+       (Ligo.add_int_int
+          (Ligo.mul_int_int low_duration  (Ligo.mul_int_int num_tlr den_thr))
+          (Ligo.mul_int_int high_duration (Ligo.mul_int_int num_thr den_tlr))
+       )
+       (Ligo.mul_int_int den_tlr den_thr)
     )
 
 let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int) : (LigoOp.operation list * checker) =
