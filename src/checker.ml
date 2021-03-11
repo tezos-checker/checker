@@ -1,4 +1,3 @@
-open FixedPoint
 open Ratio
 open Kit
 open Mem
@@ -842,8 +841,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
          * also have calculated the price right now directly using the oracle
          * feed as (tz_t * q_t), or use the current minting price, but using
          * the liquidation price is the safest option. *)
-        (* George: I use ceil, to stay on the safe side (higher-price) *)
-        (fixedpoint_of_ratio_ceil (minting_price updated_parameters)) in
+        (minting_price updated_parameters) in
 
     (* 6: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step

@@ -32,8 +32,8 @@ let[@inline] protected_index_inverse_epsilon : Ligo.int = Ligo.int_from_literal 
 let[@inline] max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
-let min_lot_auction_queue_fraction : fixedpoint =
-  fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+let min_lot_auction_queue_fraction : ratio =
+  make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")
 
 (** The percentage of additional collateral that we charge when liquidating
   * a burrow, to penalize it for liquidation. *)
