@@ -276,7 +276,7 @@ module Tezos = struct
     amount := amount_
 
   (* Executes a function within a context with a different self_address. This is useful
-  for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
+     for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
   *)
   let with_self_address address f = 
     let current_address = !self_address in

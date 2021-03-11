@@ -192,7 +192,43 @@ let suite =
         * Passes when your bid failed and returns the exact amount of tez submitted
       *)
 
-    ("checker_delegation_auction_reclaim_bid - reclaim losing bid returns expected tez" >::
+    ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
+     fun _ -> 
+       (* Create a bid *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       let ops, checker = Checker.checker_delegation_auction_place_bid initial_checker in 
+       let ticket, checker = match ops with
+         | [ Transaction (DaBidTransactionValue ticket, _, _) ;
+           ] -> ticket, checker
+         | _ -> failwith ("Expected [Transaction (DaBidTransactionValue _)] but got " ^ show_operation_list ops)
+       in 
+
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.checker_delegation_auction_reclaim_bid checker ticket)
+    );
+
+    ("checker_delegation_auction_reclaim_bid - ticket from another issuer fails" >::
+     fun _ -> 
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let bid = {
+         bidder=alice_addr;
+         cycle=initial_checker.delegation_auction.cycle;
+         amount=(Ligo.tez_from_literal "1mutez")
+       } in  
+       let a_random_ticket = Ligo.Tezos.with_self_address bob_addr (fun () -> Tickets.issue_delegation_auction_bid_ticket bid) in 
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidDelegationAuctionTicket))
+         (fun () -> Checker.checker_delegation_auction_reclaim_bid initial_checker a_random_ticket) 
+    );
+
+    ("checker_delegation_auction_reclaim_bid - reclaim your losing bid returns expected tez" >::
      fun _ -> 
        (* Create a bid *)
        let our_bid_amount = Ligo.tez_from_literal "1mutez" in 
@@ -202,7 +238,7 @@ let suite =
        let ticket, checker = match ops with
          | [ Transaction (DaBidTransactionValue ticket, _, _) ;
            ] -> ticket, checker
-         | _ -> failwith ("Expected blarg but got " ^ show_operation_list ops)
+         | _ -> failwith ("Expected [Transaction (DaBidTransactionValue _)] but got " ^ show_operation_list ops)
        in 
        (* Make another bid with a higher value *)
        Ligo.Tezos.reset ();      
