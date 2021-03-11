@@ -102,23 +102,24 @@ let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice:
 let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
   assert (amnt > Ligo.tez_from_literal "0mutez");
   assert (amnt < slice.tez);
+  (* general *)
+  let min_kit_for_unwarranted = kit_to_mukit_int slice.min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez slice.tez in
   (* left slice *)
   let ltez = amnt in
-  let min_kit_for_unwarranted = kit_to_ratio slice.min_kit_for_unwarranted in
-  let slice_tez = tez_to_mutez slice.tez in
   let lkit =
     kit_of_ratio_ceil
-      (mul_ratio
-         min_kit_for_unwarranted
-         (make_ratio (tez_to_mutez ltez) slice_tez)
+      (make_real_unsafe
+         (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez ltez))
+         (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       ) in
   (* right slice *)
   let rtez = Ligo.sub_tez_tez slice.tez amnt in
   let rkit =
     kit_of_ratio_ceil
-      (mul_ratio
-         min_kit_for_unwarranted
-         (make_ratio (tez_to_mutez rtez) slice_tez)
+      (make_real_unsafe
+         (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
+         (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
