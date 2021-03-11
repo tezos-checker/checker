@@ -139,6 +139,7 @@ module Tezos : sig
 
   val reset: unit -> unit
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
+  val with_self_address: address -> (unit -> 'a) -> 'a (* OCAML ONLY *)
 end
 
 (* VALUE CREATION *)

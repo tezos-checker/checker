@@ -275,8 +275,16 @@ module Tezos = struct
     sender := address_;
     amount := amount_
 
-
-  (* with_self_address address -> () -> 'a -> 'a *)
+  (* Executes a function within a context with a different self_address. This is useful
+  for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
+  *)
+  let with_self_address address f = 
+    let current_address = !self_address in
+    let result = 
+      self_address := address;
+      f () in
+    self_address := current_address;
+    result 
 end
 
 let string_of_int = Z.to_string
