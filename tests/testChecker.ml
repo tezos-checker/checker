@@ -184,14 +184,6 @@ let suite =
          (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id) 
     );
 
-
-    (* reclaim bid *)
-    (* 
-        * Fails when tez is submitted
-        * Fails when the bid ticket is "invalid" e.g. not issued by checker contract
-        * Passes when your bid failed and returns the exact amount of tez submitted
-      *)
-
     ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
      fun _ -> 
        (* Create a bid *)
@@ -254,6 +246,233 @@ let suite =
            "Reclaimed tez did not match the amount that was bid"
            (Ligo.eq_tez_tez reclaimed_tez our_bid_amount)
        | _ -> failwith("Expected blarg but got " ^ show_operation_list ops)       
+    );
+
+    ("burn_kit - transaction with value > 0 fails" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in 
+       let some_kit = Tickets.kit_issue (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in 
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () ->  
+            Ligo.Tezos.reset ();      
+            Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+            Checker.burn_kit checker (Some admin_ticket) burrow_id some_kit
+         )
+    );
+
+    ("burn_kit - fails when no permission ticket is provided and burrow does not support allow_all_kit_burnings" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, _, checker = newly_created_burrow initial_checker in 
+       let some_kit = Tickets.kit_issue (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in 
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_MissingPermission))
+         (fun () ->  
+            Ligo.Tezos.reset ();      
+            Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+            Checker.burn_kit checker None burrow_id some_kit
+         )
+    );
+
+    (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
+        to set burrow fields such as `allow_all_kit_burns. While for testing purposes we could manually
+        do this, it might make sense to wait until such an entrypoint exists before checking it in checker.ml
+    *)
+    (* ("burn_kit - passes when no permission ticket is provided and burrow supports allow_all_kit_burnings" >::
+       fun _ -> ()
+       (* TODO *)
+       ); *)
+
+    ("set_burrow_delegate - transaction with value > 0 fails" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () ->  
+            Checker.set_burrow_delegate checker admin_ticket burrow_id None
+         )
+    );
+
+    ("make_permission - transaction with value > 0 fails" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () ->  
+            Checker.make_permission checker admin_ticket burrow_id Admin 
+         )
+    );
+
+    ("make_permission - can create admin ticket" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       (* Issue a new permissions ticket *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.make_permission checker admin_ticket burrow_id Admin in
+       let new_ticket  = match ops with
+         | [ Transaction (PermTransactionValue ticket, _, _) ;
+           ] -> ticket
+         | _ -> failwith ("Expected [Transaction (DaBidTransactionValue _)] but got " ^ show_operation_list ops)
+       in 
+       let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+         | Some burrow -> burrow
+         | None -> assert_failure "Expected a burrow representation to exist but none was found"
+       in
+
+       assert_bool
+         "Created ticket did not have admin permissions"
+         (match ensure_valid_permission new_ticket burrow_id (burrow_permission_version burrow) with
+          | Admin -> true
+          | _ -> false
+         )
+    );
+
+    ("make_permission - can create user ticket" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       (* Issue a new permissions ticket *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let user_rights = { 
+         deposit_tez = true;
+         withdraw_tez= false;
+         mint_kit= false;
+         burn_kit= true;
+         set_delegate= false;
+         cancel_liquidation= false;
+       } in
+       let ops, checker = Checker.make_permission checker admin_ticket burrow_id (User user_rights) in
+       let new_ticket  = match ops with
+         | [ Transaction (PermTransactionValue ticket, _, _) ;
+           ] -> ticket
+         | _ -> failwith ("Expected [Transaction (PermTransactionValue _)] but got " ^ show_operation_list ops)
+       in 
+       let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+         | Some burrow -> burrow
+         | None -> assert_failure "Expected a burrow representation to exist but none was found"
+       in
+
+       assert_bool
+         "Created ticket did not have specified user permissions"
+         (match ensure_valid_permission new_ticket burrow_id (burrow_permission_version burrow) with
+          | Admin -> false
+          | User (new_ticket_rights) -> new_ticket_rights = user_rights
+         )
+    );
+
+    ("invalidate_all_permissions - old admin ticket no longer is valid" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       (* Issue a new permissions ticket *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.invalidate_all_permissions checker original_admin_ticket burrow_id in
+       let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+         | Some burrow -> burrow
+         | None -> assert_failure "Expected a burrow representation to exist but none was found"
+       in
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidPermission))
+         (fun () -> ensure_valid_permission original_admin_ticket burrow_id (burrow_permission_version burrow))
+    );
+
+    ("invalidate_all_permissions - old user ticket no longer is valid" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in 
+       (* Issue a new permissions ticket *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let user_rights = { 
+         deposit_tez = true;
+         withdraw_tez= false;
+         mint_kit= false;
+         burn_kit= true;
+         set_delegate= false;
+         cancel_liquidation= false;
+       } in
+       let ops, checker = Checker.make_permission checker original_admin_ticket burrow_id (User user_rights) in
+       let user_ticket  = match ops with
+         | [ Transaction (PermTransactionValue ticket, _, _) ;
+           ] -> ticket
+         | _ -> failwith ("Expected [Transaction (PermTransactionValue _)] but got " ^ show_operation_list ops)
+       in  
+
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.invalidate_all_permissions checker original_admin_ticket burrow_id in
+
+       let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+         | Some burrow -> burrow
+         | None -> assert_failure "Expected a burrow representation to exist but none was found"
+       in
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidPermission))
+         (fun () -> ensure_valid_permission user_ticket burrow_id (burrow_permission_version burrow))
+    );
+
+    ("invalidate_all_permissions - new admin ticket is valid" >::
+     fun _ -> 
+       (* Create a burrow *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in 
+
+       (* Issue a new permissions ticket *)
+       Ligo.Tezos.reset ();      
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, checker = Checker.invalidate_all_permissions checker original_admin_ticket burrow_id in
+       let new_ticket  = match ops with
+         | [ Transaction (PermTransactionValue ticket, _, _) ;
+           ] -> ticket
+         | _ -> failwith ("Expected [Transaction (PermTransactionValue _)] but got " ^ show_operation_list ops)
+       in
+       let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with 
+         | Some burrow -> burrow
+         | None -> assert_failure "Expected a burrow representation to exist but none was found"
+       in
+
+       assert_bool
+         "Created ticket did not have admin permissions"
+         (match ensure_valid_permission new_ticket burrow_id (burrow_permission_version burrow) with
+          | Admin -> true
+          | _ -> false
+         )
     );
 
     ("can complete a liquidation auction" >::
