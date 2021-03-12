@@ -10,12 +10,26 @@ module Big_map : sig
   val find_opt : 'key -> ('key, 'value) big_map -> 'value option
   val update : 'key -> 'value option -> ('key, 'value) big_map -> ('key, 'value) big_map
   val mem : 'key -> ('key, 'value) big_map -> bool
+  val add: 'key -> 'value -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val remove: 'key -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val get_and_update : 'key -> 'value option -> ('key, 'value) big_map -> 'value option * ('key, 'value) big_map
 
   (* NON-LIGO *)
   val bindings : ('key, 'value) big_map -> ('key * 'value) list
 end
 
-(* type ('key, 'value) map *)
+type ('key, 'value) map
+module Map: sig
+  val empty : ('key, 'value) map
+  val find_opt : 'key -> ('key, 'value) map -> 'value option
+  val update : 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
+  val mem : 'key -> ('key, 'value) map -> bool
+  val add: 'key -> 'value -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val remove: 'key -> ('key, 'value) big_map -> ('key, 'value) big_map
+
+  (* NON-LIGO *)
+  val bindings : ('key, 'value) map -> ('key * 'value) list
+end
 (**
     The type of a map from values of type key to values of type value is map (key, value).
 *)
@@ -76,6 +90,10 @@ type key_hash
 *)
 
 (* type 't list *)
+module List : sig
+  val length : 'a list -> nat
+end
+
 (**
     A sequence of elements of the same type.
 *)
@@ -199,6 +217,7 @@ val ediv_tez_nat : tez -> nat -> (tez * tez) option (* IN LIGO: ediv *)
 
 val eq_tez_tez : tez -> tez -> bool  (* IN LIGO: ( = ) *)
 val lt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( < ) *)
+val gt_tez_tez : tez -> tez -> bool  (* IN LIGO: ( > ) *)
 val leq_tez_tez : tez -> tez -> bool (* IN LIGO: ( <= ) *)
 val geq_tez_tez : tez -> tez -> bool (* IN LIGO: ( >= ) *)
 
