@@ -36,7 +36,6 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
 (* Conversions to/from other types. *)
 let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
 
-let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
 let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
@@ -45,6 +44,8 @@ let[@inline] fixedpoint_of_raw (amnt: Ligo.int) : fixedpoint = amnt
 let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
 
 (* BEGIN_OCAML *)
+let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
+
 let fixedpoint_of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
   let dotpos = String.rindex_opt str '.' in
