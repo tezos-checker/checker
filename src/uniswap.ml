@@ -49,7 +49,7 @@ let uniswap_buy_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (tez_amount = Ligo.tez_from_literal "0mutez") then
-    (Ligo.failwith error_UniswapNonPositiveInput : (kit * uniswap))
+    (Ligo.failwith error_BuyKitNoTezGiven : (kit * uniswap))
   else if (!Ligo.Tezos.now >= deadline) then
     (Ligo.failwith error_UniswapTooLate : (kit * uniswap))
   else if (min_kit_expected = kit_zero) then
@@ -95,7 +95,7 @@ let uniswap_sell_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (kit_amount = kit_zero) then
-    (Ligo.failwith error_UniswapNonPositiveInput : (Ligo.tez * uniswap))
+    (Ligo.failwith error_SellKitNoKitGiven : (Ligo.tez * uniswap))
   else if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_UniswapTooLate : (Ligo.tez * uniswap))
   else if tez_amount <> Ligo.tez_from_literal "0mutez" then

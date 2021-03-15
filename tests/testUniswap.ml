@@ -336,7 +336,7 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_UniswapNonPositiveInput))
+      (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
       (fun () ->
          uniswap_buy_kit
            uniswap
@@ -520,7 +520,7 @@ let sell_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_UniswapNonPositiveInput))
+      (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
       (fun () ->
          uniswap_sell_kit
            uniswap
