@@ -19,12 +19,13 @@ val kit_of_mukit : Ligo.nat -> kit
 val kit_to_mukit_int : kit -> Ligo.int
 val kit_to_mukit_nat : kit -> Ligo.nat
 
-val kit_to_ratio : kit -> Ratio.ratio
 val kit_of_ratio_ceil : Ratio.ratio -> kit
 val kit_of_ratio_floor : Ratio.ratio -> kit
 
 (* BEGIN_OCAML *)
 val kit_compare : kit -> kit -> int
+
+val kit_to_ratio : kit -> Ratio.ratio
 
 val pp_kit : Format.formatter -> kit -> unit
 val show_kit : kit -> string

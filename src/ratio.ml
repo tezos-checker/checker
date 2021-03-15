@@ -76,6 +76,7 @@ let ratio_to_tez_ceil (x: ratio) : Ligo.tez =
 let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
+(* BEGIN_OCAML *)
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
   let { num = x_num; den = x_den; } = x in
@@ -93,7 +94,6 @@ let mul_ratio (x: ratio) (y: ratio) : ratio =
     (Ligo.mul_int_int x_num y_num)
     (Ligo.mul_int_int x_den y_den)
 
-(* BEGIN_OCAML *)
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
   let { num = x_num; den = x_den; } = x in
