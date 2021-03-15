@@ -7,7 +7,7 @@ type fixedpoint = Ligo.int
 (* BEGIN_OCAML *)
 let[@inline] fixedpoint_scaling_exponent = 64
 (* END_OCAML *)
-let[@inline] fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
 let[@inline] fixedpoint_zero = Ligo.int_from_literal "0"

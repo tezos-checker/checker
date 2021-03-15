@@ -22,8 +22,6 @@ let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
     make_real_unsafe (neg_int n) (neg_int d)
 
 (* Conversions to/from other types. *)
-let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
-
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_floor (x: ratio) : Ligo.nat =
   let { num = x_num; den = x_den; } = x in
@@ -79,18 +77,28 @@ let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
-  let { num = x_num; den = x_den; } = x in
-  let { num = y_num; den = y_den; } = y in
-  Ligo.leq_int_int
-    (Ligo.mul_int_int x_num y_den)
-    (Ligo.mul_int_int y_num x_den)
-
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
   Ligo.lt_int_int
+    (Ligo.mul_int_int x_num y_den)
+    (Ligo.mul_int_int y_num x_den)
+
+(* NOTE: this implementation does not rely on the fact that the denominator is
+ * always positive, but it definitely preserves it. *)
+let mul_ratio (x: ratio) (y: ratio) : ratio =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
+  make_real_unsafe
+    (Ligo.mul_int_int x_num y_num)
+    (Ligo.mul_int_int x_den y_den)
+
+(* BEGIN_OCAML *)
+(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+let leq_ratio_ratio (x: ratio) (y: ratio) : bool =
+  let { num = x_num; den = x_den; } = x in
+  let { num = y_num; den = y_den; } = y in
+  Ligo.leq_int_int
     (Ligo.mul_int_int x_num y_den)
     (Ligo.mul_int_int y_num x_den)
 
@@ -125,15 +133,6 @@ let sub_ratio (x: ratio) (y: ratio) : ratio =
        (Ligo.mul_int_int y_num x_den))
     (Ligo.mul_int_int x_den y_den)
 
-(* NOTE: this implementation does not rely on the fact that the denominator is
- * always positive, but it definitely preserves it. *)
-let mul_ratio (x: ratio) (y: ratio) : ratio =
-  let { num = x_num; den = x_den; } = x in
-  let { num = y_num; den = y_den; } = y in
-  make_real_unsafe
-    (Ligo.mul_int_int x_num y_num)
-    (Ligo.mul_int_int x_den y_den)
-
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let div_ratio (x: ratio) (y: ratio) : ratio =
   let { num = y_num; den = y_den; } = y in
@@ -148,7 +147,6 @@ let qexp (x: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   { num = Ligo.add_int_int x_num x_den; den = x_den; }
 
-(* BEGIN_OCAML *)
 let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp_ratio f x = Format.pp_print_string f (show_ratio x)
 
@@ -160,6 +158,8 @@ let sign_ratio x =
     0
   else
     1
+
+let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo.int_from_literal "1"; }
 
 let min_ratio (a: ratio) (b: ratio) : ratio = if leq_ratio_ratio a b then a else b
 

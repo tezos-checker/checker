@@ -102,23 +102,24 @@ let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice:
 let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
   assert (amnt > Ligo.tez_from_literal "0mutez");
   assert (amnt < slice.tez);
+  (* general *)
+  let min_kit_for_unwarranted = kit_to_mukit_int slice.min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez slice.tez in
   (* left slice *)
   let ltez = amnt in
-  let min_kit_for_unwarranted = kit_to_ratio slice.min_kit_for_unwarranted in
-  let slice_tez = tez_to_mutez slice.tez in
   let lkit =
     kit_of_ratio_ceil
-      (mul_ratio
-         min_kit_for_unwarranted
-         (make_ratio (tez_to_mutez ltez) slice_tez)
+      (make_real_unsafe
+         (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez ltez))
+         (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       ) in
   (* right slice *)
   let rtez = Ligo.sub_tez_tez slice.tez amnt in
   let rkit =
     kit_of_ratio_ceil
-      (mul_ratio
-         min_kit_for_unwarranted
-         (make_ratio (tez_to_mutez rtez) slice_tez)
+      (make_real_unsafe
+         (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
+         (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       ) in
   ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
     { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
@@ -143,18 +144,20 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
     (storage, new_auction)
 
 let start_liquidation_auction_if_possible
-    (start_price: fixedpoint) (auctions: liquidation_auctions): liquidation_auctions =
+    (start_price: ratio) (auctions: liquidation_auctions): liquidation_auctions =
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
     let queued_amount = avl_tez auctions.avl_storage auctions.queued_slices in
     let split_threshold =
+      (* split_threshold = max (max_lot_size, FLOOR(queued_amount * min_lot_auction_queue_fraction)) *)
+      let { num = num_qf; den = den_qf; } = min_lot_auction_queue_fraction in
       max_tez
         max_lot_size
         (ratio_to_tez_floor
-           (mul_ratio
-              (ratio_of_tez queued_amount)
-              (fixedpoint_to_ratio min_lot_auction_queue_fraction)
+           (make_real_unsafe
+              (Ligo.mul_int_int (tez_to_mutez queued_amount) num_qf)
+              (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_qf)
            )
         ) in
     let (storage, new_auction) =
@@ -167,11 +170,11 @@ let start_liquidation_auction_if_possible
       then (None: current_liquidation_auction option)
       else
         let start_value =
-          kit_scale
-            kit_one
-            (fixedpoint_mul
-               (fixedpoint_of_ratio_floor (ratio_of_tez (avl_tez storage new_auction)))
-               start_price
+          let { num = num_sp; den = den_sp; } = start_price in
+          kit_of_ratio_ceil
+            (make_real_unsafe
+               (Ligo.mul_int_int (tez_to_mutez (avl_tez storage new_auction)) num_sp)
+               (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
             ) in
         Some
           { contents = new_auction;
@@ -418,7 +421,7 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
   | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
 
 
-let liquidation_auction_touch (auctions: liquidation_auctions) (price: fixedpoint) : liquidation_auctions =
+let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
   (start_liquidation_auction_if_possible price
      (complete_liquidation_auction_if_possible
         auctions))

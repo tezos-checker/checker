@@ -33,7 +33,10 @@ let uniswap_sync_last_observed (uniswap: uniswap) : uniswap =
     uniswap
   else
     { uniswap with
-      kit_in_tez_in_prev_block = div_ratio (ratio_of_tez uniswap.tez) (kit_to_ratio uniswap.kit);
+      kit_in_tez_in_prev_block =
+        make_real_unsafe
+          (Ligo.mul_int_int (tez_to_mutez uniswap.tez) kit_scaling_factor_int)
+          (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) (Ligo.int_from_literal "1_000_000"));
       last_level = !Ligo.Tezos.level;
     }
 
@@ -54,20 +57,21 @@ let uniswap_buy_kit
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = div_ratio (kit_to_ratio uniswap.kit) (ratio_of_tez uniswap.tez) in
-    let slippage = make_ratio (tez_to_mutez uniswap.tez) (tez_to_mutez (Ligo.add_tez_tez uniswap.tez tez_amount)) in
-    let return =
-      kit_of_ratio_floor
-        (mul_ratio
-           (ratio_of_tez tez_amount)
-           (mul_ratio
-              price
-              (mul_ratio
-                 slippage
-                 (sub_ratio one_ratio uniswap_fee)
-              )
-           )
-        ) in
+    let { num = num_uf; den = den_uf; } =
+      let { num = num_uf; den = den_uf; } = uniswap_fee in
+      { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - uniswap_fee *)
+    in
+    let new_uniswap_tez = Ligo.add_tez_tez uniswap.tez tez_amount in
+    let numerator =
+      Ligo.mul_int_int
+        (tez_to_mutez tez_amount)
+        (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) num_uf) in
+    let denominator =
+      Ligo.mul_int_int
+        kit_scaling_factor_int
+        (Ligo.mul_int_int (tez_to_mutez new_uniswap_tez) den_uf) in
+    let return = kit_of_ratio_floor (make_real_unsafe numerator denominator) in
+
     if return < min_kit_expected then
       (Ligo.failwith error_BuyKitPriceFailure : (kit * uniswap))
     else if return > uniswap.kit then
@@ -77,19 +81,20 @@ let uniswap_buy_kit
       ( bought_kit,
         { uniswap with
           kit = remaining_kit;
-          tez = Ligo.add_tez_tez uniswap.tez tez_amount }
+          tez = new_uniswap_tez;
+        }
       )
 
 let uniswap_sell_kit
     (uniswap: uniswap)
     (tez_amount: Ligo.tez)
-    (kit: kit)
+    (kit_amount: kit)
     (min_tez_expected: Ligo.tez)
     (deadline: Ligo.timestamp)
   : (Ligo.tez * uniswap) =
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
-  if (kit = kit_zero) then
+  if (kit_amount = kit_zero) then
     (Ligo.failwith error_UniswapNonPositiveInput : (Ligo.tez * uniswap))
   else if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_UniswapTooLate : (Ligo.tez * uniswap))
@@ -100,30 +105,32 @@ let uniswap_sell_kit
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
-    let price = div_ratio (ratio_of_tez uniswap.tez) (kit_to_ratio uniswap.kit) in
-    let slippage = div_ratio (kit_to_ratio uniswap.kit) (kit_to_ratio (kit_add uniswap.kit kit)) in
-    let return =
-      ratio_to_tez_floor
-        (mul_ratio
-           (kit_to_ratio kit)
-           (mul_ratio
-              price
-              (mul_ratio
-                 slippage
-                 (sub_ratio one_ratio uniswap_fee)
-              )
-           )
-        ) in
+    let { num = num_uf; den = den_uf; } =
+      let { num = num_uf; den = den_uf; } = uniswap_fee in
+      { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - uniswap_fee *)
+    in
+    let new_uniswap_kit = kit_add uniswap.kit kit_amount in
+    let numerator =
+      Ligo.mul_int_int
+        (kit_to_mukit_int kit_amount)
+        (Ligo.mul_int_int (tez_to_mutez uniswap.tez) num_uf) in
+    let denominator =
+      Ligo.mul_int_int
+        (Ligo.int_from_literal "1_000_000")
+        (Ligo.mul_int_int (kit_to_mukit_int new_uniswap_kit) den_uf) in
+    let return = ratio_to_tez_floor (make_real_unsafe numerator denominator) in
+
     if return < min_tez_expected then
       (Ligo.failwith error_SellKitPriceFailure : (Ligo.tez * uniswap))
     else if return > uniswap.tez then
       (Ligo.failwith error_SellKitTooMuchTezBought : (Ligo.tez * uniswap))
     else
-      let new_all_kit_in_uniswap = kit_add uniswap.kit kit in
-      ( return,
+      let bought_tez, remaining_tez = (return, Ligo.sub_tez_tez uniswap.tez return) in
+      ( bought_tez,
         { uniswap with
-          kit = new_all_kit_in_uniswap;
-          tez = Ligo.sub_tez_tez uniswap.tez return }
+          kit = new_uniswap_kit;
+          tez = remaining_tez;
+        }
       )
 
 (* But where do the assets in uniswap come from? Liquidity providers, or
@@ -155,10 +162,20 @@ let uniswap_add_liquidity
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (Ligo.nat * kit * uniswap))
   else
-    let effective_tez_balance = Ligo.add_tez_tez uniswap.tez pending_accrual in
-    let tez_ratio = make_ratio (tez_to_mutez tez_amount) (tez_to_mutez effective_tez_balance) in
-    let lqt_minted = ratio_to_nat_floor (mul_ratio (ratio_of_nat uniswap.lqt) tez_ratio) in
-    let kit_deposited = kit_of_ratio_ceil (mul_ratio (kit_to_ratio uniswap.kit) tez_ratio) in
+    let effective_tez_balance = tez_to_mutez (Ligo.add_tez_tez uniswap.tez pending_accrual) in
+    let lqt_minted =
+      ratio_to_nat_floor
+        (make_real_unsafe
+           (Ligo.mul_int_int (Ligo.int uniswap.lqt) (tez_to_mutez tez_amount))
+           effective_tez_balance
+        ) in
+    let kit_deposited =
+      kit_of_ratio_ceil
+        (make_real_unsafe
+           (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) (tez_to_mutez tez_amount))
+           (Ligo.mul_int_int kit_scaling_factor_int effective_tez_balance)
+        ) in
+
     if lqt_minted < min_lqt_minted then
       (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (Ligo.nat * kit * uniswap))
     else if max_kit_deposited < kit_deposited then
@@ -207,10 +224,19 @@ let uniswap_remove_liquidity
     (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _ = assert (lqt_burned <= uniswap.lqt) in (* the ticket mechanism should enforce this *)
-    let ratio = make_ratio (Ligo.int lqt_burned) (Ligo.int uniswap.lqt) in
-    let tez_withdrawn = ratio_to_tez_floor (mul_ratio (ratio_of_tez uniswap.tez) ratio) in
-    let kit_withdrawn = kit_of_ratio_floor (mul_ratio (kit_to_ratio uniswap.kit) ratio) in
 
+    let tez_withdrawn =
+      ratio_to_tez_floor
+        (make_real_unsafe
+           (Ligo.mul_int_int (tez_to_mutez uniswap.tez) (Ligo.int lqt_burned))
+           (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") (Ligo.int uniswap.lqt))
+        ) in
+    let kit_withdrawn =
+      kit_of_ratio_floor
+        (make_real_unsafe
+           (Ligo.mul_int_int (kit_to_mukit_int uniswap.kit) (Ligo.int lqt_burned))
+           (Ligo.mul_int_int kit_scaling_factor_int (Ligo.int uniswap.lqt))
+        ) in
     if tez_withdrawn < min_tez_withdrawn then
       (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (Ligo.tez * kit * uniswap))
     else if tez_withdrawn > uniswap.tez then

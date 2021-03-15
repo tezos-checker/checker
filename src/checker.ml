@@ -1,4 +1,3 @@
-open FixedPoint
 open Ratio
 open Kit
 open Mem
@@ -476,20 +475,33 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
     let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
     (* How much kit should be given to the burrow and how much should be burned. *)
-    (* NOTE: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+    (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
      * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
      * to truncation. That could be a problem; the extra kit, no matter how
-     * small, must be dealt with (e.g. be removed from the circulating kit). *)
+     * small, must be dealt with (e.g. be removed from the circulating kit).
+     *
+     *   kit_corresponding_to_slice =
+     *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
+     *   penalty =
+     *     CEIL (kit_corresponding_to_slice * penalty_percentage)  , if (corresponding_kit < leaf.min_kit_for_unwarranted)
+     *     zero                                                    , otherwise
+     *   kit_to_repay = kit_corresponding_to_slice - penalty
+    *)
     let kit_to_repay, kit_to_burn =
       let corresponding_kit =
         kit_of_ratio_floor
-          (mul_ratio
-             (make_ratio (tez_to_mutez leaf.tez) (tez_to_mutez outcome.sold_tez))
-             (kit_to_ratio outcome.winning_bid.kit)
+          (make_real_unsafe
+             (Ligo.mul_int_int (tez_to_mutez leaf.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+             (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
           ) in
       let penalty =
+        let { num = num_lp; den = den_lp; } = liquidation_penalty in
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          kit_of_ratio_ceil (mul_ratio (kit_to_ratio corresponding_kit) liquidation_penalty)
+          kit_of_ratio_ceil
+            (make_real_unsafe
+               (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+               (Ligo.mul_int_int kit_scaling_factor_int den_lp)
+            )
         else
           kit_zero
       in
@@ -767,13 +779,16 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
       (Ligo.int_from_literal "0")
       (Ligo.sub_int_int duration_in_seconds touch_reward_low_bracket) in
 
-  let touch_low_reward = fixedpoint_of_ratio_ceil touch_low_reward in
-  let touch_high_reward = fixedpoint_of_ratio_ceil touch_high_reward in
-  kit_scale
-    kit_one
-    (fixedpoint_add
-       (fixedpoint_mul (fixedpoint_of_int low_duration) touch_low_reward)
-       (fixedpoint_mul (fixedpoint_of_int high_duration) touch_high_reward)
+  (* reward = FLOOR (low_duration * touch_low_reward + high_duration * touch_high_reward) *)
+  let { num = num_tlr; den = den_tlr; } = touch_low_reward in
+  let { num = num_thr; den = den_thr; } = touch_high_reward in
+  kit_of_ratio_floor
+    (make_real_unsafe
+       (Ligo.add_int_int
+          (Ligo.mul_int_int low_duration  (Ligo.mul_int_int num_tlr den_thr))
+          (Ligo.mul_int_int high_duration (Ligo.mul_int_int num_thr den_tlr))
+       )
+       (Ligo.mul_int_int den_tlr den_thr)
     )
 
 let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int) : (LigoOp.operation list * checker) =
@@ -826,8 +841,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
          * also have calculated the price right now directly using the oracle
          * feed as (tz_t * q_t), or use the current minting price, but using
          * the liquidation price is the safest option. *)
-        (* George: I use ceil, to stay on the safe side (higher-price) *)
-        (fixedpoint_of_ratio_ceil (minting_price updated_parameters)) in
+        (minting_price updated_parameters) in
 
     (* 6: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial to run this step

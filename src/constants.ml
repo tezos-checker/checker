@@ -1,5 +1,4 @@
 open Ratio
-open FixedPoint
 
 (** Dimensionless. Factor used for setting the minting limit. *)
 let fminting : ratio = make_real_unsafe (Ligo.int_from_literal "21") (Ligo.int_from_literal "10") (* 2.1 *)
@@ -16,8 +15,8 @@ let burrow_fee_percentage : ratio = make_real_unsafe (Ligo.int_from_literal "5")
 
 (** The percentage of a burrow's collateral that we offer to whoever triggers
   * the burrow's liquidation. *)
-let liquidation_reward_percentage : fixedpoint =
-  fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (* 0.001 *)
+let liquidation_reward_percentage : ratio =
+  make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000") (* 0.001 *)
 
 (** Percentage kept by the uniswap contract from the return asset. *)
 let uniswap_fee : ratio = make_real_unsafe (Ligo.int_from_literal "2") (Ligo.int_from_literal "1000") (* 0.002 *)
@@ -32,8 +31,8 @@ let[@inline] protected_index_inverse_epsilon : Ligo.int = Ligo.int_from_literal 
 let[@inline] max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
-let min_lot_auction_queue_fraction : fixedpoint =
-  fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+let min_lot_auction_queue_fraction : ratio =
+  make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")
 
 (** The percentage of additional collateral that we charge when liquidating
   * a burrow, to penalize it for liquidation. *)

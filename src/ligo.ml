@@ -46,10 +46,30 @@ module Big_map = struct
       )
       m
 
+  let get_and_update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map): 'value option * ('key, 'value) big_map =
+    let prev = find_opt k m in
+    let m_ = update k v m in
+    (prev, m_)
+
+  let add (k: 'key) (v: 'value) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+    update k (Some v) m
+
+  let remove (k: 'key) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+    update k None m
+
   let bindings i =
     IntMap.bindings i |> List.concat_map snd
 
   let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
+end
+
+type ('k, 'v) map = ('k, 'v) big_map
+module Map = Big_map
+
+(* LIST *)
+
+module List = struct
+  let length xs = Z.of_int (List.length xs)
 end
 
 (* UTILITY FUNCTIONS *)
