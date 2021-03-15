@@ -1,4 +1,5 @@
 open Ratio
+open FixedPoint
 
 (** Dimensionless. Factor used for setting the minting limit. *)
 let fminting : ratio = make_real_unsafe (Ligo.int_from_literal "21") (Ligo.int_from_literal "10") (* 2.1 *)
@@ -51,6 +52,17 @@ let target_low_bracket : ratio = make_real_unsafe (Ligo.int_from_literal "5") (L
 
 (** High bracket used for the calculation of the drift derivative. *)
 let target_high_bracket : ratio = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100") (* 0.05 *)
+
+(** The drift derivative can take one of 5 distinct values: 0, +/-0.01 cNp/day,
+  * and +/-0.05 cNp/day. We calculate those statically thus as follows:
+  *
+  * low_acceleration  = 0.01/100 * (86400 * 86400) = 1/74649600000000 =  247111 in fixedpoint
+  * high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
+*)
+let[@inline] low_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "247111")
+let[@inline] low_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-247111")
+let[@inline] high_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "1235555")
+let[@inline] high_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-1235555")
 
 (** How fast a descending option price drops per second. Currently we want it
   * to drop by around 1cNp per minute, so we just divide by 60 to get roughly

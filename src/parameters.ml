@@ -151,9 +151,6 @@ let compute_adjustment_index (p: parameters) : fixedpoint =
 *)
 let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
-  let cnp_001 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "10000")) in
-  let cnp_005 = fixedpoint_of_ratio_floor (make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "10000")) in
-  let secs_in_a_day = fixedpoint_of_int seconds_in_a_day in
 
   let { num = num_tlb; den = den_tlb; } = target_low_bracket in
   let { num = num_thb; den = den_thb; } = target_high_bracket in
@@ -168,20 +165,15 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   let mul_add_den_thb_num_thb_sf = Ligo.mul_int_int (Ligo.add_int_int den_thb num_thb) fixedpoint_scaling_factor in
 
   if Ligo.lt_int_int mul_sub_den_tlb_num_tlb_sf mul_target_tlb && Ligo.lt_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf then
-    (* No acceleration (0) *)
-    fixedpoint_zero
+    fixedpoint_zero (* no acceleration (0) *)
   else if Ligo.lt_int_int mul_sub_den_thb_num_thb_sf mul_target_thb && Ligo.leq_int_int mul_target_tlb mul_sub_den_tlb_num_tlb_sf then
-    (* Low acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    low_negative_acceleration
   else if Ligo.gt_int_int mul_add_den_thb_num_thb_sf mul_target_thb && Ligo.geq_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf then
-    (* Low acceleration (+) *)
-    (fixedpoint_div cnp_001 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    low_positive_acceleration
   else if Ligo.leq_int_int mul_target_thb mul_sub_den_thb_num_thb_sf then
-    (* High acceleration (-) *)
-    fixedpoint_neg (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    high_negative_acceleration
   else if Ligo.geq_int_int mul_target_thb mul_add_den_thb_num_thb_sf then
-    (* High acceleration (+) *)
-    (fixedpoint_div cnp_005 (fixedpoint_mul secs_in_a_day secs_in_a_day))
+    high_positive_acceleration
   else
     (failwith "impossible" : fixedpoint)
 

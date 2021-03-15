@@ -3,10 +3,6 @@ open Common
 
 type fixedpoint = Ligo.int
 
-(* let scaling_base = Ligo.int_from_literal 2 *)
-(* BEGIN_OCAML *)
-let[@inline] fixedpoint_scaling_exponent = 64
-(* END_OCAML *)
 let fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
@@ -16,14 +12,6 @@ let[@inline] fixedpoint_one = fixedpoint_scaling_factor
 (* Arithmetic operations. *)
 let[@inline] fixedpoint_add (x: fixedpoint) (y: fixedpoint) = Ligo.add_int_int x y
 let[@inline] fixedpoint_sub (x: fixedpoint) (y: fixedpoint) = Ligo.sub_int_int x y
-let fixedpoint_mul (x: fixedpoint) (y: fixedpoint) = Ligo.div_int_int (Ligo.mul_int_int x y) fixedpoint_scaling_factor
-
-(* We round towards 0, for fixedpoint calculation, measuring things which are
- * inherently noisy, this is ok. Greater care must be excercised when doing
- * accounting (e.g. uniswap)... for measuring things like drift, targets,
- * imbalances etc which are naturally imprecise this is fine. *)
-let fixedpoint_div (x: fixedpoint) (y: fixedpoint) = Ligo.div_int_int (Ligo.mul_int_int x fixedpoint_scaling_factor) y
-let[@inline] fixedpoint_neg (x: fixedpoint) = neg_int x
 
 let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
   if Ligo.eq_nat_nat y (Ligo.nat_from_literal "0n") then
@@ -34,8 +22,6 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
       (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_int_int (Ligo.int y) (Ligo.int_from_literal "1"))))
 
 (* Conversions to/from other types. *)
-let[@inline] fixedpoint_of_int (amnt: fixedpoint) = Ligo.mul_int_int amnt fixedpoint_scaling_factor
-
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
 let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
@@ -44,6 +30,8 @@ let[@inline] fixedpoint_of_raw (amnt: Ligo.int) : fixedpoint = amnt
 let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
 
 (* BEGIN_OCAML *)
+let fixedpoint_scaling_exponent = 64
+
 let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
 
 let fixedpoint_of_hex_string str =
