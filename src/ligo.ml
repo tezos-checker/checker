@@ -236,7 +236,6 @@ let ediv_tez_nat n d =
 let eq_tez_tez = Z.equal
 
 let lt_tez_tez = Z.lt
-let gt_tez_tez = Z.gt
 
 let gt_tez_tez = Z.gt
 
