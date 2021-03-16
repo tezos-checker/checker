@@ -146,7 +146,7 @@ type 'a ticket
 module Tezos : sig
   val now: timestamp ref
   val level: nat ref
-  val self_address: address ref (* NOTE: is of type contract, really, not address *)
+  val self_address: address ref
   val sender: address ref
   val amount: tez ref
 
