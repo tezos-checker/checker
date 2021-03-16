@@ -1,13 +1,15 @@
+(*
+TODO: Consider if we still need this:
+
+> Require burrows to fully clean their own stuff up before they can do anything else (aside from being marked for more liquidation)
+*)
 open FixedPoint
 open Ratio
 open Kit
 open Parameters
-open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 open Constants
 open Error
-
-type liquidation_slices = {oldest: leaf_ptr; youngest: leaf_ptr;}
-[@@deriving show]
 
 type burrow =
   { (* Whether the creation deposit for the burrow has been paid. If the
@@ -33,8 +35,6 @@ type burrow =
      * purposes, this collateral can be considered gone, but depending on the
      * outcome of the auctions we expect some kit in return. *)
     collateral_at_auction : Ligo.tez;
-    (* Pointer to liquidation slices in auction queue. *)
-    liquidation_slices : liquidation_slices option;
     (* The last time the burrow was touched. *)
     last_touched : Ligo.timestamp;
   }
@@ -48,14 +48,6 @@ let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
 let[@inline] assert_burrow_invariants (b: burrow) : unit =
   assert (b.outstanding_kit = kit_zero || b.excess_kit = kit_zero);
   ()
-
-let[@inline] burrow_liquidation_slices (b: burrow) : liquidation_slices option =
-  assert_burrow_invariants b;
-  b.liquidation_slices
-
-let[@inline] burrow_set_liquidation_slices (b: burrow) (s: liquidation_slices option) : burrow =
-  assert_burrow_invariants b;
-  {b with liquidation_slices = s}
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
@@ -128,69 +120,16 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
       last_touched = p.last_touched;
     }
 
-(* Notify a burrow that one of its liquidation slices has been removed from
- * auctions. This means that we have to (a) update the amount of
- * tez living in auctions; it is less now, and (b) update the pointers to the
- * youngest and the oldest liquidation slices that the burrow has. In most
- * cases these pointers will remain unaltered, but if the slice being removed
- * is the youngest or the oldest they won't. *)
-let burrow_remove_liquidation_slice
-    (burrow : burrow)
-    (leaf_ptr: leaf_ptr)
-    (leaf : liquidation_slice) (* NOTE: derived from the leaf_ptr *)
-  : burrow =
-  assert (burrow.collateral_at_auction >= leaf.tez);
-  (* (a) the slice's tez is no longer in auctions, subtract it. *)
-  let burrow = { burrow with
-                 collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction leaf.tez;
-               } in
-  (* (b) adjust the pointers *)
-  match burrow.liquidation_slices with
-  | None -> (failwith "the burrow must have at least leaf_ptr sent off to an auction" : burrow)
-  | Some slices -> (
-      match leaf.younger with
-      | None -> (
-          match leaf.older with
-          | None ->
-            assert (slices.youngest = leaf_ptr);
-            assert (slices.oldest = leaf_ptr);
-            { burrow with liquidation_slices = (None : liquidation_slices option); }
-          | Some older ->
-            assert (slices.youngest = leaf_ptr);
-            { burrow with liquidation_slices = Some {slices with youngest = older} }
-        )
-      | Some younger -> (
-          match leaf.older with
-          | None ->
-            assert (slices.oldest = leaf_ptr);
-            { burrow with liquidation_slices = Some {slices with oldest = younger} }
-          | Some _older ->
-            assert (slices.oldest <> leaf_ptr);
-            assert (slices.youngest <> leaf_ptr);
-            burrow
-        )
-    )
-
-let burrow_return_slice_from_auction
-    (leaf_ptr: leaf_ptr)
-    (leaf: liquidation_slice)
-    (burrow: burrow)
-  : burrow =
-  assert_burrow_invariants burrow;
-  assert burrow.active;
-  (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
-  let burrow = burrow_remove_liquidation_slice burrow leaf_ptr leaf in
-  (* (b) return the tez into the burrow's collateral *)
-  { burrow with collateral = Ligo.add_tez_tez burrow.collateral leaf.tez; }
-
 let burrow_return_kit_from_auction
-    (leaf_ptr: leaf_ptr)
-    (leaf: liquidation_slice)
+    (tez: Ligo.tez)
     (kit: kit)
     (burrow: burrow) : burrow =
   assert_burrow_invariants burrow;
+  assert (burrow.collateral_at_auction >= tez);
   (* (a) the slice's tez is no longer in auctions: subtract it and adjust the pointers *)
-  let burrow = burrow_remove_liquidation_slice burrow leaf_ptr leaf in
+  let burrow = { burrow with
+                 collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction tez;
+               } in
   (* (b) burn/deposit the kit received from auctioning the slice *)
   rebalance_kit { burrow with excess_kit = kit_add burrow.excess_kit kit; }
 
@@ -209,7 +148,6 @@ let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash o
       adjustment_index = compute_adjustment_index p;
       collateral_at_auction = Ligo.tez_from_literal "0mutez";
       last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
-      liquidation_slices = (None : liquidation_slices option);
     }
 
 (** Add non-negative collateral to a burrow. *)
@@ -512,12 +450,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         min_kit_for_unwarranted = compute_min_kit_for_unwarranted p b tez_to_auction;
         burrow_state = final_burrow }
 
-let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
-  assert_burrow_invariants b;
-  match b.liquidation_slices with
-  | None -> (None : leaf_ptr option)
-  | Some i -> Some i.oldest
-
 (* BEGIN_OCAML *)
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
@@ -538,7 +470,6 @@ let make_burrow_for_test
     ~excess_kit
     ~adjustment_index
     ~collateral_at_auction
-    ~liquidation_slices
     ~last_touched =
   { permission_version = permission_version;
     allow_all_tez_deposits = allow_all_tez_deposits;
@@ -551,7 +482,6 @@ let make_burrow_for_test
     adjustment_index = adjustment_index;
     collateral_at_auction = collateral_at_auction;
     last_touched = last_touched;
-    liquidation_slices = liquidation_slices;
   }
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming

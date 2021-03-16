@@ -6,7 +6,6 @@ let suite =
     TestFixedPoint.suite;
     TestTez.suite;
     TestKit.suite;
-    TestAvl.suite;
     TestParameters.suite;
     TestLiquidation.suite;
     TestUniswap.suite;

@@ -1,5 +1,5 @@
 open Kit
-open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 open Tickets
 open CheckerTypes
 
@@ -66,18 +66,7 @@ val mark_for_liquidation : checker -> burrow_id -> (LigoOp.operation list * chec
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : checker -> leaf_ptr list -> (LigoOp.operation list * checker)
-
-(** Cancel the liquidation of a slice. The burden is on the caller to provide
-  * both the burrow_id and the leaf_ptr. This operation can fail for several
-  * reasons:
-  * - If the leaf_ptr does not refer to the burrow_id given,
-  * - if the permission given is insufficient for this operation,
-  * - if the slice is already at the current auction,
-  * - if the slice is part of an already completed auction,
-  * - if the burrow is overburrowed at the moment.
-*)
-val cancel_liquidation_slice : checker -> permission -> leaf_ptr -> (LigoOp.operation list * checker)
+val touch_liquidation_slices : checker -> slice_id list -> (LigoOp.operation list * checker)
 
 (** Perform maintainance tasks for the burrow. *)
 val touch_burrow : checker -> burrow_id -> (LigoOp.operation list * checker)
@@ -168,8 +157,7 @@ type params =
   | ActivateBurrow of (permission * burrow_id)
   | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
-  | TouchLiquidationSlices of leaf_ptr list
-  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | TouchLiquidationSlices of slice_id list
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)

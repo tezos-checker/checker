@@ -87,7 +87,4 @@ let touch_high_reward : ratio = make_real_unsafe (Ligo.int_from_literal "1") (Li
   * contract is touched. *)
 let[@inline] number_of_slices_to_process : int = 5
 
-(** Maximum height of the tree used as liquidation queue.
-  * The maximum number of elements will be between 2**(n-1) and 2**(n-2).
-  * TODO: Decide on the number here. *)
-let[@inline] max_liquidation_queue_height: Ligo.int = Ligo.int_from_literal "12"
+let[@inline] max_pending_lot_count: Ligo.nat = Ligo.nat_from_literal "10n"

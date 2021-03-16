@@ -176,7 +176,7 @@ let uniswap_add_liquidity
        * which follows from the definitions:
        *  kit_to_return     = max_kit_deposited   - kit_deposited
        *  final_uniswap_kit = initial_uniswap_kit + kit_deposited
-       *)
+      *)
       (lqt_minted, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract

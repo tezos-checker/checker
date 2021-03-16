@@ -1,5 +1,5 @@
 open Ptr
-open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 
 (*
  * BigMap

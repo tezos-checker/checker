@@ -21,8 +21,6 @@
   Checker
   CheckerTypes
   Constants
-  Mem
-  Avl
   Kit
   FixedPoint
   Parameters
@@ -31,8 +29,6 @@
   UniswapTypes
   LiquidationAuction
   LiquidationAuctionTypes
-  LiquidationAuctionPrimitiveTypes
-  Ptr
   DelegationAuction
   DelegationAuctionTypes
   Permission
@@ -45,6 +41,7 @@
   Common)
  (libraries str zarith)
  (wrapped false)
- (instrumentation (backend bisect_ppx))
+ (instrumentation
+  (backend bisect_ppx))
  (preprocess
   (pps ppx_deriving.std)))

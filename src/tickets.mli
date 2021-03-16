@@ -1,5 +1,5 @@
 open Kit
-open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 
 type specific_rights =
   { deposit_tez: bool;
@@ -16,7 +16,7 @@ type rights =
 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 
-type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
+type liquidation_auction_bid = { auction_id: auction_id; bid: bid; }
 
 type kit_token_content (* opaque *)
 type kit_token = kit_token_content Ligo.ticket

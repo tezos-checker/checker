@@ -1,4 +1,4 @@
-open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 open Kit
 open Common
 open Error
@@ -101,7 +101,7 @@ let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) :
   * (currently is, but the content might change in the future), hence the
   * runtime check of the tag. *)
 let[@inline] ensure_valid_delegation_auction_bid_ticket
-      (bid_ticket: delegation_auction_bid_ticket)
+    (bid_ticket: delegation_auction_bid_ticket)
   : delegation_auction_bid =
   let (issuer, ((tag, bid), amt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid =
@@ -116,7 +116,7 @@ let[@inline] ensure_valid_delegation_auction_bid_ticket
 (**                    LIQUIDATION AUCTION BID TICKETS                       *)
 (* ************************************************************************* *)
 
-type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
+type liquidation_auction_bid = { auction_id: auction_id; bid: bid; }
 [@@deriving show]
 
 type liquidation_auction_bid_content = token_tag * liquidation_auction_bid
@@ -183,9 +183,9 @@ let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm
   * not strictly necessary (currently is, but the content might change in the
   * future), hence the runtime check of the tag. *)
 let[@inline] ensure_valid_permission
-      (permission: permission)
-      (burrow_id: Ligo.address)
-      (burrow_permission_version: Ligo.nat)
+    (permission: permission)
+    (burrow_id: Ligo.address)
+    (burrow_permission_version: Ligo.nat)
   : rights =
   let (issuer, ((tag, right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let is_valid =
