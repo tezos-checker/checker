@@ -55,7 +55,7 @@ let suite =
 
        let expected_collateral = Ligo.tez_from_literal "0mutez" in
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -78,7 +78,7 @@ let suite =
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow ->
-         assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez"))
+         assert_equal (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez") ~printer:Ligo.string_of_tez
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -97,7 +97,7 @@ let suite =
        let _, checker = Checker.deposit_tez checker (Some admin_ticket) burrow_id in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -142,7 +142,7 @@ let suite =
        let _, checker = Checker.withdraw_tez checker admin_ticket withdrawal burrow_id in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_bool "Burrow representation has unexpected collateral value" (Ligo.eq_tez_tez (burrow_collateral burrow) expected_collateral)
+       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -232,10 +232,8 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.checker_delegation_auction_reclaim_bid checker ticket in match ops with
        | [Transaction (UnitTransactionValue, reclaimed_tez, _)] ->
-         assert_bool
-           "Reclaimed tez did not match the amount that was bid"
-           (Ligo.eq_tez_tez reclaimed_tez our_bid_amount)
-       | _ -> failwith("Expected blarg but got " ^ show_operation_list ops)
+         assert_equal reclaimed_tez our_bid_amount ~printer:Ligo.string_of_tez
+       | _ -> failwith("Expected Expected [Transaction (UnitTransactionValue _)] but got " ^ show_operation_list ops)
     );
 
     ("burn_kit - transaction with value > 0 fails" >::
