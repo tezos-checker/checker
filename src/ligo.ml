@@ -298,13 +298,12 @@ module Tezos = struct
   (* Executes a function within a context with a different self_address. This is useful
      for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
   *)
-  let with_self_address address f = 
+  let with_self_address address f =
     let current_address = !self_address in
-    let result = 
-      self_address := address;
-      f () in
+    self_address := address;
+    let result = f () in
     self_address := current_address;
-    result 
+    result
 end
 
 let string_of_int = Z.to_string
