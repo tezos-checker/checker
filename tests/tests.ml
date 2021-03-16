@@ -3,15 +3,15 @@ open OUnit2
 let suite =
   "HuxianTests" >::: [
     TestChecker.suite;
-    TestFixedPoint.suite;
+    (* TestFixedPoint.suite;
     TestTez.suite;
     TestKit.suite;
     TestAvl.suite;
     TestParameters.suite;
-    TestLiquidation.suite;
-    TestUniswap.suite;
-    TestDelegationAuction.suite;
-    TestLiquidationAuction.suite;
+    TestLiquidation.suite; *)
+    (* TestUniswap.suite; *)
+    (* TestDelegationAuction.suite;
+    TestLiquidationAuction.suite; *)
   ]
 
 let () =
