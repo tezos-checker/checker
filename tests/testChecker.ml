@@ -49,7 +49,10 @@ let suite =
 
        assert_bool
          "No matching burrow found after calling create_burrow"
-         (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows))
+         (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows));
+       assert_bool
+         "The burrow existed before calling create_burrow"
+         (Option.is_none (Ligo.Big_map.find_opt burrow_id initial_checker.burrows))
     );
 
     ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
