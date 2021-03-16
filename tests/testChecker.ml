@@ -192,7 +192,7 @@ let suite =
        (* remainder: 12000 / 36000 *)
        let expected_reward = Ligo.int_from_literal "3333" in
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
-       let _ = Ligo.Tezos.now := Ligo.timestamp_from_seconds_literal time_delta in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
@@ -207,7 +207,7 @@ let suite =
        (* remainder: 0 *)
        let expected_reward = Ligo.int_from_literal "5000" in
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
-       let _ = Ligo.Tezos.now := Ligo.timestamp_from_seconds_literal time_delta in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
@@ -222,7 +222,7 @@ let suite =
        (* remainder: 24000 / 36000 *)
        let expected_reward = Ligo.int_from_literal "6666" in
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
-       let _ = Ligo.Tezos.now := Ligo.timestamp_from_seconds_literal time_delta in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
