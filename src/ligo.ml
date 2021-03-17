@@ -255,12 +255,12 @@ type 'a ticket =
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
   let level = ref (nat_from_literal "0n")
-  let self_address = "self_address"
+  let self_address = ref "self_address"
   let sender = ref "sender"
   let amount = ref (tez_from_literal "0mutez")
 
   let create_ticket content amount =
-    { issuer = self_address;
+    { issuer = !self_address;
       content = content;
       amount = amount;
     }
@@ -294,6 +294,16 @@ module Tezos = struct
     level := Z.(!level + Z.of_int blocks_passed);
     sender := address_;
     amount := amount_
+
+  (* Executes a function within a context with a different self_address. This is useful
+     for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
+  *)
+  let with_self_address address f =
+    let current_address = !self_address in
+    self_address := address;
+    let result = f () in
+    self_address := current_address;
+    result
 end
 
 let string_of_int = Z.to_string

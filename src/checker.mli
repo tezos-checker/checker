@@ -14,6 +14,9 @@ val touch : checker -> (LigoOp.operation list * checker)
 (* FOR TESTING. *)
 val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 
+(* FOR TESTING. *)
+val calculate_touch_reward : Ligo.timestamp -> kit
+
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)

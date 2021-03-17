@@ -146,7 +146,7 @@ type 'a ticket
 module Tezos : sig
   val now: timestamp ref
   val level: nat ref
-  val self_address: address (* NOTE: is of type contract, really, not address *)
+  val self_address: address ref
   val sender: address ref
   val amount: tez ref
 
@@ -157,6 +157,7 @@ module Tezos : sig
 
   val reset: unit -> unit
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
+  val with_self_address: address -> (unit -> 'a) -> 'a (* OCAML ONLY *)
 end
 
 (* VALUE CREATION *)
