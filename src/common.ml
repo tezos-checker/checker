@@ -5,7 +5,7 @@ let oracle_entrypoint : string = "%getPriceTODO" (* FIXME: Use real entrypoint, 
 (* Tezos utilities *)
 let level_to_cycle (t : Ligo.nat) = Ligo.div_nat_nat t (Ligo.nat_from_literal "4096n")
 
-let checker_address : Ligo.address = Ligo.Tezos.self_address
+let checker_address : Ligo.address = !Ligo.Tezos.self_address
 
 (* OPERATIONS ON int *)
 let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
