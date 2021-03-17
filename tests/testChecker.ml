@@ -177,6 +177,52 @@ let suite =
          (fun () -> Checker.withdraw_tez checker some_other_ticket withdrawal burrow_id)
     );
 
+    ("calculate_touch_reward - expected result for last_touched 2s ago" >::
+     fun _ ->
+       (* The division in this case should return a remainder < 1/2 *)
+       Ligo.Tezos.reset ();
+       let time_delta = 2 in
+       (* remainder: 12000 / 36000 *)
+       let expected_reward = Ligo.int_from_literal "3333" in
+       let last_touched = Ligo.timestamp_from_seconds_literal 0 in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+
+       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+    );
+
+    ("calculate_touch_reward - expected result for last_touched 3s ago" >::
+     fun _ ->
+       (* The division in this case should produce no remainder *)
+       Ligo.Tezos.reset ();
+       let time_delta = 3 in
+       (* remainder: 0 *)
+       let expected_reward = Ligo.int_from_literal "5000" in
+       let last_touched = Ligo.timestamp_from_seconds_literal 0 in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+
+       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+    );
+
+    ("calculate_touch_reward - expected result for last_touched 4s ago" >::
+     fun _ ->
+       (* The division in this case should return a remainder > 1/2 *)
+       Ligo.Tezos.reset ();
+       let time_delta = 4 in
+       (* remainder: 24000 / 36000 *)
+       let expected_reward = Ligo.int_from_literal "6666" in
+       let last_touched = Ligo.timestamp_from_seconds_literal 0 in
+       Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+
+       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+
+    );
+
     ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
