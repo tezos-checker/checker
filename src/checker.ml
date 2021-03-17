@@ -461,41 +461,41 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
 
 
 
-(* How much kit should be given to the burrow and how much should be burned. *)
-(* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
-  * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
-  * to truncation. That could be a problem; the extra kit, no matter how
-  * small, must be dealt with (e.g. be removed from the circulating kit).
-  *
-  *   kit_corresponding_to_slice =
-  *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
-  *   penalty =
-  *     CEIL (kit_corresponding_to_slice * penalty_percentage)  , if (corresponding_kit < leaf.min_kit_for_unwarranted)
-  *     zero                                                    , otherwise
-  *   kit_to_repay = kit_corresponding_to_slice - penalty
 
- * Calculate the amount of kit won in a liquidation auction to be transfered to the delinquent burrow and
+(* Calculate the amount of kit won in a liquidation auction to be transfered to the delinquent burrow and
  * the fraction to burn as a penalty. Due to rounding errors, it is possible that the corresponding
+ *
+ * FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+ * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
+ * to truncation. That could be a problem; the extra kit, no matter how
+ * small, must be dealt with (e.g. be removed from the circulating kit).
+ *
+ *   kit_corresponding_to_slice =
+ *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
+ *   penalty =
+ *     CEIL (kit_corresponding_to_slice * penalty_percentage)  , if (corresponding_kit < leaf.min_kit_for_unwarranted)
+ *     zero                                                    , otherwise
+ *   kit_to_repay = kit_corresponding_to_slice - penalty
 *)
-let[@inline] calculate_liquidation_outcome_kit_for_burrow outcome auctioned_slice =
-    let corresponding_kit =
-      kit_of_ratio_floor
+let[@inline] calculate_liquidation_outcome_kit_portions outcome auctioned_slice =
+  let corresponding_kit =
+    kit_of_ratio_floor
+      (make_real_unsafe
+         (Ligo.mul_int_int (tez_to_mutez auctioned_slice.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+         (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
+      ) in
+  let penalty =
+    let { num = num_lp; den = den_lp; } = liquidation_penalty in
+    if corresponding_kit < auctioned_slice.min_kit_for_unwarranted then
+      kit_of_ratio_ceil
         (make_real_unsafe
-          (Ligo.mul_int_int (tez_to_mutez auctioned_slice.tez) (kit_to_mukit_int outcome.winning_bid.kit))
-          (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
-        ) in
-    let penalty =
-      let { num = num_lp; den = den_lp; } = liquidation_penalty in
-      if corresponding_kit < auctioned_slice.min_kit_for_unwarranted then
-        kit_of_ratio_ceil
-          (make_real_unsafe
-            (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
-            (Ligo.mul_int_int kit_scaling_factor_int den_lp)
-          )
-      else
-        kit_zero
-    in
-    (kit_sub corresponding_kit penalty, penalty)
+           (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+           (Ligo.mul_int_int kit_scaling_factor_int den_lp)
+        )
+    else
+      kit_zero
+  in
+  (kit_sub corresponding_kit penalty, penalty)
 
 (* FIXME: Below function shouldn't be inlined, since it's huge and used in multiple places. However otherwise `touch_oldest` function
  * throws a "type too large" error that I couldn't solve.
@@ -511,7 +511,7 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
     let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
-    let kit_to_repay, kit_to_burn = calculate_liquidation_outcome_kit_for_burrow outcome leaf in
+    let kit_to_repay, kit_to_burn = calculate_liquidation_outcome_kit_portions outcome leaf in
 
     (* Burn the kit by removing it from circulation. *)
     let state =
