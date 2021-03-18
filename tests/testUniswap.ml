@@ -164,10 +164,10 @@ let test_buy_kit_does_not_affect_liquidity =
   uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
 
 (* If successful, uniswap_buy_kit respects min_kit_expected. *)
-let test_buy_kit_respects_lower_bound =
+let test_buy_kit_respects_min_kit_expected =
   qcheck_to_ounit
   @@ QCheck.Test.make
-    ~name:"test_buy_kit_respects_lower_bound"
+    ~name:"test_buy_kit_respects_min_kit_expected"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
   @@ fun (uniswap, amount, min_kit_expected, deadline) ->
@@ -861,7 +861,7 @@ let suite =
     test_buy_kit_increases_price;
     test_buy_kit_increases_product;
     test_buy_kit_does_not_affect_liquidity;
-    test_buy_kit_respects_lower_bound;
+    test_buy_kit_respects_min_kit_expected;
     test_buy_kit_preserves_kit;
     test_buy_kit_preserves_tez;
 
