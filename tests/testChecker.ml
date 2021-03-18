@@ -223,6 +223,90 @@ let suite =
 
     );
 
+    ("calculate_liquidation_outcome_kit_portions - expected result for case with remainder > 1/2" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let open LiquidationAuctionPrimitiveTypes in
+       let outcome = {
+         sold_tez = Ligo.tez_from_literal "9mutez";
+         winning_bid = {
+           address=alice_addr;
+           kit=kit_of_mukit (Ligo.nat_from_literal "100n");
+         };
+         younger_auction = None;
+         older_auction = None;
+       } in
+       let auctioned_slice = {
+         burrow=bob_addr;
+         tez=Ligo.tez_from_literal "5mutez";
+         (* Triggers penalty condition*)
+         min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "100_000_000n");
+         older = None;
+         younger = None;
+       } in
+
+       let kit_to_repay, kit_to_burn = Checker.calculate_liquidation_outcome_kit_portions outcome auctioned_slice in
+
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "49n")) kit_to_repay;
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "6n")) kit_to_burn
+    );
+
+    ("calculate_liquidation_outcome_kit_portions - expected result for case with no remainder" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let open LiquidationAuctionPrimitiveTypes in
+       let outcome = {
+         sold_tez = Ligo.tez_from_literal "10mutez";
+         winning_bid = {
+           address=alice_addr;
+           kit=kit_of_mukit (Ligo.nat_from_literal "100n");
+         };
+         younger_auction = None;
+         older_auction = None;
+       } in
+       let auctioned_slice = {
+         burrow=bob_addr;
+         tez=Ligo.tez_from_literal "5mutez";
+         (* Triggers penalty condition*)
+         min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "100_000_000n");
+         older = None;
+         younger = None;
+       } in
+
+       let kit_to_repay, kit_to_burn = Checker.calculate_liquidation_outcome_kit_portions outcome auctioned_slice in
+
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "45n")) kit_to_repay;
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "5n")) kit_to_burn
+    );
+
+    ("calculate_liquidation_outcome_kit_portions - expected result for case with remainder < 1/2" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let open LiquidationAuctionPrimitiveTypes in
+       let outcome = {
+         sold_tez = Ligo.tez_from_literal "27mutez";
+         winning_bid = {
+           address=alice_addr;
+           kit=kit_of_mukit (Ligo.nat_from_literal "42n");
+         };
+         younger_auction = None;
+         older_auction = None;
+       } in
+       let auctioned_slice = {
+         burrow=bob_addr;
+         tez=Ligo.tez_from_literal "13mutez";
+         (* Triggers penalty condition*)
+         min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "100_000_000n");
+         older = None;
+         younger = None;
+       } in
+
+       let kit_to_repay, kit_to_burn = Checker.calculate_liquidation_outcome_kit_portions outcome auctioned_slice in
+
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "17n")) kit_to_repay;
+       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "3n")) kit_to_burn
+    );
+
     ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();

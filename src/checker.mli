@@ -17,6 +17,9 @@ val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 (* FOR TESTING. *)
 val calculate_touch_reward : Ligo.timestamp -> kit
 
+(* FOR TESTING. *)
+val calculate_liquidation_outcome_kit_portions : auction_outcome -> liquidation_slice -> (kit * kit)
+
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
 (* ************************************************************************* *)
