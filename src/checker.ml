@@ -385,41 +385,43 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
  * removed. *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
 let update_immediate_neighbors (state: checker) (leaf_ptr: leaf_ptr) (leaf : liquidation_slice) =
+  (* only the storage is to be updated *)
+  let state_liquidation_auctions_avl_storage = state.liquidation_auctions.avl_storage in
+  let leaf_older = leaf.older in
+  let leaf_younger = leaf.younger in
   (* update the younger *)
-  let state = (
-    match leaf.younger with
-    | None -> state
+  let state_liquidation_auctions_avl_storage = (
+    match leaf_younger with
+    | None -> state_liquidation_auctions_avl_storage
     | Some younger_ptr ->
-      { state with
-        liquidation_auctions = { state.liquidation_auctions with
-                                 avl_storage =
-                                   avl_update_leaf
-                                     state.liquidation_auctions.avl_storage
-                                     younger_ptr
-                                     (fun (younger: liquidation_slice) ->
-                                        assert (younger.older = Some leaf_ptr);
-                                        { younger with older = leaf.older }
-                                     )
-                               }}
+        avl_update_leaf
+          state_liquidation_auctions_avl_storage
+          younger_ptr
+          (fun (younger: liquidation_slice) ->
+             assert (younger.older = Some leaf_ptr);
+             { younger with older = leaf_older }
+          )
   ) in
   (* update the older *)
-  let state = (
-    match leaf.older with
-    | None -> state
+  let state_liquidation_auctions_avl_storage = (
+    match leaf_older with
+    | None -> state_liquidation_auctions_avl_storage
     | Some older_ptr ->
-      { state with
-        liquidation_auctions = { state.liquidation_auctions with
-                                 avl_storage =
-                                   avl_update_leaf
-                                     state.liquidation_auctions.avl_storage
-                                     older_ptr
-                                     (fun (older: liquidation_slice) ->
-                                        assert (older.younger = Some leaf_ptr);
-                                        { older with younger = leaf.younger }
-                                     )
-                               }}
+        avl_update_leaf
+          state_liquidation_auctions_avl_storage
+          older_ptr
+          (fun (older: liquidation_slice) ->
+             assert (older.younger = Some leaf_ptr);
+             { older with younger = leaf_younger }
+          )
   ) in
-  state
+  (* return updated state *)
+  { state with
+    liquidation_auctions = {
+      state.liquidation_auctions with
+      avl_storage = state_liquidation_auctions_avl_storage
+    }
+  }
 
 (* Cancel the liquidation of a slice. The burden is on the caller to provide
  * both the burrow_id and the leaf_ptr. *)
