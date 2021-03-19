@@ -15,6 +15,7 @@ module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
+let property_test_count = 100
 
 (* Helper for creating new burrows and extracting their ID and admin ticket from the corresponding Ligo Ops *)
 let newly_created_burrow checker =
@@ -321,6 +322,25 @@ let suite =
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.burn_kit checker None burrow_id some_kit
          )
+    );
+
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"test_buy_kit_respects_min_kit_expected"
+        ~count:property_test_count
+        make_inputs_for_buy_kit_to_succeed
+      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let ops, _ = Checker.buy_kit checker min_kit_expected deadline in
+      let bought_kit = match ops with
+        | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
+        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      in
+      bought_kit >= kit_to_mukit_nat min_kit_expected
     );
 
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
