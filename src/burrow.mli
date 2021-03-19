@@ -129,7 +129,6 @@ val burrow_increase_permission_version : parameters -> burrow -> (Ligo.nat * bur
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
-    expected_kit : kit;
     burrow_state : burrow;
   }
 
@@ -147,6 +146,7 @@ type liquidation_result =
   | Close of liquidation_details
 
 val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit
+val compute_expected_kit : parameters -> Ligo.tez -> kit
 
 val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit

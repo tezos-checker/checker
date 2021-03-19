@@ -439,7 +439,6 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
 type liquidation_details =
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
-    expected_kit : kit;
     burrow_state : burrow;
   }
 [@@deriving show]
@@ -499,7 +498,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
        * thing (after paying the liquidation reward of course). *)
       let tez_to_auction = Ligo.sub_tez_tez b.collateral partial_reward in
-      let expected_kit = compute_expected_kit p tez_to_auction in
       let final_burrow =
         { b with
           active = false;
@@ -509,7 +507,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       Close {
         liquidation_reward = liquidation_reward;
         tez_to_auction = tez_to_auction;
-        expected_kit = expected_kit;
         burrow_state = final_burrow }
     else
       (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
@@ -524,7 +521,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * creation deposit, and liquidate all the remaining collateral, even if
          * it is not expected to repay enough kit. *)
         let tez_to_auction = b_without_reward.collateral in (* OVERRIDE *)
-        let expected_kit = compute_expected_kit p tez_to_auction in
         let final_burrow =
           { b with
             collateral = Ligo.tez_from_literal "0mutez";
@@ -533,7 +529,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         Complete {
           liquidation_reward = liquidation_reward;
           tez_to_auction = tez_to_auction;
-          expected_kit = expected_kit;
           burrow_state = final_burrow }
       else
         (* Case 2b.2: Recovery is possible; pay the liquidation reward, stash away the
@@ -544,7 +539,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * liquidation was not really warranted, we shall return the auction
          * earnings in their entirety. If not, then only 90% of the earnings
          * shall be returned. *)
-        let expected_kit = compute_expected_kit p tez_to_auction in
         let final_burrow =
           { b with
             collateral = Ligo.sub_tez_tez b_without_reward.collateral tez_to_auction;
@@ -553,7 +547,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         Partial {
           liquidation_reward = liquidation_reward;
           tez_to_auction = tez_to_auction;
-          expected_kit = expected_kit;
           burrow_state = final_burrow }
 
 let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
