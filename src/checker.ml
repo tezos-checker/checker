@@ -319,15 +319,19 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
 
-  let details = match burrow_request_liquidation state.parameters burrow with
-    | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
-    | Some type_and_details -> let _, details = type_and_details in details
+  let
+    { liquidation_reward = liquidation_reward;
+      tez_to_auction = tez_to_auction;
+      burrow_state = updated_burrow;
+    } = match burrow_request_liquidation state.parameters burrow with
+        | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
+        | Some type_and_details -> let _, details = type_and_details in details
   in
   let liquidation_slice =
     {
       burrow = burrow_id;
-      tez = details.tez_to_auction;
-      min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow details.tez_to_auction;
+      tez = tez_to_auction;
+      min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
       older = (
         match burrow_liquidation_slices burrow with
         | None -> (None : leaf_ptr option)
@@ -361,14 +365,14 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
    * created liquidation slice. *)
   let updated_burrow =
     burrow_set_liquidation_slices
-      details.burrow_state
-      (match burrow_liquidation_slices details.burrow_state with
+      updated_burrow
+      (match burrow_liquidation_slices updated_burrow with
        | None -> Some { oldest=leaf_ptr; youngest=leaf_ptr; }
        | Some s -> Some { s with youngest=leaf_ptr; })
   in
 
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> LigoOp.Tezos.unit_transaction () details.liquidation_reward c
+    | Some c -> LigoOp.Tezos.unit_transaction () liquidation_reward c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
 
   ( [op],
