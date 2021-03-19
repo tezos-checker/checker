@@ -12,15 +12,6 @@ let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =
   assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
   { num = n; den = d; }
 
-(* make and normalize any fraction *)
-let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
-  if Ligo.eq_int_int d (Ligo.int_from_literal "0") then
-    (failwith "Ratio.make_ratio: division by zero" : ratio)
-  else if Ligo.gt_int_int d (Ligo.int_from_literal "0") then
-    make_real_unsafe n d
-  else
-    make_real_unsafe (neg_int n) (neg_int d)
-
 (* Conversions to/from other types. *)
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
 let ratio_to_nat_floor (x: ratio) : Ligo.nat =
@@ -75,6 +66,15 @@ let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* BEGIN_OCAML *)
+(* make and normalize any fraction *)
+let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
+  if Ligo.eq_int_int d (Ligo.int_from_literal "0") then
+    (failwith "Ratio.make_ratio: division by zero" : ratio)
+  else if Ligo.gt_int_int d (Ligo.int_from_literal "0") then
+    make_real_unsafe n d
+  else
+    make_real_unsafe (neg_int n) (neg_int d)
+
 let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
