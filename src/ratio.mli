@@ -15,12 +15,11 @@ val one_ratio: ratio
 val ratio_of_int: Ligo.int -> ratio
 
 val ratio_of_nat: Ligo.nat -> ratio
-val ratio_to_nat_floor: ratio -> Ligo.nat
-val ratio_to_nat_ceil: ratio -> Ligo.nat
+val fraction_to_nat_floor: Ligo.int -> Ligo.int -> Ligo.nat
 
 val ratio_of_tez: Ligo.tez -> ratio
-val ratio_to_tez_floor: ratio -> Ligo.tez
-val ratio_to_tez_ceil: ratio -> Ligo.tez
+val fraction_to_tez_floor: Ligo.int -> Ligo.int -> Ligo.tez
+val fraction_to_tez_ceil: Ligo.int -> Ligo.int -> Ligo.tez
 
 (* Relational operations. *)
 val eq_ratio_ratio: ratio -> ratio -> bool

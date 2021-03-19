@@ -31,7 +31,10 @@ let make_inputs_for_buy_kit_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
     (fun (tez, _kit, _lqt, uniswap) ->
-       let amount = ratio_to_tez_ceil (div_ratio (mul_ratio (ratio_of_tez tez) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee) in
+       let amount =
+         let { num = x_num; den = x_den; } =
+           div_ratio (mul_ratio (ratio_of_tez tez) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee in
+         fraction_to_tez_ceil x_num x_den in
        let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, min_kit_expected, deadline)
@@ -47,7 +50,10 @@ let make_inputs_for_sell_kit_to_succeed =
     (fun (_tez, kit, _lqt, uniswap) ->
        let amount = (Ligo.tez_from_literal "0mutez") in
        let token =
-         kit_of_ratio_ceil (div_ratio (mul_ratio (kit_to_ratio kit) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee) in
+         let { num = x_num; den = x_den; } =
+           div_ratio (mul_ratio (kit_to_ratio kit) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee in
+         kit_of_fraction_ceil x_num x_den
+       in
        let min_tez_expected = Ligo.tez_from_literal "1mutez" in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, token, min_tez_expected, deadline)
@@ -64,9 +70,15 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
     (fun ((tez, kit, lqt, uniswap), amount) ->
        let pending_accrual = (Ligo.tez_from_literal "0mutez") in
        let max_kit_deposited =
-         kit_of_ratio_ceil (mul_ratio (kit_to_ratio kit) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez))) in
+         let { num = x_num; den = x_den; } =
+           mul_ratio (kit_to_ratio kit) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)) in
+         kit_of_fraction_ceil x_num x_den
+       in
        let min_lqt_minted =
-         ratio_to_nat_floor (mul_ratio (ratio_of_nat lqt) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez))) in
+         let { num = x_num; den = x_den; } =
+           mul_ratio (ratio_of_nat lqt) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)) in
+         fraction_to_nat_floor x_num x_den
+       in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
@@ -79,12 +91,25 @@ let make_inputs_for_remove_liquidity_to_succeed =
     (fun ((tez, kit, lqt, uniswap), factor) ->
        let amount = (Ligo.tez_from_literal "0mutez") in
 
-       let lqt_to_burn = ratio_to_nat_floor (div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor)))) in
+       let lqt_to_burn =
+         let { num = x_num; den = x_den; } =
+           div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))) in
+           fraction_to_nat_floor x_num x_den
+       in
+
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
 
        let lqt_burned = lqt_to_burn in
-       let min_tez_withdrawn = ratio_to_tez_floor (div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
-       let min_kit_withdrawn = kit_of_ratio_floor (div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
+       let min_tez_withdrawn =
+         let { num = x_num; den = x_den; } =
+           div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+         fraction_to_tez_floor x_num x_den
+       in
+       let min_kit_withdrawn =
+         let { num = x_num; den = x_den; } =
+           div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+         kit_of_fraction_floor x_num x_den
+       in
 
        (* NOTE: We cannot just factor down the number of liquidity tokens
         * extant for this operation. When we remove liquidity we round the
@@ -100,8 +125,16 @@ let make_inputs_for_remove_liquidity_to_succeed =
              let as_q = (mul_ratio (ratio_of_nat lqt) (max_ratio least_kit_percentage least_tez_percentage)) in
              Option.get (Ligo.is_nat (Common.cdiv_int_int as_q.num as_q.den)) in
            let lqt_burned = lqt_to_burn in
-           let min_tez_withdrawn = ratio_to_tez_floor (div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
-           let min_kit_withdrawn = kit_of_ratio_floor (div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt)) in
+           let min_tez_withdrawn =
+             let { num = x_num; den = x_den; } =
+               div_ratio (mul_ratio (ratio_of_tez tez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+             fraction_to_tez_floor x_num x_den
+           in
+           let min_kit_withdrawn =
+             let { num = x_num; den = x_den; } =
+               div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+             kit_of_fraction_floor x_num x_den
+           in
            (lqt_burned, min_tez_withdrawn, min_kit_withdrawn)
          else
            lqt_burned, min_tez_withdrawn, min_kit_withdrawn in

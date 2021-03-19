@@ -211,32 +211,30 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
   (* TODO: ADD MORE ASSERTIONS: STRICTLY POSITIVE LAST PROTECTED INDEX *)
   let last_protected_index = tez_to_mutez last_protected_index in
-  ratio_to_tez_floor
-    (make_real_unsafe
-       (clamp_int
-          (Ligo.mul_int_int
-             (tez_to_mutez current_index)
+  fraction_to_tez_floor
+    (clamp_int
+       (Ligo.mul_int_int
+          (tez_to_mutez current_index)
+          protected_index_inverse_epsilon
+       )
+       (Ligo.mul_int_int
+          last_protected_index
+          (Ligo.sub_int_int
              protected_index_inverse_epsilon
-          )
-          (Ligo.mul_int_int
-             last_protected_index
-             (Ligo.sub_int_int
-                protected_index_inverse_epsilon
-                duration_in_seconds
-             )
-          )
-          (Ligo.mul_int_int
-             last_protected_index
-             (Ligo.add_int_int
-                protected_index_inverse_epsilon
-                duration_in_seconds
-             )
+             duration_in_seconds
           )
        )
        (Ligo.mul_int_int
-          protected_index_inverse_epsilon
-          (Ligo.int_from_literal "1_000_000")
+          last_protected_index
+          (Ligo.add_int_int
+             protected_index_inverse_epsilon
+             duration_in_seconds
+          )
        )
+    )
+    (Ligo.mul_int_int
+       protected_index_inverse_epsilon
+       (Ligo.int_from_literal "1_000_000")
     )
 
 (** Calculate the current drift based on the last drift, the last drift
@@ -368,11 +366,9 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
   *   )
   *)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
-  kit_of_ratio_floor
-    (make_real_unsafe
-       (Ligo.mul_int_int (kit_to_mukit_int last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
-       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
-    )
+  kit_of_fraction_floor
+    (Ligo.mul_int_int (kit_to_mukit_int last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
+    (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
 
 (** Compute current outstanding kit, given that the burrow fees have already
   * been added (that is, compute the effect of the imbalance index):
@@ -382,11 +378,9 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
   *   )
   *)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
-  kit_of_ratio_floor
-    (make_real_unsafe
-       (Ligo.mul_int_int (kit_to_mukit_int current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
-       (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
-    )
+  kit_of_fraction_floor
+    (Ligo.mul_int_int (kit_to_mukit_int current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
+    (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
@@ -537,11 +531,13 @@ let model_compute_current_protected_index
   let upper_lim = qexp (mul_ratio           (protected_index_epsilon) duration_in_seconds) in
   let lower_lim = qexp (mul_ratio (neg_ratio protected_index_epsilon) duration_in_seconds) in
   let ratio = make_ratio (tez_to_mutez current_index) (tez_to_mutez last_protected_index) in
-  ratio_to_tez_floor
+
+  let { num = x_num; den = x_den; } =
     (mul_ratio
        (ratio_of_tez last_protected_index)
        (clamp_ratio ratio lower_lim upper_lim)
-    )
+    ) in
+  fraction_to_tez_floor x_num x_den
 
 let model_compute_current_drift
     (last_drift: fixedpoint)
@@ -638,26 +634,29 @@ let model_compute_current_outstanding_with_fees
     (last_burrow_fee_index: fixedpoint)
     (current_burrow_fee_index: fixedpoint)
   : kit =
-  kit_of_ratio_floor
+  let { num = x_num; den = x_den; } =
     (div_ratio
        (mul_ratio
           (kit_to_ratio last_outstanding_kit)
           (fixedpoint_to_ratio current_burrow_fee_index)
        )
        (fixedpoint_to_ratio last_burrow_fee_index)
-    )
+    ) in
+  kit_of_fraction_floor x_num x_den
+
 
 let model_compute_current_outstanding_kit
     (current_outstanding_with_fees: kit)
     (last_imbalance_index: fixedpoint)
     (current_imbalance_index: fixedpoint)
   : kit =
-  kit_of_ratio_floor
+  let { num = x_num; den = x_den; } =
     (div_ratio
        (mul_ratio
           (kit_to_ratio current_outstanding_with_fees)
           (fixedpoint_to_ratio current_imbalance_index)
        )
        (fixedpoint_to_ratio last_imbalance_index)
-    )
+    ) in
+  kit_of_fraction_floor x_num x_den
 (* END_OCAML *)

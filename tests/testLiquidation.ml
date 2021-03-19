@@ -17,17 +17,20 @@ let arbitrary_burrow (params: parameters) =
     QCheck.map
       (fun (t, k, factor) ->
          let tez =
-           ratio_to_tez_floor
-             (div_ratio
-                (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
-                (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
-             ) in
+           let x =
+             div_ratio
+               (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
+               (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
+              in
+           fraction_to_tez_floor x.num x.den in
          let kit =
-           kit_of_ratio_floor
+           let { num = x_num; den = x_den; } =
              (div_ratio
                 (ratio_of_int (Ligo.int_from_literal (string_of_int k)))
                 (ratio_of_int (Ligo.int_from_literal (string_of_int factor)))
              ) in
+           kit_of_fraction_floor x_num x_den
+         in
          (tez, kit)
       )
       (QCheck.triple positive_int positive_int positive_int) in
@@ -35,7 +38,9 @@ let arbitrary_burrow (params: parameters) =
   let arb_smart_tez_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
-         let tez = ratio_to_tez_floor (div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2"))) in
+         let tez =
+           let x = div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2")) in
+           fraction_to_tez_floor x.num x.den in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in

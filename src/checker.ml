@@ -493,19 +493,16 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
     *)
     let kit_to_repay, kit_to_burn =
       let corresponding_kit =
-        kit_of_ratio_floor
-          (make_real_unsafe
-             (Ligo.mul_int_int (tez_to_mutez leaf.tez) (kit_to_mukit_int outcome.winning_bid.kit))
-             (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
-          ) in
+        kit_of_fraction_floor
+          (Ligo.mul_int_int (tez_to_mutez leaf.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+          (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
+      in
       let penalty =
         let { num = num_lp; den = den_lp; } = liquidation_penalty in
         if corresponding_kit < leaf.min_kit_for_unwarranted then
-          kit_of_ratio_ceil
-            (make_real_unsafe
-               (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
-               (Ligo.mul_int_int kit_scaling_factor_int den_lp)
-            )
+          kit_of_fraction_ceil
+            (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+            (Ligo.mul_int_int kit_scaling_factor_int den_lp)
         else
           kit_zero
       in
@@ -775,14 +772,12 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
   (* reward = FLOOR (low_duration * touch_low_reward + high_duration * touch_high_reward) *)
   let { num = num_tlr; den = den_tlr; } = touch_low_reward in
   let { num = num_thr; den = den_thr; } = touch_high_reward in
-  kit_of_ratio_floor
-    (make_real_unsafe
-       (Ligo.add_int_int
-          (Ligo.mul_int_int low_duration  (Ligo.mul_int_int num_tlr den_thr))
-          (Ligo.mul_int_int high_duration (Ligo.mul_int_int num_thr den_tlr))
-       )
-       (Ligo.mul_int_int den_tlr den_thr)
+  kit_of_fraction_floor
+    (Ligo.add_int_int
+       (Ligo.mul_int_int low_duration  (Ligo.mul_int_int num_tlr den_thr))
+       (Ligo.mul_int_int high_duration (Ligo.mul_int_int num_thr den_tlr))
     )
+    (Ligo.mul_int_int den_tlr den_thr)
 
 let rec touch_oldest (ops, state, maximum: LigoOp.operation list * checker * int) : (LigoOp.operation list * checker) =
   if maximum <= 0 then

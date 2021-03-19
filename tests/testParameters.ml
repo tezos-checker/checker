@@ -353,7 +353,9 @@ let test_protected_index_pace =
     let kit_in_tez = one_ratio in
 
     (* UPWARD MOVES *)
-    let very_high_index = ratio_to_tez_floor (mul_ratio (ratio_of_int (Ligo.int_from_literal "1000")) (ratio_of_tez params.index)) in
+    let very_high_index =
+      let x = mul_ratio (ratio_of_int (Ligo.int_from_literal "1000")) (ratio_of_tez params.index) in
+      fraction_to_tez_floor x.num x.den in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
@@ -368,7 +370,9 @@ let test_protected_index_pace =
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "2_053_031mutez") new_params.protected_index;
 
     (* DOWNWARD MOVES *)
-    let very_low_index = ratio_to_tez_floor (mul_ratio (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (ratio_of_tez params.index)) in
+    let very_low_index =
+      let x = mul_ratio (make_ratio (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000")) (ratio_of_tez params.index) in
+      fraction_to_tez_floor x.num x.den in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)

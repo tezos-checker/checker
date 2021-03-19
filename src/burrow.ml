@@ -125,16 +125,14 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
     let current_adjustment_index = compute_adjustment_index p in
     { b with
       outstanding_kit =
-        kit_of_ratio_ceil
-          (make_real_unsafe
-             (Ligo.mul_int_int
-                (kit_to_mukit_int b.outstanding_kit)
-                (fixedpoint_to_raw current_adjustment_index)
-             )
-             (Ligo.mul_int_int
-                kit_scaling_factor_int
-                (fixedpoint_to_raw b.adjustment_index)
-             )
+        kit_of_fraction_ceil
+          (Ligo.mul_int_int
+             (kit_to_mukit_int b.outstanding_kit)
+             (fixedpoint_to_raw current_adjustment_index)
+          )
+          (Ligo.mul_int_int
+             kit_scaling_factor_int
+             (fixedpoint_to_raw b.adjustment_index)
           );
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
@@ -384,7 +382,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
             )
          )
       ) in
-  ratio_to_tez_ceil (make_real_unsafe numerator denominator)
+  fraction_to_tez_ceil numerator denominator
 
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
@@ -403,7 +401,7 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
     Ligo.mul_int_int
       (Ligo.int_from_literal "1_000_000")
       (Ligo.mul_int_int den_lp num_mp) in
-  kit_of_ratio_ceil (make_real_unsafe numerator denominator)
+  kit_of_fraction_ceil numerator denominator
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
@@ -475,19 +473,17 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
     Ligo.mul_int_int
       den_fl
       (Ligo.mul_int_int kit_scaling_factor_int (tez_to_mutez b.collateral)) in
-  kit_of_ratio_ceil (* Round up here; safer for the system, less so for the burrow *)
-    (make_real_unsafe numerator denominator)
+  kit_of_fraction_ceil numerator denominator (* Round up here; safer for the system, less so for the burrow *)
 
 let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   let partial_reward =
     let { num = num_lrp; den = den_lrp; } = liquidation_reward_percentage in
-    ratio_to_tez_floor
-      (make_real_unsafe
-         (Ligo.mul_int_int (tez_to_mutez b.collateral) num_lrp)
-         (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_lrp)
-      ) in
+    fraction_to_tez_floor
+      (Ligo.mul_int_int (tez_to_mutez b.collateral) num_lrp)
+      (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_lrp)
+  in
   if not (burrow_is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit, or
      * the burrow is already without its creation deposit, inactive; we
@@ -570,7 +566,7 @@ let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
   let collateral = ratio_of_tez b.collateral in
   let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
   let minting_price = minting_price p in
-  ratio_to_tez_ceil
+  let { num = x_num; den = x_den; } =
     (div_ratio
        (sub_ratio
           (sub_ratio
@@ -595,7 +591,8 @@ let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
           )
           one_ratio
        )
-    )
+    ) in
+  fraction_to_tez_ceil x_num x_den
 
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;

@@ -14,46 +14,38 @@ let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =
 
 (* Conversions to/from other types. *)
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let ratio_to_nat_floor (x: ratio) : Ligo.nat =
-  let { num = x_num; den = x_den; } = x in
+let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
+  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0") then
-    (failwith "Ratio.ratio_to_nat_floor: negative" : Ligo.nat)
+    (failwith "Ratio.fraction_to_nat_floor: negative" : Ligo.nat)
   else
     Ligo.abs (fdiv_int_int x_num x_den)
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let ratio_to_nat_ceil (x: ratio) : Ligo.nat =
-  let { num = x_num; den = x_den; } = x in
-  if Ligo.lt_int_int x_num (Ligo.int_from_literal "0") then
-    (failwith "Ratio.ratio_to_nat_ceil: negative" : Ligo.nat)
-  else
-    Ligo.abs (cdiv_int_int x_num x_den)
-
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let ratio_to_tez_floor (x: ratio) : Ligo.tez =
-  let { num = x_num; den = x_den; } = x in
+let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
+  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
-  | None -> (failwith "Ratio.ratio_to_tez_floor: negative" : Ligo.tez)
+  | None -> (failwith "Ratio.fraction_to_tez_floor: negative" : Ligo.tez)
   | Some n ->
     let n = Ligo.mul_nat_tez n (Ligo.tez_from_literal "1_000_000mutez") in
     let d = Ligo.abs x_den in
     (match Ligo.ediv_tez_nat n d with
-     | None -> (failwith "Ratio.ratio_to_tez_floor: zero denominator" : Ligo.tez)
+     | None -> (failwith "Ratio.fraction_to_tez_floor: zero denominator" : Ligo.tez)
      | Some quot_and_rem ->
        let (quot, _) = quot_and_rem in
        quot (* ignore the remainder; we floor towards zero here *)
     )
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let ratio_to_tez_ceil (x: ratio) : Ligo.tez =
-  let { num = x_num; den = x_den; } = x in
+let fraction_to_tez_ceil (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
+  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
-  | None -> (failwith "Ratio.ratio_to_tez_ceil: negative" : Ligo.tez)
+  | None -> (failwith "Ratio.fraction_to_tez_ceil: negative" : Ligo.tez)
   | Some n ->
     let n = Ligo.mul_nat_tez n (Ligo.tez_from_literal "1_000_000mutez") in
     let d = Ligo.abs x_den in
     (match Ligo.ediv_tez_nat n d with
-     | None -> (failwith "Ratio.ratio_to_tez_ceil: zero denominator" : Ligo.tez)
+     | None -> (failwith "Ratio.fraction_to_tez_ceil: zero denominator" : Ligo.tez)
      | Some quot_and_rem ->
        let (quot, rem) = quot_and_rem in
        if Ligo.eq_tez_tez rem (Ligo.tez_from_literal "0mutez")
