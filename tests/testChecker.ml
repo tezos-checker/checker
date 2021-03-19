@@ -499,7 +499,7 @@ let suite =
          )
     );
 
-    ("buy_kit - returns at least requested minimum kit" >::
+    ("buy_kit - returns expected kit" >::
      fun _ ->
        Ligo.Tezos.reset ();
        (* Populate the uniswap with some liquidity *)
@@ -511,21 +511,18 @@ let suite =
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
        } in
-       let min_kit_expected = (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, _ = Checker.buy_kit checker (kit_of_mukit (Ligo.nat_from_literal "1n")) (Ligo.timestamp_from_seconds_literal 1) in
        let (_, (_, kit)), _ = match ops with
-         | [ Transaction (KitTransactionValue ticket, _, _) ;] -> Ligo.Tezos.read_ticket ticket
-         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _)), ...] but got " ^ show_operation_list ops)
+         | [ Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
+         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
        in
 
-       assert_bool
-         "Returned kit was less than the specified minimum kit"
-         (Ligo.geq_nat_nat kit min_kit_expected)
+       assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat
     );
 
-    ("sell_kit - returns at least requested minimum tez" >::
+    ("sell_kit - returns expected tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
        (* Populate the uniswap with some liquidity *)
@@ -538,18 +535,15 @@ let suite =
          };
        } in
        let kit_to_sell = Tickets.kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000_000n")) in
-       let min_tez_expected = Ligo.tez_from_literal "1mutez" in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.sell_kit checker kit_to_sell min_tez_expected (Ligo.timestamp_from_seconds_literal 1) in
+       let ops, _ = Checker.sell_kit checker kit_to_sell (Ligo.tez_from_literal "1mutez") (Ligo.timestamp_from_seconds_literal 1) in
        let tez = match ops with
          | [Transaction (UnitTransactionValue, tez, _)] -> tez
          | _ -> failwith ("Expected [Transaction (UnitTransactionValue, tez, _))] but got " ^ show_operation_list ops)
        in
 
-       assert_bool
-         "Returned tez was less than the specified minimum tez"
-         (Ligo.geq_tez_tez tez min_tez_expected)
+       assert_equal (Ligo.tez_from_literal "1mutez") tez ~printer:Ligo.string_of_tez
     );
 
     ("sell_kit - transaction with value > 0 fails" >::
@@ -565,7 +559,7 @@ let suite =
          )
     );
 
-    ("remove_liquidity - returns at least requested minimum kit and tez" >::
+    ("remove_liquidity - returns expected kit and tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
        (* Populate the uniswap with some liquidity *)
@@ -589,15 +583,11 @@ let suite =
            Transaction (KitTransactionValue ticket, _, _);
            Transaction (UnitTransactionValue, tez, _)
          ] -> let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in (kit, tez)
-         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _)), Transaction (UnitTransactionValue, tez, _) ] but got " ^ show_operation_list ops)
+         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _)); Transaction (UnitTransactionValue, tez, _) ] but got " ^ show_operation_list ops)
        in
 
-       assert_bool
-         "Returned tez was less than the specified minimum tez"
-         (Ligo.geq_tez_tez tez min_tez_expected);
-       assert_bool
-         "Returned kit was less than the specified minimum kit"
-         (Ligo.geq_nat_nat kit min_kit_expected)
+       assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
+       assert_equal (Ligo.tez_from_literal "1mutez") tez ~printer:Ligo.string_of_tez
     );
 
     ("remove_liquidity - transaction with value > 0 fails" >::
