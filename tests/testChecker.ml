@@ -7,6 +7,9 @@ open Tickets
 open Error
 open Ptr
 
+let property_test_count = 1000
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+
 module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 
 type operation_list = LigoOp.operation list
@@ -498,6 +501,68 @@ let suite =
           | _ -> false
          )
     );
+
+    (
+      let uniswap_kit = Ligo.nat_from_literal ("1_000n") in
+      let uniswap_tez = Ligo.tez_from_literal ("1_000mutez") in
+      let max_buyable_kit = 998 in
+      let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
+      let arb_tez = TestArbitrary.arb_tez in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"buy_kit - todo"
+        ~count:property_test_count
+        (QCheck.pair arb_kit arb_tez)
+      @@ fun (min_expected_kit, additional_tez) ->
+      let open Ratio in
+      Ligo.Tezos.reset();
+      let checker = {
+        initial_checker with
+        uniswap={
+          initial_checker.uniswap with
+          tez = uniswap_tez;
+          kit = kit_of_mukit uniswap_kit;
+        };
+      } in
+      (* TODO: Remove debug statements *)
+      (* let _ = Format.fprintf Format.std_formatter "<min kit expected = %s >" (show_kit min_expected_kit) in *)
+      (* let _ = Format.fprintf Format.std_formatter "<tez provided = %s >" (Ligo.string_of_tez tez_provided) in *)
+      (* Minimum tez to get the min_expected kit *)
+      let ratio_minimum_tez = div_ratio
+          (ratio_of_nat uniswap_kit)
+          (
+            sub_ratio
+              (div_ratio (ratio_of_nat (Ligo.nat_from_literal "998n")) (ratio_of_nat (kit_to_mukit_nat min_expected_kit)))
+              (ratio_of_nat (Ligo.nat_from_literal "1n"))
+          ) in
+      let minimum_tez = Ligo.mul_nat_tez (Ligo.abs (Common.cdiv_int_int ratio_minimum_tez.num ratio_minimum_tez.den)) (Ligo.tez_from_literal "1mutez") in
+      (* Adjust transaction by a random amount of extra tez *)
+      let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez
+      in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_provided;
+      let ops, _ = Checker.buy_kit checker min_expected_kit (Ligo.timestamp_from_seconds_literal 1) in
+      let (_, (_, kit)), _ = match ops with
+        | [ Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
+        | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
+      in
+
+      Ligo.geq_nat_nat kit (kit_to_mukit_nat min_expected_kit)
+    );
+
+    (* TODO: property: buy_kit should always return at least minimum expected kit *)
+    (*
+       for any specified minimum kit, buy_kit should return >= kit or fail if it can't
+
+       Given a transaction value T and uniswap U iwth U[kit] > min_expected, buy_kit should always return >= expected
+
+      try e with
+      | p1 -> e1
+      | ...
+      | pn -> en
+
+    *)
+    (* TODO: property: sell_kit should always return at least minimum expected kit *)
 
     ("buy_kit - returns expected kit" >::
      fun _ ->
