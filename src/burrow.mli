@@ -135,18 +135,21 @@ type liquidation_details =
 val show_liquidation_details : liquidation_details -> string
 val pp_liquidation_details : Format.formatter -> liquidation_details -> unit
 
-type liquidation_result =
-  (* the burrow does not qualify for liquidation *)
-  | Unnecessary
+type liquidation_type =
   (* partial: some collateral remains in the burrow *)
-  | Partial of liquidation_details
+  | Partial
   (* complete: deplete the collateral *)
-  | Complete of liquidation_details
+  | Complete
   (* complete: deplete the collateral AND the creation deposit *)
-  | Close of liquidation_details
+  | Close
+
+type liquidation_result = (liquidation_type * liquidation_details) option
 
 val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit
 val compute_expected_kit : parameters -> Ligo.tez -> kit
+
+val show_liquidation_type : liquidation_type -> string
+val pp_liquidation_type : Format.formatter -> liquidation_type -> unit
 
 val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit

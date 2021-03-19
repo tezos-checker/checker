@@ -320,10 +320,8 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
   let burrow = find_burrow state.burrows burrow_id in
 
   let details = match burrow_request_liquidation state.parameters burrow with
-    | Unnecessary -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
-    | Partial details -> details
-    | Complete details -> details
-    | Close details -> details
+    | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
+    | Some type_and_details -> let _, details = type_and_details in details
   in
   let liquidation_slice =
     {

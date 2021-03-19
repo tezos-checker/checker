@@ -443,20 +443,21 @@ type liquidation_details =
   }
 [@@deriving show]
 
-type liquidation_result =
-  (* the burrow does not qualify for liquidation *)
-  | Unnecessary
+type liquidation_type =
   (* partial: some collateral remains in the burrow *)
-  | Partial of liquidation_details
+  | Partial
   (* complete: deplete the collateral *)
-  | Complete of liquidation_details
+  | Complete
   (* complete: deplete the collateral AND the creation deposit *)
-  | Close of liquidation_details
+  | Close
+[@@deriving show]
+
+type liquidation_result = (liquidation_type * liquidation_details) option
 [@@deriving show]
 
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted. *)
-let compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
+let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
   let _ = ensure_uptodate_burrow p b in
   assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
@@ -491,7 +492,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
     (* Case 1: The outstanding kit does not exceed the liquidation limit, or
      * the burrow is already without its creation deposit, inactive; we
      * shouldn't liquidate the burrow. *)
-    Unnecessary
+    (None : liquidation_result)
   else
     let liquidation_reward = Ligo.add_tez_tez creation_deposit partial_reward in
     if Ligo.sub_tez_tez b.collateral partial_reward < creation_deposit then
@@ -504,10 +505,12 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
           collateral = Ligo.tez_from_literal "0mutez";
           collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
         } in
-      Close {
-        liquidation_reward = liquidation_reward;
-        tez_to_auction = tez_to_auction;
-        burrow_state = final_burrow }
+      Some
+        ( Close,
+          { liquidation_reward = liquidation_reward;
+            tez_to_auction = tez_to_auction;
+            burrow_state = final_burrow; }
+        )
     else
       (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
        * possible to liquidate the burrow partially or if we have to do so
@@ -526,10 +529,12 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
             collateral = Ligo.tez_from_literal "0mutez";
             collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
           } in
-        Complete {
-          liquidation_reward = liquidation_reward;
-          tez_to_auction = tez_to_auction;
-          burrow_state = final_burrow }
+        Some
+          ( Complete,
+            { liquidation_reward = liquidation_reward;
+              tez_to_auction = tez_to_auction;
+              burrow_state = final_burrow; }
+          )
       else
         (* Case 2b.2: Recovery is possible; pay the liquidation reward, stash away the
          * creation deposit, and liquidate the collateral needed to underburrow
@@ -544,10 +549,12 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
             collateral = Ligo.sub_tez_tez b_without_reward.collateral tez_to_auction;
             collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
           } in
-        Partial {
-          liquidation_reward = liquidation_reward;
-          tez_to_auction = tez_to_auction;
-          burrow_state = final_burrow }
+        Some
+          ( Partial,
+            { liquidation_reward = liquidation_reward;
+              tez_to_auction = tez_to_auction;
+              burrow_state = final_burrow; }
+          )
 
 let[@inline] burrow_oldest_liquidation_ptr (b: burrow) : leaf_ptr option =
   assert_burrow_invariants b;
