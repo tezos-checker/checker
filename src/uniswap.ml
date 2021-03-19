@@ -70,14 +70,14 @@ let uniswap_buy_kit
       Ligo.mul_int_int
         kit_scaling_factor_int
         (Ligo.mul_int_int (tez_to_mutez new_uniswap_tez) den_uf) in
-    let return = kit_of_ratio_floor (make_real_unsafe numerator denominator) in
+    let bought_kit = kit_of_ratio_floor (make_real_unsafe numerator denominator) in
 
-    if return < min_kit_expected then
+    if bought_kit < min_kit_expected then
       (Ligo.failwith error_BuyKitPriceFailure : (kit * uniswap))
-    else if return > uniswap.kit then
+    else if bought_kit > uniswap.kit then
       (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * uniswap))
     else
-      let bought_kit, remaining_kit = (return, kit_sub uniswap.kit return) in
+      let remaining_kit = kit_sub uniswap.kit bought_kit in
       ( bought_kit,
         { uniswap with
           kit = remaining_kit;
@@ -118,14 +118,14 @@ let uniswap_sell_kit
       Ligo.mul_int_int
         (Ligo.int_from_literal "1_000_000")
         (Ligo.mul_int_int (kit_to_mukit_int new_uniswap_kit) den_uf) in
-    let return = ratio_to_tez_floor (make_real_unsafe numerator denominator) in
+    let bought_tez = ratio_to_tez_floor (make_real_unsafe numerator denominator) in
 
-    if return < min_tez_expected then
+    if bought_tez < min_tez_expected then
       (Ligo.failwith error_SellKitPriceFailure : (Ligo.tez * uniswap))
-    else if return > uniswap.tez then
+    else if bought_tez > uniswap.tez then
       (Ligo.failwith error_SellKitTooMuchTezBought : (Ligo.tez * uniswap))
     else
-      let bought_tez, remaining_tez = (return, Ligo.sub_tez_tez uniswap.tez return) in
+      let remaining_tez = Ligo.sub_tez_tez uniswap.tez bought_tez in
       ( bought_tez,
         { uniswap with
           kit = new_uniswap_kit;
@@ -183,7 +183,7 @@ let uniswap_add_liquidity
     else if kit_deposited = kit_zero then
       (Ligo.failwith error_AddLiquidityZeroKitDeposited : (Ligo.nat * kit * uniswap))
     else
-      let kit_deposited, kit_to_return = (kit_deposited, kit_sub max_kit_deposited kit_deposited) in
+      let kit_to_return = kit_sub max_kit_deposited kit_deposited in
       let updated = { uniswap with
                       kit = kit_add uniswap.kit kit_deposited;
                       tez = Ligo.add_tez_tez uniswap.tez tez_amount;
@@ -252,7 +252,7 @@ let uniswap_remove_liquidity
         | Some remaining -> (remaining, lqt_burned)
       ) in
 
-      let kit_withdrawn, remaining_kit = (kit_withdrawn, kit_sub uniswap.kit kit_withdrawn) in
+      let remaining_kit = kit_sub uniswap.kit kit_withdrawn in
       let updated = { uniswap with
                       tez = Ligo.sub_tez_tez uniswap.tez tez_withdrawn;
                       kit = remaining_kit;
