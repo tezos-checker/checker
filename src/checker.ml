@@ -586,17 +586,6 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
 (**                          DELEGATION AUCTIONS                             *)
 (* ************************************************************************* *)
 
-let option_delegate_eq (o1: Ligo.key_hash option) (o2: Ligo.key_hash option) =
-  match o1 with
-  | None -> (match o2 with
-      | None -> true
-      | Some _ -> false
-    )
-  | Some h1 -> (match o2 with
-      | None -> false
-      | Some h2 -> h1 = h2
-    )
-
 let updated_delegation_auction (state: checker) (new_auction: delegation_auction) =
   let prev_auction = state.delegation_auction in
   (* When we move to a new cycle, we accrue the amount that won delegation for
@@ -611,7 +600,7 @@ let updated_delegation_auction (state: checker) (new_auction: delegation_auction
   in
   let new_delegate = delegation_auction_delegate new_auction in
 
-  let ops = if option_delegate_eq state.delegate new_delegate then
+  let ops = if state.delegate = new_delegate then
       ([]: LigoOp.operation list)
     else [LigoOp.Tezos.set_delegate new_delegate]
   in
