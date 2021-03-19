@@ -343,6 +343,26 @@ let suite =
       bought_kit >= kit_to_mukit_nat min_kit_expected
     );
 
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"test_sell_kit_respects_min_tez_expected"
+        ~count:property_test_count
+        make_inputs_for_sell_kit_to_succeed
+      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let ops, _ = Checker.sell_kit checker (Tickets.kit_issue kit_amount) min_tez_expected deadline in
+      let bought_tez = match ops with
+        | [ Transaction (_, mutez, _) ] -> mutez
+        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      in
+      bought_tez >= min_tez_expected
+    );
+
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
         to set burrow fields such as `allow_all_kit_burns. While for testing purposes we could manually
         do this, it might make sense to wait until such an entrypoint exists before checking it in checker.ml
