@@ -130,7 +130,6 @@ type liquidation_details =
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
     expected_kit : kit;
-    min_kit_for_unwarranted : kit; (* If we get this many kit or more, the liquidation was unwarranted *)
     burrow_state : burrow;
   }
 
@@ -146,6 +145,8 @@ type liquidation_result =
   | Complete of liquidation_details
   (* complete: deplete the collateral AND the creation deposit *)
   | Close of liquidation_details
+
+val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit
 
 val show_liquidation_result : liquidation_result -> string
 val pp_liquidation_result : Format.formatter -> liquidation_result -> unit

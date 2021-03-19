@@ -329,7 +329,7 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
     {
       burrow = burrow_id;
       tez = details.tez_to_auction;
-      min_kit_for_unwarranted = details.min_kit_for_unwarranted;
+      min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow details.tez_to_auction;
       older = (
         match burrow_liquidation_slices burrow with
         | None -> (None : leaf_ptr option)
