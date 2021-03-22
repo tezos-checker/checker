@@ -575,14 +575,27 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
   let _ = ensure_no_tez_given () in
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
-  let three_parts = (state.liquidation_auctions, state.burrows, state.parameters) in
+  let
+    { burrows = state_burrows;
+      uniswap = state_uniswap;
+      parameters = state_parameters;
+      liquidation_auctions = state_liquidation_auctions;
+      delegation_auction = state_delegation_auction;
+      delegate = state_delegate;
+      last_price = state_last_price;
+    } = state in
+  let three_parts = (state_liquidation_auctions, state_burrows, state_parameters) in
   let new_ops, new_three_parts = touch_liquidation_slices_rec (([]: LigoOp.operation list), three_parts, slices) in
   let state_liquidation_auctions, state_burrows, state_parameters = new_three_parts in
   let new_state =
-    { state with
+    { burrows = state_burrows;
+      uniswap = state_uniswap;
+      parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      burrows = state_burrows;
-      parameters = state_parameters; } in
+      delegation_auction = state_delegation_auction;
+      delegate = state_delegate;
+      last_price = state_last_price;
+    } in
   assert_checker_invariants new_state;
   (new_ops, new_state)
 
@@ -854,14 +867,27 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (* NOTE: the order of the operations is reversed here (wrt to the order of
      * the slices), but hopefully we don't care in this instance about this. *)
     let ops, state =
-      let three_parts = (state.liquidation_auctions, state.burrows, state.parameters) in
+      let
+        { burrows = state_burrows;
+          uniswap = state_uniswap;
+          parameters = state_parameters;
+          liquidation_auctions = state_liquidation_auctions;
+          delegation_auction = state_delegation_auction;
+          delegate = state_delegate;
+          last_price = state_last_price;
+        } = state in
+      let three_parts = (state_liquidation_auctions, state_burrows, state_parameters) in
       let ops, new_three_parts = touch_oldest (ops, three_parts, number_of_slices_to_process) in
       let state_liquidation_auctions, state_burrows, state_parameters = new_three_parts in
       let new_state =
-        { state with
+        { burrows = state_burrows;
+          uniswap = state_uniswap;
+          parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
-          burrows = state_burrows;
-          parameters = state_parameters; } in
+          delegation_auction = state_delegation_auction;
+          delegate = state_delegate;
+          last_price = state_last_price;
+        } in
       (ops, new_state) in
 
     assert_checker_invariants state;
