@@ -72,7 +72,7 @@ let is_burrow_done_with_liquidations (avl_storage: mem) (burrow: burrow) =
      | None -> true
      | Some _ -> false)
 
-let find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
+let[@inline] find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
   match Ligo.Big_map.find_opt burrow_id burrows with
   | None -> (Ligo.failwith error_NonExistentBurrow : burrow)
   | Some burrow -> burrow
