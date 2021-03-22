@@ -478,6 +478,32 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
     (* TODO: Check if leaf_ptr's are valid *)
     let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
 
+    let state_liquidation_auctions =
+      let state_liquidation_auctions = state.liquidation_auctions in
+      (* Now we delete the slice from the lot, so it cannot be withdrawn twice,
+       * also to save storage. This might cause the lot root to change, so we
+       * also update completed_auctions to reflect that.
+       *
+       * Deletion process also returns the tree root. *)
+      let (state_liquidation_auctions, auction) =
+        let (new_storage, auction) = avl_del state_liquidation_auctions.avl_storage leaf_ptr in
+        ({ state_liquidation_auctions with avl_storage = new_storage }, auction) in
+
+      (* When the auction has no slices left, we pop it from the linked list
+       * of lots. We do not delete the auction itself from the storage, since
+       * we still want the winner to be able to claim its result. *)
+      let state_liquidation_auctions =
+        if avl_is_empty state_liquidation_auctions.avl_storage auction
+        then liquidation_auction_pop_completed_auction state_liquidation_auctions auction
+        else state_liquidation_auctions in
+
+      (* And we update the slices around it *)
+      let state_liquidation_auctions =
+        { state_liquidation_auctions with
+          avl_storage = update_immediate_neighbors state_liquidation_auctions.avl_storage leaf_ptr leaf
+        } in
+      state_liquidation_auctions in
+
     (* How much kit should be given to the burrow and how much should be burned. *)
     (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
      * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
@@ -509,32 +535,6 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
       (kit_sub corresponding_kit penalty, penalty)
     in
 
-    (* Burn the kit by removing it from circulation. *)
-    let state =
-      { state with
-        parameters = remove_circulating_kit state.parameters kit_to_burn } in
-
-    (* Now we delete the slice from the lot, so it cannot be
-     * withdrawn twice, also to save storage. This might cause
-     * the lot root to change, so we also update completed_auctions
-     * to reflect that.
-     *
-     * Deletion process also returns the tree root. *)
-    let (state, auction) =
-      let (new_storage, auction) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
-      let new_state = { state with liquidation_auctions = { state.liquidation_auctions with avl_storage = new_storage }} in
-      (new_state, auction) in
-
-    (* When the auction has no slices left, we pop it from the linked list of lots. We do not
-     * delete the auction itself from the storage, since we still want the winner to be able
-     * to claim its result. *)
-    let state =
-      if avl_is_empty state.liquidation_auctions.avl_storage auction then
-        { state with
-          liquidation_auctions = liquidation_auction_pop_completed_auction state.liquidation_auctions auction;
-        }
-      else state in
-
     (* When we delete the youngest or the oldest slice, we have to adjust
      * the burrow pointers accordingly.
      *
@@ -544,27 +544,26 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
      * the client would have to do a costly search across all the auction
      * queue to find at least one slice for the burrow.
     *)
-    let state =
-      { state with burrows =
-                     let burrow = match Ligo.Big_map.find_opt leaf.burrow state.burrows with
-                       | None -> (failwith "TODO: Check if this case can happen." : burrow)
-                       | Some b -> b
-                     in
-                     Ligo.Big_map.update
-                       leaf.burrow
-                       (Some (burrow_return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
-                       state.burrows
-      } in
+    let state_burrows =
+      let state_burrows = state.burrows in
+      let burrow = match Ligo.Big_map.find_opt leaf.burrow state_burrows with
+        | None -> (failwith "TODO: Check if this case can happen." : burrow)
+        | Some b -> b
+      in
+      Ligo.Big_map.update
+        leaf.burrow
+        (Some (burrow_return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
+        state_burrows in
 
-    (* And we update the slices around it *)
+    (* Burn the kit by removing it from circulation. *)
+    let state_parameters = remove_circulating_kit state.parameters kit_to_burn in
+
+    (* Update all storage state in one go. *)
     let state =
-      let state_liquidation_auctions_avl_storage = update_immediate_neighbors state.liquidation_auctions.avl_storage leaf_ptr leaf in
       { state with
-        liquidation_auctions = {
-          state.liquidation_auctions with
-          avl_storage = state_liquidation_auctions_avl_storage
-        }
-      } in
+        liquidation_auctions = state_liquidation_auctions;
+        burrows = state_burrows;
+        parameters = state_parameters; } in
 
     assert_checker_invariants state;
 
