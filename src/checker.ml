@@ -386,9 +386,7 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
  * to point to each other instead of the slice in question, so that it can be
  * removed. *)
 (* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-let update_immediate_neighbors (state: checker) (leaf_ptr: leaf_ptr) (leaf : liquidation_slice) =
-  (* only the storage is to be updated *)
-  let state_liquidation_auctions_avl_storage = state.liquidation_auctions.avl_storage in
+let update_immediate_neighbors (state_liquidation_auctions_avl_storage: mem) (leaf_ptr: leaf_ptr) (leaf: liquidation_slice) : mem =
   let leaf_older = leaf.older in
   let leaf_younger = leaf.younger in
   (* update the younger *)
@@ -417,13 +415,7 @@ let update_immediate_neighbors (state: checker) (leaf_ptr: leaf_ptr) (leaf : liq
              { older with younger = leaf_younger }
           )
   ) in
-  (* return updated state *)
-  { state with
-    liquidation_auctions = {
-      state.liquidation_auctions with
-      avl_storage = state_liquidation_auctions_avl_storage
-    }
-  }
+  state_liquidation_auctions_avl_storage
 
 (* Cancel the liquidation of a slice. The burden is on the caller to provide
  * both the burrow_id and the leaf_ptr. *)
@@ -458,7 +450,15 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
             burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
 
         (* And we update the slices around it *)
-        let state = update_immediate_neighbors state leaf_ptr leaf in
+        let state =
+          let state_liquidation_auctions_avl_storage = update_immediate_neighbors state.liquidation_auctions.avl_storage leaf_ptr leaf in
+          { state with
+            liquidation_auctions = {
+              state.liquidation_auctions with
+              avl_storage = state_liquidation_auctions_avl_storage
+            }
+          } in
+
         assert_checker_invariants state;
         let ops : LigoOp.operation list = [] in
         (ops, state)
@@ -557,7 +557,15 @@ let[@inline] touch_liquidation_slice (ops, state, leaf_ptr: LigoOp.operation lis
       } in
 
     (* And we update the slices around it *)
-    let state = update_immediate_neighbors state leaf_ptr leaf in
+    let state =
+      let state_liquidation_auctions_avl_storage = update_immediate_neighbors state.liquidation_auctions.avl_storage leaf_ptr leaf in
+      { state with
+        liquidation_auctions = {
+          state.liquidation_auctions with
+          avl_storage = state_liquidation_auctions_avl_storage
+        }
+      } in
+
     assert_checker_invariants state;
 
     (* Signal the burrow to send the tez to checker. *)
