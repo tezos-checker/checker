@@ -815,11 +815,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
   let _ = ensure_no_tez_given () in
   if state.parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
-    let kit_tokens = kit_issue kit_zero in (* zero reward *)
-    let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c (* TODO: perhaps don't transfer anything at all?? *)
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
-    ([op], state)
+    (([]: LigoOp.operation list), state)
   else
     (* TODO: What is the right order in which to do things here? We use the
      * last observed kit_in_tez price from uniswap to update the parameters,
