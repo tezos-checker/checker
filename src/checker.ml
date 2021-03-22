@@ -853,7 +853,6 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
      * without that restriction. *)
     let state =
       { state with
-        burrows = state.burrows; (* leave as-is *)
         parameters = updated_parameters;
         uniswap = updated_uniswap;
         liquidation_auctions = updated_liquidation_auctions;
