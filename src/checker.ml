@@ -420,48 +420,47 @@ let update_immediate_neighbors (state_liquidation_auctions_avl_storage: mem) (le
 (* Cancel the liquidation of a slice. The burden is on the caller to provide
  * both the burrow_id and the leaf_ptr. *)
 let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * checker) =
+  let state_liquidation_auctions = state.liquidation_auctions in
+  let state_liquidation_auctions_avl_storage = state_liquidation_auctions.avl_storage in
+
   let _ = ensure_no_tez_given () in
-  let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+  let leaf = avl_read_leaf state_liquidation_auctions_avl_storage leaf_ptr in
   let burrow_id = leaf.burrow in
   let burrow = find_burrow state.burrows burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if not (does_right_allow_cancelling_liquidations r) then
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
   else
-    let root = avl_find_root state.liquidation_auctions.avl_storage leaf_ptr in
-    if ptr_of_avl_ptr root <> ptr_of_avl_ptr state.liquidation_auctions.queued_slices
+    let root = avl_find_root state_liquidation_auctions_avl_storage leaf_ptr in
+    if ptr_of_avl_ptr root <> ptr_of_avl_ptr state_liquidation_auctions.queued_slices
     then (Ligo.failwith error_UnwarrantedCancellation : LigoOp.operation list * checker)
     else
-      let leaf = avl_read_leaf state.liquidation_auctions.avl_storage leaf_ptr in
+      let leaf = avl_read_leaf state_liquidation_auctions_avl_storage leaf_ptr in
       if burrow_is_overburrowed state.parameters burrow then
         (Ligo.failwith error_UnwarrantedCancellation : LigoOp.operation list * checker)
       else
-        let state =
-          let (new_storage, _) = avl_del state.liquidation_auctions.avl_storage leaf_ptr in
-          { state with
-            liquidation_auctions = {
-              state.liquidation_auctions with
-              avl_storage = new_storage }} in
-
         (* Return the tez to the burrow and update its pointers to liq. slices. *)
-        let burrow = burrow_return_slice_from_auction leaf_ptr leaf burrow in
-        let state =
-          { state with
-            burrows = Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows } in
+        let state_burrows =
+          let burrow = burrow_return_slice_from_auction leaf_ptr leaf burrow in
+          Ligo.Big_map.update leaf.burrow (Some burrow) state.burrows in
 
-        (* And we update the slices around it *)
+        (* Remove the slice from storage, and update the neighboring slices. *)
+        let state_liquidation_auctions_avl_storage =
+          let (state_liquidation_auctions_avl_storage, _) = avl_del state_liquidation_auctions_avl_storage leaf_ptr in
+          let state_liquidation_auctions_avl_storage = update_immediate_neighbors state_liquidation_auctions_avl_storage leaf_ptr leaf in
+          state_liquidation_auctions_avl_storage in
+
         let state =
-          let state_liquidation_auctions_avl_storage = update_immediate_neighbors state.liquidation_auctions.avl_storage leaf_ptr leaf in
           { state with
-            liquidation_auctions = {
-              state.liquidation_auctions with
-              avl_storage = state_liquidation_auctions_avl_storage
-            }
+            burrows = state_burrows;
+            liquidation_auctions =
+              { state_liquidation_auctions with
+                avl_storage = state_liquidation_auctions_avl_storage;
+              };
           } in
-
         assert_checker_invariants state;
-        let ops : LigoOp.operation list = [] in
-        (ops, state)
+
+        (([]:  LigoOp.operation list), state)
 
 let touch_liquidation_slice (ops, three_parts, leaf_ptr: LigoOp.operation list * redacted_checker * leaf_ptr) : (LigoOp.operation list * redacted_checker) =
   let state_liquidation_auctions, state_burrows, state_parameters = three_parts in
