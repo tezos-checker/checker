@@ -8,7 +8,6 @@ open UniswapTypes
 open Error
 
 let property_test_count = 100
-let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 (* Issue an arbitrary amount of kit (checker-issued) *)
 let arb_positive_kit_token = QCheck.map kit_issue TestArbitrary.arb_positive_kit
