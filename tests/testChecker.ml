@@ -553,20 +553,6 @@ let suite =
       Ligo.geq_nat_nat kit (kit_to_mukit_nat min_expected_kit)
     );
 
-    (* TODO: property: buy_kit should always return at least minimum expected kit *)
-    (*
-       for any specified minimum kit, buy_kit should return >= kit or fail if it can't
-
-       Given a transaction value T and uniswap U iwth U[kit] > min_expected, buy_kit should always return >= expected
-
-      try e with
-      | p1 -> e1
-      | ...
-      | pn -> en
-
-    *)
-    (* TODO: property: sell_kit should always return at least minimum expected kit *)
-
     ("buy_kit - returns expected kit" >::
      fun _ ->
        Ligo.Tezos.reset ();
