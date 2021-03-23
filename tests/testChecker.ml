@@ -7,7 +7,7 @@ open Tickets
 open Error
 open Ptr
 
-let property_test_count = 100
+let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
@@ -510,7 +510,7 @@ let suite =
       *)
       let max_buyable_kit = 997 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
-      let arb_tez = TestArbitrary.arb_tez in
+      let arb_tez = TestArbitrary.arb_small_tez in
 
       qcheck_to_ounit
       @@ QCheck.Test.make
@@ -531,7 +531,7 @@ let suite =
           kit = kit_of_mukit uniswap_kit;
         };
       } in
-      (* Calculte minimum tez to get the min_expected kit given the state of the uniswap defined above*)
+      (* Calculate minimum tez to get the min_expected kit given the state of the uniswap defined above*)
       let ratio_minimum_tez = div_ratio
           (ratio_of_nat uniswap_kit)
           (
@@ -549,7 +549,9 @@ let suite =
         | [ Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
       in
-
+      (* FIXME: This test only rarely evalautes the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
+       * number of QCheck samples may improve this.
+      *)
       Ligo.geq_nat_nat kit (kit_to_mukit_nat min_expected_kit)
     );
 
