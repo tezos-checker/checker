@@ -348,6 +348,40 @@ let suite =
 
       qcheck_to_ounit
       @@ QCheck.Test.make
+        ~name:"test_buy_kit_preserves_kit"
+        ~count:property_test_count
+        make_inputs_for_buy_kit_to_succeed
+      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let ops, new_checker = Checker.buy_kit checker min_kit_expected deadline in
+      let bought_kit = match ops with
+        | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
+        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      in
+      checker.uniswap.kit = kit_add new_checker.uniswap.kit (kit_of_mukit bought_kit)
+    );
+
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"test_buy_kit_preserves_tez"
+        ~count:property_test_count
+        make_inputs_for_buy_kit_to_succeed
+      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let _, new_checker = Checker.buy_kit checker min_kit_expected deadline in
+      Ligo.add_tez_tez checker.uniswap.tez tez_amount = new_checker.uniswap.tez
+    );
+
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
         ~name:"test_sell_kit_respects_min_tez_expected"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
@@ -361,6 +395,42 @@ let suite =
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
       bought_tez >= min_tez_expected
+    );
+
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"test_sell_kit_preserves_kit"
+        ~count:property_test_count
+        make_inputs_for_sell_kit_to_succeed
+      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let _, new_checker = Checker.sell_kit checker (Tickets.kit_issue kit_amount) min_tez_expected deadline in
+      kit_add checker.uniswap.kit kit_amount = new_checker.uniswap.kit
+    );
+
+    (
+      Ligo.Tezos.reset();
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"test_sell_kit_preserves_tez"
+        ~count:property_test_count
+        make_inputs_for_sell_kit_to_succeed
+      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      let ops, new_checker = Checker.sell_kit checker (Tickets.kit_issue kit_amount) min_tez_expected deadline in
+      let bought_tez = match ops with
+        | [ Transaction (_, mutez, _) ] -> mutez
+        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      in
+      Ligo.add_tez_tez new_checker.uniswap.tez bought_tez = checker.uniswap.tez
     );
 
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
