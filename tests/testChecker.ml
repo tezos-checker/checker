@@ -7,7 +7,7 @@ open Tickets
 open Error
 open Ptr
 
-let property_test_count = 1000
+let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
@@ -505,18 +505,24 @@ let suite =
     (
       let uniswap_kit = Ligo.nat_from_literal ("1_000n") in
       let uniswap_tez = Ligo.tez_from_literal ("1_000mutez") in
-      let max_buyable_kit = 998 in
+      (* The maximum amount of kit that you can buy with a finite amount of tez is
+       * (1 - fee) * uniswap.kit - 1
+      *)
+      let max_buyable_kit = 997 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
       let arb_tez = TestArbitrary.arb_tez in
 
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"buy_kit - todo"
+        ~name:"buy_kit - returns geq min_kit_expected kit for transactions with sufficient tez"
         ~count:property_test_count
         (QCheck.pair arb_kit arb_tez)
       @@ fun (min_expected_kit, additional_tez) ->
-      let open Ratio in
+
       Ligo.Tezos.reset();
+
+      (* Populate uniswap with initial liquidity *)
+      let open Ratio in
       let checker = {
         initial_checker with
         uniswap={
@@ -525,10 +531,7 @@ let suite =
           kit = kit_of_mukit uniswap_kit;
         };
       } in
-      (* TODO: Remove debug statements *)
-      (* let _ = Format.fprintf Format.std_formatter "<min kit expected = %s >" (show_kit min_expected_kit) in *)
-      (* let _ = Format.fprintf Format.std_formatter "<tez provided = %s >" (Ligo.string_of_tez tez_provided) in *)
-      (* Minimum tez to get the min_expected kit *)
+      (* Calculte minimum tez to get the min_expected kit given the state of the uniswap defined above*)
       let ratio_minimum_tez = div_ratio
           (ratio_of_nat uniswap_kit)
           (
@@ -538,8 +541,8 @@ let suite =
           ) in
       let minimum_tez = Ligo.mul_nat_tez (Ligo.abs (Common.cdiv_int_int ratio_minimum_tez.num ratio_minimum_tez.den)) (Ligo.tez_from_literal "1mutez") in
       (* Adjust transaction by a random amount of extra tez *)
-      let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez
-      in
+      let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
+
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_provided;
       let ops, _ = Checker.buy_kit checker min_expected_kit (Ligo.timestamp_from_seconds_literal 1) in
       let (_, (_, kit)), _ = match ops with
