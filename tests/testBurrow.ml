@@ -1,8 +1,8 @@
+open Error
+open FixedPoint
+open Kit
 open OUnit2
 open TestCommon
-open Kit
-open FixedPoint
-open Error
 
 let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
