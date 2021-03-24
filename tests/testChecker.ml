@@ -880,7 +880,7 @@ let suite =
 
        let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_bool "burrow should have no liquidation slices"
-         (Option.is_none (burrow_liquidation_slices result));
+         (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
 
        assert_equal
          (Ligo.tez_from_literal "0mutez")

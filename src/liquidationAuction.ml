@@ -83,14 +83,55 @@ open Error
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
  * when we start auctions.
 *)
-let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice) : (liquidation_auctions * leaf_ptr) =
+let liquidation_auction_send_to_auction
+  (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
+  : (liquidation_auctions * leaf_ptr) =
   if avl_height auctions.avl_storage auctions.queued_slices
      >= max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
+    let old_burrow_slices =  Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
+
+    let slice = {
+           contents = contents;
+           older = (
+             match old_burrow_slices with
+             | None -> (None : leaf_ptr option)
+             | Some i -> Some i.youngest_slice
+           );
+           younger = (None: leaf_ptr option);
+        } in
+
     let (new_storage, ret) =
       avl_push auctions.avl_storage auctions.queued_slices slice Left in
-    let new_state = { auctions with avl_storage = new_storage; } in
+
+    (* Fixup the previous youngest pointer since the newly added slice
+     * is even younger.
+     *)
+    let new_storage, new_burrow_slices = (
+      match old_burrow_slices with
+      | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
+      | Some old_slices ->
+        ( mem_update
+            new_storage
+            (ptr_of_leaf_ptr old_slices.youngest_slice)
+            (fun (older: node) ->
+               let older = node_leaf older in
+               Leaf { older with value = { older.value with younger = Some ret; }; }
+            )
+        , { old_slices with youngest_slice = ret }
+        )
+    ) in
+
+    let new_state =
+          { auctions with
+            avl_storage = new_storage;
+            burrow_slices =
+              Ligo.Big_map.add
+                contents.burrow
+                new_burrow_slices
+                auctions.burrow_slices;
+          } in
     (new_state, ret)
 
 (** Split a liquidation slice into two. We also have to split the
@@ -101,10 +142,10 @@ let liquidation_auction_send_to_auction (auctions: liquidation_auctions) (slice:
   * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
 let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
   assert (amnt > Ligo.tez_from_literal "0mutez");
-  assert (amnt < slice.tez);
+  assert (amnt < slice.contents.tez);
   (* general *)
-  let min_kit_for_unwarranted = kit_to_mukit_int slice.min_kit_for_unwarranted in
-  let slice_tez = tez_to_mutez slice.tez in
+  let min_kit_for_unwarranted = kit_to_mukit_int slice.contents.min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez slice.contents.tez in
   (* left slice *)
   let ltez = amnt in
   let lkit =
@@ -113,14 +154,25 @@ let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liqui
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
   (* right slice *)
-  let rtez = Ligo.sub_tez_tez slice.tez amnt in
+  let rtez = Ligo.sub_tez_tez slice.contents.tez amnt in
   let rkit =
     kit_of_fraction_ceil
       (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
-  ( { slice with tez = ltez; min_kit_for_unwarranted = lkit; },
-    { slice with tez = rtez; min_kit_for_unwarranted = rkit; }
+  (* FIXME: We also need to fixup the pointers here *)
+  ( { slice with
+      contents = { slice.contents with
+                   tez = ltez;
+                   min_kit_for_unwarranted = lkit;
+                 }
+    },
+    { slice with
+      contents = { slice.contents with
+                   tez = rtez;
+                   min_kit_for_unwarranted = rkit;
+                 }
+    }
   )
 
 let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold: Ligo.tez) =
@@ -241,7 +293,7 @@ let complete_liquidation_auction_if_possible
                 (fun (prev: auction_outcome option) ->
                    assert (Option.is_none prev);
                    Some outcome) in
-            (storage, {youngest=curr.contents;oldest=curr.contents})
+            (storage, {youngest=curr.contents; oldest=curr.contents})
           | Some params ->
             let {youngest=youngest; oldest=oldest} = params in
             let outcome =
@@ -302,6 +354,74 @@ let is_leading_current_liquidation_auction
        | Descending _ -> false)
     else false
   | None -> false
+
+(* removes the slice from liquidation_auctions, fixing up the necessary pointers.
+ * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
+ *)
+let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
+  let avl_storage = auctions.avl_storage in
+
+  (* pop the leaf from the storage *)
+  let leaf = avl_read_leaf avl_storage leaf_ptr in
+  let avl_storage, root_ptr = avl_del avl_storage leaf_ptr in
+
+  (* fixup burrow_slices *)
+  let burrow_slices = match Ligo.Big_map.find_opt leaf.contents.burrow auctions.burrow_slices with
+      | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
+      | Some s -> s in
+  let burrow_slices =
+    match leaf.younger with
+    | None -> begin
+      match leaf.older with
+      | None -> (* leaf *) (None: burrow_liquidation_slices option)
+      | Some older -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
+      end
+    | Some younger -> begin
+      match leaf.older with
+      | None -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
+      | Some _ -> (* ... - leaf - ... *) Some burrow_slices
+      end in
+
+  (* fixup older and younger pointers *)
+  let avl_storage = (
+    match leaf.younger with
+    | None -> avl_storage
+    | Some younger_ptr ->
+        avl_update_leaf
+          avl_storage
+          younger_ptr
+          (fun (younger: liquidation_slice) ->
+             assert (younger.older = Some leaf_ptr);
+             { younger with older = leaf.older }
+          )
+  ) in
+  let avl_storage = (
+    match leaf.older with
+    | None -> avl_storage
+    | Some older_ptr ->
+        avl_update_leaf
+          avl_storage
+          older_ptr
+          (fun (older: liquidation_slice) ->
+             assert (older.younger = Some leaf_ptr);
+             { older with younger = leaf.younger }
+          )
+  ) in
+
+  (* return *)
+  ( leaf.contents
+  , root_ptr
+  , { auctions with
+      avl_storage = avl_storage;
+      burrow_slices = Ligo.Big_map.update leaf.contents.burrow burrow_slices auctions.burrow_slices;
+    }
+  )
+
+let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =
+  let (contents, root, auctions) = pop_slice auctions leaf_ptr in
+  if ptr_of_avl_ptr root <> ptr_of_avl_ptr auctions.queued_slices
+  then (Ligo.failwith error_UnwarrantedCancellation : liquidation_slice_contents * liquidation_auctions)
+  else (contents, auctions)
 
 let completed_liquidation_auction_won_by
     (avl_storage: mem) (bid_details: liquidation_auction_bid): auction_outcome option =
@@ -391,6 +511,22 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
     avl_storage = storage
   }
 
+let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * auction_outcome * liquidation_auctions =
+  let (contents, root, auctions) = pop_slice auctions leaf_ptr in
+
+  (* When the auction has no slices left, we pop it from the linked list
+   * of lots. We do not delete the auction itself from the storage, since
+   * we still want the winner to be able to claim its result. *)
+  let auctions =
+     if avl_is_empty auctions.avl_storage root
+     then liquidation_auction_pop_completed_auction auctions root
+     else auctions in
+  let outcome =
+     match avl_root_data auctions.avl_storage root with
+     | None -> (Ligo.failwith error_NotACompletedSlice: auction_outcome)
+     | Some outcome -> outcome in
+  (contents, outcome, auctions)
+
 (* If successful, it consumes the ticket. *)
 let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
@@ -439,6 +575,16 @@ let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidatio
         let (leaf_ptr, _) = p in
         Some leaf_ptr
     end
+
+let is_burrow_done_with_liquidations (auctions: liquidation_auctions) (burrow: Ligo.address) =
+  match Ligo.Big_map.find_opt burrow auctions.burrow_slices with
+  | None -> true
+  | Some bs ->
+    let root = avl_find_root auctions.avl_storage bs.oldest_slice in
+    let outcome = avl_root_data auctions.avl_storage root in
+    (match outcome with
+     | None -> true
+     | Some _ -> false)
 
 (* BEGIN_OCAML *)
 

@@ -7,10 +7,15 @@ type avl_ptr = AVLPtr of ptr
 type leaf_ptr = LeafPtr of ptr
 [@@deriving show]
 
-type liquidation_slice = {
+type liquidation_slice_contents = {
   burrow: Ligo.address;
   tez: Ligo.tez;
   min_kit_for_unwarranted: kit;
+}
+[@@deriving show]
+
+type liquidation_slice = {
+  contents: liquidation_slice_contents;
   older: leaf_ptr option;
   younger: leaf_ptr option;
 }

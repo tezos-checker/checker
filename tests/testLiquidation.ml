@@ -63,7 +63,6 @@ let arbitrary_burrow (params: parameters) =
          ~adjustment_index:(compute_adjustment_index params)
          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
          ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-         ~liquidation_slices:None
     )
     arb_smart_tez_kit
 
@@ -283,7 +282,6 @@ let initial_burrow =
     ~adjustment_index:(compute_adjustment_index params)
     ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
     ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-    ~liquidation_slices:None
 
 (* Minimum amount of collateral for the burrow to be considered collateralized. *)
 let barely_not_overburrowed_test =
@@ -301,7 +299,6 @@ let barely_not_overburrowed_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is not overburrowed" (not (burrow_is_overburrowed params burrow));
     assert_bool "is not optimistically overburrowed" (not (burrow_is_optimistically_overburrowed params burrow));
@@ -331,7 +328,6 @@ let barely_overburrowed_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -361,7 +357,6 @@ let barely_non_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -391,7 +386,6 @@ let barely_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -414,7 +408,6 @@ let barely_liquidatable_test =
                 ~excess_kit:kit_zero
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "2_818_396mutez")
-                ~liquidation_slices:None
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -461,7 +454,6 @@ let barely_non_complete_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -484,7 +476,6 @@ let barely_non_complete_liquidatable_test =
                 ~excess_kit:kit_zero
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "4_060_000mutez")
-                ~liquidation_slices:None
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -529,7 +520,6 @@ let barely_complete_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -552,7 +542,6 @@ let barely_complete_liquidatable_test =
                 ~excess_kit:kit_zero
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "4_059_999mutez")
-                ~liquidation_slices:None
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -597,7 +586,6 @@ let barely_non_close_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -620,7 +608,6 @@ let barely_non_close_liquidatable_test =
                 ~excess_kit:kit_zero
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-                ~liquidation_slices:None
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -665,7 +652,6 @@ let barely_close_liquidatable_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
@@ -688,7 +674,6 @@ let barely_close_liquidatable_test =
                 ~excess_kit:kit_zero
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "999_999mutez")
-                ~liquidation_slices:None
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -731,7 +716,6 @@ let unwarranted_liquidation_unit_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
 
     assert_bool "is not overburrowed" (not (burrow_is_overburrowed params burrow));
@@ -763,7 +747,6 @@ let partial_liquidation_unit_test =
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "7_142_472mutez")
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-                ~liquidation_slices:None
           }
         ) in
 
@@ -808,7 +791,6 @@ let complete_liquidation_unit_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
 
     let expected_liquidation_result =
@@ -829,7 +811,6 @@ let complete_liquidation_unit_test =
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "8_990_000mutez")
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-                ~liquidation_slices:None
           }
         ) in
 
@@ -876,7 +857,6 @@ let complete_and_close_liquidation_test =
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-        ~liquidation_slices:None
     in
 
     let expected_liquidation_result =
@@ -897,7 +877,6 @@ let complete_and_close_liquidation_test =
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "999_000mutez")
                 ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-                ~liquidation_slices:None
           }
         ) in
 

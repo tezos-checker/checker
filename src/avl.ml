@@ -60,7 +60,7 @@ let[@inline] ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l
 
 let node_tez (n: node) : Ligo.tez =
   match n with
-  | Leaf leaf -> leaf.value.tez
+  | Leaf leaf -> leaf.value.contents.tez
   | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
   | Root _ -> (failwith "node_tez found Root" : Ligo.tez)
 
@@ -614,7 +614,7 @@ let rec ref_split_rec
   match mem_get mem curr_ptr with
   | Root _ -> (failwith "ref_split found Root" : mem * ptr option * ptr option)
   | Leaf leaf ->
-    if leaf.value.tez <= limit
+    if leaf.value.contents.tez <= limit
     then
       (* Case 1a. Single leaf with not too much tez in it. Include it. *)
       let mem = mem_update mem curr_ptr (node_set_parent ptr_null) in
