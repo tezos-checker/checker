@@ -10,6 +10,7 @@ open DelegationAuction
 open DelegationAuctionTypes
 open LiquidationAuction
 open LiquidationAuctionPrimitiveTypes
+open LiquidationAuctionTypes
 open Common
 open Constants
 open Tickets
@@ -462,15 +463,19 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
 
         (([]:  LigoOp.operation list), state)
 
-let touch_liquidation_slice (ops, three_parts, leaf_ptr: LigoOp.operation list * redacted_checker * leaf_ptr) : (LigoOp.operation list * redacted_checker) =
-  let state_liquidation_auctions, state_burrows, state_parameters = three_parts in
+let touch_liquidation_slice
+    (ops: LigoOp.operation list)
+    (state_liquidation_auctions: liquidation_auctions)
+    (state_burrows: burrow_map)
+    (leaf_ptr: leaf_ptr)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
 
   let root = avl_find_root state_liquidation_auctions.avl_storage leaf_ptr in
   match avl_root_data state_liquidation_auctions.avl_storage root with
   (* The slice does not belong to a completed auction, so we skip it. *)
   (* NOTE: Perhaps failing would be better than silently doing nothing here?
    * Not sure if there is any danger though. *)
-  | None -> (ops, three_parts)
+  | None -> (ops, state_liquidation_auctions, state_burrows, kit_zero)
   (* If it belongs to a completed auction, we delete the slice *)
   | Some outcome ->
     (* TODO: Check if leaf_ptr's are valid *)
@@ -551,24 +556,21 @@ let touch_liquidation_slice (ops, three_parts, leaf_ptr: LigoOp.operation list *
         (Some (burrow_return_kit_from_auction leaf_ptr leaf kit_to_repay burrow))
         state_burrows in
 
-    (* Burn the kit by removing it from circulation. *)
-    let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
-
-    (* Update all storage state in one go. *)
-    let three_parts = (state_liquidation_auctions, state_burrows, state_parameters) in
-
     (* Signal the burrow to send the tez to checker. *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" leaf.burrow : Ligo.tez LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.tez_transaction leaf.tez (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
-    ((op :: ops), three_parts)
+    ((op :: ops), state_liquidation_auctions, state_burrows, kit_to_burn)
 
-let rec touch_liquidation_slices_rec (ops, three_parts, slices: LigoOp.operation list * redacted_checker * leaf_ptr list) : (LigoOp.operation list * redacted_checker) =
+let rec touch_liquidation_slices_rec
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
   match slices with
-  | [] -> (ops, three_parts)
+  | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
   | x::xs ->
-    let new_ops, new_three_parts = touch_liquidation_slice (ops, three_parts, x) in
-    touch_liquidation_slices_rec (new_ops, new_three_parts, xs)
+    let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+      touch_liquidation_slice ops state_liquidation_auctions state_burrows x in
+    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs)
 
 let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
@@ -583,9 +585,11 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
       delegate = state_delegate;
       last_price = state_last_price;
     } = state in
-  let three_parts = (state_liquidation_auctions, state_burrows, state_parameters) in
-  let new_ops, new_three_parts = touch_liquidation_slices_rec (([]: LigoOp.operation list), three_parts, slices) in
-  let state_liquidation_auctions, state_burrows, state_parameters = new_three_parts in
+
+  let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
+    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, slices) in
+  let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
+
   let new_state =
     { burrows = state_burrows;
       uniswap = state_uniswap;
@@ -798,16 +802,18 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
     )
     (Ligo.mul_int_int den_tlr den_thr)
 
-let rec touch_oldest (ops, three_parts, maximum: LigoOp.operation list * redacted_checker * int) : (LigoOp.operation list * redacted_checker) =
+let rec touch_oldest
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * int)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
   if maximum <= 0 then
-    (ops, three_parts)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
   else
-    let state_liquidation_auctions, _state_burrows, _state_parameters = three_parts in
     match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-    | None -> (ops, three_parts)
+    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
     | Some leaf ->
-      let new_ops, new_three_parts = touch_liquidation_slice (ops, three_parts, leaf) in
-      touch_oldest (new_ops, new_three_parts, maximum - 1)
+      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+        touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
+      touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
 
 let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
@@ -870,9 +876,9 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           delegate = state_delegate;
           last_price = state_last_price;
         } = state in
-      let three_parts = (state_liquidation_auctions, state_burrows, state_parameters) in
-      let ops, new_three_parts = touch_oldest (ops, three_parts, number_of_slices_to_process) in
-      let state_liquidation_auctions, state_burrows, state_parameters = new_three_parts in
+      let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
+        touch_oldest (ops, state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
+      let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
           uniswap = state_uniswap;

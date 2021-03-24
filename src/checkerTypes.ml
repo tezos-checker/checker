@@ -28,7 +28,3 @@ let initial_checker =
     delegate = (None : Ligo.key_hash option);
     last_price = (None : Ligo.nat option);
   }
-
-(** The few components of checker's state needed when touching liquidation
-  * slices. *)
-type redacted_checker = liquidation_auctions * burrow_map * parameters
