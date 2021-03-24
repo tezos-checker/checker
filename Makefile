@@ -21,6 +21,7 @@ generated/michelson/storage.tz: generate-ligo
 	ligo compile-storage --now='2021-01-01T10:10:10Z' --protocol edo generated/ligo/main.mligo main initial_checker > generated/michelson/storage.tz
 
 test:
+	./tests/ensure-unique-errors.sh
 	dune runtest .
 
 test-coverage:

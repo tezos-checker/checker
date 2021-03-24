@@ -1,4 +1,4 @@
-#! env bash
+#! /usr/bin/env bash
 
 # This awk incantation exists with code 42 if there are duplicates, and 0 otherwise
 grep error_ src/error.ml | awk 'a[$7]++{exit 42}'
@@ -12,3 +12,5 @@ elif [ $ret == 0 ]; then
 else
 	echo "something else failed"
 fi
+
+exit $ret
