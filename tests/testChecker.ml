@@ -15,8 +15,6 @@ module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
-let property_test_count = 100
-
 (* Helper for creating new burrows and extracting their ID and admin ticket from the corresponding Ligo Ops *)
 let newly_created_burrow checker =
   let ops, checker = Checker.create_burrow checker None in
