@@ -295,7 +295,7 @@ let suite =
          )
     );
 
-    ("burrow_withdraw_tez - burrow has expected collateral" >::
+    ("burrow_withdraw_tez - burrow after successful withdrawal has expected collateral" >::
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -356,6 +356,69 @@ let suite =
         (fun () -> Burrow.burrow_withdraw_tez Parameters.initial_parameters tez_to_withdraw burrow);
       true
     );
+
+    ("burrow_mint_kit - burrow after successful minting has expected collateral" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~permission_version:(Ligo.nat_from_literal "0n")
+           ~allow_all_tez_deposits:false
+           ~allow_all_kit_burnings:false
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "100mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~liquidation_slices:None
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       let burrow = Burrow.burrow_mint_kit
+           Parameters.initial_parameters
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           burrow0 in
+
+       assert_equal
+         ~printer:show_kit
+         (kit_of_mukit (Ligo.nat_from_literal "2n"))
+         (Burrow.burrow_outstanding_kit burrow)
+    );
+
+    (
+      let collateral = 100 in
+      let outstanding_kit = 1 in
+      (* As of writing, the below calculation simplifies to floor(collateral * 10/21) *)
+      let burrowing_limit_kit = 47 in
+      let min_mint_to_overburrow = burrowing_limit_kit - outstanding_kit + 1 in
+      let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_mint_to_overburrow -- max_int) in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_mint_kit - fails when minting would cause the burrow to be overburrowed"
+        ~count:property_test_count
+        arb_kit
+      @@ fun mint_kit ->
+      let burrow = Burrow.make_burrow_for_test
+          ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal (string_of_int outstanding_kit ^ "n")))
+          ~excess_kit:kit_zero
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:(Ligo.tez_from_literal ((string_of_int collateral) ^ "mutez"))
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~liquidation_slices:None
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+      in
+
+      assert_raises
+        (Failure (Ligo.string_of_int error_MintKitFailure))
+        (fun () -> Burrow.burrow_mint_kit Parameters.initial_parameters mint_kit burrow);
+      true
+    );
+
 
     ("burrow_mint_kit - fails for a burrow which needs to be touched" >::
      fun _ ->
