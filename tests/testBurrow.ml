@@ -4,6 +4,9 @@ open Kit
 open FixedPoint
 open Error
 
+let property_test_count = 10000
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+
 let suite =
   "Burrow tests" >::: [
     ("burrow_burn_kit - fails for a burrow which needs to be touched" >::
@@ -290,6 +293,68 @@ let suite =
               (Ligo.tez_from_literal "1mutez")
               burrow0
          )
+    );
+
+    ("burrow_withdraw_tez - burrow has expected collateral" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~permission_version:(Ligo.nat_from_literal "0n")
+           ~allow_all_tez_deposits:false
+           ~allow_all_kit_burnings:false
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "100mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~liquidation_slices:None
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       let burrow = Burrow.burrow_withdraw_tez
+           Parameters.initial_parameters
+           (Ligo.tez_from_literal "1mutez")
+           burrow0 in
+
+       assert_equal
+         ~printer:Ligo.string_of_tez
+         (Ligo.tez_from_literal "99mutez")
+         (Burrow.burrow_collateral burrow)
+    );
+
+    (
+      let collateral = 100 in
+      let outstanding_kit = kit_of_mukit (Ligo.nat_from_literal ("1n")) in
+      (* As of writing, the below calculation simplifies to ceil(outstanding_kit * 21/10) *)
+      let burrowing_limit_tez = 3 in
+      let min_withdrawal_to_overburrow = (collateral - burrowing_limit_tez) + 1 in
+      let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(min_withdrawal_to_overburrow -- collateral) in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_withdraw_tez - fails when the withdrawal would cause the burrow to be overburrowed"
+        ~count:property_test_count
+        arb_tez
+      @@ fun tez_to_withdraw ->
+      let burrow = Burrow.make_burrow_for_test
+          ~outstanding_kit:outstanding_kit
+          ~excess_kit:kit_zero
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:(Ligo.tez_from_literal ((string_of_int collateral) ^ "mutez"))
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~liquidation_slices:None
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+      in
+
+      assert_raises
+        (Failure (Ligo.string_of_int error_WithdrawTezFailure))
+        (fun () -> Burrow.burrow_withdraw_tez Parameters.initial_parameters tez_to_withdraw burrow);
+      true
     );
 
     ("burrow_mint_kit - fails for a burrow which needs to be touched" >::
