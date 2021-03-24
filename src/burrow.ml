@@ -345,7 +345,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
   in
 
   (* numerator = tez_sf * den_lp * num_fm * num_mp * outstanding_kit
-               - kit_sf * den_mp * (num_lp * num_fm * collateral_at_auctions + den_lp * den_fm * collateral) *)
+     - kit_sf * den_mp * (num_lp * num_fm * collateral_at_auctions + den_lp * den_fm * collateral) *)
   let numerator =
     Ligo.sub_int_int
       (Ligo.mul_int_int
@@ -644,5 +644,10 @@ let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   let collateral = ratio_of_tez b.collateral in
   let minting_price = minting_price p in
   lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting optimistic_outstanding) minting_price)
+
+
+let burrow_outstanding_kit (b: burrow) : kit = b.outstanding_kit
+
+let burrow_excess_kit (b: burrow) : kit = b.excess_kit
 
 (* END_OCAML *)
