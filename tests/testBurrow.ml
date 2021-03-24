@@ -1,5 +1,5 @@
 open OUnit2
-(* open TestCommon *)
+open TestCommon
 open Kit
 open FixedPoint
 open Error
@@ -135,6 +135,84 @@ let suite =
 
        assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) (Burrow.burrow_outstanding_kit burrow);
        assert_equal ~printer:show_kit kit_zero (Burrow.burrow_excess_kit burrow)
+    );
+
+    ("burrow_set_delegate - fails for a burrow which needs to be touched" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~permission_version:(Ligo.nat_from_literal "0n")
+           ~allow_all_tez_deposits:false
+           ~allow_all_kit_burnings:false
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "0mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~liquidation_slices:None
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () ->
+            Burrow.burrow_set_delegate
+              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+              (Some charles_key_hash)
+              burrow0
+         )
+    );
+
+    ("burrow_set_allow_all_tez_deposits - fails for a burrow which needs to be touched" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~permission_version:(Ligo.nat_from_literal "0n")
+           ~allow_all_tez_deposits:false
+           ~allow_all_kit_burnings:false
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "0mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~liquidation_slices:None
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () ->
+            Burrow.burrow_set_allow_all_tez_deposits
+              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+              burrow0
+              true
+         )
+    );
+
+    ("burrow_set_allow_all_kit_burns - fails for a burrow which needs to be touched" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~permission_version:(Ligo.nat_from_literal "0n")
+           ~allow_all_tez_deposits:false
+           ~allow_all_kit_burnings:false
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "0mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~liquidation_slices:None
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () ->
+            Burrow.burrow_set_allow_all_kit_burns
+              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+              burrow0
+              true
+         )
     );
 
   ]
