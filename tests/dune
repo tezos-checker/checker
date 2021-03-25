@@ -3,6 +3,7 @@
  (modules
   Tests
   TestAvl
+  TestBurrow
   TestFixedPoint
   TestTez
   TestKit

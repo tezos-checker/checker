@@ -183,4 +183,10 @@ val make_burrow_for_test :
   * current minting price, but that all these liquidations were actually
   * warranted. *)
 val burrow_is_optimistically_overburrowed : parameters -> burrow -> bool
+
+(* Additional record accessor for testing purposes only *)
+val burrow_outstanding_kit : burrow -> kit
+
+(* Additional record accessor for testing purposes only *)
+val burrow_excess_kit : burrow -> kit
 (* END_OCAML *)

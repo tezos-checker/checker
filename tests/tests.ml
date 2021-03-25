@@ -7,6 +7,7 @@ let suite =
     TestTez.suite;
     TestKit.suite;
     TestAvl.suite;
+    TestBurrow.suite;
     TestParameters.suite;
     TestLiquidation.suite;
     TestUniswap.suite;
