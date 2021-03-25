@@ -167,7 +167,7 @@ let suite =
          )
     );
 
-    ("burrow_deposit_tez - burrow after successful deposit has expected collateral" >::
+    ("burrow_deposit_tez - burrow after successful deposit has expected collateral and excess" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -182,7 +182,11 @@ let suite =
        assert_equal
          ~printer:Ligo.string_of_tez
          (Ligo.tez_from_literal "101mutez")
-         (Burrow.burrow_collateral burrow)
+         (Burrow.burrow_collateral burrow);
+       assert_equal
+         ~printer:show_kit
+         kit_zero
+         (Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_withdraw_tez - fails for a burrow which needs to be touched" >::
@@ -257,6 +261,52 @@ let suite =
          )
     );
 
+    ("burrow_activate - fails for a burrow which is already active" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_BurrowIsAlreadyActive))
+         (fun () ->
+            Burrow.burrow_activate
+              Parameters.initial_parameters
+              Constants.creation_deposit
+              (make_test_burrow
+                 ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+                 ~collateral:(Ligo.tez_from_literal "1mutez")
+                 ~active:true
+              )
+         )
+    );
+
+    ("burrow_activate - fails when one less tez than creation deposit provided" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_InsufficientFunds))
+         (fun () ->
+            Burrow.burrow_activate
+              Parameters.initial_parameters
+              (Ligo.sub_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "1mutez"))
+              (make_test_burrow
+                 ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+                 ~collateral:(Ligo.tez_from_literal "1mutez")
+                 ~active:true
+              )
+         )
+    );
+
+    ("burrow_activate - passes with creation deposit tez for a burrow which is inactive" >::
+     fun _ ->
+       let burrow = Burrow.burrow_activate
+           Parameters.initial_parameters
+           Constants.creation_deposit
+           (make_test_burrow
+              ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~active:false
+           )
+       in
+       assert_bool "burrow was not flagged as active after calling burrow_activate" (Burrow.burrow_active burrow)
+    );
+
     ("burrow_deactivate - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises
@@ -265,6 +315,76 @@ let suite =
             Burrow.burrow_deactivate
               {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
               burrow_for_needs_touch_tests
+         )
+    );
+
+    ("burrow_deactivate - fails for a burrow which is already inactive" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_DeactivatingAnInactiveBurrow))
+         (fun () ->
+            Burrow.burrow_deactivate
+              Parameters.initial_parameters
+              (make_test_burrow
+                 ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+                 ~collateral:(Ligo.tez_from_literal "1mutez")
+                 ~active:false
+              )
+         )
+    );
+
+    ("burrow_deactivate - fails for a burrow which has outstanding kit" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_DeactivatingWithOutstandingKit))
+         (fun () ->
+            Burrow.burrow_deactivate
+              Parameters.initial_parameters
+              (make_test_burrow
+                 ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+                 ~collateral:(Ligo.tez_from_literal "10mutez")
+                 ~active:true
+              )
+         )
+    );
+
+    ("burrow_deactivate - fails for a burrow which is overburrowed" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_DeactivatingAnOverburrowedBurrow))
+         (fun () ->
+            Burrow.burrow_deactivate
+              Parameters.initial_parameters
+              (make_test_burrow
+                 ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10n"))
+                 ~collateral:(Ligo.tez_from_literal "1mutez")
+                 ~active:true
+              )
+         )
+    );
+
+    ("burrow_deactivate - fails for a burrow which has collateral at auction" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_DeactivatingWithCollateralAtAuctions))
+         (fun () ->
+            Burrow.burrow_deactivate
+              Parameters.initial_parameters
+              (
+                Burrow.make_burrow_for_test
+                  ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+                  ~excess_kit:kit_zero
+                  ~active:true
+                  ~permission_version:(Ligo.nat_from_literal "0n")
+                  ~allow_all_tez_deposits:false
+                  ~allow_all_kit_burnings:false
+                  ~delegate:None
+                  ~collateral:(Ligo.tez_from_literal "10mutez")
+                  ~adjustment_index:fixedpoint_one
+                  ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
+                  ~liquidation_slices:None
+                  ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+              )
          )
     );
 
@@ -392,6 +512,5 @@ let suite =
         (Ligo.add_tez_tez (Burrow.burrow_collateral burrow0) tez_to_deposit)
         (Burrow.burrow_collateral burrow);
       true
-    );
-
+    )
   ]
