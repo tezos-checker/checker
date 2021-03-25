@@ -167,6 +167,24 @@ let suite =
          )
     );
 
+    ("burrow_deposit_tez - burrow after successful deposit has expected collateral" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "100mutez") in
+
+       let burrow = Burrow.burrow_deposit_tez
+           Parameters.initial_parameters
+           (Ligo.tez_from_literal "1mutez")
+           burrow0 in
+
+       assert_equal
+         ~printer:Ligo.string_of_tez
+         (Ligo.tez_from_literal "101mutez")
+         (Burrow.burrow_collateral burrow)
+    );
+
     ("burrow_withdraw_tez - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises
@@ -346,6 +364,33 @@ let suite =
       assert_raises
         (Failure (Ligo.string_of_int error_WithdrawTezFailure))
         (fun () -> Burrow.burrow_withdraw_tez Parameters.initial_parameters tez_to_withdraw burrow);
+      true
+    );
+
+    (* =========================================================================================== *)
+    (* Other property tests *)
+    (* =========================================================================================== *)
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_deposit_tez - increases burrow collateral by exactly deposit amount"
+        ~count:property_test_count
+        TestArbitrary.arb_tez
+      @@ fun tez_to_deposit ->
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+          ~active:true
+          ~collateral:(Ligo.tez_from_literal "100mutez") in
+
+      let burrow = Burrow.burrow_deposit_tez
+          Parameters.initial_parameters
+          tez_to_deposit
+          burrow0 in
+
+      assert_equal
+        ~printer:Ligo.string_of_tez
+        (Ligo.add_tez_tez (Burrow.burrow_collateral burrow0) tez_to_deposit)
+        (Burrow.burrow_collateral burrow);
       true
     );
 
