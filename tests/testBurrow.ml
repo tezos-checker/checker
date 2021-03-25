@@ -20,7 +20,6 @@ let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_f
     ~collateral:collateral
     ~adjustment_index:fixedpoint_one
     ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-    ~liquidation_slices:None
     ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
 
 (* A burrow with fixed parameters which was last touched at 0s. Use for tests which check

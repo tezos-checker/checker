@@ -67,11 +67,13 @@ let avl_from_list (mem: mem) (root_data: auction_outcome option) (elements: liqu
   (add_all mem root elements, root)
 
 let mk_liquidation_slice (n: int): liquidation_slice =
-  { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
+  { contents =
+      { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
+      ; min_kit_for_unwarranted = kit_zero
+      ; burrow = Ligo.address_of_string "someburrow"
+      }
   ; older = None
   ; younger = None
-  ; burrow = Ligo.address_of_string "someburrow"
-  ; min_kit_for_unwarranted = kit_zero
   }
 
 let rec range (f: int) (t: int) =
@@ -297,9 +299,9 @@ let suite =
        match xs with
        | [] -> ([], [])
        | x :: xs ->
-         if x.tez <= lim
+         if x.contents.tez <= lim
          then
-           match split_list (Ligo.sub_tez_tez lim x.tez) xs with
+           match split_list (Ligo.sub_tez_tez lim x.contents.tez) xs with
              (l, r) -> (x::l, r)
          else
            ([], x::xs)
