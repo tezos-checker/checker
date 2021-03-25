@@ -29,6 +29,7 @@ let burrow_for_needs_touch_tests = make_test_burrow
     ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
     ~collateral:(Ligo.tez_from_literal "0mutez")
     ~active:true
+
 let suite =
   "Burrow tests" >::: [
     ("burrow_burn_kit - fails for a burrow which needs to be touched" >::
@@ -74,7 +75,6 @@ let suite =
        assert_equal ~printer:show_kit kit_zero (Burrow.burrow_outstanding_kit burrow);
        assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) (Burrow.burrow_excess_kit burrow)
     );
-
 
     ("burrow_burn_kit - burning less than outstanding_kit returns burrow with expected excess and outstanding kit" >::
      fun _ ->
