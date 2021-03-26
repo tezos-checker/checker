@@ -512,5 +512,58 @@ let suite =
         (Ligo.add_tez_tez (Burrow.burrow_collateral burrow0) tez_to_deposit)
         (Burrow.burrow_collateral burrow);
       true
+    );
+
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_deactivate - all collateral is extracted from burrow"
+        ~count:property_test_count
+        TestArbitrary.arb_tez
+      @@ fun collateral_balance_tez ->
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+          ~active:true
+          ~collateral:collateral_balance_tez in
+
+      let burrow, returned_tez = Burrow.burrow_deactivate
+          Parameters.initial_parameters
+          burrow0 in
+
+      assert_equal
+        ~printer:Ligo.string_of_tez
+        (Ligo.tez_from_literal ("0mutez"))
+        (Burrow.burrow_collateral burrow);
+      assert_equal
+        ~printer:Ligo.string_of_tez
+        (Ligo.add_tez_tez Constants.creation_deposit collateral_balance_tez)
+        returned_tez;
+      true
+    );
+
+    (
+      let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(1_000_000 -- max_int) in
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_deactivate / burrow_activate - no collateral lost in re-activation round-trip"
+        ~count:property_test_count
+        arb_tez
+      @@ fun starting_collateral ->
+      (* Start with an active burrow with some tez collateral *)
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+          ~active:true
+          ~collateral:starting_collateral in
+
+      (* Deactivate the burrow *)
+      let deactivated_burrow, tez = Burrow.burrow_deactivate Parameters.initial_parameters burrow0 in
+      (* Reactivate it with the tez returned from deactivating it *)
+      let burrow = Burrow.burrow_activate Parameters.initial_parameters tez deactivated_burrow in
+
+      assert_equal
+        ~printer:Ligo.string_of_tez
+        starting_collateral
+        (Burrow.burrow_collateral burrow);
+      true
     )
   ]
