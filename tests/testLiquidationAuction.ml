@@ -25,7 +25,6 @@ let suite =
            burrow = burrow_id_1;
            tez = Ligo.tez_from_literal "2_000_000mutez";
            min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_000n"); (* note: randomly chosen *)
-           younger = None; older = None;
          } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
@@ -73,19 +72,19 @@ let suite =
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_001n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_002n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_003n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
@@ -100,19 +99,19 @@ let suite =
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "4_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_004n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_005n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "3_000_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_006n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
@@ -127,7 +126,7 @@ let suite =
            auctions
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "2_000_000mutez";
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_007n"); (* note: randomly chosen *)
-             younger = None; older = None; } in
+           } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        let bidder = Ligo.address_from_literal "23456" in

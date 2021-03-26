@@ -3,6 +3,8 @@
 set -o errexit
 set -o pipefail
 
+cd "$(realpath "$(dirname "$0")")/../"
+
 inputs=(
   error
   ptr

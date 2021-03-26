@@ -5,6 +5,8 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
+cd "$(realpath "$(dirname "$0")")/../"
+
 arg="$1"
 
 tezos-client call testcontract from bob \
