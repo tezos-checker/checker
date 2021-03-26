@@ -399,6 +399,21 @@ let suite =
          )
     );
 
+    ("burrow_increase_permission_version - permission version in burrow state matches returned permission version" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "1mutez") in
+
+       let new_version, burrow = Burrow.burrow_increase_permission_version Parameters.initial_parameters burrow0 in
+
+       assert_equal
+         ~printer:Ligo.string_of_nat
+         new_version
+         (Burrow.burrow_permission_version burrow)
+    );
+
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises
@@ -551,7 +566,7 @@ let suite =
       @@ fun starting_collateral ->
       (* Start with an active burrow with some tez collateral *)
       let burrow0 = make_test_burrow
-          ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
+          ~outstanding_kit:kit_zero
           ~active:true
           ~collateral:starting_collateral in
 
@@ -565,5 +580,36 @@ let suite =
         starting_collateral
         (Burrow.burrow_collateral burrow);
       true
-    )
+    );
+
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_increase_permission_version - increases burrow permission version by exactly one"
+        ~count:property_test_count
+        TestArbitrary.arb_nat
+      @@ fun initial_permission_version ->
+
+      let burrow0 = Burrow.make_burrow_for_test
+          ~outstanding_kit:kit_zero
+          ~excess_kit:kit_zero
+          ~active:true
+          ~permission_version:initial_permission_version
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:(Ligo.tez_from_literal "1mutez")
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~liquidation_slices:None
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+      let new_permission_version, _ = Burrow.burrow_increase_permission_version Parameters.initial_parameters burrow0 in
+
+      assert_equal
+        ~printer:Ligo.string_of_int
+        (Ligo.int_from_literal "1")
+        (Ligo.sub_nat_nat new_permission_version initial_permission_version);
+      true
+    );
   ]
