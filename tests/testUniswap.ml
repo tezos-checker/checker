@@ -8,57 +8,29 @@ open UniswapTypes
 open Error
 
 let property_test_count = 100
-let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 (* Issue an arbitrary amount of kit (checker-issued) *)
 let arb_positive_kit_token = QCheck.map kit_issue TestArbitrary.arb_positive_kit
 
-(* Issue an arbitrary number of liquidity tokens (checker-issued) *)
-let arb_liquidity = QCheck.map (fun x -> Ligo.abs (Ligo.int_from_literal (string_of_int x))) QCheck.(0 -- max_int)
+(* Compute the current price of kit in tez, as estimated using the ratio of tez and kit
+ * currently in the uniswap contract. *)
+let uniswap_kit_in_tez (u: uniswap) =
+  div_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
 
-(* Create an arbitrary state for the uniswap contract (NB: some values are fixed). *)
-let arbitrary_non_empty_uniswap (kit_in_tez_in_prev_block: ratio) (last_level: Ligo.nat) =
-  QCheck.map
-    (fun (tez, kit, lqt) ->
-       (tez, kit, lqt, uniswap_make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level)
-    )
-    (QCheck.triple TestArbitrary.arb_positive_tez TestArbitrary.arb_positive_kit arb_liquidity)
+(* Compute the current product of kit and tez, using the current contents of the uniswap
+ * contract. *)
+let uniswap_kit_times_tez (u: uniswap) =
+  mul_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
 
-(* amount >= uniswap_tez * (1 - fee) / fee *)
-(* 1mukit <= min_kit_expected < FLOOR{amount * (uniswap_kit / (uniswap_tez + amount)) * FACTOR} *)
-(* NB: some values are fixed *)
-let make_inputs_for_buy_kit_to_succeed =
-  QCheck.map
-    (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
-    (fun (tez, _kit, _lqt, uniswap) ->
-       let amount =
-         let { num = x_num; den = x_den; } =
-           div_ratio (mul_ratio (ratio_of_tez tez) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee in
-         fraction_to_tez_ceil x_num x_den in
-       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in (* absolute minimum *)
-       let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (uniswap, amount, min_kit_expected, deadline)
-    )
-    (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level)
+(* Reveal the current number of liquidity tokens extant. *)
+let uniswap_liquidity_tokens_extant (u: uniswap) = u.lqt
 
-(* kit >= uniswap_kit * (1 - fee) / fee *)
-(* 1mutez <= min_tez_expected < FLOOR{kit * (uniswap_tez / (uniswap_kit + kit)) * FACTOR} *)
-(* NB: some values are fixed *)
-let make_inputs_for_sell_kit_to_succeed =
-  QCheck.map
-    (* NOTE: this could still give us tough numbers I think. Due to _tez being ignored. *)
-    (fun (_tez, kit, _lqt, uniswap) ->
-       let amount = (Ligo.tez_from_literal "0mutez") in
-       let token =
-         let { num = x_num; den = x_den; } =
-           div_ratio (mul_ratio (kit_to_ratio kit) (sub_ratio one_ratio Constants.uniswap_fee)) Constants.uniswap_fee in
-         kit_of_fraction_ceil x_num x_den
-       in
-       let min_tez_expected = Ligo.tez_from_literal "1mutez" in (* absolute minimum *)
-       let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (uniswap, amount, token, min_tez_expected, deadline)
-    )
-    (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level)
+let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
+  Ligo.eq_tez_tez u1.tez u2.tez
+  && kit_compare u1.kit u2.kit = 0
+  && Ligo.eq_nat_nat u1.lqt u2.lqt
+  && eq_ratio_ratio u1.kit_in_tez_in_prev_block u2.kit_in_tez_in_prev_block
+  && Ligo.eq_nat_nat u1.last_level u2.last_level
 
 (* amount > 0xtz *)
 (* max_kit_deposited = CEIL{kit * amount / tez} *)
@@ -190,6 +162,44 @@ let test_buy_kit_does_not_affect_liquidity =
     uniswap_buy_kit uniswap amount min_kit_expected deadline in
   uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
 
+(* If successful, uniswap_buy_kit respects min_kit_expected. *)
+let test_buy_kit_respects_min_kit_expected =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_respects_min_kit_expected"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let bought_kit, _new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  bought_kit >= min_kit_expected
+
+(* If successful, uniswap_buy_kit doesn't lose kit.
+ * Note that, because kits are isomorphic to naturals,
+ * this also means that uniswap_buy_kit doesn't return more kit than uniswap had. *)
+let test_buy_kit_preserves_kit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_preserves_kit"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let bought_kit, new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  uniswap.kit = kit_add new_uniswap.kit bought_kit
+
+(* If successful, uniswap_buy_kit doesn't lose tez. *)
+let test_buy_kit_preserves_tez =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_buy_kit_preserves_tez"
+    ~count:property_test_count
+    make_inputs_for_buy_kit_to_succeed
+  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_uniswap =
+    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  Ligo.add_tez_tez uniswap.tez amount = new_uniswap.tez
+
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
 (* ************************************************************************* *)
@@ -264,6 +274,32 @@ let buy_kit_unit_test =
            (Ligo.tez_from_literal "1_000_000mutez")
            (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
+      );
+
+    (* No tez given: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
+      (fun () ->
+         uniswap_buy_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* No kit expected: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BuyKitTooLowExpectedKit))
+      (fun () ->
+         uniswap_buy_kit
+           uniswap
+           (Ligo.tez_from_literal "1mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.timestamp_from_seconds_literal 10)
       )
 
 (* ************************************************************************* *)
@@ -278,9 +314,9 @@ let test_sell_kit_decreases_price =
     ~name:"test_sell_kit_decreases_price"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
   let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
   lt_ratio_ratio (uniswap_kit_in_tez new_uniswap) (uniswap_kit_in_tez uniswap)
 
 (* If successful, uniswap_sell_kit always increases the product
@@ -291,9 +327,9 @@ let test_sell_kit_increases_product =
     ~name:"test_sell_kit_increases_product"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
   let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
   gt_ratio_ratio (uniswap_kit_times_tez new_uniswap) (uniswap_kit_times_tez uniswap)
 
 (* Successful or not, uniswap_sell_kit should never affect the number of
@@ -304,10 +340,46 @@ let test_sell_kit_does_not_affect_liquidity =
     ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, amount, token, min_tez_expected, deadline) ->
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
   let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap amount token min_tez_expected deadline in
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
   uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
+
+(* If successful, uniswap_sell_kit respects min_tez_expected. *)
+let test_sell_kit_respects_min_tez_expected =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_respects_min_tez_expected"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let bought_tez, _new_uniswap =
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
+  bought_tez >= min_tez_expected
+
+(* If successful, selling kit preserves kit. *)
+let test_sell_kit_preserves_kit =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_preserves_kit"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let _bought_tez, new_uniswap =
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
+  new_uniswap.kit = kit_add uniswap.kit kit_amount
+
+(* If successful, selling kit preserves tez. *)
+let test_sell_kit_preserves_tez =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_sell_kit_preserves_tez"
+    ~count:property_test_count
+    make_inputs_for_sell_kit_to_succeed
+  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let bought_tez, new_uniswap =
+    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
+  Ligo.add_tez_tez new_uniswap.tez bought_tez = uniswap.tez
 
 (* ************************************************************************* *)
 (*                          sell_kit (unit tests)                            *)
@@ -375,6 +447,7 @@ let sell_kit_unit_test =
       );
 
     (* Low expectations but too late (tight): fail *)
+    Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_UniswapTooLate))
@@ -385,6 +458,48 @@ let sell_kit_unit_test =
            kit_one
            (Ligo.tez_from_literal "1_663_333mutez")
            (Ligo.timestamp_from_seconds_literal 1)
+      );
+
+    (* No kit given: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           (Ligo.tez_from_literal "1_663_333mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* No tez expected: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_SellKitTooLowExpectedTez))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "0mutez")
+           kit_one
+           (Ligo.tez_from_literal "0mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
+      );
+
+    (* Some tez transferred: fail *)
+    Ligo.Tezos.reset ();
+    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_SellKitNonEmptyAmount))
+      (fun () ->
+         uniswap_sell_kit
+           uniswap
+           (Ligo.tez_from_literal "10mutez")
+           kit_one
+           (Ligo.tez_from_literal "100mutez")
+           (Ligo.timestamp_from_seconds_literal 10)
       )
 
 (* ************************************************************************* *)
@@ -745,12 +860,18 @@ let suite =
     test_buy_kit_increases_price;
     test_buy_kit_increases_product;
     test_buy_kit_does_not_affect_liquidity;
+    test_buy_kit_respects_min_kit_expected;
+    test_buy_kit_preserves_kit;
+    test_buy_kit_preserves_tez;
 
     (* sell_kit *)
     sell_kit_unit_test;
     test_sell_kit_decreases_price;
     test_sell_kit_increases_product;
     test_sell_kit_does_not_affect_liquidity;
+    test_sell_kit_respects_min_tez_expected;
+    test_sell_kit_preserves_kit;
+    test_sell_kit_preserves_tez;
 
     (* add_liquidity (first) *)
     (* TODO: add unit tests and property-based random tests *)

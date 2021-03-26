@@ -49,7 +49,7 @@ let uniswap_buy_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (tez_amount = Ligo.tez_from_literal "0mutez") then
-    (Ligo.failwith error_UniswapNonPositiveInput : (kit * uniswap))
+    (Ligo.failwith error_BuyKitNoTezGiven : (kit * uniswap))
   else if (!Ligo.Tezos.now >= deadline) then
     (Ligo.failwith error_UniswapTooLate : (kit * uniswap))
   else if (min_kit_expected = kit_zero) then
@@ -95,7 +95,7 @@ let uniswap_sell_kit
   let uniswap = uniswap_sync_last_observed uniswap in
   let uniswap = uniswap_assert_initialized uniswap in (* DON'T DROP! *)
   if (kit_amount = kit_zero) then
-    (Ligo.failwith error_UniswapNonPositiveInput : (Ligo.tez * uniswap))
+    (Ligo.failwith error_SellKitNoKitGiven : (Ligo.tez * uniswap))
   else if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_UniswapTooLate : (Ligo.tez * uniswap))
   else if tez_amount <> Ligo.tez_from_literal "0mutez" then
@@ -262,28 +262,3 @@ let uniswap_add_accrued_kit (uniswap: uniswap) (accrual: kit) : uniswap =
 let uniswap_add_accrued_tez (uniswap: uniswap) (accrual: Ligo.tez) : uniswap =
   let uniswap = uniswap_sync_last_observed uniswap in
   { uniswap with tez = Ligo.add_tez_tez uniswap.tez accrual }
-
-(* BEGIN_OCAML *)
-let uniswap_make_for_test ~tez ~kit ~lqt ~kit_in_tez_in_prev_block ~last_level =
-  { tez = tez;
-    kit = kit;
-    lqt = lqt;
-    kit_in_tez_in_prev_block = kit_in_tez_in_prev_block;
-    last_level = last_level;
-  }
-
-let uniswap_kit_in_tez (u: uniswap) =
-  div_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
-
-let uniswap_kit_times_tez (u: uniswap) =
-  mul_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
-
-let uniswap_liquidity_tokens_extant (u: uniswap) = u.lqt
-
-let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
-  Ligo.eq_tez_tez u1.tez u2.tez
-  && kit_compare u1.kit u2.kit = 0
-  && Ligo.eq_nat_nat u1.lqt u2.lqt
-  && eq_ratio_ratio u1.kit_in_tez_in_prev_block u2.kit_in_tez_in_prev_block
-  && Ligo.eq_nat_nat u1.last_level u2.last_level
-(* END_OCAML *)

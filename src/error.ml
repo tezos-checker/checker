@@ -4,11 +4,13 @@ let[@inline] error_UniswapTooLate                                  : Ligo.int = 
 let[@inline] error_BuyKitTooLowExpectedKit                         : Ligo.int = Ligo.int_from_literal "3"
 let[@inline] error_BuyKitPriceFailure                              : Ligo.int = Ligo.int_from_literal "4"
 let[@inline] error_BuyKitTooMuchKitBought                          : Ligo.int = Ligo.int_from_literal "5"
+let[@inline] error_BuyKitNoTezGiven                                : Ligo.int = Ligo.int_from_literal "72"
 
 let[@inline] error_SellKitNonEmptyAmount                           : Ligo.int = Ligo.int_from_literal "6"
 let[@inline] error_SellKitTooLowExpectedTez                        : Ligo.int = Ligo.int_from_literal "7"
 let[@inline] error_SellKitPriceFailure                             : Ligo.int = Ligo.int_from_literal "8"
 let[@inline] error_SellKitTooMuchTezBought                         : Ligo.int = Ligo.int_from_literal "9"
+let[@inline] error_SellKitNoKitGiven                               : Ligo.int = Ligo.int_from_literal "71"
 
 let[@inline] error_AddLiquidityNoTezGiven                          : Ligo.int = Ligo.int_from_literal "10"
 let[@inline] error_AddLiquidityNoKitGiven                          : Ligo.int = Ligo.int_from_literal "11"
