@@ -70,8 +70,15 @@ let[@inline] find_burrow (burrows: burrow_map) (burrow_id: burrow_id) : burrow =
 (* Looks up a burrow_id from state, and checks if the resulting burrow does
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
-let ensure_burrow_has_no_unclaimed_slices (auctions: liquidation_auctions) (burrow_id: burrow_id) : unit =
-  if is_burrow_done_with_liquidations auctions burrow_id
+let ensure_burrow_has_no_unclaimed_slices (checker: checker) (burrow_id: burrow_id) : unit =
+  let auctions = checker.liquidation_auctions in
+  let f = match Ligo.Big_map.find_opt IsBurrowDoneWithLiquidations checker.lazy_functions with
+          | None -> (failwith "incomplete lazy function storage": ty_is_burrow_done_with_liquidations)
+          | Some f -> (match (Ligo.Bytes.unpack f: ty_is_burrow_done_with_liquidations option) with
+                      | None -> (failwith "can't parse lazy function": ty_is_burrow_done_with_liquidations)
+                      | Some f -> f)
+          in
+  if f auctions burrow_id
   then ()
   else Ligo.failwith error_BurrowHasCompletedLiquidation
 
@@ -133,7 +140,7 @@ let touch_burrow (state: checker) (burrow_id: burrow_id) : (LigoOp.operation lis
 
 let deposit_tez (state: checker) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
@@ -154,7 +161,7 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
 let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (kit: kit) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
@@ -178,7 +185,7 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
 let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
@@ -194,7 +201,7 @@ let withdraw_tez (state: checker) (permission: permission) (tez: Ligo.tez) (burr
 let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow_id) (kit: kit_token) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let kit = ensure_valid_kit_token kit in (* destroyed *)
   let is_allowed =
     if burrow_allow_all_kit_burnings burrow then
@@ -222,7 +229,7 @@ let burn_kit (state: checker) (permission: permission option) (burrow_id: burrow
 
 let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can activate burrows. *)
@@ -238,7 +245,7 @@ let activate_burrow (state: checker) (permission: permission) (burrow_id: burrow
 let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
@@ -254,7 +261,7 @@ let deactivate_burrow (state: checker) (permission: permission) (burrow_id: burr
 let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: burrow_id) (delegate_opt: Ligo.key_hash option) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
@@ -270,7 +277,7 @@ let set_burrow_delegate (state: checker) (permission: permission) (burrow_id: bu
 let make_permission (state: checker) (permission: permission) (burrow_id: burrow_id) (right: rights) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can create permissions. *)
@@ -285,7 +292,7 @@ let make_permission (state: checker) (permission: permission) (burrow_id: burrow
 let invalidate_all_permissions (state: checker) (permission: permission) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state burrow_id in
   let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
   if is_admin_right r then
     (* only admins can invalidate all permissions. *)
@@ -323,8 +330,14 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
       min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
     } in
 
+    let f = match Ligo.Big_map.find_opt LiquidationAuctionSendToAuction state.lazy_functions with
+            | None -> (failwith "incomplete lazy function storage": ty_liquidation_auction_send_to_auction)
+            | Some f -> (match (Ligo.Bytes.unpack f: ty_liquidation_auction_send_to_auction option) with
+                        | None -> (failwith "can't parse lazy function": ty_liquidation_auction_send_to_auction)
+                        | Some f -> f)
+            in
   let (updated_liquidation_auctions, _) =
-    liquidation_auction_send_to_auction state.liquidation_auctions contents in
+    f state.liquidation_auctions contents in
 
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () liquidation_reward c
@@ -341,7 +354,13 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
 (* Cancel the liquidation of a slice. *)
 let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
+  let f = match Ligo.Big_map.find_opt LiquidationAuctionCancelSlice state.lazy_functions with
+          | None -> (failwith "incomplete lazy function storage": ty_liquidation_auction_cancel_slice)
+          | Some f -> (match (Ligo.Bytes.unpack f: ty_liquidation_auction_cancel_slice option) with
+                      | None -> (failwith "can't parse lazy function": ty_liquidation_auction_cancel_slice)
+                      | Some f -> f)
+            in
+  let (cancelled, auctions) = f state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
   let r = ensure_valid_permission permission cancelled.burrow (burrow_permission_version burrow) in
   if not (does_right_allow_cancelling_liquidations r) then
@@ -361,9 +380,10 @@ let touch_liquidation_slice
     (auctions: liquidation_auctions)
     (state_burrows: burrow_map)
     (leaf_ptr: leaf_ptr)
+    (pop_completed_slice: ty_liquidation_auction_pop_completed_slice)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
 
-  let slice, outcome, auctions = liquidation_auctions_pop_completed_slice auctions leaf_ptr in
+  let slice, outcome, auctions = pop_completed_slice auctions leaf_ptr in
 
   (* How much kit should be given to the burrow and how much should be burned. *)
   (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
@@ -413,17 +433,26 @@ let touch_liquidation_slice
   ((op :: ops), auctions, state_burrows, kit_to_burn)
 
 let rec touch_liquidation_slices_rec
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices, pop_completed_slice
+      : LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list * ty_liquidation_auction_pop_completed_slice)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
   match slices with
   | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
   | x::xs ->
     let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
-      touch_liquidation_slice ops state_liquidation_auctions state_burrows x in
-    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs)
+      touch_liquidation_slice ops state_liquidation_auctions state_burrows x pop_completed_slice in
+    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs, pop_completed_slice)
 
 let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
+
+  let pop_completed_slice = match Ligo.Big_map.find_opt LqdtAuctionPopCompletedSlice state.lazy_functions with
+          | None -> (failwith "incomplete lazy function storage": ty_liquidation_auction_pop_completed_slice)
+          | Some f -> (match (Ligo.Bytes.unpack f: ty_liquidation_auction_pop_completed_slice option) with
+                      | None -> (failwith "can't parse lazy function": ty_liquidation_auction_pop_completed_slice)
+                      | Some f -> f)
+            in
+
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
   let
@@ -434,10 +463,11 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
       delegation_auction = state_delegation_auction;
       delegate = state_delegate;
       last_price = state_last_price;
+      lazy_functions = state_lazy_functions;
     } = state in
 
   let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, slices) in
+    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, slices, pop_completed_slice) in
   let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
 
   let new_state =
@@ -448,6 +478,7 @@ let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) :
       delegation_auction = state_delegation_auction;
       delegate = state_delegate;
       last_price = state_last_price;
+      lazy_functions = state_lazy_functions;
     } in
   assert_checker_invariants new_state;
   (new_ops, new_state)
@@ -653,7 +684,8 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
     (Ligo.mul_int_int den_tlr den_thr)
 
 let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * int)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum, pop_completed_slice
+      : LigoOp.operation list * liquidation_auctions * burrow_map * kit * int * ty_liquidation_auction_pop_completed_slice)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
   if maximum <= 0 then
     (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
@@ -662,8 +694,8 @@ let rec touch_oldest
     | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
     | Some leaf ->
       let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
-        touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
-      touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
+        touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf pop_completed_slice in
+      touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1, pop_completed_slice)
 
 let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
@@ -694,8 +726,14 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let updated_uniswap = uniswap_add_accrued_kit state.uniswap total_accrual_to_uniswap in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)
+    let f = match Ligo.Big_map.find_opt LiquidationAuctionTouch state.lazy_functions with
+            | None -> (failwith "incomplete lazy function storage": ty_liquidation_auction_touch)
+            | Some f -> (match (Ligo.Bytes.unpack f: ty_liquidation_auction_touch option) with
+                        | None -> (failwith "can't parse lazy function": ty_liquidation_auction_touch)
+                        | Some f -> f)
+            in
     let updated_liquidation_auctions =
-      liquidation_auction_touch
+      f
         state.liquidation_auctions
         (* Start the auction using the current liquidation price. We could
          * also have calculated the price right now directly using the oracle
@@ -716,6 +754,12 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (* TODO: Figure out how many slices we can process per checker touch.*)
     (* NOTE: the order of the operations is reversed here (wrt to the order of
      * the slices), but hopefully we don't care in this instance about this. *)
+    let pop_completed_slice = match Ligo.Big_map.find_opt LqdtAuctionPopCompletedSlice state.lazy_functions with
+            | None -> (failwith "incomplete lazy function storage": ty_liquidation_auction_pop_completed_slice)
+            | Some f -> (match (Ligo.Bytes.unpack f: ty_liquidation_auction_pop_completed_slice option) with
+                        | None -> (failwith "can't parse lazy function": ty_liquidation_auction_pop_completed_slice)
+                        | Some f -> f)
+                in
     let ops, state =
       let
         { burrows = state_burrows;
@@ -725,9 +769,10 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           delegation_auction = state_delegation_auction;
           delegate = state_delegate;
           last_price = state_last_price;
+          lazy_functions = state_lazy_functions;
         } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-        touch_oldest (ops, state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
+        touch_oldest (ops, state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process, pop_completed_slice) in
       let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
@@ -737,6 +782,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           delegation_auction = state_delegation_auction;
           delegate = state_delegate;
           last_price = state_last_price;
+          lazy_functions = state_lazy_functions;
         } in
       (ops, new_state) in
 
