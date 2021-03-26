@@ -409,7 +409,10 @@ let suite =
        assert_equal
          ~printer:Ligo.string_of_nat
          new_version
-         (Burrow.burrow_permission_version burrow)
+         (Burrow.burrow_permission_version burrow);
+       assert_bool
+         "New permission version was equal to the original permission version"
+         (not (new_version = (Burrow.burrow_permission_version burrow0)))
     );
 
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
