@@ -91,7 +91,7 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
-let rebalance_kit (b: burrow) : burrow =
+let[@inline] rebalance_kit (b: burrow) : burrow =
   let kit_to_move = kit_min b.outstanding_kit b.excess_kit in
   { b with
     outstanding_kit = kit_sub b.outstanding_kit kit_to_move;
@@ -108,18 +108,17 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
   then
     burrow
   else
-    let b = rebalance_kit burrow in
     let current_adjustment_index = compute_adjustment_index p in
-    { b with
+    { burrow with
       outstanding_kit =
         kit_of_fraction_ceil
           (Ligo.mul_int_int
-             (kit_to_mukit_int b.outstanding_kit)
+             (kit_to_mukit_int burrow.outstanding_kit)
              (fixedpoint_to_raw current_adjustment_index)
           )
           (Ligo.mul_int_int
              kit_scaling_factor_int
-             (fixedpoint_to_raw b.adjustment_index)
+             (fixedpoint_to_raw burrow.adjustment_index)
           );
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
@@ -147,7 +146,7 @@ let burrow_return_kit_from_auction
     { burrow with
       excess_kit = kit_add burrow.excess_kit kit;
       collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction slice.tez;
-   }
+    }
 
 let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
   if tez < creation_deposit
