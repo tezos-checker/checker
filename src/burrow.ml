@@ -186,6 +186,7 @@ let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
 let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
+  (* TODO [Dorran]: This ain't right if the burrow is in a state with excess kit *)
   let burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
   if burrow_is_overburrowed p burrow
   then (Ligo.failwith error_MintKitFailure : burrow)
