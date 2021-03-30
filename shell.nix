@@ -20,6 +20,7 @@ pkgs.mkShell {
     ++ [ pkgs.niv ]
     ++ (with pkgs.ocamlPackages; [
       ocaml
+      ocaml-lsp
       dune_2
       findlib # Lets merlin see packages like ounit
       ocp-indent
