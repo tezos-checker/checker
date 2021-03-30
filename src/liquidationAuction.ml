@@ -620,6 +620,7 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
 (* ************************************************************************* *)
 
 let[@inline] liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let auctions = complete_liquidation_auction_if_possible auctions in
   let auctions = start_liquidation_auction_if_possible price auctions in
   (([]: LigoOp.operation list), auctions)
@@ -628,12 +629,14 @@ let[@inline] liquidation_auction_touch (auctions: liquidation_auctions) (price: 
  * not have any completed liquidation slices that need to be claimed before
  * any operation. *)
 let[@inline] ensure_no_unclaimed_slices (auctions: liquidation_auctions) (burrow_id: Ligo.address) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   (* FIXME: Ensure that Tezos.sender is no other but checker. *)
   if is_burrow_done_with_liquidations auctions burrow_id
   then (([]: LigoOp.operation list), auctions)
   else (Ligo.failwith error_BurrowHasCompletedLiquidation : LigoOp.operation list * liquidation_auctions)
 
 let[@inline] send_slice_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice_contents) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   (* FIXME: Ensure that Tezos.sender is no other but checker. *)
   let ops = ([]: LigoOp.operation list) in
   let auctions = liquidation_auction_send_to_auction auctions slice in
@@ -643,13 +646,13 @@ let[@inline] send_slice_to_auction (auctions: liquidation_auctions) (slice: liqu
   * perform all changes on the liquidation auction side, we have to pass the
   * remaining data to checker to perform the rest of the changes. *)
 let[@inline] liquidation_auction_cancel_liquidation_slice (auctions: liquidation_auctions) (permission: permission) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * liquidation_auctions) =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice auctions leaf_ptr in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%cancelSliceLiquidation" checker_public_address : (permission * liquidation_slice_contents) LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.permission_slice_transaction (permission, cancelled) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureCancelSliceLiquidation : LigoOp.operation) in
   ([op], auctions)
-
 
 let touch_liquidation_slice
     (ops: LigoOp.operation list)
@@ -713,6 +716,7 @@ let rec touch_liquidation_slices_rec
 (* FIXME: I don't think we should allow this list to be "too long". After
  * all, it's a user that chooses it, and the user can always be malicious. *)
 let[@inline] liquidation_auction_touch_liquidation_slices (auctions: liquidation_auctions) (slices: leaf_ptr list) : (LigoOp.operation list * liquidation_auctions) =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
@@ -739,6 +743,7 @@ let rec touch_oldest_rec
       touch_oldest_rec (new_ops, new_state_liquidation_auctions, (d::ds), kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
 
 let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auctions) : (LigoOp.operation list * liquidation_auctions) =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   (* FIXME: Ensure that Tezos.sender is no other but checker. *)
   (* TODO: Figure out how many slices we can process per checker touch.*)
   let ops, auctions, ds, kit_to_burn =
@@ -758,6 +763,7 @@ let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auct
   * too low. If successful, return a ticket which can be used to
   * reclaim the kit when outbid. *)
 let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: liquidation_auctions) (kit: kit_token) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * We should check against checker's address, not Tezos.self_address. *)
@@ -777,6 +783,7 @@ let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: 
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 let[@inline] checker_liquidation_auction_reclaim_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * We should check against checker's address, not Tezos.self_address. *)
@@ -792,6 +799,7 @@ let[@inline] checker_liquidation_auction_reclaim_bid (state_liquidation_auctions
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
 let[@inline] checker_liquidation_auction_reclaim_winning_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * We should check against checker's address, not Tezos.self_address. *)
