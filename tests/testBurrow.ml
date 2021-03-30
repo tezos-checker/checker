@@ -521,9 +521,6 @@ let suite =
         else
           (kit_zero, burrow_kit, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat kit_to_mint))
       in
-      (* TODO: Remove this once test fix is implemented *)
-      let _ = Format.fprintf Format.std_formatter "outstanding=%s, excess=%s, collateral=%s ||| " (show_kit outstanding) (show_kit excess) (Ligo.string_of_tez collateral) in
-      (* Note: this combination of burrow and parameters cause the adjustment to be just the identity *)
       let burrow0 = Burrow.make_burrow_for_test
           ~outstanding_kit:outstanding
           ~excess_kit:excess
