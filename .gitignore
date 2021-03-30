@@ -12,3 +12,4 @@ ligo/bench/*.tz
 
 # editors
 .vscode
+/result

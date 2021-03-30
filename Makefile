@@ -7,7 +7,7 @@ build-ocaml:
 
 generate-ligo:
 	mkdir -p generated/ligo
-	./scripts/generate-ligo.sh
+	sh ./scripts/generate-ligo.sh
 
 build-ligo: generated/michelson/main.tz generated/michelson/storage.tz
 
