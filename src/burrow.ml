@@ -196,12 +196,9 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
 let[@inline] burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let kit_to_burn = kit_min b.outstanding_kit k in
-  let kit_to_store = kit_sub k kit_to_burn in
   rebalance_kit
     { b with
-      outstanding_kit = kit_sub b.outstanding_kit kit_to_burn;
-      excess_kit = kit_add b.excess_kit kit_to_store;
+      excess_kit = kit_add b.excess_kit k;
     }
 
 (** Activate a currently inactive burrow. This operation will fail if either
