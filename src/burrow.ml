@@ -91,7 +91,7 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
-let[@inline] rebalance_kit (b: burrow) : burrow =
+let rebalance_kit (b: burrow) : burrow =
   let kit_to_move = kit_min b.outstanding_kit b.excess_kit in
   { b with
     outstanding_kit = kit_sub b.outstanding_kit kit_to_move;
