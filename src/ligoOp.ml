@@ -1,6 +1,8 @@
 open Ligo
 open BurrowTypes
 open Tickets
+open LiquidationAuctionPrimitiveTypes
+open Ratio
 
 (* contract *)
 
@@ -21,11 +23,18 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
+  | SliceTransactionValue : liquidation_slice_contents -> liquidation_slice_contents transaction_value
+  | PermissionSliceTransactionValue : (permission * liquidation_slice_contents) -> (permission * liquidation_slice_contents) transaction_value
+  | TlsDataTransactionValue : tls_data -> tls_data transaction_value
+  | RatioTransactionValue : ratio -> ratio transaction_value
 
 type tez_and_address = (tez * address)
 [@@deriving show]
 
 type key_hash_option = key_hash option
+[@@deriving show]
+
+type permission_and_slice = (permission * liquidation_slice_contents)
 [@@deriving show]
 
 let show_transaction_value : type parameter. parameter transaction_value -> String.t =
@@ -42,6 +51,10 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
     | OptKeyHashTransactionValue kho -> show_key_hash_option kho
     | TezTransactionValue tz -> string_of_tez tz
     | NatContractTransactionValue c -> show_contract c
+    | SliceTransactionValue slice -> show_liquidation_slice_contents slice
+    | PermissionSliceTransactionValue c -> show_permission_and_slice c
+    | TlsDataTransactionValue d -> show_tls_data d
+    | RatioTransactionValue r -> show_ratio r
 
 (* operation *)
 
@@ -85,6 +98,10 @@ module Tezos = struct
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
+  let slice_contents_transaction value tez contract = Transaction (SliceTransactionValue value, tez, contract)
+  let permission_slice_transaction value tez contract = Transaction (PermissionSliceTransactionValue value, tez, contract)
+  let tls_data_transaction value tez contract = Transaction (TlsDataTransactionValue value, tez, contract)
+  let ratio_transaction value tez contract = Transaction (RatioTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)

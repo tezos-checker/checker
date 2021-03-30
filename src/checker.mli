@@ -69,7 +69,7 @@ val mark_for_liquidation : checker -> burrow_id -> (LigoOp.operation list * chec
 (** Process the liquidation slices on completed liquidation auctions. Invalid
   * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
   * ignored. *)
-val touch_liquidation_slices : checker -> leaf_ptr list -> (LigoOp.operation list * checker)
+val touch_liquidation_slices : checker -> tls_data -> (LigoOp.operation list * checker)
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
   * both the burrow_id and the leaf_ptr. This operation can fail for several
@@ -80,7 +80,7 @@ val touch_liquidation_slices : checker -> leaf_ptr list -> (LigoOp.operation lis
   * - if the slice is part of an already completed auction,
   * - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : checker -> permission -> leaf_ptr -> (LigoOp.operation list * checker)
+val cancel_liquidation_slice : checker -> permission -> liquidation_slice_contents -> (LigoOp.operation list * checker)
 
 (** Perform maintainance tasks for the burrow. *)
 val touch_burrow : checker -> burrow_id -> (LigoOp.operation list * checker)
@@ -123,21 +123,6 @@ val remove_liquidity : checker -> liquidity -> Ligo.tez -> kit -> Ligo.timestamp
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-(** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
-  * too low. If successful, return a ticket which can be used to
-  * reclaim the kit when outbid. *)
-val checker_liquidation_auction_place_bid : checker -> kit_token -> (LigoOp.operation list * checker)
-
-(** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val checker_liquidation_auction_reclaim_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
-
-(** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val checker_liquidation_auction_reclaim_winning_bid : checker -> liquidation_auction_bid_ticket -> (LigoOp.operation list * checker)
-
-(* (\** Increase a failed bid for the current auction. *\)
- * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
- *   -> liquidation_auction_bid_ticket *)
-
 (** Receive a liquidation slice from a burrow; we gather the slices in the
   * checker contract, and the checker contract is responsible for transfering
   * the lot to the liquidation auction winner. *)
@@ -171,8 +156,8 @@ type params =
   | ActivateBurrow of (permission * burrow_id)
   | DeactivateBurrow of (permission * burrow_id)
   | MarkBurrowForLiquidation of burrow_id
-  | TouchLiquidationSlices of leaf_ptr list
-  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | TouchLiquidationSlices of tls_data
+  | CancelSliceLiquidation of (permission * liquidation_slice_contents)
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
@@ -183,9 +168,6 @@ type params =
   | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
   (* Liquidation Auction *)
-  | LiqAuctionPlaceBid of kit_token
-  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
-  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
   | ReceiveLiquidationSlice
   (* Delegation Auction *)
   | DelegationAuctionPlaceBid

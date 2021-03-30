@@ -1,3 +1,5 @@
+open Error
+
 (* Oracle data *)
 let oracle_address : Ligo.address = (Ligo.address_from_literal "KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr" : Ligo.address) (* FIXME: Use real address *)
 let oracle_entrypoint : string = "%getPriceTODO" (* FIXME: Use real entrypoint, when chosen *)
@@ -6,6 +8,10 @@ let oracle_entrypoint : string = "%getPriceTODO" (* FIXME: Use real entrypoint, 
 let level_to_cycle (t : Ligo.nat) = Ligo.div_nat_nat t (Ligo.nat_from_literal "4096n")
 
 let checker_address : Ligo.address = !Ligo.Tezos.self_address
+
+let auctions_public_address : Ligo.address = (Ligo.address_from_literal "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx" : Ligo.address) (* FIXME: Use real address *)
+
+let checker_public_address : Ligo.address = (Ligo.address_from_literal "KT1VYnz5peWhfPcpBiViBZXa6Z8na3gqdkZS" : Ligo.address) (* FIXME: Use real address *)
 
 (* OPERATIONS ON int *)
 let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
@@ -65,6 +71,14 @@ let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
 let min_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.leq_tez_tez x y then x else y
 let max_tez (x: Ligo.tez) (y: Ligo.tez) = if Ligo.geq_tez_tez x y then x else y
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
+
+(* Misc. *)
+
+(* Ensure that there is no tez given. To prevent accidental fund loss. *)
+let ensure_no_tez_given () =
+  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+  then Ligo.failwith error_UnwantedTezGiven
+  else ()
 
 (* BEGIN_OCAML *)
 let compare_int (i: Ligo.int) (j: Ligo.int) : Int.t =

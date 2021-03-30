@@ -1,6 +1,8 @@
 open Ligo
 open BurrowTypes
 open Tickets
+open LiquidationAuctionPrimitiveTypes
+open Ratio
 
 (* contract *)
 
@@ -26,6 +28,10 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
+  | SliceTransactionValue : liquidation_slice_contents -> liquidation_slice_contents transaction_value
+  | PermissionSliceTransactionValue : (permission * liquidation_slice_contents) -> (permission * liquidation_slice_contents) transaction_value
+  | TlsDataTransactionValue : tls_data -> tls_data transaction_value
+  | RatioTransactionValue : ratio -> ratio transaction_value
 
 (* operation *)
 
@@ -61,6 +67,10 @@ module Tezos : sig
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
   val tez_transaction : tez -> tez -> tez contract -> operation
   val nat_contract_transaction : nat contract -> tez -> nat contract contract -> operation
+  val slice_contents_transaction : liquidation_slice_contents -> tez -> liquidation_slice_contents contract -> operation
+  val permission_slice_transaction : (permission * liquidation_slice_contents) -> tez -> (permission * liquidation_slice_contents) contract -> operation
+  val tls_data_transaction : tls_data -> tez -> tls_data contract -> operation
+  val ratio_transaction : ratio ->tez -> ratio contract -> operation
 
   val get_entrypoint_opt : string -> address -> 'parameter contract option
   val get_contract_opt : address -> unit contract option (* could also leave it as a parameter *)

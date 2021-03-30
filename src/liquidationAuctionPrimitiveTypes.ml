@@ -14,6 +14,13 @@ type liquidation_slice_contents = {
 }
 [@@deriving show]
 
+type return_kit_data = liquidation_slice_contents * kit
+[@@deriving show]
+
+(* touch_liquidation_slice_data *)
+type tls_data = (return_kit_data list) * kit (* kit to burn *)
+[@@deriving show]
+
 type liquidation_slice = {
   contents: liquidation_slice_contents;
   older: leaf_ptr option;

@@ -85,10 +85,10 @@ open Error
 *)
 let liquidation_auction_send_to_auction
   (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
-  : (liquidation_auctions * leaf_ptr) =
+  : liquidation_auctions =
   if avl_height auctions.avl_storage auctions.queued_slices
      >= max_liquidation_queue_height then
-    (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
+    (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions)
   else
     let old_burrow_slices =  Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
 
@@ -123,16 +123,14 @@ let liquidation_auction_send_to_auction
         )
     ) in
 
-    let new_state =
-          { auctions with
-            avl_storage = new_storage;
-            burrow_slices =
-              Ligo.Big_map.add
-                contents.burrow
-                new_burrow_slices
-                auctions.burrow_slices;
-          } in
-    (new_state, ret)
+    { auctions with
+      avl_storage = new_storage;
+      burrow_slices =
+        Ligo.Big_map.add
+          contents.burrow
+          new_burrow_slices
+          auctions.burrow_slices;
+    }
 
 (** Split a liquidation slice into two. We also have to split the
   * min_kit_for_unwarranted so that we can evaluate the two auctions separately
@@ -551,12 +549,6 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
     )
   | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
 
-
-let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
-  (start_liquidation_auction_if_possible price
-     (complete_liquidation_auction_if_possible
-        auctions))
-
 (*
  * - Cancel auction
  *
@@ -622,3 +614,257 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
 
   ()
 (* END_OCAML *)
+
+(* ************************************************************************* *)
+(*                                ????????                                   *)
+(* ************************************************************************* *)
+
+let[@inline] liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : LigoOp.operation list * liquidation_auctions =
+  let auctions = complete_liquidation_auction_if_possible auctions in
+  let auctions = start_liquidation_auction_if_possible price auctions in
+  (([]: LigoOp.operation list), auctions)
+
+(* Looks up a burrow_id from state, and checks if the resulting burrow does
+ * not have any completed liquidation slices that need to be claimed before
+ * any operation. *)
+let[@inline] ensure_no_unclaimed_slices (auctions: liquidation_auctions) (burrow_id: Ligo.address) : LigoOp.operation list * liquidation_auctions =
+  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  if is_burrow_done_with_liquidations auctions burrow_id
+  then (([]: LigoOp.operation list), auctions)
+  else (Ligo.failwith error_BurrowHasCompletedLiquidation : LigoOp.operation list * liquidation_auctions)
+
+let[@inline] send_slice_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice_contents) : LigoOp.operation list * liquidation_auctions =
+  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  let ops = ([]: LigoOp.operation list) in
+  let auctions = liquidation_auction_send_to_auction auctions slice in
+  (ops, auctions)
+
+(** Cancel the liquidation of a slice. This is only half the story: after we
+  * perform all changes on the liquidation auction side, we have to pass the
+  * remaining data to checker to perform the rest of the changes. *)
+let[@inline] liquidation_auction_cancel_liquidation_slice (auctions: liquidation_auctions) (permission: permission) (leaf_ptr: leaf_ptr) : (LigoOp.operation list * liquidation_auctions) =
+  let _ = ensure_no_tez_given () in
+  let (cancelled, auctions) = liquidation_auctions_cancel_slice auctions leaf_ptr in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%cancelSliceLiquidation" checker_public_address : (permission * liquidation_slice_contents) LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.permission_slice_transaction (permission, cancelled) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureCancelSliceLiquidation : LigoOp.operation) in
+  ([op], auctions)
+
+
+let touch_liquidation_slice
+    (ops: LigoOp.operation list)
+    (auctions: liquidation_auctions)
+    (leaf_ptr: leaf_ptr)
+  : (LigoOp.operation list * liquidation_auctions * return_kit_data * kit) =
+
+  let slice, outcome, auctions = liquidation_auctions_pop_completed_slice auctions leaf_ptr in
+
+  (* How much kit should be given to the burrow and how much should be burned. *)
+  (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+   * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
+   * to truncation. That could be a problem; the extra kit, no matter how
+   * small, must be dealt with (e.g. be removed from the circulating kit).
+   *
+   *   kit_corresponding_to_slice =
+   *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
+   *   penalty =
+   *     CEIL (kit_corresponding_to_slice * penalty_percentage)  , if (corresponding_kit < leaf.min_kit_for_unwarranted)
+   *     zero                                                    , otherwise
+   *   kit_to_repay = kit_corresponding_to_slice - penalty
+  *)
+  let kit_to_repay, kit_to_burn =
+    let corresponding_kit =
+      kit_of_fraction_floor
+        (Ligo.mul_int_int (tez_to_mutez slice.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+        (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
+    in
+    let penalty =
+      let { num = num_lp; den = den_lp; } = liquidation_penalty in
+      if corresponding_kit < slice.min_kit_for_unwarranted then
+        kit_of_fraction_ceil
+          (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+          (Ligo.mul_int_int kit_scaling_factor_int den_lp)
+      else
+        kit_zero
+    in
+    (kit_sub corresponding_kit penalty, penalty)
+  in
+
+  (* Signal the burrow to send the tez to checker. *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" slice.burrow : Ligo.tez LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.tez_transaction slice.tez (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
+  ((op :: ops), auctions, (slice, kit_to_repay), kit_to_burn)
+
+let rec touch_liquidation_slices_rec
+    (ops, state_liquidation_auctions, ds, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * return_kit_data list * kit * leaf_ptr list)
+  : (LigoOp.operation list * liquidation_auctions * return_kit_data list * kit) =
+  match slices with
+  | [] -> (ops, state_liquidation_auctions, ds, old_kit_to_burn)
+  | x::xs ->
+    let new_ops, new_state_liquidation_auctions, d, new_kit_to_burn =
+      touch_liquidation_slice ops state_liquidation_auctions x in
+    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, (d::ds), kit_add old_kit_to_burn new_kit_to_burn, xs)
+
+(** Touch some liquidation slices. This is only half the story: after we
+  * perform all changes on the liquidation auction side, we have to pass the
+  * relevant data to checker so that it can (a) update the affected burrows,
+  * and (b) burn the necessary kit. *)
+(* FIXME: I don't think we should allow this list to be "too long". After
+ * all, it's a user that chooses it, and the user can always be malicious. *)
+let[@inline] liquidation_auction_touch_liquidation_slices (auctions: liquidation_auctions) (slices: leaf_ptr list) : (LigoOp.operation list * liquidation_auctions) =
+  let _ = ensure_no_tez_given () in
+  (* NOTE: the order of the operations is reversed here (wrt to the order of
+   * the slices), but hopefully we don't care in this instance about this. *)
+  let ops, auctions, ds, kit_to_burn =
+    touch_liquidation_slices_rec (([]: LigoOp.operation list), auctions, ([]: return_kit_data list), kit_zero, slices) in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%touchLiquidationSlices" checker_public_address : tls_data LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.tls_data_transaction (ds, kit_to_burn) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTouchLiquidationSlices : LigoOp.operation) in
+  (* FIXME: assert_checker_invariants new_state; *)
+  (* FIXME: the op should actually be AT THE END OF THE LIST. *)
+  ((op :: ops), auctions)
+
+let rec touch_oldest_rec
+    (ops, state_liquidation_auctions, ds, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * return_kit_data list * kit * int)
+  : (LigoOp.operation list * liquidation_auctions * return_kit_data list * kit) =
+  if maximum <= 0 then
+    (ops, state_liquidation_auctions, ds, old_kit_to_burn)
+  else
+    match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
+    | None -> (ops, state_liquidation_auctions, ds, old_kit_to_burn)
+    | Some leaf ->
+      let new_ops, new_state_liquidation_auctions, d, new_kit_to_burn =
+        touch_liquidation_slice ops state_liquidation_auctions leaf in
+      touch_oldest_rec (new_ops, new_state_liquidation_auctions, (d::ds), kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
+
+let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auctions) : (LigoOp.operation list * liquidation_auctions) =
+  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  (* TODO: Figure out how many slices we can process per checker touch.*)
+  let ops, auctions, ds, kit_to_burn =
+    touch_oldest_rec (([]: LigoOp.operation list), auctions, ([]: return_kit_data list), kit_zero, number_of_slices_to_process) in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%touchLiquidationSlices" checker_public_address : tls_data LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.tls_data_transaction (ds, kit_to_burn) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTouchLiquidationSlices : LigoOp.operation) in
+  (* FIXME: assert_checker_invariants new_state; *)
+  (* FIXME: the op should actually be AT THE END OF THE LIST. *)
+  ((op :: ops), auctions)
+
+(* ************************************************************************* *)
+(**                          LIQUIDATION AUCTIONS                            *)
+(* ************************************************************************* *)
+
+(** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
+  * too low. If successful, return a ticket which can be used to
+  * reclaim the kit when outbid. *)
+let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: liquidation_auctions) (kit: kit_token) : LigoOp.operation list * liquidation_auctions =
+  let _ = ensure_no_tez_given () in
+  (* FIXME: this cannot work correctly while in a contract that is not checker.
+   * We should check against checker's address, not Tezos.self_address. *)
+  let kit = ensure_valid_kit_token kit in (* destroyed *)
+
+  let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
+  let current_auction = liquidation_auction_get_current_auction state_liquidation_auctions in
+
+  let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
+  let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_content Ligo.ticket LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLABidTicket : LigoOp.operation) in
+  ( [op],
+    {state_liquidation_auctions with current_auction = Some new_current_auction;}
+  )
+
+(** Reclaim a failed bid for the current or a completed liquidation auction. *)
+let[@inline] checker_liquidation_auction_reclaim_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+  let _ = ensure_no_tez_given () in
+  (* FIXME: this cannot work correctly while in a contract that is not checker.
+   * We should check against checker's address, not Tezos.self_address. *)
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
+  let kit = liquidation_auction_reclaim_bid state_liquidation_auctions bid_details in
+  (* FIXME: this cannot work correctly while in a contract that is not checker.
+   * Shall we do the issuing and the validation on the liquidation auction contract side? *)
+  let kit_tokens = kit_issue kit in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
+  ([op], state_liquidation_auctions) (* FIXME: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
+
+(** Reclaim a winning bid for the current or a completed liquidation auction. *)
+let[@inline] checker_liquidation_auction_reclaim_winning_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+  let _ = ensure_no_tez_given () in
+  (* FIXME: this cannot work correctly while in a contract that is not checker.
+   * We should check against checker's address, not Tezos.self_address. *)
+  let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
+  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state_liquidation_auctions bid_details in
+  let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> LigoOp.Tezos.unit_transaction () tez c
+    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
+  ([op], liquidation_auctions)
+
+(* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
+ * *)
+
+(* (\** Increase a failed bid for the current auction. *\)
+ * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
+ *   -> liquidation_auction_bid_ticket *)
+
+(* ************************************************************************* *)
+(*                                CONTRACT                                   *)
+(* ************************************************************************* *)
+
+(* initial storage: liquidation_auction_empty
+ * invariants for storage: assert_liquidation_auction_invariants
+ *)
+
+type auction_storage = liquidation_auctions
+
+(* ENTRYPOINTS *)
+
+type auction_params =
+  (* Touch the liquidation auctions contract (e.g. start/finish auctions. *)
+  | LiqAuctionTouch of ratio (* starting price *)
+  (* Ensure that a burrow has no unclaimed slices: should only be invokable by checker. *)
+  | EnsureNoUnclaimedSlices of Ligo.address
+  (* Send a slice to liquidation: should only be invokable by checker. *)
+  | SendSliceToAuction of liquidation_slice_contents
+  (* Cancel the liquidation of a slice. *)
+  | CancelLiquidationOfSlice of (permission * leaf_ptr)
+  (* Touch a few liquidation slices *)
+  | LiqAuctionTouchSlices of (leaf_ptr list)
+  (* Touch the oldest X liquidation slices *)
+  | LiqAuctionTouchOldestSlices
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid of kit_token
+  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
+
+let liquidation_auction_main (op_and_state: auction_params * auction_storage) : LigoOp.operation list * auction_storage =
+  let op, state = op_and_state in
+  match op with
+  (* Touch the liquidation auctions contract (e.g. start/finish auctions. *)
+  | LiqAuctionTouch price ->
+    liquidation_auction_touch state price
+  (* Burrow operations *)
+  | EnsureNoUnclaimedSlices burrow_id ->
+    ensure_no_unclaimed_slices state burrow_id
+  (* Mark burrow for liquidation *)
+  | SendSliceToAuction slice ->
+    send_slice_to_auction state slice
+  (* Cancel the liquidation of a slice *)
+  | CancelLiquidationOfSlice p ->
+    let (permission, leaf_ptr) = p in
+    liquidation_auction_cancel_liquidation_slice state permission leaf_ptr
+  (* Touch a few liquidation slices *)
+  | LiqAuctionTouchSlices leaf_ptr_list ->
+    liquidation_auction_touch_liquidation_slices state leaf_ptr_list
+  (* Touch the oldest X liquidation slices *)
+  | LiqAuctionTouchOldestSlices (* no arguments *) ->
+    liquidation_auction_touch_oldest_slices state
+  (* Liquidation Auction *)
+  | LiqAuctionPlaceBid kit_token ->
+    checker_liquidation_auction_place_bid state kit_token
+  | LiqAuctionReclaimBid ticket ->
+    checker_liquidation_auction_reclaim_bid state ticket
+  | LiqAuctionReclaimWinningBid ticket ->
+    checker_liquidation_auction_reclaim_winning_bid state ticket

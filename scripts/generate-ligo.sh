@@ -103,6 +103,10 @@ for name in "${inputs[@]}"; do
     sed -E 's/Tezos\.opt_key_hash_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.tez_transaction/Tezos\.transaction/g' |
     sed -E 's/Tezos\.nat_contract_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.slice_contents_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.permission_slice_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.tls_data_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.ratio_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done

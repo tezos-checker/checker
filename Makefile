@@ -9,7 +9,7 @@ generate-ligo:
 	mkdir -p generated/ligo
 	sh ./scripts/generate-ligo.sh
 
-build-ligo: generated/michelson/main.tz generated/michelson/storage.tz
+build-ligo: generated/michelson/main.tz generated/michelson/storage.tz generated/michelson/auction.tz generated/michelson/auction_storage.tz
 
 generated/michelson/main.tz: generate-ligo
 	mkdir -p generated/michelson
@@ -19,6 +19,15 @@ generated/michelson/main.tz: generate-ligo
 generated/michelson/storage.tz: generate-ligo
 	mkdir -p generated/michelson
 	ligo compile-storage --now='2021-01-01T10:10:10Z' --protocol edo generated/ligo/main.mligo main initial_checker > generated/michelson/storage.tz
+
+generated/michelson/auction.tz: generate-ligo
+	mkdir -p generated/michelson
+	ligo compile-contract --protocol edo generated/ligo/main.mligo liquidation_auction_main --output-file generated/michelson/auction_main.tz
+	ligo measure-contract generated/ligo/main.mligo liquidation_auction_main
+
+generated/michelson/auction_storage.tz: generate-ligo
+	mkdir -p generated/michelson
+	ligo compile-storage --now='2021-01-01T10:10:10Z' --protocol edo generated/ligo/main.mligo liquidation_auction_main liquidation_auction_empty > generated/michelson/auction_storage.tz
 
 test:
 	./scripts/ensure-unique-errors.sh
