@@ -194,7 +194,7 @@ let[@inline] ensure_valid_permission
   : rights =
   let (issuer, ((tag, right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let is_valid =
-    issuer = checker_address
+    issuer = checker_public_address
     && tag = permission_tag
     && amnt = Ligo.nat_from_literal "0n"
     && version = burrow_permission_version
