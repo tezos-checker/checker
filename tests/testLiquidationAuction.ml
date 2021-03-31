@@ -131,13 +131,13 @@ let suite =
        (* Below minimum bid *)
        assert_raises
          (Failure (Ligo.string_of_int error_BidTooLow))
-         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_000_000n"); });
+         (fun () -> place_liquidation_auction_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_000_000n"); });
        (* Right below minimum bid *)
        assert_raises
          (Failure (Ligo.string_of_int error_BidTooLow))
-         (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_999_999n"); });
+         (fun () -> place_liquidation_auction_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_999_999n"); });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
-       let (current, _) = liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "2_000_000n"); } in
+       let (current, _) = place_liquidation_auction_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "2_000_000n"); } in
        assert_equal
          (kit_of_mukit (Ligo.nat_from_literal "2_006_599n"))
          (liquidation_auction_current_auction_minimum_bid current)
@@ -145,11 +145,11 @@ let suite =
        (* Minimum bid does not drop over time *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* Can increase the bid.*)
-       let (current, _) = liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "4_000_000n")} in
+       let (current, _) = place_liquidation_auction_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "4_000_000n")} in
        (* Does not allow a lower bid.*)
        assert_raises
          (Failure (Ligo.string_of_int error_BidTooLow))
-         (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
+         (fun () -> place_liquidation_auction_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
 
        ()
     );

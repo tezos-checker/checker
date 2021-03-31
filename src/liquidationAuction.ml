@@ -326,7 +326,7 @@ let complete_liquidation_auction_if_possible
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
-let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
+let place_liquidation_auction_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
@@ -431,7 +431,7 @@ let completed_liquidation_auction_won_by
   | None -> (None: auction_outcome option)
 
 (* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
+let reclaim_liquidation_auction_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
   if is_leading_current_liquidation_auction auctions bid_details
   then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
   else
@@ -526,7 +526,7 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
   (contents, outcome, auctions)
 
 (* If successful, it consumes the ticket. *)
-let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
+let[@inline] reclaim_liquidation_auction_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
@@ -762,7 +762,7 @@ let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auct
 (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
   * too low. If successful, return a ticket which can be used to
   * reclaim the kit when outbid. *)
-let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: liquidation_auctions) (kit: kit_token) : LigoOp.operation list * liquidation_auctions =
+let[@inline] liquidation_auction_place_bid (state_liquidation_auctions: liquidation_auctions) (kit: kit_token) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
@@ -772,7 +772,7 @@ let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state_liquidation_auctions in
 
-  let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
+  let (new_current_auction, bid_details) = place_liquidation_auction_bid current_auction bid in
   let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_content Ligo.ticket LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
@@ -782,13 +782,13 @@ let[@inline] checker_liquidation_auction_place_bid (state_liquidation_auctions: 
   )
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-let[@inline] checker_liquidation_auction_reclaim_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+let[@inline] liquidation_auction_reclaim_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * We should check against checker's address, not Tezos.self_address. *)
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
-  let kit = liquidation_auction_reclaim_bid state_liquidation_auctions bid_details in
+  let kit = reclaim_liquidation_auction_bid state_liquidation_auctions bid_details in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * Shall we do the issuing and the validation on the liquidation auction contract side? *)
   let kit_tokens = kit_issue kit in
@@ -798,13 +798,13 @@ let[@inline] checker_liquidation_auction_reclaim_bid (state_liquidation_auctions
   ([op], state_liquidation_auctions) (* FIXME: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
 (** Reclaim a winning bid for the current or a completed liquidation auction. *)
-let[@inline] checker_liquidation_auction_reclaim_winning_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
+let[@inline] liquidation_auction_reclaim_winning_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
    * We should check against checker's address, not Tezos.self_address. *)
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
-  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state_liquidation_auctions bid_details in
+  let (tez, liquidation_auctions) = reclaim_liquidation_auction_winning_bid state_liquidation_auctions bid_details in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
@@ -871,8 +871,8 @@ let liquidation_auction_main (op_and_state: auction_params * auction_storage) : 
     liquidation_auction_touch_oldest_slices state
   (* Liquidation Auction *)
   | LiqAuctionPlaceBid kit_token ->
-    checker_liquidation_auction_place_bid state kit_token
+    liquidation_auction_place_bid state kit_token
   | LiqAuctionReclaimBid ticket ->
-    checker_liquidation_auction_reclaim_bid state ticket
+    liquidation_auction_reclaim_bid state ticket
   | LiqAuctionReclaimWinningBid ticket ->
-    checker_liquidation_auction_reclaim_winning_bid state ticket
+    liquidation_auction_reclaim_winning_bid state ticket
