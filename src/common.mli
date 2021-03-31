@@ -30,6 +30,8 @@ val tez_to_mutez : Ligo.tez -> Ligo.int
 
 (* Misc. *)
 val ensure_no_tez_given : unit -> unit
+val ensure_sender_is_checker : unit -> unit
+val ensure_sender_is_auctions : unit -> unit
 
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t

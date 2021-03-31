@@ -339,8 +339,8 @@ let[@inline]  mark_for_liquidation (state: checker) (burrow_id: burrow_id) : (Li
 
 (* Cancel the liquidation of a slice. *)
 let cancel_liquidation_slice (state: checker) (permission: permission) (cancelled: liquidation_slice_contents) : (LigoOp.operation list * checker) =
-  (* FIXME: Ensure that Tezos.sender is no other but the liquidation auction contract. *)
-  (* NOTE: let _ = ensure_no_tez_given () in *)
+  let _ = ensure_sender_is_auctions () in
+  (* let _ = ensure_no_tez_given () in *)
   let burrow = find_burrow state.burrows cancelled.burrow in
   let r = ensure_valid_permission permission cancelled.burrow (burrow_permission_version burrow) in
   if not (does_right_allow_cancelling_liquidations r) then
@@ -373,7 +373,7 @@ let rec apply_return_kit_data_rec
     apply_return_kit_data_rec (return_kit_from_auction_to_burrow state_burrows d, ds)
 
 let[@inline] touch_liquidation_slices (state: checker) (ds, kit_to_burn : tls_data) : (LigoOp.operation list * checker) =
-  (* FIXME: Ensure that Tezos.sender is no other but the liquidation auctions. *)
+  let _ = ensure_sender_is_auctions () in
   (* let _ = ensure_no_tez_given () in *)
   let state_parameters = remove_circulating_kit state.parameters kit_to_burn in
   let state_burrows = apply_return_kit_data_rec (state.burrows, ds) in

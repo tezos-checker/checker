@@ -80,6 +80,16 @@ let ensure_no_tez_given () =
   then Ligo.failwith error_UnwantedTezGiven
   else ()
 
+let ensure_sender_is_checker () =
+  if !Ligo.Tezos.sender <> checker_public_address
+  then Ligo.failwith error_UnauthorisedCaller
+  else ()
+
+let ensure_sender_is_auctions () =
+  if !Ligo.Tezos.sender <> auctions_public_address
+  then Ligo.failwith error_UnauthorisedCaller
+  else ()
+
 (* BEGIN_OCAML *)
 let compare_int (i: Ligo.int) (j: Ligo.int) : Int.t =
   if Ligo.gt_int_int i j then

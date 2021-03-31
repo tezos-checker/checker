@@ -630,14 +630,14 @@ let[@inline] liquidation_auction_touch (auctions: liquidation_auctions) (price: 
  * any operation. *)
 let[@inline] ensure_no_unclaimed_slices (auctions: liquidation_auctions) (burrow_id: Ligo.address) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
-  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  let _ = ensure_sender_is_checker () in
   if is_burrow_done_with_liquidations auctions burrow_id
   then (([]: LigoOp.operation list), auctions)
   else (Ligo.failwith error_BurrowHasCompletedLiquidation : LigoOp.operation list * liquidation_auctions)
 
 let[@inline] send_slice_to_auction (auctions: liquidation_auctions) (slice: liquidation_slice_contents) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
-  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  let _ = ensure_sender_is_checker () in
   let ops = ([]: LigoOp.operation list) in
   let auctions = liquidation_auction_send_to_auction auctions slice in
   (ops, auctions)
@@ -744,7 +744,7 @@ let rec touch_oldest_rec
 
 let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auctions) : (LigoOp.operation list * liquidation_auctions) =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
-  (* FIXME: Ensure that Tezos.sender is no other but checker. *)
+  let _ = ensure_sender_is_checker () in
   (* TODO: Figure out how many slices we can process per checker touch.*)
   let ops, auctions, ds, kit_to_burn =
     touch_oldest_rec (([]: LigoOp.operation list), auctions, ([]: return_kit_data list), kit_zero, number_of_slices_to_process) in
@@ -765,8 +765,6 @@ let[@inline] liquidation_auction_touch_oldest_slices (auctions: liquidation_auct
 let[@inline] liquidation_auction_place_bid (state_liquidation_auctions: liquidation_auctions) (kit: kit_token) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
-  (* FIXME: this cannot work correctly while in a contract that is not checker.
-   * We should check against checker's address, not Tezos.self_address. *)
   let kit = ensure_valid_kit_token kit in (* destroyed *)
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
@@ -785,8 +783,6 @@ let[@inline] liquidation_auction_place_bid (state_liquidation_auctions: liquidat
 let[@inline] liquidation_auction_reclaim_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
-  (* FIXME: this cannot work correctly while in a contract that is not checker.
-   * We should check against checker's address, not Tezos.self_address. *)
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let kit = reclaim_liquidation_auction_bid state_liquidation_auctions bid_details in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
@@ -801,8 +797,6 @@ let[@inline] liquidation_auction_reclaim_bid (state_liquidation_auctions: liquid
 let[@inline] liquidation_auction_reclaim_winning_bid (state_liquidation_auctions: liquidation_auctions) (bid_ticket: liquidation_auction_bid_ticket) : LigoOp.operation list * liquidation_auctions =
   assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   let _ = ensure_no_tez_given () in
-  (* FIXME: this cannot work correctly while in a contract that is not checker.
-   * We should check against checker's address, not Tezos.self_address. *)
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = reclaim_liquidation_auction_winning_bid state_liquidation_auctions bid_details in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
