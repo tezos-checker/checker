@@ -196,10 +196,7 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
 let[@inline] burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  rebalance_kit
-    { b with
-      excess_kit = kit_add b.excess_kit k;
-    }
+  rebalance_kit { b with excess_kit = kit_add b.excess_kit k }
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
