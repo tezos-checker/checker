@@ -4,10 +4,6 @@ open DelegationAuction
 open DelegationAuctionTypes
 open Error
 
-let checker_address = Ligo.address_from_literal "checker"
-let checker_amount = Ligo.tez_from_literal "0mutez"
-let checker_sender = Ligo.address_from_literal "somebody"
-
 type address_option = Ligo.address option [@@deriving show]
 type key_hash_option = Ligo.key_hash option [@@deriving show]
 

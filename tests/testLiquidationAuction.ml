@@ -6,10 +6,6 @@ open LiquidationAuctionTypes
 open Error
 open Ratio
 
-let checker_address = Ligo.address_from_literal "checker"
-let checker_amount = Ligo.tez_from_literal "0mutez"
-let checker_sender = Ligo.address_from_literal "somebody"
-
 let suite =
   let burrow_id_1 = Ligo.address_of_string "burrow_1" in
   let burrow_id_2 = Ligo.address_of_string "burrow_2" in

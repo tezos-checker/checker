@@ -255,7 +255,11 @@ type 'a ticket =
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
   let level = ref (nat_from_literal "0n")
-  let self_address = ref "self_address"
+  (* NOTE: Perhaps it would be better to not have self_address set to checker
+   * by default, but use an empty string instead. This way, our tests will have
+   * to set it explicitly when we wish to check each part; I think this woudl
+   * provide much better coverage. *)
+  let self_address = ref "checker_address"
   let sender = ref "sender"
   let amount = ref (tez_from_literal "0mutez")
 
