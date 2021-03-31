@@ -41,7 +41,6 @@ val burrow_is_liquidatable : parameters -> burrow -> bool
   * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
   * - Update the last observed adjustment index
   * - Update the last observed timestamp.
-  * - Rebalance outstanding_kit/excess_kit
   * - NOTE: Are there any other tasks to put in this list?
 *)
 val burrow_touch : parameters -> burrow -> burrow

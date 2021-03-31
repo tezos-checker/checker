@@ -108,18 +108,17 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
   then
     burrow
   else
-    let b = rebalance_kit burrow in
     let current_adjustment_index = compute_adjustment_index p in
-    { b with
+    { burrow with
       outstanding_kit =
         kit_of_fraction_ceil
           (Ligo.mul_int_int
-             (kit_to_mukit_int b.outstanding_kit)
+             (kit_to_mukit_int burrow.outstanding_kit)
              (fixedpoint_to_raw current_adjustment_index)
           )
           (Ligo.mul_int_int
              kit_scaling_factor_int
-             (fixedpoint_to_raw b.adjustment_index)
+             (fixedpoint_to_raw burrow.adjustment_index)
           );
       adjustment_index = current_adjustment_index;
       last_touched = p.last_touched;
@@ -147,7 +146,7 @@ let burrow_return_kit_from_auction
     { burrow with
       excess_kit = kit_add burrow.excess_kit kit;
       collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction slice.tez;
-   }
+    }
 
 let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
   if tez < creation_deposit
@@ -187,7 +186,7 @@ let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
 let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let burrow = { b with outstanding_kit = kit_add b.outstanding_kit kit } in
+  let burrow = rebalance_kit { b with outstanding_kit = kit_add b.outstanding_kit kit } in
   if burrow_is_overburrowed p burrow
   then (Ligo.failwith error_MintKitFailure : burrow)
   else burrow
@@ -197,12 +196,7 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
 let[@inline] burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let kit_to_burn = kit_min b.outstanding_kit k in
-  let kit_to_store = kit_sub k kit_to_burn in
-  { b with
-    outstanding_kit = kit_sub b.outstanding_kit kit_to_burn;
-    excess_kit = kit_add b.excess_kit kit_to_store;
-  }
+  rebalance_kit { b with excess_kit = kit_add b.excess_kit k }
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than

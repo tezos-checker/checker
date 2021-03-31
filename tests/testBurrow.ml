@@ -504,6 +504,72 @@ let suite =
     );
 
     (* =========================================================================================== *)
+    (* Property tests for ensuring burrow invariants are obeyed *)
+    (* =========================================================================================== *)
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_mint_kit - returned burrow obeys burrow invariants"
+        ~count:property_test_count
+        (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
+      @@ fun (burrow_kit, arbitrary_int) ->
+
+      let kit_to_mint = kit_of_mukit (Ligo.nat_from_literal "10n") in
+      (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
+      let outstanding, excess, collateral = if (arbitrary_int mod 2) = 0 then
+          (burrow_kit, kit_zero, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat burrow_kit))
+        else
+          (kit_zero, burrow_kit, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat kit_to_mint))
+      in
+      let burrow0 = Burrow.make_burrow_for_test
+          ~outstanding_kit:outstanding
+          ~excess_kit:excess
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:collateral
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+      let _ = Burrow.assert_burrow_invariants (Burrow.burrow_mint_kit Parameters.initial_parameters kit_to_mint burrow0) in
+      true
+    );
+
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_burn_kit - returned burrow obeys burrow invariants"
+        ~count:property_test_count
+        (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit QCheck.(0 -- max_int))
+      @@ fun (burrow_kit, kit_to_burn, arbitrary_int) ->
+
+      (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
+      let outstanding, excess = if (arbitrary_int mod 2) = 0 then
+          (burrow_kit, kit_zero)
+        else
+          (kit_zero, burrow_kit)
+      in
+      let burrow0 = Burrow.make_burrow_for_test
+          ~outstanding_kit:outstanding
+          ~excess_kit:excess
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:(Ligo.tez_from_literal "1mutez")
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+      let _ = Burrow.assert_burrow_invariants (Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0) in
+      true
+    );
+
+    (* =========================================================================================== *)
     (* Other property tests *)
     (* =========================================================================================== *)
     (
@@ -612,4 +678,44 @@ let suite =
         (Ligo.sub_nat_nat new_permission_version initial_permission_version);
       true
     );
+
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_touch - net kit associated with burrow does not change when no adjustment is required"
+        ~count:property_test_count
+        (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
+      @@ fun (kit, arbitrary_int) ->
+
+      (* Random kit balances which obey the burrow invariants *)
+      let outstanding, excess = if (arbitrary_int mod 2) = 0 then
+          (kit, kit_zero)
+        else
+          (kit_zero, kit)
+      in
+      (* Helper for computing the net kit balance of the burrow *)
+      let net_kit_int b = (Ligo.sub_int_int (kit_to_mukit_int (Burrow.burrow_excess_kit b)) (kit_to_mukit_int (Burrow.burrow_outstanding_kit b))) in
+      (* Note: this combination of burrow and parameters cause the adjustment to be just the identity *)
+      let burrow0 = Burrow.make_burrow_for_test
+          ~outstanding_kit:outstanding
+          ~excess_kit:excess
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:(Ligo.tez_from_literal "1mutez")
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+      let parameters = {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)} in
+
+      let burrow = Burrow.burrow_touch parameters burrow0 in
+      assert_bool
+        "Net kit changed during touch operation even though no adjustment should have been performed."
+        (net_kit_int burrow = net_kit_int burrow0);
+      true
+    );
+
+
   ]
