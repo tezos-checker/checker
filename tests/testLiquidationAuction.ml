@@ -14,7 +14,7 @@ let suite =
   "Liquidation auction tests" >::: [
     ("test starts descending auction" >::
      fun _ ->
-       Ligo.Tezos.reset();
+       Ligo.Tezos.reset Common.auctions_public_address;
        let auctions = liquidation_auction_empty in
        let auctions =
          liquidation_auction_send_to_auction auctions {
@@ -23,9 +23,7 @@ let suite =
            min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_000n"); (* note: randomly chosen *)
          } in
        let start_price = one_ratio in
-       let (_ops, auctions) =
-         Ligo.Tezos.with_self_address Common.auctions_public_address @@ fun () ->
-           liquidation_auction_touch auctions start_price in
+       let (_ops, auctions) = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
        assert_equal
          (Some (Ligo.tez_from_literal "2_000_000mutez"))
@@ -63,7 +61,7 @@ let suite =
 
     ("test batches up auction lots" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.auctions_public_address;
        let auctions = liquidation_auction_empty in
        let auctions =
          liquidation_auction_send_to_auction
@@ -84,15 +82,13 @@ let suite =
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_003n"); (* note: randomly chosen *)
             } in
        let start_price = one_ratio in
-       let (_ops, auctions) =
-         Ligo.Tezos.with_self_address Common.auctions_public_address @@ fun () ->
-           liquidation_auction_touch auctions start_price in
+       let (_ops, auctions) = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
     );
 
     ("test splits up auction lots to fit batch size" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.auctions_public_address;
        let auctions = liquidation_auction_empty in
        let auctions =
          liquidation_auction_send_to_auction
@@ -113,15 +109,13 @@ let suite =
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "9_000_006n"); (* note: randomly chosen *)
             } in
        let start_price = one_ratio in
-       let (_ops, auctions) =
-         Ligo.Tezos.with_self_address Common.auctions_public_address @@ fun () ->
-           liquidation_auction_touch auctions start_price in
+       let (_ops, auctions) = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
     );
 
     ("test bidding" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.auctions_public_address;
        let auctions = liquidation_auction_empty in
        let auctions =
          liquidation_auction_send_to_auction
@@ -130,9 +124,7 @@ let suite =
              min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "4_000_007n"); (* note: randomly chosen *)
            } in
        let start_price = one_ratio in
-       let (_ops, auctions) =
-         Ligo.Tezos.with_self_address Common.auctions_public_address @@ fun () ->
-           liquidation_auction_touch auctions start_price in
+       let (_ops, auctions) = liquidation_auction_touch auctions start_price in
        let bidder = Ligo.address_from_literal "23456" in
        let current = Option.get auctions.current_auction in
 

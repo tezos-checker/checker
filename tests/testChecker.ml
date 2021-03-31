@@ -30,7 +30,7 @@ let suite =
   "Checker tests" >::: [
     ("initial touch (noop)" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let checker1 = initial_checker in
        let ops, checker2 = Checker.touch_with_index checker1 (Ligo.tez_from_literal "0mutez") in
 
@@ -41,7 +41,7 @@ let suite =
 
     ("create_burrow - updates checker storage" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
 
        let burrow_id, _, checker = newly_created_burrow initial_checker in
@@ -56,7 +56,7 @@ let suite =
 
     ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
 
        let burrow_id, _, checker = newly_created_burrow initial_checker in
@@ -69,8 +69,9 @@ let suite =
 
     ("create_burrow - fails when transaction amount is one mutez below creation deposit" >::
      fun _ ->
-       Ligo.Tezos.reset ();
        let amount = Ligo.sub_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "1mutez") in
+
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
 
        assert_raises
@@ -80,7 +81,7 @@ let suite =
 
     ("create_burrow - passes when transaction amount is exactly the creation deposit" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
        let burrow_id, _, checker = newly_created_burrow initial_checker in
 
@@ -92,7 +93,7 @@ let suite =
 
     ("deposit_tez - admin ticket holder can deposit" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let expected_collateral = Ligo.add_tez_tez deposit (Ligo.sub_tez_tez  initial_deposit Constants.creation_deposit) in
@@ -111,7 +112,7 @@ let suite =
 
     ("deposit_tez - non-ticket holder can not deposit by default" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
 
        let burrow_id, _, checker = newly_created_burrow initial_checker in
@@ -123,7 +124,7 @@ let suite =
 
     ("deposit_tez - fail if the ticket to another burrow is submitted" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
        let burrow_id, _, checker = newly_created_burrow initial_checker in
 
@@ -138,7 +139,7 @@ let suite =
 
     ("withdraw_tez - admin ticket holder can withdraw" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
        let expected_collateral = Ligo.sub_tez_tez initial_deposit (Ligo.add_tez_tez Constants.creation_deposit withdrawal) in
@@ -156,7 +157,7 @@ let suite =
 
     ("withdraw_tez - transaction with value > 0 fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
 
@@ -171,7 +172,7 @@ let suite =
 
     ("withdraw_tez - fail if the ticket to another burrow is submitted" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:initial_deposit;
@@ -188,7 +189,7 @@ let suite =
     ("calculate_touch_reward - expected result for last_touched 2s ago" >::
      fun _ ->
        (* The division in this case should return a remainder < 1/2 *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let time_delta = 2 in
        (* remainder: 12000 / 36000 *)
        let expected_reward = Ligo.int_from_literal "3333" in
@@ -203,7 +204,7 @@ let suite =
     ("calculate_touch_reward - expected result for last_touched 3s ago" >::
      fun _ ->
        (* The division in this case should produce no remainder *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let time_delta = 3 in
        (* remainder: 0 *)
        let expected_reward = Ligo.int_from_literal "5000" in
@@ -218,7 +219,7 @@ let suite =
     ("calculate_touch_reward - expected result for last_touched 4s ago" >::
      fun _ ->
        (* The division in this case should return a remainder > 1/2 *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let time_delta = 4 in
        (* remainder: 24000 / 36000 *)
        let expected_reward = Ligo.int_from_literal "6666" in
@@ -233,7 +234,7 @@ let suite =
 
     ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Create a bid *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid initial_checker in
@@ -252,14 +253,16 @@ let suite =
 
     ("checker_delegation_auction_reclaim_bid - ticket from another issuer fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let bid = {
          bidder=alice_addr;
          cycle=initial_checker.delegation_auction.cycle;
          amount=(Ligo.tez_from_literal "1mutez")
        } in
-       let a_random_ticket = Ligo.Tezos.with_self_address bob_addr (fun () -> Tickets.issue_delegation_auction_bid_ticket bid) in
+
+       Ligo.Tezos.reset bob_addr;
+       let a_random_ticket = Tickets.issue_delegation_auction_bid_ticket bid in
 
        assert_raises
          (Failure (Ligo.string_of_int error_InvalidDelegationAuctionTicket))
@@ -268,7 +271,7 @@ let suite =
 
     ("checker_delegation_auction_reclaim_bid - reclaim your losing bid returns expected tez" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Create a bid *)
        let our_bid_amount = Ligo.tez_from_literal "1mutez" in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:our_bid_amount;
@@ -292,7 +295,7 @@ let suite =
 
     ("burn_kit - transaction with value > 0 fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in
@@ -309,7 +312,7 @@ let suite =
     ("burn_kit - fails when no permission ticket is provided and burrow does not support allow_all_kit_burnings" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, _, checker = newly_created_burrow initial_checker in
        let some_kit = Tickets.kit_issue (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in
@@ -323,8 +326,6 @@ let suite =
     );
 
     (
-      Ligo.Tezos.reset();
-
       qcheck_to_ounit
       @@ QCheck.Test.make
         ~name:"test_buy_kit_respects_min_kit_expected"
@@ -332,6 +333,8 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.reset Common.checker_public_address;
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, _ = Checker.buy_kit checker min_kit_expected deadline in
       let bought_kit = match ops with
@@ -342,8 +345,6 @@ let suite =
     );
 
     (
-      Ligo.Tezos.reset();
-
       qcheck_to_ounit
       @@ QCheck.Test.make
         ~name:"test_buy_kit_preserves_kit"
@@ -351,6 +352,8 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.reset Common.checker_public_address;
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, new_checker = Checker.buy_kit checker min_kit_expected deadline in
       let bought_kit = match ops with
@@ -361,8 +364,6 @@ let suite =
     );
 
     (
-      Ligo.Tezos.reset();
-
       qcheck_to_ounit
       @@ QCheck.Test.make
         ~name:"test_buy_kit_preserves_tez"
@@ -370,13 +371,15 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with uniswap = uniswap } in
+
+      Ligo.Tezos.reset Common.checker_public_address;
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let _, new_checker = Checker.buy_kit checker min_kit_expected deadline in
       Ligo.add_tez_tez checker.uniswap.tez tez_amount = new_checker.uniswap.tez
     );
 
     (
-      Ligo.Tezos.reset();
+      Ligo.Tezos.reset Common.checker_public_address;
 
       qcheck_to_ounit
       @@ QCheck.Test.make
@@ -396,8 +399,6 @@ let suite =
     );
 
     (
-      Ligo.Tezos.reset();
-
       qcheck_to_ounit
       @@ QCheck.Test.make
         ~name:"test_sell_kit_preserves_kit"
@@ -406,14 +407,13 @@ let suite =
       @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
       let checker = { initial_checker with uniswap = uniswap } in
 
+      Ligo.Tezos.reset Common.checker_public_address;
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let _, new_checker = Checker.sell_kit checker (Tickets.kit_issue kit_amount) min_tez_expected deadline in
       kit_add checker.uniswap.kit kit_amount = new_checker.uniswap.kit
     );
 
     (
-      Ligo.Tezos.reset();
-
       qcheck_to_ounit
       @@ QCheck.Test.make
         ~name:"test_sell_kit_preserves_tez"
@@ -422,6 +422,7 @@ let suite =
       @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
       let checker = { initial_checker with uniswap = uniswap } in
 
+      Ligo.Tezos.reset Common.checker_public_address;
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, new_checker = Checker.sell_kit checker (Tickets.kit_issue kit_amount) min_tez_expected deadline in
       let bought_tez = match ops with
@@ -443,7 +444,7 @@ let suite =
     ("set_burrow_delegate - transaction with value > 0 fails" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -458,7 +459,7 @@ let suite =
     ("make_permission - transaction with value > 0 fails" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -473,7 +474,7 @@ let suite =
     ("make_permission - can create admin ticket" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -502,7 +503,7 @@ let suite =
     ("make_permission - can create user ticket" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -539,7 +540,7 @@ let suite =
     ("invalidate_all_permissions - old admin ticket no longer is valid" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -558,7 +559,7 @@ let suite =
     ("invalidate_all_permissions - old user ticket no longer is valid" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in
        (* Issue a new permissions ticket *)
@@ -594,7 +595,7 @@ let suite =
     ("invalidate_all_permissions - new admin ticket is valid" >::
      fun _ ->
        (* Create a burrow *)
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, original_admin_ticket, checker = newly_created_burrow initial_checker in
 
@@ -637,7 +638,7 @@ let suite =
         (QCheck.pair arb_kit arb_tez)
       @@ fun (min_expected_kit, additional_tez) ->
 
-      Ligo.Tezos.reset();
+      Ligo.Tezos.reset Common.checker_public_address;
 
       (* Populate uniswap with initial liquidity *)
       let open Ratio in
@@ -675,7 +676,7 @@ let suite =
 
     ("buy_kit - returns expected kit" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Populate the uniswap with some liquidity *)
        let checker = {
          initial_checker with
@@ -698,7 +699,7 @@ let suite =
 
     ("sell_kit - returns expected tez" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Populate the uniswap with some liquidity *)
        let checker = {
          initial_checker with
@@ -722,7 +723,7 @@ let suite =
 
     ("sell_kit - transaction with value > 0 fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let kit_to_sell = Tickets.kit_issue (kit_of_mukit (Ligo.nat_from_literal "1n")) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
@@ -735,7 +736,7 @@ let suite =
 
     ("remove_liquidity - returns expected kit and tez" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        (* Populate the uniswap with some liquidity *)
        let checker = {
          initial_checker with
@@ -766,7 +767,7 @@ let suite =
 
     ("remove_liquidity - transaction with value > 0 fails" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let min_kit_expected = Ligo.nat_from_literal "1n" in
        let min_tez_expected = Ligo.tez_from_literal "1mutez" in
        let my_liquidity_tokens = Tickets.issue_liquidity_tokens (Ligo.nat_from_literal "1n") in
@@ -781,7 +782,7 @@ let suite =
 
     ("can complete a liquidation auction" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let checker = initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
@@ -1030,7 +1031,7 @@ let suite =
 
     ("Can't claim delegation too soon after winning delegation auction" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in
@@ -1048,7 +1049,7 @@ let suite =
 
     ("Can't claim delegation too late after winning delegation auction" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in
@@ -1066,7 +1067,7 @@ let suite =
 
     ("Can claim delegation after winning delegation auction" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let checker = initial_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let ops, checker = Checker.checker_delegation_auction_place_bid checker in

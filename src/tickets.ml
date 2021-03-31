@@ -38,6 +38,7 @@ type kit_token = kit_token_content Ligo.ticket
 [@@deriving show]
 
 let[@inline] kit_issue (kit: kit) : kit_token =
+  assert (!Ligo.Tezos.self_address = checker_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit_nat kit)
 
 (** Check whether a kit token is valid and return the amount of kit stored in
@@ -47,7 +48,7 @@ let[@inline] kit_issue (kit: kit) : kit_token =
   * tag. *)
 let[@inline] ensure_valid_kit_token (token: kit_token) : kit =
   let (issuer, ((tag, _content), mukit)), _same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address && tag = kit_token_tag in
+  let is_valid = issuer = checker_public_address && tag = kit_token_tag in
   if is_valid
   then kit_of_mukit mukit
   else (Ligo.failwith error_InvalidKitToken : kit)
@@ -66,6 +67,7 @@ type liquidity = liquidity_token_content Ligo.ticket
 [@@deriving show]
 
 let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
+  assert (!Ligo.Tezos.self_address = checker_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   Ligo.Tezos.create_ticket (lqt_token_tag, Lqt) n
 
 (** Check whether a liquidity token is valid. A liquidity token is valid if (a)
@@ -74,7 +76,7 @@ let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
   * hence the runtime check of the tag. *)
 let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
   let (issuer, ((tag, _content), _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
-  let is_valid = issuer = checker_address && tag = lqt_token_tag in
+  let is_valid = issuer = checker_public_address && tag = lqt_token_tag in
   if is_valid
   then liquidity
   else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
@@ -92,6 +94,7 @@ type delegation_auction_bid_content = token_tag * delegation_auction_bid
 type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket
 
 let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) : delegation_auction_bid_ticket =
+  (* assert (!Ligo.Tezos.self_address = checker_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *) *)
   Ligo.Tezos.create_ticket (del_auction_bid_tag, bid) (Ligo.nat_from_literal "1n")
 
 (** Ensure that a delegation auction bid ticket is valid. A delegation bid
@@ -105,7 +108,7 @@ let[@inline] ensure_valid_delegation_auction_bid_ticket
   : delegation_auction_bid =
   let (issuer, ((tag, bid), amt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid =
-    issuer = checker_address
+    issuer = checker_public_address
     && tag = del_auction_bid_tag
     && amt = Ligo.nat_from_literal "1n" in
   if is_valid
@@ -125,6 +128,7 @@ type liquidation_auction_bid_content = token_tag * liquidation_auction_bid
 type liquidation_auction_bid_ticket = liquidation_auction_bid_content Ligo.ticket
 
 let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auction_bid) =
+  assert (!Ligo.Tezos.self_address = auctions_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   Ligo.Tezos.create_ticket (liq_auction_bid_tag, bid_details) (Ligo.nat_from_literal "1n")
 
 (** Check whether a liquidation auction bid ticket is valid. An auction bid
@@ -136,7 +140,7 @@ let[@inline] issue_liquidation_auction_bid_ticket (bid_details: liquidation_auct
 let[@inline] ensure_valid_liquidation_auction_bid_ticket (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
   let (issuer, ((tag, bid_details), amnt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
   let is_valid =
-    issuer = checker_address
+    issuer = auctions_public_address
     && tag = liq_auction_bid_tag
     && amnt = Ligo.nat_from_literal "1n" in
   if is_valid
@@ -173,6 +177,7 @@ type permission = permission_content Ligo.ticket
 [@@deriving show]
 
 let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm_version: Ligo.nat) =
+  assert (!Ligo.Tezos.self_address = checker_public_address); (* ENSURE IT's CALLED IN THE RIGHT CONTEXT. *)
   Ligo.Tezos.create_ticket (permission_tag, r, burrow_id, perm_version) (Ligo.nat_from_literal "0n")
 
 (** Check whether a permission ticket is valid. A permission ticket is valid if

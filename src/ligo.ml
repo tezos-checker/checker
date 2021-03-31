@@ -259,7 +259,7 @@ module Tezos = struct
    * by default, but use an empty string instead. This way, our tests will have
    * to set it explicitly when we wish to check each part; I think this woudl
    * provide much better coverage. *)
-  let self_address = ref "checker_address"
+  let self_address = ref "KT1VYnz5peWhfPcpBiViBZXa6Z8na3gqdkZS"
   let sender = ref "sender"
   let amount = ref (tez_from_literal "0mutez")
 
@@ -285,7 +285,8 @@ module Tezos = struct
     then None
     else Some {issuer = t1.issuer; content = t1.content; amount = add_nat_nat t1.amount t2.amount;}
 
-  let reset () =
+  let reset address =
+    self_address := address;
     now := timestamp_from_seconds_literal 0;
     level := nat_from_literal "0n";
     amount := tez_from_literal "0mutez"
@@ -298,16 +299,6 @@ module Tezos = struct
     level := Z.(!level + Z.of_int blocks_passed);
     sender := address_;
     amount := amount_
-
-  (* Executes a function within a context with a different self_address. This is useful
-     for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
-  *)
-  let with_self_address address f =
-    let current_address = !self_address in
-    self_address := address;
-    let result = f () in
-    self_address := current_address;
-    result
 end
 
 let string_of_int = Z.to_string

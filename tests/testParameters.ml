@@ -326,7 +326,7 @@ let test_protected_index_follows_index =
     ~count:property_test_count
     (QCheck.pair TestArbitrary.arb_small_tez QCheck.small_nat)
   @@ fun (index, lvl) ->
-  Ligo.Tezos.reset();
+  Ligo.Tezos.reset Common.checker_public_address;
 
   (* let time pass, please *)
   let lvl = lvl+1 in
@@ -359,13 +359,13 @@ let test_protected_index_pace =
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
-    Ligo.Tezos.reset();
+    Ligo.Tezos.reset Common.checker_public_address;
     let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "1_030_420mutez") new_params.protected_index;
     (* One day, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
-    Ligo.Tezos.reset();
+    Ligo.Tezos.reset Common.checker_public_address;
     let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "2_053_031mutez") new_params.protected_index;
 
@@ -376,13 +376,13 @@ let test_protected_index_pace =
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
-    Ligo.Tezos.reset();
+    Ligo.Tezos.reset Common.checker_public_address;
     let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "970_407mutez") new_params.protected_index;
     (* One day, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
-    Ligo.Tezos.reset();
+    Ligo.Tezos.reset Common.checker_public_address;
     let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "486_151mutez") new_params.protected_index
 
@@ -406,7 +406,7 @@ let test_minting_index_low_bounded =
     ~count:property_test_count
     (QCheck.map (fun x -> Ligo.tez_from_literal (string_of_int x ^ "mutez")) QCheck.(0 -- 999_999))
   @@ fun index ->
-  Ligo.Tezos.reset ();
+  Ligo.Tezos.reset Common.checker_public_address;
 
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -431,7 +431,7 @@ let test_minting_index_high_unbounded =
     ~count:property_test_count
     (QCheck.map (fun x -> Ligo.tez_from_literal (string_of_int x ^ "mutez")) QCheck.(1_000_001 -- max_int))
   @@ fun index ->
-  Ligo.Tezos.reset ();
+  Ligo.Tezos.reset Common.checker_public_address;
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -458,7 +458,7 @@ let test_liquidation_index_high_bounded =
     ~count:property_test_count
     (QCheck.map (fun x -> Ligo.tez_from_literal (string_of_int x ^ "mutez")) QCheck.(1_000_001 -- max_int))
   @@ fun index ->
-  Ligo.Tezos.reset ();
+  Ligo.Tezos.reset Common.checker_public_address;
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -472,7 +472,7 @@ let test_liquidation_index_high_bounded =
  * also by the current quantity q)? *)
 let test_liquidation_index_low_unbounded =
   (* initial *)
-  Ligo.Tezos.reset ();
+  Ligo.Tezos.reset Common.checker_public_address;
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
@@ -508,7 +508,7 @@ let test_liquidation_index_low_unbounded =
 (* FIXME
    let test_touch_identity =
    (* initial *)
-   Ligo.Tezos.reset ();
+   Ligo.Tezos.reset Common.checker_public_address;
    let params = initial_parameters in
 
    (* neutral arguments *)
@@ -578,7 +578,7 @@ let test_touch_1 =
         circulating_kit = kit_zero;
         last_touched = Ligo.timestamp_from_seconds_literal 0;
       } in
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in
@@ -620,7 +620,7 @@ let test_touch_2 =
         circulating_kit = (kit_of_mukit (Ligo.nat_from_literal "1_000_000n"));
         last_touched = Ligo.timestamp_from_seconds_literal 0;
       } in
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in

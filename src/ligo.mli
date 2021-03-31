@@ -155,9 +155,8 @@ module Tezos : sig
   val split_ticket : 'a ticket -> (nat * nat) -> ('a ticket * 'a ticket) option
   val join_tickets : 'a ticket * 'a ticket -> ('a ticket) option
 
-  val reset: unit -> unit
+  val reset: address -> unit (* OCAML ONLY *)
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
-  val with_self_address: address -> (unit -> 'a) -> 'a (* OCAML ONLY *)
 end
 
 (* VALUE CREATION *)

@@ -11,7 +11,7 @@ let suite =
   "Delegation auction tests" >::: [
     ("test initialisation" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let auction = delegation_auction_empty in
        let delegate = delegation_auction_delegate auction in
        assert_equal None delegate ~printer:show_key_hash_option
@@ -19,7 +19,7 @@ let suite =
 
     ("test single bidder" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let auction = delegation_auction_empty in
        let bidder = Ligo.address_from_literal "5678" in
        let for_delegate = Ligo.key_hash_from_literal "sdfasdfasdf" in
@@ -80,7 +80,7 @@ let suite =
 
     ("test outbidding" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let auction = delegation_auction_empty in
        let bidder1 = Ligo.address_from_literal "1111" in
        let bidder2 = Ligo.address_from_literal "2222" in
@@ -127,7 +127,7 @@ let suite =
 
     ("test sanity when skipping multiple levels" >::
      fun _ ->
-       Ligo.Tezos.reset ();
+       Ligo.Tezos.reset Common.checker_public_address;
        let auction = delegation_auction_empty in
        let bidder = Ligo.address_from_literal "5678" in
        let amount = Ligo.tez_from_literal "1mutez" in

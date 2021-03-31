@@ -206,7 +206,7 @@ let test_buy_kit_preserves_tez =
 
 let buy_kit_unit_test =
   "buy kit unit test" >:: fun _ ->
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
@@ -227,7 +227,7 @@ let buy_kit_unit_test =
     in
 
     (* Low expectations and on time (lax): pass *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     let returned_kit, updated_uniswap =
       uniswap_buy_kit
@@ -239,7 +239,7 @@ let buy_kit_unit_test =
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* Low expectations and on time (tight): pass *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     let returned_kit, updated_uniswap =
       uniswap_buy_kit
@@ -251,7 +251,7 @@ let buy_kit_unit_test =
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* High expectations but on time (tight): fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
@@ -264,7 +264,7 @@ let buy_kit_unit_test =
       );
 
     (* Low expectations but too late (tight): fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_UniswapTooLate))
@@ -277,7 +277,7 @@ let buy_kit_unit_test =
       );
 
     (* No tez given: fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
@@ -290,7 +290,7 @@ let buy_kit_unit_test =
       );
 
     (* No kit expected: fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitTooLowExpectedKit))
@@ -387,7 +387,7 @@ let test_sell_kit_preserves_tez =
 
 let sell_kit_unit_test =
   "sell kit" >:: fun _ ->
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
@@ -407,7 +407,7 @@ let sell_kit_unit_test =
     in
 
     (* Low expectations and on time (lax): pass *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     let returned_tez, updated_uniswap =
       uniswap_sell_kit
@@ -420,7 +420,7 @@ let sell_kit_unit_test =
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* Low expectations and on time (tight): pass *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     let returned_tez, updated_uniswap =
       uniswap_sell_kit
@@ -433,7 +433,7 @@ let sell_kit_unit_test =
     assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
 
     (* High expectations but on time (tight): fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitPriceFailure))
@@ -447,7 +447,7 @@ let sell_kit_unit_test =
       );
 
     (* Low expectations but too late (tight): fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_UniswapTooLate))
@@ -461,7 +461,7 @@ let sell_kit_unit_test =
       );
 
     (* No kit given: fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
@@ -475,7 +475,7 @@ let sell_kit_unit_test =
       );
 
     (* No tez expected: fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitTooLowExpectedTez))
@@ -489,7 +489,7 @@ let sell_kit_unit_test =
       );
 
     (* Some tez transferred: fail *)
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitNonEmptyAmount))
@@ -591,7 +591,7 @@ let test_add_liquidity_respects_max_kit_deposited =
 
 let add_liquidity_unit_test =
   "add liquidity unit test" >:: fun _ ->
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     let uniswap : uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
@@ -625,7 +625,7 @@ let add_liquidity_unit_test =
 
 let test_add_liquidity_failures =
   "add liquidity failure conditions" >:: fun _ ->
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     let uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
@@ -756,7 +756,7 @@ let test_remove_liquidity_respects_kit_limit =
 
 let test_remove_liquidity_failures =
   "remove liquidity failure conditions" >:: fun _ ->
-    Ligo.Tezos.reset ();
+    Ligo.Tezos.reset Common.checker_public_address;
     let uniswap =
       uniswap_make_for_test
         ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
@@ -824,7 +824,7 @@ let test_remove_liquidity_failures =
 let pending_tez_deposit_test =
   "set pending tez deposit" >::
   (fun _ ->
-     Ligo.Tezos.reset ();
+     Ligo.Tezos.reset Common.checker_public_address;
      let uniswap =
        uniswap_make_for_test
          ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
