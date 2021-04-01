@@ -791,7 +791,7 @@ let[@inline] liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (b
    * checker entrypoint to issue and send kit to people and invoke that. *)
   let kit_tokens = kit_issue kit in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+    | Some c -> LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
   ([op], auctions) (* FIXME: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 

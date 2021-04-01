@@ -148,7 +148,7 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
     let burrow = burrow_mint_kit state.parameters kit burrow in
     let kit_tokens = kit_issue kit in
     let op1 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+      | Some c -> LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
     let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%ensureNoUnclaimedSlices" auctions_public_address : Ligo.address LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.address_transaction burrow_id (Ligo.tez_from_literal "0mutez") c
@@ -454,7 +454,7 @@ let buy_kit (state: checker) (min_kit_expected: kit) (deadline: Ligo.timestamp) 
   let (kit_tokens, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
+    | Some c -> (LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
   (ops, {state with uniswap = updated_uniswap})
 
@@ -480,7 +480,7 @@ let add_liquidity (state: checker) (max_kit_deposited: kit_token) (min_lqt_minte
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
+    | Some c -> (LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -499,7 +499,7 @@ let remove_liquidity (state: checker) (lqt_burned: liquidity) (min_tez_withdrawn
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation list) in
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
+    | Some c -> (LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
   let updated_state = {state with uniswap = updated_uniswap} in
   (ops, updated_state)
@@ -606,7 +606,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (* Send the reward to the sender. *)
     let kit_tokens = kit_issue reward in
     let op3 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
+      | Some c -> LigoOp.Tezos.kit_token_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
 
     (* Ask the oracle to send updated values. *)

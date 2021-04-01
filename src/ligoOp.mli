@@ -58,7 +58,7 @@ module Tezos : sig
 
   val unit_transaction : unit -> tez -> unit contract -> operation
   val address_transaction : address -> tez -> address contract -> operation
-  val kit_transaction : kit_token_content ticket -> tez -> kit_token_content ticket contract -> operation
+  val kit_token_transaction : kit_token_content ticket -> tez -> kit_token_content ticket contract -> operation
   val lqt_transaction : liquidity_token_content ticket -> tez -> liquidity_token_content ticket contract -> operation
   val da_bid_transaction : delegation_auction_bid_content ticket -> tez -> delegation_auction_bid_content ticket contract -> operation
   val la_bid_transaction : liquidation_auction_bid_content ticket -> tez -> liquidation_auction_bid_content ticket contract -> operation

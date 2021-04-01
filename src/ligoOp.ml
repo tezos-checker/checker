@@ -89,7 +89,7 @@ module Tezos = struct
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
   let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
-  let kit_transaction value tez contract = Transaction (KitTransactionValue value, tez, contract)
+  let kit_token_transaction value tez contract = Transaction (KitTransactionValue value, tez, contract)
   let lqt_transaction value tez contract = Transaction (LqtTransactionValue value, tez, contract)
   let da_bid_transaction value tez contract = Transaction (DaBidTransactionValue value, tez, contract)
   let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
