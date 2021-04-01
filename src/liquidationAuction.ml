@@ -785,7 +785,10 @@ let[@inline] liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (b
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let kit = reclaim_liquidation_auction_bid auctions bid_details in
   (* FIXME: this cannot work correctly while in a contract that is not checker.
-   * Shall we do the issuing and the validation on the liquidation auction contract side? *)
+   * Changing the bid to include the kit tokens seems pretty hard (the bid
+   * itself is also a ticket, and the kit is burried deep into the bid
+   * representation). The easiest way out of this situation would be to have a
+   * checker entrypoint to issue and send kit to people and invoke that. *)
   let kit_tokens = kit_issue kit in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
