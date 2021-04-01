@@ -6,13 +6,13 @@ open Error
 (*
 Ticket-based entitities in checker and their expected value/mechanics:
 
-| Ticket           | Multiplicity | (Usably) Splittable              | Tag |
-|------------------|--------------|----------------------------------|-----|
-| kit              | non-negative | Yes (finitely, zero is useless)  |  1n |
-| liquidity        | non-negative | Yes (finitely, zero is useless)  |  2n |
-| del. auction bid | always one   | No  (zero is useless)            |  3n |
-| liq. auction bid | always one   | No  (zero is useless)            |  4n |
-| permission       | always zero  | Yes (infinitely, always zero)    |  5n |
+| Ticket           | Issuer       | Multiplicity | (Usably) Splittable              | Tag |
+|------------------|--------------| -------------|----------------------------------|-----|
+| kit              | checker      | non-negative | Yes (finitely, zero is useless)  |  1n |
+| liquidity        | checker      | non-negative | Yes (finitely, zero is useless)  |  2n |
+| del. auction bid | checker      | always one   | No  (zero is useless)            |  3n |
+| liq. auction bid | liq_auctions | always one   | No  (zero is useless)            |  4n |
+| permission       | checker      | always zero  | Yes (infinitely, always zero)    |  5n |
 *)
 
 type token_tag = Ligo.nat
