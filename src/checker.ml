@@ -17,10 +17,6 @@ open BurrowTypes
 open CheckerTypes
 open Error
 
-(* TODO: At the very end, inline all numeric operations, flatten all ratio so
- * that we mainly deal with integers directly. Hardwire the constants too,
- * where possible. *)
-
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
@@ -128,15 +124,11 @@ let touch_burrow (state: checker) (burrow_id: burrow_id) : (LigoOp.operation lis
   let burrow = find_burrow state.burrows burrow_id in
   let updated_burrow = burrow_touch state.parameters burrow in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-  let ops : LigoOp.operation list = [] in
-  (ops, state)
+  (([]: LigoOp.operation list), state)
 
 let deposit_tez (state: checker) (permission: permission option) (burrow_id: burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
-    | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
   let is_allowed =
     if burrow_allow_all_tez_deposits burrow then
       true
@@ -147,6 +139,9 @@ let deposit_tez (state: checker) (permission: permission option) (burrow_id: bur
   in
   if is_allowed then
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
+      | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
     ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
@@ -356,6 +351,9 @@ let cancel_liquidation_slice (state: checker) (permission: permission) (leaf_ptr
     assert_checker_invariants state;
     (([]:  LigoOp.operation list), state)
 
+(* NOTE: It prepends the operation to the list of operations given. This means
+ * that if we touch a list of liquidation slices, the order of operations is
+ * reversed. *)
 let touch_liquidation_slice
     (ops: LigoOp.operation list)
     (auctions: liquidation_auctions)
@@ -412,6 +410,9 @@ let touch_liquidation_slice
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
   ((op :: ops), auctions, state_burrows, kit_to_burn)
 
+(* NOTE: The list of operations returned is in reverse order (with respect to
+ * the order the input slices were processed in). However, since the operations
+ * computed are independent from each other, this needs not be a problem. *)
 let rec touch_liquidation_slices_rec
     (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
@@ -422,6 +423,9 @@ let rec touch_liquidation_slices_rec
       touch_liquidation_slice ops state_liquidation_auctions state_burrows x in
     touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs)
 
+(* NOTE: The list of operations returned is in reverse order (with respect to
+ * the order the input slices were processed in). However, since the operations
+ * computed are independent from each other, this needs not be a problem. *)
 let[@inline] touch_liquidation_slices (state: checker) (slices: leaf_ptr list) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   (* NOTE: the order of the operations is reversed here (wrt to the order of
@@ -652,6 +656,9 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
     )
     (Ligo.mul_int_int den_tlr den_thr)
 
+(* NOTE: The list of operations returned is in reverse order (with respect to
+ * the order the input slices were processed in). However, since the operations
+ * computed are independent from each other, this needs not be a problem. *)
 let rec touch_oldest
     (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * int)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
@@ -665,6 +672,12 @@ let rec touch_oldest
         touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
       touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
 
+(* NOTE: The list of operations returned is in reverse order (with respect to
+ * the order in which the things are expected to happen). However, all inputs
+ * to those operations are computed in the correct order, and, with two
+ * exceptions (1. setting the delegate, and 2. call/callback to the oract), all
+ * of the operations are outwards calls, to other contracts (no callbacks). It
+ * should be safe to leave the order of the transaction reversed. *)
 let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
   let _ = ensure_no_tez_given () in
@@ -714,8 +727,6 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       } in
 
     (* TODO: Figure out how many slices we can process per checker touch.*)
-    (* NOTE: the order of the operations is reversed here (wrt to the order of
-     * the slices), but hopefully we don't care in this instance about this. *)
     let ops, state =
       let
         { burrows = state_burrows;
@@ -742,11 +753,9 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
 
     assert_checker_invariants state;
 
-    (* TODO: Add more tasks here *)
-
     let kit_tokens = kit_issue reward in
     let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-      | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
+      | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
 
     (* Create operations to ask the oracles to send updated values. *)
@@ -757,7 +766,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       | Some c -> c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint : (Ligo.nat LigoOp.contract) LigoOp.contract) in
     let op = LigoOp.Tezos.nat_contract_transaction cb (Ligo.tez_from_literal "0mutez") oracle in
-    let ops = (op :: ops) in (* FIXME: op should be at the end, not the beginning *)
+    let ops = (op :: ops) in
 
     (ops, state)
 
