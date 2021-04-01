@@ -134,18 +134,26 @@ let liquidation_auction_send_to_auction
       } in
     (new_state, ret)
 
-(** Split a liquidation slice into two. We also have to split the
-  * min_kit_for_unwarranted so that we can evaluate the two auctions separately
-  * (and see if the liquidation was warranted, retroactively). Perhaps a bit
-  * harshly, for both slices we round up. NOTE: Alternatively, we can calculate
-  * min_kit_for_unwarranted_1 and then calculate min_kit_for_unwarranted_2 =
-  * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
-let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
+(** Split a liquidation slice into two. The first of the two slices is the
+  * "older" of the two (i.e. it is the one to be included in the auction we are
+  * starting).
+  *
+  * We also have to split the min_kit_for_unwarranted so that we can evaluate
+  * the two auctions separately (and see if the liquidation was warranted,
+  * retroactively). Currently, perhaps a bit harshly, we round up for both
+  * slices.  Alternatively, we can calculate min_kit_for_unwarranted_1 and then
+  * calculate min_kit_for_unwarranted_2 = min_kit_for_unwarranted -
+  * min_kit_for_unwarranted_1. *)
+let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_slice_contents) : (liquidation_slice_contents * liquidation_slice_contents) =
+  let { burrow = contents_burrow;
+        tez = contents_tez;
+        min_kit_for_unwarranted = contents_min_kit_for_unwarranted;
+      } = contents in
   assert (amnt > Ligo.tez_from_literal "0mutez");
-  assert (amnt < slice.contents.tez);
+  assert (amnt < contents_tez);
   (* general *)
-  let min_kit_for_unwarranted = kit_to_mukit_int slice.contents.min_kit_for_unwarranted in
-  let slice_tez = tez_to_mutez slice.contents.tez in
+  let min_kit_for_unwarranted = kit_to_mukit_int contents_min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez contents_tez in
   (* left slice *)
   let ltez = amnt in
   let lkit =
@@ -154,25 +162,14 @@ let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liqui
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
   (* right slice *)
-  let rtez = Ligo.sub_tez_tez slice.contents.tez amnt in
+  let rtez = Ligo.sub_tez_tez contents_tez amnt in
   let rkit =
     kit_of_fraction_ceil
       (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
-  (* FIXME: We also need to fixup the pointers here *)
-  ( { slice with
-      contents = { slice.contents with
-                   tez = ltez;
-                   min_kit_for_unwarranted = lkit;
-                 }
-    },
-    { slice with
-      contents = { slice.contents with
-                   tez = rtez;
-                   min_kit_for_unwarranted = rkit;
-                 }
-    }
+  ( { burrow = contents_burrow; tez = ltez; min_kit_for_unwarranted = lkit; },
+    { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
 let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold: Ligo.tez) =
@@ -184,7 +181,23 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
     let (storage, next) = avl_pop_front storage queued_slices in
     match next with
     | Some slice ->
-      let (part1, part2) = split_liquidation_slice (Ligo.sub_tez_tez split_threshold queued_amount) slice in
+      let slice_contents = slice.contents in
+      let (part1, part2) = split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice_contents in
+
+      (* FIXME: We also need to fixup the pointers here.
+       * They should end up looking somewhat like this:
+       * - part1.older = slice.older
+       * - part1.younger = part2
+       *
+       * - part2.older = part1
+       * - part2.younger = slice.younger
+       *
+       * - slice.contents.burrow.oldest   = slice.contents.burrow.oldest   <|> part1
+       * - slice.contents.burrow.youngest = slice.contents.burrow.youngest <|> part2
+       *)
+      let part1 = {slice with contents = part1} in (* WRONG *)
+      let part2 = {slice with contents = part2} in (* WRONG *)
+
       let (storage, _) = avl_push storage queued_slices part2 Right in
       let (storage, _) = avl_push storage new_auction part1 Left in
       (storage, new_auction)
