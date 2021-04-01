@@ -159,12 +159,9 @@ let mint_kit (state: checker) (permission: permission) (burrow_id: burrow_id) (k
       | Some c -> LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
     let state =
-      {state with
-       burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
-       parameters =
-         add_outstanding_kit
-           (add_circulating_kit state.parameters kit)
-           kit;
+      { state with
+        burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
+        parameters = add_outstanding_and_circulating_kit state.parameters kit;
       } in
     ([op], state)
   else
@@ -693,8 +690,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (* 1: Calculate the reward that we should create out of thin air to give
      * to the contract toucher, and update the circulating kit accordingly.*)
     let reward = calculate_touch_reward state.parameters.last_touched in
-    let state = { state with parameters =
-                               add_circulating_kit state.parameters reward } in
+    let state = { state with parameters = add_circulating_kit state.parameters reward } in
 
     (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the uniswap *)
     let (ops, state) = touch_delegation_auction state in

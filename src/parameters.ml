@@ -461,9 +461,13 @@ let[@inline] remove_circulating_kit (parameters: parameters) (kit: kit) : parame
   assert (parameters.circulating_kit >= kit);
   { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
-(** Add some kit to the total amount of kit required to close all burrows. *)
-let[@inline] add_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
-  { parameters with outstanding_kit = kit_add parameters.outstanding_kit kit; }
+(** Add some kit to the total amount of kit required to close all burrows and
+  * the kit in circulation. This is the case when a burrow owner mints kit. *)
+let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
+  { parameters with
+    outstanding_kit = kit_add parameters.outstanding_kit kit;
+    circulating_kit = kit_add parameters.circulating_kit kit;
+  }
 
 (** Remove some kit from the total amount of kit required to close all burrows. *)
 let[@inline] remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
@@ -471,6 +475,7 @@ let[@inline] remove_outstanding_kit (parameters: parameters) (kit: kit) : parame
   { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }
 
 (* BEGIN_OCAML *)
+
 (* NOTE: These are "model" implementations of the functions above, using
  * ratios. The only reason I left them here is so that we can check that each
  * function implementation above (which does not use the ratio and fixedpoint
