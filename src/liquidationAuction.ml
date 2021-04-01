@@ -172,8 +172,13 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
-let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold: Ligo.tez) =
+let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) =
+  let storage = auctions.avl_storage in
+  let queued_slices = auctions.queued_slices in
+
   let (storage, new_auction) = avl_take storage queued_slices split_threshold (None: auction_outcome option) in
+  let auctions = { auctions with avl_storage = storage } in
+
   let queued_amount = avl_tez storage new_auction in
   if queued_amount < split_threshold
   then
@@ -182,7 +187,8 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
     match next with
     | Some slice ->
       let slice_contents = slice.contents in
-      let (part1, part2) = split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice_contents in
+      let (part1_contents, part2_contents) =
+        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice_contents in
 
       (* FIXME: We also need to fixup the pointers here.
        * They should end up looking somewhat like this:
@@ -194,17 +200,20 @@ let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold
        *
        * - slice.contents.burrow.oldest   = slice.contents.burrow.oldest   <|> part1
        * - slice.contents.burrow.youngest = slice.contents.burrow.youngest <|> part2
-       *)
-      let part1 = {slice with contents = part1} in (* WRONG *)
-      let part2 = {slice with contents = part2} in (* WRONG *)
+       *
+       * This means we probably need to pass the whole auctions type;
+       * auctions.burrow_slices needs to be updated. *)
+      let part1 = {slice with contents = part1_contents;} in (* WRONG *)
+      let part2 = {slice with contents = part2_contents;} in (* WRONG *)
 
       let (storage, _) = avl_push storage queued_slices part2 Right in
       let (storage, _) = avl_push storage new_auction part1 Left in
-      (storage, new_auction)
+
+      ({ auctions with avl_storage = storage }, new_auction)
     | None ->
-      (storage, new_auction)
+      (auctions, new_auction)
   else
-    (storage, new_auction)
+    (auctions, new_auction)
 
 let start_liquidation_auction_if_possible
     (start_price: ratio) (auctions: liquidation_auctions): liquidation_auctions =
@@ -221,28 +230,21 @@ let start_liquidation_auction_if_possible
            (Ligo.mul_int_int (tez_to_mutez queued_amount) num_qf)
            (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_qf)
         ) in
-    let (storage, new_auction) =
-      take_with_splitting
-        auctions.avl_storage
-        auctions.queued_slices
-        split_threshold in
+    let (auctions, new_auction) = take_with_splitting auctions split_threshold in
     let current_auction =
-      if avl_is_empty storage new_auction
+      if avl_is_empty auctions.avl_storage new_auction
       then (None: current_liquidation_auction option)
       else
         let start_value =
           let { num = num_sp; den = den_sp; } = start_price in
           kit_of_fraction_ceil
-            (Ligo.mul_int_int (tez_to_mutez (avl_tez storage new_auction)) num_sp)
+            (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
             (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
         in
         Some
           { contents = new_auction;
             state = Descending (start_value, !Ligo.Tezos.now); } in
-    { auctions with
-      avl_storage = storage;
-      current_auction = current_auction;
-    }
+    { auctions with current_auction = current_auction; }
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
