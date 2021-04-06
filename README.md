@@ -7,6 +7,8 @@
 
 ## Development
 
+Currently the team uses [Nix](https://nixos.org/) to provide all dependencies, including OCaml packages and appropriate (perhaps even patched) versions of Ligo and other necessary tools, so this is the recommended method. For the curious, the dependencies are listed in `shell.nix`.
+
 Within a `nix-shell` (the first time this might take a while, since it must fetch all dependencies), type
 
 * `make build-ocaml` to build and compile the ocaml code (in [./src](./src))
