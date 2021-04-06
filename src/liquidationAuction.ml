@@ -172,6 +172,13 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
+(** Create a slice given the contents and set older and younger to None. *)
+let[@inline] make_standalone_slice (contents: liquidation_slice_contents) =
+  { contents = contents;
+    older = (None: leaf_ptr option);
+    younger = (None: leaf_ptr option);
+  }
+
 let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) =
   let queued_slices = auctions.queued_slices in
 
@@ -193,18 +200,10 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       (* 2: create and push the two slices to the AVL, but initially without
        * pointers to their neighbors. Before adding the slices to the AVL we
        * cannot have this information. *)
-      let part1 =
-         { contents = part1_contents;
-           older = (None: leaf_ptr option);   (* WRONG *)
-           younger = (None: leaf_ptr option); (* WRONG *)
-         } in
-      let part2 =
-         { contents = part2_contents;
-           older = (None: leaf_ptr option);   (* WRONG *)
-           younger = (None: leaf_ptr option); (* WRONG *)
-         } in
-
+      let part1 = make_standalone_slice part1_contents in
       let (storage, part1_leaf_ptr) = avl_push storage new_auction part1 Left in
+
+      let part2 = make_standalone_slice part2_contents in
       let (storage, part2_leaf_ptr) = avl_push storage queued_slices part2 Right in
 
       (* 3: fixup the pointers within slice 1 (the older of the two) as follows:
