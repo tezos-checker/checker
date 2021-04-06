@@ -1,3 +1,5 @@
+[![Build Status](https://github.com/tzConnectBerlin/huxian/workflows/CI/badge.svg)](https://github.com/tzConnectBerlin/huxian/actions)
+
 # Huxian
 
 * Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
