@@ -826,6 +826,7 @@ let receive_price (state, price: checker * Ligo.nat) : LigoOp.operation list * c
 (* ENTRYPOINTS *)
 
 type lazyFunctionId = int
+(* BEGIN_LIGO
 let[@inline] lazy_fun_touch = 1
 let[@inline] lazy_fun_create_burrow = 2
 let[@inline] lazy_fun_touch_liquidation_slices = 3
@@ -852,6 +853,7 @@ let[@inline] lazy_fun_checker_delegation_auction_place_bid = 23
 let[@inline] lazy_fun_checker_delegation_auction_claim_win = 24
 let[@inline] lazy_fun_checker_delegation_auction_reclaim_bid = 25
 let[@inline] lazy_fun_receive_price = 26
+END_LIGO *)
 
 type params =
   | Touch
