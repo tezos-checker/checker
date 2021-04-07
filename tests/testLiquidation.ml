@@ -21,7 +21,7 @@ let arbitrary_burrow (params: parameters) =
              div_ratio
                (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
                (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
-              in
+           in
            fraction_to_tez_floor x.num x.den in
          let kit =
            let { num = x_num; den = x_den; } =

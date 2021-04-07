@@ -84,7 +84,7 @@ open Error
  * when we start auctions.
 *)
 let liquidation_auction_send_to_auction
-  (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
+    (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
   : (liquidation_auctions * leaf_ptr) =
   if avl_height auctions.avl_storage auctions.queued_slices
      >= max_liquidation_queue_height then
@@ -93,21 +93,21 @@ let liquidation_auction_send_to_auction
     let old_burrow_slices =  Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
 
     let slice = {
-           contents = contents;
-           older = (
-             match old_burrow_slices with
-             | None -> (None : leaf_ptr option)
-             | Some i -> Some i.youngest_slice
-           );
-           younger = (None: leaf_ptr option);
-        } in
+      contents = contents;
+      older = (
+        match old_burrow_slices with
+        | None -> (None : leaf_ptr option)
+        | Some i -> Some i.youngest_slice
+      );
+      younger = (None: leaf_ptr option);
+    } in
 
     let (new_storage, ret) =
       avl_push auctions.avl_storage auctions.queued_slices slice Left in
 
     (* Fixup the previous youngest pointer since the newly added slice
      * is even younger.
-     *)
+    *)
     let new_storage, new_burrow_slices = (
       match old_burrow_slices with
       | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
@@ -124,14 +124,14 @@ let liquidation_auction_send_to_auction
     ) in
 
     let new_state =
-          { auctions with
-            avl_storage = new_storage;
-            burrow_slices =
-              Ligo.Big_map.add
-                contents.burrow
-                new_burrow_slices
-                auctions.burrow_slices;
-          } in
+      { auctions with
+        avl_storage = new_storage;
+        burrow_slices =
+          Ligo.Big_map.add
+            contents.burrow
+            new_burrow_slices
+            auctions.burrow_slices;
+      } in
     (new_state, ret)
 
 (** Split a liquidation slice into two. We also have to split the
@@ -357,7 +357,7 @@ let is_leading_current_liquidation_auction
 
 (* removes the slice from liquidation_auctions, fixing up the necessary pointers.
  * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
- *)
+*)
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
   let avl_storage = auctions.avl_storage in
 
@@ -367,19 +367,19 @@ let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation
 
   (* fixup burrow_slices *)
   let burrow_slices = match Ligo.Big_map.find_opt leaf.contents.burrow auctions.burrow_slices with
-      | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
-      | Some s -> s in
+    | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
+    | Some s -> s in
   let burrow_slices =
     match leaf.younger with
     | None -> begin
-      match leaf.older with
-      | None -> (* leaf *) (None: burrow_liquidation_slices option)
-      | Some older -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
+        match leaf.older with
+        | None -> (* leaf *) (None: burrow_liquidation_slices option)
+        | Some older -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
       end
     | Some younger -> begin
-      match leaf.older with
-      | None -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
-      | Some _ -> (* ... - leaf - ... *) Some burrow_slices
+        match leaf.older with
+        | None -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
+        | Some _ -> (* ... - leaf - ... *) Some burrow_slices
       end in
 
   (* fixup older and younger pointers *)
@@ -387,25 +387,25 @@ let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation
     match leaf.younger with
     | None -> avl_storage
     | Some younger_ptr ->
-        avl_update_leaf
-          avl_storage
-          younger_ptr
-          (fun (younger: liquidation_slice) ->
-             assert (younger.older = Some leaf_ptr);
-             { younger with older = leaf.older }
-          )
+      avl_update_leaf
+        avl_storage
+        younger_ptr
+        (fun (younger: liquidation_slice) ->
+           assert (younger.older = Some leaf_ptr);
+           { younger with older = leaf.older }
+        )
   ) in
   let avl_storage = (
     match leaf.older with
     | None -> avl_storage
     | Some older_ptr ->
-        avl_update_leaf
-          avl_storage
-          older_ptr
-          (fun (older: liquidation_slice) ->
-             assert (older.younger = Some leaf_ptr);
-             { older with younger = leaf.younger }
-          )
+      avl_update_leaf
+        avl_storage
+        older_ptr
+        (fun (older: liquidation_slice) ->
+           assert (older.younger = Some leaf_ptr);
+           { older with younger = leaf.younger }
+        )
   ) in
 
   (* return *)
@@ -518,13 +518,13 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
    * of lots. We do not delete the auction itself from the storage, since
    * we still want the winner to be able to claim its result. *)
   let auctions =
-     if avl_is_empty auctions.avl_storage root
-     then liquidation_auction_pop_completed_auction auctions root
-     else auctions in
+    if avl_is_empty auctions.avl_storage root
+    then liquidation_auction_pop_completed_auction auctions root
+    else auctions in
   let outcome =
-     match avl_root_data auctions.avl_storage root with
-     | None -> (Ligo.failwith error_NotACompletedSlice: auction_outcome)
-     | Some outcome -> outcome in
+    match avl_root_data auctions.avl_storage root with
+    | None -> (Ligo.failwith error_NotACompletedSlice: auction_outcome)
+    | Some outcome -> outcome in
   (contents, outcome, auctions)
 
 (* If successful, it consumes the ticket. *)

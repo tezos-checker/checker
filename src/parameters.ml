@@ -105,7 +105,7 @@ let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   * the burrow fee index and the imbalance adjustment index.
   *
   *   adjustment_index_i = FLOOR (burrow_fee_index_i * imabalance_index_i)
-  *)
+*)
 let compute_adjustment_index (p: parameters) : fixedpoint =
   fixedpoint_of_raw
     (fdiv_int_int
@@ -206,7 +206,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
   *   protected_index_{i+1} = FLOOR (
   *     protected_index_i * CLAMP (index_{i+1}/protected_index_i, EXP(-epsilon * (t_{i+1} - t_i)), EXP(+epsilon * (t_{i+1} - t_i)))
   *   )
-  *)
+*)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
   (* TODO: ADD MORE ASSERTIONS: STRICTLY POSITIVE LAST PROTECTED INDEX *)
@@ -242,7 +242,7 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
   * have elapsed.
   *
   *   drift_{i+1} = FLOOR (drift_i + (1/2) * (drift'_i + drift'_{i+1}) * (t_{i+1} - t_i))
-  *)
+*)
 let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   fixedpoint_of_raw
     (fdiv_int_int
@@ -263,7 +263,7 @@ let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivati
   *   q_{i+1} = FLOOR (q_i * EXP((drift_i + (1/6) * (2*drift'_i + drift'_{i+1}) * (t_{i+1} - t_i)) * (t_{i+1} - t_i)))
   *
   * where EXP(X) = X+1.
-  *)
+*)
 let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   let six_sf =
     Ligo.mul_int_int
@@ -304,7 +304,7 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
   * sub-contract, from the previous block).
   *
   * target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
-  *)
+*)
 let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.tez) (current_kit_in_tez: ratio) : fixedpoint =
   let { num = num; den = den; } = current_kit_in_tez in
   fixedpoint_of_raw
@@ -364,7 +364,7 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
   *   outstanding_with_fees_{i+1} = FLOOR (
   *     outstanding_kit_i * burrow_fee_index_{i+1} / burrow_fee_index_i
   *   )
-  *)
+*)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
   kit_of_fraction_floor
     (Ligo.mul_int_int (kit_to_mukit_int last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
@@ -376,7 +376,7 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
   *   outstanding_kit_{i+1} = FLOOR (
   *     outstanding_with_fees_{i+1} * imbalance_index_{i+1} / imbalance_index_i
   *   )
-  *)
+*)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
   kit_of_fraction_floor
     (Ligo.mul_int_int (kit_to_mukit_int current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))

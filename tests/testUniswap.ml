@@ -66,7 +66,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let lqt_to_burn =
          let { num = x_num; den = x_den; } =
            div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))) in
-           fraction_to_nat_floor x_num x_den
+         fraction_to_nat_floor x_num x_den
        in
 
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
@@ -764,14 +764,14 @@ let test_remove_liquidity_failures =
         ~lqt:(Ligo.nat_from_literal "1000n")
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
-     let (liq, _kit, uniswap) =
-       uniswap_add_liquidity
-         uniswap
-         (Ligo.tez_from_literal "101_000_000mutez")
-         (Ligo.tez_from_literal "10_000_000mutez")
-         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
-         (Ligo.nat_from_literal "1n")
-         (Ligo.timestamp_from_seconds_literal 1) in
+    let (liq, _kit, uniswap) =
+      uniswap_add_liquidity
+        uniswap
+        (Ligo.tez_from_literal "101_000_000mutez")
+        (Ligo.tez_from_literal "10_000_000mutez")
+        (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
+        (Ligo.nat_from_literal "1n")
+        (Ligo.timestamp_from_seconds_literal 1) in
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNonEmptyAmount))
       (fun () ->

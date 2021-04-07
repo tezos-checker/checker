@@ -326,8 +326,8 @@ let[@inline] mark_for_liquidation (state, burrow_id: checker * burrow_id) : (Lig
       tez_to_auction = tez_to_auction;
       burrow_state = updated_burrow;
     } = match burrow_request_liquidation state.parameters burrow with
-        | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
-        | Some type_and_details -> let _, details = type_and_details in details
+    | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
+    | Some type_and_details -> let _, details = type_and_details in details
   in
   let contents =
     { burrow = burrow_id;
@@ -362,10 +362,10 @@ let cancel_liquidation_slice ((state, (permission, leaf_ptr)): checker * (permis
   else
     let burrow = burrow_return_slice_from_auction cancelled burrow in
     let state =
-          { state with
-            burrows = Ligo.Big_map.add cancelled.burrow burrow state.burrows;
-            liquidation_auctions = auctions;
-          } in
+      { state with
+        burrows = Ligo.Big_map.add cancelled.burrow burrow state.burrows;
+        liquidation_auctions = auctions;
+      } in
     assert_checker_invariants state;
     (([]:  LigoOp.operation list), state)
 
@@ -900,364 +900,364 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
 
   let ops, checker, lazy_functions, deployer = match deployer with
     | Some deployer -> begin
-      let lazy_functions, deployer =
-        if !Ligo.Tezos.sender = deployer
-        then match op with
-             | DeployFunction p ->
-               let lfi, bs = p in
-               let lazy_functions =
-                 match Ligo.Big_map.find_opt lfi lazy_functions with
-                   | None -> Ligo.Big_map.add lfi bs lazy_functions
-                   | Some prev -> Ligo.Big_map.add lfi (Ligo.Bytes.concat prev bs) lazy_functions in
-               (lazy_functions, Some deployer)
-             | SealContract ->
-               (lazy_functions, (None: Ligo.address option))
-             (* we really need wildcard patterns... *)
-             | ActivateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | AddLiquidity _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | BurnKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | BuyKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | CancelSliceLiquidation _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | CreateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | DeactivateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | DelegationAuctionClaimWin _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | DelegationAuctionPlaceBid -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | DelegationAuctionReclaimBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | DepositTez _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | InvalidateAllPermissions _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | LiqAuctionPlaceBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | LiqAuctionReclaimBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | LiqAuctionReclaimWinningBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | MakePermission _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | MarkBurrowForLiquidation _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | MintKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | ReceiveLiquidationSlice -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | ReceivePrice _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | RemoveLiquidity _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | SellKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | SetBurrowDelegate _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | Touch -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | TouchBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | TouchLiquidationSlices _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-             | WithdrawTez _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
-        else (Ligo.failwith error_UnauthorisedCaller: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option) in
+        let lazy_functions, deployer =
+          if !Ligo.Tezos.sender = deployer
+          then match op with
+            | DeployFunction p ->
+              let lfi, bs = p in
+              let lazy_functions =
+                match Ligo.Big_map.find_opt lfi lazy_functions with
+                | None -> Ligo.Big_map.add lfi bs lazy_functions
+                | Some prev -> Ligo.Big_map.add lfi (Ligo.Bytes.concat prev bs) lazy_functions in
+              (lazy_functions, Some deployer)
+            | SealContract ->
+              (lazy_functions, (None: Ligo.address option))
+            (* we really need wildcard patterns... *)
+            | ActivateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | AddLiquidity _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | BurnKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | BuyKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | CancelSliceLiquidation _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | CreateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | DeactivateBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | DelegationAuctionClaimWin _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | DelegationAuctionPlaceBid -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | DelegationAuctionReclaimBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | DepositTez _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | InvalidateAllPermissions _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | LiqAuctionPlaceBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | LiqAuctionReclaimBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | LiqAuctionReclaimWinningBid _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | MakePermission _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | MarkBurrowForLiquidation _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | MintKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | ReceiveLiquidationSlice -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | ReceivePrice _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | RemoveLiquidity _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | SellKit _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | SetBurrowDelegate _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | Touch -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | TouchBurrow _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | TouchLiquidationSlices _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | WithdrawTez _ -> (Ligo.failwith error_ContractNotDeployed: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option)
+          else (Ligo.failwith error_UnauthorisedCaller: (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option) in
         (([]: LigoOp.operation list), checker, lazy_functions, deployer)
       end
     | None -> begin
-      (* BEGIN_LIGO
-      let get_lazy_fun (m, k: (lazyFunctionId, Ligo.bytes) Ligo.big_map * lazyFunctionId): Ligo.bytes =
-          match Ligo.Big_map.find_opt k m with
-          | None -> (failwith "lazy function not found": Ligo.bytes)
-          | Some f -> f in
-      END_LIGO *)
-      let ops, checker = match op with
-        | Touch ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch)): ty_touch option) with
-            | None -> (failwith "lazy function not found": ty_touch)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (touch: ty_touch)
-            (* END_OCAML *)
-          in f checker
-        (* Burrows *)
-        | CreateBurrow p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_create_burrow)): ty_create_burrow option) with
-            | None -> (failwith "lazy function not found": ty_create_burrow)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (create_burrow: ty_create_burrow)
-            (* END_OCAML *)
-          in f (checker, p)
-        | DepositTez p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deposit_tez)): ty_deposit_tez option) with
-            | None -> (failwith "lazy function not found": ty_deposit_tez)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (deposit_tez: ty_deposit_tez)
-            (* END_OCAML *)
-          in f (checker, p)
-        | WithdrawTez p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_withdraw_tez option) with
-            | None -> (failwith "lazy function not found": ty_withdraw_tez)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (withdraw_tez: ty_withdraw_tez)
-            (* END_OCAML *)
-          in f (checker, p)
-        | MintKit p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_mint_kit option) with
-            | None -> (failwith "lazy function not found": ty_mint_kit)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (mint_kit: ty_mint_kit)
-            (* END_OCAML *)
-          in f (checker, p)
-        | BurnKit p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_burn_kit)): ty_burn_kit option) with
-            | None -> (failwith "lazy function not found": ty_burn_kit)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (burn_kit: ty_burn_kit)
-            (* END_OCAML *)
-          in f (checker, p)
-        | ActivateBurrow p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_activate_burrow)): ty_activate_burrow option) with
-            | None -> (failwith "lazy function not found": ty_activate_burrow)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (activate_burrow: ty_activate_burrow)
-            (* END_OCAML *)
-          in f (checker, p)
-        | DeactivateBurrow p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deactivate_burrow)): ty_deactivate_burrow option) with
-            | None -> (failwith "lazy function not found": ty_deactivate_burrow)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (deactivate_burrow: ty_deactivate_burrow)
-            (* END_OCAML *)
-          in f (checker, p)
-        | MarkBurrowForLiquidation p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_mark_for_liquidation)): ty_mark_for_liquidation option) with
-            | None -> (failwith "lazy function not found": ty_mark_for_liquidation)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (mark_for_liquidation: ty_mark_for_liquidation)
-            (* END_OCAML *)
-          in f (checker, p)
-        | TouchLiquidationSlices p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_liquidation_slices)): ty_touch_liquidation_slices option) with
-            | None -> (failwith "lazy function not found": ty_touch_liquidation_slices)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (touch_liquidation_slices: ty_touch_liquidation_slices)
-            (* END_OCAML *)
-          in f (checker, p)
-        | CancelSliceLiquidation p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_cancel_liquidation_slice)): ty_cancel_liquidation_slice option) with
-            | None -> (failwith "lazy function not found": ty_cancel_liquidation_slice)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (cancel_liquidation_slice: ty_cancel_liquidation_slice)
-            (* END_OCAML *)
-          in f (checker, p)
-        | TouchBurrow p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_burrow)): ty_touch_burrow option) with
-            | None -> (failwith "lazy function not found": ty_touch_burrow)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (touch_burrow: ty_touch_burrow)
-            (* END_OCAML *)
-          in f (checker, p)
-        | SetBurrowDelegate p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_set_burrow_delegate)): ty_set_burrow_delegate option) with
-            | None -> (failwith "lazy function not found": ty_set_burrow_delegate)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (set_burrow_delegate: ty_set_burrow_delegate)
-            (* END_OCAML *)
-          in f (checker, p)
-        | MakePermission p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_make_permission)): ty_make_permission option) with
-            | None -> (failwith "lazy function not found": ty_make_permission)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (make_permission: ty_make_permission)
-            (* END_OCAML *)
-          in f (checker, p)
-        | InvalidateAllPermissions p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_invalidate_all_permissions)): ty_invalidate_all_permissions option) with
-            | None -> (failwith "lazy function not found": ty_invalidate_all_permissions)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (invalidate_all_permissions: ty_invalidate_all_permissions)
-            (* END_OCAML *)
-          in f (checker, p)
-        (* Uniswap *)
-        | BuyKit p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_buy_kit)): ty_buy_kit option) with
-            | None -> (failwith "lazy function not found": ty_buy_kit)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (buy_kit: ty_buy_kit)
-            (* END_OCAML *)
-          in f (checker, p)
-        | SellKit p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_sell_kit)): ty_sell_kit option) with
-            | None -> (failwith "lazy function not found": ty_sell_kit)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (sell_kit: ty_sell_kit)
-            (* END_OCAML *)
-          in f (checker, p)
-       | AddLiquidity p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_add_liquidity)): ty_add_liquidity option) with
-            | None -> (failwith "lazy function not found": ty_add_liquidity)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (add_liquidity: ty_add_liquidity)
-            (* END_OCAML *)
-          in f (checker, p)
-        | RemoveLiquidity p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_remove_liquidity)): ty_remove_liquidity option) with
-            | None -> (failwith "lazy function not found": ty_remove_liquidity)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (remove_liquidity: ty_remove_liquidity)
-            (* END_OCAML *)
-          in f (checker, p)
-        (* Liquidation Auction *)
-        | LiqAuctionPlaceBid p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_place_bid)): ty_checker_liquidation_auction_place_bid option) with
-            | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_place_bid)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_liquidation_auction_place_bid: ty_checker_liquidation_auction_place_bid)
-            (* END_OCAML *)
-          in f (checker, p)
-        | LiqAuctionReclaimBid p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_bid)): ty_checker_liquidation_auction_reclaim_bid option) with
-            | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_bid)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_liquidation_auction_reclaim_bid: ty_checker_liquidation_auction_reclaim_bid)
-            (* END_OCAML *)
-          in f (checker, p)
-        | LiqAuctionReclaimWinningBid p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_winning_bid)): ty_checker_liquidation_auction_reclaim_winning_bid option) with
-            | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_winning_bid)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_liquidation_auction_reclaim_winning_bid: ty_checker_liquidation_auction_reclaim_winning_bid)
-            (* END_OCAML *)
-          in f (checker, p)
-        | ReceiveLiquidationSlice ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_slice_from_burrow)): ty_receive_slice_from_burrow option) with
-            | None -> (failwith "lazy function not found": ty_receive_slice_from_burrow)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (receive_slice_from_burrow: ty_receive_slice_from_burrow)
-            (* END_OCAML *)
-          in f checker
-        (* Delegation Auction *)
-        | DelegationAuctionPlaceBid ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_place_bid)): ty_checker_delegation_auction_place_bid option) with
-            | None -> (failwith "lazy function not found": ty_checker_delegation_auction_place_bid)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_delegation_auction_place_bid: ty_checker_delegation_auction_place_bid)
-            (* END_OCAML *)
-          in f checker
-        | DelegationAuctionClaimWin p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_claim_win)): ty_checker_delegation_auction_claim_win option) with
-            | None -> (failwith "lazy function not found": ty_checker_delegation_auction_claim_win)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_delegation_auction_claim_win: ty_checker_delegation_auction_claim_win)
-            (* END_OCAML *)
-          in f (checker, p)
-        | DelegationAuctionReclaimBid p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_reclaim_bid)): ty_checker_delegation_auction_reclaim_bid option) with
-            | None -> (failwith "lazy function not found": ty_checker_delegation_auction_reclaim_bid)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (checker_delegation_auction_reclaim_bid: ty_checker_delegation_auction_reclaim_bid)
-            (* END_OCAML *)
-          in f (checker, p)
-        (* Oracles *)
-        | ReceivePrice p ->
-          let f =
-            (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_price)): ty_receive_price option) with
-            | None -> (failwith "lazy function not found": ty_receive_price)
-            | Some f -> f
-            END_LIGO *)
-            (* BEGIN_OCAML *)
-            (receive_price: ty_receive_price)
-            (* END_OCAML *)
-          in f (checker, p)
-        (* Deployment *)
-        | SealContract -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-        | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-      in
-      (ops, checker, lazy_functions, (None: Ligo.address option))
-    end in
+        (* BEGIN_LIGO
+           let get_lazy_fun (m, k: (lazyFunctionId, Ligo.bytes) Ligo.big_map * lazyFunctionId): Ligo.bytes =
+            match Ligo.Big_map.find_opt k m with
+            | None -> (failwith "lazy function not found": Ligo.bytes)
+            | Some f -> f in
+           END_LIGO *)
+        let ops, checker = match op with
+          | Touch ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch)): ty_touch option) with
+                 | None -> (failwith "lazy function not found": ty_touch)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (touch: ty_touch)
+              (* END_OCAML *)
+            in f checker
+          (* Burrows *)
+          | CreateBurrow p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_create_burrow)): ty_create_burrow option) with
+                 | None -> (failwith "lazy function not found": ty_create_burrow)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (create_burrow: ty_create_burrow)
+              (* END_OCAML *)
+            in f (checker, p)
+          | DepositTez p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deposit_tez)): ty_deposit_tez option) with
+                 | None -> (failwith "lazy function not found": ty_deposit_tez)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (deposit_tez: ty_deposit_tez)
+              (* END_OCAML *)
+            in f (checker, p)
+          | WithdrawTez p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_withdraw_tez option) with
+                 | None -> (failwith "lazy function not found": ty_withdraw_tez)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (withdraw_tez: ty_withdraw_tez)
+              (* END_OCAML *)
+            in f (checker, p)
+          | MintKit p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_mint_kit option) with
+                 | None -> (failwith "lazy function not found": ty_mint_kit)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (mint_kit: ty_mint_kit)
+              (* END_OCAML *)
+            in f (checker, p)
+          | BurnKit p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_burn_kit)): ty_burn_kit option) with
+                 | None -> (failwith "lazy function not found": ty_burn_kit)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (burn_kit: ty_burn_kit)
+              (* END_OCAML *)
+            in f (checker, p)
+          | ActivateBurrow p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_activate_burrow)): ty_activate_burrow option) with
+                 | None -> (failwith "lazy function not found": ty_activate_burrow)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (activate_burrow: ty_activate_burrow)
+              (* END_OCAML *)
+            in f (checker, p)
+          | DeactivateBurrow p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deactivate_burrow)): ty_deactivate_burrow option) with
+                 | None -> (failwith "lazy function not found": ty_deactivate_burrow)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (deactivate_burrow: ty_deactivate_burrow)
+              (* END_OCAML *)
+            in f (checker, p)
+          | MarkBurrowForLiquidation p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_mark_for_liquidation)): ty_mark_for_liquidation option) with
+                 | None -> (failwith "lazy function not found": ty_mark_for_liquidation)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (mark_for_liquidation: ty_mark_for_liquidation)
+              (* END_OCAML *)
+            in f (checker, p)
+          | TouchLiquidationSlices p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_liquidation_slices)): ty_touch_liquidation_slices option) with
+                 | None -> (failwith "lazy function not found": ty_touch_liquidation_slices)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (touch_liquidation_slices: ty_touch_liquidation_slices)
+              (* END_OCAML *)
+            in f (checker, p)
+          | CancelSliceLiquidation p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_cancel_liquidation_slice)): ty_cancel_liquidation_slice option) with
+                 | None -> (failwith "lazy function not found": ty_cancel_liquidation_slice)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (cancel_liquidation_slice: ty_cancel_liquidation_slice)
+              (* END_OCAML *)
+            in f (checker, p)
+          | TouchBurrow p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_burrow)): ty_touch_burrow option) with
+                 | None -> (failwith "lazy function not found": ty_touch_burrow)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (touch_burrow: ty_touch_burrow)
+              (* END_OCAML *)
+            in f (checker, p)
+          | SetBurrowDelegate p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_set_burrow_delegate)): ty_set_burrow_delegate option) with
+                 | None -> (failwith "lazy function not found": ty_set_burrow_delegate)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (set_burrow_delegate: ty_set_burrow_delegate)
+              (* END_OCAML *)
+            in f (checker, p)
+          | MakePermission p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_make_permission)): ty_make_permission option) with
+                 | None -> (failwith "lazy function not found": ty_make_permission)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (make_permission: ty_make_permission)
+              (* END_OCAML *)
+            in f (checker, p)
+          | InvalidateAllPermissions p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_invalidate_all_permissions)): ty_invalidate_all_permissions option) with
+                 | None -> (failwith "lazy function not found": ty_invalidate_all_permissions)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (invalidate_all_permissions: ty_invalidate_all_permissions)
+              (* END_OCAML *)
+            in f (checker, p)
+          (* Uniswap *)
+          | BuyKit p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_buy_kit)): ty_buy_kit option) with
+                 | None -> (failwith "lazy function not found": ty_buy_kit)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (buy_kit: ty_buy_kit)
+              (* END_OCAML *)
+            in f (checker, p)
+          | SellKit p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_sell_kit)): ty_sell_kit option) with
+                 | None -> (failwith "lazy function not found": ty_sell_kit)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (sell_kit: ty_sell_kit)
+              (* END_OCAML *)
+            in f (checker, p)
+          | AddLiquidity p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_add_liquidity)): ty_add_liquidity option) with
+                 | None -> (failwith "lazy function not found": ty_add_liquidity)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (add_liquidity: ty_add_liquidity)
+              (* END_OCAML *)
+            in f (checker, p)
+          | RemoveLiquidity p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_remove_liquidity)): ty_remove_liquidity option) with
+                 | None -> (failwith "lazy function not found": ty_remove_liquidity)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (remove_liquidity: ty_remove_liquidity)
+              (* END_OCAML *)
+            in f (checker, p)
+          (* Liquidation Auction *)
+          | LiqAuctionPlaceBid p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_place_bid)): ty_checker_liquidation_auction_place_bid option) with
+                 | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_place_bid)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_liquidation_auction_place_bid: ty_checker_liquidation_auction_place_bid)
+              (* END_OCAML *)
+            in f (checker, p)
+          | LiqAuctionReclaimBid p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_bid)): ty_checker_liquidation_auction_reclaim_bid option) with
+                 | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_bid)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_liquidation_auction_reclaim_bid: ty_checker_liquidation_auction_reclaim_bid)
+              (* END_OCAML *)
+            in f (checker, p)
+          | LiqAuctionReclaimWinningBid p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_winning_bid)): ty_checker_liquidation_auction_reclaim_winning_bid option) with
+                 | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_winning_bid)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_liquidation_auction_reclaim_winning_bid: ty_checker_liquidation_auction_reclaim_winning_bid)
+              (* END_OCAML *)
+            in f (checker, p)
+          | ReceiveLiquidationSlice ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_slice_from_burrow)): ty_receive_slice_from_burrow option) with
+                 | None -> (failwith "lazy function not found": ty_receive_slice_from_burrow)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (receive_slice_from_burrow: ty_receive_slice_from_burrow)
+              (* END_OCAML *)
+            in f checker
+          (* Delegation Auction *)
+          | DelegationAuctionPlaceBid ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_place_bid)): ty_checker_delegation_auction_place_bid option) with
+                 | None -> (failwith "lazy function not found": ty_checker_delegation_auction_place_bid)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_delegation_auction_place_bid: ty_checker_delegation_auction_place_bid)
+              (* END_OCAML *)
+            in f checker
+          | DelegationAuctionClaimWin p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_claim_win)): ty_checker_delegation_auction_claim_win option) with
+                 | None -> (failwith "lazy function not found": ty_checker_delegation_auction_claim_win)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_delegation_auction_claim_win: ty_checker_delegation_auction_claim_win)
+              (* END_OCAML *)
+            in f (checker, p)
+          | DelegationAuctionReclaimBid p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_reclaim_bid)): ty_checker_delegation_auction_reclaim_bid option) with
+                 | None -> (failwith "lazy function not found": ty_checker_delegation_auction_reclaim_bid)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (checker_delegation_auction_reclaim_bid: ty_checker_delegation_auction_reclaim_bid)
+              (* END_OCAML *)
+            in f (checker, p)
+          (* Oracles *)
+          | ReceivePrice p ->
+            let f =
+              (* BEGIN_LIGO
+                 match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_price)): ty_receive_price option) with
+                 | None -> (failwith "lazy function not found": ty_receive_price)
+                 | Some f -> f
+                 END_LIGO *)
+              (* BEGIN_OCAML *)
+              (receive_price: ty_receive_price)
+              (* END_OCAML *)
+            in f (checker, p)
+          (* Deployment *)
+          | SealContract -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
+          | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
+        in
+        (ops, checker, lazy_functions, (None: Ligo.address option))
+      end in
 
   (ops, (checker, lazy_functions, deployer))
