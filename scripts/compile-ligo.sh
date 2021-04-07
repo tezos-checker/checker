@@ -17,15 +17,15 @@ echo 'Compiling: main'
 ligo compile-contract --warn false "$main" main --output-file "$target_dir/main.tz"
 ligo measure-contract --warn false "$main" main
 
-functions=( $(grep -o 'let fun_[^ ]*' "$checker" | sed -E 's/.{8}(.*)/\1/g' ) )
+functions=$(perl -n -e'/let lazy_fun_(\S+)/ && print "$1\n"' "$checker")
 
-for fun in "${functions[@]}"; do
+for fun in $functions; do
   echo "Packing: $fun"
   ligo compile-expression cameligo \
      --warn false \
      --init-file "$main" \
     "Bytes.pack $fun" \
-    | split -b 40000 -d - "$target_dir/fun_$fun.tz."
+    | split -b 40000 -d - "$target_dir/lazy_fun_$fun.tz."
 done
 
 echo "done." 1>&2

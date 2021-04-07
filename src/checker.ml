@@ -826,32 +826,32 @@ let receive_price (state, price: checker * Ligo.nat) : LigoOp.operation list * c
 (* ENTRYPOINTS *)
 
 type lazyFunctionId = int
-let[@inline] fun_touch = 1
-let[@inline] fun_create_burrow = 2
-let[@inline] fun_touch_liquidation_slices = 3
-let[@inline] fun_mark_for_liquidation = 4
-let[@inline] fun_cancel_liquidation_slice = 5
-let[@inline] fun_checker_liquidation_auction_reclaim_winning_bid = 6
-let[@inline] fun_deposit_tez = 7
-let[@inline] fun_withdraw_tez = 8
-let[@inline] fun_burn_kit = 9
-let[@inline] fun_activate_burrow = 10
-let[@inline] fun_deactivate_burrow = 11
-let[@inline] fun_touch_burrow = 12
-let[@inline] fun_set_burrow_delegate = 13
-let[@inline] fun_make_permission = 14
-let[@inline] fun_invalidate_all_permissions = 15
-let[@inline] fun_buy_kit = 16
-let[@inline] fun_sell_kit = 17
-let[@inline] fun_add_liquidity = 18
-let[@inline] fun_remove_liquidity = 19
-let[@inline] fun_checker_liquidation_auction_place_bid = 20
-let[@inline] fun_checker_liquidation_auction_reclaim_bid = 21
-let[@inline] fun_receive_slice_from_burrow = 22
-let[@inline] fun_checker_delegation_auction_place_bid = 23
-let[@inline] fun_checker_delegation_auction_claim_win = 24
-let[@inline] fun_checker_delegation_auction_reclaim_bid = 25
-let[@inline] fun_receive_price = 26
+let[@inline] lazy_fun_touch = 1
+let[@inline] lazy_fun_create_burrow = 2
+let[@inline] lazy_fun_touch_liquidation_slices = 3
+let[@inline] lazy_fun_mark_for_liquidation = 4
+let[@inline] lazy_fun_cancel_liquidation_slice = 5
+let[@inline] lazy_fun_checker_liquidation_auction_reclaim_winning_bid = 6
+let[@inline] lazy_fun_deposit_tez = 7
+let[@inline] lazy_fun_withdraw_tez = 8
+let[@inline] lazy_fun_burn_kit = 9
+let[@inline] lazy_fun_activate_burrow = 10
+let[@inline] lazy_fun_deactivate_burrow = 11
+let[@inline] lazy_fun_touch_burrow = 12
+let[@inline] lazy_fun_set_burrow_delegate = 13
+let[@inline] lazy_fun_make_permission = 14
+let[@inline] lazy_fun_invalidate_all_permissions = 15
+let[@inline] lazy_fun_buy_kit = 16
+let[@inline] lazy_fun_sell_kit = 17
+let[@inline] lazy_fun_add_liquidity = 18
+let[@inline] lazy_fun_remove_liquidity = 19
+let[@inline] lazy_fun_checker_liquidation_auction_place_bid = 20
+let[@inline] lazy_fun_checker_liquidation_auction_reclaim_bid = 21
+let[@inline] lazy_fun_receive_slice_from_burrow = 22
+let[@inline] lazy_fun_checker_delegation_auction_place_bid = 23
+let[@inline] lazy_fun_checker_delegation_auction_claim_win = 24
+let[@inline] lazy_fun_checker_delegation_auction_reclaim_bid = 25
+let[@inline] lazy_fun_receive_price = 26
 
 type params =
   | Touch
@@ -954,7 +954,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | Touch ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_touch)): ty_touch option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch)): ty_touch option) with
             | None -> (failwith "lazy function not found": ty_touch)
             | Some f -> f
             END_LIGO *)
@@ -966,7 +966,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | CreateBurrow p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_create_burrow)): ty_create_burrow option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_create_burrow)): ty_create_burrow option) with
             | None -> (failwith "lazy function not found": ty_create_burrow)
             | Some f -> f
             END_LIGO *)
@@ -977,7 +977,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | DepositTez p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_deposit_tez)): ty_deposit_tez option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deposit_tez)): ty_deposit_tez option) with
             | None -> (failwith "lazy function not found": ty_deposit_tez)
             | Some f -> f
             END_LIGO *)
@@ -988,7 +988,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | WithdrawTez p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_withdraw_tez)): ty_withdraw_tez option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_withdraw_tez option) with
             | None -> (failwith "lazy function not found": ty_withdraw_tez)
             | Some f -> f
             END_LIGO *)
@@ -999,7 +999,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | MintKit p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_withdraw_tez)): ty_mint_kit option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_withdraw_tez)): ty_mint_kit option) with
             | None -> (failwith "lazy function not found": ty_mint_kit)
             | Some f -> f
             END_LIGO *)
@@ -1010,7 +1010,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | BurnKit p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_burn_kit)): ty_burn_kit option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_burn_kit)): ty_burn_kit option) with
             | None -> (failwith "lazy function not found": ty_burn_kit)
             | Some f -> f
             END_LIGO *)
@@ -1021,7 +1021,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | ActivateBurrow p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_activate_burrow)): ty_activate_burrow option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_activate_burrow)): ty_activate_burrow option) with
             | None -> (failwith "lazy function not found": ty_activate_burrow)
             | Some f -> f
             END_LIGO *)
@@ -1032,7 +1032,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | DeactivateBurrow p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_deactivate_burrow)): ty_deactivate_burrow option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_deactivate_burrow)): ty_deactivate_burrow option) with
             | None -> (failwith "lazy function not found": ty_deactivate_burrow)
             | Some f -> f
             END_LIGO *)
@@ -1043,7 +1043,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | MarkBurrowForLiquidation p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_mark_for_liquidation)): ty_mark_for_liquidation option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_mark_for_liquidation)): ty_mark_for_liquidation option) with
             | None -> (failwith "lazy function not found": ty_mark_for_liquidation)
             | Some f -> f
             END_LIGO *)
@@ -1054,7 +1054,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | TouchLiquidationSlices p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_touch_liquidation_slices)): ty_touch_liquidation_slices option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_liquidation_slices)): ty_touch_liquidation_slices option) with
             | None -> (failwith "lazy function not found": ty_touch_liquidation_slices)
             | Some f -> f
             END_LIGO *)
@@ -1065,7 +1065,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | CancelSliceLiquidation p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_cancel_liquidation_slice)): ty_cancel_liquidation_slice option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_cancel_liquidation_slice)): ty_cancel_liquidation_slice option) with
             | None -> (failwith "lazy function not found": ty_cancel_liquidation_slice)
             | Some f -> f
             END_LIGO *)
@@ -1076,7 +1076,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | TouchBurrow p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_touch_burrow)): ty_touch_burrow option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_touch_burrow)): ty_touch_burrow option) with
             | None -> (failwith "lazy function not found": ty_touch_burrow)
             | Some f -> f
             END_LIGO *)
@@ -1087,7 +1087,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | SetBurrowDelegate p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_set_burrow_delegate)): ty_set_burrow_delegate option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_set_burrow_delegate)): ty_set_burrow_delegate option) with
             | None -> (failwith "lazy function not found": ty_set_burrow_delegate)
             | Some f -> f
             END_LIGO *)
@@ -1098,7 +1098,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | MakePermission p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_make_permission)): ty_make_permission option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_make_permission)): ty_make_permission option) with
             | None -> (failwith "lazy function not found": ty_make_permission)
             | Some f -> f
             END_LIGO *)
@@ -1109,7 +1109,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | InvalidateAllPermissions p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_invalidate_all_permissions)): ty_invalidate_all_permissions option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_invalidate_all_permissions)): ty_invalidate_all_permissions option) with
             | None -> (failwith "lazy function not found": ty_invalidate_all_permissions)
             | Some f -> f
             END_LIGO *)
@@ -1121,7 +1121,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | BuyKit p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_buy_kit)): ty_buy_kit option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_buy_kit)): ty_buy_kit option) with
             | None -> (failwith "lazy function not found": ty_buy_kit)
             | Some f -> f
             END_LIGO *)
@@ -1132,7 +1132,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | SellKit p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_sell_kit)): ty_sell_kit option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_sell_kit)): ty_sell_kit option) with
             | None -> (failwith "lazy function not found": ty_sell_kit)
             | Some f -> f
             END_LIGO *)
@@ -1143,7 +1143,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
        | AddLiquidity p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_add_liquidity)): ty_add_liquidity option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_add_liquidity)): ty_add_liquidity option) with
             | None -> (failwith "lazy function not found": ty_add_liquidity)
             | Some f -> f
             END_LIGO *)
@@ -1154,7 +1154,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | RemoveLiquidity p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_remove_liquidity)): ty_remove_liquidity option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_remove_liquidity)): ty_remove_liquidity option) with
             | None -> (failwith "lazy function not found": ty_remove_liquidity)
             | Some f -> f
             END_LIGO *)
@@ -1166,7 +1166,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | LiqAuctionPlaceBid p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_liquidation_auction_place_bid)): ty_checker_liquidation_auction_place_bid option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_place_bid)): ty_checker_liquidation_auction_place_bid option) with
             | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_place_bid)
             | Some f -> f
             END_LIGO *)
@@ -1177,7 +1177,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | LiqAuctionReclaimBid p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_liquidation_auction_reclaim_bid)): ty_checker_liquidation_auction_reclaim_bid option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_bid)): ty_checker_liquidation_auction_reclaim_bid option) with
             | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_bid)
             | Some f -> f
             END_LIGO *)
@@ -1188,7 +1188,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | LiqAuctionReclaimWinningBid p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_liquidation_auction_reclaim_winning_bid)): ty_checker_liquidation_auction_reclaim_winning_bid option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_liquidation_auction_reclaim_winning_bid)): ty_checker_liquidation_auction_reclaim_winning_bid option) with
             | None -> (failwith "lazy function not found": ty_checker_liquidation_auction_reclaim_winning_bid)
             | Some f -> f
             END_LIGO *)
@@ -1199,7 +1199,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | ReceiveLiquidationSlice ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_receive_slice_from_burrow)): ty_receive_slice_from_burrow option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_slice_from_burrow)): ty_receive_slice_from_burrow option) with
             | None -> (failwith "lazy function not found": ty_receive_slice_from_burrow)
             | Some f -> f
             END_LIGO *)
@@ -1211,7 +1211,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | DelegationAuctionPlaceBid ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_delegation_auction_place_bid)): ty_checker_delegation_auction_place_bid option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_place_bid)): ty_checker_delegation_auction_place_bid option) with
             | None -> (failwith "lazy function not found": ty_checker_delegation_auction_place_bid)
             | Some f -> f
             END_LIGO *)
@@ -1222,7 +1222,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | DelegationAuctionClaimWin p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_delegation_auction_claim_win)): ty_checker_delegation_auction_claim_win option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_claim_win)): ty_checker_delegation_auction_claim_win option) with
             | None -> (failwith "lazy function not found": ty_checker_delegation_auction_claim_win)
             | Some f -> f
             END_LIGO *)
@@ -1233,7 +1233,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | DelegationAuctionReclaimBid p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_checker_delegation_auction_reclaim_bid)): ty_checker_delegation_auction_reclaim_bid option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_checker_delegation_auction_reclaim_bid)): ty_checker_delegation_auction_reclaim_bid option) with
             | None -> (failwith "lazy function not found": ty_checker_delegation_auction_reclaim_bid)
             | Some f -> f
             END_LIGO *)
@@ -1245,7 +1245,7 @@ let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
         | ReceivePrice p ->
           let f =
             (* BEGIN_LIGO
-            match (Bytes.unpack (get_lazy_fun (lazy_functions, fun_receive_price)): ty_receive_price option) with
+            match (Bytes.unpack (get_lazy_fun (lazy_functions, lazy_fun_receive_price)): ty_receive_price option) with
             | None -> (failwith "lazy function not found": ty_receive_price)
             | Some f -> f
             END_LIGO *)

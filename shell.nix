@@ -15,7 +15,7 @@ pkgs.mkShell {
     pkgs.lib.optionals (pkgs.stdenv.isLinux)
       [ ligoBinary
       ]
-    ++ [ pkgs.niv ]
+    ++ [ pkgs.niv pkgs.perl ]
     ++ (with pkgs.ocamlPackages; [
       ocaml
       ocaml-lsp
