@@ -191,7 +191,8 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
     (* split next thing *)
     let (storage, next) = avl_pop_front storage queued_slices in
     match next with
-    | Some slice ->
+    | Some slice_ptr_and_slice ->
+      let slice_ptr, slice = slice_ptr_and_slice in
 
       (* 1: split the contents *)
       let (part1_contents, part2_contents) =
@@ -247,6 +248,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
             storage
             older_ptr
             (fun (older: liquidation_slice) ->
+               assert (older.younger = Some slice_ptr);
                { older with younger = Some part1_leaf_ptr }
             ) in
 
@@ -261,6 +263,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
             storage
             younger_ptr
             (fun (younger: liquidation_slice) ->
+               assert (younger.older = Some slice_ptr);
                { younger with older = Some part2_leaf_ptr }
             ) in
 
@@ -274,13 +277,21 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
         | Some old_slices ->
           { oldest_slice =
               (match slice.older with
-               | None -> part1_leaf_ptr            (* slice was the oldest, now part1 is. *)
-               | Some _ -> old_slices.oldest_slice (* there was another; it remains as it was *)
+               | None ->
+                 assert (old_slices.oldest_slice = slice_ptr);
+                 part1_leaf_ptr (* slice was the oldest, now part1 is. *)
+               | Some _ ->
+                 assert (old_slices.oldest_slice <> slice_ptr);
+                 old_slices.oldest_slice (* there was another; it remains as it was *)
               );
             youngest_slice =
               (match slice.younger with
-               | None -> part2_leaf_ptr              (* slice was the youngest, now part2 is. *)
-               | Some _ -> old_slices.youngest_slice (* there was another; it remains as it was *)
+               | None ->
+                 assert (old_slices.youngest_slice = slice_ptr);
+                 part2_leaf_ptr (* slice was the youngest, now part2 is. *)
+               | Some _ ->
+                 assert (old_slices.youngest_slice <> slice_ptr);
+                 old_slices.youngest_slice (* there was another; it remains as it was *)
               );
           } in
 
