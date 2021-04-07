@@ -14,14 +14,14 @@ main="$PWD/generated/ligo/main.mligo"
 checker="$PWD/generated/ligo/checker.mligo"
 
 echo 'Compiling: main'
-./bin/ligo compile-contract --warn false "$main" main --output-file "$target_dir/main.tz"
-./bin/ligo measure-contract --warn false "$main" main
+ligo compile-contract --warn false "$main" main --output-file "$target_dir/main.tz"
+ligo measure-contract --warn false "$main" main
 
 functions=( $(grep -o 'let fun_[^ ]*' "$checker" | sed -E 's/.{8}(.*)/\1/g' ) )
 
 for fun in "${functions[@]}"; do
   echo "Packing: $fun"
-  ./bin/ligo compile-expression cameligo \
+  ligo compile-expression cameligo \
      --warn false \
      --init-file "$main" \
     "Bytes.pack $fun" \

@@ -14,7 +14,7 @@ fi
 main="$PWD/generated/ligo/main.mligo"
 
 self_address="$($TEZOS_BIN/tezos-client show address bob | grep Hash | cut -d ' ' -f 2)"
-storage="$(./bin/ligo compile-storage --warn false \
+storage="$(ligo compile-storage --warn false \
   --now='2021-01-01T10:10:10Z' \
   "$main" \
   main \
