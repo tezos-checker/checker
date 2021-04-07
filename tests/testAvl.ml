@@ -8,6 +8,7 @@ open Ptr
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]
+type slice_option = liquidation_slice option [@@deriving show]
 
 let nTez (i: int) : Ligo.tez = Ligo.tez_from_literal (string_of_int (1_000_000 * i) ^ "mutez")
 
@@ -160,7 +161,7 @@ let suite =
        let (mem, root) = avl_from_list mem_empty None [] in
        let (mem, x) = avl_pop_front mem root in
        assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal x None;
+       assert_equal None (Option.map snd x) ~printer:show_slice_option;
     );
 
     "test_pop_front" >::
@@ -169,10 +170,10 @@ let suite =
        let (mem, root) = avl_from_list mem_empty None elements in
        let (mem, x) = avl_pop_front mem root in
        assert_equal [ mk_liquidation_slice 2 ] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal x (Some (mk_liquidation_slice 1));
+       assert_equal (Some (mk_liquidation_slice 1)) (Option.map snd x) ~printer:show_slice_option;
        let (mem, x) = avl_pop_front mem root in
        assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal x (Some (mk_liquidation_slice 2));
+       assert_equal (Some (mk_liquidation_slice 2)) (Option.map snd x) ~printer:show_slice_option;
     );
 
     "test_del_singleton" >::
