@@ -179,7 +179,7 @@ let[@inline] make_standalone_slice (contents: liquidation_slice_contents) =
     younger = (None: leaf_ptr option);
   }
 
-let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) =
+let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) : liquidation_auctions * avl_ptr (* liquidation_auction_id *) =
   let queued_slices = auctions.queued_slices in
 
   let (storage, new_auction) = avl_take auctions.avl_storage queued_slices split_threshold (None: auction_outcome option) in
@@ -327,20 +327,29 @@ let start_liquidation_auction_if_possible
            (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_qf)
         ) in
     let (auctions, new_auction) = take_with_splitting auctions split_threshold in
-    let current_auction =
-      if avl_is_empty auctions.avl_storage new_auction
-      then (None: current_liquidation_auction option)
-      else
-        let start_value =
-          let { num = num_sp; den = den_sp; } = start_price in
-          kit_of_fraction_ceil
-            (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
-            (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
-        in
+    if avl_is_empty auctions.avl_storage new_auction
+    then
+      (* If the new auction is empty (effectively meaning that the auction
+       * queue itself is empty) we garbage-collect it (it's not even referenced
+       * in the output). *)
+      let storage = avl_delete_empty_tree auctions.avl_storage new_auction in
+      let current_auction = (None: current_liquidation_auction option) in
+      { auctions with
+        avl_storage = storage;
+        current_auction = current_auction;
+      }
+    else
+      let start_value =
+        let { num = num_sp; den = den_sp; } = start_price in
+        kit_of_fraction_ceil
+          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
+          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
+      in
+      let current_auction =
         Some
           { contents = new_auction;
             state = Descending (start_value, !Ligo.Tezos.now); } in
-    { auctions with current_auction = current_auction; }
+      { auctions with current_auction = current_auction; }
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
