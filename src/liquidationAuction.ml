@@ -211,19 +211,14 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
        * - part1.younger = part2
        *)
       let storage =
-        mem_update
+        avl_update_leaf
           storage
-          (ptr_of_leaf_ptr part1_leaf_ptr)
-          (fun (node: node) ->
-             let node = node_leaf node in
-             Leaf
-               { node with
-                 value =
-                   { node.value with
-                     younger = Some part2_leaf_ptr;
-                     older = slice.older;
-                   };
-               }
+          part1_leaf_ptr
+          (fun (node: liquidation_slice) ->
+             { node with
+               younger = Some part2_leaf_ptr;
+               older = slice.older;
+             }
           ) in
 
       (* 4: fixup the pointers within slice 2 (the younger of the two) as follows:
@@ -231,19 +226,14 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
        * - part2.younger = slice.younger
        *)
       let storage =
-        mem_update
+        avl_update_leaf
           storage
-          (ptr_of_leaf_ptr part2_leaf_ptr)
-          (fun (node: node) ->
-             let node = node_leaf node in
-             Leaf
-               { node with
-                 value =
-                   { node.value with
-                     younger = slice.younger;
-                     older = Some part1_leaf_ptr;
-                   };
-               }
+          part2_leaf_ptr
+          (fun (node: liquidation_slice) ->
+             { node with
+               younger = slice.younger;
+               older = Some part1_leaf_ptr;
+             }
           ) in
 
       (* 5: fixup the "younger" pointer within slice.older so that it now
@@ -252,19 +242,12 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       let storage =
         match slice.older with
         | None -> storage (* slice was the oldest, nothing to change. *)
-        | Some older ->
-          mem_update
+        | Some older_ptr ->
+          avl_update_leaf
             storage
-            (ptr_of_leaf_ptr older)
-            (fun (node: node) ->
-               let node = node_leaf node in
-               Leaf
-                 { node with
-                   value =
-                     { node.value with
-                       younger = Some part1_leaf_ptr;
-                     };
-                 }
+            older_ptr
+            (fun (older: liquidation_slice) ->
+               { older with younger = Some part1_leaf_ptr }
             ) in
 
       (* 6: fixup the "older" pointer within slice.younger so that it now
@@ -273,19 +256,12 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       let storage =
         match slice.younger with
         | None -> storage (* slice was the youngest, nothing to change. *)
-        | Some younger ->
-          mem_update
+        | Some younger_ptr ->
+          avl_update_leaf
             storage
-            (ptr_of_leaf_ptr younger)
-            (fun (node: node) ->
-               let node = node_leaf node in
-               Leaf
-                 { node with
-                   value =
-                     { node.value with
-                       older = Some part2_leaf_ptr;
-                     };
-                 }
+            younger_ptr
+            (fun (younger: liquidation_slice) ->
+               { younger with older = Some part2_leaf_ptr }
             ) in
 
       (* 7: fixup the pointers to the oldest and youngest slices of the burrow.
