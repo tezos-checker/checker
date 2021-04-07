@@ -24,14 +24,9 @@ test-coverage:
 clean:
 	$(RM) -r _build generated
 
-indent: indent-src indent-tests
-
-indent-src:
-	ocp-indent -i src/*.ml src/*.mli
+indent:
+	ocp-indent -i src/*.ml src/*.mli tests/*.ml
 	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
-
-indent-tests:
-	ocp-indent -i tests/*.ml
 	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
 
 docs:
