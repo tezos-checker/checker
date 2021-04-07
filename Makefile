@@ -9,16 +9,8 @@ generate-ligo:
 	mkdir -p generated/ligo
 	sh ./scripts/generate-ligo.sh
 
-build-ligo: generated/michelson/main.tz generated/michelson/storage.tz
-
-generated/michelson/main.tz: generate-ligo
-	mkdir -p generated/michelson
-	ligo compile-contract --protocol edo generated/ligo/main.mligo main --output-file generated/michelson/main.tz
-	ligo measure-contract generated/ligo/main.mligo main
-
-generated/michelson/storage.tz: generate-ligo
-	mkdir -p generated/michelson
-	ligo compile-storage --now='2021-01-01T10:10:10Z' --protocol edo generated/ligo/main.mligo main initial_checker > generated/michelson/storage.tz
+build-ligo: generate-ligo
+	./scripts/compile-ligo.sh
 
 test:
 	./scripts/ensure-unique-errors.sh

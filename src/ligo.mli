@@ -36,7 +36,10 @@ end
 
 (* type bool *)
 
-(* type bytes *)
+type bytes
+module Bytes: sig
+  val concat : bytes -> bytes -> bytes
+end
 
 (* type 'parameter contract *)
 (**
