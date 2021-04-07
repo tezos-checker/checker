@@ -34,15 +34,15 @@ echo '========================'
   --burn-cap 25 \
   --force
 
-for fname in generated/michelson/fun_*.tz*; do
+for fname in generated/michelson/lazy_fun_*.tz*; do
   echo '========================'
   echo "Deploying $fname"
   echo '========================'
 
-  fun="$(echo "$fname" | sed -E 's|.*/fun_(.*).tz.*|\1|g')"
+  fun="$(echo "$fname" | sed -E 's|.*/lazy_fun_(.*).tz.*|\1|g')"
   contents="$(cat "$fname" | sed -z -e 's/^0x//g' -e 's/^/0x/g')"
 
-  param="$(ligo compile-parameter "$main" main "DeployFunction (fun_$fun, $contents)")"
+  param="$(ligo compile-parameter "$main" main "DeployFunction (lazy_fun_$fun, $contents)")"
   "$TEZOS_BIN"/tezos-client call testcontract from bob \
     --arg "$param" \
     --burn-cap 25 \
