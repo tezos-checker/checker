@@ -41,6 +41,10 @@ for name in "${inputs[@]}"; do
     sed -E 's/([(]\* BEGIN_OCAML )\*[)]/\1  /g' |
     sed -E 's/[(]\*( END_OCAML \*[)])/  \1/g' |
 
+    # remove comments wrapped with "{BEGIN,END}_LIGO"
+    sed -E 's/([(]\* BEGIN_LIGO)/\1 *)/g' |
+    sed -E 's/(END_LIGO \*[)])/(* \1/g' |
+
     # Replace all "vocal" failwiths with integer failures.
     # TODO: Ideally we wouldn't have this line.
     # User-facing errors should all fail using appropriate error codes (see

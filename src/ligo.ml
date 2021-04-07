@@ -96,6 +96,13 @@ type key_hash = string
 let pp_key_hash = Format.pp_print_string
 let key_hash_from_literal s = s
 
+(* bytes *)
+
+type bytes = string
+module Bytes = struct
+  let concat (prev: bytes) (next: bytes) = prev ^ next
+end
+
 (* address *)
 
 type address = string

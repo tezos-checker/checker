@@ -27,8 +27,8 @@ PATH="$TEZOS_BIN:$PATH" "$TEZOS_BIN/tezos-sandbox" \
   --add-bootstrap-account "$("$TEZOS_BIN/tezos-sandbox" key alice)@2_000_000_000" \
   --add-bootstrap-account "$("$TEZOS_BIN/tezos-sandbox" key bob)@2_000_000_000" \
   --no-daemons-for alice --no-daemons-for bob \
-  --tezos-baker-alpha-binary "$TEZOS_BIN/tezos-baker-008-PtEdo2Zk" \
-  --tezos-accuser-alpha-binary "$TEZOS_BIN/tezos-accuser-008-PtEdo2Zk" \
-  --tezos-endorser-alpha-binary "$TEZOS_BIN/tezos-endorser-008-PtEdo2Zk" \
-  --protocol-kind Edo \
-  --protocol-hash PtEdo2ZkT9oKpimTah6x2embF25oss54njMuPzkJTEi5RqfdZFA
+  --tezos-baker-alpha-binary "$TEZOS_BIN/tezos-baker-009-PsFLoren" \
+  --tezos-accuser-alpha-binary "$TEZOS_BIN/tezos-accuser-009-PsFLoren" \
+  --tezos-endorser-alpha-binary "$TEZOS_BIN/tezos-endorser-009-PsFLoren" \
+  --protocol-kind Florence \
+  --protocol-hash PsFLorenaUUuikDWvMDr6fGBRG8kt3e3D3fHoXK1j1BFRxeSH4i
