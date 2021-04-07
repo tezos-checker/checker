@@ -429,9 +429,16 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
     (None : liquidation_result)
   else
     let liquidation_reward = Ligo.add_tez_tez creation_deposit partial_reward in
+    (* If, once we subtract reward, collateral is less than creation_deposit, then the burrow needs to be closed. *)
+    (* Does this make sense though? The creation deposit is stored separately *)
+    (* I think this implies that the burrow needs to have double the creation deposit associated with it
+       (1 CD as collateral, 1 as the assumed CD) *)
     if Ligo.sub_tez_tez b.collateral partial_reward < creation_deposit then
+      (* ^^^ *)
+      (*  *)
       (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
        * thing (after paying the liquidation reward of course). *)
+      let _ = Format.fprintf Format.std_formatter "case#a" in
       let tez_to_auction = Ligo.sub_tez_tez b.collateral partial_reward in
       let final_burrow =
         { b with
@@ -452,11 +459,13 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) creation_deposit } in
       let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
+      (* What case would trigger this first condition?  *)
       if tez_to_auction < Ligo.tez_from_literal "0mutez" || tez_to_auction > b_without_reward.collateral then
         (* Case 2b.1: With the current price it's impossible to make the burrow
          * not undercollateralized; pay the liquidation reward, stash away the
          * creation deposit, and liquidate all the remaining collateral, even if
          * it is not expected to repay enough kit. *)
+        let _ = Format.fprintf Format.std_formatter "case#b" in
         let tez_to_auction = b_without_reward.collateral in (* OVERRIDE *)
         let final_burrow =
           { b with
@@ -478,6 +487,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * liquidation was not really warranted, we shall return the auction
          * earnings in their entirety. If not, then only 90% of the earnings
          * shall be returned. *)
+        let _ = Format.fprintf Format.std_formatter "case#c" in
         let final_burrow =
           { b with
             collateral = Ligo.sub_tez_tez b_without_reward.collateral tez_to_auction;

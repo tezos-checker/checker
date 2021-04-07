@@ -569,6 +569,100 @@ let suite =
       true
     );
 
+    (* TODO: unit test burrow_request_liquidation - non liquidatable burrow preserves invariants *)
+    (
+      (* 1 / liquidation_reward * creation_deposit *)
+      let upper_collat_bound_for_test = 1_001_001 in
+      let kit_to_allow_liquidation = kit_of_mukit (Ligo.nat_from_literal "1901901n") in
+      let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- upper_collat_bound_for_test) in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_request_liquidation - burrow returned in case 2a (close burrow) obeys burrow invariants"
+        ~count:property_test_count
+        arb_tez
+      @@ fun collateral ->
+
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:kit_to_allow_liquidation
+          ~active:true
+          ~collateral:collateral in
+
+      let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+        | Some (_, liquidation_details) -> liquidation_details.burrow_state
+        | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+      in
+      Burrow.assert_burrow_invariants burrow;
+      true
+    );
+
+    (
+      (* 1 / liquidation_reward * creation_deposit *)
+      let lower_collat_bound_for_test = 1_001_001 in
+      let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_request_liquidation - burrow returned in case 2b (liquidate all collateral) obeys burrow invariants"
+        ~count:property_test_count
+        (QCheck.pair arb_tez TestArbitrary.arb_kit)
+      @@ fun (collateral, extra_kit)->
+
+      (* Want state where:  *)
+      (* collat - reward - tez_to_auction <= creation_deposit *)
+      (* 999/1000 * collat - tez_to_auction <= creation_deposit *)
+      (*   tez_to_auction = outstanding_kit - collat / 1.9 *)
+      (* 2899 / 1000 collat + creation_deposit <= outstanding_kit *)
+      let min_kit_to_trigger_case = Common.fdiv_int_int
+          (Ligo.mul_int_int (Ligo.int_from_literal "28981") (Common.tez_to_mutez collateral))
+          (Ligo.int_from_literal "19000") in
+      let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
+        | Some n -> kit_add (kit_of_mukit n) extra_kit
+        | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
+      in
+      (* let _ = Format.fprintf Format.std_formatter "collateral=%s|oustanding=%s" (Ligo.string_of_tez collateral) (show_kit outstanding_kit) in *)
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:outstanding_kit
+          ~active:true
+          ~collateral:collateral in
+
+      let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+        | Some (_, liquidation_details) -> liquidation_details.burrow_state
+        | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+      in
+      Burrow.assert_burrow_invariants burrow;
+      true
+    );
+
+    (
+      let collateral = 10_000_000 in
+      (* liquidation limit + creation_deposit *)
+      let min_kit_for_case = 0 in
+      (* 2899 / 1000 collat + creation_deposit *)
+      let max_kit_for_case = 3_731_578 in
+      let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_kit_for_case -- max_kit_for_case) in
+
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"burrow_request_liquidation - burrow returned in case 2c (partially liquidate collateral) obeys burrow invariants"
+        ~count:property_test_count
+        arb_kit
+      @@ fun outstanding_kit ->
+
+      (* let _ = Format.fprintf Format.std_formatter "collateral=%s|oustanding=%s" (string_of_int collateral) (show_kit outstanding_kit) in *)
+      let burrow0 = make_test_burrow
+          ~outstanding_kit:outstanding_kit
+          ~active:true
+          ~collateral:(Ligo.tez_from_literal (string_of_int collateral ^ "mutez")) in
+
+      let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+        | Some (_, liquidation_details) -> liquidation_details.burrow_state
+        | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+      in
+      Burrow.assert_burrow_invariants burrow;
+      true
+    );
+
     (* =========================================================================================== *)
     (* Other property tests *)
     (* =========================================================================================== *)
