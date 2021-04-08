@@ -449,6 +449,20 @@ let suite =
          )
     );
 
+    (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction
+       won't throw an exception if the constants are ever reconfigured in this way.*)
+    ("compute_tez_to_auction - constants do not produce zero division" >::
+     fun _ ->
+       let open Ratio in
+       let {num=f_num; den=f_den} = Constants.fminting in
+       let {num=lp_num; den=lp_den} = Constants.liquidation_penalty in
+
+       assert_bool
+         ("fminting and liquidation_penalty must not be reciprocals of one another. " ^
+          "This breaks the math in compute_tez_to_auction")
+         (not (f_num = lp_den && f_den = lp_num))
+    );
+
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
     (* =========================================================================================== *)
@@ -717,5 +731,32 @@ let suite =
       true
     );
 
+    (
+      (* Note: this test was written to catch cases in an implemention of compute_tez_to_auction in which
+         errors would be thrown for negative values. *)
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"compute_tez_to_auction - does not throw exception for arbitrary inputs"
+        ~count:property_test_count
+        (QCheck.triple TestArbitrary.arb_tez TestArbitrary.arb_tez TestArbitrary.arb_kit)
+      @@ fun (collateral, collateral_at_auction, outstanding_kit) ->
+
+      let burrow0 = Burrow.make_burrow_for_test
+          ~outstanding_kit:outstanding_kit
+          ~excess_kit:kit_zero
+          ~active:true
+          ~permission_version:(Ligo.nat_from_literal "0n")
+          ~allow_all_tez_deposits:false
+          ~allow_all_kit_burnings:false
+          ~delegate:None
+          ~collateral:collateral
+          ~adjustment_index:fixedpoint_one
+          ~collateral_at_auction:collateral_at_auction
+          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+      let _ = Burrow.compute_tez_to_auction Parameters.initial_parameters burrow0 in
+      true
+
+    );
 
   ]
