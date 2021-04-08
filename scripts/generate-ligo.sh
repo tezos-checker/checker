@@ -52,7 +52,7 @@ for name in "${inputs[@]}"; do
     # If I understand correctly, we currently have internal errors that use
     # failwith, and that's why we replace them with "cheap" (failwith 42) here.
     # Eventually this should go away though.
-    sed -E 's/failwith \"([^\"])*\"/Ligo\.failwith 42/g' |
+    # sed -E 's/failwith \"([^\"])*\"/Ligo\.failwith 42/g' |
 
     # Remove ligo qualifiers from identifiers
     sed -E 's/Ligo\.//g' |

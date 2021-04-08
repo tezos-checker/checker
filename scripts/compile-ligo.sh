@@ -24,7 +24,7 @@ for fun in $functions; do
   ligo compile-expression cameligo \
      --warn false \
      --init-file "$main" \
-    "Bytes.pack $fun" \
+    "Bytes.pack wrapped_$fun" \
     | split -b 40000 -d - "$target_dir/lazy_fun_$fun.tz."
 done
 
