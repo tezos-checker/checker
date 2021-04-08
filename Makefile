@@ -2,7 +2,10 @@ all: install-git-hooks build test
 
 build: build-ocaml build-ligo
 
-build-ocaml:
+src/checkerEndpoints.ml: src/checker.mli scripts/generate-endpoints
+	scripts/generate-endpoints src/checker.mli > $@
+
+build-ocaml: src/checkerEndpoints.ml
 	dune build @install
 
 generate-ligo:
