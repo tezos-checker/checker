@@ -569,9 +569,7 @@ let suite =
       true
     );
 
-    (* TODO: unit test burrow_request_liquidation - non liquidatable burrow preserves invariants *)
     (
-      (* 1 / liquidation_reward * creation_deposit *)
       let upper_collat_bound_for_test = 1_001_001 in
       let kit_to_allow_liquidation = kit_of_mukit (Ligo.nat_from_literal "1901901n") in
       let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- upper_collat_bound_for_test) in
@@ -620,7 +618,6 @@ let suite =
         | Some n -> kit_add (kit_of_mukit n) extra_kit
         | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
       in
-      (* let _ = Format.fprintf Format.std_formatter "collateral=%s|oustanding=%s" (Ligo.string_of_tez collateral) (show_kit outstanding_kit) in *)
       let burrow0 = make_test_burrow
           ~outstanding_kit:outstanding_kit
           ~active:true
@@ -635,11 +632,13 @@ let suite =
     );
 
     (
+      (* Holding collateral constant and varying kit since the range of outstanding_kit to trigger this case
+       * depends on the collateral. *)
       let collateral = 10_000_000 in
-      (* liquidation limit + creation_deposit *)
-      let min_kit_for_case = 0 in
-      (* 2899 / 1000 collat + creation_deposit *)
-      let max_kit_for_case = 3_731_578 in
+      (* liquidation limit + 1 *)
+      let min_kit_for_case = 5_263_158  in
+      (* (999 / 1000 collat - creation_deposit) - 1/10 * (999 / 1000 collat - creation_deposit) *)
+      let max_kit_for_case = 8_091_000 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_kit_for_case -- max_kit_for_case) in
 
       qcheck_to_ounit
@@ -649,7 +648,6 @@ let suite =
         arb_kit
       @@ fun outstanding_kit ->
 
-      (* let _ = Format.fprintf Format.std_formatter "collateral=%s|oustanding=%s" (string_of_int collateral) (show_kit outstanding_kit) in *)
       let burrow0 = make_test_burrow
           ~outstanding_kit:outstanding_kit
           ~active:true
