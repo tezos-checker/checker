@@ -481,7 +481,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * shall be returned. *)
         let tez_to_auction = match Ligo.is_nat tez_to_auction with
           | Some mutez -> Ligo.mul_nat_tez mutez (Ligo.tez_from_literal "1mutez")
-          | None -> failwith "tez_to_auction was negative, which should be impossible in this branch"
+          | None -> (failwith "tez_to_auction was negative, which should be impossible in this branch" : Ligo.tez)
         in
         let final_burrow =
           { b with
