@@ -6,7 +6,7 @@ open Tickets
 open CheckerTypes
 open Checker
 
-type params = 
+type checker_params = 
    Touch of unit
  | CreateBurrow of Ligo.key_hash option
  | DepositTez of (permission option * burrow_id)
@@ -36,7 +36,7 @@ type params =
 
 type lazyFunctionId = Ligo.int
 
-let paramsToLazyFunctionId (p: params) : lazyFunctionId * params =
+let checkerParamsToLazyFunctionId (p: checker_params) : lazyFunctionId * checker_params =
   match p with
    | Touch a -> (Ligo.int_from_literal "0", Touch a)
    | CreateBurrow a -> (Ligo.int_from_literal "1", CreateBurrow a)
@@ -65,7 +65,7 @@ let paramsToLazyFunctionId (p: params) : lazyFunctionId * params =
    | DelegationAuctionClaimWin a -> (Ligo.int_from_literal "24", DelegationAuctionClaimWin a)
    | DelegationAuctionReclaimBid a -> (Ligo.int_from_literal "25", DelegationAuctionReclaimBid a)
 
-let lazy_fun_touch (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_touch (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | Touch a -> a
     | CreateBurrow _ -> (failwith "unexpected params": unit)
@@ -95,7 +95,7 @@ let lazy_fun_touch (checker, params: checker * params): LigoOp.operation list * 
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": unit)
   in endpoint_touch (checker, p)
 
-let lazy_fun_create_burrow (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_create_burrow (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | CreateBurrow a -> a
     | Touch _ -> (failwith "unexpected params": Ligo.key_hash option)
@@ -125,7 +125,7 @@ let lazy_fun_create_burrow (checker, params: checker * params): LigoOp.operation
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": Ligo.key_hash option)
   in endpoint_create_burrow (checker, p)
 
-let lazy_fun_deposit_tez (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_deposit_tez (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | DepositTez a -> a
     | Touch _ -> (failwith "unexpected params": (permission option * burrow_id))
@@ -155,7 +155,7 @@ let lazy_fun_deposit_tez (checker, params: checker * params): LigoOp.operation l
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission option * burrow_id))
   in endpoint_deposit_tez (checker, p)
 
-let lazy_fun_withdraw_tez (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_withdraw_tez (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | WithdrawTez a -> a
     | Touch _ -> (failwith "unexpected params": (permission * Ligo.tez * burrow_id))
@@ -185,7 +185,7 @@ let lazy_fun_withdraw_tez (checker, params: checker * params): LigoOp.operation 
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * Ligo.tez * burrow_id))
   in endpoint_withdraw_tez (checker, p)
 
-let lazy_fun_mint_kit (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_mint_kit (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | MintKit a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id * kit))
@@ -215,7 +215,7 @@ let lazy_fun_mint_kit (checker, params: checker * params): LigoOp.operation list
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id * kit))
   in endpoint_mint_kit (checker, p)
 
-let lazy_fun_burn_kit (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_burn_kit (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | BurnKit a -> a
     | Touch _ -> (failwith "unexpected params": (permission option * burrow_id * kit_token))
@@ -245,7 +245,7 @@ let lazy_fun_burn_kit (checker, params: checker * params): LigoOp.operation list
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission option * burrow_id * kit_token))
   in endpoint_burn_kit (checker, p)
 
-let lazy_fun_activate_burrow (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_activate_burrow (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | ActivateBurrow a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id))
@@ -275,7 +275,7 @@ let lazy_fun_activate_burrow (checker, params: checker * params): LigoOp.operati
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id))
   in endpoint_activate_burrow (checker, p)
 
-let lazy_fun_deactivate_burrow (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_deactivate_burrow (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | DeactivateBurrow a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id))
@@ -305,7 +305,7 @@ let lazy_fun_deactivate_burrow (checker, params: checker * params): LigoOp.opera
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id))
   in endpoint_deactivate_burrow (checker, p)
 
-let lazy_fun_mark_for_liquidation (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_mark_for_liquidation (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | MarkForLiquidation a -> a
     | Touch _ -> (failwith "unexpected params": burrow_id)
@@ -335,7 +335,7 @@ let lazy_fun_mark_for_liquidation (checker, params: checker * params): LigoOp.op
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": burrow_id)
   in endpoint_mark_for_liquidation (checker, p)
 
-let lazy_fun_touch_liquidation_slices (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_touch_liquidation_slices (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | TouchLiquidationSlices a -> a
     | Touch _ -> (failwith "unexpected params": leaf_ptr list)
@@ -365,7 +365,7 @@ let lazy_fun_touch_liquidation_slices (checker, params: checker * params): LigoO
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": leaf_ptr list)
   in endpoint_touch_liquidation_slices (checker, p)
 
-let lazy_fun_cancel_liquidation_slice (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_cancel_liquidation_slice (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | CancelLiquidationSlice a -> a
     | Touch _ -> (failwith "unexpected params": (permission * leaf_ptr))
@@ -395,7 +395,7 @@ let lazy_fun_cancel_liquidation_slice (checker, params: checker * params): LigoO
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * leaf_ptr))
   in endpoint_cancel_liquidation_slice (checker, p)
 
-let lazy_fun_touch_burrow (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_touch_burrow (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | TouchBurrow a -> a
     | Touch _ -> (failwith "unexpected params": burrow_id)
@@ -425,7 +425,7 @@ let lazy_fun_touch_burrow (checker, params: checker * params): LigoOp.operation 
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": burrow_id)
   in endpoint_touch_burrow (checker, p)
 
-let lazy_fun_set_burrow_delegate (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_set_burrow_delegate (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | SetBurrowDelegate a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id * Ligo.key_hash option))
@@ -455,7 +455,7 @@ let lazy_fun_set_burrow_delegate (checker, params: checker * params): LigoOp.ope
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id * Ligo.key_hash option))
   in endpoint_set_burrow_delegate (checker, p)
 
-let lazy_fun_make_permission (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_make_permission (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | MakePermission a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id * rights))
@@ -485,7 +485,7 @@ let lazy_fun_make_permission (checker, params: checker * params): LigoOp.operati
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id * rights))
   in endpoint_make_permission (checker, p)
 
-let lazy_fun_invalidate_all_permissions (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_invalidate_all_permissions (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | InvalidateAllPermissions a -> a
     | Touch _ -> (failwith "unexpected params": (permission * burrow_id))
@@ -515,7 +515,7 @@ let lazy_fun_invalidate_all_permissions (checker, params: checker * params): Lig
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (permission * burrow_id))
   in endpoint_invalidate_all_permissions (checker, p)
 
-let lazy_fun_buy_kit (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_buy_kit (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | BuyKit a -> a
     | Touch _ -> (failwith "unexpected params": (kit * Ligo.timestamp))
@@ -545,7 +545,7 @@ let lazy_fun_buy_kit (checker, params: checker * params): LigoOp.operation list 
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (kit * Ligo.timestamp))
   in endpoint_buy_kit (checker, p)
 
-let lazy_fun_sell_kit (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_sell_kit (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | SellKit a -> a
     | Touch _ -> (failwith "unexpected params": (kit_token * Ligo.tez * Ligo.timestamp))
@@ -575,7 +575,7 @@ let lazy_fun_sell_kit (checker, params: checker * params): LigoOp.operation list
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (kit_token * Ligo.tez * Ligo.timestamp))
   in endpoint_sell_kit (checker, p)
 
-let lazy_fun_add_liquidity (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_add_liquidity (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | AddLiquidity a -> a
     | Touch _ -> (failwith "unexpected params": (kit_token * Ligo.nat * Ligo.timestamp))
@@ -605,7 +605,7 @@ let lazy_fun_add_liquidity (checker, params: checker * params): LigoOp.operation
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (kit_token * Ligo.nat * Ligo.timestamp))
   in endpoint_add_liquidity (checker, p)
 
-let lazy_fun_remove_liquidity (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_remove_liquidity (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | RemoveLiquidity a -> a
     | Touch _ -> (failwith "unexpected params": (liquidity * Ligo.tez * kit * Ligo.timestamp))
@@ -635,7 +635,7 @@ let lazy_fun_remove_liquidity (checker, params: checker * params): LigoOp.operat
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (liquidity * Ligo.tez * kit * Ligo.timestamp))
   in endpoint_remove_liquidity (checker, p)
 
-let lazy_fun_liquidation_auction_place_bid (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_liquidation_auction_place_bid (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | LiquidationAuctionPlaceBid a -> a
     | Touch _ -> (failwith "unexpected params": kit_token)
@@ -665,7 +665,7 @@ let lazy_fun_liquidation_auction_place_bid (checker, params: checker * params): 
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": kit_token)
   in endpoint_liquidation_auction_place_bid (checker, p)
 
-let lazy_fun_liquidation_auction_reclaim_bid (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_liquidation_auction_reclaim_bid (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | LiquidationAuctionReclaimBid a -> a
     | Touch _ -> (failwith "unexpected params": liquidation_auction_bid_ticket)
@@ -695,7 +695,7 @@ let lazy_fun_liquidation_auction_reclaim_bid (checker, params: checker * params)
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": liquidation_auction_bid_ticket)
   in endpoint_liquidation_auction_reclaim_bid (checker, p)
 
-let lazy_fun_liquidation_auction_reclaim_winning_bid (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_liquidation_auction_reclaim_winning_bid (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | LiquidationAuctionReclaimWinningBid a -> a
     | Touch _ -> (failwith "unexpected params": liquidation_auction_bid_ticket)
@@ -725,7 +725,7 @@ let lazy_fun_liquidation_auction_reclaim_winning_bid (checker, params: checker *
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": liquidation_auction_bid_ticket)
   in endpoint_liquidation_auction_reclaim_winning_bid (checker, p)
 
-let lazy_fun_receive_slice_from_burrow (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_receive_slice_from_burrow (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | ReceiveSliceFromBurrow a -> a
     | Touch _ -> (failwith "unexpected params": unit)
@@ -755,7 +755,7 @@ let lazy_fun_receive_slice_from_burrow (checker, params: checker * params): Ligo
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": unit)
   in endpoint_receive_slice_from_burrow (checker, p)
 
-let lazy_fun_delegation_auction_place_bid (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_delegation_auction_place_bid (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | DelegationAuctionPlaceBid a -> a
     | Touch _ -> (failwith "unexpected params": unit)
@@ -785,7 +785,7 @@ let lazy_fun_delegation_auction_place_bid (checker, params: checker * params): L
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": unit)
   in endpoint_delegation_auction_place_bid (checker, p)
 
-let lazy_fun_delegation_auction_claim_win (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_delegation_auction_claim_win (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | DelegationAuctionClaimWin a -> a
     | Touch _ -> (failwith "unexpected params": (delegation_auction_bid_ticket * Ligo.key_hash))
@@ -815,7 +815,7 @@ let lazy_fun_delegation_auction_claim_win (checker, params: checker * params): L
     | DelegationAuctionReclaimBid _ -> (failwith "unexpected params": (delegation_auction_bid_ticket * Ligo.key_hash))
   in endpoint_delegation_auction_claim_win (checker, p)
 
-let lazy_fun_delegation_auction_reclaim_bid (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_delegation_auction_reclaim_bid (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | DelegationAuctionReclaimBid a -> a
     | Touch _ -> (failwith "unexpected params": delegation_auction_bid_ticket)

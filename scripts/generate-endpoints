@@ -27,13 +27,13 @@ open Checker
 
 EOF
 
-puts "type params = \n   " +
+puts "type checker_params = \n   " +
      endpoints.map { |e| "#{e.name.camelize} of #{e.param_sig}" }.join("\n | ")
 
 puts
 puts "type lazyFunctionId = Ligo.int"
 puts
-puts "let paramsToLazyFunctionId (p: params) : lazyFunctionId * params =
+puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazyFunctionId * checker_params =
   match p with
 "
 # Need to rebind the constructor arg to work around linearity of tickets
@@ -45,7 +45,7 @@ end
 
 endpoints.each do |endpoint|
   puts "
-let lazy_fun_#{endpoint.name} (checker, params: checker * params): LigoOp.operation list * checker =
+let lazy_fun_#{endpoint.name} (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
     | #{endpoint.name.camelize} a -> a
 "
