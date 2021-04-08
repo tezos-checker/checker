@@ -130,7 +130,7 @@ let optimistically_overburrowed_implies_overburrowed =
  *         burrow would be non-overburrowed, non-liquidatable,
  *         non-optimistically-overburrowed.
 *)
-let assert_properties_of_partial_liquidation burrow_in details =
+let assert_properties_of_partial_liquidation ?params:(params=params) burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "partial liquidation means overburrowed input burrow"
@@ -173,7 +173,7 @@ let assert_properties_of_partial_liquidation burrow_in details =
  *         burrow would be overburrowed. Would it be liquidatable and
  *         optimistically-overburrowed though???
 *)
-let assert_properties_of_complete_liquidation burrow_in details =
+let assert_properties_of_complete_liquidation ?params:(params=params) burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "complete liquidation means liquidatable input burrow"
@@ -218,7 +218,7 @@ let assert_properties_of_complete_liquidation burrow_in details =
  *         expected price? Would it be overburrowed?
  *         optimistically-overburrowed? liquidatable?
 *)
-let assert_properties_of_close_liquidation burrow_in details =
+let assert_properties_of_close_liquidation ?params:(params=params) burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "close liquidation means overburrowed input burrow"
@@ -943,7 +943,7 @@ let test_burrow_request_liquidation_invariant_close =
   in
 
   Burrow.assert_burrow_invariants burrow;
-  assert_properties_of_close_liquidation burrow liquidation_details;
+  assert_properties_of_close_liquidation  ~params:Parameters.initial_parameters burrow0 liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_complete =
@@ -989,7 +989,7 @@ let test_burrow_request_liquidation_invariant_complete =
     | _ -> failwith "liquidation_type returned by burrow_request_liquidation was not Complete as is expected by this test"
   in
   Burrow.assert_burrow_invariants burrow;
-  assert_properties_of_complete_liquidation burrow liquidation_details;
+  assert_properties_of_complete_liquidation ~params:Parameters.initial_parameters burrow0 liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_partial =
@@ -1028,7 +1028,7 @@ let test_burrow_request_liquidation_invariant_partial =
     | _ -> failwith "liquidation_type returned by burrow_request_liquidation was not Partial as is expected by this test"
   in
   Burrow.assert_burrow_invariants burrow;
-  assert_properties_of_partial_liquidation burrow liquidation_details;
+  assert_properties_of_partial_liquidation ~params:Parameters.initial_parameters burrow0 liquidation_details;
   true
 
 let suite =
