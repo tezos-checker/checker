@@ -34,7 +34,7 @@ puts
 puts "type lazy_function_id = Ligo.int"
 puts
 endpoints.each.with_index do |e, n|
-  puts "let[@inline] lazy_id_#{e.name} = Ligo.int_from_literal(\"#{n}\")"
+  puts "let[@inline] lazy_id_#{e.name} = Ligo.int_from_literal \"#{n}\""
 end
 puts
 

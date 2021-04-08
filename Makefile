@@ -3,7 +3,7 @@ all: install-git-hooks build test
 build: build-ocaml build-ligo
 
 src/checkerEndpoints.ml: src/checker.mli scripts/generate-endpoints
-	scripts/generate-endpoints src/checker.mli > $@
+	ruby scripts/generate-endpoints src/checker.mli > $@
 	ocp-indent -i $@
 
 build-ocaml: src/checkerEndpoints.ml
