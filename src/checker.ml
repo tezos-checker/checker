@@ -623,7 +623,7 @@ let endpoint_liquidation_auction_reclaim_bid (state, bid_ticket: checker * liqui
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
   ([op], state) (* NOTE: unchanged state. It's a little weird that we don't keep track of how much kit has not been reclaimed. *)
 
-let endpoint_liquidation_auction_reclaim_winning_bid (state, bid_ticket: checker * liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
+let endpoint_liquidation_auction_claim_win (state, bid_ticket: checker * liquidation_auction_bid_ticket) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let bid_details = ensure_valid_liquidation_auction_bid_ticket bid_ticket in
   let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in

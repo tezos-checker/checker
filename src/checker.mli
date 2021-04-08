@@ -131,8 +131,8 @@ val endpoint_liquidation_auction_place_bid : checker * kit_token -> LigoOp.opera
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
 val endpoint_liquidation_auction_reclaim_bid : checker * liquidation_auction_bid_ticket -> LigoOp.operation list * checker
 
-(** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val endpoint_liquidation_auction_reclaim_winning_bid : checker * liquidation_auction_bid_ticket -> LigoOp.operation list * checker
+(** Claim a winning bid for the current or a completed liquidation auction. *)
+val endpoint_liquidation_auction_claim_win : checker * liquidation_auction_bid_ticket -> LigoOp.operation list * checker
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket

@@ -16,20 +16,19 @@ let initial_wrapper (addr: Ligo.address) =
 
 let get_lazy_function (fnMap : lazy_function_map) (fnId: lazy_function_id) : lazy_function =
   (* BEGIN_LIGO
-     let wrapped : wrapper = match Ligo.Big_map.get_opt fnId fnMap with
+     match Ligo.Big_map.find_opt fnId fnMap with
      | Some bytes -> begin
-        match Ligo.Bytes.unpack bytes with
+        match (Ligo.Bytes.unpack bytes : lazy_function option) with
         | Some f -> f
-        | None -> failwith "lazy function unpack failure"
+        | None -> (failwith "lazy function unpack failure" : lazy_function)
       end
-     | None -> failwith "lazy function missing"
+     | None -> (failwith "lazy function missing" : lazy_function)
      END_LIGO *)
   (* BEGIN_OCAML *)
   lookUpLazyFunction fnId
 (* END_OCAML *)
 
-let main (op_and_state: params * wrapper): LigoOp.operation list * wrapper =
-  let op, state = op_and_state in
+let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
   let checker, lazy_functions, deployer = state in
 
   let ops, checker, lazy_functions, deployer = match deployer with
