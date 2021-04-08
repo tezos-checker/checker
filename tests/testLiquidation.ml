@@ -936,13 +936,14 @@ let test_burrow_request_liquidation_invariant_close =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
-    | Some (Burrow.Close, liquidation_details) -> liquidation_details.burrow_state
+  let burrow, liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+    | Some (Burrow.Close, liquidation_details) -> (liquidation_details.burrow_state, liquidation_details)
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | _ -> failwith "liquidation_type returned by burrow_request_liquidation was not Close as is expected by this test"
   in
 
   Burrow.assert_burrow_invariants burrow;
+  assert_properties_of_close_liquidation burrow liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_complete =
@@ -982,12 +983,13 @@ let test_burrow_request_liquidation_invariant_complete =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
-    | Some (Burrow.Complete, liquidation_details) -> liquidation_details.burrow_state
+  let burrow, liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+    | Some (Burrow.Complete, liquidation_details) -> (liquidation_details.burrow_state, liquidation_details)
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | _ -> failwith "liquidation_type returned by burrow_request_liquidation was not Complete as is expected by this test"
   in
   Burrow.assert_burrow_invariants burrow;
+  assert_properties_of_complete_liquidation burrow liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_partial =
@@ -1020,12 +1022,13 @@ let test_burrow_request_liquidation_invariant_partial =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let burrow = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
-    | Some (Burrow.Partial, liquidation_details) -> liquidation_details.burrow_state
+  let burrow, liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+    | Some (Burrow.Partial, liquidation_details) -> (liquidation_details.burrow_state, liquidation_details)
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | _ -> failwith "liquidation_type returned by burrow_request_liquidation was not Partial as is expected by this test"
   in
   Burrow.assert_burrow_invariants burrow;
+  assert_properties_of_partial_liquidation burrow liquidation_details;
   true
 
 let suite =
