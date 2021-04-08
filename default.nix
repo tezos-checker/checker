@@ -1,6 +1,6 @@
 let
   sources = import ./nix/sources.nix { };
-  pkgs = import sources.nixpkgs { };
+  pkgs = import sources.nixpkgs { system = "x86_64-linux"; };
   ligoBinary =
     # Run 'niv update ligo-artifacts -r <git_rev>' to update
     pkgs.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''

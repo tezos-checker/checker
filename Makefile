@@ -4,16 +4,17 @@ build: build-ocaml build-ligo
 
 src/checkerEndpoints.ml: src/checker.mli scripts/generate-endpoints
 	scripts/generate-endpoints src/checker.mli > $@
+	ocp-indent -i $@
 
 build-ocaml: src/checkerEndpoints.ml
 	dune build @install
 
-generate-ligo:
+generate-ligo: src/checkerEndpoints.ml
 	mkdir -p generated/ligo
 	sh ./scripts/generate-ligo.sh
 
 build-ligo: generate-ligo
-	./scripts/compile-ligo.sh
+	sh ./scripts/compile-ligo.sh
 
 test:
 	./scripts/ensure-unique-errors.sh

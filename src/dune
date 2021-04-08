@@ -22,7 +22,7 @@
   CheckerEndpoints
   CheckerTypes
   Constants
-  Main
+  CheckerLazy
   Mem
   Avl
   Kit

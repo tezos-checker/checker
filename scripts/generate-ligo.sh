@@ -29,6 +29,8 @@ inputs=(
   liquidationAuction
   delegationAuction
   checker
+  checkerEndpoints
+  checkerLazy
 )
 
 for name in "${inputs[@]}"; do
