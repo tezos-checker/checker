@@ -34,36 +34,65 @@ type checker_params =
  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
 
-type lazyFunctionId = Ligo.int
+type lazy_function_id = Ligo.int
 
-let checkerParamsToLazyFunctionId (p: checker_params) : lazyFunctionId * checker_params =
+let[@inline] lazy_id_touch = Ligo.int_from_literal("0")
+let[@inline] lazy_id_create_burrow = Ligo.int_from_literal("1")
+let[@inline] lazy_id_deposit_tez = Ligo.int_from_literal("2")
+let[@inline] lazy_id_withdraw_tez = Ligo.int_from_literal("3")
+let[@inline] lazy_id_mint_kit = Ligo.int_from_literal("4")
+let[@inline] lazy_id_burn_kit = Ligo.int_from_literal("5")
+let[@inline] lazy_id_activate_burrow = Ligo.int_from_literal("6")
+let[@inline] lazy_id_deactivate_burrow = Ligo.int_from_literal("7")
+let[@inline] lazy_id_mark_for_liquidation = Ligo.int_from_literal("8")
+let[@inline] lazy_id_touch_liquidation_slices = Ligo.int_from_literal("9")
+let[@inline] lazy_id_cancel_liquidation_slice = Ligo.int_from_literal("10")
+let[@inline] lazy_id_touch_burrow = Ligo.int_from_literal("11")
+let[@inline] lazy_id_set_burrow_delegate = Ligo.int_from_literal("12")
+let[@inline] lazy_id_make_permission = Ligo.int_from_literal("13")
+let[@inline] lazy_id_invalidate_all_permissions = Ligo.int_from_literal("14")
+let[@inline] lazy_id_buy_kit = Ligo.int_from_literal("15")
+let[@inline] lazy_id_sell_kit = Ligo.int_from_literal("16")
+let[@inline] lazy_id_add_liquidity = Ligo.int_from_literal("17")
+let[@inline] lazy_id_remove_liquidity = Ligo.int_from_literal("18")
+let[@inline] lazy_id_liquidation_auction_place_bid = Ligo.int_from_literal("19")
+let[@inline] lazy_id_liquidation_auction_reclaim_bid = Ligo.int_from_literal("20")
+let[@inline] lazy_id_liquidation_auction_reclaim_winning_bid = Ligo.int_from_literal("21")
+let[@inline] lazy_id_receive_slice_from_burrow = Ligo.int_from_literal("22")
+let[@inline] lazy_id_delegation_auction_place_bid = Ligo.int_from_literal("23")
+let[@inline] lazy_id_delegation_auction_claim_win = Ligo.int_from_literal("24")
+let[@inline] lazy_id_delegation_auction_reclaim_bid = Ligo.int_from_literal("25")
+
+type lazy_function = checker * checker_params -> LigoOp.operation list * checker
+
+let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * checker_params =
   match p with
-   | Touch a -> (Ligo.int_from_literal "0", Touch a)
-   | CreateBurrow a -> (Ligo.int_from_literal "1", CreateBurrow a)
-   | DepositTez a -> (Ligo.int_from_literal "2", DepositTez a)
-   | WithdrawTez a -> (Ligo.int_from_literal "3", WithdrawTez a)
-   | MintKit a -> (Ligo.int_from_literal "4", MintKit a)
-   | BurnKit a -> (Ligo.int_from_literal "5", BurnKit a)
-   | ActivateBurrow a -> (Ligo.int_from_literal "6", ActivateBurrow a)
-   | DeactivateBurrow a -> (Ligo.int_from_literal "7", DeactivateBurrow a)
-   | MarkForLiquidation a -> (Ligo.int_from_literal "8", MarkForLiquidation a)
-   | TouchLiquidationSlices a -> (Ligo.int_from_literal "9", TouchLiquidationSlices a)
-   | CancelLiquidationSlice a -> (Ligo.int_from_literal "10", CancelLiquidationSlice a)
-   | TouchBurrow a -> (Ligo.int_from_literal "11", TouchBurrow a)
-   | SetBurrowDelegate a -> (Ligo.int_from_literal "12", SetBurrowDelegate a)
-   | MakePermission a -> (Ligo.int_from_literal "13", MakePermission a)
-   | InvalidateAllPermissions a -> (Ligo.int_from_literal "14", InvalidateAllPermissions a)
-   | BuyKit a -> (Ligo.int_from_literal "15", BuyKit a)
-   | SellKit a -> (Ligo.int_from_literal "16", SellKit a)
-   | AddLiquidity a -> (Ligo.int_from_literal "17", AddLiquidity a)
-   | RemoveLiquidity a -> (Ligo.int_from_literal "18", RemoveLiquidity a)
-   | LiquidationAuctionPlaceBid a -> (Ligo.int_from_literal "19", LiquidationAuctionPlaceBid a)
-   | LiquidationAuctionReclaimBid a -> (Ligo.int_from_literal "20", LiquidationAuctionReclaimBid a)
-   | LiquidationAuctionReclaimWinningBid a -> (Ligo.int_from_literal "21", LiquidationAuctionReclaimWinningBid a)
-   | ReceiveSliceFromBurrow a -> (Ligo.int_from_literal "22", ReceiveSliceFromBurrow a)
-   | DelegationAuctionPlaceBid a -> (Ligo.int_from_literal "23", DelegationAuctionPlaceBid a)
-   | DelegationAuctionClaimWin a -> (Ligo.int_from_literal "24", DelegationAuctionClaimWin a)
-   | DelegationAuctionReclaimBid a -> (Ligo.int_from_literal "25", DelegationAuctionReclaimBid a)
+   | Touch a -> (lazy_id_touch, Touch a)
+   | CreateBurrow a -> (lazy_id_create_burrow, CreateBurrow a)
+   | DepositTez a -> (lazy_id_deposit_tez, DepositTez a)
+   | WithdrawTez a -> (lazy_id_withdraw_tez, WithdrawTez a)
+   | MintKit a -> (lazy_id_mint_kit, MintKit a)
+   | BurnKit a -> (lazy_id_burn_kit, BurnKit a)
+   | ActivateBurrow a -> (lazy_id_activate_burrow, ActivateBurrow a)
+   | DeactivateBurrow a -> (lazy_id_deactivate_burrow, DeactivateBurrow a)
+   | MarkForLiquidation a -> (lazy_id_mark_for_liquidation, MarkForLiquidation a)
+   | TouchLiquidationSlices a -> (lazy_id_touch_liquidation_slices, TouchLiquidationSlices a)
+   | CancelLiquidationSlice a -> (lazy_id_cancel_liquidation_slice, CancelLiquidationSlice a)
+   | TouchBurrow a -> (lazy_id_touch_burrow, TouchBurrow a)
+   | SetBurrowDelegate a -> (lazy_id_set_burrow_delegate, SetBurrowDelegate a)
+   | MakePermission a -> (lazy_id_make_permission, MakePermission a)
+   | InvalidateAllPermissions a -> (lazy_id_invalidate_all_permissions, InvalidateAllPermissions a)
+   | BuyKit a -> (lazy_id_buy_kit, BuyKit a)
+   | SellKit a -> (lazy_id_sell_kit, SellKit a)
+   | AddLiquidity a -> (lazy_id_add_liquidity, AddLiquidity a)
+   | RemoveLiquidity a -> (lazy_id_remove_liquidity, RemoveLiquidity a)
+   | LiquidationAuctionPlaceBid a -> (lazy_id_liquidation_auction_place_bid, LiquidationAuctionPlaceBid a)
+   | LiquidationAuctionReclaimBid a -> (lazy_id_liquidation_auction_reclaim_bid, LiquidationAuctionReclaimBid a)
+   | LiquidationAuctionReclaimWinningBid a -> (lazy_id_liquidation_auction_reclaim_winning_bid, LiquidationAuctionReclaimWinningBid a)
+   | ReceiveSliceFromBurrow a -> (lazy_id_receive_slice_from_burrow, ReceiveSliceFromBurrow a)
+   | DelegationAuctionPlaceBid a -> (lazy_id_delegation_auction_place_bid, DelegationAuctionPlaceBid a)
+   | DelegationAuctionClaimWin a -> (lazy_id_delegation_auction_claim_win, DelegationAuctionClaimWin a)
+   | DelegationAuctionReclaimBid a -> (lazy_id_delegation_auction_reclaim_bid, DelegationAuctionReclaimBid a)
 
 let lazy_fun_touch (checker, params: checker * checker_params): LigoOp.operation list * checker =
   let p = match params with
@@ -844,3 +873,33 @@ let lazy_fun_delegation_auction_reclaim_bid (checker, params: checker * checker_
     | DelegationAuctionPlaceBid _ -> (failwith "unexpected params": delegation_auction_bid_ticket)
     | DelegationAuctionClaimWin _ -> (failwith "unexpected params": delegation_auction_bid_ticket)
   in endpoint_delegation_auction_reclaim_bid (checker, p)
+(* BEGIN_OCAML *)
+let lookUpLazyFunction (fnId : lazy_function_id) : lazy_function =
+  if fnId = lazy_id_touch then lazy_fun_touch else
+  if fnId = lazy_id_create_burrow then lazy_fun_create_burrow else
+  if fnId = lazy_id_deposit_tez then lazy_fun_deposit_tez else
+  if fnId = lazy_id_withdraw_tez then lazy_fun_withdraw_tez else
+  if fnId = lazy_id_mint_kit then lazy_fun_mint_kit else
+  if fnId = lazy_id_burn_kit then lazy_fun_burn_kit else
+  if fnId = lazy_id_activate_burrow then lazy_fun_activate_burrow else
+  if fnId = lazy_id_deactivate_burrow then lazy_fun_deactivate_burrow else
+  if fnId = lazy_id_mark_for_liquidation then lazy_fun_mark_for_liquidation else
+  if fnId = lazy_id_touch_liquidation_slices then lazy_fun_touch_liquidation_slices else
+  if fnId = lazy_id_cancel_liquidation_slice then lazy_fun_cancel_liquidation_slice else
+  if fnId = lazy_id_touch_burrow then lazy_fun_touch_burrow else
+  if fnId = lazy_id_set_burrow_delegate then lazy_fun_set_burrow_delegate else
+  if fnId = lazy_id_make_permission then lazy_fun_make_permission else
+  if fnId = lazy_id_invalidate_all_permissions then lazy_fun_invalidate_all_permissions else
+  if fnId = lazy_id_buy_kit then lazy_fun_buy_kit else
+  if fnId = lazy_id_sell_kit then lazy_fun_sell_kit else
+  if fnId = lazy_id_add_liquidity then lazy_fun_add_liquidity else
+  if fnId = lazy_id_remove_liquidity then lazy_fun_remove_liquidity else
+  if fnId = lazy_id_liquidation_auction_place_bid then lazy_fun_liquidation_auction_place_bid else
+  if fnId = lazy_id_liquidation_auction_reclaim_bid then lazy_fun_liquidation_auction_reclaim_bid else
+  if fnId = lazy_id_liquidation_auction_reclaim_winning_bid then lazy_fun_liquidation_auction_reclaim_winning_bid else
+  if fnId = lazy_id_receive_slice_from_burrow then lazy_fun_receive_slice_from_burrow else
+  if fnId = lazy_id_delegation_auction_place_bid then lazy_fun_delegation_auction_place_bid else
+  if fnId = lazy_id_delegation_auction_claim_win then lazy_fun_delegation_auction_claim_win else
+  if fnId = lazy_id_delegation_auction_reclaim_bid then lazy_fun_delegation_auction_reclaim_bid else
+  failwith "unexpected lazyFunctionId"
+(* END_OCAML *)

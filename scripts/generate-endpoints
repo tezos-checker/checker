@@ -31,18 +31,24 @@ puts "type checker_params = \n   " +
      endpoints.map { |e| "#{e.name.camelize} of #{e.param_sig}" }.join("\n | ")
 
 puts
-puts "type lazyFunctionId = Ligo.int"
+puts "type lazy_function_id = Ligo.int"
 puts
-puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazyFunctionId * checker_params =
+endpoints.each.with_index do |e, n|
+  puts "let[@inline] lazy_id_#{e.name} = Ligo.int_from_literal(\"#{n}\")"
+end
+puts
+
+puts "type lazy_function = checker * checker_params -> LigoOp.operation list * checker"
+puts
+puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * checker_params =
   match p with
 "
 # Need to rebind the constructor arg to work around linearity of tickets
-endpoints.each.with_index do |e, n|
-  puts "   | #{e.name.camelize} a -> (Ligo.int_from_literal \"#{n}\", #{e.name.camelize} a)"
+endpoints.each do |e|
+  puts "   | #{e.name.camelize} a -> (lazy_id_#{e.name}, #{e.name.camelize} a)"
 end
 
 # Generate wrappers for endpoint functions
-
 endpoints.each do |endpoint|
   puts "
 let lazy_fun_#{endpoint.name} (checker, params: checker * checker_params): LigoOp.operation list * checker =
@@ -54,3 +60,12 @@ let lazy_fun_#{endpoint.name} (checker, params: checker * checker_params): LigoO
   end
   puts "  in endpoint_#{endpoint.name} (checker, p)"
 end
+
+
+puts "(* BEGIN_OCAML *)"
+puts "let lookUpLazyFunction (fnId : lazy_function_id) : lazy_function ="
+endpoints.each.with_index do |e, n|
+  puts "  if fnId = lazy_id_#{e.name} then lazy_fun_#{e.name} else"
+end
+puts "  failwith \"unexpected lazyFunctionId\""
+puts "(* END_OCAML *)"
