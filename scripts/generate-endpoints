@@ -52,15 +52,14 @@ end
 endpoints.each do |endpoint|
   puts "
 let lazy_fun_#{endpoint.name} (checker, params: checker * checker_params): LigoOp.operation list * checker =
-  let p = match params with
-    | #{endpoint.name.camelize} a -> a
+  match params with
+    | #{endpoint.name.camelize} a -> endpoint_#{endpoint.name} (checker, a)
 "
   (endpoints - [endpoint]).each do |other|
-  puts "    | #{other.name.camelize} _ -> (failwith \"unexpected params\": #{endpoint.param_sig})"
+  puts "    | #{other.name.camelize} _ -> (failwith \"unexpected params\": LigoOp.operation list * checker)"
   end
-  puts "  in endpoint_#{endpoint.name} (checker, p)"
 end
-
+puts
 
 puts "(* BEGIN_OCAML *)"
 puts "let lookUpLazyFunction (fnId : lazy_function_id) : lazy_function ="
