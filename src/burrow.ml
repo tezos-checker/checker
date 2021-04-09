@@ -278,6 +278,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
 
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
+  (* Note that num_lp and den_lp here are actually = 1 - liquidation_penalty *)
   let { num = num_lp; den = den_lp; } =
     let { num = num_lp; den = den_lp; } = liquidation_penalty in
     { num = Ligo.sub_int_int den_lp num_lp; den = den_lp; }
