@@ -29,5 +29,17 @@
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/8f1302995ec820e175db9c91b08a08541964df12.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "tezos-packaging": {
+        "branch": "master",
+        "description": "Various forms of Tezos software distribution for Linux.",
+        "homepage": "",
+        "owner": "serokell",
+        "repo": "tezos-packaging",
+        "rev": "056277b258067e6b9bcd85ccb43364ea3a3109c7",
+        "sha256": "1p6304lbvp6h5bg7r7gjyqf8b24pwf9rs2iq7jqb6ba0ipvfi05f",
+        "type": "tarball",
+        "url": "https://github.com/serokell/tezos-packaging/archive/056277b258067e6b9bcd85ccb43364ea3a3109c7.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
