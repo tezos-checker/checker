@@ -134,18 +134,26 @@ let liquidation_auction_send_to_auction
       } in
     (new_state, ret)
 
-(** Split a liquidation slice into two. We also have to split the
-  * min_kit_for_unwarranted so that we can evaluate the two auctions separately
-  * (and see if the liquidation was warranted, retroactively). Perhaps a bit
-  * harshly, for both slices we round up. NOTE: Alternatively, we can calculate
-  * min_kit_for_unwarranted_1 and then calculate min_kit_for_unwarranted_2 =
-  * min_kit_for_unwarranted - min_kit_for_unwarranted_1. *)
-let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liquidation_slice * liquidation_slice) =
+(** Split a liquidation slice into two. The first of the two slices is the
+  * "older" of the two (i.e. it is the one to be included in the auction we are
+  * starting).
+  *
+  * We also have to split the min_kit_for_unwarranted so that we can evaluate
+  * the two auctions separately (and see if the liquidation was warranted,
+  * retroactively). Currently, perhaps a bit harshly, we round up for both
+  * slices.  Alternatively, we can calculate min_kit_for_unwarranted_1 and then
+  * calculate min_kit_for_unwarranted_2 = min_kit_for_unwarranted -
+  * min_kit_for_unwarranted_1. *)
+let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_slice_contents) : (liquidation_slice_contents * liquidation_slice_contents) =
+  let { burrow = contents_burrow;
+        tez = contents_tez;
+        min_kit_for_unwarranted = contents_min_kit_for_unwarranted;
+      } = contents in
   assert (amnt > Ligo.tez_from_literal "0mutez");
-  assert (amnt < slice.contents.tez);
+  assert (amnt < contents_tez);
   (* general *)
-  let min_kit_for_unwarranted = kit_to_mukit_int slice.contents.min_kit_for_unwarranted in
-  let slice_tez = tez_to_mutez slice.contents.tez in
+  let min_kit_for_unwarranted = kit_to_mukit_int contents_min_kit_for_unwarranted in
+  let slice_tez = tez_to_mutez contents_tez in
   (* left slice *)
   let ltez = amnt in
   let lkit =
@@ -154,44 +162,154 @@ let split_liquidation_slice (amnt: Ligo.tez) (slice: liquidation_slice) : (liqui
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
   (* right slice *)
-  let rtez = Ligo.sub_tez_tez slice.contents.tez amnt in
+  let rtez = Ligo.sub_tez_tez contents_tez amnt in
   let rkit =
     kit_of_fraction_ceil
       (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
       (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
   in
-  (* FIXME: We also need to fixup the pointers here *)
-  ( { slice with
-      contents = { slice.contents with
-                   tez = ltez;
-                   min_kit_for_unwarranted = lkit;
-                 }
-    },
-    { slice with
-      contents = { slice.contents with
-                   tez = rtez;
-                   min_kit_for_unwarranted = rkit;
-                 }
-    }
+  ( { burrow = contents_burrow; tez = ltez; min_kit_for_unwarranted = lkit; },
+    { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
-let take_with_splitting (storage: mem) (queued_slices: avl_ptr) (split_threshold: Ligo.tez) =
-  let (storage, new_auction) = avl_take storage queued_slices split_threshold (None: auction_outcome option) in
+(** Create a slice given the contents and set older and younger to None. *)
+let[@inline] make_standalone_slice (contents: liquidation_slice_contents) =
+  { contents = contents;
+    older = (None: leaf_ptr option);
+    younger = (None: leaf_ptr option);
+  }
+
+let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) : liquidation_auctions * avl_ptr (* liquidation_auction_id *) =
+  let queued_slices = auctions.queued_slices in
+
+  let (storage, new_auction) = avl_take auctions.avl_storage queued_slices split_threshold (None: auction_outcome option) in
+  let auctions = { auctions with avl_storage = storage } in
+
   let queued_amount = avl_tez storage new_auction in
   if queued_amount < split_threshold
   then
     (* split next thing *)
     let (storage, next) = avl_pop_front storage queued_slices in
     match next with
-    | Some slice ->
-      let (part1, part2) = split_liquidation_slice (Ligo.sub_tez_tez split_threshold queued_amount) slice in
-      let (storage, _) = avl_push storage queued_slices part2 Right in
-      let (storage, _) = avl_push storage new_auction part1 Left in
-      (storage, new_auction)
+    | Some slice_ptr_and_slice ->
+      let slice_ptr, slice = slice_ptr_and_slice in
+
+      (* 1: split the contents *)
+      let (part1_contents, part2_contents) =
+        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice.contents in
+
+      (* 2: create and push the two slices to the AVL, but initially without
+       * pointers to their neighbors. Before adding the slices to the AVL we
+       * cannot have this information. *)
+      let part1 = make_standalone_slice part1_contents in
+      let (storage, part1_leaf_ptr) = avl_push storage new_auction part1 Left in
+
+      let part2 = make_standalone_slice part2_contents in
+      let (storage, part2_leaf_ptr) = avl_push storage queued_slices part2 Right in
+
+      (* 3: fixup the pointers within slice 1 (the older of the two) as follows:
+       * - part1.older = slice.older
+       * - part1.younger = part2
+       *)
+      let storage =
+        avl_update_leaf
+          storage
+          part1_leaf_ptr
+          (fun (node: liquidation_slice) ->
+             { node with
+               younger = Some part2_leaf_ptr;
+               older = slice.older;
+             }
+          ) in
+
+      (* 4: fixup the pointers within slice 2 (the younger of the two) as follows:
+       * - part2.older = part1
+       * - part2.younger = slice.younger
+       *)
+      let storage =
+        avl_update_leaf
+          storage
+          part2_leaf_ptr
+          (fun (node: liquidation_slice) ->
+             { node with
+               younger = slice.younger;
+               older = Some part1_leaf_ptr;
+             }
+          ) in
+
+      (* 5: fixup the "younger" pointer within slice.older so that it now
+       * points to part1 instead of slice. Nothing to be done if slice is the
+       * oldest. *)
+      let storage =
+        match slice.older with
+        | None -> storage (* slice was the oldest, nothing to change. *)
+        | Some older_ptr ->
+          avl_update_leaf
+            storage
+            older_ptr
+            (fun (older: liquidation_slice) ->
+               assert (older.younger = Some slice_ptr);
+               { older with younger = Some part1_leaf_ptr }
+            ) in
+
+      (* 6: fixup the "older" pointer within slice.younger so that it now
+       * points to part2 instead of slice. Nothing to be done if slice is the
+       * youngest. *)
+      let storage =
+        match slice.younger with
+        | None -> storage (* slice was the youngest, nothing to change. *)
+        | Some younger_ptr ->
+          avl_update_leaf
+            storage
+            younger_ptr
+            (fun (younger: liquidation_slice) ->
+               assert (younger.older = Some slice_ptr);
+               { younger with older = Some part2_leaf_ptr }
+            ) in
+
+      (* 7: fixup the pointers to the oldest and youngest slices of the burrow.
+       * If slice is not the oldest or the youngest itself these should remain
+       * unaltered. If it's the oldest, then part1 now becomes the oldest, and
+       * if it's the youngest then part2 now becomes the youngest. *)
+      let new_burrow_slices =
+        match Ligo.Big_map.find_opt slice.contents.burrow auctions.burrow_slices with
+        | None -> (failwith "this should be impossible, right?" : burrow_liquidation_slices)
+        | Some old_slices ->
+          { oldest_slice =
+              (match slice.older with
+               | None ->
+                 assert (old_slices.oldest_slice = slice_ptr);
+                 part1_leaf_ptr (* slice was the oldest, now part1 is. *)
+               | Some _ ->
+                 assert (old_slices.oldest_slice <> slice_ptr);
+                 old_slices.oldest_slice (* there was another; it remains as it was *)
+              );
+            youngest_slice =
+              (match slice.younger with
+               | None ->
+                 assert (old_slices.youngest_slice = slice_ptr);
+                 part2_leaf_ptr (* slice was the youngest, now part2 is. *)
+               | Some _ ->
+                 assert (old_slices.youngest_slice <> slice_ptr);
+                 old_slices.youngest_slice (* there was another; it remains as it was *)
+              );
+          } in
+
+      let auctions =
+        { auctions with
+          avl_storage = storage;
+          burrow_slices =
+            Ligo.Big_map.add
+              slice.contents.burrow
+              new_burrow_slices
+              auctions.burrow_slices;
+        } in
+
+      (auctions, new_auction)
     | None ->
-      (storage, new_auction)
+      (auctions, new_auction)
   else
-    (storage, new_auction)
+    (auctions, new_auction)
 
 let start_liquidation_auction_if_possible
     (start_price: ratio) (auctions: liquidation_auctions): liquidation_auctions =
@@ -208,28 +326,30 @@ let start_liquidation_auction_if_possible
            (Ligo.mul_int_int (tez_to_mutez queued_amount) num_qf)
            (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_qf)
         ) in
-    let (storage, new_auction) =
-      take_with_splitting
-        auctions.avl_storage
-        auctions.queued_slices
-        split_threshold in
-    let current_auction =
-      if avl_is_empty storage new_auction
-      then (None: current_liquidation_auction option)
-      else
-        let start_value =
-          let { num = num_sp; den = den_sp; } = start_price in
-          kit_of_fraction_ceil
-            (Ligo.mul_int_int (tez_to_mutez (avl_tez storage new_auction)) num_sp)
-            (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
-        in
+    let (auctions, new_auction) = take_with_splitting auctions split_threshold in
+    if avl_is_empty auctions.avl_storage new_auction
+    then
+      (* If the new auction is empty (effectively meaning that the auction
+       * queue itself is empty) we garbage-collect it (it's not even referenced
+       * in the output). *)
+      let storage = avl_delete_empty_tree auctions.avl_storage new_auction in
+      let current_auction = (None: current_liquidation_auction option) in
+      { auctions with
+        avl_storage = storage;
+        current_auction = current_auction;
+      }
+    else
+      let start_value =
+        let { num = num_sp; den = den_sp; } = start_price in
+        kit_of_fraction_ceil
+          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
+          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
+      in
+      let current_auction =
         Some
           { contents = new_auction;
             state = Descending (start_value, !Ligo.Tezos.now); } in
-    { auctions with
-      avl_storage = storage;
-      current_auction = current_auction;
-    }
+      { auctions with current_auction = current_auction; }
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially

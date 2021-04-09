@@ -271,12 +271,14 @@ let burrow_increase_permission_version (p: parameters) (b: burrow) : (Ligo.nat *
   * liquidation (assuming the current expected minting price). For its
   * calculation, see docs/burrow-state-liquidations.md.  Note that it's skewed
   * on the safe side (overapproximation). This ensures that after a partial
-  * liquidation we are no longer "optimistically overburrowed" *)
-let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
+  * liquidation we are no longer "optimistically overburrowed".
+  * Returns the number of tez in mutez *)
+let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
   assert_burrow_invariants b;
 
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
+  (* Note that num_lp and den_lp here are actually = 1 - liquidation_penalty *)
   let { num = num_lp; den = den_lp; } =
     let { num = num_lp; den = den_lp; } = liquidation_penalty in
     { num = Ligo.sub_int_int den_lp num_lp; den = den_lp; }
@@ -320,7 +322,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
             )
          )
       ) in
-  fraction_to_tez_ceil numerator denominator
+  cdiv_int_int (Ligo.mul_int_int numerator (Ligo.int_from_literal "1_000_000")) denominator
 
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
@@ -452,8 +454,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) creation_deposit } in
       let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
-      (* TODO: What case would trigger this first condition?  *)
-      if tez_to_auction < Ligo.tez_from_literal "0mutez" || tez_to_auction > b_without_reward.collateral then
+      if (Ligo.lt_int_int tez_to_auction (Ligo.int_from_literal "0")) || (Ligo.gt_int_int tez_to_auction (tez_to_mutez b_without_reward.collateral)) then
         (* Case 2b.1: With the current price it's impossible to make the burrow
          * not undercollateralized; pay the liquidation reward, stash away the
          * creation deposit, and liquidate all the remaining collateral, even if
@@ -479,6 +480,10 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * liquidation was not really warranted, we shall return the auction
          * earnings in their entirety. If not, then only 90% of the earnings
          * shall be returned. *)
+        let tez_to_auction = match Ligo.is_nat tez_to_auction with
+          | Some mutez -> Ligo.mul_nat_tez mutez (Ligo.tez_from_literal "1mutez")
+          | None -> (failwith "tez_to_auction was negative, which should be impossible in this branch" : Ligo.tez)
+        in
         let final_burrow =
           { b with
             collateral = Ligo.sub_tez_tez b_without_reward.collateral tez_to_auction;

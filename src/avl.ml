@@ -556,14 +556,14 @@ let avl_peek_front (mem: mem) (ptr: avl_ptr) : (leaf_ptr * leaf) option =
   | Some r -> Some (ref_peek_front (mem, r))
 
 (* FIXME: needs an efficient reimplementation *)
-let avl_pop_front (mem: mem) (root_ptr: avl_ptr) : mem * liquidation_slice option =
+let avl_pop_front (mem: mem) (root_ptr: avl_ptr) : mem * (leaf_ptr * liquidation_slice) option =
   let (r, _) = deref_avl_ptr mem root_ptr in
   match r with
-  | None -> (mem, (None: liquidation_slice option))
+  | None -> (mem, (None: (leaf_ptr * liquidation_slice) option))
   | Some r ->
     let (leafptr, leaf) = ref_peek_front (mem, r) in
     let (mem, _) = avl_del mem leafptr in
-    (mem, Some leaf.value)
+    (mem, Some (leafptr, leaf.value))
 
 (* ************************** *)
 
