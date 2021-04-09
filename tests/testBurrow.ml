@@ -451,16 +451,21 @@ let suite =
 
     (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction
        won't throw an exception if the constants are ever reconfigured in this way.*)
-    ("compute_tez_to_auction - constants do not produce zero division" >::
+    ("compute_tez_to_auction - constants obey assumption in implementation" >::
      fun _ ->
        let open Ratio in
        let {num=f_num; den=f_den} = Constants.fminting in
        let {num=lp_num; den=lp_den} = Constants.liquidation_penalty in
 
        assert_bool
-         ("fminting and liquidation_penalty must not be reciprocals of one another. " ^
-          "This breaks the math in compute_tez_to_auction")
-         (not (f_num = lp_den && f_den = lp_num))
+         ("fminting and liquidation_penalty must be configured such that" ^
+          "((1 - liquidation_penalty) * fminting - 1) > 0 in order for the assumptions in " ^
+          "compute_tez_to_auction to hold")
+         (Ligo.gt_int_int
+            (Ligo.mul_int_int
+               f_num
+               (Ligo.sub_int_int lp_den lp_num))
+            (Ligo.mul_int_int lp_den f_den))
     );
 
     (* =========================================================================================== *)
