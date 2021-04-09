@@ -130,7 +130,7 @@ let optimistically_overburrowed_implies_overburrowed =
  *         burrow would be non-overburrowed, non-liquidatable,
  *         non-optimistically-overburrowed.
 *)
-let assert_properties_of_partial_liquidation ?params:(params=params) burrow_in details =
+let assert_properties_of_partial_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "partial liquidation means overburrowed input burrow"
@@ -173,7 +173,7 @@ let assert_properties_of_partial_liquidation ?params:(params=params) burrow_in d
  *         burrow would be overburrowed. Would it be liquidatable and
  *         optimistically-overburrowed though???
 *)
-let assert_properties_of_complete_liquidation ?params:(params=params) burrow_in details =
+let assert_properties_of_complete_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "complete liquidation means liquidatable input burrow"
@@ -218,7 +218,7 @@ let assert_properties_of_complete_liquidation ?params:(params=params) burrow_in 
  *         expected price? Would it be overburrowed?
  *         optimistically-overburrowed? liquidatable?
 *)
-let assert_properties_of_close_liquidation ?params:(params=params) burrow_in details =
+let assert_properties_of_close_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "close liquidation means overburrowed input burrow"
@@ -263,11 +263,11 @@ let test_general_liquidation_properties =
       (not (burrow_is_liquidatable params burrow));
     true
   | Some (Partial, details) ->
-    assert_properties_of_partial_liquidation burrow details; true
+    assert_properties_of_partial_liquidation params burrow details; true
   | Some (Complete, details) ->
-    assert_properties_of_complete_liquidation burrow details; true
+    assert_properties_of_complete_liquidation params burrow details; true
   | Some (Close, details) ->
-    assert_properties_of_close_liquidation burrow details; true
+    assert_properties_of_close_liquidation params burrow details; true
 
 let initial_burrow =
   make_burrow_for_test
@@ -433,7 +433,7 @@ let barely_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 (* Minimum amount of collateral for the burrow to be considered partially
  * liquidatable, but a candidate for collateral depletion (the collateral is
@@ -501,7 +501,7 @@ let barely_non_complete_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 (* Maximum amount of collateral for the burrow to be liquidatable in a way thay
  * recovery seems impossible. *)
@@ -567,7 +567,7 @@ let barely_complete_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 (* Minimum amount of collateral for the burrow to be liquidatable in a way thay
  * recovery seems impossible, but without having to deactivate it. *)
@@ -633,7 +633,7 @@ let barely_non_close_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 (* Maximum amount of collateral for the burrow to be liquidatable and have to
  * be deactivated. *)
@@ -699,7 +699,7 @@ let barely_close_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_close_liquidation burrow details
+    assert_properties_of_close_liquidation params burrow details
 
 let unwarranted_liquidation_unit_test =
   "unwarranted_liquidation_unit_test" >:: fun _ ->
@@ -774,7 +774,7 @@ let partial_liquidation_unit_test =
       (compute_expected_kit params details.tez_to_auction);
 
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 let complete_liquidation_unit_test =
   "complete_liquidation_unit_test" >:: fun _ ->
@@ -840,7 +840,7 @@ let complete_liquidation_unit_test =
     assert_bool
       "input burrow is optimistically overburrowed"
       (burrow_is_optimistically_overburrowed params burrow);
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 let complete_and_close_liquidation_test =
   "complete_and_close_liquidation_test" >:: fun _ ->
@@ -909,7 +909,7 @@ let complete_and_close_liquidation_test =
     assert_bool
       "output burrow is optimistically overburrowed"
       (burrow_is_optimistically_overburrowed params details.burrow_state);
-    assert_properties_of_close_liquidation burrow details
+    assert_properties_of_close_liquidation params burrow details
 
 let test_burrow_request_liquidation_invariant_close =
   let upper_collat_bound_for_test = 1_001_000 in
@@ -937,14 +937,14 @@ let test_burrow_request_liquidation_invariant_close =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
     | Some (Burrow.Close, liquidation_details) -> liquidation_details
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Close was expected" (Burrow.show_liquidation_type liquidation_type))
   in
 
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
-  assert_properties_of_close_liquidation  ~params:Parameters.initial_parameters burrow0 liquidation_details;
+  assert_properties_of_close_liquidation initial_parameters burrow0 liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_complete =
@@ -983,7 +983,7 @@ let test_burrow_request_liquidation_invariant_complete =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
     | Some (Burrow.Complete, liquidation_details) -> liquidation_details
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
@@ -991,7 +991,7 @@ let test_burrow_request_liquidation_invariant_complete =
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
   (* FIXME: this assertion currently fails due to https://github.com/tzConnectBerlin/huxian/issues/72
    * Once we resolve this issue we can re-enable it. *)
-  (* assert_properties_of_complete_liquidation ~params:Parameters.initial_parameters burrow0 liquidation_details; *)
+  (* assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details; *)
   true
 
 let test_burrow_request_liquidation_invariant_partial =
@@ -1024,13 +1024,13 @@ let test_burrow_request_liquidation_invariant_partial =
       ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
       ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-  let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
     | Some (Burrow.Partial, liquidation_details) -> liquidation_details
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Partial was expected" (Burrow.show_liquidation_type liquidation_type))
   in
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
-  assert_properties_of_partial_liquidation ~params:Parameters.initial_parameters burrow0 liquidation_details;
+  assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 
 let suite =
