@@ -38,7 +38,7 @@ in
          '';
          installPhase = ''
            mkdir -p $out
-           cp generated/michelson/*.tz $out
+           cp generated/michelson/* $out
          '';
        };
   shell =
