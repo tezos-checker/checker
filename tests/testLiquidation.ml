@@ -130,7 +130,7 @@ let optimistically_overburrowed_implies_overburrowed =
  *         burrow would be non-overburrowed, non-liquidatable,
  *         non-optimistically-overburrowed.
 *)
-let assert_properties_of_partial_liquidation burrow_in details =
+let assert_properties_of_partial_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "partial liquidation means overburrowed input burrow"
@@ -173,7 +173,7 @@ let assert_properties_of_partial_liquidation burrow_in details =
  *         burrow would be overburrowed. Would it be liquidatable and
  *         optimistically-overburrowed though???
 *)
-let assert_properties_of_complete_liquidation burrow_in details =
+let assert_properties_of_complete_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "complete liquidation means liquidatable input burrow"
@@ -218,7 +218,7 @@ let assert_properties_of_complete_liquidation burrow_in details =
  *         expected price? Would it be overburrowed?
  *         optimistically-overburrowed? liquidatable?
 *)
-let assert_properties_of_close_liquidation burrow_in details =
+let assert_properties_of_close_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
   assert_bool
     "close liquidation means overburrowed input burrow"
@@ -263,11 +263,11 @@ let test_general_liquidation_properties =
       (not (burrow_is_liquidatable params burrow));
     true
   | Some (Partial, details) ->
-    assert_properties_of_partial_liquidation burrow details; true
+    assert_properties_of_partial_liquidation params burrow details; true
   | Some (Complete, details) ->
-    assert_properties_of_complete_liquidation burrow details; true
+    assert_properties_of_complete_liquidation params burrow details; true
   | Some (Close, details) ->
-    assert_properties_of_close_liquidation burrow details; true
+    assert_properties_of_close_liquidation params burrow details; true
 
 let initial_burrow =
   make_burrow_for_test
@@ -433,7 +433,7 @@ let barely_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 (* Minimum amount of collateral for the burrow to be considered partially
  * liquidatable, but a candidate for collateral depletion (the collateral is
@@ -501,7 +501,7 @@ let barely_non_complete_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 (* Maximum amount of collateral for the burrow to be liquidatable in a way thay
  * recovery seems impossible. *)
@@ -567,7 +567,7 @@ let barely_complete_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 (* Minimum amount of collateral for the burrow to be liquidatable in a way thay
  * recovery seems impossible, but without having to deactivate it. *)
@@ -633,7 +633,7 @@ let barely_non_close_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 (* Maximum amount of collateral for the burrow to be liquidatable and have to
  * be deactivated. *)
@@ -699,7 +699,7 @@ let barely_close_liquidatable_test =
       expected_expected_kit
       (compute_expected_kit params details.tez_to_auction);
 
-    assert_properties_of_close_liquidation burrow details
+    assert_properties_of_close_liquidation params burrow details
 
 let unwarranted_liquidation_unit_test =
   "unwarranted_liquidation_unit_test" >:: fun _ ->
@@ -774,7 +774,7 @@ let partial_liquidation_unit_test =
       (compute_expected_kit params details.tez_to_auction);
 
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
-    assert_properties_of_partial_liquidation burrow details
+    assert_properties_of_partial_liquidation params burrow details
 
 let complete_liquidation_unit_test =
   "complete_liquidation_unit_test" >:: fun _ ->
@@ -840,7 +840,7 @@ let complete_liquidation_unit_test =
     assert_bool
       "input burrow is optimistically overburrowed"
       (burrow_is_optimistically_overburrowed params burrow);
-    assert_properties_of_complete_liquidation burrow details
+    assert_properties_of_complete_liquidation params burrow details
 
 let complete_and_close_liquidation_test =
   "complete_and_close_liquidation_test" >:: fun _ ->
@@ -909,7 +909,129 @@ let complete_and_close_liquidation_test =
     assert_bool
       "output burrow is optimistically overburrowed"
       (burrow_is_optimistically_overburrowed params details.burrow_state);
-    assert_properties_of_close_liquidation burrow details
+    assert_properties_of_close_liquidation params burrow details
+
+let test_burrow_request_liquidation_invariant_close =
+  let upper_collat_bound_for_test = 1_001_000 in
+  (* upper_collat_bound_for_test / 1.9 + 1 *)
+  let kit_to_allow_liquidation = kit_of_mukit (Ligo.nat_from_literal "526_843n") in
+  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- upper_collat_bound_for_test) in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"burrow_request_liquidation - burrow returned in case 2a (close burrow) obeys burrow invariants"
+    ~count:property_test_count
+    arb_tez
+  @@ fun collateral ->
+
+  let burrow0 = make_burrow_for_test
+      ~permission_version:(Ligo.nat_from_literal "0n")
+      ~allow_all_tez_deposits:false
+      ~allow_all_kit_burnings:false
+      ~delegate:None
+      ~active:true
+      ~collateral:collateral
+      ~outstanding_kit:kit_to_allow_liquidation
+      ~excess_kit:kit_zero
+      ~adjustment_index:(compute_adjustment_index params)
+      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (Burrow.Close, liquidation_details) -> liquidation_details
+    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+    | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Close was expected" (Burrow.show_liquidation_type liquidation_type))
+  in
+
+  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
+  assert_properties_of_close_liquidation initial_parameters burrow0 liquidation_details;
+  true
+
+let test_burrow_request_liquidation_invariant_complete =
+  (* 1 / liquidation_reward * creation_deposit *)
+  let lower_collat_bound_for_test = 1_001_001 in
+  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"burrow_request_liquidation - burrow returned in case 2b (liquidate all collateral) obeys burrow invariants"
+    ~count:property_test_count
+    (QCheck.pair arb_tez TestArbitrary.arb_kit)
+  @@ fun (collateral, _)->
+
+  (* (999 / 1000 collat - creation_deposit) - 1/10 * (999 / 1000 collat - creation_deposit) + 1 *)
+  (* Note: the math below is just a simplified version of the above expression *)
+  let min_kit_to_trigger_case = Ligo.sub_int_int
+      (Common.cdiv_int_int
+         (Ligo.mul_int_int (Ligo.int_from_literal "8_991") (Common.tez_to_mutez collateral))
+         (Ligo.int_from_literal "10_000"))
+      (Ligo.int_from_literal "899_999") in
+  let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
+    | Some n -> kit_add (kit_of_mukit n) kit_zero
+    | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
+  in
+  let burrow0 = make_burrow_for_test
+      ~permission_version:(Ligo.nat_from_literal "0n")
+      ~allow_all_tez_deposits:false
+      ~allow_all_kit_burnings:false
+      ~delegate:None
+      ~active:true
+      ~collateral:collateral
+      ~outstanding_kit:outstanding_kit
+      ~excess_kit:kit_zero
+      ~adjustment_index:(compute_adjustment_index params)
+      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (Burrow.Complete, liquidation_details) -> liquidation_details
+    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+    | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
+  in
+  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
+  (* FIXME: this assertion currently fails due to https://github.com/tzConnectBerlin/huxian/issues/72
+   * Once we resolve this issue we can re-enable it. *)
+  (* assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details; *)
+  true
+
+let test_burrow_request_liquidation_invariant_partial =
+  (* Holding collateral constant and varying kit since both bounds of the range of outstanding_kit to trigger this case
+   * depend on the collateral. *)
+  let collateral = 10_000_000 in
+  (* liquidation limit + 1 *)
+  let min_kit_for_case = 5_263_158  in
+  (* (999 / 1000 collat - creation_deposit) - 1/10 * (999 / 1000 collat - creation_deposit) *)
+  let max_kit_for_case = 8_091_000 in
+  let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_kit_for_case -- max_kit_for_case) in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"burrow_request_liquidation - burrow returned in case 2c (partially liquidate collateral) obeys burrow invariants"
+    ~count:property_test_count
+    arb_kit
+  @@ fun outstanding_kit ->
+
+  let burrow0 = make_burrow_for_test
+      ~permission_version:(Ligo.nat_from_literal "0n")
+      ~allow_all_tez_deposits:false
+      ~allow_all_kit_burnings:false
+      ~delegate:None
+      ~active:true
+      ~collateral:(Ligo.tez_from_literal (string_of_int collateral ^ "mutez"))
+      ~outstanding_kit:outstanding_kit
+      ~excess_kit:kit_zero
+      ~adjustment_index:(compute_adjustment_index params)
+      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (Burrow.Partial, liquidation_details) -> liquidation_details
+    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+    | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Partial was expected" (Burrow.show_liquidation_type liquidation_type))
+  in
+  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
+  assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
+  true
 
 let suite =
   "LiquidationTests" >::: [
@@ -932,6 +1054,12 @@ let suite =
     liquidatable_implies_overburrowed;
     optimistically_overburrowed_implies_overburrowed;
 
-    (* General, property-based randomg tests regarding liquidation calculations. *)
+    (* General, property-based random tests regarding liquidation calculations. *)
     test_general_liquidation_properties;
+
+    (* General, property-based random tests for checking that burrow_request_liquidation
+     * preserves invariants. *)
+    test_burrow_request_liquidation_invariant_close;
+    test_burrow_request_liquidation_invariant_complete;
+    test_burrow_request_liquidation_invariant_partial;
   ]
