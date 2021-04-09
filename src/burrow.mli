@@ -167,6 +167,8 @@ val make_burrow_for_test :
   last_touched:Ligo.timestamp ->
   burrow
 
+val compute_tez_to_auction : parameters -> burrow -> Ligo.int
+
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
   * current minting price, but that all these liquidations were actually
