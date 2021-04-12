@@ -157,3 +157,36 @@ val endpoint_delegation_auction_claim_win : checker * (delegation_auction_bid_ti
 
 (** Reclaim a failed bid for the current or a completed auction. *)
 val endpoint_delegation_auction_reclaim_bid : checker * delegation_auction_bid_ticket -> (LigoOp.operation list * checker)
+
+(* ************************************************************************* *)
+(**                           CHECKER PARAMETERS                             *)
+(* ************************************************************************* *)
+
+(** User-facing checker parameters. These include non-serializable tickets. *)
+type checker_params =
+    Touch of unit
+  | CreateBurrow of Ligo.key_hash option
+  | DepositTez of (permission option * burrow_id)
+  | WithdrawTez of (permission * Ligo.tez * burrow_id)
+  | MintKit of (permission * burrow_id * kit)
+  | BurnKit of (permission option * burrow_id * kit_token)
+  | ActivateBurrow of (permission * burrow_id)
+  | DeactivateBurrow of (permission * burrow_id)
+  | MarkForLiquidation of burrow_id
+  | TouchLiquidationSlices of leaf_ptr list
+  | CancelLiquidationSlice of (permission * leaf_ptr)
+  | TouchBurrow of burrow_id
+  | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
+  | MakePermission of (permission * burrow_id * rights)
+  | InvalidateAllPermissions of (permission * burrow_id)
+  | BuyKit of (kit * Ligo.timestamp)
+  | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
+  | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
+  | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
+  | LiquidationAuctionPlaceBid of kit_token
+  | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
+  | ReceiveSliceFromBurrow of unit
+  | DelegationAuctionPlaceBid of unit
+  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
+  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket

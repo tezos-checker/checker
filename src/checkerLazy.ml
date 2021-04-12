@@ -1,5 +1,6 @@
 open CheckerEndpoints
 open CheckerTypes
+open Checker
 open Error
 
 type params =
