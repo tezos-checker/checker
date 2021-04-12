@@ -198,6 +198,11 @@ let[@inline] ensure_valid_permission (permission: permission) : permission_redac
   then (rights, id, version)
   else (Ligo.failwith error_InvalidPermission : permission_redacted_content)
 
+let[@inline] ensure_valid_optional_permission (permission: permission option) : permission_redacted_content option =
+  match permission with
+  | None -> (None: permission_redacted_content option)
+  | Some permission -> Some (ensure_valid_permission permission)
+
 (** Check whether a permission (redacted content) matches the burrow it's
   * supposed to match. That is, check whether (a) it matches the given burrow
   * id, and (b) it matches the permission version specified by the burrow. Note
@@ -212,7 +217,7 @@ let[@inline] ensure_matching_permission
   then rights
   else (Ligo.failwith error_InvalidPermission : rights)
 
-let ensure_permission_is_present (permission: permission option) : permission =
+let ensure_permission_is_present (permission: permission_redacted_content option) : permission_redacted_content =
   match permission with
-  | None -> (Ligo.failwith error_MissingPermission : permission)
+  | None -> (Ligo.failwith error_MissingPermission : permission_redacted_content)
   | Some permission -> permission

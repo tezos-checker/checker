@@ -43,8 +43,9 @@ type permission_redacted_content = rights * Ligo.address * Ligo.nat
 type permission = permission_content Ligo.ticket
 val issue_permission_ticket : rights -> Ligo.address -> Ligo.nat -> permission
 val ensure_valid_permission : permission -> permission_redacted_content
+val ensure_valid_optional_permission : permission option -> permission_redacted_content option
 val ensure_matching_permission : Ligo.address -> Ligo.nat -> permission_redacted_content -> rights
-val ensure_permission_is_present : permission option -> permission
+val ensure_permission_is_present : permission_redacted_content option -> permission_redacted_content
 
 (* BEGIN_OCAML *)
 val show_kit_token_content : kit_token_content -> string

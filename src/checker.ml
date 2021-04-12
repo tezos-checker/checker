@@ -133,8 +133,8 @@ let endpoint_deposit_tez (state, p: checker * (permission option * burrow_id)) :
     if burrow_allow_all_tez_deposits burrow then
       true
     else
-      let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission in
+      let r = ensure_valid_optional_permission permission in
+      let r = ensure_permission_is_present r in
       let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
       does_right_allow_tez_deposits r
   in
@@ -199,8 +199,8 @@ let endpoint_burn_kit (state, p: checker * (permission option * burrow_id * kit_
     if burrow_allow_all_kit_burnings burrow then
       true
     else
-      let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission in
+      let r = ensure_valid_optional_permission permission in
+      let r = ensure_permission_is_present r in
       let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
       does_right_allow_kit_burning r
   in
