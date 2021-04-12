@@ -134,7 +134,8 @@ let endpoint_deposit_tez (state, p: checker * (permission option * burrow_id)) :
       true
     else
       let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+      let r = ensure_valid_permission permission in
+      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
       does_right_allow_tez_deposits r
   in
   if is_allowed then
@@ -151,7 +152,8 @@ let endpoint_mint_kit (state, p: checker * (permission * burrow_id * kit)) : Lig
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
   if does_right_allow_kit_minting r then
     (* the permission should support minting kit. *)
     let burrow = burrow_mint_kit state.parameters kit burrow in
@@ -173,7 +175,9 @@ let endpoint_withdraw_tez (state, p: checker * (permission * Ligo.tez * burrow_i
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if does_right_allow_tez_withdrawals r then
     (* the permission should support withdrawing tez. *)
     let burrow = burrow_withdraw_tez state.parameters tez burrow in
@@ -196,7 +200,8 @@ let endpoint_burn_kit (state, p: checker * (permission option * burrow_id * kit_
       true
     else
       let permission = ensure_permission_is_present permission in
-      let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+      let r = ensure_valid_permission permission in
+      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
       does_right_allow_kit_burning r
   in
   if is_allowed then
@@ -219,7 +224,9 @@ let endpoint_activate_burrow (state, p: checker * (permission * burrow_id)) : Li
   let permission, burrow_id = p in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if is_admin_right r then
     (* only admins can activate burrows. *)
     let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
@@ -236,7 +243,9 @@ let endpoint_deactivate_burrow (state, p: checker * (permission * burrow_id)) : 
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if is_admin_right r then
     (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
@@ -253,7 +262,9 @@ let endpoint_set_burrow_delegate (state, p: checker * (permission * burrow_id * 
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if does_right_allow_setting_delegate r then
     (* the permission should support setting the delegate. *)
     let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
@@ -270,7 +281,9 @@ let endpoint_make_permission (state, p: checker * (permission * burrow_id * righ
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if is_admin_right r then
     (* only admins can create permissions. *)
     let ticket = issue_permission_ticket right burrow_id (burrow_permission_version burrow) in
@@ -286,7 +299,9 @@ let endpoint_invalidate_all_permissions (state, p: checker * (permission * burro
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_valid_permission permission burrow_id (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
   if is_admin_right r then
     (* only admins can invalidate all permissions. *)
     let updated_version, updated_burrow = burrow_increase_permission_version state.parameters burrow in
@@ -343,7 +358,9 @@ let endpoint_cancel_liquidation_slice ((state, (permission, leaf_ptr)): checker 
   let _ = ensure_no_tez_given () in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
-  let r = ensure_valid_permission permission cancelled.burrow (burrow_permission_version burrow) in
+  let r = ensure_valid_permission permission in
+  let r = ensure_matching_permission cancelled.burrow (burrow_permission_version burrow) r in
+
   if not (does_right_allow_cancelling_liquidations r) then
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
   else
