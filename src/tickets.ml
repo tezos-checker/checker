@@ -72,12 +72,12 @@ let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
   * it is issued by checker, and (b) it is tagged appropriately. In OCaml/LIGO
   * the type ensures (b), but in Michelson this is not strictly necessary,
   * hence the runtime check of the tag. *)
-let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, ((tag, _content), _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : Ligo.nat =
+  let (issuer, ((tag, _content), lqt)), _liquidity = Ligo.Tezos.read_ticket liquidity in
   let is_valid = issuer = checker_address && tag = lqt_token_tag in
   if is_valid
-  then liquidity
-  else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
+  then lqt
+  else (Ligo.failwith error_InvalidLiquidityToken : Ligo.nat)
 
 (* ************************************************************************* *)
 (**                    DELEGATION AUCTION BID TICKETS                        *)

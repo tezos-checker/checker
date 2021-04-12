@@ -26,7 +26,7 @@ val ensure_valid_kit_token : kit_token -> kit
 type liquidity_token_content (* opaque *)
 type liquidity = liquidity_token_content Ligo.ticket
 val issue_liquidity_tokens : Ligo.nat -> liquidity
-val ensure_valid_liquidity_token : liquidity -> liquidity
+val ensure_valid_liquidity_token : liquidity -> Ligo.nat
 
 type delegation_auction_bid_content (* opaque *)
 type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket

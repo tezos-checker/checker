@@ -574,8 +574,7 @@ let endpoint_remove_liquidity (state, p: checker * (liquidity * Ligo.tez * kit *
   let lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
-  let lqt_burned = ensure_valid_liquidity_token lqt_burned in
-  let (_, (_, lqt_burned)), _ = Ligo.Tezos.read_ticket lqt_burned in (* NOTE: consumed, right here. *)
+  let lqt_burned = ensure_valid_liquidity_token lqt_burned in (* NOTE: consumed, right here. *)
   let (tez, kit_tokens, updated_uniswap) =
     uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
