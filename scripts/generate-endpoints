@@ -31,25 +31,25 @@ endpoints.each.with_index do |e, n|
 end
 puts
 
-puts "type lazy_function = checker * checker_params -> LigoOp.operation list * checker"
+puts "type lazy_function = checker * checker_raw_params -> LigoOp.operation list * checker"
 puts
-puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * checker_params =
+puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * checker_raw_params =
   match p with
 "
 # Need to rebind the constructor arg to work around linearity of tickets
 endpoints.each do |e|
-  puts "   | #{e.name.camelize} a -> (lazy_id_#{e.name}, #{e.name.camelize} a)"
+  puts "   | #{e.name.camelize} a -> (lazy_id_#{e.name}, Raw#{e.name.camelize} (deticketify_#{e.name} a))"
 end
 
 # Generate wrappers for endpoint functions
 endpoints.each do |endpoint|
   puts "
-let lazy_fun_#{endpoint.name} (checker, params: checker * checker_params): LigoOp.operation list * checker =
+let lazy_fun_#{endpoint.name} (checker, params: checker * checker_raw_params): LigoOp.operation list * checker =
   match params with
-    | #{endpoint.name.camelize} a -> endpoint_#{endpoint.name} (checker, a)
+    | Raw#{endpoint.name.camelize} a -> endpoint_#{endpoint.name} (checker, a)
 "
   (endpoints - [endpoint]).each do |other|
-  puts "    | #{other.name.camelize} _ -> (failwith \"unexpected params\": LigoOp.operation list * checker)"
+  puts "    | Raw#{other.name.camelize} _ -> (failwith \"unexpected params\": LigoOp.operation list * checker)"
   end
 end
 puts
