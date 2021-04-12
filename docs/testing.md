@@ -5,7 +5,7 @@
 The purpose of this document is to outline the current sets of testing approaches which have been used
 in the project. As of the writing of this document, testing is non-exhaustive but does cover a sizeable portion of the codebase.
 
-All tests are written in OCaml and are designed to be executed using `dune` (or via the repo `Makefile`). All tests reside under the [tests/](../tests) directory and are primarily organized by the corresponding `src` module which they test. The exception to this is `testLiquidation.ml`, which centralizes testing logic for liquidation auctions.
+All tests are written in OCaml and are designed to be executed using `dune` (or via the repo `Makefile`) since there is not a unit testing framework for Ligo yet. All tests reside under the [tests/](../tests) directory and are primarily organized by the corresponding `src` module which they test. The exception to this is `testLiquidation.ml`, which centralizes testing logic for liquidation auctions.
 
 
 So far, testing has focused on the following areas:
