@@ -191,35 +191,6 @@ type checker_params =
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
 
-(** Raw checker parameters without tickets. Serializable. *)
-type checker_raw_params =
-    RawTouch of unit
-  | RawCreateBurrow of Ligo.key_hash option
-  | RawDepositTez of (permission_redacted_content option * burrow_id)
-  | RawWithdrawTez of (permission_redacted_content * Ligo.tez * burrow_id)
-  | RawMintKit of (permission_redacted_content * burrow_id * kit)
-  | RawBurnKit of (permission_redacted_content option * burrow_id * kit)
-  | RawActivateBurrow of (permission_redacted_content * burrow_id)
-  | RawDeactivateBurrow of (permission_redacted_content * burrow_id)
-  | RawMarkForLiquidation of burrow_id
-  | RawTouchLiquidationSlices of leaf_ptr list
-  | RawCancelLiquidationSlice of (permission_redacted_content * leaf_ptr)
-  | RawTouchBurrow of burrow_id
-  | RawSetBurrowDelegate of (permission_redacted_content * burrow_id * Ligo.key_hash option)
-  | RawMakePermission of (permission_redacted_content * burrow_id * rights)
-  | RawInvalidateAllPermissions of (permission_redacted_content * burrow_id)
-  | RawBuyKit of (kit * Ligo.timestamp)
-  | RawSellKit of (kit * Ligo.tez * Ligo.timestamp)
-  | RawAddLiquidity of (kit * Ligo.nat * Ligo.timestamp)
-  | RawRemoveLiquidity of (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)
-  | RawLiquidationAuctionPlaceBid of kit
-  | RawLiquidationAuctionReclaimBid of liquidation_auction_bid
-  | RawLiquidationAuctionClaimWin of liquidation_auction_bid
-  | RawReceiveSliceFromBurrow of unit
-  | RawDelegationAuctionPlaceBid of unit
-  | RawDelegationAuctionClaimWin of (delegation_auction_bid * Ligo.key_hash)
-  | RawDelegationAuctionReclaimBid of delegation_auction_bid
-
 val deticketify_touch : unit -> unit
 val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
 val deticketify_deposit_tez : permission option * burrow_id -> permission_redacted_content option * burrow_id

@@ -15,19 +15,16 @@ type wrapper = checker * lazy_function_map * Ligo.address option
 let initial_wrapper (addr: Ligo.address) =
   (initial_checker, (Ligo.Big_map.empty: (lazy_function_id, Ligo.bytes) Ligo.big_map), Some addr)
 
-let get_lazy_function (fnMap : lazy_function_map) (fnId: lazy_function_id) : lazy_function =
-  (* BEGIN_LIGO
-     match Ligo.Big_map.find_opt fnId fnMap with
-     | Some bytes -> begin
-        match (Ligo.Bytes.unpack bytes : lazy_function option) with
-        | Some f -> f
-        | None -> (failwith "lazy function unpack failure" : lazy_function)
-      end
-     | None -> (failwith "lazy function missing" : lazy_function)
-     END_LIGO *)
-  (* BEGIN_OCAML *)
-  lookUpLazyFunction fnId
-(* END_OCAML *)
+(* BEGIN_LIGO
+   let get_lazy_function (fnMap : lazy_function_map) (fnId: lazy_function_id) : lazy_function =
+   match Ligo.Big_map.find_opt fnId fnMap with
+   | Some bytes -> begin
+      match (Ligo.Bytes.unpack bytes : lazy_function option) with
+      | Some f -> f
+      | None -> (failwith "lazy function unpack failure" : lazy_function)
+    end
+   | None -> (failwith "lazy function missing" : lazy_function)
+   END_LIGO *)
 
 let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
   let checker, lazy_functions, deployer = state in
@@ -57,8 +54,13 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
         | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
         | SealContract -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
         | CheckerEndpoint op ->
-          let fid, op = checkerParamsToLazyFunctionId op in
-          (get_lazy_function lazy_functions fid) (checker, op) in
+          (* BEGIN_LIGO
+             let fid, params = checkerParamsToLazyFunctionId op in
+             (get_lazy_function lazy_functions fid) (checker, params)
+             END_LIGO *)
+          (* BEGIN_OCAML *)
+          runCheckerParams op checker
+          (* END_OCAML *) in
       (ops, checker, lazy_functions, deployer)
   in
   (ops, (checker, lazy_functions, deployer))

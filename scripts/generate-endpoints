@@ -31,33 +31,34 @@ endpoints.each.with_index do |e, n|
 end
 puts
 
-puts "type lazy_function = checker * checker_raw_params -> LigoOp.operation list * checker"
+puts "type lazy_function = checker * Ligo.bytes -> LigoOp.operation list * checker"
 puts
-puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * checker_raw_params =
+puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * Ligo.bytes =
   match p with
 "
-# Need to rebind the constructor arg to work around linearity of tickets
 endpoints.each do |e|
-  puts "   | #{e.name.camelize} a -> (lazy_id_#{e.name}, Raw#{e.name.camelize} (deticketify_#{e.name} a))"
+  puts "   | #{e.name.camelize} a -> (lazy_id_#{e.name}, Ligo.Bytes.pack (deticketify_#{e.name} a))"
 end
 
 # Generate wrappers for endpoint functions
 endpoints.each do |endpoint|
   puts "
-let lazy_fun_#{endpoint.name} (checker, params: checker * checker_raw_params): LigoOp.operation list * checker =
-  match params with
-    | Raw#{endpoint.name.camelize} a -> endpoint_#{endpoint.name} (checker, a)
+(* BEGIN_LIGO
+let lazy_fun_#{endpoint.name} (checker, params: checker * Ligo.bytes): LigoOp.operation list * checker =
+  match (Ligo.Bytes.unpack params: #{endpoint.param_sig} option) with
+  | Some p -> endpoint_#{endpoint.name} (checker, p)
+  | None -> (failwith \"unexpected params\": LigoOp.operation list * checker)
+END_LIGO *)
 "
-  (endpoints - [endpoint]).each do |other|
-  puts "    | Raw#{other.name.camelize} _ -> (failwith \"unexpected params\": LigoOp.operation list * checker)"
-  end
 end
 puts
 
+# Generate an ocaml shim to avoid packing
 puts "(* BEGIN_OCAML *)"
-puts "let lookUpLazyFunction (fnId : lazy_function_id) : lazy_function ="
-endpoints.each.with_index do |e, n|
-  puts "  if fnId = lazy_id_#{e.name} then lazy_fun_#{e.name} else"
+puts "let runCheckerParams (params: checker_params) (checker: checker): LigoOp.operation list * checker =
+  match params with
+"
+endpoints.each do |e|
+  puts "   | #{e.name.camelize} a -> endpoint_#{e.name} (checker, deticketify_#{e.name} a)"
 end
-puts "  failwith \"unexpected lazyFunctionId\""
 puts "(* END_OCAML *)"

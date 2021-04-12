@@ -210,7 +210,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       (* 3: fixup the pointers within slice 1 (the older of the two) as follows:
        * - part1.older = slice.older
        * - part1.younger = part2
-       *)
+      *)
       let storage =
         avl_update_leaf
           storage
@@ -225,7 +225,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       (* 4: fixup the pointers within slice 2 (the younger of the two) as follows:
        * - part2.older = part1
        * - part2.younger = slice.younger
-       *)
+      *)
       let storage =
         avl_update_leaf
           storage

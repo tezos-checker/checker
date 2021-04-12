@@ -101,6 +101,7 @@ let key_hash_from_literal s = s
 type bytes = string
 module Bytes = struct
   let concat (prev: bytes) (next: bytes) = prev ^ next
+  let pack (_: 'a) = ""
 end
 
 (* address *)

@@ -39,6 +39,7 @@ end
 type bytes
 module Bytes: sig
   val concat : bytes -> bytes -> bytes
+  val pack : 'a -> bytes
 end
 
 (* type 'parameter contract *)
