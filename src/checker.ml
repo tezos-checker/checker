@@ -816,6 +816,7 @@ let endpoint_receive_price (state, price: checker * Ligo.nat) : LigoOp.operation
 (**                           CHECKER PARAMETERS                             *)
 (* ************************************************************************* *)
 
+(** User-facing checker parameters. These include non-serializable tickets. *)
 type checker_params =
     Touch of unit
   | CreateBurrow of Ligo.key_hash option
@@ -844,3 +845,127 @@ type checker_params =
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
 
+(** Raw checker parameters without tickets. Serializable. *)
+type checker_raw_params =
+    RawTouch of unit
+  | RawCreateBurrow of Ligo.key_hash option
+  | RawDepositTez of (permission_redacted_content option * burrow_id)
+  | RawWithdrawTez of (permission_redacted_content * Ligo.tez * burrow_id)
+  | RawMintKit of (permission_redacted_content * burrow_id * kit)
+  | RawBurnKit of (permission_redacted_content option * burrow_id * kit)
+  | RawActivateBurrow of (permission_redacted_content * burrow_id)
+  | RawDeactivateBurrow of (permission_redacted_content * burrow_id)
+  | RawMarkForLiquidation of burrow_id
+  | RawTouchLiquidationSlices of leaf_ptr list
+  | RawCancelLiquidationSlice of (permission_redacted_content * leaf_ptr)
+  | RawTouchBurrow of burrow_id
+  | RawSetBurrowDelegate of (permission_redacted_content * burrow_id * Ligo.key_hash option)
+  | RawMakePermission of (permission_redacted_content * burrow_id * rights)
+  | RawInvalidateAllPermissions of (permission_redacted_content * burrow_id)
+  | RawBuyKit of (kit * Ligo.timestamp)
+  | RawSellKit of (kit * Ligo.tez * Ligo.timestamp)
+  | RawAddLiquidity of (kit * Ligo.nat * Ligo.timestamp)
+  | RawRemoveLiquidity of (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)
+  | RawLiquidationAuctionPlaceBid of kit
+  | RawLiquidationAuctionReclaimBid of liquidation_auction_bid
+  | RawLiquidationAuctionClaimWin of liquidation_auction_bid
+  | RawReceiveSliceFromBurrow of unit
+  | RawDelegationAuctionPlaceBid of unit
+  | RawDelegationAuctionClaimWin of (delegation_auction_bid * Ligo.key_hash)
+  | RawDelegationAuctionReclaimBid of delegation_auction_bid
+
+(* noop *)
+let[@inline] deticketify_touch (p: unit) : unit = p
+
+(* noop *)
+let[@inline] deticketify_create_burrow (p: Ligo.key_hash option) : Ligo.key_hash option = p
+
+(* removes tickets *)
+let[@inline] deticketify_deposit_tez (permission, burrow_id: permission option * burrow_id) : permission_redacted_content option * burrow_id =
+  (ensure_valid_optional_permission permission, burrow_id)
+
+(* removes tickets *)
+let[@inline] deticketify_withdraw_tez (permission, tez, burrow_id: permission * Ligo.tez * burrow_id) : permission_redacted_content * Ligo.tez * burrow_id =
+  (ensure_valid_permission permission, tez, burrow_id)
+
+(* removes tickets *)
+let[@inline] deticketify_mint_kit (permission, burrow_id, kit: permission * burrow_id * kit) : permission_redacted_content * burrow_id * kit =
+  (ensure_valid_permission permission, burrow_id, kit)
+
+(* removes tickets *)
+let[@inline] deticketify_burn_kit (permission, burrow_id, kit_token: permission option * burrow_id * kit_token) : permission_redacted_content option * burrow_id * kit =
+  (ensure_valid_optional_permission permission, burrow_id, ensure_valid_kit_token kit_token)
+
+(* removes tickets *)
+let[@inline] deticketify_activate_burrow (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
+  (ensure_valid_permission permission, burrow_id)
+
+(* removes tickets *)
+let[@inline] deticketify_deactivate_burrow (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
+  (ensure_valid_permission permission, burrow_id)
+
+(* noop *)
+let[@inline] deticketify_mark_for_liquidation (burrow_id: burrow_id) : burrow_id = burrow_id
+
+(* noop *)
+let[@inline] deticketify_touch_liquidation_slices (p: leaf_ptr list) : leaf_ptr list = p
+
+(* removes tickets *)
+let[@inline] deticketify_cancel_liquidation_slice (permission, leaf_ptr: permission * leaf_ptr) : permission_redacted_content * leaf_ptr =
+  (ensure_valid_permission permission, leaf_ptr)
+
+(* noop *)
+let[@inline] deticketify_touch_burrow (burrow_id: burrow_id) : burrow_id = burrow_id
+
+(* removes tickets *)
+let[@inline] deticketify_set_burrow_delegate (permission, burrow_id, kho: permission * burrow_id * Ligo.key_hash option) : permission_redacted_content * burrow_id * Ligo.key_hash option =
+  (ensure_valid_permission permission, burrow_id, kho)
+
+(* removes tickets *)
+let[@inline] deticketify_make_permission (permission, burrow_id, rights: permission * burrow_id * rights) : permission_redacted_content * burrow_id * rights =
+  (ensure_valid_permission permission, burrow_id, rights)
+
+(* removes tickets *)
+let[@inline] deticketify_invalidate_all_permissions (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
+  (ensure_valid_permission permission, burrow_id)
+
+(* noop *)
+let[@inline] deticketify_buy_kit (p: kit * Ligo.timestamp) : kit * Ligo.timestamp = p
+
+(* removes tickets *)
+let[@inline] deticketify_sell_kit (kit_token, tez, deadline: kit_token * Ligo.tez * Ligo.timestamp) : kit * Ligo.tez * Ligo.timestamp =
+  (ensure_valid_kit_token kit_token, tez, deadline)
+
+(* removes tickets *)
+let[@inline] deticketify_add_liquidity (kit_token, lqt, deadline: kit_token * Ligo.nat * Ligo.timestamp) : kit * Ligo.nat * Ligo.timestamp =
+  (ensure_valid_kit_token kit_token, lqt, deadline)
+
+(* removes tickets *)
+let[@inline] deticketify_remove_liquidity (lqt, tez, kit, deadline: liquidity * Ligo.tez * kit * Ligo.timestamp) : Ligo.nat * Ligo.tez * kit * Ligo.timestamp =
+  (ensure_valid_liquidity_token lqt, tez, kit, deadline)
+
+(* removes tickets *)
+let[@inline] deticketify_liquidation_auction_place_bid (kit_token: kit_token) : kit =
+  ensure_valid_kit_token kit_token
+
+(* removes tickets *)
+let[@inline] deticketify_liquidation_auction_reclaim_bid (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
+  ensure_valid_liquidation_auction_bid_ticket bid_ticket
+
+(* removes tickets *)
+let[@inline] deticketify_liquidation_auction_claim_win (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
+  ensure_valid_liquidation_auction_bid_ticket bid_ticket
+
+(* noop *)
+let[@inline] deticketify_receive_slice_from_burrow (p: unit) : unit = p
+
+(* noop *)
+let[@inline] deticketify_delegation_auction_place_bid (p: unit) : unit = p
+
+(* removes tickets *)
+let[@inline] deticketify_delegation_auction_claim_win (bid_ticket, kh: delegation_auction_bid_ticket * Ligo.key_hash) : delegation_auction_bid * Ligo.key_hash =
+  (ensure_valid_delegation_auction_bid_ticket bid_ticket, kh)
+
+(* removes tickets *)
+let[@inline] deticketify_delegation_auction_reclaim_bid (bid_ticket: delegation_auction_bid_ticket) : delegation_auction_bid =
+  ensure_valid_delegation_auction_bid_ticket bid_ticket

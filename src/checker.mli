@@ -190,3 +190,59 @@ type checker_params =
   | DelegationAuctionPlaceBid of unit
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
+
+(** Raw checker parameters without tickets. Serializable. *)
+type checker_raw_params =
+    RawTouch of unit
+  | RawCreateBurrow of Ligo.key_hash option
+  | RawDepositTez of (permission_redacted_content option * burrow_id)
+  | RawWithdrawTez of (permission_redacted_content * Ligo.tez * burrow_id)
+  | RawMintKit of (permission_redacted_content * burrow_id * kit)
+  | RawBurnKit of (permission_redacted_content option * burrow_id * kit)
+  | RawActivateBurrow of (permission_redacted_content * burrow_id)
+  | RawDeactivateBurrow of (permission_redacted_content * burrow_id)
+  | RawMarkForLiquidation of burrow_id
+  | RawTouchLiquidationSlices of leaf_ptr list
+  | RawCancelLiquidationSlice of (permission_redacted_content * leaf_ptr)
+  | RawTouchBurrow of burrow_id
+  | RawSetBurrowDelegate of (permission_redacted_content * burrow_id * Ligo.key_hash option)
+  | RawMakePermission of (permission_redacted_content * burrow_id * rights)
+  | RawInvalidateAllPermissions of (permission_redacted_content * burrow_id)
+  | RawBuyKit of (kit * Ligo.timestamp)
+  | RawSellKit of (kit * Ligo.tez * Ligo.timestamp)
+  | RawAddLiquidity of (kit * Ligo.nat * Ligo.timestamp)
+  | RawRemoveLiquidity of (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)
+  | RawLiquidationAuctionPlaceBid of kit
+  | RawLiquidationAuctionReclaimBid of liquidation_auction_bid
+  | RawLiquidationAuctionClaimWin of liquidation_auction_bid
+  | RawReceiveSliceFromBurrow of unit
+  | RawDelegationAuctionPlaceBid of unit
+  | RawDelegationAuctionClaimWin of (delegation_auction_bid * Ligo.key_hash)
+  | RawDelegationAuctionReclaimBid of delegation_auction_bid
+
+val deticketify_touch : unit -> unit
+val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
+val deticketify_deposit_tez : permission option * burrow_id -> permission_redacted_content option * burrow_id
+val deticketify_withdraw_tez : permission * Ligo.tez * burrow_id -> permission_redacted_content * Ligo.tez * burrow_id
+val deticketify_mint_kit : permission * burrow_id * kit -> permission_redacted_content * burrow_id * kit
+val deticketify_burn_kit : permission option * burrow_id * kit_token -> permission_redacted_content option * burrow_id * kit
+val deticketify_activate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_deactivate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_mark_for_liquidation : burrow_id -> burrow_id
+val deticketify_touch_liquidation_slices : leaf_ptr list -> leaf_ptr list
+val deticketify_cancel_liquidation_slice : permission * leaf_ptr -> permission_redacted_content * leaf_ptr
+val deticketify_touch_burrow : burrow_id -> burrow_id
+val deticketify_set_burrow_delegate : permission * burrow_id * Ligo.key_hash option -> permission_redacted_content * burrow_id * Ligo.key_hash option
+val deticketify_make_permission : permission * burrow_id * rights -> permission_redacted_content * burrow_id * rights
+val deticketify_invalidate_all_permissions : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_buy_kit : kit * Ligo.timestamp -> kit * Ligo.timestamp
+val deticketify_sell_kit : kit_token * Ligo.tez * Ligo.timestamp -> kit * Ligo.tez * Ligo.timestamp
+val deticketify_add_liquidity : kit_token * Ligo.nat * Ligo.timestamp -> kit * Ligo.nat * Ligo.timestamp
+val deticketify_remove_liquidity : liquidity * Ligo.tez * kit * Ligo.timestamp -> Ligo.nat * Ligo.tez * kit * Ligo.timestamp
+val deticketify_liquidation_auction_place_bid : kit_token -> kit
+val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
+val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
+val deticketify_receive_slice_from_burrow : unit -> unit
+val deticketify_delegation_auction_place_bid : unit -> unit
+val deticketify_delegation_auction_claim_win : delegation_auction_bid_ticket * Ligo.key_hash -> delegation_auction_bid * Ligo.key_hash
+val deticketify_delegation_auction_reclaim_bid : delegation_auction_bid_ticket -> delegation_auction_bid
