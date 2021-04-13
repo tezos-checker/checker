@@ -12,9 +12,9 @@ docker run -i -t --rm \
   --name tezos-sandbox \
   -p 20000:20000 \
   tqtezos/flextesa:20210316 \
-  flobox info
+  edobox info
 docker run -i -t --rm \
   --name tezos-sandbox \
   -p 20000:20000 \
   tqtezos/flextesa:20210316 \
-  flobox start
+  edobox start
