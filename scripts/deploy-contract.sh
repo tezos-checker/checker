@@ -29,15 +29,12 @@ tezos-client originate contract \
   --burn-cap 25 \
   --force
 
-for fname in generated/michelson/lazy_fun_*.tz*; do
+for fname in generated/ligo_compiled/*.bc; do
   echo '========================'
   echo "Deploying $fname"
   echo '========================'
 
-  fun="$(echo "$fname" | sed -E 's|.*/lazy_fun_(.*).tz.*|\1|g')"
-  contents="$(cat "$fname" | sed -z -e 's/^0x//g' -e 's/^/0x/g')"
-
-  param="$(ligo compile-parameter --warn false "$main" main "DeployFunction (lazy_id_$fun, $contents)")"
+  param="$(cat $fname)"
   tezos-client call testcontract from bob \
     --arg "$param" \
     --burn-cap 25 \
