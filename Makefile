@@ -35,8 +35,9 @@ indent:
 	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
 	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
 
-docs:
-	dune build @doc
+docs: ocaml-src
+	cd src && dune build @doc
+	@echo "Docs generated in _build/default/_doc/_html"
 
 distclean: clean
 
