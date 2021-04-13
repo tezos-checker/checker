@@ -28,4 +28,58 @@ For extracting (haddock-style) documentation from the code using dune, type
 
 ## Local Deployment
 
-TODO: Add instructions here about how to patch `tezos-client`, how to run a sandbox, how to deploy the contract, and how to call it.
+The contract can be deployed to a local sandbox run using Docker. Note that this workflow has only been tested on Linux.
+
+First, enter a nix shell:
+```console
+$ nix-shell
+```
+
+Generate the LIGO and Michelson code:
+
+```console
+$ make build-ligo
+```
+
+Start the Tezos sandbox. This will run a couple of Tezos nodes in a local network using Docker.
+
+```console
+$ ./scripts/run-sandbox.sh
+```
+
+Since the sandbox runs in the foreground, open another terminal and enter a nix shell:
+```console
+$ nix-shell
+```
+
+The first time you deploy the contract locally, you will need to configure your local tezos-client to use the sandbox. This step can be skipped when you want to
+re-deploy the contract later.
+
+```console
+## Clean-up left-over configuration
+
+$ tezos-client config reset
+
+## Configure the client to communicate with the sandbox
+
+$ tezos-client --endpoint http://localhost:20000 bootstrapped
+$ tezos-client --endpoint http://localhost:20000 config update
+
+## Import the secret keys for two pre-existing accounts, alice and bob:
+
+$ tezos-client import secret key alice unencrypted:edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq --force
+
+$ tezos-client import secret key bob unencrypted:edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt --force
+```
+
+And finally, deploy the contract (and packed entrypoints) to the sandbox:
+
+```console
+$ ./scripts/deploy-contract.sh
+```
+
+To call the contract, we can use the [call-contract.sh](./scripts/call-contract.sh) helper script:
+
+```console
+$ ./scripts/call-contract.sh 'Touch ()'
+```
