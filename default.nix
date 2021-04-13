@@ -1,3 +1,5 @@
+{ doCheck ? false }:
+
 let
   sources = import ./nix/sources.nix { };
 
@@ -17,13 +19,30 @@ let
     #   unzip ${sources.ligo-artifacts} ligo -d $out/bin
     #   chmod +x $out/bin/ligo
     # '';
+
+  ocamlDeps = pkgs: with pkgs.ocamlPackages; [
+     ocaml
+     ocaml-lsp
+     dune_2
+     findlib # Lets merlin see packages like ounit
+     ocp-indent
+     merlin
+     ounit
+     qcheck
+     ppxlib
+     bisect_ppx
+     ppx_tools_versioned
+     ppx_deriving
+     zarith
+     odoc
+  ];
 in
 {
   michelson =
     let pkgs = pkgsLinux;
     in pkgs.stdenv.mkDerivation {
          name = "huxian-michelson";
-         buildInputs = [ ligoBinary pkgs.ruby pkgs.ocamlPackages.ocp-indent pkgs.perl ];
+         buildInputs = [ ligoBinary pkgs.ruby pkgs.perl ] ++ ocamlDeps pkgs;
          src =
            let filter =
              let ignored = gitignoreNix.gitignoreFilter ./.;
@@ -35,6 +54,12 @@ in
               };
          buildPhase = ''
            make build-ligo
+         '';
+
+         inherit doCheck;
+         checkPhase = ''
+           make build-ocaml
+           make test
          '';
          installPhase = ''
            mkdir -p $out
@@ -53,21 +78,7 @@ in
                (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client
              ]
            ++ [ pkgs.niv pkgs.perl pkgs.ruby ]
-           ++ (with pkgs.ocamlPackages; [
-             ocaml
-             ocaml-lsp
-             dune_2
-             findlib # Lets merlin see packages like ounit
-             ocp-indent
-             merlin
-             ounit
-             qcheck
-             ppxlib
-             bisect_ppx
-             ppx_tools_versioned
-             ppx_deriving
-             zarith
-             odoc
-           ]);
+           ++ ocamlDeps pkgs;
+
        };
 }

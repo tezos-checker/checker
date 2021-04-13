@@ -15,4 +15,4 @@ jobs:
     - uses: cachix/install-nix-action@v12
     - uses: actions/checkout@v2
     - name: Build and test
-      run: nix-shell --run 'make all'
+      run: nix-build -A michelson --arg doCheck true

@@ -17,7 +17,7 @@ build-ligo: generate-ligo
 	sh ./scripts/compile-ligo.sh
 
 test:
-	./scripts/ensure-unique-errors.sh
+	sh ./scripts/ensure-unique-errors.sh
 	dune runtest .
 
 test-coverage:
