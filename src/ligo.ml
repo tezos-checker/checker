@@ -83,6 +83,10 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
 
   let suffix = String.sub s prefix_len suffix_len in
 
+  let prefix = prefix
+               |> String.to_seq
+               |> Stdlib.Seq.filter (fun c -> c <> '_')
+               |> String.of_seq in
   try
     if not (String.equal suffix expected_suffix) then
       raise (Invalid_argument ("Expected suffix: " ^ expected_suffix ^ ", real suffix: " ^ suffix))
