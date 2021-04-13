@@ -41,50 +41,52 @@ let initial_parameters : parameters =
     last_touched = !Ligo.Tezos.now;
   }
 
-(* tez. To get tez/kit must multiply with q. *)
+(** Compute the current minting index (in tez). To get tez/kit must multiply with q. *)
 let[@inline] tz_minting (p: parameters) : Ligo.tez = max_tez p.index p.protected_index
 
-(* tez. To get tez/kit must multiply with q. *)
+(** Compute the current liquidation index (in tez). To get tez/kit must multiply with q. *)
 let[@inline] tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.protected_index
 
-(** Current minting price (tez/kit). *)
+(** Current minting price (in tez/kit). *)
 let minting_price (p: parameters) : ratio =
   make_real_unsafe
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_minting p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
-(** Current liquidation price (tez/kit). *)
+(** Current liquidation price (in tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_real_unsafe
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_liquidation p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
-  * (burrowed) and the amount of kit that are currently in circulation,
-  * compute the current imbalance adjustment (can be either a fee or a
-  * bonus).
-  *
-  * If we call "burrowed" the total amount of kit necessary to close all
-  * existing burrows, and "circulating" the total amount of kit in circulation,
-  * then the imbalance fee/bonus is calculated as follows (per year):
-  *
-  *   min((burrowed - circulating) / burrowed,   0.20) * (1/0.20) * 0.05 , if burrowed >= circulating
-  *   max((burrowed - circulating) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
-  *
-  * or, equivalently,
-  *
-  *   min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
-  *   max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
-  *
-  * Edge cases:
-  * - burrowed = 0, circulating = 0
-  *     The imbalance fee/bonus is 0.
-  * - burrowed = 0, circulating > 0
-  *     Well, burrowed is "infinitely" smaller than circulating so let's
-  *     saturate the imbalance to -5 cNp.
-  * NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
-  *   doing conditionals and save gas costs. Messes only slightly with the
-  *   computations, but can save quite some gas. *)
+    (burrowed) and the amount of kit that are currently in circulation,
+    compute the current imbalance adjustment (can be either a fee or a
+    bonus).
+
+    If we call "burrowed" the total amount of kit necessary to close all
+    existing burrows, and "circulating" the total amount of kit in circulation,
+    then the imbalance fee/bonus is calculated as follows (per year):
+    {[
+      min((burrowed - circulating) / burrowed,   0.20) * (1/0.20) * 0.05 , if burrowed >= circulating
+      max((burrowed - circulating) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
+    ]}
+
+    or, equivalently,
+    {[
+      min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
+      max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
+    ]}
+
+    Edge cases:
+    - [burrowed = 0] and [circulating = 0].
+        The imbalance fee/bonus is 0.
+    - [burrowed = 0] and [circulating > 0].
+        Well, burrowed is "infinitely" smaller than circulating so let's
+        saturate the imbalance to -5 cNp.
+    NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
+      doing conditionals and save gas costs. Messes only slightly with the
+      computations, but can save quite some gas. *)
 let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   let burrowed = kit_to_mukit_int burrowed in
   let circulating = kit_to_mukit_int circulating in
@@ -102,9 +104,10 @@ let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
       (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
 
 (** Compute the current adjustment index. Basically this is the product of
-  * the burrow fee index and the imbalance adjustment index.
-  *
-  *   adjustment_index_i = FLOOR (burrow_fee_index_i * imabalance_index_i)
+    the burrow fee index and the imbalance adjustment index.
+    {[
+       adjustment_index_i = FLOOR (burrow_fee_index_i * imabalance_index_i)
+    ]}
 *)
 let compute_adjustment_index (p: parameters) : fixedpoint =
   fixedpoint_of_raw
@@ -117,37 +120,39 @@ let compute_adjustment_index (p: parameters) : fixedpoint =
     )
 
 (** Given the current target, calculate the rate of change of the drift (drift
-  * derivative). That's how the following calculations came to be:
-  *
-  *   let X = log (p_t) be the "measure of imbalance". The original doc gave:
-  *
-  *   d_t' = 0                             if 0       <= |X| < 0.5 cNp
-  *   d_t' = sign(X) * 0.01 cNp / day^2    if 0.5 cNp <= |X| <   5 cNp
-  *   d_t' = sign(X) * 0.05 cNp / day^2    if   5 cNp <= |X| < infinity
-  *
-  *   1. Inline the numbers: cNp ~= 1/100, day ~= 24 * 60 * 60 = 86400 seconds
-  *
-  *   d_t' = 0                             if 0     <= |X| < 0.005
-  *   d_t' = sign(X) * 0.0001 / 86400^2    if 0.005 <= |X| < 0.05
-  *   d_t' = sign(X) * 0.0005 / 86400^2    if 0.05  <= |X| < infinity
-  *
-  *   2. Remove absolute values
-  *
-  *   d_t' =  0                   if -0.005 <  X <  0.005
-  *   d_t' = +0.0001 / 86400^2    if +0.005 <= X < +0.05
-  *   d_t' = -0.0001 / 86400^2    if -0.005 >= X > -0.05
-  *   d_t' = +0.0005 / 86400^2    if +0.05  <= X < +infinity
-  *   d_t' = -0.0005 / 86400^2    if -0.05  >= X > -infinity
-  *
-  *   3. Exponentiate the inequalities
-  *
-  *   d_t' =  0                   if exp(-0.005) <  p_t < exp(+0.005)
-  *   d_t' = +0.0001 / 86400^2    if exp(+0.005) <= p_t < exp(+0.05)
-  *   d_t' = -0.0001 / 86400^2    if exp(-0.005) >= p_t > exp(-0.05)
-  *   d_t' = +0.0005 / 86400^2    if exp(+0.05)  <= p_t < +infinity
-  *   d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
-  *
-  * I've left these calculations here so that others could double-check them too.
+    derivative). That's how the following calculations came to be:
+
+    let [X = log (p_t)] be the "measure of imbalance". The original doc gave:
+    {[
+      d_t' = 0                             if 0       <= |X| < 0.5 cNp
+      d_t' = sign(X) * 0.01 cNp / day^2    if 0.5 cNp <= |X| <   5 cNp
+      d_t' = sign(X) * 0.05 cNp / day^2    if   5 cNp <= |X| < infinity
+    ]}
+
+    1. Inline the numbers: cNp ~= 1/100, day ~= 24 * 60 * 60 = 86400 seconds
+    {[
+      d_t' = 0                             if 0     <= |X| < 0.005
+      d_t' = sign(X) * 0.0001 / 86400^2    if 0.005 <= |X| < 0.05
+      d_t' = sign(X) * 0.0005 / 86400^2    if 0.05  <= |X| < infinity
+    ]}
+
+    2. Remove absolute values
+    {[
+      d_t' =  0                   if -0.005 <  X <  0.005
+      d_t' = +0.0001 / 86400^2    if +0.005 <= X < +0.05
+      d_t' = -0.0001 / 86400^2    if -0.005 >= X > -0.05
+      d_t' = +0.0005 / 86400^2    if +0.05  <= X < +infinity
+      d_t' = -0.0005 / 86400^2    if -0.05  >= X > -infinity
+    ]}
+
+    3. Exponentiate the inequalities
+    {[
+      d_t' =  0                   if exp(-0.005) <  p_t < exp(+0.005)
+      d_t' = +0.0001 / 86400^2    if exp(+0.005) <= p_t < exp(+0.05)
+      d_t' = -0.0001 / 86400^2    if exp(-0.005) >= p_t > exp(-0.05)
+      d_t' = +0.0005 / 86400^2    if exp(+0.05)  <= p_t < +infinity
+      d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
+    ]}
 *)
 let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
@@ -178,12 +183,12 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
     (failwith "impossible" : fixedpoint)
 
 (** Calculate the current burrow fee index based on the last index and the
-  * number of seconds that have elapsed.
-  *
-  * burrow_fee_index_{i+1} = FLOOR (burrow_fee_index_i * (1 + burrow_fee_percentage * (t_{i+1} - t_i)) / <seconds_in_a_year>)
-  *
-  * Keep in mind that this formula means that the burrow fee index is
-  * ever-increasing. *)
+    number of seconds that have elapsed.
+    {[
+      burrow_fee_index_{i+1} = FLOOR (burrow_fee_index_i * (1 + burrow_fee_percentage * (t_{i+1} - t_i)) / <seconds_in_a_year>)
+    ]}
+    Keep in mind that this formula means that the burrow fee index is
+    ever-increasing. *)
 let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   let { num = num; den = den; } = burrow_fee_percentage in
   let denom = Ligo.mul_int_int den seconds_in_a_year in
@@ -200,12 +205,13 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
     )
 
 (** Calculate the current protected index based on the last protected index,
-  * the current index (as provided by the oracle), and the number of seconds
-  * that have elapsed.
-  *
-  *   protected_index_{i+1} = FLOOR (
-  *     protected_index_i * CLAMP (index_{i+1}/protected_index_i, EXP(-epsilon * (t_{i+1} - t_i)), EXP(+epsilon * (t_{i+1} - t_i)))
-  *   )
+    the current index (as provided by the oracle), and the number of seconds
+    that have elapsed.
+    {[
+      protected_index_{i+1} = FLOOR (
+        protected_index_i * CLAMP (index_{i+1}/protected_index_i, EXP(-epsilon * (t_{i+1} - t_i)), EXP(+epsilon * (t_{i+1} - t_i)))
+      )
+    ]}
 *)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
@@ -238,10 +244,11 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
     )
 
 (** Calculate the current drift based on the last drift, the last drift
-  * derivative, the current drift derivative, and the number of seconds that
-  * have elapsed.
-  *
-  *   drift_{i+1} = FLOOR (drift_i + (1/2) * (drift'_i + drift'_{i+1}) * (t_{i+1} - t_i))
+    derivative, the current drift derivative, and the number of seconds that
+    have elapsed.
+    {[
+      drift_{i+1} = FLOOR (drift_i + (1/2) * (drift'_i + drift'_{i+1}) * (t_{i+1} - t_i))
+    ]}
 *)
 let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   fixedpoint_of_raw
@@ -257,12 +264,12 @@ let[@inline] compute_current_drift (last_drift: fixedpoint) (last_drift_derivati
     )
 
 (** Calculate the current quantity based on the last quantity, the last drift,
-  * the last drift derivative, the current drift derivative, and the number of
-  * seconds that have elapsed.
-  *
-  *   q_{i+1} = FLOOR (q_i * EXP((drift_i + (1/6) * (2*drift'_i + drift'_{i+1}) * (t_{i+1} - t_i)) * (t_{i+1} - t_i)))
-  *
-  * where EXP(X) = X+1.
+    the last drift derivative, the current drift derivative, and the number of
+    seconds that have elapsed.
+    {[
+      q_{i+1} = FLOOR (q_i * EXP((drift_i + (1/6) * (2*drift'_i + drift'_{i+1}) * (t_{i+1} - t_i)) * (t_{i+1} - t_i)))
+    ]}
+    where [EXP(X) = X+1].
 *)
 let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (last_drift_derivative: fixedpoint) (current_drift_derivative: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   let six_sf =
@@ -300,10 +307,11 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
     )
 
 (** Calculate the current target based on the current quantity, the current
-  * index, and the current price of kit in tez (as provided by the cfmm
-  * sub-contract, from the previous block).
-  *
-  * target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
+    index, and the current price of kit in tez (as provided by the cfmm
+    sub-contract, from the previous block).
+    {[
+      target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
+    ]}
 *)
 let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.tez) (current_kit_in_tez: ratio) : fixedpoint =
   let { num = num; den = den; } = current_kit_in_tez in
@@ -323,24 +331,24 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
     )
 
 (** Calculate the current imbalance index based on the last amount of
-  * outstanding (burrowed) kit, the last amount of circulating kit, the last
-  * imbalance index, and the number of seconds that have elapsed, using the
-  * following formula:
-  *
-  *   imbalance_index_{i+1} = FLOOR (
-  *     imbalance_index_i * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
-  *   )
-  *
-  * (note that the last outstanding kit and circulating kit are used in the
-  * calculation of imbalance; see compute_imbalance).
-  *
-  * This calculation means that even if the imbalance_rate is bounded (from -5
-  * cNp to +5 cNp), the imbalance index is not. The above formula for
-  * imbalance = -5cNp and 20 years time in seconds elapsed gives
-  * imbalance_index_{i+1} = 0 (for longer time it gives
-  * imbalance_index_{i+1} < 0). This can make calculations below fail. All of
-  * this of course refers to the possibility of nobody touching checker for
-  * over 20 years, which I guess should be practically impossible. *)
+    outstanding (burrowed) kit, the last amount of circulating kit, the last
+    imbalance index, and the number of seconds that have elapsed, using the
+    following formula:
+    {[
+      imbalance_index_{i+1} = FLOOR (
+        imbalance_index_i * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)
+      )
+    ]}
+    (note that the last outstanding kit and circulating kit are used in the
+    calculation of imbalance; see {!compute_imbalance}).
+
+    This calculation means that even if the imbalance_rate is bounded (from -5
+    cNp to +5 cNp), the imbalance index is not. The above formula for
+    [imbalance = -5cNp] and 20 years time in seconds elapsed gives
+    [imbalance_index_{i+1} = 0] (for longer time it gives
+    [imbalance_index_{i+1} < 0]). This can make calculations below fail. All of
+    this of course refers to the possibility of nobody touching checker for
+    over 20 years, which I guess should be practically impossible. *)
 let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_circulating_kit: kit) (last_imbalance_index: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
   let { num = num; den = den; } =
     compute_imbalance
@@ -360,10 +368,11 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
     )
 
 (** Compute current outstanding kit, taking burrow fees into account:
-  *
-  *   outstanding_with_fees_{i+1} = FLOOR (
-  *     outstanding_kit_i * burrow_fee_index_{i+1} / burrow_fee_index_i
-  *   )
+    {[
+      outstanding_with_fees_{i+1} = FLOOR (
+        outstanding_kit_i * burrow_fee_index_{i+1} / burrow_fee_index_i
+      )
+    ]}
 *)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
   kit_of_fraction_floor
@@ -371,11 +380,12 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
 
 (** Compute current outstanding kit, given that the burrow fees have already
-  * been added (that is, compute the effect of the imbalance index):
-  *
-  *   outstanding_kit_{i+1} = FLOOR (
-  *     outstanding_with_fees_{i+1} * imbalance_index_{i+1} / imbalance_index_i
-  *   )
+    been added (that is, compute the effect of the imbalance index):
+    {[
+      outstanding_kit_{i+1} = FLOOR (
+        outstanding_with_fees_{i+1} * imbalance_index_{i+1} / imbalance_index_i
+      )
+    ]}
 *)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
   kit_of_fraction_floor
@@ -383,9 +393,9 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
 
 (** Update the checker's parameters, given (a) the current timestamp
-  * (Tezos.now), (b) the current index (the median of the oracles right now),
-  * and (c) the current price of kit in tez, as given by the cfmm
-  * sub-contract. *)
+    (Tezos.now), (b) the current index (the median of the oracles right now),
+    and (c) the current price of kit in tez, as given by the cfmm
+    sub-contract. *)
 let parameters_touch
     (current_index: Ligo.tez)
     (current_kit_in_tez: ratio)
@@ -462,7 +472,7 @@ let[@inline] remove_circulating_kit (parameters: parameters) (kit: kit) : parame
   { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows and
-  * the kit in circulation. This is the case when a burrow owner mints kit. *)
+    the kit in circulation. This is the case when a burrow owner mints kit. *)
 let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   { parameters with
     outstanding_kit = kit_add parameters.outstanding_kit kit;
