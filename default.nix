@@ -42,7 +42,7 @@ in
     let pkgs = pkgsLinux;
     in pkgs.stdenv.mkDerivation {
          name = "huxian-michelson";
-         buildInputs = [ ligoBinary pkgs.ruby pkgs.perl ] ++ ocamlDeps pkgs;
+         buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby perl bc ]) ++ ocamlDeps pkgs;
          src =
            let filter =
              let ignored = gitignoreNix.gitignoreFilter ./.;

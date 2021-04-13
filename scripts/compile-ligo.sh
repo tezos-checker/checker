@@ -21,14 +21,19 @@ functions=$(perl -n -e'/let lazy_fun_(\S+)/ && print "$1\n"' "$checkerEntrypoint
 
 for fun in $functions; do
   echo "Packing: $fun"
+  prefix="$target_dir/lazy_fun_$fun.tz."
   ligo compile-expression cameligo \
      --warn false \
      --init-file "$main" \
     "Bytes.pack lazy_fun_$fun" \
-    | split -b 32000 -d - "$target_dir/lazy_fun_$fun.tz."
+    | split -b 32000 -d - $prefix
 
  # Make sure that everything is prefixed by 0x
- sed -z -e 's/^0x//g' -e 's/^/0x/g' -i "$target_dir/lazy_fun_$fun.tz."*
+ sed -z -e 's/^0x//g' -e 's/^/0x/g' -i "$prefix"*
+
+ # Size of endpoints in storage will be almost exactly half the encoded size
+ size=$(echo "$(cat "$prefix"*|wc -c) / 2"|bc)
+ echo " -> ~$size bytes"
 done
 
 echo "done." 1>&2
