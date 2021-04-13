@@ -1,5 +1,5 @@
-let[@inline] error_UniswapNonPositiveInput                         : Ligo.int = Ligo.int_from_literal "1"
-let[@inline] error_UniswapTooLate                                  : Ligo.int = Ligo.int_from_literal "2"
+let[@inline] error_CfmmNonPositiveInput                         : Ligo.int = Ligo.int_from_literal "1"
+let[@inline] error_CfmmTooLate                                  : Ligo.int = Ligo.int_from_literal "2"
 
 let[@inline] error_BuyKitTooLowExpectedKit                         : Ligo.int = Ligo.int_from_literal "10"
 let[@inline] error_BuyKitPriceFailure                              : Ligo.int = Ligo.int_from_literal "11"

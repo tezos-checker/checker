@@ -300,7 +300,7 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
     )
 
 (** Calculate the current target based on the current quantity, the current
-  * index, and the current price of kit in tez (as provided by the uniswap
+  * index, and the current price of kit in tez (as provided by the cfmm
   * sub-contract, from the previous block).
   *
   * target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
@@ -384,7 +384,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
 
 (** Update the checker's parameters, given (a) the current timestamp
   * (Tezos.now), (b) the current index (the median of the oracles right now),
-  * and (c) the current price of kit in tez, as given by the uniswap
+  * and (c) the current price of kit in tez, as given by the cfmm
   * sub-contract. *)
 let parameters_touch
     (current_index: Ligo.tez)
@@ -415,7 +415,7 @@ let parameters_touch
   let current_imbalance_index =
     compute_current_imbalance_index parameters_outstanding_kit parameters_circulating_kit parameters_imbalance_index duration_in_seconds in
 
-  (* Calculate all parameter updates and accrual to uniswap. *)
+  (* Calculate all parameter updates and accrual to cfmm. *)
   let current_protected_index =
     compute_current_protected_index parameters_protected_index current_index duration_in_seconds in
   let current_drift_derivative =
@@ -428,15 +428,15 @@ let parameters_touch
     compute_current_target current_q current_index current_kit_in_tez in
   let current_outstanding_with_fees =
     compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
-  let accrual_to_uniswap =
+  let accrual_to_cfmm =
     kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
   let current_outstanding_kit =
     compute_current_outstanding_kit current_outstanding_with_fees parameters_imbalance_index current_imbalance_index in
   let current_circulating_kit =
-    kit_add parameters_circulating_kit accrual_to_uniswap in
+    kit_add parameters_circulating_kit accrual_to_cfmm in
 
   (* Update all values *)
-  ( accrual_to_uniswap
+  ( accrual_to_cfmm
   , {
     index = current_index;
     protected_index = current_protected_index;

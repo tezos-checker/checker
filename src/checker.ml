@@ -3,7 +3,7 @@ open Kit
 open Avl
 open Permission
 open Parameters
-open Uniswap
+open Cfmm
 open Burrow
 open DelegationAuction
 open DelegationAuctionTypes
@@ -442,7 +442,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
    * the slices), but hopefully we don't care in this instance about this. *)
   let
     { burrows = state_burrows;
-      uniswap = state_uniswap;
+      cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       delegation_auction = state_delegation_auction;
@@ -456,7 +456,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
 
   let new_state =
     { burrows = state_burrows;
-      uniswap = state_uniswap;
+      cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       delegation_auction = state_delegation_auction;
@@ -473,7 +473,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
 let updated_delegation_auction (state: checker) (new_auction: delegation_auction) =
   let prev_auction = state.delegation_auction in
   (* When we move to a new cycle, we accrue the amount that won delegation for
-     the previous cycle to uniswap. *)
+     the previous cycle to cfmm. *)
   let accrued_tez =
     if delegation_auction_cycle prev_auction <> delegation_auction_cycle new_auction then
       match delegation_auction_winning_amount prev_auction with
@@ -493,7 +493,7 @@ let updated_delegation_auction (state: checker) (new_auction: delegation_auction
    { state with
      delegation_auction = new_auction;
      delegate = delegation_auction_delegate new_auction;
-     uniswap = uniswap_add_accrued_tez state.uniswap accrued_tez;
+     cfmm = cfmm_add_accrued_tez state.cfmm accrued_tez;
    })
 
 let entrypoint_delegation_auction_place_bid (state, _: checker * unit) : (LigoOp.operation list * checker) =
@@ -529,28 +529,28 @@ let touch_delegation_auction (state: checker) =
   updated_delegation_auction state (delegation_auction_touch state.delegation_auction)
 
 (* ************************************************************************* *)
-(**                                UNISWAP                                   *)
+(**                                 CFMM                                     *)
 (* ************************************************************************* *)
 
 let entrypoint_buy_kit (state, p: checker * (kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let min_kit_expected, deadline = p in
   let (ops, state) = touch_delegation_auction state in
-  let (kit_tokens, updated_uniswap) = uniswap_buy_kit state.uniswap !Ligo.Tezos.amount min_kit_expected deadline in
+  let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm !Ligo.Tezos.amount min_kit_expected deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
-  (ops, {state with uniswap = updated_uniswap})
+  (ops, {state with cfmm = updated_cfmm})
 
 let entrypoint_sell_kit (state, p: checker * (kit * Ligo.tez * Ligo.timestamp)) : LigoOp.operation list * checker =
   let kit, min_tez_expected, deadline = p in
   let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
-  let (tez, updated_uniswap) = uniswap_sell_kit state.uniswap !Ligo.Tezos.amount kit min_tez_expected deadline in
+  let (tez, updated_cfmm) = cfmm_sell_kit state.cfmm !Ligo.Tezos.amount kit min_tez_expected deadline in
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation list) in
-  let updated_state = {state with uniswap = updated_uniswap} in
+  let updated_state = {state with cfmm = updated_cfmm} in
   (ops, updated_state)
 
 let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
@@ -559,8 +559,8 @@ let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timesta
   let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
     | None -> Ligo.tez_from_literal "0mutez"
     | Some tez -> tez in
-  let (lqt_tokens, kit_tokens, updated_uniswap) =
-    uniswap_add_liquidity state.uniswap !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  let (lqt_tokens, kit_tokens, updated_cfmm) =
+    cfmm_add_liquidity state.cfmm !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -569,14 +569,14 @@ let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timesta
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLqt : LigoOp.operation list) in
-  (ops, {state with uniswap = updated_uniswap})
+  (ops, {state with cfmm = updated_cfmm})
 
 let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
   let (ops, state) = touch_delegation_auction state in
-  let (tez, kit_tokens, updated_uniswap) =
-    uniswap_remove_liquidity state.uniswap !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  let (tez, kit_tokens, updated_cfmm) =
+    cfmm_remove_liquidity state.cfmm !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
@@ -584,7 +584,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * Ligo.tez * kit 
   let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
-  let updated_state = {state with uniswap = updated_uniswap} in
+  let updated_state = {state with cfmm = updated_cfmm} in
   (ops, updated_state)
 
 (* ************************************************************************* *)
@@ -692,8 +692,8 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     (([]: LigoOp.operation list), state)
   else
     (* TODO: What is the right order in which to do things here? We use the
-     * last observed kit_in_tez price from uniswap to update the parameters,
-     * which return kit to be added to the uniswap contract. Gotta make sure we
+     * last observed kit_in_tez price from cfmm to update the parameters,
+     * which return kit to be added to the cfmm contract. Gotta make sure we
      * do things in the right order here. *)
 
     (* 1: Calculate the reward that we should create out of thin air to give
@@ -701,15 +701,15 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let reward = calculate_touch_reward state.parameters.last_touched in
     let state = { state with parameters = add_circulating_kit state.parameters reward } in
 
-    (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the uniswap *)
+    (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the cfmm *)
     let (ops, state) = touch_delegation_auction state in
 
     (* 2: Update the system parameters *)
-    let total_accrual_to_uniswap, updated_parameters =
-      parameters_touch index (uniswap_kit_in_tez_in_prev_block state.uniswap) state.parameters
+    let total_accrual_to_cfmm, updated_parameters =
+      parameters_touch index (cfmm_kit_in_tez_in_prev_block state.cfmm) state.parameters
     in
-    (* 3: Add accrued burrowing fees to the uniswap sub-contract *)
-    let updated_uniswap = uniswap_add_accrued_kit state.uniswap total_accrual_to_uniswap in
+    (* 3: Add accrued burrowing fees to the cfmm sub-contract *)
+    let updated_cfmm = cfmm_add_accrued_kit state.cfmm total_accrual_to_cfmm in
 
     (* 5: Update auction-related info (e.g. start a new auction) *)
     let updated_liquidation_auctions =
@@ -727,7 +727,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let state =
       { state with
         parameters = updated_parameters;
-        uniswap = updated_uniswap;
+        cfmm = updated_cfmm;
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
@@ -735,7 +735,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let ops, state =
       let
         { burrows = state_burrows;
-          uniswap = state_uniswap;
+          cfmm = state_cfmm;
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
           delegation_auction = state_delegation_auction;
@@ -747,7 +747,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
-          uniswap = state_uniswap;
+          cfmm = state_cfmm;
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
           delegation_auction = state_delegation_auction;

@@ -24,7 +24,7 @@ let rec call_touch_times
   then params
   else begin
     Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+    let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
     call_touch_times index kit_in_tez (pred n) new_params
   end
 
@@ -332,7 +332,7 @@ let test_protected_index_follows_index =
   let lvl = lvl+1 in
   Ligo.Tezos.new_transaction ~seconds_passed:(lvl*60) ~blocks_passed:lvl ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
 
   assert_equal
     (compare new_params.index params.index)
@@ -411,7 +411,7 @@ let test_minting_index_low_bounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
 
   (tz_minting new_params >= Ligo.tez_from_literal "999_500mutez") (* 0.05% down, at "best" *)
 
@@ -435,7 +435,7 @@ let test_minting_index_high_unbounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
   assert_equal
     index
     (tz_minting new_params)
@@ -462,7 +462,7 @@ let test_liquidation_index_high_bounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
   (* not very likely to hit the < case here I think;
    * perhaps we need a different generator *)
   (tz_liquidation new_params <= Ligo.tez_from_literal "1_000_500mutez") (* 0.05% up, at "best" *)
@@ -487,7 +487,7 @@ let test_liquidation_index_low_unbounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_uniswap, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
   assert_equal
     index
     (tz_liquidation new_params)
@@ -521,7 +521,7 @@ let test_liquidation_index_low_unbounded =
     ~count:property_test_count
     TestArbitrary.arb_tezos
    @@ fun new_tezos ->
-   let _total_accrual_to_uniswap, new_params = touch index kit_in_tez params in
+   let _total_accrual_to_cfmm, new_params = touch index kit_in_tez params in
 
    (* Most of the parameters remain the same *)
    assert_equal
@@ -583,7 +583,7 @@ let test_touch_1 =
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
-    let total_accrual_to_uniswap, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
+    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
     assert_equal
       { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
         index = Ligo.tez_from_literal "340_000mutez";
@@ -601,7 +601,7 @@ let test_touch_1 =
       ~printer:show_parameters;
     assert_equal
       kit_zero (* NOTE: I'd expect this to be higher I think. *)
-      total_accrual_to_uniswap
+      total_accrual_to_cfmm
       ~printer:show_kit
 
 (* Just a simple unit test, testing nothing specific, really. *)
@@ -625,7 +625,7 @@ let test_touch_2 =
 
     let new_index = Ligo.tez_from_literal "340_000mutez" in
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
-    let total_accrual_to_uniswap, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
+    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
     assert_equal
       { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5";
         index = Ligo.tez_from_literal "340000mutez";
@@ -643,7 +643,7 @@ let test_touch_2 =
       ~printer:show_parameters;
     assert_equal
       (kit_of_mukit (Ligo.nat_from_literal "1n"))
-      total_accrual_to_uniswap
+      total_accrual_to_cfmm
       ~printer:show_kit
 
 let suite =

@@ -5,7 +5,7 @@ open CheckerTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
   * - Updating the system parameters
-  * - Updating uniswap parameters (e.g. adding accrued burrowing fees to it)
+  * - Updating cfmm parameters (e.g. adding accrued burrowing fees to it)
   * - Update auction-related info (e.g. start a new auction)
   * - NOTE: Are there any other tasks to put in this list?
 *)
@@ -97,25 +97,25 @@ val entrypoint_make_permission : checker * (permission_redacted_content * burrow
 val entrypoint_invalidate_all_permissions : checker * (permission_redacted_content * burrow_id) -> (LigoOp.operation list * checker)
 
 (* ************************************************************************* *)
-(**                                UNISWAP                                   *)
+(**                                 CFMM                                     *)
 (* ************************************************************************* *)
 
-(** Buy some kit from the uniswap contract. Fail if the desired amount of kit
+(** Buy some kit from the cfmm contract. Fail if the desired amount of kit
   * cannot be bought or if the deadline has passed. *)
 val entrypoint_buy_kit : checker * (kit * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some kit to the uniswap contract. Fail if the desired amount of tez
+(** Sell some kit to the cfmm contract. Fail if the desired amount of tez
   * cannot be bought or if the deadline has passed. *)
 val entrypoint_sell_kit : checker * (kit * Ligo.tez * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Buy some liquidity (liquidity tokens) from the uniswap contract, by
+(** Buy some liquidity (liquidity tokens) from the cfmm contract, by
   * giving it some tez and some kit. If the given amounts do not have the
-  * right ratio, the uniswap contract keeps as much of the given tez and kit
+  * right ratio, the cfmm contract keeps as much of the given tez and kit
   * as possible with the right ratio, and returns the leftovers, along with
   * the liquidity tokens. *)
 val entrypoint_add_liquidity : checker * (kit * Ligo.nat * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some liquidity (liquidity tokens) to the uniswap contract in
+(** Sell some liquidity (liquidity tokens) to the cfmm contract in
   * exchange for the corresponding tez and kit of the right ratio. *)
 val entrypoint_remove_liquidity : checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
 

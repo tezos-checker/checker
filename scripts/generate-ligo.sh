@@ -16,7 +16,7 @@ inputs=(
   ratio
   fixedPoint
   kit
-  uniswapTypes
+  cfmmTypes
   liquidationAuctionPrimitiveTypes
   mem
   avl
@@ -29,7 +29,7 @@ inputs=(
   parameters
   burrow
   checkerTypes
-  uniswap
+  cfmm
   liquidationAuction
   delegationAuction
   checker

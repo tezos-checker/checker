@@ -72,7 +72,14 @@ adjustment_index = burrow_fee_index * imbalance_index
 
 ## Touching
 
-Touching the system parameters has the effect of updating all aforementioned fields, and calculating the burrowing fees that need to be accrued to the uniswap sub-contract. This is done under the assumption that we have available the current time `now`, the current index `index_now` (calculated by the medianizer), and the current price of kit in tez `kit_in_tez_now` (calculated by the uniswap sub-contract). In fact, the uniswap sub-contract gives us the one calculated at the end of the last block, to make manipulation a little harder. We update each field:
+Touching the system parameters has the effect of updating all aforementioned
+fields, and calculating the burrowing fees that need to be accrued to the cfmm
+sub-contract. This is done under the assumption that we have available the
+current time `now`, the current index `index_now` (calculated by the
+medianizer), and the current price of kit in tez `kit_in_tez_now` (calculated
+by the cfmm sub-contract). In fact, the cfmm sub-contract gives us the one
+calculated at the end of the last block, to make manipulation a little harder.
+We update each field:
 
 ### `last_touched`
 Update the timestamp from the last time it was touched to now
@@ -163,10 +170,10 @@ In order to compute the updates for the two remaining fields (`outstanding_kit` 
 outstanding_with_fees = old_outstanding_kit * (new_burrow_fee_index / old_burrow_fee_index)
 ```
 
-### Accrual to uniswap
-The accrued burrowing fees are to be given to the uniswap sub-contract. The total amount we easily compute as
+### Accrual to cfmm
+The accrued burrowing fees are to be given to the cfmm sub-contract. The total amount we easily compute as
 ```
-accrual_to_uniswap = outstanding_with_fees - old_outstanding
+accrual_to_cfmm = outstanding_with_fees - old_outstanding
 ```
 
 ### `outstanding_kit`
@@ -182,9 +189,9 @@ new_outstanding_kit = outstanding_with_fees * (new_imbalance_index / old_imbalan
 ```
 
 ### `circulating_kit`
-Finally, to obtain the up-to-date `circulating_kit`, we just need to record the new kit in circulation, that is, `accrual_to_uniswap`:
+Finally, to obtain the up-to-date `circulating_kit`, we just need to record the new kit in circulation, that is, `accrual_to_cfmm`:
 ```
-new_circulating_kit = old_circulating_kit + accrual_to_uniswap
+new_circulating_kit = old_circulating_kit + accrual_to_cfmm
 ```
 
 **NOTE**: If the current timestamp is identical to that stored in the parameters, we do not perform any of the above.

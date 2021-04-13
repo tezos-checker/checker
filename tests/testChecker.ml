@@ -330,8 +330,8 @@ let suite =
         ~name:"test_buy_kit_respects_min_kit_expected"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, _ = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
       let bought_kit = match ops with
@@ -349,15 +349,15 @@ let suite =
         ~name:"test_buy_kit_preserves_kit"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
       let bought_kit = match ops with
         | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
-      checker.uniswap.kit = kit_add new_checker.uniswap.kit (kit_of_mukit bought_kit)
+      checker.cfmm.kit = kit_add new_checker.cfmm.kit (kit_of_mukit bought_kit)
     );
 
     (
@@ -368,11 +368,11 @@ let suite =
         ~name:"test_buy_kit_preserves_tez"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (uniswap, tez_amount, min_kit_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let _, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
-      Ligo.add_tez_tez checker.uniswap.tez tez_amount = new_checker.uniswap.tez
+      Ligo.add_tez_tez checker.cfmm.tez tez_amount = new_checker.cfmm.tez
     );
 
     (
@@ -383,8 +383,8 @@ let suite =
         ~name:"test_sell_kit_respects_min_tez_expected"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
@@ -403,12 +403,12 @@ let suite =
         ~name:"test_sell_kit_preserves_kit"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
-      kit_add checker.uniswap.kit kit_amount = new_checker.uniswap.kit
+      kit_add checker.cfmm.kit kit_amount = new_checker.cfmm.kit
     );
 
     (
@@ -419,8 +419,8 @@ let suite =
         ~name:"test_sell_kit_preserves_tez"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-      let checker = { initial_checker with uniswap = uniswap } in
+      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      let checker = { initial_checker with cfmm = cfmm } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
       let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
@@ -428,7 +428,7 @@ let suite =
         | [ Transaction (_, mutez, _) ] -> mutez
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
-      Ligo.add_tez_tez new_checker.uniswap.tez bought_tez = checker.uniswap.tez
+      Ligo.add_tez_tez new_checker.cfmm.tez bought_tez = checker.cfmm.tez
     );
 
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
@@ -617,10 +617,10 @@ let suite =
     );
 
     (
-      let uniswap_kit = Ligo.nat_from_literal ("1_000n") in
-      let uniswap_tez = Ligo.tez_from_literal ("1_000mutez") in
+      let cfmm_kit = Ligo.nat_from_literal ("1_000n") in
+      let cfmm_tez = Ligo.tez_from_literal ("1_000mutez") in
       (* The maximum amount of kit that you can buy with a finite amount of tez is
-       * (1 - fee) * uniswap.kit - 1
+       * (1 - fee) * cfmm.kit - 1
       *)
       let max_buyable_kit = 997 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
@@ -635,19 +635,19 @@ let suite =
 
       Ligo.Tezos.reset();
 
-      (* Populate uniswap with initial liquidity *)
+      (* Populate cfmm with initial liquidity *)
       let open Ratio in
       let checker = {
         initial_checker with
-        uniswap={
-          initial_checker.uniswap with
-          tez = uniswap_tez;
-          kit = kit_of_mukit uniswap_kit;
+        cfmm={
+          initial_checker.cfmm with
+          tez = cfmm_tez;
+          kit = kit_of_mukit cfmm_kit;
         };
       } in
-      (* Calculate minimum tez to get the min_expected kit given the state of the uniswap defined above*)
+      (* Calculate minimum tez to get the min_expected kit given the state of the cfmm defined above*)
       let ratio_minimum_tez = div_ratio
-          (ratio_of_nat uniswap_kit)
+          (ratio_of_nat cfmm_kit)
           (
             sub_ratio
               (div_ratio (ratio_of_nat (Ligo.nat_from_literal "998n")) (ratio_of_nat (kit_to_mukit_nat min_expected_kit)))
@@ -672,11 +672,11 @@ let suite =
     ("buy_kit - returns expected kit" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       (* Populate the uniswap with some liquidity *)
+       (* Populate the cfmm with some liquidity *)
        let checker = {
          initial_checker with
-         uniswap={
-           initial_checker.uniswap with
+         cfmm={
+           initial_checker.cfmm with
            tez = Ligo.tez_from_literal "2mutez";
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
@@ -695,11 +695,11 @@ let suite =
     ("sell_kit - returns expected tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       (* Populate the uniswap with some liquidity *)
+       (* Populate the cfmm with some liquidity *)
        let checker = {
          initial_checker with
-         uniswap={
-           initial_checker.uniswap with
+         cfmm={
+           initial_checker.cfmm with
            tez = Ligo.tez_from_literal "2mutez";
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
@@ -732,11 +732,11 @@ let suite =
     ("remove_liquidity - returns expected kit and tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       (* Populate the uniswap with some liquidity *)
+       (* Populate the cfmm with some liquidity *)
        let checker = {
          initial_checker with
-         uniswap={
-           initial_checker.uniswap with
+         cfmm={
+           initial_checker.cfmm with
            tez = Ligo.tez_from_literal "2mutez";
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
            lqt = Ligo.nat_from_literal "2n";
@@ -818,7 +818,7 @@ let suite =
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
          let _ops, checker2 = Checker.entrypoint_activate_burrow (checker1, Checker.deticketify_activate_burrow (admin_permission, burrow_id)) in
-         (* FIXME: uniswap contains a ratio, which cannot be compared for equality using (=). So, the next line can give false positives. *)
+         (* FIXME: cfmm contains a ratio, which cannot be compared for equality using (=). So, the next line can give false positives. *)
          assert_equal checker0 checker2;
          () in
 

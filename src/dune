@@ -29,8 +29,8 @@
   FixedPoint
   Parameters
   Burrow
-  Uniswap
-  UniswapTypes
+  Cfmm
+  CfmmTypes
   LiquidationAuction
   LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes

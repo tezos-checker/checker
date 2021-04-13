@@ -1,5 +1,5 @@
 open Burrow
-open UniswapTypes
+open CfmmTypes
 open Parameters
 open LiquidationAuctionTypes
 open DelegationAuctionTypes
@@ -10,7 +10,7 @@ type burrow_map = (burrow_id, burrow) Ligo.big_map
 
 type checker =
   { burrows : burrow_map;
-    uniswap : uniswap;
+    cfmm : cfmm;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     delegation_auction : delegation_auction;
@@ -21,7 +21,7 @@ type checker =
 (** Make a fresh state. *)
 let initial_checker =
   { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
-    uniswap = initial_uniswap;
+    cfmm = initial_cfmm;
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     delegation_auction = delegation_auction_empty;
