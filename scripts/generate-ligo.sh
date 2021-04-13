@@ -33,7 +33,7 @@ inputs=(
   liquidationAuction
   delegationAuction
   checker
-  checkerEndpoints
+  checkerEntrypoints
   checkerLazy
 )
 

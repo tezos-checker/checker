@@ -2,14 +2,14 @@ all: install-git-hooks build test
 
 build: build-ocaml build-ligo
 
-src/checkerEndpoints.ml: src/checker.mli scripts/generate-endpoints
-	ruby scripts/generate-endpoints src/checker.mli > $@
+src/checkerEntrypoints.ml: src/checker.mli scripts/generate-entrypoints
+	ruby scripts/generate-entrypoints src/checker.mli > $@
 	ocp-indent -i $@
 
-build-ocaml: src/checkerEndpoints.ml
+build-ocaml: src/checkerEntrypoints.ml
 	dune build @install
 
-generate-ligo: src/checkerEndpoints.ml
+generate-ligo: src/checkerEntrypoints.ml
 	mkdir -p generated/ligo
 	sh ./scripts/generate-ligo.sh
 

@@ -11,13 +11,13 @@ rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
 main="$PWD/generated/ligo/main.mligo"
-checkerEndpoints="$PWD/generated/ligo/checkerEndpoints.mligo"
+checkerEntrypoints="$PWD/generated/ligo/checkerEntrypoints.mligo"
 
 echo 'Compiling: main'
 ligo compile-contract --warn false "$main" main --output-file "$target_dir/main.tz"
 ligo measure-contract --warn false "$main" main
 
-functions=$(perl -n -e'/let lazy_fun_(\S+)/ && print "$1\n"' "$checkerEndpoints")
+functions=$(perl -n -e'/let lazy_fun_(\S+)/ && print "$1\n"' "$checkerEntrypoints")
 
 for fun in $functions; do
   echo "Packing: $fun"
