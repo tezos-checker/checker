@@ -19,7 +19,7 @@
  (public_name src)
  (modules
   Checker
-  CheckerEndpoints
+  CheckerEntrypoints
   CheckerTypes
   Constants
   CheckerLazy

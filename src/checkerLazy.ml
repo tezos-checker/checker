@@ -1,4 +1,4 @@
-open CheckerEndpoints
+open CheckerEntrypoints
 open CheckerTypes
 open Checker
 open Error
@@ -7,7 +7,7 @@ type params =
   (* Deployment *)
   | DeployFunction of (lazy_function_id * Ligo.bytes)
   | SealContract
-  | CheckerEndpoint of checker_params
+  | CheckerEntrypoint of checker_params
 
 type lazy_function_map = (lazy_function_id, Ligo.bytes) Ligo.big_map
 type wrapper = checker * lazy_function_map * Ligo.address option
@@ -44,7 +44,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
             | SealContract ->
               (lazy_functions, (None: Ligo.address option))
             (* we really need wildcard patterns... *)
-            | CheckerEndpoint _ -> (Ligo.failwith error_ContractNotDeployed: (lazy_function_id, Ligo.bytes) Ligo.big_map * Ligo.address option)
+            | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: (lazy_function_id, Ligo.bytes) Ligo.big_map * Ligo.address option)
           else (Ligo.failwith error_UnauthorisedCaller: (lazy_function_id, Ligo.bytes) Ligo.big_map * Ligo.address option) in
         (([]: LigoOp.operation list), checker, lazy_functions, deployer)
       end
@@ -53,7 +53,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
         match op with
         | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
         | SealContract -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-        | CheckerEndpoint op ->
+        | CheckerEntrypoint op ->
           (* BEGIN_LIGO
              let fid, params = checkerParamsToLazyFunctionId op in
              (get_lazy_function lazy_functions fid) (checker, params)
