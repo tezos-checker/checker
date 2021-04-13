@@ -28,7 +28,7 @@ For extracting (haddock-style) documentation from the code using dune, type
 
 ## Local Deployment
 
-The contract can be deployed to a local sandbox run using Docker.
+The contract can be deployed to a local sandbox run using Docker. Note that this workflow has only been tested on Linux.
 
 First, enter a nix shell:
 ```console
