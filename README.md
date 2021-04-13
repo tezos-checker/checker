@@ -75,11 +75,11 @@ $ tezos-client import secret key bob unencrypted:edsk3RFfvaFaxbHx8BMtEW1rKQcPtDM
 And finally, deploy the contract (and packed entrypoints) to the sandbox:
 
 ```console
-./scripts/deploy-contract.sh
+$ ./scripts/deploy-contract.sh
 ```
 
 To call the contract, we can use the [call-contract.sh](./scripts/call-contract.sh) helper script:
 
 ```console
-./scripts/call-contract.sh 'Touch ()'
+$ ./scripts/call-contract.sh 'Touch ()'
 ```
