@@ -19,8 +19,8 @@ let[@inline] burrow_fee_percentage : ratio = make_real_unsafe (Ligo.int_from_lit
 let[@inline] liquidation_reward_percentage : ratio =
   make_real_unsafe (Ligo.int_from_literal "1") (Ligo.int_from_literal "1000") (* 0.001 *)
 
-(** Percentage kept by the uniswap contract from the return asset. *)
-let[@inline] uniswap_fee : ratio = make_real_unsafe (Ligo.int_from_literal "2") (Ligo.int_from_literal "1000") (* 0.002 *)
+(** Percentage kept by the cfmm contract from the return asset. *)
+let[@inline] cfmm_fee : ratio = make_real_unsafe (Ligo.int_from_literal "2") (Ligo.int_from_literal "1000") (* 0.002 *)
 
 (** Protected index epsilon. The higher this value is, the faster the protected
   * index catches up with the actual index. Currently calculated as 0.05 cNp

@@ -5,6 +5,10 @@ set -o pipefail
 
 cd "$(realpath "$(dirname "$0")")/../"
 
+target_dir="$PWD/generated/ligo"
+rm -rf "$target_dir"
+mkdir -p "$target_dir"
+
 inputs=(
   error
   ptr
@@ -12,7 +16,7 @@ inputs=(
   ratio
   fixedPoint
   kit
-  uniswapTypes
+  cfmmTypes
   liquidationAuctionPrimitiveTypes
   mem
   avl
@@ -25,15 +29,17 @@ inputs=(
   parameters
   burrow
   checkerTypes
-  uniswap
+  cfmm
   liquidationAuction
   delegationAuction
   checker
+  checkerEntrypoints
+  checkerLazy
 )
 
 for name in "${inputs[@]}"; do
   from="$PWD/src/$name".ml
-  to="$PWD/generated/ligo/$name".mligo
+  to="$target_dir/$name".mligo
   echo "$from -> $to" 1>&2
 
   cat "$from" |
@@ -111,15 +117,15 @@ for name in "${inputs[@]}"; do
     cat > "$to"
 done
 
-echo "$PWD/src/ligo.mligo => $PWD/generated/ligo.mligo" 2>&1
-cp "$PWD/src/ligo.mligo" "$PWD/generated/ligo/ligo.mligo"
+echo "$PWD/src/ligo.mligo => $target_dir/ligo.mligo" 2>&1
+cp "$PWD/src/ligo.mligo" "$target_dir/ligo.mligo"
 
 echo "=> main.mligo" 2>&1
 
-echo '#include "ligo.mligo"' > "$PWD/generated/ligo/main.mligo"
+echo '#include "ligo.mligo"' > "$target_dir/main.mligo"
 
 ( IFS=$'\n'; echo "${inputs[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
-  cat >> "$PWD/generated/ligo/main.mligo"
+  cat >> "$target_dir/main.mligo"
 
 echo "done." 1>&2

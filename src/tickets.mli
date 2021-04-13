@@ -26,7 +26,7 @@ val ensure_valid_kit_token : kit_token -> kit
 type liquidity_token_content (* opaque *)
 type liquidity = liquidity_token_content Ligo.ticket
 val issue_liquidity_tokens : Ligo.nat -> liquidity
-val ensure_valid_liquidity_token : liquidity -> liquidity
+val ensure_valid_liquidity_token : liquidity -> Ligo.nat
 
 type delegation_auction_bid_content (* opaque *)
 type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket
@@ -39,10 +39,13 @@ val issue_liquidation_auction_bid_ticket : liquidation_auction_bid -> liquidatio
 val ensure_valid_liquidation_auction_bid_ticket : liquidation_auction_bid_ticket -> liquidation_auction_bid
 
 type permission_content (* opaque *)
+type permission_redacted_content = rights * Ligo.address * Ligo.nat
 type permission = permission_content Ligo.ticket
 val issue_permission_ticket : rights -> Ligo.address -> Ligo.nat -> permission
-val ensure_valid_permission : permission -> Ligo.address -> Ligo.nat -> rights
-val ensure_permission_is_present : permission option -> permission
+val ensure_valid_permission : permission -> permission_redacted_content
+val ensure_valid_optional_permission : permission option -> permission_redacted_content option
+val ensure_matching_permission : Ligo.address -> Ligo.nat -> permission_redacted_content -> rights
+val ensure_permission_is_present : permission_redacted_content option -> permission_redacted_content
 
 (* BEGIN_OCAML *)
 val show_kit_token_content : kit_token_content -> string
@@ -71,6 +74,9 @@ val pp_liquidation_auction_bid : Format.formatter -> liquidation_auction_bid -> 
 
 val show_permission_content : permission_content -> string
 val pp_permission_content : Format.formatter -> permission_content -> unit
+
+val show_permission_redacted_content : permission_redacted_content -> string
+val pp_permission_redacted_content : Format.formatter -> permission_redacted_content -> unit
 
 val show_permission : permission -> string
 val pp_permission : Format.formatter -> permission -> unit

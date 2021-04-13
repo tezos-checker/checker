@@ -25,6 +25,10 @@ let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "4n"
 let[@inline] permission_tag      = Ligo.nat_from_literal "5n"
 
 (* ************************************************************************* *)
+(**                               GENERAL                                    *)
+(* ************************************************************************* *)
+
+(* ************************************************************************* *)
 (**                              KIT TOKENS                                  *)
 (* ************************************************************************* *)
 
@@ -72,12 +76,12 @@ let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
   * it is issued by checker, and (b) it is tagged appropriately. In OCaml/LIGO
   * the type ensures (b), but in Michelson this is not strictly necessary,
   * hence the runtime check of the tag. *)
-let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : liquidity =
-  let (issuer, ((tag, _content), _lqt)), liquidity = Ligo.Tezos.read_ticket liquidity in
+let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : Ligo.nat =
+  let (issuer, ((tag, _content), lqt)), _liquidity = Ligo.Tezos.read_ticket liquidity in
   let is_valid = issuer = checker_address && tag = lqt_token_tag in
   if is_valid
-  then liquidity
-  else (Ligo.failwith error_InvalidLiquidityToken : liquidity)
+  then lqt
+  else (Ligo.failwith error_InvalidLiquidityToken : Ligo.nat)
 
 (* ************************************************************************* *)
 (**                    DELEGATION AUCTION BID TICKETS                        *)
@@ -168,6 +172,9 @@ type rights =
 type permission_content = token_tag * rights * Ligo.address * Ligo.nat
 [@@deriving show]
 
+type permission_redacted_content = rights * Ligo.address * Ligo.nat
+[@@deriving show]
+
 (** A permission is a ticket containing a right. *)
 type permission = permission_content Ligo.ticket
 [@@deriving show]
@@ -177,28 +184,40 @@ let[@inline] issue_permission_ticket (r: rights) (burrow_id: Ligo.address) (perm
 
 (** Check whether a permission ticket is valid. A permission ticket is valid if
   * (a) it is issued by checker, (b) its amount is exactly zero (infinitely
-  * splittable), (c) it matches the given burrow id, (d) it matches the
-  * permission version specified by the burrow, and (e) it is tagged
-  * appropriately. In OCaml/LIGO the type ensures (e), but in Michelson this is
-  * not strictly necessary (currently is, but the content might change in the
-  * future), hence the runtime check of the tag. *)
-let[@inline] ensure_valid_permission
-    (permission: permission)
-    (burrow_id: Ligo.address)
-    (burrow_permission_version: Ligo.nat)
-  : rights =
-  let (issuer, ((tag, right, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
+  * splittable), and (c) it is tagged appropriately. In OCaml/LIGO the type
+  * ensures (c), but in Michelson this is not strictly necessary (currently is,
+  * but the content might change in the future), hence the runtime check of the
+  * tag. *)
+let[@inline] ensure_valid_permission (permission: permission) : permission_redacted_content =
+  let (issuer, ((tag, rights, id, version), amnt)), _ = Ligo.Tezos.read_ticket permission in
   let is_valid =
     issuer = checker_address
     && tag = permission_tag
-    && amnt = Ligo.nat_from_literal "0n"
-    && version = burrow_permission_version
-    && id = burrow_id in
+    && amnt = Ligo.nat_from_literal "0n" in
   if is_valid
-  then right
+  then (rights, id, version)
+  else (Ligo.failwith error_InvalidPermission : permission_redacted_content)
+
+let[@inline] ensure_valid_optional_permission (permission: permission option) : permission_redacted_content option =
+  match permission with
+  | None -> (None: permission_redacted_content option)
+  | Some permission -> Some (ensure_valid_permission permission)
+
+(** Check whether a permission (redacted content) matches the burrow it's
+  * supposed to match. That is, check whether (a) it matches the given burrow
+  * id, and (b) it matches the permission version specified by the burrow. Note
+  * that this function does not check the validity of the permission itself;
+  * ensure_valid_permission does that. *)
+let[@inline] ensure_matching_permission
+    (expected_id: Ligo.address)
+    (expected_version: Ligo.nat)
+    (rights, id, version: permission_redacted_content)
+  : rights =
+  if id = expected_id && version = expected_version
+  then rights
   else (Ligo.failwith error_InvalidPermission : rights)
 
-let ensure_permission_is_present (permission: permission option) : permission =
+let ensure_permission_is_present (permission: permission_redacted_content option) : permission_redacted_content =
   match permission with
-  | None -> (Ligo.failwith error_MissingPermission : permission)
+  | None -> (Ligo.failwith error_MissingPermission : permission_redacted_content)
   | Some permission -> permission

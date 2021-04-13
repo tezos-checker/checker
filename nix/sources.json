@@ -1,4 +1,16 @@
 {
+    "gitignore.nix": {
+        "branch": "master",
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore.nix",
+        "rev": "211907489e9f198594c0eb0ca9256a1949c9d412",
+        "sha256": "06j7wpvj54khw0z10fjyi31kpafkr6hi1k0di13k1xp8kywvfyx8",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore.nix/archive/211907489e9f198594c0eb0ca9256a1949c9d412.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "ligo-artifacts": {
         "rev": "8dd8a5e662a02b13e3d3248bc618448cd9ea9fcd",
         "sha256": "1l0kgk3v4hn0m0mgh9bf7xy3wszh1nb0syvn30iwifnskarwvibj",
@@ -16,6 +28,18 @@
         "sha256": "07a5i67jxlv08aaj3cay5hgsx5i6slwpabbqwz6167xdini60f8b",
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/8f1302995ec820e175db9c91b08a08541964df12.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "tezos-packaging": {
+        "branch": "master",
+        "description": "Various forms of Tezos software distribution for Linux.",
+        "homepage": "",
+        "owner": "serokell",
+        "repo": "tezos-packaging",
+        "rev": "056277b258067e6b9bcd85ccb43364ea3a3109c7",
+        "sha256": "1p6304lbvp6h5bg7r7gjyqf8b24pwf9rs2iq7jqb6ba0ipvfi05f",
+        "type": "tarball",
+        "url": "https://github.com/serokell/tezos-packaging/archive/056277b258067e6b9bcd85ccb43364ea3a3109c7.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

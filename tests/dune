@@ -9,7 +9,7 @@
   TestKit
   TestParameters
   TestLiquidation
-  TestUniswap
+  TestCfmm
   TestDelegationAuction
   TestLiquidationAuction
   TestChecker

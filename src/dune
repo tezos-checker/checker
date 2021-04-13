@@ -19,16 +19,18 @@
  (public_name src)
  (modules
   Checker
+  CheckerEntrypoints
   CheckerTypes
   Constants
+  CheckerLazy
   Mem
   Avl
   Kit
   FixedPoint
   Parameters
   Burrow
-  Uniswap
-  UniswapTypes
+  Cfmm
+  CfmmTypes
   LiquidationAuction
   LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes

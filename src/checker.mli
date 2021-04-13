@@ -4,167 +4,178 @@ open Tickets
 open CheckerTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
-  * - Updating the system parameters
-  * - Updating uniswap parameters (e.g. adding accrued burrowing fees to it)
-  * - Update auction-related info (e.g. start a new auction)
-  * - NOTE: Are there any other tasks to put in this list?
+    - Updating the system parameters
+    - Updating cfmm parameters (e.g. adding accrued burrowing fees to it)
+    - Update auction-related info (e.g. start a new auction)
+    - NOTE: the list is not exhaustive at the moment.
 *)
-val touch : checker -> (LigoOp.operation list * checker)
+val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 
+(**/**)
 (* FOR TESTING. *)
 val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
+(**/**)
 
+(**/**)
 (* FOR TESTING. *)
 val calculate_touch_reward : Ligo.timestamp -> kit
+(**/**)
 
-(* ************************************************************************* *)
-(**                               BURROWS                                    *)
-(* ************************************************************************* *)
+(*****************************************************************************)
+(**                            {1 BURROWS}                                   *)
+(*****************************************************************************)
 
 (** Create and return a new burrow containing the given tez as collateral,
-  * minus the creation deposit. Fail if the tez is not enough to cover the
-  * creation deposit. Additionally, return an Admin permission ticket to the
-  * sender. *)
-val create_burrow : checker * Ligo.key_hash option -> (LigoOp.operation list * checker)
+    minus the creation deposit. Fail if the tez is not enough to cover the
+    creation deposit. Additionally, return an Admin permission ticket to the
+    sender. *)
+val entrypoint_create_burrow : checker * Ligo.key_hash option -> (LigoOp.operation list * checker)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
-  * the burrow does not exist, or if the burrow does not allow deposits from
-  * anyone and the permission ticket given is insufficient. *)
-val deposit_tez : checker * (permission option * burrow_id) -> (LigoOp.operation list * checker)
+    the burrow does not exist, or if the burrow does not allow deposits from
+    anyone and the permission ticket given is insufficient. *)
+val entrypoint_deposit_tez : checker * (permission_redacted_content option * burrow_id) -> (LigoOp.operation list * checker)
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
-  * does not exist, if this action would overburrow it, or if the permission
-  * ticket given is insufficient. *)
-val withdraw_tez : checker * (permission * Ligo.tez * burrow_id) -> LigoOp.operation list * checker
+    does not exist, if this action would overburrow it, or if the permission
+    ticket given is insufficient. *)
+val entrypoint_withdraw_tez : checker * (permission_redacted_content * Ligo.tez * burrow_id) -> LigoOp.operation list * checker
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
-  * there is not enough collateral, or if the permission ticket given is
-  * insufficient. *)
-val mint_kit : checker * (permission * burrow_id * kit) -> LigoOp.operation list * checker
+    there is not enough collateral, or if the permission ticket given is
+    insufficient. *)
+val entrypoint_mint_kit : checker * (permission_redacted_content * burrow_id * kit) -> LigoOp.operation list * checker
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is
-  * excess kit, simply store it into the burrow. Fail if the burrow does not
-  * exist, or if the burrow does not allow kit burnings from anyone and the
-  * permission ticket given is insufficient. *)
-val burn_kit : checker * (permission option * burrow_id * kit_token) -> (LigoOp.operation list * checker)
+    excess kit, simply store it into the burrow. Fail if the burrow does not
+    exist, or if the burrow does not allow kit burnings from anyone and the
+    permission ticket given is insufficient. *)
+val entrypoint_burn_kit : checker * (permission_redacted_content option * burrow_id * kit) -> (LigoOp.operation list * checker)
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
-  * if the burrow is already active, if the amount of tez given is less than
-  * the creation deposit, or if the permission ticket given is not an admin
-  * ticket. *)
-val activate_burrow : checker * (permission * burrow_id) -> LigoOp.operation list * checker
+    if the burrow is already active, if the amount of tez given is less than
+    the creation deposit, or if the permission ticket given is not an admin
+    ticket. *)
+val entrypoint_activate_burrow : checker * (permission_redacted_content * burrow_id) -> LigoOp.operation list * checker
 
 (** Deativate a currently active burrow. Fail if the burrow does not exist,
-  * if it is already inactive, if it is overburrowed, if it has kit
-  * outstanding, if it has collateral sent off to auctions, or if the
-  * permission ticket given is not an admin ticket. If deactivation is
-  * successful, make a tez payment to the sender. *)
-val deactivate_burrow : checker * (permission * burrow_id) -> LigoOp.operation list * checker
+    if it is already inactive, if it is overburrowed, if it has kit
+    outstanding, if it has collateral sent off to auctions, or if the
+    permission ticket given is not an admin ticket. If deactivation is
+    successful, make a tez payment to the sender. *)
+val entrypoint_deactivate_burrow : checker * (permission_redacted_content * burrow_id) -> LigoOp.operation list * checker
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
-  * liquidation or if the burrow does not exist. If successful, return the
-  * reward, to be credited to the liquidator. *)
-val mark_for_liquidation : checker * burrow_id -> (LigoOp.operation list * checker)
+    liquidation or if the burrow does not exist. If successful, return the
+    reward, to be credited to the liquidator. *)
+val entrypoint_mark_for_liquidation : checker * burrow_id -> (LigoOp.operation list * checker)
 
 (** Process the liquidation slices on completed liquidation auctions. Invalid
-  * leaf_ptr's fail, and slices that correspond to incomplete liquidations are
-  * ignored. *)
-val touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.operation list * checker)
+    leaf_ptr's fail, and slices that correspond to incomplete liquidations are
+    ignored. *)
+val entrypoint_touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.operation list * checker)
 
 (** Cancel the liquidation of a slice. The burden is on the caller to provide
-  * both the burrow_id and the leaf_ptr. This operation can fail for several
-  * reasons:
-  * - If the leaf_ptr does not refer to the burrow_id given,
-  * - if the permission given is insufficient for this operation,
-  * - if the slice is already at the current auction,
-  * - if the slice is part of an already completed auction,
-  * - if the burrow is overburrowed at the moment.
+    both the burrow_id and the leaf_ptr. This operation can fail for several
+    reasons:
+    - If the leaf_ptr does not refer to the burrow_id given,
+    - if the permission given is insufficient for this operation,
+    - if the slice is already at the current auction,
+    - if the slice is part of an already completed auction,
+    - if the burrow is overburrowed at the moment.
 *)
-val cancel_liquidation_slice : checker * (permission * leaf_ptr) -> LigoOp.operation list * checker
+val entrypoint_cancel_liquidation_slice : checker * (permission_redacted_content * leaf_ptr) -> LigoOp.operation list * checker
 
 (** Perform maintainance tasks for the burrow. *)
-val touch_burrow : checker * burrow_id -> LigoOp.operation list * checker
+val entrypoint_touch_burrow : checker * burrow_id -> LigoOp.operation list * checker
 
 (** Set the delegate of a burrow. *)
-val set_burrow_delegate : checker * (permission * burrow_id * Ligo.key_hash option) -> (LigoOp.operation list * checker)
+val entrypoint_set_burrow_delegate : checker * (permission_redacted_content * burrow_id * Ligo.key_hash option) -> (LigoOp.operation list * checker)
 
 (** Requires admin. Create a new permission for a burrow. *)
-val make_permission : checker * (permission * burrow_id * rights) -> (LigoOp.operation list * checker)
+val entrypoint_make_permission : checker * (permission_redacted_content * burrow_id * rights) -> (LigoOp.operation list * checker)
 
 (** Requires admin. Increments a counter so that all previous permissions are
-  * now invalid and returns a new admin permission. This makes it easy to
-  * transfer an admin permission to another party. *)
-val invalidate_all_permissions : checker * (permission * burrow_id) -> (LigoOp.operation list * checker)
+    now invalid and returns a new admin permission. This makes it easy to
+    transfer an admin permission to another party. *)
+val entrypoint_invalidate_all_permissions : checker * (permission_redacted_content * burrow_id) -> (LigoOp.operation list * checker)
 
-(* ************************************************************************* *)
-(**                                UNISWAP                                   *)
-(* ************************************************************************* *)
+(*****************************************************************************)
+(**                              {1 CFMM}                                    *)
+(*****************************************************************************)
 
-(** Buy some kit from the uniswap contract. Fail if the desired amount of kit
-  * cannot be bought or if the deadline has passed. *)
-val buy_kit : checker * (kit * Ligo.timestamp) -> LigoOp.operation list * checker
+(** Buy some kit from the cfmm contract. Fail if the desired amount of kit
+    cannot be bought or if the deadline has passed. *)
+val entrypoint_buy_kit : checker * (kit * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some kit to the uniswap contract. Fail if the desired amount of tez
-  * cannot be bought or if the deadline has passed. *)
-val sell_kit : checker * (kit_token * Ligo.tez * Ligo.timestamp) -> LigoOp.operation list * checker
+(** Sell some kit to the cfmm contract. Fail if the desired amount of tez
+    cannot be bought or if the deadline has passed. *)
+val entrypoint_sell_kit : checker * (kit * Ligo.tez * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Buy some liquidity (liquidity tokens) from the uniswap contract, by
-  * giving it some tez and some kit. If the given amounts do not have the
-  * right ratio, the uniswap contract keeps as much of the given tez and kit
-  * as possible with the right ratio, and returns the leftovers, along with
-  * the liquidity tokens. *)
-val add_liquidity : checker * (kit_token * Ligo.nat * Ligo.timestamp) -> LigoOp.operation list * checker
+(** Buy some liquidity (liquidity tokens) from the cfmm contract, by
+    giving it some tez and some kit. If the given amounts do not have the
+    right ratio, the cfmm contract keeps as much of the given tez and kit
+    as possible with the right ratio, and returns the leftovers, along with
+    the liquidity tokens. *)
+val entrypoint_add_liquidity : checker * (kit * Ligo.nat * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some liquidity (liquidity tokens) to the uniswap contract in
-  * exchange for the corresponding tez and kit of the right ratio. *)
-val remove_liquidity : checker * (liquidity * Ligo.tez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
+(** Sell some liquidity (liquidity tokens) to the cfmm contract in
+    exchange for the corresponding tez and kit of the right ratio. *)
+val entrypoint_remove_liquidity : checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
 
-(* ************************************************************************* *)
-(**                          LIQUIDATION AUCTIONS                            *)
-(* ************************************************************************* *)
+(*****************************************************************************)
+(**                      {1 LIQUIDATION AUCTIONS}                            *)
+(*****************************************************************************)
 
 (** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
-  * too low. If successful, return a ticket which can be used to
-  * reclaim the kit when outbid. *)
-val checker_liquidation_auction_place_bid : checker * kit_token -> LigoOp.operation list * checker
+    too low. If successful, return a ticket which can be used to
+    reclaim the kit when outbid. *)
+val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
 
 (** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val checker_liquidation_auction_reclaim_bid : checker * liquidation_auction_bid_ticket -> LigoOp.operation list * checker
+val entrypoint_liquidation_auction_reclaim_bid : checker * liquidation_auction_bid -> LigoOp.operation list * checker
 
-(** Reclaim a winning bid for the current or a completed liquidation auction. *)
-val checker_liquidation_auction_reclaim_winning_bid : checker * liquidation_auction_bid_ticket -> LigoOp.operation list * checker
+(** Claim a winning bid for the current or a completed liquidation auction. *)
+val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_bid -> LigoOp.operation list * checker
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
  *   -> liquidation_auction_bid_ticket *)
 
 (** Receive a liquidation slice from a burrow; we gather the slices in the
-  * checker contract, and the checker contract is responsible for transfering
-  * the lot to the liquidation auction winner. *)
-val receive_slice_from_burrow : checker -> (LigoOp.operation list * checker)
+    checker contract, and the checker contract is responsible for transfering
+    the lot to the liquidation auction winner. *)
+val entrypoint_receive_slice_from_burrow : checker * unit -> (LigoOp.operation list * checker)
 
-(* ************************************************************************* *)
-(**                          DELEGATION AUCTIONS                             *)
-(* ************************************************************************* *)
+(*****************************************************************************)
+(**                        {1 DELEGATION AUCTIONS}                           *)
+(*****************************************************************************)
 
 (** Bid in current auction. Fail if the auction is closed, or if the bid is
-  * too low. If successful, return a token which can be used to either
-  * reclaim the tez when outbid, or claim the auction result. *)
-val checker_delegation_auction_place_bid : checker -> (LigoOp.operation list * checker)
+    too low. If successful, return a token which can be used to either
+    reclaim the tez when outbid, or claim the auction result. *)
+val entrypoint_delegation_auction_place_bid : checker * unit -> (LigoOp.operation list * checker)
 
 (** Claim a win in the last cycle in order to become the delegate for this one. *)
-val checker_delegation_auction_claim_win : checker * (delegation_auction_bid_ticket * Ligo.key_hash) -> (LigoOp.operation list * checker)
+val entrypoint_delegation_auction_claim_win : checker * (delegation_auction_bid * Ligo.key_hash) -> (LigoOp.operation list * checker)
 
 (** Reclaim a failed bid for the current or a completed auction. *)
-val checker_delegation_auction_reclaim_bid : checker * delegation_auction_bid_ticket -> (LigoOp.operation list * checker)
+val entrypoint_delegation_auction_reclaim_bid : checker * delegation_auction_bid -> (LigoOp.operation list * checker)
 
-(* ENTRYPOINTS *)
+(*****************************************************************************)
+(**                            {1 ORACLE}                                    *)
+(*****************************************************************************)
 
-type lazyFunctionId
+(** Receive a price from the oracle. *)
+val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
-type params =
-  | Touch
-  (* Burrows *)
+(*****************************************************************************)
+(**                          {1 CHECKER PARAMETERS}                          *)
+(*****************************************************************************)
+
+(** User-facing checker parameters. These include non-serializable tickets. *)
+type checker_params =
+    Touch of unit
   | CreateBurrow of Ligo.key_hash option
   | DepositTez of (permission option * burrow_id)
   | WithdrawTez of (permission * Ligo.tez * burrow_id)
@@ -172,34 +183,53 @@ type params =
   | BurnKit of (permission option * burrow_id * kit_token)
   | ActivateBurrow of (permission * burrow_id)
   | DeactivateBurrow of (permission * burrow_id)
-  | MarkBurrowForLiquidation of burrow_id
+  | MarkForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
-  | CancelSliceLiquidation of (permission * leaf_ptr)
+  | CancelLiquidationSlice of (permission * leaf_ptr)
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
   | InvalidateAllPermissions of (permission * burrow_id)
-  (* Uniswap *)
   | BuyKit of (kit * Ligo.timestamp)
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
   | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
-  (* Liquidation Auction *)
-  | LiqAuctionPlaceBid of kit_token
-  | LiqAuctionReclaimBid of liquidation_auction_bid_ticket
-  | LiqAuctionReclaimWinningBid of liquidation_auction_bid_ticket
-  | ReceiveLiquidationSlice
-  (* Delegation Auction *)
-  | DelegationAuctionPlaceBid
+  | LiquidationAuctionPlaceBid of kit_token
+  | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
+  | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
+  | ReceiveSliceFromBurrow of unit
+  | DelegationAuctionPlaceBid of unit
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
-  (* Oracles *)
   | ReceivePrice of Ligo.nat
-  (* Deployment *)
-  | DeployFunction of (lazyFunctionId * Ligo.bytes)
-  | SealContract
 
-type wrapper = checker * (lazyFunctionId, Ligo.bytes) Ligo.big_map * Ligo.address option
-val initial_wrapper: Ligo.address -> wrapper
-
-val main : params * wrapper -> LigoOp.operation list * wrapper
+(**/**)
+(* These need not be part of the documentation of checker.ml. *)
+val deticketify_touch : unit -> unit
+val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
+val deticketify_deposit_tez : permission option * burrow_id -> permission_redacted_content option * burrow_id
+val deticketify_withdraw_tez : permission * Ligo.tez * burrow_id -> permission_redacted_content * Ligo.tez * burrow_id
+val deticketify_mint_kit : permission * burrow_id * kit -> permission_redacted_content * burrow_id * kit
+val deticketify_burn_kit : permission option * burrow_id * kit_token -> permission_redacted_content option * burrow_id * kit
+val deticketify_activate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_deactivate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_mark_for_liquidation : burrow_id -> burrow_id
+val deticketify_touch_liquidation_slices : leaf_ptr list -> leaf_ptr list
+val deticketify_cancel_liquidation_slice : permission * leaf_ptr -> permission_redacted_content * leaf_ptr
+val deticketify_touch_burrow : burrow_id -> burrow_id
+val deticketify_set_burrow_delegate : permission * burrow_id * Ligo.key_hash option -> permission_redacted_content * burrow_id * Ligo.key_hash option
+val deticketify_make_permission : permission * burrow_id * rights -> permission_redacted_content * burrow_id * rights
+val deticketify_invalidate_all_permissions : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_buy_kit : kit * Ligo.timestamp -> kit * Ligo.timestamp
+val deticketify_sell_kit : kit_token * Ligo.tez * Ligo.timestamp -> kit * Ligo.tez * Ligo.timestamp
+val deticketify_add_liquidity : kit_token * Ligo.nat * Ligo.timestamp -> kit * Ligo.nat * Ligo.timestamp
+val deticketify_remove_liquidity : liquidity * Ligo.tez * kit * Ligo.timestamp -> Ligo.nat * Ligo.tez * kit * Ligo.timestamp
+val deticketify_liquidation_auction_place_bid : kit_token -> kit
+val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
+val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
+val deticketify_receive_slice_from_burrow : unit -> unit
+val deticketify_delegation_auction_place_bid : unit -> unit
+val deticketify_delegation_auction_claim_win : delegation_auction_bid_ticket * Ligo.key_hash -> delegation_auction_bid * Ligo.key_hash
+val deticketify_delegation_auction_reclaim_bid : delegation_auction_bid_ticket -> delegation_auction_bid
+val deticketify_receive_price : Ligo.nat -> Ligo.nat
+(**/**)

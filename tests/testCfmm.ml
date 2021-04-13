@@ -2,9 +2,9 @@ open OUnit2
 open TestCommon
 open Ratio
 open Kit
-open Uniswap
+open Cfmm
 open Tickets
-open UniswapTypes
+open CfmmTypes
 open Error
 
 let property_test_count = 100
@@ -13,19 +13,19 @@ let property_test_count = 100
 let arb_positive_kit_token = QCheck.map kit_issue TestArbitrary.arb_positive_kit
 
 (* Compute the current price of kit in tez, as estimated using the ratio of tez and kit
- * currently in the uniswap contract. *)
-let uniswap_kit_in_tez (u: uniswap) =
+ * currently in the cfmm contract. *)
+let cfmm_kit_in_tez (u: cfmm) =
   div_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
 
-(* Compute the current product of kit and tez, using the current contents of the uniswap
+(* Compute the current product of kit and tez, using the current contents of the cfmm
  * contract. *)
-let uniswap_kit_times_tez (u: uniswap) =
+let cfmm_kit_times_tez (u: cfmm) =
   mul_ratio (ratio_of_tez u.tez) (kit_to_ratio u.kit)
 
 (* Reveal the current number of liquidity tokens extant. *)
-let uniswap_liquidity_tokens_extant (u: uniswap) = u.lqt
+let cfmm_liquidity_tokens_extant (u: cfmm) = u.lqt
 
-let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
+let eq_cfmm (u1: cfmm) (u2: cfmm) : bool =
   Ligo.eq_tez_tez u1.tez u2.tez
   && kit_compare u1.kit u2.kit = 0
   && Ligo.eq_nat_nat u1.lqt u2.lqt
@@ -39,7 +39,7 @@ let eq_uniswap (u1: uniswap) (u2: uniswap) : bool =
 let make_inputs_for_add_liquidity_to_succeed_no_accrual =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. The liquidity created can be zero for example. *)
-    (fun ((tez, kit, lqt, uniswap), amount) ->
+    (fun ((tez, kit, lqt, cfmm), amount) ->
        let pending_accrual = (Ligo.tez_from_literal "0mutez") in
        let max_kit_deposited =
          let { num = x_num; den = x_den; } =
@@ -52,15 +52,15 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
          fraction_to_nat_floor x_num x_den
        in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
+       (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level) TestArbitrary.arb_positive_tez)
+    (QCheck.pair (arbitrary_non_empty_cfmm one_ratio !Ligo.Tezos.level) TestArbitrary.arb_positive_tez)
 
 (* NB: some values are fixed *)
 let make_inputs_for_remove_liquidity_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. *)
-    (fun ((tez, kit, lqt, uniswap), factor) ->
+    (fun ((tez, kit, lqt, cfmm), factor) ->
        let amount = (Ligo.tez_from_literal "0mutez") in
 
        let lqt_to_burn =
@@ -112,18 +112,18 @@ let make_inputs_for_remove_liquidity_to_succeed =
            lqt_burned, min_tez_withdrawn, min_kit_withdrawn in
 
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
+       (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline)
     )
-    (QCheck.pair (arbitrary_non_empty_uniswap one_ratio !Ligo.Tezos.level) QCheck.pos_int)
+    (QCheck.pair (arbitrary_non_empty_cfmm one_ratio !Ligo.Tezos.level) QCheck.pos_int)
 
-(* TODO: Write down for which inputs are the uniswap functions to succeed and
+(* TODO: Write down for which inputs are the cfmm functions to succeed and
  * test the corresponding edge cases. *)
 
 (* ************************************************************************* *)
 (*                     buy_kit (property-based tests)                        *)
 (* ************************************************************************* *)
 
-(* If successful, uniswap_buy_kit always increases the ratio of
+(* If successful, cfmm_buy_kit always increases the ratio of
  * total_tez/total_kit, since it adds tez and removes kit. *)
 let test_buy_kit_increases_price =
   qcheck_to_ounit
@@ -131,12 +131,12 @@ let test_buy_kit_increases_price =
     ~name:"test_buy_kit_increases_price"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
-  gt_ratio_ratio (uniswap_kit_in_tez new_uniswap) (uniswap_kit_in_tez uniswap)
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+  gt_ratio_ratio (cfmm_kit_in_tez new_cfmm) (cfmm_kit_in_tez cfmm)
 
-(* If successful, uniswap_buy_kit always increases the product
+(* If successful, cfmm_buy_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
 let test_buy_kit_increases_product =
   qcheck_to_ounit
@@ -144,12 +144,12 @@ let test_buy_kit_increases_product =
     ~name:"test_buy_kit_increases_product"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
-  gt_ratio_ratio (uniswap_kit_times_tez new_uniswap) (uniswap_kit_times_tez uniswap)
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+  gt_ratio_ratio (cfmm_kit_times_tez new_cfmm) (cfmm_kit_times_tez cfmm)
 
-(* Successful or not, uniswap_buy_kit should never affect the number of
+(* Successful or not, cfmm_buy_kit should never affect the number of
  * liquidity tokens extant. *)
 let test_buy_kit_does_not_affect_liquidity =
   qcheck_to_ounit
@@ -157,48 +157,48 @@ let test_buy_kit_does_not_affect_liquidity =
     ~name:"test_buy_kit_does_not_affect_liquidity"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
-  uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+  cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
-(* If successful, uniswap_buy_kit respects min_kit_expected. *)
+(* If successful, cfmm_buy_kit respects min_kit_expected. *)
 let test_buy_kit_respects_min_kit_expected =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_buy_kit_respects_min_kit_expected"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let bought_kit, _new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let bought_kit, _new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
   bought_kit >= min_kit_expected
 
-(* If successful, uniswap_buy_kit doesn't lose kit.
+(* If successful, cfmm_buy_kit doesn't lose kit.
  * Note that, because kits are isomorphic to naturals,
- * this also means that uniswap_buy_kit doesn't return more kit than uniswap had. *)
+ * this also means that cfmm_buy_kit doesn't return more kit than cfmm had. *)
 let test_buy_kit_preserves_kit =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_buy_kit_preserves_kit"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let bought_kit, new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
-  uniswap.kit = kit_add new_uniswap.kit bought_kit
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let bought_kit, new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+  cfmm.kit = kit_add new_cfmm.kit bought_kit
 
-(* If successful, uniswap_buy_kit doesn't lose tez. *)
+(* If successful, cfmm_buy_kit doesn't lose tez. *)
 let test_buy_kit_preserves_tez =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_buy_kit_preserves_tez"
     ~count:property_test_count
     make_inputs_for_buy_kit_to_succeed
-  @@ fun (uniswap, amount, min_kit_expected, deadline) ->
-  let _bought_kit, new_uniswap =
-    uniswap_buy_kit uniswap amount min_kit_expected deadline in
-  Ligo.add_tez_tez uniswap.tez amount = new_uniswap.tez
+  @@ fun (cfmm, amount, min_kit_expected, deadline) ->
+  let _bought_kit, new_cfmm =
+    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+  Ligo.add_tez_tez cfmm.tez amount = new_cfmm.tez
 
 (* ************************************************************************* *)
 (*                          buy_kit (unit tests)                             *)
@@ -207,8 +207,8 @@ let test_buy_kit_preserves_tez =
 let buy_kit_unit_test =
   "buy kit unit test" >:: fun _ ->
     Ligo.Tezos.reset ();
-    let uniswap : uniswap =
-      uniswap_make_for_test
+    let cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1n")
@@ -217,8 +217,8 @@ let buy_kit_unit_test =
     in
 
     let expected_returned_kit = kit_of_mukit (Ligo.nat_from_literal "453_636n") in
-    let expected_updated_uniswap : uniswap =
-      uniswap_make_for_test
+    let expected_updated_cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "11_000_000mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "4_546_364n"))
         ~lqt:(Ligo.nat_from_literal "1n")
@@ -229,26 +229,26 @@ let buy_kit_unit_test =
     (* Low expectations and on time (lax): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_uniswap =
-      uniswap_buy_kit
-        uniswap
+    let returned_kit, updated_cfmm =
+      cfmm_buy_kit
+        cfmm
         (Ligo.tez_from_literal "1_000_000mutez")
         (kit_of_mukit (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_uniswap =
-      uniswap_buy_kit
-        uniswap
+    let returned_kit, updated_cfmm =
+      cfmm_buy_kit
+        cfmm
         (Ligo.tez_from_literal "1_000_000mutez")
         (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -256,8 +256,8 @@ let buy_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
       (fun () ->
-         uniswap_buy_kit
-           uniswap
+         cfmm_buy_kit
+           cfmm
            (Ligo.tez_from_literal "1_000_000mutez")
            (kit_of_mukit (Ligo.nat_from_literal "453_637n"))
            (Ligo.timestamp_from_seconds_literal 2)
@@ -267,10 +267,10 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_UniswapTooLate))
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
       (fun () ->
-         uniswap_buy_kit
-           uniswap
+         cfmm_buy_kit
+           cfmm
            (Ligo.tez_from_literal "1_000_000mutez")
            (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
@@ -282,8 +282,8 @@ let buy_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
       (fun () ->
-         uniswap_buy_kit
-           uniswap
+         cfmm_buy_kit
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -295,8 +295,8 @@ let buy_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_BuyKitTooLowExpectedKit))
       (fun () ->
-         uniswap_buy_kit
-           uniswap
+         cfmm_buy_kit
+           cfmm
            (Ligo.tez_from_literal "1mutez")
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -306,7 +306,7 @@ let buy_kit_unit_test =
 (*                     sell_kit (property-based tests)                       *)
 (* ************************************************************************* *)
 
-(* If successful, uniswap_sell_kit always decreases the ratio of
+(* If successful, cfmm_sell_kit always decreases the ratio of
  * total_tez/total_kit, since it removes tez and adds kit. *)
 let test_sell_kit_decreases_price =
   qcheck_to_ounit
@@ -314,12 +314,12 @@ let test_sell_kit_decreases_price =
     ~name:"test_sell_kit_decreases_price"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
-  lt_ratio_ratio (uniswap_kit_in_tez new_uniswap) (uniswap_kit_in_tez uniswap)
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let _bought_tez, new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
+  lt_ratio_ratio (cfmm_kit_in_tez new_cfmm) (cfmm_kit_in_tez cfmm)
 
-(* If successful, uniswap_sell_kit always increases the product
+(* If successful, cfmm_sell_kit always increases the product
  * total_tez * total_kit, because of the fees. *)
 let test_sell_kit_increases_product =
   qcheck_to_ounit
@@ -327,12 +327,12 @@ let test_sell_kit_increases_product =
     ~name:"test_sell_kit_increases_product"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
-  gt_ratio_ratio (uniswap_kit_times_tez new_uniswap) (uniswap_kit_times_tez uniswap)
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let _bought_tez, new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
+  gt_ratio_ratio (cfmm_kit_times_tez new_cfmm) (cfmm_kit_times_tez cfmm)
 
-(* Successful or not, uniswap_sell_kit should never affect the number of
+(* Successful or not, cfmm_sell_kit should never affect the number of
  * liquidity tokens extant. *)
 let test_sell_kit_does_not_affect_liquidity =
   qcheck_to_ounit
@@ -340,21 +340,21 @@ let test_sell_kit_does_not_affect_liquidity =
     ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
-  uniswap_liquidity_tokens_extant new_uniswap = uniswap_liquidity_tokens_extant uniswap
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let _bought_tez, new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
+  cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
-(* If successful, uniswap_sell_kit respects min_tez_expected. *)
+(* If successful, cfmm_sell_kit respects min_tez_expected. *)
 let test_sell_kit_respects_min_tez_expected =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_sell_kit_respects_min_tez_expected"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let bought_tez, _new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let bought_tez, _new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
   bought_tez >= min_tez_expected
 
 (* If successful, selling kit preserves kit. *)
@@ -364,10 +364,10 @@ let test_sell_kit_preserves_kit =
     ~name:"test_sell_kit_preserves_kit"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let _bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
-  new_uniswap.kit = kit_add uniswap.kit kit_amount
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let _bought_tez, new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
+  new_cfmm.kit = kit_add cfmm.kit kit_amount
 
 (* If successful, selling kit preserves tez. *)
 let test_sell_kit_preserves_tez =
@@ -376,10 +376,10 @@ let test_sell_kit_preserves_tez =
     ~name:"test_sell_kit_preserves_tez"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (uniswap, tez_amount, kit_amount, min_tez_expected, deadline) ->
-  let bought_tez, new_uniswap =
-    uniswap_sell_kit uniswap tez_amount kit_amount min_tez_expected deadline in
-  Ligo.add_tez_tez new_uniswap.tez bought_tez = uniswap.tez
+  @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+  let bought_tez, new_cfmm =
+    cfmm_sell_kit cfmm tez_amount kit_amount min_tez_expected deadline in
+  Ligo.add_tez_tez new_cfmm.tez bought_tez = cfmm.tez
 
 (* ************************************************************************* *)
 (*                          sell_kit (unit tests)                            *)
@@ -388,8 +388,8 @@ let test_sell_kit_preserves_tez =
 let sell_kit_unit_test =
   "sell kit" >:: fun _ ->
     Ligo.Tezos.reset ();
-    let uniswap : uniswap =
-      uniswap_make_for_test
+    let cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "10_000_000mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1n")
@@ -397,8 +397,8 @@ let sell_kit_unit_test =
         ~last_level:(Ligo.nat_from_literal "0n")
     in
     let expected_returned_tez = Ligo.tez_from_literal "1_663_333mutez" in
-    let expected_updated_uniswap : uniswap =
-      uniswap_make_for_test
+    let expected_updated_cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "6_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1n")
@@ -409,28 +409,28 @@ let sell_kit_unit_test =
     (* Low expectations and on time (lax): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_tez, updated_uniswap =
-      uniswap_sell_kit
-        uniswap
+    let returned_tez, updated_cfmm =
+      cfmm_sell_kit
+        cfmm
         (Ligo.tez_from_literal "0mutez")
         kit_one
         (Ligo.tez_from_literal "1mutez")
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
-    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_tez, updated_uniswap =
-      uniswap_sell_kit
-        uniswap
+    let returned_tez, updated_cfmm =
+      cfmm_sell_kit
+        cfmm
         (Ligo.tez_from_literal "0mutez")
         kit_one
         (Ligo.tez_from_literal "1_663_333mutez")
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_equal ~printer:Ligo.string_of_tez expected_returned_tez returned_tez;
-    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap;
+    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -438,8 +438,8 @@ let sell_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitPriceFailure))
       (fun () ->
-         uniswap_sell_kit
-           uniswap
+         cfmm_sell_kit
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            kit_one
            (Ligo.tez_from_literal "1_663_334mutez")
@@ -450,10 +450,10 @@ let sell_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_UniswapTooLate))
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
       (fun () ->
-         uniswap_sell_kit
-           uniswap
+         cfmm_sell_kit
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            kit_one
            (Ligo.tez_from_literal "1_663_333mutez")
@@ -466,8 +466,8 @@ let sell_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
       (fun () ->
-         uniswap_sell_kit
-           uniswap
+         cfmm_sell_kit
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
            (Ligo.tez_from_literal "1_663_333mutez")
@@ -480,8 +480,8 @@ let sell_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitTooLowExpectedTez))
       (fun () ->
-         uniswap_sell_kit
-           uniswap
+         cfmm_sell_kit
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            kit_one
            (Ligo.tez_from_literal "0mutez")
@@ -494,8 +494,8 @@ let sell_kit_unit_test =
     assert_raises
       (Failure (Ligo.string_of_int error_SellKitNonEmptyAmount))
       (fun () ->
-         uniswap_sell_kit
-           uniswap
+         cfmm_sell_kit
+           cfmm
            (Ligo.tez_from_literal "10mutez")
            kit_one
            (Ligo.tez_from_literal "100mutez")
@@ -506,10 +506,10 @@ let sell_kit_unit_test =
 (*             add_liquidity (non-first) (property-based tests)              *)
 (* ************************************************************************* *)
 
-(* If successful, uniswap_add_liquidity never increases the ratio of
+(* If successful, cfmm_add_liquidity never increases the ratio of
  * total_tez/total_kit (might leave it where it is or decrease it), since it
  * always rounds up the kit it keeps in the contract. If amount is a multiple
- * of the tez in the uniswap contract, then the price should remain the same,
+ * of the tez in the cfmm contract, then the price should remain the same,
  * hence the lack of strict monotonicity. *)
 let test_add_liquidity_might_decrease_price =
   qcheck_to_ounit
@@ -517,12 +517,12 @@ let test_add_liquidity_might_decrease_price =
     ~name:"test_add_liquidity_might_decrease_price"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  leq_ratio_ratio (uniswap_kit_in_tez new_uniswap) (uniswap_kit_in_tez uniswap)
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, _bought_kit, new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  leq_ratio_ratio (cfmm_kit_in_tez new_cfmm) (cfmm_kit_in_tez cfmm)
 
-(* If successful, uniswap_add_liquidity always increases the product
+(* If successful, cfmm_add_liquidity always increases the product
  * total_tez * total_kit, because we add both tez and kit. *)
 let test_add_liquidity_increases_product =
   qcheck_to_ounit
@@ -530,12 +530,12 @@ let test_add_liquidity_increases_product =
     ~name:"test_add_liquidity_increases_product"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  gt_ratio_ratio (uniswap_kit_times_tez new_uniswap) (uniswap_kit_times_tez uniswap)
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, _bought_kit, new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  gt_ratio_ratio (cfmm_kit_times_tez new_cfmm) (cfmm_kit_times_tez cfmm)
 
-(* If successful, uniswap_add_liquidity always increases the liquidity;
+(* If successful, cfmm_add_liquidity always increases the liquidity;
  * that's what it's supposed to do. *)
 let test_add_liquidity_increases_liquidity =
   qcheck_to_ounit
@@ -543,12 +543,12 @@ let test_add_liquidity_increases_liquidity =
     ~name:"test_add_liquidity_increases_liquidity"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, _bought_kit, new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  uniswap_liquidity_tokens_extant new_uniswap > uniswap_liquidity_tokens_extant uniswap
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, _bought_kit, new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  cfmm_liquidity_tokens_extant new_cfmm > cfmm_liquidity_tokens_extant cfmm
 
-(* If successful, uniswap_add_liquidity always deposits some kit,
+(* If successful, cfmm_add_liquidity always deposits some kit,
  * implying kit_to_return = max_kit_deposited - kit_deposited < max_kit_deposited. *)
 let test_add_liquidity_kit_to_return_lt_max_kit_deposited =
   qcheck_to_ounit
@@ -556,34 +556,34 @@ let test_add_liquidity_kit_to_return_lt_max_kit_deposited =
     ~name:"test_add_liquidity_kit_to_return_lt_max_kit_deposited"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _bought_liquidity, kit_to_return, _new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _bought_liquidity, kit_to_return, _new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   kit_to_return < max_kit_deposited
 
-(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+(* If successful, cfmm_add_liquidity does not produce less kit than min_lqt_minted *)
 let test_add_liquidity_respects_min_lqt_minted =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_respects_min_lqt_minted"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let lqt_minted, _bought_kit, _new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let lqt_minted, _bought_kit, _new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
   lqt_minted >= min_lqt_minted
 
-(* If successful, uniswap_add_liquidity does not produce less kit than min_lqt_minted *)
+(* If successful, cfmm_add_liquidity does not produce less kit than min_lqt_minted *)
 let test_add_liquidity_respects_max_kit_deposited =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_respects_max_kit_deposited"
     ~count:property_test_count
     make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (uniswap, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
-  let _lqt_minted, _bought_kit, new_uniswap =
-    uniswap_add_liquidity uniswap amount pending_accrual max_kit_deposited min_lqt_minted deadline in
-  new_uniswap.kit <= kit_add uniswap.kit max_kit_deposited
+  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+  let _lqt_minted, _bought_kit, new_cfmm =
+    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+  new_cfmm.kit <= kit_add cfmm.kit max_kit_deposited
 
 (* ************************************************************************* *)
 (*                 add_liquidity (non-first) (unit tests)                    *)
@@ -592,8 +592,8 @@ let test_add_liquidity_respects_max_kit_deposited =
 let add_liquidity_unit_test =
   "add liquidity unit test" >:: fun _ ->
     Ligo.Tezos.reset ();
-    let uniswap : uniswap =
-      uniswap_make_for_test
+    let cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "8_336_667mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "6_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1n")
@@ -602,8 +602,8 @@ let add_liquidity_unit_test =
     in
     let expected_returned_liquidity = Ligo.nat_from_literal "2n" in
     let expected_returned_kit = kit_of_mukit (Ligo.nat_from_literal "5_605_758n") in
-    let expected_updated_uniswap : uniswap =
-      uniswap_make_for_test
+    let expected_updated_cfmm : cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "28_336_667mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "20_394_242n"))
         ~lqt:(Ligo.nat_from_literal "3n")
@@ -611,9 +611,9 @@ let add_liquidity_unit_test =
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
-    let returned_liquidity, returned_kit, updated_uniswap =
-      uniswap_add_liquidity
-        uniswap
+    let returned_liquidity, returned_kit, updated_cfmm =
+      cfmm_add_liquidity
+        cfmm
         (Ligo.tez_from_literal "20_000_000mutez")
         (Ligo.tez_from_literal "0mutez")
         (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
@@ -621,13 +621,13 @@ let add_liquidity_unit_test =
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_equal ~printer:Ligo.string_of_nat expected_returned_liquidity returned_liquidity;
     assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_uniswap ~cmp:eq_uniswap expected_updated_uniswap updated_uniswap
+    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm
 
 let test_add_liquidity_failures =
   "add liquidity failure conditions" >:: fun _ ->
     Ligo.Tezos.reset ();
-    let uniswap =
-      uniswap_make_for_test
+    let cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1000n")
@@ -636,8 +636,8 @@ let test_add_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
       (fun () ->
-         uniswap_add_liquidity
-           uniswap
+         cfmm_add_liquidity
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
@@ -647,8 +647,8 @@ let test_add_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoKitGiven))
       (fun () ->
-         uniswap_add_liquidity
-           uniswap
+         cfmm_add_liquidity
+           cfmm
            (Ligo.tez_from_literal "1mutez")
            (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
@@ -658,8 +658,8 @@ let test_add_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_AddLiquidityNoLiquidityToBeAdded))
       (fun () ->
-         uniswap_add_liquidity
-           uniswap
+         cfmm_add_liquidity
+           cfmm
            (Ligo.tez_from_literal "1mutez")
            (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -671,11 +671,11 @@ let test_add_liquidity_failures =
 (*                 remove_liquidity (property-based tests)                   *)
 (* ************************************************************************* *)
 
-(* If successful, uniswap_remove_liquidity always decreases the product
+(* If successful, cfmm_remove_liquidity always decreases the product
  * total_tez * total_kit, because we remove both tez and kit. *)
 (* NOTE: That is not entirely true, because when we remove liquidity we round
  * the amounts of kit and tez to return towards zero; they might end up being
- * zero because of this. BUT, in these cases uniswap_remove_liquidity should
+ * zero because of this. BUT, in these cases cfmm_remove_liquidity should
  * thrown an error, so this property is expected to hold indeed, when
  * remove_liquidity succeeds. *)
 let test_remove_liquidity_decreases_product =
@@ -684,12 +684,12 @@ let test_remove_liquidity_decreases_product =
     ~name:"test_remove_liquidity_decreases_product"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, _withdrawn_kit, new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  leq_ratio_ratio (uniswap_kit_times_tez new_uniswap) (uniswap_kit_times_tez uniswap)
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, _withdrawn_kit, new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  leq_ratio_ratio (cfmm_kit_times_tez new_cfmm) (cfmm_kit_times_tez cfmm)
 
-(* If successful, uniswap_remove_liquidity always decreases the liquidity;
+(* If successful, cfmm_remove_liquidity always decreases the liquidity;
  * that's what it's supposed to do. *)
 let test_remove_liquidity_decreases_liquidity =
   qcheck_to_ounit
@@ -697,58 +697,58 @@ let test_remove_liquidity_decreases_liquidity =
     ~name:"test_remove_liquidity_decreases_liquidity"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, _withdrawn_kit, new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  uniswap_liquidity_tokens_extant new_uniswap < uniswap_liquidity_tokens_extant uniswap
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, _withdrawn_kit, new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  cfmm_liquidity_tokens_extant new_cfmm < cfmm_liquidity_tokens_extant cfmm
 
-(* If successful, uniswap_remove_liquidity removes at least min_tez_withdrawn tez. *)
+(* If successful, cfmm_remove_liquidity removes at least min_tez_withdrawn tez. *)
 let test_remove_liquidity_respects_min_tez_withdrawn =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_respects_min_tez_withdrawn"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   withdrawn_tez >= min_tez_withdrawn
 
-(* If successful, uniswap_remove_liquidity removes at least min_kit_withdrawn kit. *)
+(* If successful, cfmm_remove_liquidity removes at least min_kit_withdrawn kit. *)
 let test_remove_liquidity_respects_min_kit_withdrawn =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_respects_min_kit_withdrawn"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   withdrawn_kit >= min_kit_withdrawn
 
-(* If successful, uniswap_remove_liquidity removes no more tez than it had. *)
+(* If successful, cfmm_remove_liquidity removes no more tez than it had. *)
 let test_remove_liquidity_respects_tez_limit =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_respects_tez_limit"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let withdrawn_tez, _withdrawn_kit, _new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  withdrawn_tez <= uniswap.tez
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let withdrawn_tez, _withdrawn_kit, _new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_tez <= cfmm.tez
 
-(* If successful, uniswap_remove_liquidity removes no more kit than it had. *)
+(* If successful, cfmm_remove_liquidity removes no more kit than it had. *)
 let test_remove_liquidity_respects_kit_limit =
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"test_remove_liquidity_respects_kit_limit"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (uniswap, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
-  let _withdrawn_tez, withdrawn_kit, _new_uniswap =
-    uniswap_remove_liquidity uniswap amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
-  withdrawn_kit <= uniswap.kit
+  @@ fun (cfmm, amount, lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline) ->
+  let _withdrawn_tez, withdrawn_kit, _new_cfmm =
+    cfmm_remove_liquidity cfmm amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  withdrawn_kit <= cfmm.kit
 
 (* ************************************************************************* *)
 (*                 remove_liquidity (unit tests)                             *)
@@ -757,16 +757,16 @@ let test_remove_liquidity_respects_kit_limit =
 let test_remove_liquidity_failures =
   "remove liquidity failure conditions" >:: fun _ ->
     Ligo.Tezos.reset ();
-    let uniswap =
-      uniswap_make_for_test
+    let cfmm =
+      cfmm_make_for_test
         ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
         ~lqt:(Ligo.nat_from_literal "1000n")
         ~kit_in_tez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
-    let (liq, _kit, uniswap) =
-      uniswap_add_liquidity
-        uniswap
+    let (liq, _kit, cfmm) =
+      cfmm_add_liquidity
+        cfmm
         (Ligo.tez_from_literal "101_000_000mutez")
         (Ligo.tez_from_literal "10_000_000mutez")
         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
@@ -775,8 +775,8 @@ let test_remove_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNonEmptyAmount))
       (fun () ->
-         uniswap_remove_liquidity
-           uniswap
+         cfmm_remove_liquidity
+           cfmm
            (Ligo.tez_from_literal "1mutez")
            liq
            (Ligo.tez_from_literal "1mutez")
@@ -786,8 +786,8 @@ let test_remove_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
       (fun () ->
-         uniswap_remove_liquidity
-           uniswap
+         cfmm_remove_liquidity
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            (Ligo.nat_from_literal "0n")
            (Ligo.tez_from_literal "1mutez")
@@ -797,8 +797,8 @@ let test_remove_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNoTezWithdrawnExpected))
       (fun () ->
-         uniswap_remove_liquidity
-           uniswap
+         cfmm_remove_liquidity
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            liq
            (Ligo.tez_from_literal "0mutez")
@@ -808,8 +808,8 @@ let test_remove_liquidity_failures =
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNoKitWithdrawnExpected))
       (fun () ->
-         uniswap_remove_liquidity
-           uniswap
+         cfmm_remove_liquidity
+           cfmm
            (Ligo.tez_from_literal "0mutez")
            liq
            (Ligo.tez_from_literal "1mutez")
@@ -825,25 +825,25 @@ let pending_tez_deposit_test =
   "set pending tez deposit" >::
   (fun _ ->
      Ligo.Tezos.reset ();
-     let uniswap =
-       uniswap_make_for_test
+     let cfmm =
+       cfmm_make_for_test
          ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
          ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
          ~lqt:(Ligo.nat_from_literal "1000n")
          ~kit_in_tez_in_prev_block:one_ratio
          ~last_level:(Ligo.nat_from_literal "0n") in
-     (* let uniswap = set_pending_accrued_tez uniswap (Ligo.tez_from_literal "1_000_000mutez") in *)
+     (* let cfmm = set_pending_accrued_tez cfmm (Ligo.tez_from_literal "1_000_000mutez") in *)
 
-     let (liq, _kit, uniswap) =
-       uniswap_add_liquidity
-         uniswap
+     let (liq, _kit, cfmm) =
+       cfmm_add_liquidity
+         cfmm
          (Ligo.tez_from_literal "101_000_000mutez")
          (Ligo.tez_from_literal "10_000_000mutez")
          (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
          (Ligo.nat_from_literal "1n")
          (Ligo.timestamp_from_seconds_literal 1) in
      let (tez, kit, _) =
-       uniswap_remove_liquidity uniswap
+       cfmm_remove_liquidity cfmm
          (Ligo.tez_from_literal "0mutez")
          liq
          (Ligo.tez_from_literal "1mutez")
@@ -854,7 +854,7 @@ let pending_tez_deposit_test =
   )
 
 let suite =
-  "Uniswap tests" >::: [
+  "Cfmm tests" >::: [
     (* buy_kit *)
     buy_kit_unit_test;
     test_buy_kit_increases_price;
