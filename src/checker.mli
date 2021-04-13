@@ -159,6 +159,13 @@ val entrypoint_delegation_auction_claim_win : checker * (delegation_auction_bid 
 val entrypoint_delegation_auction_reclaim_bid : checker * delegation_auction_bid -> (LigoOp.operation list * checker)
 
 (* ************************************************************************* *)
+(**                               ORACLE                                     *)
+(* ************************************************************************* *)
+
+(** Receive a price from the oracle. *)
+val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
+
+(* ************************************************************************* *)
 (**                           CHECKER PARAMETERS                             *)
 (* ************************************************************************* *)
 
@@ -190,6 +197,7 @@ type checker_params =
   | DelegationAuctionPlaceBid of unit
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
+  | ReceivePrice of Ligo.nat
 
 val deticketify_touch : unit -> unit
 val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
@@ -217,3 +225,4 @@ val deticketify_receive_slice_from_burrow : unit -> unit
 val deticketify_delegation_auction_place_bid : unit -> unit
 val deticketify_delegation_auction_claim_win : delegation_auction_bid_ticket * Ligo.key_hash -> delegation_auction_bid * Ligo.key_hash
 val deticketify_delegation_auction_reclaim_bid : delegation_auction_bid_ticket -> delegation_auction_bid
+val deticketify_receive_price : Ligo.nat -> Ligo.nat

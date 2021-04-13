@@ -785,7 +785,7 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 (**                               ORACLE                                     *)
 (* ************************************************************************* *)
 
-let entrypoint_receive_price (state, price: checker * Ligo.nat) : LigoOp.operation list * checker =
+let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   if !Ligo.Tezos.sender <> oracle_address then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
@@ -824,6 +824,7 @@ type checker_params =
   | DelegationAuctionPlaceBid of unit
   | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
   | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
+  | ReceivePrice of Ligo.nat
 
 (* noop *)
 let[@inline] deticketify_touch (p: unit) : unit = p
@@ -920,3 +921,6 @@ let[@inline] deticketify_delegation_auction_claim_win (bid_ticket, kh: delegatio
 (* removes tickets *)
 let[@inline] deticketify_delegation_auction_reclaim_bid (bid_ticket: delegation_auction_bid_ticket) : delegation_auction_bid =
   ensure_valid_delegation_auction_bid_ticket bid_ticket
+
+(* noop *)
+let[@inline] deticketify_receive_price (p: Ligo.nat) : Ligo.nat = p
