@@ -77,7 +77,7 @@ in
              [ ligoBinary
                (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client
              ]
-           ++ [ pkgs.niv pkgs.perl pkgs.ruby ]
+           ++ [ pkgs.niv pkgs.perl pkgs.ruby pkgs.bc ]
            ++ ocamlDeps pkgs;
 
        };
