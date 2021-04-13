@@ -5,7 +5,7 @@
 The purpose of this document is to outline the current sets of testing approaches which have been used
 in the project. As of the writing of this document, testing is non-exhaustive but does cover a sizeable portion of the codebase.
 
-All tests are written in OCaml and are designed to be executed using `dune` (or via the repo `Makefile`) since there is not a unit testing framework for Ligo yet. All tests reside under the [tests/](../tests) directory and are primarily organized by the corresponding `src` module which they test. The exception to this is `testLiquidation.ml`, which centralizes testing logic for liquidation auctions.
+All tests are written in OCaml (OUnit and QCheck) and are designed to be executed using `dune` (or via the repo `Makefile`) since there is not a unit testing framework for Ligo yet. All tests reside under the [tests/](../tests) directory and are primarily organized by the corresponding `src` module which they test. The exception to this is `testLiquidation.ml`, which centralizes testing logic for liquidation auctions.
 
 
 So far, testing has focused on the following areas:
@@ -16,8 +16,8 @@ So far, testing has focused on the following areas:
 Areas which remain to be tested include:
 
   1. Filling in cases still requiring unit / property tests. Most of the remaining test cases are spread throughout the codebase and not centralized to a single module.
-  1. Addition of some higher-level end to end tests which actually call the contract. Tests do **not** currently evaluate the Tezos operations which the Checker code generates since no interpreter exists for them in Ligo at the moment.
-    1. We will want these to also test the inter-contract dynamics between Checker and burrows, etc.
+  1. Addition of some higher-level end to end tests which actually call the contract. Tests do **not** currently evaluate the Tezos operations which the Checker code generates since no interpreter exists for them in Ligo at the moment. Some initial work has begun on this front but has not landed yet.
+     1. We will want these to also test the inter-contract dynamics between Checker and burrows, etc.
 
 
 ## Unit tests
