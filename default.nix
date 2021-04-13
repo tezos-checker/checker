@@ -6,7 +6,7 @@ let
   pkgsHost = import sources.nixpkgs {};
   pkgsLinux = import sources.nixpkgs { system = "x86_64-linux"; };
 
-  gitignoreNix = import sources."gitignore.nix" { inherit (pkgsHost.lib); };
+  gitignoreNix = import sources."gitignore.nix" { lib = pkgsHost.lib; };
 
   ligoBinary =
     pkgsLinux.runCommand "ligo-binary" { buildInputs = [ pkgsLinux.unzip ]; } ''
