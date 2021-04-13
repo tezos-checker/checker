@@ -67,9 +67,12 @@ $ tezos-client --endpoint http://localhost:20000 config update
 
 ## Import the secret keys for two pre-existing accounts, alice and bob:
 
-$ tezos-client import secret key alice unencrypted:edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq --force
+$ ./scripts/setup-keys.sh
+```
 
-$ tezos-client import secret key bob unencrypted:edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt --force
+Then, compile the packed entrypoints of the contract:
+```console
+$ ./scripts/compile-lazyfuns.sh
 ```
 
 And finally, deploy the contract (and packed entrypoints) to the sandbox:
