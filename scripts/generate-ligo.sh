@@ -81,10 +81,6 @@ for name in "${inputs[@]}"; do
     sed 's/^ *assert_burrow_invariants .*//g' |
     sed 's/^ *assert_checker_invariants .*//g' |
 
-    # replace "_" with ignored
-    sed 's/ _ / ignored /g' |
-    sed -E 's/([^a-z0-9])_([a-z0-9]+)/\1ignored_\2/g' |
-
     # replace 'int_from_literal' with its argument and replace
     # the double quotes with parentheses (for the potential sign)
     sed -E 's/int_from_literal \"([+-])?([0-9_]+)\"/(\1\2)/g' |

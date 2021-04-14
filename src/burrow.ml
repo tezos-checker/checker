@@ -41,8 +41,8 @@ let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
   then ()
   else (Ligo.failwith error_OperationOnUntouchedBurrow : unit)
 
-let[@inline] assert_burrow_invariants (b: burrow) : unit =
-  assert (b.outstanding_kit = kit_zero || b.excess_kit = kit_zero);
+let[@inline] assert_burrow_invariants (_b: burrow) : unit =
+  assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
   ()
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =

@@ -43,7 +43,6 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
               (lazy_functions, Some deployer)
             | SealContract ->
               (lazy_functions, (None: Ligo.address option))
-            (* we really need wildcard patterns... *)
             | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: (lazy_function_id, Ligo.bytes) Ligo.big_map * Ligo.address option)
           else (Ligo.failwith error_UnauthorisedCaller: (lazy_function_id, Ligo.bytes) Ligo.big_map * Ligo.address option) in
         (([]: LigoOp.operation list), checker, lazy_functions, deployer)
