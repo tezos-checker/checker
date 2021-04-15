@@ -285,6 +285,21 @@ let entrypoint_make_permission (state, p: checker * (permission_redacted_content
   else
     (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
 
+let entrypoint_set_allow_all_tez_deposits (state, p: checker * (permission_redacted_content * burrow_id * bool)) : LigoOp.operation list * checker =
+  let r, burrow_id, on = p in
+  let _ = ensure_no_tez_given () in
+  let burrow = find_burrow state.burrows burrow_id in
+  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
+  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+
+  if is_admin_right r then
+    (* only admins can set the allow_all_tez_deposits field. *)
+    let updated_burrow = burrow_set_allow_all_tez_deposits state.parameters burrow on in
+    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+    (([]: LigoOp.operation list), updated_state)
+  else
+    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+
 let entrypoint_invalidate_all_permissions (state, p: checker * (permission_redacted_content * burrow_id)) : LigoOp.operation list * checker =
   let r, burrow_id = p in
   let _ = ensure_no_tez_given () in
@@ -812,6 +827,7 @@ type checker_params =
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
+  | SetAllowAllTezDeposits of (permission * burrow_id * bool)
   | InvalidateAllPermissions of (permission * burrow_id)
   | BuyKit of (kit * Ligo.timestamp)
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
@@ -876,6 +892,10 @@ let[@inline] deticketify_set_burrow_delegate (permission, burrow_id, kho: permis
 (* removes tickets *)
 let[@inline] deticketify_make_permission (permission, burrow_id, rights: permission * burrow_id * rights) : permission_redacted_content * burrow_id * rights =
   (ensure_valid_permission permission, burrow_id, rights)
+
+(* removes tickets *)
+let[@inline] deticketify_set_allow_all_tez_deposits (permission, burrow_id, on: permission * burrow_id * bool) : permission_redacted_content * burrow_id * bool =
+  (ensure_valid_permission permission, burrow_id, on)
 
 (* removes tickets *)
 let[@inline] deticketify_invalidate_all_permissions (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
