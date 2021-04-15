@@ -130,12 +130,10 @@ let entrypoint_deposit_tez (state, p: checker * (permission_redacted_content opt
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let is_allowed =
-    if burrow_allow_all_tez_deposits burrow then
-      true
-    else
-      let r = ensure_permission_is_present r in
-      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-      does_right_allow_tez_deposits r
+    burrow_allow_all_tez_deposits burrow ||
+    (let r = ensure_permission_is_present r in
+     let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+     does_right_allow_tez_deposits r)
   in
   if is_allowed then
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
@@ -192,12 +190,10 @@ let entrypoint_burn_kit (state, p: checker * (permission_redacted_content option
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let is_allowed =
-    if burrow_allow_all_kit_burnings burrow then
-      true
-    else
-      let r = ensure_permission_is_present r in
-      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-      does_right_allow_kit_burning r
+    burrow_allow_all_kit_burnings burrow ||
+    (let r = ensure_permission_is_present r in
+     let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
+     does_right_allow_kit_burning r)
   in
   if is_allowed then
     let updated_burrow = burrow_burn_kit state.parameters kit burrow in
