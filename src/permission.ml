@@ -2,35 +2,35 @@ open Tickets
 
 let[@inline] does_right_allow_tez_deposits (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.deposit_tez
+  | AdminRights -> true
+  | LimitedRights r -> r.deposit_tez
 
 let[@inline] does_right_allow_tez_withdrawals (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.withdraw_tez
+  | AdminRights -> true
+  | LimitedRights r -> r.withdraw_tez
 
 let[@inline] does_right_allow_kit_minting (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.mint_kit
+  | AdminRights -> true
+  | LimitedRights r -> r.mint_kit
 
 let[@inline] does_right_allow_kit_burning (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.burn_kit
+  | AdminRights -> true
+  | LimitedRights r -> r.burn_kit
 
 let[@inline] does_right_allow_setting_delegate (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.set_delegate
+  | AdminRights -> true
+  | LimitedRights r -> r.set_delegate
 
 let[@inline] does_right_allow_cancelling_liquidations (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User r -> r.cancel_liquidation
+  | AdminRights -> true
+  | LimitedRights r -> r.cancel_liquidation
 
 let[@inline] is_admin_right (right: rights) : bool =
   match right with
-  | Admin -> true
-  | User _ -> false
+  | AdminRights -> true
+  | LimitedRights _ -> false

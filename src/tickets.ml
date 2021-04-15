@@ -161,12 +161,12 @@ type specific_rights =
   }
 [@@deriving show]
 
-(** A right can be an admin right (which implies all right), or a user right,
-  * which can include depositing/withdrawing tez, minting/burning kit, setting
-  * the delegate, and/or canceling liquidations. *)
+(** Rights can be an admin right (which implies all rights), or a limited subset
+    which can include depositing/withdrawing tez, minting/burning kit, setting
+    the delegate, and/or canceling liquidations. *)
 type rights =
-  | Admin
-  | User of specific_rights
+  | AdminRights
+  | LimitedRights of specific_rights
 [@@deriving show]
 
 type permission_content = token_tag * rights * Ligo.address * Ligo.nat
