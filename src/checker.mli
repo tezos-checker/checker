@@ -166,6 +166,17 @@ val entrypoint_make_permission : checker * (permission_redacted_content * burrow
 *)
 val entrypoint_set_allow_all_tez_deposits : checker * (permission_redacted_content * burrow_id * bool) -> (LigoOp.operation list * checker)
 
+(** Requires admin. Sets whether or not a burrow accepts all kit burns
+    without a permission.
+
+    Parameters:
+    - An existing permission for the burrow (supplied as a ticket)
+    - The ID of the burrow for which to create permissions
+    - A boolean: [true] means that permissionless kit burns are allowed
+      and [false] means that they are not allowed
+*)
+val entrypoint_set_allow_all_kit_burns : checker * (permission_redacted_content * burrow_id * bool) -> (LigoOp.operation list * checker)
+
 (** Requires admin. Increments a counter so that all previous permissions are
     now invalid and returns a new admin permission. This makes it easy to
     transfer an admin permission to another party.
@@ -266,6 +277,7 @@ type checker_params =
   | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
   | MakePermission of (permission * burrow_id * rights)
   | SetAllowAllTezDeposits of (permission * burrow_id * bool)
+  | SetAllowAllKitBurns of (permission * burrow_id * bool)
   | InvalidateAllPermissions of (permission * burrow_id)
   | BuyKit of (kit * Ligo.timestamp)
   | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
@@ -297,6 +309,7 @@ val deticketify_touch_burrow : burrow_id -> burrow_id
 val deticketify_set_burrow_delegate : permission * burrow_id * Ligo.key_hash option -> permission_redacted_content * burrow_id * Ligo.key_hash option
 val deticketify_make_permission : permission * burrow_id * rights -> permission_redacted_content * burrow_id * rights
 val deticketify_set_allow_all_tez_deposits : permission * burrow_id * bool -> permission_redacted_content * burrow_id * bool
+val deticketify_set_allow_all_kit_burns : permission * burrow_id * bool -> permission_redacted_content * burrow_id * bool
 val deticketify_invalidate_all_permissions : permission * burrow_id -> permission_redacted_content * burrow_id
 val deticketify_buy_kit : kit * Ligo.timestamp -> kit * Ligo.timestamp
 val deticketify_sell_kit : kit_token * Ligo.tez * Ligo.timestamp -> kit * Ligo.tez * Ligo.timestamp
