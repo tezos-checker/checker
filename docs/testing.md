@@ -2,7 +2,7 @@
 
 **Date: 2021-03-12**
 
-The purpose of this document is to outline the current sets of testing
+The purpose of this document is to outline the current testing
 approaches which have been used in the project. As of the writing of this
 document, testing is non-exhaustive but does cover a sizeable portion of the
 codebase.
