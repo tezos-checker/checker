@@ -40,24 +40,10 @@ permissioning) and ensuring that expected error codes are thrown. We've provided
 tests in these areas for nearly all of the main entrypoint code in `checker.ml`
 and have also added many to `burrow.ml` and `uniswap.ml`.
 
-One interesting pattern in the unit tests is the setting of the mutable
-references in `Ligo.Tezos` before (and sometimes within) test logic. This
-pattern is used to simulate execution within the context of a transaction.
-
-```ocaml
- Ligo.Tezos.reset ();
- Ligo.Tezos.new_transaction
-    ~seconds_passed:1
-    ~blocks_passed:1
-    ~sender:alice_addr
-    ~amount:(Ligo.tez_from_literal "0mutez");
-
- assert_raises
-    (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
-    (fun () ->
-       ...
-      );
-```
+The tests in `testChecker.ml` are of particular interest, since they are
+somewhat higher-level functional tests that simulate calling the contract's
+entrypoints in the context of a Tezos transaction. (Mutable state in our
+`Ligo.Tezos` module is used to achieve this.)
 
 In addition to tests for handling of permissions and errors, we have also
 written a number of unit tests which aim to check boundary cases for the many
