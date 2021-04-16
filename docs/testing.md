@@ -12,7 +12,7 @@ executed using `dune` (or via the repo `Makefile`) since there is not a unit
 testing framework for Ligo yet. All tests reside under the [tests/](../tests)
 directory and are primarily organized by the corresponding `src` module which
 they test. The exception to this is `testLiquidation.ml`, which centralizes
-testing logic for liquidation auctions.
+testing logic for calculations related to burrow liquidation.
 
 So far, testing has focused on the following areas:
   1. Unit tests for key business logic
