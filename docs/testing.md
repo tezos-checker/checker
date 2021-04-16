@@ -14,7 +14,6 @@ directory and are primarily organized by the corresponding `src` module which
 they test. The exception to this is `testLiquidation.ml`, which centralizes
 testing logic for liquidation auctions.
 
-
 So far, testing has focused on the following areas:
   1. Unit tests for key business logic
   1. Unit tests for calculation edge cases
@@ -23,9 +22,9 @@ So far, testing has focused on the following areas:
 Areas which remain to be tested include:
 
   1. Filling in cases still requiring unit / property tests. Most of the
-     remaining test cases are spread throughout the codebase and not centralized
-     to a single module.
-  1. Addition of some higher-level end to end tests which actually call the
+     remaining test cases are spread throughout the codebase and are not
+     centralized to a single module.
+  1. Addition of some higher-level end-to-end tests which actually call the
      contract. Tests do **not** currently evaluate the Tezos operations which
      the Checker code generates since no interpreter exists for them in Ligo at
      the moment. Some initial work has begun on this front but has not landed
@@ -33,13 +32,12 @@ Areas which remain to be tested include:
      1. We will want these to also test the inter-contract dynamics between
         Checker and burrows, etc.
 
-
 ## Unit tests
 
 A core part of the current test suite are unit tests which check basic
-application logic such as the logic for handling tickets (which are used for
+application logic such as handling tickets (which are used for
 permissioning) and ensuring that expected error codes are thrown. We've provided
-a test in these areas for nearly all of the main entrypoint code in `checker.ml`
+tests in these areas for nearly all of the main entrypoint code in `checker.ml`
 and have also added many to `burrow.ml` and `uniswap.ml`.
 
 One interesting pattern in the unit tests is the setting of the mutable
@@ -71,7 +69,7 @@ ceil division) as well as changes to the constants defined in `constants.ml`.
 
 ## Property tests
 
-A number of property tests exist for expected properties (i.e. from the spec) as
+A number of property tests exist for expected properties (i.e. from the [spec](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA)) as
 well as properties which we assume in the current implementation.  These tests
 are written using `QCheck` and incorporated into the main `OUnit` test suite.
 One challenge in writing property tests for Checker is that many of the
@@ -80,7 +78,7 @@ which makes the search space for randomized testing large. To reduce the number
 of samples required to detect failures, we have tried to hold some of the inputs
 constant where appropriate.
 
-As with many of the unit tests, we have made hard-coded the bounds for many of
+As with many of the unit tests, we have hard-coded the bounds for many of
 the randomized parameters where applicable (e.g. when the range of valid values
 for inputs are dependent on eachother). As described above, this helps make the
 tests more sensitive to changes in complex numerical calculations.
