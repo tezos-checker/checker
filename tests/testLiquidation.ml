@@ -5,7 +5,7 @@ open OUnit2
 open FixedPoint
 open Parameters
 
-let property_test_count = 100
+let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 (* Create an arbitrary burrow state, given the set of checker's parameters (NB:
@@ -181,6 +181,7 @@ let assert_properties_of_complete_liquidation params burrow_in details =
   assert_bool
     "complete liquidation means overburrowed input burrow"
     (burrow_is_overburrowed params burrow_in);
+  Format.fprintf Format.std_formatter "| IN=%s; OUT=%s" (show_burrow burrow_in) (show_burrow burrow_out);
   assert_bool
     "complete liquidation means liquidatable output burrow"
     (burrow_is_liquidatable params burrow_out);
@@ -947,10 +948,12 @@ let test_burrow_request_liquidation_invariant_close =
   assert_properties_of_close_liquidation initial_parameters burrow0 liquidation_details;
   true
 
+(* TODO: Re-enable kit argument here and on line 973 *)
 let test_burrow_request_liquidation_invariant_complete =
   (* 1 / liquidation_reward * creation_deposit *)
-  let lower_collat_bound_for_test = 1_001_001 in
-  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
+  (* let lower_collat_bound_for_test = 4369345928872593390 in *)
+  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(4369345928872593390 -- 4369345928872593390) in
+  (* let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(1_001_001 -- max_int) in *)
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -991,7 +994,8 @@ let test_burrow_request_liquidation_invariant_complete =
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
   (* FIXME: this assertion currently fails due to https://github.com/tzConnectBerlin/huxian/issues/72
    * Once we resolve this issue we can re-enable it. *)
-  (* assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details; *)
+  assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details;
+  let _ = failwith "ending here on purpose" in
   true
 
 let test_burrow_request_liquidation_invariant_partial =
@@ -1033,33 +1037,87 @@ let test_burrow_request_liquidation_invariant_partial =
   assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 
+let test_burrow_request_liquidation_preserves_tez =
+  (* 1 / liquidation_reward * creation_deposit *)
+  let lower_collat_bound_for_test = 1_001_001 in
+  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"burrow_request_liquidation - total tez is preserved"
+    ~count:property_test_count
+    (QCheck.triple arb_tez arb_tez TestArbitrary.arb_kit)
+  @@ fun (collateral, collateral_at_auction, extra_kit)->
+
+  (* liquidation_limit + 1 *)
+  let min_kit_to_trigger_case = Ligo.add_int_int
+      (Common.fdiv_int_int
+         (Ligo.mul_int_int (Ligo.int_from_literal "19") (Common.tez_to_mutez (Ligo.add_tez_tez collateral collateral_at_auction)))
+         (Ligo.int_from_literal "10"))
+      (Ligo.int_from_literal "1") in
+  let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
+    | Some n -> kit_add (kit_of_mukit n) extra_kit
+    | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
+  in
+  let burrow0 = make_burrow_for_test
+      ~permission_version:(Ligo.nat_from_literal "0n")
+      ~allow_all_tez_deposits:false
+      ~allow_all_kit_burnings:false
+      ~delegate:None
+      ~active:true
+      ~collateral:collateral
+      ~outstanding_kit:outstanding_kit
+      ~excess_kit:kit_zero
+      ~adjustment_index:(compute_adjustment_index params)
+      ~collateral_at_auction:collateral_at_auction
+      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (_, liquidation_details) -> liquidation_details
+    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+  in
+  assert_equal
+    ~cmp:Ligo.eq_tez_tez
+    ~printer:Ligo.string_of_tez
+    (Ligo.add_tez_tez (burrow_collateral burrow0) (burrow_collateral_at_auction burrow0))
+    (Ligo.add_tez_tez liquidation_details.liquidation_reward (Ligo.add_tez_tez (burrow_collateral liquidation_details.burrow_state) (burrow_collateral_at_auction liquidation_details.burrow_state)));
+  true
+
+
 let suite =
   "LiquidationTests" >::: [
-    partial_liquidation_unit_test;
-    unwarranted_liquidation_unit_test;
-    complete_liquidation_unit_test;
-    complete_and_close_liquidation_test;
+    (* partial_liquidation_unit_test;
+       unwarranted_liquidation_unit_test;
+       complete_liquidation_unit_test;
+       complete_and_close_liquidation_test;
 
-    (* Test the boundaries *)
-    barely_not_overburrowed_test;
-    barely_overburrowed_test;
-    barely_non_liquidatable_test;
-    barely_liquidatable_test;
-    barely_non_complete_liquidatable_test;
-    barely_complete_liquidatable_test;
-    barely_non_close_liquidatable_test;
-    barely_close_liquidatable_test;
+       (* Test the boundaries *)
+       barely_not_overburrowed_test;
+       barely_overburrowed_test;
+       barely_non_liquidatable_test;
+       barely_liquidatable_test;
+       barely_non_complete_liquidatable_test;
+       barely_complete_liquidatable_test;
+       barely_non_close_liquidatable_test;
+       barely_close_liquidatable_test;
 
-    (* General, property-based random tests *)
-    liquidatable_implies_overburrowed;
-    optimistically_overburrowed_implies_overburrowed;
+       (* General, property-based random tests *)
+       liquidatable_implies_overburrowed;
+       optimistically_overburrowed_implies_overburrowed; *)
 
-    (* General, property-based random tests regarding liquidation calculations. *)
-    test_general_liquidation_properties;
+
+    (* test_burrow_request_liquidation_preserves_tez; *)
+
+    (* General, property-based random tests regarding liquidation calculations.
+       test_general_liquidation_properties; *)
 
     (* General, property-based random tests for checking that burrow_request_liquidation
      * preserves invariants. *)
-    test_burrow_request_liquidation_invariant_close;
+    (* test_burrow_request_liquidation_invariant_close; *)
+
+
     test_burrow_request_liquidation_invariant_complete;
-    test_burrow_request_liquidation_invariant_partial;
+
+
+    (* test_burrow_request_liquidation_invariant_partial; *)
   ]
