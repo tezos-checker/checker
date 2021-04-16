@@ -1,17 +1,17 @@
 src/checkerEntrypoints.ml
 
+generated/michelson/main.tz
+generated/michelson/functions.json
+
+generated/ligo
 
 _build
 _coverage
 checker.byte
-generated
 _opam
 
 *.cmi
 *.cmo
-
-ligo/*.tz
-ligo/bench/*.tz
 
 # editors
 .vscode
