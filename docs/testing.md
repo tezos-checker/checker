@@ -11,8 +11,8 @@ All tests are written in OCaml (OUnit and QCheck) and are designed to be
 executed using `dune` (or via the repo `Makefile`) since there is not a unit
 testing framework for Ligo yet. All tests reside under the [tests/](../tests)
 directory and are primarily organized by the corresponding `src` module which
-they test. The exception to this is `testLiquidation.ml`, which centralizes
-testing logic for calculations related to burrow liquidation.
+they test. The exceptions to this are `testLiquidation.ml`, which centralizes
+testing logic for calculations related to burrow liquidation, and `testLiquidationAuction.ml` which contains tests for the general logic of liquidation auctions.
 
 So far, testing has focused on the following areas:
   1. Unit tests for key business logic
