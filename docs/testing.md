@@ -1,6 +1,6 @@
 # Testing Approaches
 
-**Date: 12/03/2021**
+**Date: 2021-03-12**
 
 The purpose of this document is to outline the current sets of testing
 approaches which have been used in the project. As of the writing of this
