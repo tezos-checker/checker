@@ -11,7 +11,7 @@ FUNCTIONS_TARGET="#{__dir__}/../generated/michelson/functions.json"
 
 MAIN_FILE="#{LIGO_DIR}/main.mligo"
 
-# this address is created with a private key of 20 bytes of zeroes:
+# this address is created with a key of 20 bytes of zeroes:
 #
 # import hashlib
 # import base58
