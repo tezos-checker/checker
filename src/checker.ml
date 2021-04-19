@@ -5,8 +5,6 @@ open Permission
 open Parameters
 open Cfmm
 open Burrow
-open DelegationAuction
-open DelegationAuctionTypes
 open LiquidationAuction
 open LiquidationAuctionPrimitiveTypes
 open LiquidationAuctionTypes
@@ -475,8 +473,6 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      delegation_auction = state_delegation_auction;
-      delegate = state_delegate;
       last_price = state_last_price;
     } = state in
 
@@ -489,74 +485,10 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      delegation_auction = state_delegation_auction;
-      delegate = state_delegate;
       last_price = state_last_price;
     } in
   assert_checker_invariants new_state;
   (new_ops, new_state)
-
-(* ************************************************************************* *)
-(**                          DELEGATION AUCTIONS                             *)
-(* ************************************************************************* *)
-
-let updated_delegation_auction (state: checker) (new_auction: delegation_auction) =
-  let prev_auction = state.delegation_auction in
-  (* When we move to a new cycle, we accrue the amount that won delegation for
-     the previous cycle to cfmm. *)
-  let accrued_tez =
-    if delegation_auction_cycle prev_auction <> delegation_auction_cycle new_auction then
-      match delegation_auction_winning_amount prev_auction with
-      | None -> Ligo.tez_from_literal "0mutez"
-      | Some tez -> tez
-    else
-      Ligo.tez_from_literal "0mutez"
-  in
-  let new_delegate = delegation_auction_delegate new_auction in
-
-  let ops = if state.delegate = new_delegate then
-      ([]: LigoOp.operation list)
-    else [LigoOp.Tezos.set_delegate new_delegate]
-  in
-  (ops,
-
-   { state with
-     delegation_auction = new_auction;
-     delegate = delegation_auction_delegate new_auction;
-     cfmm = cfmm_add_accrued_tez state.cfmm accrued_tez;
-   })
-
-let entrypoint_delegation_auction_place_bid (state, _: checker * unit) : (LigoOp.operation list * checker) =
-  let bid, auction =
-    delegation_auction_place_bid
-      state.delegation_auction
-      !Ligo.Tezos.sender
-      !Ligo.Tezos.amount
-  in
-  let ticket = issue_delegation_auction_bid_ticket bid in
-  let (ops, new_state) = updated_delegation_auction state auction in
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferDABidTicket" !Ligo.Tezos.sender : delegation_auction_bid_content Ligo.ticket LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.da_bid_transaction ticket (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferDABidTicket : LigoOp.operation list) in
-  (ops, new_state)
-
-let entrypoint_delegation_auction_claim_win (state, p: checker * (delegation_auction_bid * Ligo.key_hash)) : LigoOp.operation list * checker =
-  let bid, for_delegate = p in
-  let _ = ensure_no_tez_given () in
-  let auction = delegation_auction_claim_win state.delegation_auction bid for_delegate in
-  updated_delegation_auction state auction
-
-let entrypoint_delegation_auction_reclaim_bid (state, bid: checker * delegation_auction_bid) : LigoOp.operation list * checker =
-  let _ = ensure_no_tez_given () in
-  let tez, auction = delegation_auction_reclaim_bid state.delegation_auction bid in
-  let ops, new_auction = updated_delegation_auction state auction in
-  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation list) in
-  (ops, new_auction)
-
-let touch_delegation_auction (state: checker) =
-  updated_delegation_auction state (delegation_auction_touch state.delegation_auction)
 
 (* ************************************************************************* *)
 (**                                 CFMM                                     *)
@@ -564,58 +496,51 @@ let touch_delegation_auction (state: checker) =
 
 let entrypoint_buy_kit (state, p: checker * (kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let min_kit_expected, deadline = p in
-  let (ops, state) = touch_delegation_auction state in
   let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm !Ligo.Tezos.amount min_kit_expected deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
-  (ops, {state with cfmm = updated_cfmm})
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
+  ([op], {state with cfmm = updated_cfmm})
 
 let entrypoint_sell_kit (state, p: checker * (kit * Ligo.tez * Ligo.timestamp)) : LigoOp.operation list * checker =
   let kit, min_tez_expected, deadline = p in
   let _ = ensure_no_tez_given () in
-  let (ops, state) = touch_delegation_auction state in
   let (tez, updated_cfmm) = cfmm_sell_kit state.cfmm !Ligo.Tezos.amount kit min_tez_expected deadline in
-  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation list) in
+  let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.unit_transaction () tez c)
+    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
   let updated_state = {state with cfmm = updated_cfmm} in
-  (ops, updated_state)
+  ([op], updated_state)
 
 let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
   let max_kit_deposited, min_lqt_minted, deadline = p in
-  let (ops, state) = touch_delegation_auction state in
-  let pending_accrual = match delegation_auction_winning_amount state.delegation_auction with
-    | None -> Ligo.tez_from_literal "0mutez"
-    | Some tez -> tez in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
-    cfmm_add_liquidity state.cfmm !Ligo.Tezos.amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity state.cfmm !Ligo.Tezos.amount max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLqt : LigoOp.operation list) in
-  (ops, {state with cfmm = updated_cfmm})
+  let op1 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
+  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c)
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLqt : LigoOp.operation) in
+  ([op1; op2], {state with cfmm = updated_cfmm})
 
 let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
-  let (ops, state) = touch_delegation_auction state in
   let (tez, kit_tokens, updated_cfmm) =
     cfmm_remove_liquidity state.cfmm !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
-  let ops = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.unit_transaction () tez c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation list) in
-  let ops = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c) :: ops (* NOTE: I (George) think we should concatenate to the right actually. *)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation list) in
+  let op1 = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.unit_transaction () tez c)
+    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
+  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
   let updated_state = {state with cfmm = updated_cfmm} in
-  (ops, updated_state)
+  ([op1; op2], updated_state)
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION AUCTIONS                            *)
@@ -731,9 +656,6 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let reward = calculate_touch_reward state.parameters.last_touched in
     let state = { state with parameters = add_circulating_kit state.parameters reward } in
 
-    (* Ensure the delegation auction is up-to-date, and any proceeds accrued to the cfmm *)
-    let (ops, state) = touch_delegation_auction state in
-
     (* 2: Update the system parameters *)
     let total_accrual_to_cfmm, updated_parameters =
       parameters_touch index (cfmm_kit_in_tez_in_prev_block state.cfmm) state.parameters
@@ -768,20 +690,16 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           cfmm = state_cfmm;
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
-          delegation_auction = state_delegation_auction;
-          delegate = state_delegate;
           last_price = state_last_price;
         } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-        touch_oldest (ops, state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
+        touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
       let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
           cfmm = state_cfmm;
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
-          delegation_auction = state_delegation_auction;
-          delegate = state_delegate;
           last_price = state_last_price;
         } in
       (ops, new_state) in
@@ -853,9 +771,6 @@ type checker_params =
   | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
   | ReceiveSliceFromBurrow of unit
-  | DelegationAuctionPlaceBid of unit
-  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
   | ReceivePrice of Ligo.nat
 
 (* noop *)
@@ -950,17 +865,6 @@ let[@inline] deticketify_liquidation_auction_claim_win (bid_ticket: liquidation_
 
 (* noop *)
 let[@inline] deticketify_receive_slice_from_burrow (p: unit) : unit = p
-
-(* noop *)
-let[@inline] deticketify_delegation_auction_place_bid (p: unit) : unit = p
-
-(* removes tickets *)
-let[@inline] deticketify_delegation_auction_claim_win (bid_ticket, kh: delegation_auction_bid_ticket * Ligo.key_hash) : delegation_auction_bid * Ligo.key_hash =
-  (ensure_valid_delegation_auction_bid_ticket bid_ticket, kh)
-
-(* removes tickets *)
-let[@inline] deticketify_delegation_auction_reclaim_bid (bid_ticket: delegation_auction_bid_ticket) : delegation_auction_bid =
-  ensure_valid_delegation_auction_bid_ticket bid_ticket
 
 (* noop *)
 let[@inline] deticketify_receive_price (p: Ligo.nat) : Ligo.nat = p

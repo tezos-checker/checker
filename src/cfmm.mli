@@ -69,8 +69,6 @@ val cfmm_sell_kit :
 val cfmm_add_liquidity :
   cfmm ->
   Ligo.tez (* amount *) ->
-  (** This amount is temporarily treated as if it is part of the tez balance *)
-  Ligo.tez (* pending accrual *) ->
   kit (* max kit deposited *) ->
   Ligo.nat (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->

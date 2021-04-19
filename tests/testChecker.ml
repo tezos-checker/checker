@@ -231,65 +231,6 @@ let suite =
 
     );
 
-    ("checker_delegation_auction_reclaim_bid - transaction with value > 0 fails" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       (* Create a bid *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-       let ops, checker = Checker.entrypoint_delegation_auction_place_bid (initial_checker, ()) in
-       let ticket, checker = match ops with
-         | [ Transaction (DaBidTransactionValue ticket, _, _) ;
-           ] -> ticket, checker
-         | _ -> failwith ("Expected [Transaction (DaBidTransactionValue _)] but got " ^ show_operation_list ops)
-       in
-
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-
-       assert_raises
-         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-         (fun () -> Checker.entrypoint_delegation_auction_reclaim_bid (checker, Checker.deticketify_delegation_auction_reclaim_bid ticket))
-    );
-
-    ("checker_delegation_auction_reclaim_bid - ticket from another issuer fails" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let bid = {
-         bidder=alice_addr;
-         cycle=initial_checker.delegation_auction.cycle;
-         amount=(Ligo.tez_from_literal "1mutez")
-       } in
-       let a_random_ticket = Ligo.Tezos.with_self_address bob_addr (fun () -> Tickets.issue_delegation_auction_bid_ticket bid) in
-
-       assert_raises
-         (Failure (Ligo.string_of_int error_InvalidDelegationAuctionTicket))
-         (fun () -> Checker.entrypoint_delegation_auction_reclaim_bid (initial_checker, Checker.deticketify_delegation_auction_reclaim_bid a_random_ticket))
-    );
-
-    ("checker_delegation_auction_reclaim_bid - reclaim your losing bid returns expected tez" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       (* Create a bid *)
-       let our_bid_amount = Ligo.tez_from_literal "1mutez" in
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:our_bid_amount;
-       let ops, checker = Checker.entrypoint_delegation_auction_place_bid (initial_checker, ()) in
-       let ticket, checker = match ops with
-         | [ Transaction (DaBidTransactionValue ticket, _, _) ;
-           ] -> ticket, checker
-         | _ -> failwith ("Expected [Transaction (DaBidTransactionValue _)] but got " ^ show_operation_list ops)
-       in
-       (* Make another bid with a higher value *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "2mutez");
-       let _, checker = Checker.entrypoint_delegation_auction_place_bid (checker, ()) in
-
-       (* Reclaim our first bid *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_delegation_auction_reclaim_bid (checker, Checker.deticketify_delegation_auction_reclaim_bid ticket) in match ops with
-       | [Transaction (UnitTransactionValue, reclaimed_tez, _)] ->
-         assert_equal reclaimed_tez our_bid_amount ~printer:Ligo.string_of_tez
-       | _ -> failwith("Expected Expected [Transaction (UnitTransactionValue _)] but got " ^ show_operation_list ops)
-    );
-
     ("burn_kit - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -750,8 +691,8 @@ let suite =
        let ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_tez_expected, kit_of_mukit min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
        let kit, tez = match ops with
          | [
+           Transaction (UnitTransactionValue, tez, _);
            Transaction (KitTransactionValue ticket, _, _);
-           Transaction (UnitTransactionValue, tez, _)
          ] -> let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in (kit, tez)
          | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _)); Transaction (UnitTransactionValue, tez, _) ] but got " ^ show_operation_list ops)
        in
@@ -1016,58 +957,5 @@ let suite =
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_961mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
-    );
-
-    ("Can't claim delegation too soon after winning delegation auction" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       let checker = initial_checker in
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.entrypoint_delegation_auction_place_bid (checker, ()) in
-
-       let ticket = match ops with
-         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
-       in
-
-       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
-           Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4095) ~blocks_passed:4095 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.entrypoint_delegation_auction_claim_win (checker, Checker.deticketify_delegation_auction_claim_win (ticket, charles_key_hash)) in
-           ());
-    );
-
-    ("Can't claim delegation too late after winning delegation auction" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       let checker = initial_checker in
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.entrypoint_delegation_auction_place_bid (checker, ()) in
-
-       let ticket = match ops with
-         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
-       in
-
-       assert_raises (Failure (Ligo.string_of_int error_NotAWinningBid)) (fun _ ->
-           Ligo.Tezos.new_transaction ~seconds_passed:(60 * 9000) ~blocks_passed:9000 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-           let _checker = Checker.entrypoint_delegation_auction_claim_win (checker, Checker.deticketify_delegation_auction_claim_win (ticket, charles_key_hash)) in
-           ());
-    );
-
-    ("Can claim delegation after winning delegation auction" >::
-     fun _ ->
-       Ligo.Tezos.reset ();
-       let checker = initial_checker in
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, checker = Checker.entrypoint_delegation_auction_place_bid (checker, ()) in
-
-       let ticket = match ops with
-         | [Transaction (DaBidTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (DaBidTransactionValue ticket, _, _)] but got " ^ show_operation_list ops)
-       in
-
-       Ligo.Tezos.new_transaction ~seconds_passed:(60 * 4096) ~blocks_passed:4096 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _checker = Checker.entrypoint_delegation_auction_claim_win (checker, Checker.deticketify_delegation_auction_claim_win (ticket, charles_key_hash)) in
-       assert_equal [LigoOp.SetDelegate (Some charles_key_hash)] ops ~printer:show_operation_list;
     );
   ]

@@ -146,7 +146,6 @@ let cfmm_sell_kit
 let cfmm_add_liquidity
     (cfmm: cfmm)
     (tez_amount: Ligo.tez)
-    (pending_accrual: Ligo.tez)
     (max_kit_deposited: kit)
     (min_lqt_minted: Ligo.nat)
     (deadline: Ligo.timestamp)
@@ -162,7 +161,7 @@ let cfmm_add_liquidity
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (Ligo.nat * kit * cfmm))
   else
-    let effective_tez_balance = tez_to_mutez (Ligo.add_tez_tez cfmm.tez pending_accrual) in
+    let effective_tez_balance = tez_to_mutez cfmm.tez in
     let lqt_minted =
       fraction_to_nat_floor
         (Ligo.mul_int_int (Ligo.int cfmm.lqt) (tez_to_mutez tez_amount))

@@ -3,7 +3,6 @@ val oracle_address : Ligo.address
 val oracle_entrypoint : string
 
 (* Tezos utilities *)
-val level_to_cycle : Ligo.nat -> Ligo.nat
 val checker_address : Ligo.address
 
 (* OPERATIONS ON int *)
