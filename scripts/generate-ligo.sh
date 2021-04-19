@@ -15,6 +15,7 @@ inputs=(
   common
   ratio
   fixedPoint
+  ctez
   kit
   cfmmTypes
   liquidationAuctionPrimitiveTypes

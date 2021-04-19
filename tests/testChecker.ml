@@ -1,3 +1,4 @@
+open Ctez
 open Kit
 open Burrow
 open OUnit2
@@ -273,7 +274,7 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
       let ops, _ = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
       let bought_kit = match ops with
         | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
@@ -292,7 +293,7 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
       let ops, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
       let bought_kit = match ops with
         | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
@@ -309,11 +310,11 @@ let suite =
         ~name:"test_buy_kit_preserves_tez"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez ctez_amount);
       let _, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
-      Ligo.add_tez_tez checker.cfmm.tez tez_amount = new_checker.cfmm.tez
+      ctez_add checker.cfmm.ctez ctez_amount = new_checker.cfmm.ctez
     );
 
     (
@@ -327,13 +328,13 @@ let suite =
       @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
-      let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
+      let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
       let bought_tez = match ops with
         | [ Transaction (_, mutez, _) ] -> mutez
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
-      bought_tez >= min_tez_expected
+      ctez_from_tez bought_tez >= min_tez_expected
     );
 
     (
@@ -347,8 +348,8 @@ let suite =
       @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
-      let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
+      let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
       kit_add checker.cfmm.kit kit_amount = new_checker.cfmm.kit
     );
 
@@ -363,13 +364,13 @@ let suite =
       @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_amount;
-      let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_tez_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
+      let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
       let bought_tez = match ops with
         | [ Transaction (_, mutez, _) ] -> mutez
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
-      Ligo.add_tez_tez new_checker.cfmm.tez bought_tez = checker.cfmm.tez
+      ctez_add new_checker.cfmm.ctez (ctez_from_tez bought_tez) = checker.cfmm.ctez
     );
 
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
@@ -559,7 +560,7 @@ let suite =
 
     (
       let cfmm_kit = Ligo.nat_from_literal ("1_000n") in
-      let cfmm_tez = Ligo.tez_from_literal ("1_000mutez") in
+      let cfmm_ctez = ctez_of_muctez (Ligo.nat_from_literal ("1_000n")) in
       (* The maximum amount of kit that you can buy with a finite amount of tez is
        * (1 - fee) * cfmm.kit - 1
       *)
@@ -582,7 +583,7 @@ let suite =
         initial_checker with
         cfmm={
           initial_checker.cfmm with
-          tez = cfmm_tez;
+          ctez = cfmm_ctez;
           kit = kit_of_mukit cfmm_kit;
         };
       } in
@@ -618,7 +619,7 @@ let suite =
          initial_checker with
          cfmm={
            initial_checker.cfmm with
-           tez = Ligo.tez_from_literal "2mutez";
+           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
        } in
@@ -641,7 +642,7 @@ let suite =
          initial_checker with
          cfmm={
            initial_checker.cfmm with
-           tez = Ligo.tez_from_literal "2mutez";
+           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
        } in
@@ -678,7 +679,7 @@ let suite =
          initial_checker with
          cfmm={
            initial_checker.cfmm with
-           tez = Ligo.tez_from_literal "2mutez";
+           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
            lqt = Ligo.nat_from_literal "2n";
          };

@@ -1,6 +1,6 @@
 open Ratio
+open Ctez
 open Kit
-open Common
 open Constants
 open CfmmTypes
 open Error
@@ -12,18 +12,18 @@ open Error
  * implementation of remove_liquidity currently allows liquidity to reach zero.
  * *)
 let cfmm_assert_initialized (u: cfmm) : cfmm =
-  assert (not (u.tez = Ligo.tez_from_literal "0mutez"));
+  assert (not (u.ctez = ctez_zero));
   assert (not (u.kit = kit_zero));
   assert (not (u.lqt = Ligo.nat_from_literal "0n"));
   u
 
-let cfmm_kit_in_tez_in_prev_block (cfmm: cfmm) =
+let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
-  cfmm.kit_in_tez_in_prev_block
+  cfmm.kit_in_ctez_in_prev_block
 
-(* Update the kit_in_tez cached and last_level, if we just entered a new block.
+(* Update the kit_in_ctez cached and last_level, if we just entered a new block.
  * This should be called before we many any changes to the contract so that we
- * don't lose the last kit_in_tez at the end of the last block. George: Note
+ * don't lose the last kit_in_ctez at the end of the last block. George: Note
  * that this is not be the previous block, but the last block in which the
  * cfmm contract was touched. *)
 let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
@@ -33,22 +33,22 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
     cfmm
   else
     { cfmm with
-      kit_in_tez_in_prev_block =
+      kit_in_ctez_in_prev_block =
         make_real_unsafe
-          (Ligo.mul_int_int (tez_to_mutez cfmm.tez) kit_scaling_factor_int)
+          (Ligo.mul_int_int (ctez_to_muctez_int cfmm.ctez) kit_scaling_factor_int)
           (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (Ligo.int_from_literal "1_000_000"));
       last_level = !Ligo.Tezos.level;
     }
 
 let cfmm_buy_kit
     (cfmm: cfmm)
-    (tez_amount: Ligo.tez)
+    (ctez_amount: ctez)
     (min_kit_expected: kit)
     (deadline: Ligo.timestamp)
   : (kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
-  if (tez_amount = Ligo.tez_from_literal "0mutez") then
+  if (ctez_amount = ctez_zero) then
     (Ligo.failwith error_BuyKitNoTezGiven : (kit * cfmm))
   else if (!Ligo.Tezos.now >= deadline) then
     (Ligo.failwith error_CfmmTooLate : (kit * cfmm))
@@ -61,15 +61,15 @@ let cfmm_buy_kit
       let { num = num_uf; den = den_uf; } = cfmm_fee in
       { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - cfmm_fee *)
     in
-    let new_cfmm_tez = Ligo.add_tez_tez cfmm.tez tez_amount in
+    let new_cfmm_ctez = ctez_add cfmm.ctez ctez_amount in
     let numerator =
       Ligo.mul_int_int
-        (tez_to_mutez tez_amount)
+        (ctez_to_muctez_int ctez_amount)
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) num_uf) in
     let denominator =
       Ligo.mul_int_int
         kit_scaling_factor_int
-        (Ligo.mul_int_int (tez_to_mutez new_cfmm_tez) den_uf) in
+        (Ligo.mul_int_int (ctez_to_muctez_int new_cfmm_ctez) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
 
     if bought_kit < min_kit_expected then
@@ -81,27 +81,27 @@ let cfmm_buy_kit
       ( bought_kit,
         { cfmm with
           kit = remaining_kit;
-          tez = new_cfmm_tez;
+          ctez = new_cfmm_ctez;
         }
       )
 
 let cfmm_sell_kit
     (cfmm: cfmm)
-    (tez_amount: Ligo.tez)
+    (ctez_amount: ctez)
     (kit_amount: kit)
-    (min_tez_expected: Ligo.tez)
+    (min_ctez_expected: ctez)
     (deadline: Ligo.timestamp)
-  : (Ligo.tez * cfmm) =
+  : (ctez * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
   if (kit_amount = kit_zero) then
-    (Ligo.failwith error_SellKitNoKitGiven : (Ligo.tez * cfmm))
+    (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
   else if !Ligo.Tezos.now >= deadline then
-    (Ligo.failwith error_CfmmTooLate : (Ligo.tez * cfmm))
-  else if tez_amount <> Ligo.tez_from_literal "0mutez" then
-    (Ligo.failwith error_SellKitNonEmptyAmount : (Ligo.tez * cfmm))
-  else if (min_tez_expected = Ligo.tez_from_literal "0mutez") then
-    (Ligo.failwith error_SellKitTooLowExpectedTez : (Ligo.tez * cfmm))
+    (Ligo.failwith error_CfmmTooLate : (ctez * cfmm))
+  else if ctez_amount <> ctez_zero then
+    (Ligo.failwith error_SellKitNonEmptyAmount : (ctez * cfmm))
+  else if (min_ctez_expected = ctez_zero) then
+    (Ligo.failwith error_SellKitTooLowExpectedTez : (ctez * cfmm))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -113,23 +113,23 @@ let cfmm_sell_kit
     let numerator =
       Ligo.mul_int_int
         (kit_to_mukit_int kit_amount)
-        (Ligo.mul_int_int (tez_to_mutez cfmm.tez) num_uf) in
+        (Ligo.mul_int_int (ctez_to_muctez_int cfmm.ctez) num_uf) in
     let denominator =
       Ligo.mul_int_int
         (Ligo.int_from_literal "1_000_000")
         (Ligo.mul_int_int (kit_to_mukit_int new_cfmm_kit) den_uf) in
-    let bought_tez = fraction_to_tez_floor numerator denominator in
+    let bought_ctez = ctez_of_fraction_floor numerator denominator in
 
-    if bought_tez < min_tez_expected then
-      (Ligo.failwith error_SellKitPriceFailure : (Ligo.tez * cfmm))
-    else if bought_tez > cfmm.tez then
-      (Ligo.failwith error_SellKitTooMuchTezBought : (Ligo.tez * cfmm))
+    if bought_ctez < min_ctez_expected then
+      (Ligo.failwith error_SellKitPriceFailure : (ctez * cfmm))
+    else if bought_ctez > cfmm.ctez then
+      (Ligo.failwith error_SellKitTooMuchTezBought : (ctez * cfmm))
     else
-      let remaining_tez = Ligo.sub_tez_tez cfmm.tez bought_tez in
-      ( bought_tez,
+      let remaining_ctez = ctez_sub cfmm.ctez bought_ctez in
+      ( bought_ctez,
         { cfmm with
           kit = new_cfmm_kit;
-          tez = remaining_tez;
+          ctez = remaining_ctez;
         }
       )
 
@@ -145,7 +145,7 @@ let cfmm_sell_kit
  * continuously credited with the burrow fee taken from burrow holders. *)
 let cfmm_add_liquidity
     (cfmm: cfmm)
-    (tez_amount: Ligo.tez)
+    (ctez_amount: ctez)
     (max_kit_deposited: kit)
     (min_lqt_minted: Ligo.nat)
     (deadline: Ligo.timestamp)
@@ -154,23 +154,23 @@ let cfmm_add_liquidity
   let cfmm = cfmm_assert_initialized cfmm in
   if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_CfmmTooLate : (Ligo.nat * kit * cfmm))
-  else if tez_amount = Ligo.tez_from_literal "0mutez" then
+  else if ctez_amount = ctez_zero then
     (Ligo.failwith error_AddLiquidityNoTezGiven : (Ligo.nat * kit * cfmm))
   else if max_kit_deposited = kit_zero then
     (Ligo.failwith error_AddLiquidityNoKitGiven : (Ligo.nat * kit * cfmm))
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (Ligo.nat * kit * cfmm))
   else
-    let effective_tez_balance = tez_to_mutez cfmm.tez in
+    let effective_ctez_balance = ctez_to_muctez_int cfmm.ctez in
     let lqt_minted =
       fraction_to_nat_floor
-        (Ligo.mul_int_int (Ligo.int cfmm.lqt) (tez_to_mutez tez_amount))
-        effective_tez_balance
+        (Ligo.mul_int_int (Ligo.int cfmm.lqt) (ctez_to_muctez_int ctez_amount))
+        effective_ctez_balance
     in
     let kit_deposited =
       kit_of_fraction_ceil
-        (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (tez_to_mutez tez_amount))
-        (Ligo.mul_int_int kit_scaling_factor_int effective_tez_balance)
+        (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_int ctez_amount))
+        (Ligo.mul_int_int kit_scaling_factor_int effective_ctez_balance)
     in
 
     if lqt_minted < min_lqt_minted then
@@ -183,7 +183,7 @@ let cfmm_add_liquidity
       let kit_to_return = kit_sub max_kit_deposited kit_deposited in
       let updated = { cfmm with
                       kit = kit_add cfmm.kit kit_deposited;
-                      tez = Ligo.add_tez_tez cfmm.tez tez_amount;
+                      ctez = ctez_add cfmm.ctez ctez_amount;
                       lqt = Ligo.add_nat_nat cfmm.lqt lqt_minted;
                     } in
       (* EXPECTED PROPERTY: kit_to_return + final_cfmm_kit = max_kit_deposited + initial_cfmm_kit
@@ -194,36 +194,36 @@ let cfmm_add_liquidity
       (lqt_minted, kit_to_return, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
- * without tez and kit if everybody sells their liquidity. I think
+ * without ctez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
 (* NOTE: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let cfmm_remove_liquidity
     (cfmm: cfmm)
-    (tez_amount: Ligo.tez)
+    (ctez_amount: ctez)
     (lqt_burned: Ligo.nat)
-    (min_tez_withdrawn: Ligo.tez)
+    (min_ctez_withdrawn: ctez)
     (min_kit_withdrawn: kit)
     (deadline: Ligo.timestamp)
-  : (Ligo.tez * kit * cfmm) =
+  : (ctez * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
-  if tez_amount <> Ligo.tez_from_literal "0mutez" then
-    (Ligo.failwith error_RemoveLiquidityNonEmptyAmount : (Ligo.tez * kit * cfmm))
+  if ctez_amount <> ctez_zero then
+    (Ligo.failwith error_RemoveLiquidityNonEmptyAmount : (ctez * kit * cfmm))
   else if !Ligo.Tezos.now >= deadline then
-    (Ligo.failwith error_CfmmTooLate : (Ligo.tez * kit * cfmm))
+    (Ligo.failwith error_CfmmTooLate : (ctez * kit * cfmm))
   else if lqt_burned = Ligo.nat_from_literal "0n" then
-    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (Ligo.tez * kit * cfmm))
-  else if min_tez_withdrawn = Ligo.tez_from_literal "0mutez" then
-    (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (Ligo.tez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
+  else if min_ctez_withdrawn = ctez_zero then
+    (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (ctez * kit * cfmm))
   else if min_kit_withdrawn = kit_zero then
-    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (Ligo.tez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (ctez * kit * cfmm))
   else
     let _ = assert (lqt_burned <= cfmm.lqt) in (* the ticket mechanism should enforce this *)
 
-    let tez_withdrawn =
-      fraction_to_tez_floor
-        (Ligo.mul_int_int (tez_to_mutez cfmm.tez) (Ligo.int lqt_burned))
+    let ctez_withdrawn =
+      ctez_of_fraction_floor
+        (Ligo.mul_int_int (ctez_to_muctez_int cfmm.ctez) (Ligo.int lqt_burned))
         (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") (Ligo.int cfmm.lqt))
     in
     let kit_withdrawn =
@@ -231,14 +231,14 @@ let cfmm_remove_liquidity
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (Ligo.int lqt_burned))
         (Ligo.mul_int_int kit_scaling_factor_int (Ligo.int cfmm.lqt))
     in
-    if tez_withdrawn < min_tez_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (Ligo.tez * kit * cfmm))
-    else if tez_withdrawn > cfmm.tez then
-      (Ligo.failwith error_RemoveLiquidityTooMuchTezWithdrawn : (Ligo.tez * kit * cfmm))
+    if ctez_withdrawn < min_ctez_withdrawn then
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (ctez * kit * cfmm))
+    else if ctez_withdrawn > cfmm.ctez then
+      (Ligo.failwith error_RemoveLiquidityTooMuchTezWithdrawn : (ctez * kit * cfmm))
     else if kit_withdrawn < min_kit_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (Ligo.tez * kit * cfmm))
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (ctez * kit * cfmm))
     else if kit_withdrawn > cfmm.kit then
-      (Ligo.failwith error_RemoveLiquidityTooMuchKitWithdrawn : (Ligo.tez * kit * cfmm))
+      (Ligo.failwith error_RemoveLiquidityTooMuchKitWithdrawn : (ctez * kit * cfmm))
     else
       let remaining_lqt, _burned = (
         match Ligo.is_nat (Ligo.sub_nat_nat cfmm.lqt lqt_burned) with
@@ -248,15 +248,11 @@ let cfmm_remove_liquidity
 
       let remaining_kit = kit_sub cfmm.kit kit_withdrawn in
       let updated = { cfmm with
-                      tez = Ligo.sub_tez_tez cfmm.tez tez_withdrawn;
+                      ctez = ctez_sub cfmm.ctez ctez_withdrawn;
                       kit = remaining_kit;
                       lqt = remaining_lqt } in
-      (tez_withdrawn, kit_withdrawn, updated)
+      (ctez_withdrawn, kit_withdrawn, updated)
 
 let cfmm_add_accrued_kit (cfmm: cfmm) (accrual: kit) : cfmm =
   let cfmm = cfmm_sync_last_observed cfmm in
   { cfmm with kit = kit_add cfmm.kit accrual }
-
-let cfmm_add_accrued_tez (cfmm: cfmm) (accrual: Ligo.tez) : cfmm =
-  let cfmm = cfmm_sync_last_observed cfmm in
-  { cfmm with tez = Ligo.add_tez_tez cfmm.tez accrual }
