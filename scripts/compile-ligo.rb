@@ -39,38 +39,45 @@ status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{e
 puts "  ~#{output.length / 2} bytes"
 
 puts "Compiling the initial storage and entrypoints."
-entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo").scan(/let lazy_id_(\S+)/).flatten
+entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+  .scan(/let lazy_id_(\S+) *= \(*(\d*)\)/)
+  .map { |g| { name: g[0], fn_id: g[1] }}
 
-# Extract the initial storage and entrypoint related data
-entrypoints_scripts =
-  "[ " + entrypoints
-          .map {|i| "(\"#{i}\", lazy_id_#{i}, Bytes.pack lazy_fun_#{i})" }
-          .join("; ") + " ]"
-script = "(initial_wrapper (\"#{ADDRESS_PLACEHOLDER}\": address), #{entrypoints_scripts})"
+initial_storage = nil
+packed_entrypoints = []
 
-output, exit_status = Open3.capture2("ligo", "compile-expression", "cameligo", "--michelson-format", "json", "--init-file", MAIN_FILE, script)
-exit_status.success? or raise "Packing failed:\n#{output}"
-output = JSON.parse(output)
+threads = []
+threads << Thread.new {
+  stdout, stderr, exit_status = Open3.capture3(
+    "ligo", "compile-storage",
+    MAIN_FILE, "main",
+    "initial_wrapper (\"#{ADDRESS_PLACEHOLDER}\": address)"
+  )
+  exit_status.success? or raise "compiling initial_wrapper failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
+  initial_storage = stdout
+}
 
-# we have to convert the initial storage back to michelson format
-initial_storage = JSON.generate(output["args"][0])
-initial_storage, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", initial_storage, "from", "json", "to", "michelson")
-status.success? or raise "tezos-client convert to michelson failed:\n#{initial_storage}, #{err}"
-initial_storage.strip!
-
-packed_functions =
-  output["args"][1]
-    .map { |p|
-      name = p["args"][0]["args"][0]["string"]
-      fn_id = p["args"][0]["args"][1]["int"]
-      bytes = p["args"][1]["bytes"]
-      { name: name, fn_id: fn_id, bytes: bytes }
+entrypoints.each_slice(entrypoints.length / Etc.nprocessors) { |batch|
+  threads << Thread.new {
+    batch.each { |entrypoint|
+      stdout, stderr, exit_status = Open3.capture3(
+        "ligo", "compile-expression", "cameligo",
+        "--init-file", MAIN_FILE,
+        "Bytes.pack lazy_fun_#{entrypoint[:name]}"
+      )
+      exit_status.success? or raise "compiling entrypoint #{entrypoint[:name]} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
+      packed_entrypoints << {
+        name: entrypoint[:name],
+        fn_id: entrypoint[:fn_id],
+        bytes: stdout.delete_prefix("0x")
+      }
     }
+  }
+}
 
-raise "Missing entrypoint data" unless packed_functions.length == entrypoints.length
+threads.each(&:join)
 
-# Chunk entrypoint data
-lazy_functions = packed_functions.map do |i|
+chunked_entrypoints = packed_entrypoints.map do |i|
   bytes = i[:bytes]
   size = bytes.length / 2
   chunks = bytes.chars.each_slice(32000).map(&:join)
@@ -79,7 +86,7 @@ lazy_functions = packed_functions.map do |i|
 end
 
 functions_json = {
-  lazy_functions: lazy_functions,
+  lazy_functions: chunked_entrypoints,
   initial_storage: initial_storage,
   initial_storage_address_placeholder: ADDRESS_PLACEHOLDER
 }

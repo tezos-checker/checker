@@ -83,4 +83,4 @@ system(
 )
 $?.success? or raise
 
-puts "DOne."
+puts "Done."
