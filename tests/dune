@@ -10,7 +10,6 @@
   TestParameters
   TestLiquidation
   TestCfmm
-  TestDelegationAuction
   TestLiquidationAuction
   TestChecker
   TestArbitrary

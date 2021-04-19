@@ -22,7 +22,6 @@ inputs=(
   avl
   liquidationAuctionTypes
   tickets
-  delegationAuctionTypes
   burrowTypes
   constants
   permission
@@ -31,7 +30,6 @@ inputs=(
   checkerTypes
   cfmm
   liquidationAuction
-  delegationAuction
   checker
   checkerEntrypoints
   checkerLazy

@@ -11,7 +11,6 @@ let suite =
     TestParameters.suite;
     TestLiquidation.suite;
     TestCfmm.suite;
-    TestDelegationAuction.suite;
     TestLiquidationAuction.suite;
   ]
 

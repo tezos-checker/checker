@@ -36,11 +36,10 @@ let eq_cfmm (u1: cfmm) (u2: cfmm) : bool =
 (* max_kit_deposited = CEIL{kit * amount / tez} *)
 (* min_lqt_minted = FLOOR{lqt * amount / tez} *)
 (* NB: some values are fixed *)
-let make_inputs_for_add_liquidity_to_succeed_no_accrual =
+let make_inputs_for_add_liquidity_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. The liquidity created can be zero for example. *)
     (fun ((tez, kit, lqt, cfmm), amount) ->
-       let pending_accrual = (Ligo.tez_from_literal "0mutez") in
        let max_kit_deposited =
          let { num = x_num; den = x_den; } =
            mul_ratio (kit_to_ratio kit) (make_ratio (Common.tez_to_mutez amount) (Common.tez_to_mutez tez)) in
@@ -52,7 +51,7 @@ let make_inputs_for_add_liquidity_to_succeed_no_accrual =
          fraction_to_nat_floor x_num x_den
        in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline)
+       (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline)
     )
     (QCheck.pair (arbitrary_non_empty_cfmm one_ratio !Ligo.Tezos.level) TestArbitrary.arb_positive_tez)
 
@@ -516,10 +515,10 @@ let test_add_liquidity_might_decrease_price =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_might_decrease_price"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, _bought_kit, new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   leq_ratio_ratio (cfmm_kit_in_tez new_cfmm) (cfmm_kit_in_tez cfmm)
 
 (* If successful, cfmm_add_liquidity always increases the product
@@ -529,10 +528,10 @@ let test_add_liquidity_increases_product =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_increases_product"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, _bought_kit, new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   gt_ratio_ratio (cfmm_kit_times_tez new_cfmm) (cfmm_kit_times_tez cfmm)
 
 (* If successful, cfmm_add_liquidity always increases the liquidity;
@@ -542,10 +541,10 @@ let test_add_liquidity_increases_liquidity =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_increases_liquidity"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, _bought_kit, new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   cfmm_liquidity_tokens_extant new_cfmm > cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_add_liquidity always deposits some kit,
@@ -555,10 +554,10 @@ let test_add_liquidity_kit_to_return_lt_max_kit_deposited =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_kit_to_return_lt_max_kit_deposited"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let _bought_liquidity, kit_to_return, _new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   kit_to_return < max_kit_deposited
 
 (* If successful, cfmm_add_liquidity does not produce less kit than min_lqt_minted *)
@@ -567,10 +566,10 @@ let test_add_liquidity_respects_min_lqt_minted =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_respects_min_lqt_minted"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let lqt_minted, _bought_kit, _new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   lqt_minted >= min_lqt_minted
 
 (* If successful, cfmm_add_liquidity does not produce less kit than min_lqt_minted *)
@@ -579,10 +578,10 @@ let test_add_liquidity_respects_max_kit_deposited =
   @@ QCheck.Test.make
     ~name:"test_add_liquidity_respects_max_kit_deposited"
     ~count:property_test_count
-    make_inputs_for_add_liquidity_to_succeed_no_accrual
-  @@ fun (cfmm, amount, pending_accrual, max_kit_deposited, min_lqt_minted, deadline) ->
+    make_inputs_for_add_liquidity_to_succeed
+  @@ fun (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline) ->
   let _lqt_minted, _bought_kit, new_cfmm =
-    cfmm_add_liquidity cfmm amount pending_accrual max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity cfmm amount max_kit_deposited min_lqt_minted deadline in
   new_cfmm.kit <= kit_add cfmm.kit max_kit_deposited
 
 (* ************************************************************************* *)
@@ -615,7 +614,6 @@ let add_liquidity_unit_test =
       cfmm_add_liquidity
         cfmm
         (Ligo.tez_from_literal "20_000_000mutez")
-        (Ligo.tez_from_literal "0mutez")
         (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
         (Ligo.nat_from_literal "2n")
         (Ligo.timestamp_from_seconds_literal 1) in
@@ -639,7 +637,6 @@ let test_add_liquidity_failures =
          cfmm_add_liquidity
            cfmm
            (Ligo.tez_from_literal "0mutez")
-           (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
            (Ligo.nat_from_literal "2n")
            (Ligo.timestamp_from_seconds_literal 1)
@@ -650,7 +647,6 @@ let test_add_liquidity_failures =
          cfmm_add_liquidity
            cfmm
            (Ligo.tez_from_literal "1mutez")
-           (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
            (Ligo.nat_from_literal "2n")
            (Ligo.timestamp_from_seconds_literal 1)
@@ -661,7 +657,6 @@ let test_add_liquidity_failures =
          cfmm_add_liquidity
            cfmm
            (Ligo.tez_from_literal "1mutez")
-           (Ligo.tez_from_literal "0mutez")
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            (Ligo.nat_from_literal "0n")
            (Ligo.timestamp_from_seconds_literal 1)
@@ -766,9 +761,8 @@ let test_remove_liquidity_failures =
         ~last_level:(Ligo.nat_from_literal "0n") in
     let (liq, _kit, cfmm) =
       cfmm_add_liquidity
-        cfmm
+        { cfmm with tez = Ligo.add_tez_tez cfmm.tez (Ligo.tez_from_literal "10_000_000mutez") }
         (Ligo.tez_from_literal "101_000_000mutez")
-        (Ligo.tez_from_literal "10_000_000mutez")
         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
         (Ligo.nat_from_literal "1n")
         (Ligo.timestamp_from_seconds_literal 1) in
@@ -817,42 +811,6 @@ let test_remove_liquidity_failures =
            (Ligo.timestamp_from_seconds_literal 100)
       )
 
-(* ************************************************************************* *)
-(*                 liquidity when accruals are pending                       *)
-(* ************************************************************************* *)
-
-let pending_tez_deposit_test =
-  "set pending tez deposit" >::
-  (fun _ ->
-     Ligo.Tezos.reset ();
-     let cfmm =
-       cfmm_make_for_test
-         ~tez:(Ligo.tez_from_literal "1000_000_000mutez")
-         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
-         ~lqt:(Ligo.nat_from_literal "1000n")
-         ~kit_in_tez_in_prev_block:one_ratio
-         ~last_level:(Ligo.nat_from_literal "0n") in
-     (* let cfmm = set_pending_accrued_tez cfmm (Ligo.tez_from_literal "1_000_000mutez") in *)
-
-     let (liq, _kit, cfmm) =
-       cfmm_add_liquidity
-         cfmm
-         (Ligo.tez_from_literal "101_000_000mutez")
-         (Ligo.tez_from_literal "10_000_000mutez")
-         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
-         (Ligo.nat_from_literal "1n")
-         (Ligo.timestamp_from_seconds_literal 1) in
-     let (tez, kit, _) =
-       cfmm_remove_liquidity cfmm
-         (Ligo.tez_from_literal "0mutez")
-         liq
-         (Ligo.tez_from_literal "1mutez")
-         (kit_of_mukit (Ligo.nat_from_literal "1n"))
-         (Ligo.timestamp_from_seconds_literal 100) in
-     assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "500_000_000n")) kit;
-     assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "100_090_909mutez") tez;
-  )
-
 let suite =
   "Cfmm tests" >::: [
     (* buy_kit *)
@@ -895,6 +853,4 @@ let suite =
     test_remove_liquidity_respects_min_kit_withdrawn;
     test_remove_liquidity_respects_tez_limit;
     test_remove_liquidity_respects_kit_limit;
-
-    pending_tez_deposit_test;
   ]

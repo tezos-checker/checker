@@ -10,7 +10,6 @@ Ticket-based entitities in checker and their expected value/mechanics:
 |------------------|--------------|----------------------------------|-----|
 | kit              | non-negative | Yes (finitely, zero is useless)  |  1n |
 | liquidity        | non-negative | Yes (finitely, zero is useless)  |  2n |
-| del. auction bid | always one   | No  (zero is useless)            |  3n |
 | liq. auction bid | always one   | No  (zero is useless)            |  4n |
 | permission       | always zero  | Yes (infinitely, always zero)    |  5n |
 *)
@@ -20,9 +19,8 @@ type token_tag = Ligo.nat
 
 let[@inline] kit_token_tag       = Ligo.nat_from_literal "1n"
 let[@inline] lqt_token_tag       = Ligo.nat_from_literal "2n"
-let[@inline] del_auction_bid_tag = Ligo.nat_from_literal "3n"
-let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "4n"
-let[@inline] permission_tag      = Ligo.nat_from_literal "5n"
+let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "3n"
+let[@inline] permission_tag      = Ligo.nat_from_literal "4n"
 
 (* ************************************************************************* *)
 (**                               GENERAL                                    *)
@@ -82,39 +80,6 @@ let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : Ligo.nat =
   if is_valid
   then lqt
   else (Ligo.failwith error_InvalidLiquidityToken : Ligo.nat)
-
-(* ************************************************************************* *)
-(**                    DELEGATION AUCTION BID TICKETS                        *)
-(* ************************************************************************* *)
-
-type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
-[@@deriving show]
-
-type delegation_auction_bid_content = token_tag * delegation_auction_bid
-[@@deriving show]
-
-type delegation_auction_bid_ticket = delegation_auction_bid_content Ligo.ticket
-
-let[@inline] issue_delegation_auction_bid_ticket (bid: delegation_auction_bid) : delegation_auction_bid_ticket =
-  Ligo.Tezos.create_ticket (del_auction_bid_tag, bid) (Ligo.nat_from_literal "1n")
-
-(** Ensure that a delegation auction bid ticket is valid. A delegation bid
-  * ticket is valid if (a) it is issued by checker, (b) its amount is exactly 1
-  * (avoids splitting it), and (c) is tagged appropriately. In OCaml/LIGO the
-  * type ensures (c), but in Michelson this is not strictly necessary
-  * (currently is, but the content might change in the future), hence the
-  * runtime check of the tag. *)
-let[@inline] ensure_valid_delegation_auction_bid_ticket
-    (bid_ticket: delegation_auction_bid_ticket)
-  : delegation_auction_bid =
-  let (issuer, ((tag, bid), amt)), _same_ticket = Ligo.Tezos.read_ticket bid_ticket in
-  let is_valid =
-    issuer = checker_address
-    && tag = del_auction_bid_tag
-    && amt = Ligo.nat_from_literal "1n" in
-  if is_valid
-  then bid
-  else (Ligo.failwith error_InvalidDelegationAuctionTicket : delegation_auction_bid)
 
 (* ************************************************************************* *)
 (**                    LIQUIDATION AUCTION BID TICKETS                       *)

@@ -235,21 +235,6 @@ val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_bid
 val entrypoint_receive_slice_from_burrow : checker * unit -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
-(**                        {1 DELEGATION AUCTIONS}                           *)
-(*****************************************************************************)
-
-(** Bid in current auction. Fail if the auction is closed, or if the bid is
-    too low. If successful, return a token which can be used to either
-    reclaim the tez when outbid, or claim the auction result. *)
-val entrypoint_delegation_auction_place_bid : checker * unit -> (LigoOp.operation list * checker)
-
-(** Claim a win in the last cycle in order to become the delegate for this one. *)
-val entrypoint_delegation_auction_claim_win : checker * (delegation_auction_bid * Ligo.key_hash) -> (LigoOp.operation list * checker)
-
-(** Reclaim a failed bid for the current or a completed auction. *)
-val entrypoint_delegation_auction_reclaim_bid : checker * delegation_auction_bid -> (LigoOp.operation list * checker)
-
-(*****************************************************************************)
 (**                            {1 ORACLE}                                    *)
 (*****************************************************************************)
 
@@ -287,9 +272,6 @@ type checker_params =
   | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
   | ReceiveSliceFromBurrow of unit
-  | DelegationAuctionPlaceBid of unit
-  | DelegationAuctionClaimWin of (delegation_auction_bid_ticket * Ligo.key_hash)
-  | DelegationAuctionReclaimBid of delegation_auction_bid_ticket
   | ReceivePrice of Ligo.nat
 
 (**/**)
@@ -319,8 +301,5 @@ val deticketify_liquidation_auction_place_bid : kit_token -> kit
 val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_receive_slice_from_burrow : unit -> unit
-val deticketify_delegation_auction_place_bid : unit -> unit
-val deticketify_delegation_auction_claim_win : delegation_auction_bid_ticket * Ligo.key_hash -> delegation_auction_bid * Ligo.key_hash
-val deticketify_delegation_auction_reclaim_bid : delegation_auction_bid_ticket -> delegation_auction_bid
 val deticketify_receive_price : Ligo.nat -> Ligo.nat
 (**/**)

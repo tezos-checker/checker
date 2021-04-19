@@ -14,7 +14,6 @@ type 'parameter transaction_value = (* GADT *)
   | AddressTransactionValue : address -> address transaction_value
   | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
   | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
-  | DaBidTransactionValue : delegation_auction_bid_content ticket -> delegation_auction_bid_content ticket transaction_value
   | LaBidTransactionValue : liquidation_auction_bid_content ticket -> liquidation_auction_bid_content ticket transaction_value
   | PermTransactionValue : permission_content ticket -> permission_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
@@ -35,7 +34,6 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | AddressTransactionValue a -> string_of_address a
   | KitTransactionValue c -> show_ticket pp_kit_token_content c
   | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
-  | DaBidTransactionValue c -> show_ticket pp_delegation_auction_bid_content c
   | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_content c
   | PermTransactionValue c -> show_ticket pp_permission_content c
   | TezAddressTransactionValue ta -> show_tez_and_address ta
@@ -78,7 +76,6 @@ module Tezos = struct
   let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
   let kit_transaction value tez contract = Transaction (KitTransactionValue value, tez, contract)
   let lqt_transaction value tez contract = Transaction (LqtTransactionValue value, tez, contract)
-  let da_bid_transaction value tez contract = Transaction (DaBidTransactionValue value, tez, contract)
   let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
   let perm_transaction value tez contract = Transaction (PermTransactionValue value, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
