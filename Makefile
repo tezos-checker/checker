@@ -16,7 +16,7 @@ generate-ligo: ocaml-src
 	sh ./scripts/generate-ligo.sh
 
 build-ligo: generate-ligo
-	sh ./scripts/compile-ligo.sh
+	ruby ./scripts/compile-ligo.rb
 
 test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh

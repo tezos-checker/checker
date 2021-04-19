@@ -46,7 +46,7 @@ deploy_chunks =
     .flatten
     .reduce([[]]) { |memo, curr|
        last_size = memo.last.map(&:length).sum
-       if last_size + curr.length < 16000*2
+       if last_size + curr.length < 15000*2
          memo.last.append(curr)
        else
          memo.append([curr])
@@ -55,7 +55,7 @@ deploy_chunks =
     }
 
 deploy_chunks.each_with_index do |chunk, i|
-  puts "Deploying chunk #{i+1} / #{deploy_chunks.length}..."
+  puts "Deploying chunk #{i+1} of #{deploy_chunks.length}..."
 
   transfers = chunk.map
     .map { |arg|
