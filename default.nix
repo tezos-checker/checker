@@ -38,13 +38,16 @@ let
      zarith
      odoc
   ];
+
+  tezosClient = (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client;
+
 in
 {
   michelson =
     let pkgs = pkgsLinux;
     in pkgs.stdenv.mkDerivation {
          name = "huxian-michelson";
-         buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby perl bc ]) ++ ocamlDeps pkgs;
+         buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby perl tezosClient ]) ++ ocamlDeps pkgs;
          src =
            let filter =
              let ignored = gitignoreNix.gitignoreFilter ./.;
@@ -55,6 +58,7 @@ in
                 name = "huxian-source";
               };
          buildPhase = ''
+           export HOME=$(mktemp -d)
            make build-ligo
          '';
 
@@ -76,9 +80,7 @@ in
            # ligo does not compile on macos, also we don't want to
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux)
-             [ ligoBinary
-               (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client
-             ]
+             [ ligoBinary tezosClient ]
            ++ [ pkgs.niv pkgs.perl pkgs.ruby pkgs.bc ]
            ++ ocamlDeps pkgs;
 
