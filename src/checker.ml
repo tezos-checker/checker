@@ -1,4 +1,5 @@
 open Ratio
+open Ctez
 open Kit
 open Avl
 open Permission
@@ -496,7 +497,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
 
 let entrypoint_buy_kit (state, p: checker * (kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let min_kit_expected, deadline = p in
-  let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm !Ligo.Tezos.amount min_kit_expected deadline in
+  let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) min_kit_expected deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
@@ -506,9 +507,9 @@ let entrypoint_buy_kit (state, p: checker * (kit * Ligo.timestamp)) : LigoOp.ope
 let entrypoint_sell_kit (state, p: checker * (kit * Ligo.tez * Ligo.timestamp)) : LigoOp.operation list * checker =
   let kit, min_tez_expected, deadline = p in
   let _ = ensure_no_tez_given () in
-  let (tez, updated_cfmm) = cfmm_sell_kit state.cfmm !Ligo.Tezos.amount kit min_tez_expected deadline in
+  let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) kit (ctez_from_tez (* FIXME *) min_tez_expected) deadline in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.unit_transaction () tez c)
+    | Some c -> (LigoOp.Tezos.unit_transaction () (tez_from_ctez (* FIXME *) ctez) c)
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
   let updated_state = {state with cfmm = updated_cfmm} in
   ([op], updated_state)
@@ -516,7 +517,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * Ligo.tez * Ligo.timestamp)) 
 let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
   let max_kit_deposited, min_lqt_minted, deadline = p in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
-    cfmm_add_liquidity state.cfmm !Ligo.Tezos.amount max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let op1 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -530,11 +531,11 @@ let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timesta
 let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
-  let (tez, kit_tokens, updated_cfmm) =
-    cfmm_remove_liquidity state.cfmm !Ligo.Tezos.amount lqt_burned min_tez_withdrawn min_kit_withdrawn deadline in
+  let (ctez, kit_tokens, updated_cfmm) =
+    cfmm_remove_liquidity state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) lqt_burned (ctez_from_tez (* FIXME *) min_tez_withdrawn) min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let op1 = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit LigoOp.contract option) with
-    | Some c -> (LigoOp.Tezos.unit_transaction () tez c)
+    | Some c -> (LigoOp.Tezos.unit_transaction () (tez_from_ctez (* FIXME *) ctez) c)
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
   let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
@@ -658,8 +659,10 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
 
     (* 2: Update the system parameters *)
     let total_accrual_to_cfmm, updated_parameters =
-      parameters_touch index (cfmm_kit_in_tez_in_prev_block state.cfmm) state.parameters
+      let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state.cfmm) in (* FIXME: times ctez_in_tez *)
+      parameters_touch index kit_in_tez_in_prev_block state.parameters
     in
+
     (* 3: Add accrued burrowing fees to the cfmm sub-contract *)
     let updated_cfmm = cfmm_add_accrued_kit state.cfmm total_accrual_to_cfmm in
 

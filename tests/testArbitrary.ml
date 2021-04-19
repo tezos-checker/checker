@@ -1,8 +1,11 @@
+open Ctez
 open Kit
 
 let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- max_int)
 
 let arb_positive_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(1 -- max_int)
+
+let arb_positive_ctez = QCheck.map (fun x -> ctez_of_muctez (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
 
 let arb_address = QCheck.map Ligo.address_of_string QCheck.(string_of_size (Gen.return 36))
 

@@ -1,3 +1,4 @@
+open Ctez
 open Kit
 open CfmmTypes
 
@@ -26,32 +27,32 @@ open CfmmTypes
  * - Ensure that the balances and prices in cfmm do not go too far off.
 *)
 
-(** Compute the price of kit in tez (ratio of tez and kit in the cfmm
+(** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date
-    kit_in_tez, because it is a little harder to manipulate. *)
-val cfmm_kit_in_tez_in_prev_block : cfmm -> Ratio.ratio
+    kit_in_ctez, because it is a little harder to manipulate. *)
+val cfmm_kit_in_ctez_in_prev_block : cfmm -> Ratio.ratio
 
-(** Buy some kit from the cfmm contract by providing some tez. Fail if the
+(** Buy some kit from the cfmm contract by providing some ctez. Fail if the
     desired amount of kit cannot be bought or if the deadline has passed. *)
 val cfmm_buy_kit :
   cfmm ->
-  Ligo.tez (* amount *) ->
+  ctez (* amount *) ->
   kit (* min kit expected *) ->
   Ligo.timestamp (* deadline *) ->
   (kit * cfmm)
 
-(** Sell some kit to the cfmm contract. Fail if the desired amount of tez
+(** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
     cannot be bought or if the deadline has passed. *)
 val cfmm_sell_kit :
   cfmm ->
-  Ligo.tez (* amount: must be zero *) ->
+  ctez (* amount: must be zero *) ->
   kit ->
-  Ligo.tez (* min tez expected *) ->
+  ctez (* min ctez expected *) ->
   Ligo.timestamp (* deadline *) ->
-  (Ligo.tez * cfmm)
+  (ctez * cfmm)
 
-(** Buy some liquidity from the cfmm contract, by giving it some tez and
+(** Buy some liquidity from the cfmm contract, by giving it some ctez and
     some kit. If the given amounts does not have the right ratio, we
     liquidate as much as we can with the right ratio, and return the
     leftovers, along with the liquidity tokens. *)
@@ -68,28 +69,25 @@ val cfmm_sell_kit :
 *)
 val cfmm_add_liquidity :
   cfmm ->
-  Ligo.tez (* amount *) ->
+  ctez (* amount *) ->
   kit (* max kit deposited *) ->
   Ligo.nat (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
   (Ligo.nat * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
-    succeeds, but might leave the contract without tez and kit if everybody
+    succeeds, but might leave the contract without ctez and kit if everybody
     sells their liquidity. I think it is unlikely to happen, since the last
     liquidity holders wouldn't want to lose the burrow fees.
 *)
 val cfmm_remove_liquidity :
   cfmm ->
-  Ligo.tez (* amount: should be zero *) ->
+  ctez (* amount: should be zero *) ->
   Ligo.nat (* lqt burned *) ->
-  Ligo.tez (* min tez withdrawn *) ->
+  ctez (* min ctez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->
-  (Ligo.tez * kit * cfmm)
+  (ctez * kit * cfmm)
 
 (** Add accrued burrowing fees to the cfmm contract. *)
 val cfmm_add_accrued_kit : cfmm -> kit -> cfmm
-
-(** Add accrued tez to the cfmm contract. *)
-val cfmm_add_accrued_tez : cfmm -> Ligo.tez -> cfmm
