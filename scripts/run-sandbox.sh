@@ -14,6 +14,7 @@ docker run -i -t --rm \
   tqtezos/flextesa:20210316 \
   edobox info
 docker run -i -t --rm \
+  -e block_time=1 \
   --name tezos-sandbox \
   -p 20000:20000 \
   tqtezos/flextesa:20210316 \

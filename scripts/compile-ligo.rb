@@ -4,12 +4,16 @@ require 'etc'
 require 'json'
 require 'open3'
 require 'enumerator'
+require 'ostruct'
 
 LIGO_DIR="#{__dir__}/../generated/ligo"
 CONTRACT_TARGET="#{__dir__}/../generated/michelson/main.tz"
 FUNCTIONS_TARGET="#{__dir__}/../generated/michelson/functions.json"
 
 MAIN_FILE="#{LIGO_DIR}/main.mligo"
+
+PROTOCOL = "PsFLoren"
+protocol_arg = ["--protocol", PROTOCOL]
 
 # this address is created with a key of 20 bytes of zeroes:
 #
@@ -30,16 +34,12 @@ exit_status.success? or raise "compile-contract failed:\n#{compiled_contract}"
 
 # Convert the contract to binary to measure the size.
 # (we don't want to generate it as binary because it's nice to have it human-readable)
-output, err, status = Open3.capture3("tezos-client", "convert", "script", compiled_contract, "from", "michelson", "to", "binary")
-status.success? or raise "tezos-client convert failed:\n#{output}, #{err}"
+output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_contract, "from", "michelson", "to", "binary")
+status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
 puts "  ~#{output.length / 2} bytes"
 
 puts "Compiling the initial storage and entrypoints."
-entrypoints = File.readlines("#{LIGO_DIR}/checkerEntrypoints.mligo").map do |line|
-  case line
-  when /let lazy_id_(\S+)/ then $1
-  end
-end.compact
+entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo").scan(/let lazy_id_(\S+)/).flatten
 
 # Extract the initial storage and entrypoint related data
 entrypoints_scripts =
@@ -54,17 +54,17 @@ output = JSON.parse(output)
 
 # we have to convert the initial storage back to michelson format
 initial_storage = JSON.generate(output["args"][0])
-initial_storage, err, status = Open3.capture3("tezos-client", "convert", "data", initial_storage, "from", "json", "to", "michelson")
-status.success? or raise "tezos-client convert failed:\n#{output}, #{err}"
+initial_storage, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", initial_storage, "from", "json", "to", "michelson")
+status.success? or raise "tezos-client convert to michelson failed:\n#{initial_storage}, #{err}"
 initial_storage.strip!
 
 packed_functions =
   output["args"][1]
     .map { |p|
-       name = p["args"][0]["args"][0]["string"]
-       id = p["args"][0]["args"][1]["int"]
-       bytes = p["args"][1]["bytes"]
-       { :name => name, :id => id, :bytes => bytes }
+      name = p["args"][0]["args"][0]["string"]
+      fn_id = p["args"][0]["args"][1]["int"]
+      bytes = p["args"][1]["bytes"]
+      { name: name, fn_id: fn_id, bytes: bytes }
     }
 
 raise "Missing entrypoint data" unless packed_functions.length == entrypoints.length
@@ -73,15 +73,15 @@ raise "Missing entrypoint data" unless packed_functions.length == entrypoints.le
 lazy_functions = packed_functions.map do |i|
   bytes = i[:bytes]
   size = bytes.length / 2
-  chunks = bytes.chars.each_slice(32000).map { |c| "#{c.join("")}" }
+  chunks = bytes.chars.each_slice(32000).map(&:join)
   puts "#{i[:name].rjust(36)}: ~#{size} bytes, #{chunks.length} chunks"
-  { :name => i[:name], :id => i[:id], :chunks => chunks }
+  { name: i[:name], fn_id: i[:fn_id], chunks: chunks }
 end
 
 functions_json = {
-  :lazy_functions => lazy_functions,
-  :initial_storage => initial_storage,
-  :initial_storage_address_placeholder => ADDRESS_PLACEHOLDER
+  lazy_functions: lazy_functions,
+  initial_storage: initial_storage,
+  initial_storage_address_placeholder: ADDRESS_PLACEHOLDER
 }
 
 functions_json = JSON.pretty_generate(functions_json)
