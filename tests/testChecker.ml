@@ -687,36 +687,37 @@ let suite =
            lqt = Ligo.nat_from_literal "2n";
          };
        } in
-       let min_kit_expected = Ligo.nat_from_literal "1n" in
-       let min_tez_expected = Ligo.tez_from_literal "1mutez" in
+       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = Tickets.issue_liquidity_tokens (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_tez_expected, kit_of_mukit min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
-       let kit, tez = match ops with
+       let ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
+       let kit, ctez = match ops with
          | [
-           Transaction (UnitTransactionValue, tez, _);
+           Transaction (FA12TransferTransactionValue transfer, _, _);
            Transaction (KitTransactionValue ticket, _, _);
-         ] -> let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in (kit, tez)
-         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _)); Transaction (UnitTransactionValue, tez, _) ] but got " ^ show_operation_list ops)
+           ] -> let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in
+                let ctez = transfer.value in (* FIXME: Check the from and to as well? *)
+                (kit, ctez)
+         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
-
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
-       assert_equal (Ligo.tez_from_literal "1mutez") tez ~printer:Ligo.string_of_tez
+       assert_equal (Ligo.nat_from_literal "1n") ctez ~printer:Ligo.string_of_nat;
     );
 
     ("remove_liquidity - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let min_kit_expected = Ligo.nat_from_literal "1n" in
-       let min_tez_expected = Ligo.tez_from_literal "1mutez" in
+       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = Tickets.issue_liquidity_tokens (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_remove_liquidity (initial_checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_tez_expected, kit_of_mukit min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_remove_liquidity (initial_checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 
