@@ -4,7 +4,7 @@
 
 The purpose of this document is to outline the current testing approaches which
 have been used in the project. As of the writing of this document, testing is
-non-exhaustive but does cover a [sizeable portion](#code-coverage) of the
+non-exhaustive but does cover approximately 75% of the
 codebase.
 
 All tests are written in OCaml (OUnit and QCheck) and are designed to be
@@ -12,7 +12,9 @@ executed using `dune` (or via the repo `Makefile`) since there is not a unit
 testing framework for Ligo yet. All tests reside under the [tests/](../tests)
 directory and are primarily organized by the corresponding `src` module which
 they test. The exceptions to this are `testLiquidation.ml`, which centralizes
-testing logic for calculations related to burrow liquidation, and `testLiquidationAuction.ml` which contains tests for the general logic of liquidation auctions.
+testing logic for calculations related to burrow liquidation, and
+`testLiquidationAuction.ml` which contains tests for the general logic of
+liquidation auctions.
 
 So far, testing has focused on the following areas:
   1. Unit tests for key business logic
@@ -34,8 +36,7 @@ Areas which remain to be tested include:
      yet.
      1. We will want these to also test the inter-contract dynamics between
         Checker and the other contracts which it relies on, namely the
-        individual contracts for burrows as well as the oracle (once it is
-        implemented)
+        individual contracts for burrows as well as the price oracle.
 
 ## Unit tests
 
@@ -75,7 +76,7 @@ Another challenge in writing tests for Checker is that portions of the codebase
 make assumptions about user behavior. For example, the calculation of the
 imbalance index assumes that Checker would not remain untouched for 20 years.
 These types of assumptions force us to include additional constraints on the
-bounds of randomized test inputs to ensure they match our expectations of user
+bounds of randomized test inputs to ensure that they match our expectations of user
 behavior and add additional cases to check for failure when these expectations
 are not met.
 
@@ -108,37 +109,3 @@ part of our test suite. When interpreting coverage reports, it is important to
 note that sections of the codebase are written for compatibility with OCaml /
 testing purposes and are removed when transpiling to Ligo (Denoted by a `(*
 BEGIN_OCAML *) ... (* END_OCAML *)`)
-
-As of the writing of this document, coverage is as follows:
-
-```
-$ make test-coverage
-
-Coverage: 1976/2632 (75.08%)
-
-83%  src/avl.ml
-88%  src/burrow.ml
-0%   src/burrowTypes.ml
-99%  src/cfmm.ml
-100% src/cfmmTypes.ml
-67%  src/checker.ml
-100% src/checkerTypes.ml
-84%  src/common.ml
-100% src/constants.ml
-93%  src/delegationAuction.ml
-16%  src/delegationAuctionTypes.ml
-100% src/error.ml
-98%  src/fixedPoint.ml
-90%  src/kit.ml
-71%  src/ligo.ml
-72%  src/ligoOp.ml
-63%  src/liquidationAuction.ml
-27%  src/liquidationAuctionPrimitiveTypes.ml
-11%  src/liquidationAuctionTypes.ml
-95%  src/mem.ml
-60%  src/parameters.ml
-38%  src/permission.ml
-50%  src/ptr.ml
-74%  src/ratio.ml
-63%  src/tickets.ml
-```
