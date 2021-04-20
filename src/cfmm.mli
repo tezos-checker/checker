@@ -46,7 +46,6 @@ val cfmm_buy_kit :
     cannot be bought or if the deadline has passed. *)
 val cfmm_sell_kit :
   cfmm ->
-  ctez (* amount: must be zero *) ->
   kit ->
   ctez (* min ctez expected *) ->
   Ligo.timestamp (* deadline *) ->
@@ -82,7 +81,6 @@ val cfmm_add_liquidity :
 *)
 val cfmm_remove_liquidity :
   cfmm ->
-  ctez (* amount: should be zero *) ->
   Ligo.nat (* lqt burned *) ->
   ctez (* min ctez withdrawn *) ->
   kit (* min kit withdrawn *) ->
