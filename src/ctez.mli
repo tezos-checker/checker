@@ -24,9 +24,7 @@ val ctez_one : ctez
 (* Conversions to/from other types. *)
 val ctez_of_muctez : Ligo.nat -> ctez
 val ctez_to_muctez_int : ctez -> Ligo.int
-(*
 val ctez_to_muctez_nat : ctez -> Ligo.nat
-*)
 
 val ctez_of_fraction_ceil : Ligo.int -> Ligo.int -> ctez
 val ctez_of_fraction_floor : Ligo.int -> Ligo.int -> ctez

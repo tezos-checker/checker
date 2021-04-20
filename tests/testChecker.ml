@@ -272,12 +272,12 @@ let suite =
         ~name:"test_buy_kit_respects_min_kit_expected"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
-      let ops, _ = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
       let bought_kit = match ops with
-        | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
+        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
       bought_kit >= kit_to_mukit_nat min_kit_expected
@@ -291,12 +291,12 @@ let suite =
         ~name:"test_buy_kit_preserves_kit"
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
-      @@ fun (cfmm, tez_amount, min_kit_expected, deadline) ->
+      @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
-      let ops, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let ops, new_checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
       let bought_kit = match ops with
-        | [ Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
+        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
         | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
       in
       checker.cfmm.kit = kit_add new_checker.cfmm.kit (kit_of_mukit bought_kit)
@@ -312,8 +312,8 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez ctez_amount);
-      let _, new_checker = Checker.entrypoint_buy_kit (checker, (min_kit_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let _, new_checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
       ctez_add checker.cfmm.ctez ctez_amount = new_checker.cfmm.ctez
     );
 
@@ -599,13 +599,13 @@ let suite =
       (* Adjust transaction by a random amount of extra tez *)
       let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:tez_provided;
-      let ops, _ = Checker.entrypoint_buy_kit (checker, (min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
       let (_, (_, kit)), _ = match ops with
-        | [ Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
-        | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
+        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
+        | _ -> failwith ("Expected [_; Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
       in
-      (* FIXME: This test only rarely evalautes the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
+      (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
        * number of QCheck samples may improve this.
       *)
       Ligo.geq_nat_nat kit (kit_to_mukit_nat min_expected_kit)
@@ -624,11 +624,11 @@ let suite =
          };
        } in
 
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, _ = Checker.entrypoint_buy_kit (checker, (kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
        let (_, (_, kit)), _ = match ops with
-         | [ Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
-         | _ -> failwith ("Expected [Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
+         | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
+         | _ -> failwith ("Expected [_; Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
        in
 
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat
