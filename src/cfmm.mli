@@ -27,13 +27,13 @@ open CfmmTypes
 *)
 
 (** Compute the price of kit in tez (ratio of tez and kit in the cfmm
-  * contract), as it was at the end of the last block. This is to be used when
-  * required for the calculation of the drift derivative instead of up-to-date
-  * kit_in_tez, because it is a little harder to manipulate. *)
+    contract), as it was at the end of the last block. This is to be used when
+    required for the calculation of the drift derivative instead of up-to-date
+    kit_in_tez, because it is a little harder to manipulate. *)
 val cfmm_kit_in_tez_in_prev_block : cfmm -> Ratio.ratio
 
 (** Buy some kit from the cfmm contract by providing some tez. Fail if the
-  * desired amount of kit cannot be bought or if the deadline has passed. *)
+    desired amount of kit cannot be bought or if the deadline has passed. *)
 val cfmm_buy_kit :
   cfmm ->
   Ligo.tez (* amount *) ->
@@ -42,7 +42,7 @@ val cfmm_buy_kit :
   (kit * cfmm)
 
 (** Sell some kit to the cfmm contract. Fail if the desired amount of tez
-  * cannot be bought or if the deadline has passed. *)
+    cannot be bought or if the deadline has passed. *)
 val cfmm_sell_kit :
   cfmm ->
   Ligo.tez (* amount: must be zero *) ->
@@ -52,9 +52,9 @@ val cfmm_sell_kit :
   (Ligo.tez * cfmm)
 
 (** Buy some liquidity from the cfmm contract, by giving it some tez and
-  * some kit. If the given amounts does not have the right ratio, we
-  * liquidate as much as we can with the right ratio, and return the
-  * leftovers, along with the liquidity tokens. *)
+    some kit. If the given amounts does not have the right ratio, we
+    liquidate as much as we can with the right ratio, and return the
+    leftovers, along with the liquidity tokens. *)
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
  * same proportion as the contract la / lb = a / b . Assuming there are n
@@ -77,9 +77,9 @@ val cfmm_add_liquidity :
   (Ligo.nat * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
-  * succeeds, but might leave the contract without tez and kit if everybody
-  * sells their liquidity. I think it is unlikely to happen, since the last
-  * liquidity holders wouldn't want to lose the burrow fees.
+    succeeds, but might leave the contract without tez and kit if everybody
+    sells their liquidity. I think it is unlikely to happen, since the last
+    liquidity holders wouldn't want to lose the burrow fees.
 *)
 val cfmm_remove_liquidity :
   cfmm ->

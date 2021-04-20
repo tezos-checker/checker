@@ -198,7 +198,7 @@ let cfmm_add_liquidity
  * without tez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
-(* TODO: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
+(* NOTE: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let cfmm_remove_liquidity
     (cfmm: cfmm)
     (tez_amount: Ligo.tez)
@@ -219,7 +219,6 @@ let cfmm_remove_liquidity
     (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (Ligo.tez * kit * cfmm))
   else if min_kit_withdrawn = kit_zero then
     (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (Ligo.tez * kit * cfmm))
-    (* TODO: Check whether we have more edge cases to give a failure for. *)
   else
     let _ = assert (lqt_burned <= cfmm.lqt) in (* the ticket mechanism should enforce this *)
 

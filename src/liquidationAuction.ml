@@ -191,9 +191,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
     (* split next thing *)
     let (storage, next) = avl_pop_front storage queued_slices in
     match next with
-    | Some slice_ptr_and_slice ->
-      let slice_ptr, slice = slice_ptr_and_slice in
-
+    | Some (_slice_ptr, slice) ->
       (* 1: split the contents *)
       let (part1_contents, part2_contents) =
         split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice.contents in
@@ -248,7 +246,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
             storage
             older_ptr
             (fun (older: liquidation_slice) ->
-               assert (older.younger = Some slice_ptr);
+               assert (older.younger = Some _slice_ptr);
                { older with younger = Some part1_leaf_ptr }
             ) in
 
@@ -263,7 +261,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
             storage
             younger_ptr
             (fun (younger: liquidation_slice) ->
-               assert (younger.older = Some slice_ptr);
+               assert (younger.older = Some _slice_ptr);
                { younger with older = Some part2_leaf_ptr }
             ) in
 
@@ -278,19 +276,19 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
           { oldest_slice =
               (match slice.older with
                | None ->
-                 assert (old_slices.oldest_slice = slice_ptr);
+                 assert (old_slices.oldest_slice = _slice_ptr);
                  part1_leaf_ptr (* slice was the oldest, now part1 is. *)
                | Some _ ->
-                 assert (old_slices.oldest_slice <> slice_ptr);
+                 assert (old_slices.oldest_slice <> _slice_ptr);
                  old_slices.oldest_slice (* there was another; it remains as it was *)
               );
             youngest_slice =
               (match slice.younger with
                | None ->
-                 assert (old_slices.youngest_slice = slice_ptr);
+                 assert (old_slices.youngest_slice = _slice_ptr);
                  part2_leaf_ptr (* slice was the youngest, now part2 is. *)
                | Some _ ->
-                 assert (old_slices.youngest_slice <> slice_ptr);
+                 assert (old_slices.youngest_slice <> _slice_ptr);
                  old_slices.youngest_slice (* there was another; it remains as it was *)
               );
           } in
@@ -357,16 +355,14 @@ let start_liquidation_auction_if_possible
   * a fixed factor. *)
 let liquidation_auction_current_auction_minimum_bid (auction: current_liquidation_auction) : kit =
   match auction.state with
-  | Descending params ->
-    let (start_value, start_time) = params in
+  | Descending (start_value, start_time) ->
     let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
     let decay =
       match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
       | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
       | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
     kit_scale start_value decay
-  | Ascending params ->
-    let (leading_bid, _timestamp, _level) = params in
+  | Ascending (leading_bid, _timestamp, _level) ->
     let bid_improvement_factor = fixedpoint_of_ratio_floor bid_improvement_factor in
     kit_scale leading_bid.kit (fixedpoint_add fixedpoint_one bid_improvement_factor)
 
@@ -380,8 +376,7 @@ let is_liquidation_auction_complete
   match auction_state with
   | Descending _ ->
     (None: bid option)
-  | Ascending params ->
-    let (b, t, h) = params in
+  | Ascending (b, t, h) ->
     if Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t
        > max_bid_interval_in_seconds
     && Ligo.gt_int_int
@@ -410,8 +405,8 @@ let complete_liquidation_auction_if_possible
               avl_modify_root_data
                 auctions.avl_storage
                 curr.contents
-                (fun (prev: auction_outcome option) ->
-                   assert (Option.is_none prev);
+                (fun (_prev: auction_outcome option) ->
+                   assert (Option.is_none _prev);
                    Some outcome) in
             (storage, {youngest=curr.contents; oldest=curr.contents})
           | Some params ->
@@ -426,8 +421,8 @@ let complete_liquidation_auction_if_possible
               avl_modify_root_data
                 auctions.avl_storage
                 curr.contents
-                (fun (prev: auction_outcome option) ->
-                   assert (Option.is_none prev);
+                (fun (_prev: auction_outcome option) ->
+                   assert (Option.is_none _prev);
                    Some outcome) in
             let storage =
               avl_modify_root_data
@@ -490,17 +485,12 @@ let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation
     | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
     | Some s -> s in
   let burrow_slices =
-    match leaf.younger with
-    | None -> begin
-        match leaf.older with
-        | None -> (* leaf *) (None: burrow_liquidation_slices option)
-        | Some older -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
-      end
-    | Some younger -> begin
-        match leaf.older with
-        | None -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
-        | Some _ -> (* ... - leaf - ... *) Some burrow_slices
-      end in
+    match (leaf.older, leaf.younger) with
+    | (None, None) -> (* leaf *) (None: burrow_liquidation_slices option)
+    | (None, Some younger) -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
+    | (Some older, None) -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
+    | (Some _, Some _) -> (* ... - leaf - ... *) Some burrow_slices
+  in
 
   (* fixup older and younger pointers *)
   let avl_storage = (

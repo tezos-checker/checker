@@ -11,8 +11,8 @@ type specific_rights =
   }
 
 type rights =
-  | Admin
-  | User of specific_rights
+  | AdminRights
+  | LimitedRights of specific_rights
 
 type delegation_auction_bid = { bidder: Ligo.address; cycle: Ligo.nat; amount: Ligo.tez }
 

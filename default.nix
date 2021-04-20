@@ -9,6 +9,8 @@ let
   gitignoreNix = import sources."gitignore.nix" { lib = pkgsHost.lib; };
 
   ligoBinary =
+    # This is a precompiled file, which is the ligo revision `0b2a8d2e3` compiled
+    # with the patch ./patches/ligo_michelson_maximum_type_size.patch.
     pkgsLinux.runCommand "ligo-binary" { buildInputs = [ pkgsLinux.unzip ]; } ''
       mkdir -p $out/bin
       ln -s ${./bin/ligo} $out/bin/ligo
@@ -77,7 +79,7 @@ in
              [ ligoBinary
                (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client
              ]
-           ++ [ pkgs.niv pkgs.perl pkgs.ruby ]
+           ++ [ pkgs.niv pkgs.perl pkgs.ruby pkgs.bc ]
            ++ ocamlDeps pkgs;
 
        };

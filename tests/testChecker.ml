@@ -466,7 +466,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, Admin))
+            Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, AdminRights))
          )
     );
 
@@ -479,7 +479,7 @@ let suite =
 
        (* Issue a new permissions ticket *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, Admin)) in
+       let ops, _ = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, AdminRights)) in
        let new_ticket  = match ops with
          | [ Transaction (PermTransactionValue ticket, _, _) ;
            ] -> ticket
@@ -493,7 +493,7 @@ let suite =
        assert_bool
          "Created ticket did not have admin permissions"
          (match ensure_matching_permission burrow_id (burrow_permission_version burrow) (ensure_valid_permission new_ticket) with
-          | Admin -> true
+          | AdminRights -> true
           | _ -> false
          )
     );
@@ -515,7 +515,7 @@ let suite =
          set_delegate= false;
          cancel_liquidation= false;
        } in
-       let ops, checker = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, User user_rights)) in
+       let ops, checker = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (admin_ticket, burrow_id, LimitedRights user_rights)) in
        let new_ticket  = match ops with
          | [ Transaction (PermTransactionValue ticket, _, _) ;
            ] -> ticket
@@ -529,8 +529,8 @@ let suite =
        assert_bool
          "Created ticket did not have specified user permissions"
          (match ensure_matching_permission burrow_id (burrow_permission_version burrow) (ensure_valid_permission new_ticket) with
-          | Admin -> false
-          | User (new_ticket_rights) -> new_ticket_rights = user_rights
+          | AdminRights -> false
+          | LimitedRights (new_ticket_rights) -> new_ticket_rights = user_rights
          )
     );
 
@@ -569,7 +569,7 @@ let suite =
          set_delegate= false;
          cancel_liquidation= false;
        } in
-       let ops, checker = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (original_admin_ticket, burrow_id, User user_rights)) in
+       let ops, checker = Checker.entrypoint_make_permission (checker, Checker.deticketify_make_permission (original_admin_ticket, burrow_id, LimitedRights user_rights)) in
        let user_ticket  = match ops with
          | [ Transaction (PermTransactionValue ticket, _, _) ;
            ] -> ticket
@@ -611,7 +611,7 @@ let suite =
        assert_bool
          "Created ticket did not have admin permissions"
          (match ensure_matching_permission burrow_id (burrow_permission_version burrow) (ensure_valid_permission new_ticket) with
-          | Admin -> true
+          | AdminRights -> true
           | _ -> false
          )
     );

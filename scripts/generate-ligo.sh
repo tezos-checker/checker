@@ -81,10 +81,6 @@ for name in "${inputs[@]}"; do
     sed 's/^ *assert_burrow_invariants .*//g' |
     sed 's/^ *assert_checker_invariants .*//g' |
 
-    # replace "_" with ignored
-    sed 's/ _ / ignored /g' |
-    sed -E 's/([^a-z0-9])_([a-z0-9]+)/\1ignored_\2/g' |
-
     # replace 'int_from_literal' with its argument and replace
     # the double quotes with parentheses (for the potential sign)
     sed -E 's/int_from_literal \"([+-])?([0-9_]+)\"/(\1\2)/g' |
@@ -101,18 +97,8 @@ for name in "${inputs[@]}"; do
     # remove the dereferences from Ligo.Tezos values
     sed -E 's/!(Tezos\.)/\1/g' |
 
-    # forget separate kinds of transfers
-    sed -E 's/Tezos\.unit_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.address_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.kit_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.lqt_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.da_bid_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.la_bid_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.perm_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.tez_address_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.opt_key_hash_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.tez_transaction/Tezos\.transaction/g' |
-    sed -E 's/Tezos\.nat_contract_transaction/Tezos\.transaction/g' |
+    # map specialized 'Tezos.*_transaction' functions to the generic one
+    sed -E 's/Tezos\.([a-z_A-Z]+)_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done

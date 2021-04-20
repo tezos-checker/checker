@@ -82,21 +82,18 @@ let[@inline] node_parent (n: node) : ptr =
 let[@inline] node_branch (n: node) : branch =
   match n with
   | Branch branch -> branch
-  | Root _ -> (failwith "node_branch found Root" : branch)
-  | Leaf _ -> (failwith "node_branch found Leaf" : branch)
+  | _ -> (failwith "node_branch found unexpected node" : branch)
 
 let[@inline] node_leaf (n: node) : leaf =
   match n with
   | Leaf leaf -> leaf
-  | Root _ -> (failwith "node_leaf found Root" : leaf)
-  | Branch _ -> (failwith "node_leaf found Branch" : leaf)
+  | _ -> (failwith "node_leaf found unexpected_node" : leaf)
 
 let deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
   let p = match p with AVLPtr p -> p in
   match mem_get mem p with
   | Root p -> p
-  | Branch _ -> (failwith "deref_avl_ptr found Branch" : ptr option * auction_outcome option)
-  | Leaf _ -> (failwith "deref_avl_ptr found Leaf" : ptr option * auction_outcome option)
+  | _ -> (failwith "deref_avl_ptr found unexpected_node" : ptr option * auction_outcome option)
 
 let[@inline] deref_leaf_ptr (mem: mem) (p: leaf_ptr): leaf =
   match p with LeafPtr p -> node_leaf (mem_get mem p)
@@ -116,11 +113,9 @@ let[@inline] node_set_parent (p: ptr) (n: node) : node =
 let update_matching_child
     (mem: mem) (ptr: ptr) (from_ptr: ptr) (to_ptr: ptr) : mem =
   match mem_get mem ptr with
-  | Root r ->
-    (match r with
-       (b, r) ->
-       assert (b = Some from_ptr);
-       mem_set mem ptr (Root ((Some to_ptr), r)))
+  | Root (_b, r) ->
+    assert (_b = Some from_ptr);
+    mem_set mem ptr (Root ((Some to_ptr), r))
   | Leaf _ ->
     (failwith "update_matching_child: got a leaf" : mem)
   | Branch old_branch ->
@@ -188,16 +183,14 @@ let avl_mk_empty (mem: mem) (r: auction_outcome option): mem * avl_ptr =
 let ref_rotate_left (mem: mem) (curr_ptr: ptr) : mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
-    | Root _ -> (failwith "rotate_left: curr_ptr is Root" : branch)
-    | Leaf _ -> (failwith "rotate_left: curr_ptr is Leaf" : branch)
-    | Branch curr -> curr in
+    | Branch curr -> curr
+    | _ -> (failwith "rotate_left: curr_ptr is not a branch" : branch) in
 
   let right_ptr = curr.right in
   let right =
     match mem_get mem right_ptr with
-    | Root _ -> (failwith "rotate_left: right_ptr is Root" : branch)
-    | Leaf _ -> (failwith "rotate_left: right_ptr is Leaf" : branch)
-    | Branch right -> right in
+    | Branch right -> right
+    | _ -> (failwith "rotate_left: right_ptr is not a branch" : branch) in
 
   let right_left_ptr = right.left in
 
@@ -235,16 +228,14 @@ let ref_rotate_left (mem: mem) (curr_ptr: ptr) : mem * ptr =
 let ref_rotate_right (mem: mem) (curr_ptr: ptr) : mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
-    | Root _ -> (failwith "rotate_right: curr_ptr is Root" : branch)
-    | Leaf _ -> (failwith "rotate_right: curr_ptr is Leaf" : branch)
-    | Branch curr -> curr in
+    | Branch curr -> curr
+    | _ -> (failwith "rotate_right: curr_ptr is not a branch" : branch) in
 
   let left_ptr = curr.left in
   let left =
     match mem_get mem left_ptr with
-    | Root _ -> (failwith "rotate_right: left_ptr is Root" : branch)
-    | Leaf _ -> (failwith "rotate_right: curr_ptr is Leaf" : branch)
-    | Branch left -> left in
+    | Branch left -> left
+    | _ -> (failwith "rotate_right: left_ptr is not a branch" : branch) in
 
   let left_right_ptr = left.right in
 
@@ -284,8 +275,7 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
         if Ligo.lt_int_int diff (Ligo.int_from_literal "0") then branch.left else branch.right in
       let heavy_child = match mem_get mem heavy_child_ptr with
         | Branch b -> b
-        | Leaf _ -> (failwith "invariant violation: heavy_child should be a branch" : branch)
-        | Root _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
+        | _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
       let heavy_child_balance =
         Ligo.sub_int_int heavy_child.right_height heavy_child.left_height in
 

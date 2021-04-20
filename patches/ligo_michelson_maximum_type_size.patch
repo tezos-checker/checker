@@ -1,0 +1,12 @@
+diff --git a/vendors/ligo-utils/proto-alpha-utils/init_proto_alpha.ml b/vendors/ligo-utils/proto-alpha-utils/init_proto_alpha.ml
+index f8b2b17e8..9164ec8ba 100644
+--- a/vendors/ligo-utils/proto-alpha-utils/init_proto_alpha.ml
++++ b/vendors/ligo-utils/proto-alpha-utils/init_proto_alpha.ml
+@@ -70,6 +70,7 @@ module Context_init = struct
+           Parameters_repr.{ public_key_hash = pkh ; public_key = Some pk ; amount }
+         ) initial_accounts
+     in
++    let constants = Constants_repr.{ constants with michelson_maximum_type_size = 65000 } in
+     let json =
+       Data_encoding.Json.construct
+         Parameters_repr.encoding

@@ -14,8 +14,8 @@ main="$PWD/generated/ligo/main.mligo"
 checkerEntrypoints="$PWD/generated/ligo/checkerEntrypoints.mligo"
 
 echo 'Compiling: main'
-ligo compile-contract --warn false "$main" main --output-file "$target_dir/main.tz"
-ligo measure-contract --warn false "$main" main
+ligo compile-contract "$main" main --output-file "$target_dir/main.tz"
+ligo measure-contract "$main" main
 
 functions=$(perl -n -e'/let lazy_fun_(\S+)/ && print "$1\n"' "$checkerEntrypoints")
 
@@ -23,7 +23,6 @@ for fun in $functions; do
   echo "Packing: $fun"
   prefix="$target_dir/lazy_fun_$fun.tz."
   ligo compile-expression cameligo \
-     --warn false \
      --init-file "$main" \
     "Bytes.pack lazy_fun_$fun" \
     | split -b 32000 -d - $prefix
