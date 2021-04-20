@@ -30,9 +30,7 @@ let[@inline] ctez_one = ctez_scaling_factor_nat
 (* Conversions to/from other types. *)
 let[@inline] ctez_of_muctez (amnt: Ligo.nat) : ctez = amnt
 let[@inline] ctez_to_muctez_int (amnt: ctez) : Ligo.int = Ligo.int amnt
-(*
 let[@inline] ctez_to_muctez_nat (amnt: ctez) : Ligo.nat = amnt
-*)
 
 let ctez_of_fraction_ceil (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));

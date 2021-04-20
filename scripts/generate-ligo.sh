@@ -98,7 +98,7 @@ for name in "${inputs[@]}"; do
     sed -E 's/!(Tezos\.)/\1/g' |
 
     # map specialized 'Tezos.*_transaction' functions to the generic one
-    sed -E 's/Tezos\.([a-z_A-Z]+)_transaction/Tezos\.transaction/g' |
+    sed -E 's/Tezos\.([0-9a-zA-Z_]+)_transaction/Tezos\.transaction/g' |
 
     cat > "$to"
 done
