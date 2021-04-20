@@ -327,11 +327,17 @@ let suite =
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
+      let sender = alice_addr in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_ctez_expected, deadline)) in
       let bought_muctez = match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value (* FIXME: Check the from and to as well? *)
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+          begin
+            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
+            transfer.value
+          end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
       ctez_of_muctez bought_muctez >= min_ctez_expected
@@ -363,12 +369,18 @@ let suite =
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
+      let sender = alice_addr in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_ctez_expected, deadline)) in
 
       let bought_muctez = match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value (* FIXME: Check the from and to as well? *)
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+          begin
+            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
+            transfer.value
+          end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
       ctez_add new_checker.cfmm.ctez (ctez_of_muctez bought_muctez) = checker.cfmm.ctez
@@ -690,16 +702,22 @@ let suite =
        let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = Tickets.issue_liquidity_tokens (Ligo.nat_from_literal "1n") in
+       let sender = alice_addr in
 
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
        let kit, ctez = match ops with
          | [
            Transaction (FA12TransferTransactionValue transfer, _, _);
            Transaction (KitTransactionValue ticket, _, _);
-           ] -> let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in
-                let ctez = transfer.value in (* FIXME: Check the from and to as well? *)
-                (kit, ctez)
+           ] ->
+           begin
+             assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
+             let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in
+             let ctez = transfer.value in
+             (kit, ctez)
+           end
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
