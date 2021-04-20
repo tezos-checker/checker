@@ -32,11 +32,16 @@ puts "Compiling contract."
 compiled_contract, exit_status = Open3.capture2("ligo", "compile-contract", MAIN_FILE, "main")
 exit_status.success? or raise "compile-contract failed:\n#{compiled_contract}"
 
-# Convert the contract to binary to measure the size.
-# (we don't want to generate it as binary because it's nice to have it human-readable)
-output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_contract, "from", "michelson", "to", "binary")
-status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
-puts "  ~#{output.length / 2} bytes"
+begin
+  # Convert the contract to binary to measure the size.
+  # (we don't want to generate it as binary because it's nice to have it human-readable)
+  output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_contract, "from", "michelson", "to", "binary")
+rescue
+  puts "  Can't run tezos-client, skipping measurement."
+else
+  status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
+  puts "  ~#{output.length / 2} bytes"
+end
 
 puts "Compiling the initial storage and entrypoints."
 entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
