@@ -327,7 +327,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
 
 (** Compute the amount of kit we expect to receive from auctioning off an
   * amount of tez, using the current minting price. Note that we are being
-  * rather optimistic here (we overapproximate the expected kit). *)
+  * pessimistic here (we round down, underestimating the expected kit). *)
 let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
   let { num = num_lp; den = den_lp; } = liquidation_penalty in
   let { num = num_mp; den = den_mp; } = minting_price p in
@@ -576,11 +576,14 @@ let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   assert_burrow_invariants b;
   let expected_kit = compute_expected_kit p b.collateral_at_auction in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
+    (* Note: rounding down in expected_kit means that we are rounding UP here, so optimistic_outstanding is one higher than it used to be *)
     if b.outstanding_kit < expected_kit
     then zero_ratio
     else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
   let collateral = ratio_of_tez b.collateral in
   let minting_price = minting_price p in
+  let limit_tez = (mul_ratio (mul_ratio fminting optimistic_outstanding) minting_price) in
+  (* let _ = Format.fprintf Format.std_formatter "expected=%s ; outstanding=%s ; limit_tez=%s ; collateral=%s | " (show_kit expected_kit) (show_kit b.outstanding_kit) (show_ratio limit_tez) (show_ratio collateral) in *)
   lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting optimistic_outstanding) minting_price)
 
 
