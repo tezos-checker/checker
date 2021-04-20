@@ -194,6 +194,7 @@ val entrypoint_invalidate_all_permissions : checker * (permission_redacted_conte
 
 (** Buy some kit from the cfmm contract. Fail if the desired amount of kit
     cannot be bought or if the deadline has passed.
+
     Parameters:
     - The amount of ctez to be sold for kit
     - The minimum amount of kit expected to be bought
@@ -202,8 +203,14 @@ val entrypoint_invalidate_all_permissions : checker * (permission_redacted_conte
 val entrypoint_buy_kit : checker * (ctez * kit * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Sell some kit to the cfmm contract. Fail if the desired amount of tez
-    cannot be bought or if the deadline has passed. *)
-val entrypoint_sell_kit : checker * (kit * Ligo.tez * Ligo.timestamp) -> LigoOp.operation list * checker
+    cannot be bought or if the deadline has passed.
+
+    Parameters:
+    - The amount of kit to be sold for ctez
+    - The minimum amount of ctez expected to be bought
+    - The deadline for the transaction to be valid
+*)
+val entrypoint_sell_kit : checker * (kit * ctez * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Buy some liquidity (liquidity tokens) from the cfmm contract, by
     giving it some tez and some kit. If the given amounts do not have the
@@ -271,7 +278,7 @@ type checker_params =
   | SetAllowAllKitBurns of (permission * burrow_id * bool)
   | InvalidateAllPermissions of (permission * burrow_id)
   | BuyKit of (ctez * kit * Ligo.timestamp)
-  | SellKit of (kit_token * Ligo.tez * Ligo.timestamp)
+  | SellKit of (kit_token * ctez * Ligo.timestamp)
   | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
   | LiquidationAuctionPlaceBid of kit_token
@@ -300,7 +307,7 @@ val deticketify_set_allow_all_tez_deposits : permission * burrow_id * bool -> pe
 val deticketify_set_allow_all_kit_burns : permission * burrow_id * bool -> permission_redacted_content * burrow_id * bool
 val deticketify_invalidate_all_permissions : permission * burrow_id -> permission_redacted_content * burrow_id
 val deticketify_buy_kit : ctez * kit * Ligo.timestamp -> ctez * kit * Ligo.timestamp
-val deticketify_sell_kit : kit_token * Ligo.tez * Ligo.timestamp -> kit * Ligo.tez * Ligo.timestamp
+val deticketify_sell_kit : kit_token * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
 val deticketify_add_liquidity : kit_token * Ligo.nat * Ligo.timestamp -> kit * Ligo.nat * Ligo.timestamp
 val deticketify_remove_liquidity : liquidity * Ligo.tez * kit * Ligo.timestamp -> Ligo.nat * Ligo.tez * kit * Ligo.timestamp
 val deticketify_liquidation_auction_place_bid : kit_token -> kit
