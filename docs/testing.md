@@ -36,7 +36,8 @@ Areas which remain to be tested include:
      yet.
      1. We will want these to also test the inter-contract dynamics between
         Checker and the other contracts which it relies on, namely the
-        individual contracts for burrows as well as the price oracle.
+        individual contracts for burrows, the price oracle, as well as
+        the [ctez contract](https://github.com/murbard/ctez).
 
 ## Unit tests
 
