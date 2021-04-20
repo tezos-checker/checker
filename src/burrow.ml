@@ -322,10 +322,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
             )
          )
       ) in
-  (* TODO:Might be able to fdiv here? *)
-  let answer = fdiv_int_int (Ligo.mul_int_int numerator (Ligo.int_from_literal "1_000_000")) denominator in
-  (* let _ = Format.fprintf Format.std_formatter "| minting_price=%s; f_minting=%s; liquidation_penalty=%s; numerator=%s; denominator=%s; result=%s" (Ratio.show_ratio (minting_price p)) (Ratio.show_ratio fminting) (Ratio.show_ratio liquidation_penalty) (Ligo.string_of_int numerator) (Ligo.string_of_int denominator) (Ligo.string_of_int answer) in *)
-  answer
+  cdiv_int_int (Ligo.mul_int_int numerator (Ligo.int_from_literal "1_000_000")) denominator
 
 
 (** Compute the amount of kit we expect to receive from auctioning off an
@@ -424,16 +421,10 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
   assert_burrow_invariants b;
   let partial_reward =
     let { num = num_lrp; den = den_lrp; } = liquidation_reward_percentage in
-    (* TODO, might be able to round up here? *)
     fraction_to_tez_floor
       (Ligo.mul_int_int (tez_to_mutez b.collateral) num_lrp)
-      (* TODO: Why are we converting to tez with this expression (from mutez)? *)
-      (* Looks like it is because fraction_to_tez_floor takes tez in "tez" units and not mutez. Why is this? *)
-      (* Reward is rounded down which effectively rounds the remaining collateral UP *)
       (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_lrp)
   in
-  (* TODO: Debugging *)
-  (* let partial_reward = Ligo.sub_tez_tez partial_reward (Ligo.tez_from_literal "3mutez") in *)
   if not (burrow_is_liquidatable p b) then
     (* Case 1: The outstanding kit does not exceed the liquidation limit, or
      * the burrow is already without its creation deposit, inactive; we
@@ -461,24 +452,15 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       (* Case 2b: We can replenish the creation deposit. Now we gotta see if it's
        * possible to liquidate the burrow partially or if we have to do so
        * completely (deplete the collateral). *)
-      let b_without_reward = { b with collateral = Ligo.sub_tez_tez b.collateral liquidation_reward } in
+      let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) creation_deposit } in
       let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
-      let _ = let auction_tez = (Ligo.tez_from_literal ((Ligo.string_of_int tez_to_auction) ^ "mutez")) in
-        Format.fprintf Format.std_formatter "<calculated tez_to_auction=%s , the amount of expected kit for this auction is: %s>" (Ligo.string_of_tez auction_tez) (show_kit (compute_expected_kit p (Ligo.add_tez_tez b.collateral_at_auction auction_tez))) in
-
-      (* TODO: Dorran - when we enter this case we would expect that tez_to_auction would give us an expected kit at most [outstanding_kit - 1]
-         If tez_to_auction would give us an expected_kit = b_without_reward.collateral, that should be a "Partial" case.
-      *)
       if (Ligo.lt_int_int tez_to_auction (Ligo.int_from_literal "0")) || (Ligo.gt_int_int tez_to_auction (tez_to_mutez b_without_reward.collateral)) then
         (* Case 2b.1: With the current price it's impossible to make the burrow
          * not undercollateralized; pay the liquidation reward, stash away the
          * creation deposit, and liquidate all the remaining collateral, even if
          * it is not expected to repay enough kit. *)
         let tez_to_auction = b_without_reward.collateral in (* OVERRIDE *)
-
-        let expected_kit = compute_expected_kit p (Ligo.add_tez_tez b.collateral_at_auction tez_to_auction) in
-        let _ = Format.fprintf Format.std_formatter "<tez_to_auction_updated=%s; expected_kit_updated=%s>" (Ligo.string_of_tez tez_to_auction) (show_kit expected_kit) in
 
         let final_burrow =
           { b with

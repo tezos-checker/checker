@@ -38,7 +38,6 @@ let cdiv_int_int (x: Ligo.int) (y: Ligo.int) =
   | None -> (failwith "Ligo.cdiv_int_int: zero denominator" : Ligo.int)
   | Some quot_rem ->
     let (quot, rem) = quot_rem in
-    (* let _ = Format.fprintf Format.std_formatter "| quotient=%s; remainder=%s" (Ligo.string_of_int quot) (Ligo.string_of_nat rem) in *)
     if Ligo.eq_nat_nat rem (Ligo.nat_from_literal "0n") then
       quot
     else if Ligo.lt_int_int y (Ligo.int_from_literal "0") then
