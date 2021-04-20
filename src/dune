@@ -42,6 +42,7 @@
   Tickets
   Ligo
   LigoOp
+  Fa12Types
   Error
   Common)
  (libraries str zarith)
