@@ -325,16 +325,16 @@ let suite =
         ~name:"test_sell_kit_respects_min_tez_expected"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
-      let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
-      let bought_tez = match ops with
-        | [ Transaction (_, mutez, _) ] -> mutez
-        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_ctez_expected, deadline)) in
+      let bought_muctez = match ops with
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value (* FIXME: Check the from and to as well? *)
+        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
-      ctez_from_tez bought_tez >= min_tez_expected
+      ctez_of_muctez bought_muctez >= min_ctez_expected
     );
 
     (
@@ -345,11 +345,11 @@ let suite =
         ~name:"test_sell_kit_preserves_kit"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
-      let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_ctez_expected, deadline)) in
       kit_add checker.cfmm.kit kit_amount = new_checker.cfmm.kit
     );
 
@@ -361,16 +361,17 @@ let suite =
         ~name:"test_sell_kit_preserves_tez"
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
-      @@ fun (cfmm, tez_amount, kit_amount, min_tez_expected, deadline) ->
+      @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker = { initial_checker with cfmm = cfmm } in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_from_ctez tez_amount);
-      let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, tez_from_ctez min_tez_expected, deadline)) in
-      let bought_tez = match ops with
-        | [ Transaction (_, mutez, _) ] -> mutez
-        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (Tickets.kit_issue kit_amount, min_ctez_expected, deadline)) in
+
+      let bought_muctez = match ops with
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value (* FIXME: Check the from and to as well? *)
+        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
-      ctez_add new_checker.cfmm.ctez (ctez_from_tez bought_tez) = checker.cfmm.ctez
+      ctez_add new_checker.cfmm.ctez (ctez_of_muctez bought_muctez) = checker.cfmm.ctez
     );
 
     (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
@@ -647,27 +648,29 @@ let suite =
          };
        } in
        let kit_to_sell = Tickets.kit_issue (kit_of_mukit (Ligo.nat_from_literal "1_000_000n")) in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_to_sell, Ligo.tez_from_literal "1mutez", Ligo.timestamp_from_seconds_literal 1)) in
-       let tez = match ops with
-         | [Transaction (UnitTransactionValue, tez, _)] -> tez
-         | _ -> failwith ("Expected [Transaction (UnitTransactionValue, tez, _))] but got " ^ show_operation_list ops)
+       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
+       let muctez = match ops with
+         | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value
+         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_equal (Ligo.tez_from_literal "1mutez") tez ~printer:Ligo.string_of_tez
+       assert_equal (Ligo.nat_from_literal "1n") muctez ~printer:Ligo.string_of_nat
     );
 
     ("sell_kit - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
        let kit_to_sell = Tickets.kit_issue (kit_of_mukit (Ligo.nat_from_literal "1n")) in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_sell_kit (initial_checker, Checker.deticketify_sell_kit (kit_to_sell, Ligo.tez_from_literal "1mutez", Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_sell_kit (initial_checker, Checker.deticketify_sell_kit (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 

@@ -314,9 +314,9 @@ let test_sell_kit_decreases_price =
     ~name:"test_sell_kit_decreases_price"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   lt_ratio_ratio (cfmm_kit_in_ctez new_cfmm) (cfmm_kit_in_ctez cfmm)
 
 (* If successful, cfmm_sell_kit always increases the product
@@ -327,9 +327,9 @@ let test_sell_kit_increases_product =
     ~name:"test_sell_kit_increases_product"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   gt_ratio_ratio (cfmm_kit_times_ctez new_cfmm) (cfmm_kit_times_ctez cfmm)
 
 (* Successful or not, cfmm_sell_kit should never affect the number of
@@ -340,9 +340,9 @@ let test_sell_kit_does_not_affect_liquidity =
     ~name:"test_sell_kit_does_not_affect_liquidity"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_sell_kit respects min_ctez_expected. *)
@@ -352,9 +352,9 @@ let test_sell_kit_respects_min_ctez_expected =
     ~name:"test_sell_kit_respects_min_ctez_expected"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let bought_ctez, _new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   bought_ctez >= min_ctez_expected
 
 (* If successful, selling kit preserves kit. *)
@@ -364,9 +364,9 @@ let test_sell_kit_preserves_kit =
     ~name:"test_sell_kit_preserves_kit"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   new_cfmm.kit = kit_add cfmm.kit kit_amount
 
 (* If successful, selling kit preserves ctez. *)
@@ -376,9 +376,9 @@ let test_sell_kit_preserves_ctez =
     ~name:"test_sell_kit_preserves_ctez"
     ~count:property_test_count
     make_inputs_for_sell_kit_to_succeed
-  @@ fun (cfmm, ctez_amount, kit_amount, min_ctez_expected, deadline) ->
+  @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_amount kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
   ctez_add new_cfmm.ctez bought_ctez = cfmm.ctez
 
 (* ************************************************************************* *)

@@ -47,7 +47,6 @@ let make_inputs_for_sell_kit_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. Due to _tez being ignored. *)
     (fun (_tez, kit, _lqt, cfmm) ->
-       let amount = Ctez.ctez_zero in
        let token =
          let { Ratio.num = x_num; Ratio.den = x_den; } =
            Ratio.div_ratio (Ratio.mul_ratio (Kit.kit_to_ratio kit) (Ratio.sub_ratio Ratio.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
@@ -55,6 +54,6 @@ let make_inputs_for_sell_kit_to_succeed =
        in
        let min_ctez_expected = Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (cfmm, amount, token, min_ctez_expected, deadline)
+       (cfmm, token, min_ctez_expected, deadline)
     )
     (arbitrary_non_empty_cfmm Ratio.one_ratio !Ligo.Tezos.level)
