@@ -227,8 +227,15 @@ val entrypoint_sell_kit : checker * (kit * ctez * Ligo.timestamp) -> LigoOp.oper
 val entrypoint_add_liquidity : checker * (ctez * kit * Ligo.nat * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Sell some liquidity (liquidity tokens) to the cfmm contract in
-    exchange for the corresponding tez and kit of the right ratio. *)
-val entrypoint_remove_liquidity : checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
+    exchange for the corresponding ctez and kit of the right ratio.
+
+    Parameters:
+    - The number of liquidity tokens to be sold
+    - The minimum amount of ctez expected to be bought
+    - The minimum amount of kit expected to be bought
+    - The deadline for the transaction to be valid
+*)
+val entrypoint_remove_liquidity : checker * (Ligo.nat * ctez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                      {1 LIQUIDATION AUCTIONS}                            *)
@@ -287,7 +294,7 @@ type checker_params =
   | BuyKit of (ctez * kit * Ligo.timestamp)
   | SellKit of (kit_token * ctez * Ligo.timestamp)
   | AddLiquidity of (ctez * kit_token * Ligo.nat * Ligo.timestamp)
-  | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
+  | RemoveLiquidity of (liquidity * ctez * kit * Ligo.timestamp)
   | LiquidationAuctionPlaceBid of kit_token
   | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
@@ -316,7 +323,7 @@ val deticketify_invalidate_all_permissions : permission * burrow_id -> permissio
 val deticketify_buy_kit : ctez * kit * Ligo.timestamp -> ctez * kit * Ligo.timestamp
 val deticketify_sell_kit : kit_token * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
 val deticketify_add_liquidity : ctez * kit_token * Ligo.nat * Ligo.timestamp -> ctez * kit * Ligo.nat * Ligo.timestamp
-val deticketify_remove_liquidity : liquidity * Ligo.tez * kit * Ligo.timestamp -> Ligo.nat * Ligo.tez * kit * Ligo.timestamp
+val deticketify_remove_liquidity : liquidity * ctez * kit * Ligo.timestamp -> Ligo.nat * ctez * kit * Ligo.timestamp
 val deticketify_liquidation_auction_place_bid : kit_token -> kit
 val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
