@@ -725,12 +725,13 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = initial_checker in
 
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _lqt_minted_ret_kit_ops, checker =
          Checker.entrypoint_add_liquidity
            ( checker
            , Checker.deticketify_add_liquidity
-               ( kit_issue kit_one
+               ( ctez_of_muctez (Ligo.nat_from_literal "1_000_000n")
+               , kit_issue kit_one
                , Ligo.nat_from_literal "1n"
                , Ligo.timestamp_from_seconds_literal 1
                )

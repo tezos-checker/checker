@@ -528,19 +528,28 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
     | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
   ([op], {state with cfmm = updated_cfmm})
 
-let entrypoint_add_liquidity (state, p: checker * (kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
-  let max_kit_deposited, min_lqt_minted, deadline = p in
+let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
+  let ctez_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
+  let _ = ensure_no_tez_given () in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
-    cfmm_add_liquidity state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity state.cfmm ctez_deposited max_kit_deposited min_lqt_minted deadline in
   let lqt_tokens = issue_liquidity_tokens lqt_tokens in (* Issue them here!! *)
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
-  let op1 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
+  let transfer =
+    { address_from = !Ligo.Tezos.sender;
+      address_to = checker_address;
+      value = ctez_to_muctez_nat ctez_deposited;
+    } in
+  let op1 = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : transfer LigoOp.contract option) with
+    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.kit_transaction kit_tokens (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferKit : LigoOp.operation) in
-  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
+  let op3 = match (LigoOp.Tezos.get_entrypoint_opt "%transferLqt" !Ligo.Tezos.sender : liquidity LigoOp.contract option) with
     | Some c -> (LigoOp.Tezos.lqt_transaction lqt_tokens (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLqt : LigoOp.operation) in
-  ([op1; op2], {state with cfmm = updated_cfmm})
+  ([op1; op2; op3], {state with cfmm = updated_cfmm})
 
 let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * Ligo.tez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   let lqt_burned, min_tez_withdrawn, min_kit_withdrawn, deadline = p in
@@ -782,7 +791,7 @@ type checker_params =
   | InvalidateAllPermissions of (permission * burrow_id)
   | BuyKit of (ctez * kit * Ligo.timestamp)
   | SellKit of (kit_token * ctez * Ligo.timestamp)
-  | AddLiquidity of (kit_token * Ligo.nat * Ligo.timestamp)
+  | AddLiquidity of (ctez * kit_token * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * Ligo.tez * kit * Ligo.timestamp)
   | LiquidationAuctionPlaceBid of kit_token
   | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
@@ -861,8 +870,8 @@ let[@inline] deticketify_sell_kit (kit_token, ctez, deadline: kit_token * ctez *
   (ensure_valid_kit_token kit_token, ctez, deadline)
 
 (* removes tickets *)
-let[@inline] deticketify_add_liquidity (kit_token, lqt, deadline: kit_token * Ligo.nat * Ligo.timestamp) : kit * Ligo.nat * Ligo.timestamp =
-  (ensure_valid_kit_token kit_token, lqt, deadline)
+let[@inline] deticketify_add_liquidity (ctez, kit_token, lqt, deadline: ctez * kit_token * Ligo.nat * Ligo.timestamp) : ctez * kit * Ligo.nat * Ligo.timestamp =
+  (ctez, ensure_valid_kit_token kit_token, lqt, deadline)
 
 (* removes tickets *)
 let[@inline] deticketify_remove_liquidity (lqt, tez, kit, deadline: liquidity * Ligo.tez * kit * Ligo.timestamp) : Ligo.nat * Ligo.tez * kit * Ligo.timestamp =
