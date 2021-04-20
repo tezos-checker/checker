@@ -20,6 +20,7 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
+  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value (* qualified: we'll have FA2 as well soon *)
 
 type tez_and_address = (tez * address)
 [@@deriving show]
@@ -40,6 +41,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
   | TezTransactionValue tz -> string_of_tez tz
   | NatContractTransactionValue c -> show_contract c
+  | FA12TransferTransactionValue t -> Fa12Types.show_transfer t
 
 (* operation *)
 
@@ -82,6 +84,7 @@ module Tezos = struct
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
+  let fa12_transfer_transaction value tez contract = Transaction (FA12TransferTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
