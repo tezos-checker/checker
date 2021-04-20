@@ -87,7 +87,6 @@ let cfmm_buy_kit
 
 let cfmm_sell_kit
     (cfmm: cfmm)
-    (ctez_amount: ctez)
     (kit_amount: kit)
     (min_ctez_expected: ctez)
     (deadline: Ligo.timestamp)
@@ -98,8 +97,6 @@ let cfmm_sell_kit
     (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
   else if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_CfmmTooLate : (ctez * cfmm))
-  else if ctez_amount <> ctez_zero then
-    (Ligo.failwith error_SellKitNonEmptyAmount : (ctez * cfmm))
   else if (min_ctez_expected = ctez_zero) then
     (Ligo.failwith error_SellKitTooLowExpectedTez : (ctez * cfmm))
   else
@@ -197,10 +194,8 @@ let cfmm_add_liquidity
  * without ctez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
-(* NOTE: for the purpose of removing liquidity, the bid accrues only after the next period begins. *)
 let cfmm_remove_liquidity
     (cfmm: cfmm)
-    (ctez_amount: ctez)
     (lqt_burned: Ligo.nat)
     (min_ctez_withdrawn: ctez)
     (min_kit_withdrawn: kit)
@@ -208,9 +203,7 @@ let cfmm_remove_liquidity
   : (ctez * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
-  if ctez_amount <> ctez_zero then
-    (Ligo.failwith error_RemoveLiquidityNonEmptyAmount : (ctez * kit * cfmm))
-  else if !Ligo.Tezos.now >= deadline then
+  if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_CfmmTooLate : (ctez * kit * cfmm))
   else if lqt_burned = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))

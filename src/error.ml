@@ -6,7 +6,6 @@ let[@inline] error_BuyKitPriceFailure                              : Ligo.int = 
 let[@inline] error_BuyKitTooMuchKitBought                          : Ligo.int = Ligo.int_from_literal "12"
 let[@inline] error_BuyKitNoTezGiven                                : Ligo.int = Ligo.int_from_literal "13"
 
-let[@inline] error_SellKitNonEmptyAmount                           : Ligo.int = Ligo.int_from_literal "20"
 let[@inline] error_SellKitTooLowExpectedTez                        : Ligo.int = Ligo.int_from_literal "21"
 let[@inline] error_SellKitPriceFailure                             : Ligo.int = Ligo.int_from_literal "22"
 let[@inline] error_SellKitTooMuchTezBought                         : Ligo.int = Ligo.int_from_literal "23"
@@ -19,7 +18,6 @@ let[@inline] error_AddLiquidityTooLowLiquidityMinted               : Ligo.int = 
 let[@inline] error_AddLiquidityTooMuchKitRequired                  : Ligo.int = Ligo.int_from_literal "34"
 let[@inline] error_AddLiquidityZeroKitDeposited                    : Ligo.int = Ligo.int_from_literal "35"
 
-let[@inline] error_RemoveLiquidityNonEmptyAmount                   : Ligo.int = Ligo.int_from_literal "40"
 let[@inline] error_RemoveLiquidityNoLiquidityBurned                : Ligo.int = Ligo.int_from_literal "41"
 let[@inline] error_RemoveLiquidityNoTezWithdrawnExpected           : Ligo.int = Ligo.int_from_literal "42"
 let[@inline] error_RemoveLiquidityNoKitWithdrawnExpected           : Ligo.int = Ligo.int_from_literal "43"

@@ -61,8 +61,6 @@ let make_inputs_for_remove_liquidity_to_succeed =
   QCheck.map
     (* NOTE: this could still give us tough numbers I think. *)
     (fun ((ctez, kit, lqt, cfmm), factor) ->
-       let amount = ctez_zero in
-
        let lqt_to_burn =
          let { num = x_num; den = x_den; } =
            div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))) in
@@ -112,7 +110,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
            lqt_burned, min_ctez_withdrawn, min_kit_withdrawn in
 
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
-       (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline)
+       (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline)
     )
     (QCheck.pair (arbitrary_non_empty_cfmm one_ratio !Ligo.Tezos.level) QCheck.pos_int)
 
@@ -316,7 +314,7 @@ let test_sell_kit_decreases_price =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   lt_ratio_ratio (cfmm_kit_in_ctez new_cfmm) (cfmm_kit_in_ctez cfmm)
 
 (* If successful, cfmm_sell_kit always increases the product
@@ -329,7 +327,7 @@ let test_sell_kit_increases_product =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   gt_ratio_ratio (cfmm_kit_times_ctez new_cfmm) (cfmm_kit_times_ctez cfmm)
 
 (* Successful or not, cfmm_sell_kit should never affect the number of
@@ -342,7 +340,7 @@ let test_sell_kit_does_not_affect_liquidity =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_sell_kit respects min_ctez_expected. *)
@@ -354,7 +352,7 @@ let test_sell_kit_respects_min_ctez_expected =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let bought_ctez, _new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   bought_ctez >= min_ctez_expected
 
 (* If successful, selling kit preserves kit. *)
@@ -366,7 +364,7 @@ let test_sell_kit_preserves_kit =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let _bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   new_cfmm.kit = kit_add cfmm.kit kit_amount
 
 (* If successful, selling kit preserves ctez. *)
@@ -378,7 +376,7 @@ let test_sell_kit_preserves_ctez =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
   let bought_ctez, new_cfmm =
-    cfmm_sell_kit cfmm ctez_zero kit_amount min_ctez_expected deadline in
+    cfmm_sell_kit cfmm kit_amount min_ctez_expected deadline in
   ctez_add new_cfmm.ctez bought_ctez = cfmm.ctez
 
 (* ************************************************************************* *)
@@ -412,7 +410,6 @@ let sell_kit_unit_test =
     let returned_ctez, updated_cfmm =
       cfmm_sell_kit
         cfmm
-        ctez_zero
         kit_one
         (ctez_of_muctez (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
@@ -425,7 +422,6 @@ let sell_kit_unit_test =
     let returned_ctez, updated_cfmm =
       cfmm_sell_kit
         cfmm
-        ctez_zero
         kit_one
         (ctez_of_muctez (Ligo.nat_from_literal "1_663_333n"))
         (Ligo.timestamp_from_seconds_literal 2) in
@@ -440,7 +436,6 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
-           ctez_zero
            kit_one
            (ctez_of_muctez (Ligo.nat_from_literal "1_663_334n"))
            (Ligo.timestamp_from_seconds_literal 2)
@@ -454,7 +449,6 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
-           ctez_zero
            kit_one
            (ctez_of_muctez (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 1)
@@ -468,7 +462,6 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
-           ctez_zero
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
            (ctez_of_muctez (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -482,23 +475,8 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
-           ctez_zero
            kit_one
            ctez_zero
-           (Ligo.timestamp_from_seconds_literal 10)
-      );
-
-    (* Some ctez transferred: fail *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_raises
-      (Failure (Ligo.string_of_int error_SellKitNonEmptyAmount))
-      (fun () ->
-         cfmm_sell_kit
-           cfmm
-           (ctez_of_muctez (Ligo.nat_from_literal "10n"))
-           kit_one
-           (ctez_of_muctez (Ligo.nat_from_literal "100n"))
            (Ligo.timestamp_from_seconds_literal 10)
       )
 
@@ -680,9 +658,9 @@ let test_remove_liquidity_decreases_product =
     ~name:"test_remove_liquidity_decreases_product"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let _withdrawn_ctez, _withdrawn_kit, new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   leq_ratio_ratio (cfmm_kit_times_ctez new_cfmm) (cfmm_kit_times_ctez cfmm)
 
 (* If successful, cfmm_remove_liquidity always decreases the liquidity;
@@ -693,9 +671,9 @@ let test_remove_liquidity_decreases_liquidity =
     ~name:"test_remove_liquidity_decreases_liquidity"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let _withdrawn_ctez, _withdrawn_kit, new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   cfmm_liquidity_tokens_extant new_cfmm < cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_remove_liquidity removes at least min_ctez_withdrawn ctez. *)
@@ -705,9 +683,9 @@ let test_remove_liquidity_respects_min_ctez_withdrawn =
     ~name:"test_remove_liquidity_respects_min_ctez_withdrawn"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let withdrawn_ctez, _withdrawn_kit, _new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   withdrawn_ctez >= min_ctez_withdrawn
 
 (* If successful, cfmm_remove_liquidity removes at least min_kit_withdrawn kit. *)
@@ -717,9 +695,9 @@ let test_remove_liquidity_respects_min_kit_withdrawn =
     ~name:"test_remove_liquidity_respects_min_kit_withdrawn"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let _withdrawn_ctez, withdrawn_kit, _new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   withdrawn_kit >= min_kit_withdrawn
 
 (* If successful, cfmm_remove_liquidity removes no more ctez than it had. *)
@@ -729,9 +707,9 @@ let test_remove_liquidity_respects_ctez_limit =
     ~name:"test_remove_liquidity_respects_ctez_limit"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let withdrawn_ctez, _withdrawn_kit, _new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   withdrawn_ctez <= cfmm.ctez
 
 (* If successful, cfmm_remove_liquidity removes no more kit than it had. *)
@@ -741,9 +719,9 @@ let test_remove_liquidity_respects_kit_limit =
     ~name:"test_remove_liquidity_respects_kit_limit"
     ~count:property_test_count
     make_inputs_for_remove_liquidity_to_succeed
-  @@ fun (cfmm, amount, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
+  @@ fun (cfmm, lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline) ->
   let _withdrawn_ctez, withdrawn_kit, _new_cfmm =
-    cfmm_remove_liquidity cfmm amount lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   withdrawn_kit <= cfmm.kit
 
 (* ************************************************************************* *)
@@ -768,22 +746,10 @@ let test_remove_liquidity_failures =
         (Ligo.nat_from_literal "1n")
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_raises
-      (Failure (Ligo.string_of_int error_RemoveLiquidityNonEmptyAmount))
-      (fun () ->
-         cfmm_remove_liquidity
-           cfmm
-           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
-           liq
-           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
-           (kit_of_mukit (Ligo.nat_from_literal "1n"))
-           (Ligo.timestamp_from_seconds_literal 100)
-      );
-    assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
       (fun () ->
          cfmm_remove_liquidity
            cfmm
-           ctez_zero
            (Ligo.nat_from_literal "0n")
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -794,7 +760,6 @@ let test_remove_liquidity_failures =
       (fun () ->
          cfmm_remove_liquidity
            cfmm
-           ctez_zero
            liq
            ctez_zero
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -805,7 +770,6 @@ let test_remove_liquidity_failures =
       (fun () ->
          cfmm_remove_liquidity
            cfmm
-           ctez_zero
            liq
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "0n"))

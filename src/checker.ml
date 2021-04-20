@@ -517,7 +517,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
 let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : LigoOp.operation list * checker =
   let kit, min_ctez_expected, deadline = p in
   let _ = ensure_no_tez_given () in
-  let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) kit min_ctez_expected deadline in
+  let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctez_expected deadline in
   let transfer =
     { address_from = checker_address;
       address_to = !Ligo.Tezos.sender;
@@ -555,7 +555,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
   let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
   let (ctez, kit_tokens, updated_cfmm) =
-    cfmm_remove_liquidity state.cfmm (ctez_from_tez (* FIXME *) !Ligo.Tezos.amount) lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+    cfmm_remove_liquidity state.cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   let kit_tokens = kit_issue kit_tokens in (* Issue them here!! *)
   let transfer =
     { address_from = checker_address;
