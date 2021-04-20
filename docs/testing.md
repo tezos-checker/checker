@@ -45,7 +45,7 @@ A core part of the current test suite are unit tests which check basic
 application logic such as handling tickets (which are used for permissioning)
 and ensuring that expected error codes are thrown. We've provided tests in these
 areas for nearly all of the main entrypoint code in `checker.ml` and have also
-added many to `burrow.ml` and `uniswap.ml`.
+added many to `burrow.ml` and `cfmm.ml`.
 
 The tests in `testChecker.ml` are of particular interest, since they are
 somewhat higher-level functional tests that simulate calling the contract's
@@ -55,7 +55,7 @@ entrypoints in the context of a Tezos transaction. (Mutable state in our
 In addition to tests for handling of permissions and errors, we have also
 written a number of unit tests which aim to check boundary cases for the many
 calculations Checker performs. These tests are primarily spread throughout
-`burrow.ml`, `parameters.ml`, `uniswap.ml`. In general, we have aimed to err on
+`burrow.ml`, `parameters.ml`, `cfmm.ml`. In general, we have aimed to err on
 the side of caution by hard coding the bounds for test conditions. This makes
 the tests more sensitive to changes to internal calculation logic (e.g. floor vs
 ceil division) as well as changes to the constants defined in `constants.ml`.
