@@ -410,8 +410,8 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
   let _ = ensure_uptodate_burrow p b in
   assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
   let expected_kit =
-    let fraction = compute_expected_kit p b.collateral_at_auction in
-    kit_of_fraction_ceil fraction.num fraction.den in
+    let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
+    kit_of_fraction_ceil num_ek den_ek in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
     then kit_zero
