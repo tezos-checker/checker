@@ -358,23 +358,31 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
 let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let expected_kit =
-    let fraction = compute_expected_kit p b.collateral_at_auction in
-    kit_of_fraction_ceil fraction.num fraction.den in
-  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
-    if b.outstanding_kit < expected_kit
-    then kit_zero
-    else kit_sub b.outstanding_kit expected_kit in
   let { num = num_fl; den = den_fl; } = fliquidation in
   let { num = num_lp; den = den_lp; } = liquidation_price p in
+  let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
+
+  (* lhs = collateral * den_fl * kit_sf * den_ek * den_lp *)
   let lhs =
     Ligo.mul_int_int
       (tez_to_mutez b.collateral)
-      (Ligo.mul_int_int den_fl (Ligo.mul_int_int kit_scaling_factor_int den_lp)) in
+      (Ligo.mul_int_int
+         (Ligo.mul_int_int den_fl kit_scaling_factor_int)
+         (Ligo.mul_int_int den_ek den_lp)
+      ) in
+
+  (* rhs = num_fl * (kit_outstanding * den_ek - kit_sf * num_ek) * num_lp * tez_sf *)
   let rhs =
     Ligo.mul_int_int
-      (Ligo.int_from_literal "1_000_000")
-      (Ligo.mul_int_int num_fl (Ligo.mul_int_int (kit_to_mukit_int optimistic_outstanding) num_lp)) in
+      num_fl
+      (Ligo.mul_int_int
+         (Ligo.sub_int_int
+            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+            (Ligo.mul_int_int kit_scaling_factor_int num_ek)
+         )
+         (Ligo.mul_int_int num_lp (Ligo.int_from_literal "1_000_000"))
+      ) in
+
   b.active && Ligo.lt_int_int lhs rhs
 
 type liquidation_details =
