@@ -581,21 +581,39 @@ let make_burrow_for_test
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the
   * current minting price, and that all these liquidations were warranted
-  * (i.e. liquidation penalties have been paid). *)
+  * (i.e. liquidation penalties have been paid).
+  *
+  *   tez_collateral < fminting * kit_outstanding * minting_price
+*)
 let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let expected_kit =
-    let fraction = compute_expected_kit p b.collateral_at_auction in
-    kit_of_fraction_ceil fraction.num fraction.den in
-  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
-    if b.outstanding_kit < expected_kit
-    then zero_ratio
-    else kit_to_ratio (kit_sub b.outstanding_kit expected_kit) in
-  let collateral = ratio_of_tez b.collateral in
-  let minting_price = minting_price p in
-  lt_ratio_ratio collateral (mul_ratio (mul_ratio fminting optimistic_outstanding) minting_price)
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
 
+  (* lhs = collateral * den_fm * kit_sf * den_ek * den_mp *)
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int
+         (Ligo.mul_int_int den_fm kit_scaling_factor_int)
+         (Ligo.mul_int_int den_ek den_mp)
+      ) in
+
+  (* rhs = num_fm * (kit_outstanding * den_ek - kit_sf * num_ek) * num_mp * tez_sf *)
+  let rhs =
+    Ligo.mul_int_int
+      num_fm
+      (Ligo.mul_int_int
+         (Ligo.sub_int_int
+            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+            (Ligo.mul_int_int kit_scaling_factor_int num_ek)
+         )
+         (Ligo.mul_int_int num_mp (Ligo.int_from_literal "1_000_000"))
+      ) in
+
+  Ligo.lt_int_int lhs rhs
 
 let burrow_outstanding_kit (b: burrow) : kit = b.outstanding_kit
 
