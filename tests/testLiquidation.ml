@@ -427,13 +427,15 @@ let barely_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "6_941_863n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "467912067393300348926951424";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -499,13 +501,15 @@ let barely_non_complete_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "10_000_001n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "67404402845334701604864";
+        den = Ligo.int_from_literal "6740440284533470160400";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -569,13 +573,15 @@ let barely_complete_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "9_999_998n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "674043862432650352662675456";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -639,13 +645,12 @@ let barely_non_close_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_zero in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit = zero_ratio in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -709,13 +714,15 @@ let barely_close_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "2_463_052n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "166020530642689301158035456";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -787,13 +794,15 @@ let partial_liquidation_unit_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "17_592_296n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "1185798177338727676948512768";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -855,13 +864,15 @@ let complete_liquidation_unit_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "22_142_858n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "149252606300383982125056";
+        den = Ligo.int_from_literal "6740440284533470160400";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
@@ -925,13 +936,15 @@ let complete_and_close_liquidation_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "2_460_592n") in
-    let expected_kit =
-      let fraction = compute_expected_kit params details.tez_to_auction in
-      kit_of_fraction_ceil fraction.num fraction.den in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "165854675966722578579456";
+        den = Ligo.int_from_literal "67404402845334701604000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
       expected_kit;
 
