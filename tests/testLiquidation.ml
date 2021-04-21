@@ -1063,6 +1063,29 @@ let test_burrow_request_liquidation_invariant_partial =
   assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 
+let regression_test_72 =
+  "regression_test_72" >:: fun _ ->
+    let burrow0 =
+      Burrow.make_burrow_for_test
+        ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
+        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3928478924648448718n"))
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~excess_kit:kit_zero
+        ~active:true
+        ~permission_version:(Ligo.nat_from_literal "0n")
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~adjustment_index:fixedpoint_one
+        ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+    let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+      | Some (Burrow.Complete, liquidation_details) -> liquidation_details
+      | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+      | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
+    in
+    assert_properties_of_complete_liquidation Parameters.initial_parameters burrow0 liquidation_details
+
 let suite =
   "LiquidationTests" >::: [
     partial_liquidation_unit_test;
@@ -1092,4 +1115,7 @@ let suite =
     test_burrow_request_liquidation_invariant_close;
     test_burrow_request_liquidation_invariant_complete;
     test_burrow_request_liquidation_invariant_partial;
+
+    (* Regression tests *)
+    regression_test_72;
   ]
