@@ -347,7 +347,7 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
   *
-  *   tez_collateral < fliquidation * kit_outstanding * liquidation_price
+  *   tez_collateral < fliquidation * (kit_outstanding - expected_kit_from_auctions) * liquidation_price
   *
   * The quantity tez_collateral / (fliquidation * liquidation_price) we call the
   * liquidation limit. Note that for this check we optimistically take into
@@ -405,9 +405,10 @@ type liquidation_result = (liquidation_type * liquidation_details) option
 [@@deriving show]
 
 (** Compute the minumum amount of kit to receive for considering the
-  * liquidation unwarranted:
+  * liquidation unwarranted, calculated as (see
+  * docs/burrow-state-liquidations.md for the derivation of this formula):
   *
-  *   min_received_kit_for_unwarranted = tez_to_auction * (fliquidation * optimistic_outstanding) / collateral
+  *   tez_to_auction * (fliquidation * (outstanding_kit - expected_kit_from_auctions)) / collateral
 *)
 let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
   let _ = ensure_uptodate_burrow p b in
@@ -590,7 +591,7 @@ let make_burrow_for_test
   * current minting price, and that all these liquidations were warranted
   * (i.e. liquidation penalties have been paid).
   *
-  *   tez_collateral < fminting * kit_outstanding * minting_price
+  *   tez_collateral < fminting * (kit_outstanding - expected_kit_from_auctions) * minting_price
 *)
 let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
