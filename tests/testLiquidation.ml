@@ -1021,9 +1021,7 @@ let test_burrow_request_liquidation_invariant_complete =
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
   in
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
-  (* FIXME: this assertion currently fails due to https://github.com/tzConnectBerlin/huxian/issues/72
-   * Once we resolve this issue we can re-enable it. *)
-  (* assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details; *)
+  assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_partial =
