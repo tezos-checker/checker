@@ -427,11 +427,17 @@ let barely_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "6_941_863n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "467912067393300348926951424";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_properties_of_partial_liquidation params burrow details
 
@@ -495,11 +501,17 @@ let barely_non_complete_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "10_000_001n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "67404402845334701604864";
+        den = Ligo.int_from_literal "6740440284533470160400";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_properties_of_partial_liquidation params burrow details
 
@@ -561,11 +573,17 @@ let barely_complete_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "9_999_998n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "674043862432650352662675456";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_properties_of_complete_liquidation params burrow details
 
@@ -627,11 +645,14 @@ let barely_non_close_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_zero in
+    let expected_expected_kit = zero_ratio in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_properties_of_complete_liquidation params burrow details
 
@@ -693,11 +714,17 @@ let barely_close_liquidatable_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "2_463_052n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "166020530642689301158035456";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_properties_of_close_liquidation params burrow details
 
@@ -767,11 +794,17 @@ let partial_liquidation_unit_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "17_592_296n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "1185798177338727676948512768";
+        den = Ligo.int_from_literal "67404402845334701604000000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_bool "is optimistically overburrowed" (burrow_is_optimistically_overburrowed params burrow);
     assert_properties_of_partial_liquidation params burrow details
@@ -831,11 +864,17 @@ let complete_liquidation_unit_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "22_142_858n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "149252606300383982125056";
+        den = Ligo.int_from_literal "6740440284533470160400";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_bool
       "input burrow is optimistically overburrowed"
@@ -897,11 +936,17 @@ let complete_and_close_liquidation_test =
       expected_min_kit_for_unwarranted
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = kit_of_mukit (Ligo.nat_from_literal "2_460_592n") in
+    let expected_expected_kit =
+      { num = Ligo.int_from_literal "165854675966722578579456";
+        den = Ligo.int_from_literal "67404402845334701604000";
+      } in
+    let expected_kit = compute_expected_kit params details.tez_to_auction in
+
     assert_equal
-      ~printer:show_kit
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
       expected_expected_kit
-      (compute_expected_kit params details.tez_to_auction);
+      expected_kit;
 
     assert_bool
       "input burrow is optimistically overburrowed"
@@ -989,9 +1034,7 @@ let test_burrow_request_liquidation_invariant_complete =
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
   in
   Burrow.assert_burrow_invariants liquidation_details.burrow_state;
-  (* FIXME: this assertion currently fails due to https://github.com/tzConnectBerlin/huxian/issues/72
-   * Once we resolve this issue we can re-enable it. *)
-  (* assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details; *)
+  assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details;
   true
 
 let test_burrow_request_liquidation_invariant_partial =
@@ -1033,6 +1076,29 @@ let test_burrow_request_liquidation_invariant_partial =
   assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 
+let regression_test_72 =
+  "regression_test_72" >:: fun _ ->
+    let burrow0 =
+      Burrow.make_burrow_for_test
+        ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
+        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3928478924648448718n"))
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~excess_kit:kit_zero
+        ~active:true
+        ~permission_version:(Ligo.nat_from_literal "0n")
+        ~allow_all_tez_deposits:false
+        ~allow_all_kit_burnings:false
+        ~delegate:None
+        ~adjustment_index:fixedpoint_one
+        ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+    let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow0 with
+      | Some (Burrow.Complete, liquidation_details) -> liquidation_details
+      | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+      | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
+    in
+    assert_properties_of_complete_liquidation Parameters.initial_parameters burrow0 liquidation_details
+
 let suite =
   "LiquidationTests" >::: [
     partial_liquidation_unit_test;
@@ -1062,4 +1128,7 @@ let suite =
     test_burrow_request_liquidation_invariant_close;
     test_burrow_request_liquidation_invariant_complete;
     test_burrow_request_liquidation_invariant_partial;
+
+    (* Regression tests *)
+    regression_test_72;
   ]
