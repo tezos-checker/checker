@@ -4,7 +4,6 @@ open Checker
 open Error
 
 type params =
-  (* Deployment *)
   | DeployFunction of (lazy_function_id * Ligo.bytes)
   | SealContract
   | CheckerEntrypoint of checker_params
