@@ -7,8 +7,9 @@ require 'enumerator'
 require 'ostruct'
 
 LIGO_DIR="#{__dir__}/../generated/ligo"
-CONTRACT_TARGET="#{__dir__}/../generated/michelson/main.tz"
-FUNCTIONS_TARGET="#{__dir__}/../generated/michelson/functions.json"
+MICHELSON_DIR="#{__dir__}/../generated/michelson"
+CONTRACT_TARGET="#{MICHELSON_DIR}/main.tz"
+FUNCTIONS_TARGET="#{MICHELSON_DIR}/functions.json"
 
 MAIN_FILE="#{LIGO_DIR}/main.mligo"
 
@@ -98,6 +99,7 @@ functions_json = {
 
 functions_json = JSON.pretty_generate(functions_json)
 
+system("mkdir", "-p", MICHELSON_DIR)
 File.write(CONTRACT_TARGET, compiled_contract)
 puts "Wrote #{CONTRACT_TARGET}"
 File.write(FUNCTIONS_TARGET, functions_json)
