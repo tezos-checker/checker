@@ -28,7 +28,7 @@ test-coverage:
 	bisect-ppx-report summary
 
 clean:
-	$(RM) -r _build
+	$(RM) -r _build generated
 
 indent:
 	ocp-indent -i src/*.ml src/*.mli tests/*.ml
