@@ -1002,7 +1002,7 @@ let test_burrow_request_liquidation_invariant_complete =
     ~name:"burrow_request_liquidation - burrow returned in case 2b (liquidate all collateral) obeys burrow invariants"
     ~count:property_test_count
     (QCheck.pair arb_tez TestArbitrary.arb_kit)
-  @@ fun (collateral, _)->
+  @@ fun (collateral, extra_kit)->
 
   (* (999 / 1000 collat - creation_deposit) - 1/10 * (999 / 1000 collat - creation_deposit) + 1 *)
   (* Note: the math below is just a simplified version of the above expression *)
@@ -1012,7 +1012,7 @@ let test_burrow_request_liquidation_invariant_complete =
          (Ligo.int_from_literal "10_000"))
       (Ligo.int_from_literal "899_999") in
   let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
-    | Some n -> kit_add (kit_of_mukit n) kit_zero
+    | Some n -> kit_add (kit_of_mukit n) extra_kit
     | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
   in
   let burrow0 = make_burrow_for_test
