@@ -325,9 +325,10 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
   cdiv_int_int (Ligo.mul_int_int numerator (Ligo.int_from_literal "1_000_000")) denominator
 
 (** Compute the amount of kit we expect to receive from auctioning off an
-  * amount of tez, using the current minting price. Note that we are being
-  * rather optimistic here (we overapproximate the expected kit). *)
-let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
+  * amount of tez, using the current minting price. Since this is an artifice,
+  * a mere expectation, we neither floor nor ceil, but instead return the
+  * lossless fraction as is. *)
+let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
   let { num = num_lp; den = den_lp; } = liquidation_penalty in
   let { num = num_mp; den = den_mp; } = minting_price p in
   let numerator =
@@ -341,7 +342,7 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
     Ligo.mul_int_int
       (Ligo.int_from_literal "1_000_000")
       (Ligo.mul_int_int den_lp num_mp) in
-  kit_of_fraction_ceil numerator denominator
+  { num = numerator; den = denominator; }
 
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
@@ -357,7 +358,9 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : kit =
 let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let expected_kit = compute_expected_kit p b.collateral_at_auction in
+  let expected_kit =
+    let fraction = compute_expected_kit p b.collateral_at_auction in
+    kit_of_fraction_ceil fraction.num fraction.den in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
     then kit_zero
@@ -398,7 +401,9 @@ type liquidation_result = (liquidation_type * liquidation_details) option
 let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
   let _ = ensure_uptodate_burrow p b in
   assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
-  let expected_kit = compute_expected_kit p b.collateral_at_auction in
+  let expected_kit =
+    let fraction = compute_expected_kit p b.collateral_at_auction in
+    kit_of_fraction_ceil fraction.num fraction.den in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
     then kit_zero
@@ -572,7 +577,9 @@ let make_burrow_for_test
 let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let expected_kit = compute_expected_kit p b.collateral_at_auction in
+  let expected_kit =
+    let fraction = compute_expected_kit p b.collateral_at_auction in
+    kit_of_fraction_ceil fraction.num fraction.den in
   let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
     if b.outstanding_kit < expected_kit
     then zero_ratio

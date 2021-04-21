@@ -1,6 +1,7 @@
 open Kit
 open FixedPoint
 open Parameters
+open Ratio
 
 (** Representation of a burrow contract. *)
 type burrow
@@ -137,7 +138,7 @@ type liquidation_type =
 type liquidation_result = (liquidation_type * liquidation_details) option
 
 val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit
-val compute_expected_kit : parameters -> Ligo.tez -> kit
+val compute_expected_kit : parameters -> Ligo.tez -> ratio
 
 val show_liquidation_type : liquidation_type -> string
 val pp_liquidation_type : Format.formatter -> liquidation_type -> unit
