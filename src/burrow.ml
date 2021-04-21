@@ -405,27 +405,34 @@ type liquidation_result = (liquidation_type * liquidation_details) option
 [@@deriving show]
 
 (** Compute the minumum amount of kit to receive for considering the
-  * liquidation unwarranted. *)
+  * liquidation unwarranted:
+  *
+  *   min_received_kit_for_unwarranted = tez_to_auction * (fliquidation * optimistic_outstanding) / collateral
+*)
 let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
   let _ = ensure_uptodate_burrow p b in
-  assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero *)
-  let expected_kit =
-    let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
-    kit_of_fraction_ceil num_ek den_ek in
-  let optimistic_outstanding = (* if more is stored in the burrow, we just use optimistic_outstanding = 0 *)
-    if b.outstanding_kit < expected_kit
-    then kit_zero
-    else kit_sub b.outstanding_kit expected_kit in
+  assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero. FIXME: are we safe from this? *)
 
   let { num = num_fl; den = den_fl; } = fliquidation in
+  let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
+
+  (* numerator = max 0 (tez_to_auction * num_fl * (den_ek * outstanding_kit - kit_sf * num_ek)) *)
   let numerator =
-    Ligo.mul_int_int
-      (tez_to_mutez tez_to_auction)
-      (Ligo.mul_int_int num_fl (kit_to_mukit_int optimistic_outstanding)) in
+    let numerator =
+      Ligo.mul_int_int
+        (Ligo.mul_int_int (tez_to_mutez tez_to_auction) num_fl)
+        (Ligo.sub_int_int
+           (Ligo.mul_int_int den_ek (kit_to_mukit_int b.outstanding_kit))
+           (Ligo.mul_int_int kit_scaling_factor_int num_ek)
+        ) in
+    max_int (Ligo.int_from_literal "0") numerator in
+
+  (* denominator = collateral * den_fl * kit_sf * den_ek *)
   let denominator =
     Ligo.mul_int_int
-      den_fl
-      (Ligo.mul_int_int kit_scaling_factor_int (tez_to_mutez b.collateral)) in
+      (Ligo.mul_int_int (tez_to_mutez b.collateral) den_fl)
+      (Ligo.mul_int_int kit_scaling_factor_int den_ek) in
+
   kit_of_fraction_ceil numerator denominator (* Round up here; safer for the system, less so for the burrow *)
 
 let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result =
