@@ -230,8 +230,64 @@ let suite =
          )
     );
 
-    (* TODO: Missing "burn_kit - owner can withdraw". *)
-    (* TODO: Missing "burn_kit - non-owner cannot withdraw". *)
+    ("burn_kit - owner can burn" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
+       let burrow_id, checker = newly_created_burrow initial_checker in
+
+       (* Mint as much kit as possible *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let (ops, checker) =
+         Checker.entrypoint_mint_kit
+           ( checker
+           , Checker.deticketify_mint_kit
+               ( burrow_id
+               , kit_of_mukit (Ligo.nat_from_literal "4_285_714n")
+               )
+           ) in
+       let kit_token = match ops with
+         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+       in
+
+       (* Burn it back *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _ = Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token)) in
+       ()
+    );
+
+    ("burn_kit - non-owner cannot burn" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
+       let burrow_id, checker = newly_created_burrow initial_checker in
+
+       (* Mint as much kit as possible *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let (ops, checker) =
+         Checker.entrypoint_mint_kit
+           ( checker
+           , Checker.deticketify_mint_kit
+               ( burrow_id
+               , kit_of_mukit (Ligo.nat_from_literal "4_285_714n")
+               )
+           ) in
+       let kit_token = match ops with
+         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
+         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+       in
+
+       (* Have the wrong person try to burn it back *)
+       assert_raises
+         (Failure (Ligo.string_of_int error_InsufficientPermission))
+         (fun () ->
+            Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+            Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token))
+         )
+    );
 
     (
       Ligo.Tezos.reset();
