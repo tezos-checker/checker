@@ -52,7 +52,6 @@ let[@inline] error_InvalidKitToken                                 : Ligo.int = 
 let[@inline] error_InvalidLiquidityToken                           : Ligo.int = Ligo.int_from_literal "71"
 let[@inline] error_InvalidDelegationAuctionTicket                  : Ligo.int = Ligo.int_from_literal "72"
 let[@inline] error_InvalidLiquidationAuctionTicket                 : Ligo.int = Ligo.int_from_literal "73"
-let[@inline] error_InsufficientPermission                          : Ligo.int = Ligo.int_from_literal "76"
 
 let[@inline] error_NonExistentBurrow                               : Ligo.int = Ligo.int_from_literal "81"
 let[@inline] error_BurrowHasCompletedLiquidation                   : Ligo.int = Ligo.int_from_literal "82"

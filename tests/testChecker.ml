@@ -117,7 +117,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        assert_raises
-         (Failure (Ligo.string_of_int error_InsufficientPermission))
+         (Failure (Ligo.string_of_int error_AuthenticationError))
          (fun () -> Checker.entrypoint_deposit_tez (checker, Checker.deticketify_deposit_tez burrow_id))
     );
 
@@ -164,7 +164,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
-         (Failure (Ligo.string_of_int error_InsufficientPermission))
+         (Failure (Ligo.string_of_int error_AuthenticationError))
          (fun () -> Checker.entrypoint_withdraw_tez (checker, Checker.deticketify_withdraw_tez (withdrawal, burrow_id)))
     );
 
@@ -282,7 +282,7 @@ let suite =
 
        (* Have the wrong person try to burn it back *)
        assert_raises
-         (Failure (Ligo.string_of_int error_InsufficientPermission))
+         (Failure (Ligo.string_of_int error_AuthenticationError))
          (fun () ->
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token))
@@ -410,15 +410,6 @@ let suite =
       in
       ctez_add new_checker.cfmm.ctez (ctez_of_muctez bought_muctez) = checker.cfmm.ctez
     );
-
-    (* TODO [Dorran]: As of writing this comment we don't have an entrypoint for updating burrow permissions
-        to set burrow fields such as `allow_all_kit_burns. While for testing purposes we could manually
-        do this, it might make sense to wait until such an entrypoint exists before checking it in checker.ml
-    *)
-    (* ("burn_kit - passes when no permission ticket is provided and burrow supports allow_all_kit_burnings" >::
-       fun _ -> ()
-       (* TODO *)
-       ); *)
 
     ("set_burrow_delegate - transaction with value > 0 fails" >::
      fun _ ->

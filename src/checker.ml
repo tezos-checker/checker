@@ -129,7 +129,7 @@ let entrypoint_deposit_tez (state, burrow_id: checker * burrow_id) : (LigoOp.ope
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
     ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_mint_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operation list * checker =
   let burrow_id, kit = p in
@@ -149,7 +149,7 @@ let entrypoint_mint_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
       } in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_withdraw_tez (state, p: checker * (Ligo.tez * burrow_id)) : LigoOp.operation list * checker =
   let tez, burrow_id = p in
@@ -164,7 +164,7 @@ let entrypoint_withdraw_tez (state, p: checker * (Ligo.tez * burrow_id)) : LigoO
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_burn_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operation list * checker =
   let burrow_id, kit = p in
@@ -185,7 +185,7 @@ let entrypoint_burn_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
       } in
     (([]: LigoOp.operation list), state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_activate_burrow (state, burrow_id: checker * burrow_id) : LigoOp.operation list * checker =
   let burrow = find_burrow state.burrows burrow_id in
@@ -198,7 +198,7 @@ let entrypoint_activate_burrow (state, burrow_id: checker * burrow_id) : LigoOp.
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_deactivate_burrow (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
@@ -212,7 +212,7 @@ let entrypoint_deactivate_burrow (state, burrow_id: checker * burrow_id) : (Ligo
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
     ([op], updated_state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 let entrypoint_set_burrow_delegate (state, p: checker * (burrow_id * Ligo.key_hash option)) : LigoOp.operation list * checker =
   let burrow_id, delegate_opt = p in
@@ -227,7 +227,7 @@ let entrypoint_set_burrow_delegate (state, p: checker * (burrow_id * Ligo.key_ha
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 (* TODO: Arthur: one time we might want to trigger garbage collection of
  * slices is during a liquidation. a liquidation creates one slice, so if we
@@ -282,7 +282,7 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
     assert_checker_invariants state;
     (([]:  LigoOp.operation list), state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 (* NOTE: It prepends the operation to the list of operations given. This means
  * that if we entrypoint_touch a list of liquidation slices, the order of operations is
