@@ -36,6 +36,25 @@ type burrow =
   }
 [@@deriving show]
 
+type liquidation_details =
+  { liquidation_reward : Ligo.tez;
+    tez_to_auction : Ligo.tez;
+    burrow_state : burrow;
+  }
+[@@deriving show]
+
+type liquidation_type =
+  (* partial: some collateral remains in the burrow *)
+  | Partial
+  (* complete: deplete the collateral *)
+  | Complete
+  (* complete: deplete the collateral AND the creation deposit *)
+  | Close
+[@@deriving show]
+
+type liquidation_result = (liquidation_type * liquidation_details) option
+[@@deriving show]
+
 let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
   if p.last_touched = b.last_touched
   then ()
@@ -44,6 +63,32 @@ let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
 let[@inline] assert_burrow_invariants (_b: burrow) : unit =
   assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
   ()
+
+(* let liquidation_preserves_tez burrow_1 liquidation_result =
+   ...
+   let total_burrow_tez_1 = collateral_1 + collateral_at_auction_1 + (if active burrow_1 then creation_deposit else 0tez) in
+   let total_burrow_tez_2 = collateral_2 + collateral_at_auction_2 + (if active burrow_2 then creation_deposit else 0tez) in
+   ...
+   total_burrow_tez_1 = liquidation_reward + total_burrow_tez_2 *)
+
+let[@inline] assert_liquidation_preserves_tez (_burrow_in: burrow) (_liquidation_details: liquidation_details) : unit =
+  let total_collateral burrow = Ligo.add_tez_tez
+      (Ligo.add_tez_tez burrow.collateral burrow.collateral_at_auction)
+      (if burrow.active then creation_deposit else Ligo.tez_from_literal "0mutez")
+  in
+  let tez_in = total_collateral _burrow_in in
+  let tez_out = Ligo.add_tez_tez _liquidation_details.liquidation_reward (total_collateral _liquidation_details.burrow_state) in
+
+  (* Total tez in burrow state does not change *)
+  assert (Ligo.eq_tez_tez tez_in tez_out);
+  (* Also check that the tez_to_auction / collateral_at_auction book-keeping is correct *)
+  assert (
+    _burrow_in.collateral_at_auction =
+    (Ligo.sub_tez_tez
+       _liquidation_details.burrow_state.collateral_at_auction
+       _liquidation_details.tez_to_auction
+    )
+  )
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
@@ -385,24 +430,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
 
   b.active && Ligo.lt_int_int lhs rhs
 
-type liquidation_details =
-  { liquidation_reward : Ligo.tez;
-    tez_to_auction : Ligo.tez;
-    burrow_state : burrow;
-  }
-[@@deriving show]
 
-type liquidation_type =
-  (* partial: some collateral remains in the burrow *)
-  | Partial
-  (* complete: deplete the collateral *)
-  | Complete
-  (* complete: deplete the collateral AND the creation deposit *)
-  | Close
-[@@deriving show]
-
-type liquidation_result = (liquidation_type * liquidation_details) option
-[@@deriving show]
 
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted, calculated as (see
