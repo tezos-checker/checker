@@ -12,10 +12,6 @@ val pp_burrow : Format.formatter -> burrow -> unit
 (* Burrow API *)
 val burrow_collateral_at_auction : burrow -> Ligo.tez
 
-val burrow_permission_version : burrow -> Ligo.nat
-val burrow_allow_all_tez_deposits : burrow -> bool
-val burrow_allow_all_kit_burnings : burrow -> bool
-
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
   *   tez_collateral < fminting * kit_outstanding * minting_price
@@ -94,22 +90,6 @@ val burrow_deactivate : parameters -> burrow -> (burrow * Ligo.tez)
 val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
 
 (* ************************************************************************* *)
-(*                           Permission-related                              *)
-(* ************************************************************************* *)
-
-(** Requires admin. Sets whether or not to accept all tez deposits without
-  * permissions. *)
-val burrow_set_allow_all_tez_deposits : parameters -> burrow -> bool -> burrow
-
-(** Requires admin. Sets whether or not to accept all kit burns without
-  * permissions. *)
-val burrow_set_allow_all_kit_burns : parameters -> burrow -> bool -> burrow
-
-(** Requires admin. Increases the permission version so that all previous
-  * permissions are now invalid. Returns the new permission version. *)
-val burrow_increase_permission_version : parameters -> burrow -> (Ligo.nat * burrow)
-
-(* ************************************************************************* *)
 (*                          Liquidation-related                              *)
 (* ************************************************************************* *)
 (* Some notes:
@@ -156,9 +136,6 @@ val burrow_active : burrow -> bool
 
 val make_burrow_for_test :
   active:bool ->
-  permission_version:Ligo.nat ->
-  allow_all_tez_deposits:bool ->
-  allow_all_kit_burnings:bool ->
   delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->

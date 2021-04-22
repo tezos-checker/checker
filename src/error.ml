@@ -67,7 +67,6 @@ let[@inline] error_NotACompletedSlice                              : Ligo.int = 
 let[@inline] error_GetContractOptFailure                           : Ligo.int = Ligo.int_from_literal "90"
 
 let[@inline] error_GetEntrypointOptFailureReceiveLiquidationSlice  : Ligo.int = Ligo.int_from_literal "100"
-let[@inline] error_GetEntrypointOptFailureTransferPermission       : Ligo.int = Ligo.int_from_literal "101"
 let[@inline] error_GetEntrypointOptFailureTransferAddress          : Ligo.int = Ligo.int_from_literal "102"
 let[@inline] error_GetEntrypointOptFailureBurrowStoreTez           : Ligo.int = Ligo.int_from_literal "103"
 let[@inline] error_GetEntrypointOptFailureTransferKit              : Ligo.int = Ligo.int_from_literal "104"

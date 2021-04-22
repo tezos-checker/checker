@@ -13,10 +13,6 @@ type burrow =
      * "closed"/inactive otherwise. Paying the creation deposit re-activates
      * a "closed" burrow. *)
     active : bool;
-    (* Permission-related *)
-    permission_version : Ligo.nat;
-    allow_all_tez_deposits : bool;
-    allow_all_kit_burnings : bool;
     delegate : Ligo.key_hash option;
     (* Collateral currently stored in the burrow. *)
     collateral : Ligo.tez;
@@ -48,18 +44,6 @@ let[@inline] assert_burrow_invariants (_b: burrow) : unit =
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral_at_auction
-
-let[@inline] burrow_permission_version (b: burrow) : Ligo.nat =
-  assert_burrow_invariants b;
-  b.permission_version
-
-let[@inline] burrow_allow_all_tez_deposits (b: burrow) : bool =
-  assert_burrow_invariants b;
-  b.allow_all_tez_deposits
-
-let[@inline] burrow_allow_all_kit_burnings (b: burrow) : bool =
-  assert_burrow_invariants b;
-  b.allow_all_kit_burnings
 
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
@@ -153,9 +137,6 @@ let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash o
   then (Ligo.failwith error_InsufficientFunds : burrow)
   else
     { active = true;
-      permission_version = Ligo.nat_from_literal "0n";
-      allow_all_tez_deposits = false;
-      allow_all_kit_burnings = false;
       delegate = delegate_opt;
       collateral = Ligo.sub_tez_tez tez creation_deposit;
       outstanding_kit = kit_zero;
@@ -241,26 +222,6 @@ let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash option) (b:
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   { b with delegate = new_delegate; }
-
-(* ************************************************************************* *)
-(*                           PERMISSION-RELATED                              *)
-(* ************************************************************************* *)
-
-let burrow_set_allow_all_tez_deposits (p: parameters) (b: burrow) (on: bool) : burrow =
-  let _ = ensure_uptodate_burrow p b in
-  assert_burrow_invariants b;
-  { b with allow_all_tez_deposits = on; }
-
-let burrow_set_allow_all_kit_burns (p: parameters) (b: burrow) (on: bool) : burrow =
-  let _ = ensure_uptodate_burrow p b in
-  assert_burrow_invariants b;
-  { b with allow_all_kit_burnings = on; }
-
-let burrow_increase_permission_version (p: parameters) (b: burrow) : (Ligo.nat * burrow) =
-  let _ = ensure_uptodate_burrow p b in
-  assert_burrow_invariants b;
-  let new_version = Ligo.add_nat_nat b.permission_version (Ligo.nat_from_literal "1n") in
-  (new_version, {b with permission_version = new_version;})
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
@@ -563,9 +524,6 @@ let burrow_active (b: burrow) : bool =
 
 let make_burrow_for_test
     ~active
-    ~permission_version
-    ~allow_all_tez_deposits
-    ~allow_all_kit_burnings
     ~delegate
     ~collateral
     ~outstanding_kit
@@ -573,10 +531,7 @@ let make_burrow_for_test
     ~adjustment_index
     ~collateral_at_auction
     ~last_touched =
-  { permission_version = permission_version;
-    allow_all_tez_deposits = allow_all_tez_deposits;
-    allow_all_kit_burnings = allow_all_kit_burnings;
-    delegate = delegate;
+  { delegate = delegate;
     active = active;
     collateral = collateral;
     outstanding_kit = outstanding_kit;

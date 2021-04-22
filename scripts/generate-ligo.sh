@@ -26,7 +26,6 @@ inputs=(
   tickets
   burrowTypes
   constants
-  permission
   parameters
   burrow
   checkerTypes

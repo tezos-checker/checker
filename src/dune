@@ -36,7 +36,6 @@
   LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes
   Ptr
-  Permission
   Ratio
   BurrowTypes
   Tickets
