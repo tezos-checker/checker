@@ -1078,55 +1078,17 @@ let test_burrow_request_liquidation_invariant_partial =
 
 
 let test_burrow_request_liquidation_preserves_tez =
-  (* 1 / liquidation_reward * creation_deposit *)
-  let lower_collat_bound_for_test = 1_001_001 in
-  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
-
   qcheck_to_ounit
   @@ QCheck.Test.make
     ~name:"burrow_request_liquidation - total tez is preserved"
     ~count:property_test_count
-    (QCheck.triple arb_tez arb_tez TestArbitrary.arb_kit)
-  @@ fun (collateral, collateral_at_auction, extra_kit)->
+    (arbitrary_burrow initial_parameters)
+  @@ fun burrow0 ->
 
-  (* liquidation_limit + 1 *)
-  let min_kit_to_trigger_case = Ligo.add_int_int
-      (Common.fdiv_int_int
-         (Ligo.mul_int_int (Ligo.int_from_literal "19") (Common.tez_to_mutez (Ligo.add_tez_tez collateral collateral_at_auction)))
-         (Ligo.int_from_literal "10"))
-      (Ligo.int_from_literal "1") in
-  let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
-    | Some n -> kit_add (kit_of_mukit n) extra_kit
-    | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
+  let _ = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (_, liquidation_details) -> Burrow.assert_liquidation_preserves_tez burrow0 liquidation_details
+    | None -> ()
   in
-  let burrow0 = make_burrow_for_test
-      ~permission_version:(Ligo.nat_from_literal "0n")
-      ~allow_all_tez_deposits:false
-      ~allow_all_kit_burnings:false
-      ~delegate:None
-      ~active:true
-      ~collateral:collateral
-      ~outstanding_kit:outstanding_kit
-      ~excess_kit:kit_zero
-      ~adjustment_index:(compute_adjustment_index params)
-      ~collateral_at_auction:collateral_at_auction
-      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
-    | Some (_, liquidation_details) -> liquidation_details
-    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
-  in
-  assert_equal
-    ~cmp:Ligo.eq_tez_tez
-    ~printer:Ligo.string_of_tez
-    (Ligo.add_tez_tez (burrow_collateral burrow0) (burrow_collateral_at_auction burrow0))
-    (Ligo.add_tez_tez
-       liquidation_details.liquidation_reward
-       (Ligo.add_tez_tez
-          (burrow_collateral liquidation_details.burrow_state)
-          (burrow_collateral_at_auction liquidation_details.burrow_state)
-       )
-    );
   true
 
 let regression_test_72 =
