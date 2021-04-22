@@ -42,6 +42,7 @@
   Ligo
   LigoOp
   Fa12Types
+  Fa2Interface
   Error
   Common)
  (libraries str zarith)

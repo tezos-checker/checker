@@ -15,6 +15,7 @@ open BurrowTypes
 open CheckerTypes
 open Error
 open Fa12Types
+open Fa2Interface
 
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
@@ -369,6 +370,8 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       last_price = state_last_price;
+      fa2_ledger = state_fa2_ledger;
+      fa2_operators = state_fa2_operators;
     } = state in
 
   let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
@@ -381,6 +384,8 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       last_price = state_last_price;
+      fa2_ledger = state_fa2_ledger;
+      fa2_operators = state_fa2_operators;
     } in
   assert_checker_invariants new_state;
   (new_ops, new_state)
@@ -615,6 +620,8 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
           last_price = state_last_price;
+          fa2_ledger = state_fa2_ledger;
+          fa2_operators = state_fa2_operators;
         } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
         touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
@@ -625,6 +632,8 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           parameters = state_parameters;
           liquidation_auctions = state_liquidation_auctions;
           last_price = state_last_price;
+          fa2_ledger = state_fa2_ledger;
+          fa2_operators = state_fa2_operators;
         } in
       (ops, new_state) in
 
@@ -665,6 +674,66 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
     (([]: LigoOp.operation list), {state with last_price = Some price})
 
 (* ************************************************************************* *)
+(**                               FA2                                        *)
+(* ************************************************************************* *)
+
+(*
+Reference:
+https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/proposals/tzip-12/tzip-12.md
+*)
+let entrypoint_transfer (checker, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
+  let checker =
+    Ligo.List.fold_left
+      (fun (checker, x) ->
+        let is_authorized =
+               x.from_ = !Ligo.Tezos.sender
+                  || Ligo.mem (!Ligo.Tezos.sender, x.from_) checker.fa2_operators in
+        if not is_authorized
+        then failwith "UNAUTHORIZED"
+        else failwith "TODO"
+
+      )
+      checker
+      xs
+  in ([], checker)
+
+let entrypoint_balance_of (_, _: checker * fa2_balance_of_param) : (LigoOp.operation list * checker) =
+  failwith "foo"
+
+let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
+  let checker =
+    Ligo.List.fold_left
+      (fun (checker, x) ->
+        match x with
+        | Add_operator op ->
+          (* The standard does not specify who is permitted to update operators. We restrict
+             it only to the owner. *)
+          if op.owner <> !Ligo.Tezos.sender
+          then failwith "UNAUTHORIZED" (* FIXME: error message *)
+          else
+            { checker  with
+              fa2_operators =
+                Ligo.Big_map.add
+                  (op.operator, op.owner)
+                  ()
+                  checker.fa2_operators;
+            }
+        | Remove_operator op ->
+          if op.owner <> !Ligo.Tezos.sender
+          then failwith "UNAUTHORIZED" (* FIXME: error message *)
+          else
+            { checker  with
+              fa2_operators =
+                Ligo.Big_map.remove
+                  (op.operator, op.owner)
+                  checker.fa2_operators;
+            }
+      )
+      checker
+      xs
+  in ([], checker)
+
+(* ************************************************************************* *)
 (**                           CHECKER PARAMETERS                             *)
 (* ************************************************************************* *)
 
@@ -692,6 +761,9 @@ type checker_params =
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
   | ReceiveSliceFromBurrow of unit
   | ReceivePrice of Ligo.nat
+  | Transfer of fa2_transfer list
+  | Balance_of of fa2_balance_of_param
+  | Update_operators of fa2_update_operator list
 
 (* noop *)
 let[@inline] deticketify_touch (p: unit) : unit = p
@@ -765,3 +837,12 @@ let[@inline] deticketify_receive_slice_from_burrow (p: unit) : unit = p
 
 (* noop *)
 let[@inline] deticketify_receive_price (p: Ligo.nat) : Ligo.nat = p
+
+(* noop *)
+let[@inline] deticketify_transfer (p: fa2_transfer list) : fa2_transfer list = p
+
+(* noop *)
+let[@inline] deticketify_balance_of (p: fa2_balance_of_param) : fa2_balance_of_param = p
+
+(* noop *)
+let[@inline] deticketify_update_operators (p: fa2_update_operator list) : fa2_update_operator list = p

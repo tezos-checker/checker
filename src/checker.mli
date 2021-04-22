@@ -3,6 +3,7 @@ open Kit
 open LiquidationAuctionPrimitiveTypes
 open Tickets
 open CheckerTypes
+open Fa2Interface
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -215,6 +216,14 @@ val entrypoint_receive_slice_from_burrow : checker * unit -> (LigoOp.operation l
 (** Receive a price from the oracle. *)
 val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
+(* ************************************************************************* *)
+(**                               FA2                                        *)
+(* ************************************************************************* *)
+
+val entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
+val entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
+val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.operation list * checker
+
 (*****************************************************************************)
 (**                          {1 CHECKER PARAMETERS}                          *)
 (*****************************************************************************)
@@ -243,6 +252,9 @@ type checker_params =
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
   | ReceiveSliceFromBurrow of unit
   | ReceivePrice of Ligo.nat
+  | Transfer of fa2_transfer list
+  | Balance_of of fa2_balance_of_param
+  | Update_operators of fa2_update_operator list
 
 (**/**)
 (* These need not be part of the documentation of checker.ml. *)
@@ -268,4 +280,7 @@ val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket
 val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_receive_slice_from_burrow : unit -> unit
 val deticketify_receive_price : Ligo.nat -> Ligo.nat
+val deticketify_transfer : fa2_transfer list -> fa2_transfer list
+val deticketify_balance_of : fa2_balance_of_param -> fa2_balance_of_param
+val deticketify_update_operators : fa2_update_operator list -> fa2_update_operator list
 (**/**)

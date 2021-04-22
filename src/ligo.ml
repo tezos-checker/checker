@@ -29,7 +29,7 @@ module Big_map = struct
     IntMap.update
       hash
       (fun slot -> match slot with
-         | None  -> Option.map (fun v -> [(k, v)]) v
+         | None -> Option.map (fun v -> [(k, v)]) v
          | Some slot ->
            let rec go xs =
              match xs with
@@ -70,6 +70,7 @@ module Map = Big_map
 
 module List = struct
   let length xs = Z.of_int (List.length xs)
+  let fold_left f acc xs = List.fold_left (fun a b -> f (a, b)) acc xs
 end
 
 (* UTILITY FUNCTIONS *)

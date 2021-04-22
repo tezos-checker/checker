@@ -93,9 +93,9 @@ type key_hash
     The hash of a public cryptographic key.
 *)
 
-(* type 't list *)
 module List : sig
   val length : 'a list -> nat
+  val fold_left : ('acc * 'a -> 'acc) -> 'acc -> 'a list -> 'acc
 end
 
 (**
