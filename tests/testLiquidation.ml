@@ -1084,10 +1084,19 @@ let test_burrow_request_liquidation_preserves_tez =
     ~count:property_test_count
     (arbitrary_burrow initial_parameters)
   @@ fun burrow0 ->
-
+  let _ = Burrow.burrow_collateral_at_auction in
   let _ = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
-    | Some (_, liquidation_details) -> Burrow.assert_liquidation_preserves_tez burrow0 liquidation_details
     | None -> ()
+    | Some (_, liquidation_details) ->
+      let tez_in = burrow_total_associated_tez burrow0 in
+      let tez_out = Ligo.add_tez_tez liquidation_details.liquidation_reward (burrow_total_associated_tez liquidation_details.burrow_state) in
+
+      assert (Ligo.eq_tez_tez tez_in tez_out);
+      (* Also check that tez_to_auction is exactly reflected in collateral_at_auction *)
+      assert (Burrow.burrow_collateral_at_auction burrow0 =
+              (Ligo.sub_tez_tez
+                 (Burrow.burrow_collateral_at_auction liquidation_details.burrow_state) liquidation_details.tez_to_auction)
+             );
   in
   true
 

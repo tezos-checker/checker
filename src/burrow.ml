@@ -64,31 +64,15 @@ let[@inline] assert_burrow_invariants (_b: burrow) : unit =
   assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
   ()
 
-(* let liquidation_preserves_tez burrow_1 liquidation_result =
-   ...
-   let total_burrow_tez_1 = collateral_1 + collateral_at_auction_1 + (if active burrow_1 then creation_deposit else 0tez) in
-   let total_burrow_tez_2 = collateral_2 + collateral_at_auction_2 + (if active burrow_2 then creation_deposit else 0tez) in
-   ...
-   total_burrow_tez_1 = liquidation_reward + total_burrow_tez_2 *)
 
-let[@inline] assert_liquidation_preserves_tez (_burrow_in: burrow) (_liquidation_details: liquidation_details) : unit =
-  let total_collateral burrow = Ligo.add_tez_tez
-      (Ligo.add_tez_tez burrow.collateral burrow.collateral_at_auction)
-      (if burrow.active then creation_deposit else Ligo.tez_from_literal "0mutez")
-  in
-  let tez_in = total_collateral _burrow_in in
-  let tez_out = Ligo.add_tez_tez _liquidation_details.liquidation_reward (total_collateral _liquidation_details.burrow_state) in
+(** Computes the total amount of tez associated with a burrow. This includes
+  * the collateral, collateral_at_auction, and the creation_deposit if the burrow is active
+*)
+let burrow_total_associated_tez (b: burrow) : Ligo.tez =
+  Ligo.add_tez_tez
+    (Ligo.add_tez_tez b.collateral b.collateral_at_auction)
+    (if b.active then creation_deposit else Ligo.tez_from_literal "0mutez")
 
-  (* Total tez in burrow state does not change *)
-  assert (Ligo.eq_tez_tez tez_in tez_out);
-  (* Also check that the tez_to_auction / collateral_at_auction book-keeping is correct *)
-  assert (
-    _burrow_in.collateral_at_auction =
-    (Ligo.sub_tez_tez
-       _liquidation_details.burrow_state.collateral_at_auction
-       _liquidation_details.tez_to_auction
-    )
-  )
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
