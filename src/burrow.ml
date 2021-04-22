@@ -13,6 +13,13 @@ type burrow =
      * "closed"/inactive otherwise. Paying the creation deposit re-activates
      * a "closed" burrow. *)
     active : bool;
+    (* The owner of the burrow. This should be set once during creation, and
+     * never change throughout the lifetime of the burrow. NOTE: Perhaps we
+     * should add assertions (burrow_in.owner = burrow_out.owner) on all
+     * burrow-managing functions. *)
+    owner: Ligo.address;
+    (* The delegate for the tez (collateral + creation_deposit) the burrow
+     * holds. *)
     delegate : Ligo.key_hash option;
     (* Collateral currently stored in the burrow. *)
     collateral : Ligo.tez;
@@ -40,6 +47,10 @@ let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
 let[@inline] assert_burrow_invariants (_b: burrow) : unit =
   assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
   ()
+
+let[@inline] burrow_owner (b: burrow) : Ligo.address =
+  assert_burrow_invariants b;
+  b.owner
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
@@ -132,11 +143,12 @@ let burrow_return_kit_from_auction
       collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction slice.tez;
     }
 
-let burrow_create (p: parameters) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
+let burrow_create (p: parameters) (owner: Ligo.address) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
   if tez < creation_deposit
   then (Ligo.failwith error_InsufficientFunds : burrow)
   else
     { active = true;
+      owner = owner;
       delegate = delegate_opt;
       collateral = Ligo.sub_tez_tez tez creation_deposit;
       outstanding_kit = kit_zero;
@@ -524,6 +536,7 @@ let burrow_active (b: burrow) : bool =
 
 let make_burrow_for_test
     ~active
+    ~owner
     ~delegate
     ~collateral
     ~outstanding_kit
@@ -531,7 +544,8 @@ let make_burrow_for_test
     ~adjustment_index
     ~collateral_at_auction
     ~last_touched =
-  { delegate = delegate;
+  { owner = owner;
+    delegate = delegate;
     active = active;
     collateral = collateral;
     outstanding_kit = outstanding_kit;

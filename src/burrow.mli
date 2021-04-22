@@ -10,6 +10,7 @@ val show_burrow : burrow -> string
 val pp_burrow : Format.formatter -> burrow -> unit
 
 (* Burrow API *)
+val burrow_owner : burrow -> Ligo.address
 val burrow_collateral_at_auction : burrow -> Ligo.tez
 
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
@@ -59,7 +60,7 @@ val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidat
 (** Given an amount of tez as collateral (including a creation deposit, not
   * counting towards that collateral), create a burrow. Fail if the tez given
   * is less than the creation deposit. *)
-val burrow_create : parameters -> Ligo.tez -> Ligo.key_hash option -> burrow
+val burrow_create : parameters -> Ligo.address -> Ligo.tez -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
 val burrow_deposit_tez : parameters -> Ligo.tez -> burrow -> burrow
@@ -136,6 +137,7 @@ val burrow_active : burrow -> bool
 
 val make_burrow_for_test :
   active:bool ->
+  owner:Ligo.address ->
   delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->

@@ -77,7 +77,7 @@ let ensure_no_tez_given () =
   else ()
 
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
-  let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
+  let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
@@ -122,7 +122,7 @@ let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.ope
 let entrypoint_deposit_tez (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
@@ -136,7 +136,7 @@ let entrypoint_mint_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_mint_kit state.parameters kit burrow in
     let kit_tokens = kit_issue kit in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -156,8 +156,7 @@ let entrypoint_withdraw_tez (state, p: checker * (Ligo.tez * burrow_id)) : LigoO
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_withdraw_tez state.parameters tez burrow in
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
@@ -172,7 +171,7 @@ let entrypoint_burn_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
@@ -191,8 +190,7 @@ let entrypoint_burn_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
 let entrypoint_activate_burrow (state, burrow_id: checker * burrow_id) : LigoOp.operation list * checker =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
@@ -206,8 +204,7 @@ let entrypoint_deactivate_burrow (state, burrow_id: checker * burrow_id) : (Ligo
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
@@ -222,8 +219,7 @@ let entrypoint_set_burrow_delegate (state, p: checker * (burrow_id * Ligo.key_ha
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" burrow_id : Ligo.key_hash option LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
@@ -276,8 +272,7 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   let _ = ensure_no_tez_given () in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
-
-  if true (* FIXME: ownership authentication *) then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_return_slice_from_auction cancelled burrow in
     let state =
       { state with
