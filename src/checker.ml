@@ -690,11 +690,13 @@ let entrypoint_transfer (checker, xs: checker * fa2_transfer list) : (LigoOp.ope
     }
   )
 
+(* FIXME
 let entrypoint_balance_of (checker, param: checker * fa2_balance_of_param) : (LigoOp.operation list * checker) =
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (checker.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
   ( [op], checker )
+*)
 
 let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
   ( ([]: LigoOp.operation list),
@@ -732,7 +734,9 @@ type checker_params =
   | ReceiveSliceFromBurrow of unit
   | ReceivePrice of Ligo.nat
   | Transfer of fa2_transfer list
+(* FIXME
   | Balance_of of fa2_balance_of_param
+*)
   | Update_operators of fa2_update_operator list
 
 (* noop *)
@@ -810,8 +814,10 @@ let[@inline] deticketify_receive_price (p: Ligo.nat) : Ligo.nat = p
 (* noop *)
 let[@inline] deticketify_transfer (p: fa2_transfer list) : fa2_transfer list = p
 
+(* FIXME
 (* noop *)
 let[@inline] deticketify_balance_of (p: fa2_balance_of_param) : fa2_balance_of_param = p
+*)
 
 (* noop *)
 let[@inline] deticketify_update_operators (p: fa2_update_operator list) : fa2_update_operator list = p
