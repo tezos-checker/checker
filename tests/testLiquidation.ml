@@ -1029,6 +1029,38 @@ let test_burrow_request_liquidation_invariant_partial =
   assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 
+let test_compute_min_kit_for_unwarranted_zero_collateral =
+  (* let upper_collat_bound_for_test = 1_001_000 in *)
+  (* upper_collat_bound_for_test / 1.9 + 1 *)
+  let kit_to_allow_liquidation = kit_of_mukit (Ligo.nat_from_literal "526_843n") in
+  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- 0) in
+
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"TODO compute_min_kit_for_unwarranted - never encounters zero collateral"
+    ~count:property_test_count
+    (QCheck.pair arb_tez TestArbitrary.arb_kit)
+  @@ fun (collateral, extra_kit) ->
+
+  let burrow0 = make_burrow_for_test
+      ~owner:bob_addr
+      ~delegate:None
+      ~active:true
+      ~collateral:collateral
+      ~outstanding_kit:(kit_add kit_to_allow_liquidation extra_kit)
+      ~excess_kit:kit_zero
+      ~adjustment_index:(compute_adjustment_index params)
+      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+  let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+    | Some (Burrow.Close, liquidation_details) -> liquidation_details
+    | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
+    | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Close was expected" (Burrow.show_liquidation_type liquidation_type))
+  in
+  let _ = Format.fprintf Format.std_formatter "%s | " (show_liquidation_details liquidation_details) in
+  let _ = Burrow.compute_min_kit_for_unwarranted initial_parameters burrow0 liquidation_details.tez_to_auction in
+  true
 let regression_test_72 =
   "regression_test_72" >:: fun _ ->
     let burrow0 =
@@ -1079,6 +1111,8 @@ let suite =
     test_burrow_request_liquidation_invariant_close;
     test_burrow_request_liquidation_invariant_complete;
     test_burrow_request_liquidation_invariant_partial;
+
+    test_compute_min_kit_for_unwarranted_zero_collateral;
 
     (* Regression tests *)
     regression_test_72;

@@ -8,9 +8,9 @@ let suite =
        TestKit.suite;
        TestAvl.suite;
        TestBurrow.suite;
-       TestParameters.suite;
-       TestLiquidation.suite;
-       TestCfmm.suite; *)
+       TestParameters.suite; *)
+    TestLiquidation.suite;
+    (* TestCfmm.suite; *)
     TestLiquidationAuction.suite;
   ]
 
