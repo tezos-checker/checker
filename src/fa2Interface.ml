@@ -153,7 +153,7 @@ let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
 let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
 
 let assert_valid_fa2_token (n: fa2_token_id): unit =
-  if n == kit_token_id || n == liquidity_token_id
+  if n = kit_token_id || n = liquidity_token_id
   then ()
   else failwith "FA2_TOKEN_UNDEFINED" (* FIXME: error message *)
 
@@ -180,7 +180,7 @@ let set_fa2_ledger_value
   (key: fa2_token_id * Ligo.address)
   (value: Ligo.nat)
   : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map =
-  if value == Ligo.nat_from_literal "0n"
+  if value = Ligo.nat_from_literal "0n"
   then Ligo.Big_map.remove key ledger
   else Ligo.Big_map.add key value ledger
 
