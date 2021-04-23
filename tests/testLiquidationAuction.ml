@@ -5,6 +5,8 @@ open LiquidationAuction
 open LiquidationAuctionTypes
 open Error
 open Ratio
+let property_test_count = 100
+let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -12,12 +14,12 @@ let checker_sender = Ligo.address_from_literal "somebody"
 
 let suite =
   let burrow_id_1 = Ligo.address_of_string "burrow_1" in
-  let burrow_id_2 = Ligo.address_of_string "burrow_2" in
-  let burrow_id_3 = Ligo.address_of_string "burrow_3" in
+  (* let burrow_id_2 = Ligo.address_of_string "burrow_2" in *)
+  (* let burrow_id_3 = Ligo.address_of_string "burrow_3" in *)
 
   "Liquidation auction tests" >::: [
-    ("test starts descending auction" >::
-     fun _ ->
+    (* ("test starts descending auction" >::
+       fun _ ->
        Ligo.Tezos.reset();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -61,10 +63,10 @@ let suite =
          (kit_of_mukit (Ligo.nat_from_literal "1_960_394n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
-    );
+       );
 
-    ("test batches up auction lots" >::
-     fun _ ->
+       ("test batches up auction lots" >::
+       fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -88,10 +90,10 @@ let suite =
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
-    );
+       );
 
-    ("test splits up auction lots to fit batch size" >::
-     fun _ ->
+       ("test splits up auction lots to fit batch size" >::
+       fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -115,10 +117,10 @@ let suite =
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
-    );
+       );
 
-    ("test bidding" >::
-     fun _ ->
+       ("test bidding" >::
+       fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -156,5 +158,34 @@ let suite =
          (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
 
        ()
-    );
+       ); *)
+
+    qcheck_to_ounit
+    @@ QCheck.Test.make
+      ~name:"TODO bid can not be zero"
+      ~count:property_test_count
+      QCheck.(0 -- 100)
+    @@ fun blocks_passed ->
+
+    (* Create an auction with one slice *)
+    Ligo.Tezos.reset ();
+    let auctions = liquidation_auction_empty in
+    let (auctions, _) =
+      liquidation_auction_send_to_auction
+        auctions
+        (* Note: The amounts don't matter here. We are only interested in the bidding logic *)
+        { burrow = burrow_id_1; tez = Ligo.tez_from_literal "1_000_000mutez";
+          min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "1n"); (* note: randomly chosen *)
+        } in
+    let start_price = one_ratio in
+    let auctions = liquidation_auction_touch auctions start_price in
+    let current = Option.get auctions.current_auction in
+
+    Ligo.Tezos.new_transaction ~seconds_passed:(blocks_passed*3600) ~blocks_passed:blocks_passed ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BidTooLow))
+      (fun () -> liquidation_auction_place_bid current {address=Ligo.address_from_literal "12345"; kit=kit_zero});
+    ();
+    true
+
   ]
