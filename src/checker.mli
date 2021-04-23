@@ -28,8 +28,7 @@ val calculate_touch_reward : Ligo.timestamp -> kit
 
 (** Create and return a new burrow containing the given tez as collateral,
     minus the creation deposit. Fail if the tez is not enough to cover the
-    creation deposit. Additionally, return an Admin permission ticket to the
-    sender.
+    creation deposit.
 
     Parameters:
     - An optional delegate address for the freshly-originated burrow contract
@@ -37,75 +36,65 @@ val calculate_touch_reward : Ligo.timestamp -> kit
 val entrypoint_create_burrow : checker * Ligo.key_hash option -> (LigoOp.operation list * checker)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
-    the burrow does not exist, or if the burrow does not allow deposits from
-    anyone and the permission ticket given is insufficient.
+    the burrow does not exist, or if the sender is not the burrow owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow into which the collateral will be deposited
 *)
-val entrypoint_deposit_tez : checker * (permission_redacted_content option * burrow_id) -> (LigoOp.operation list * checker)
+val entrypoint_deposit_tez : checker * burrow_id -> (LigoOp.operation list * checker)
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
-    does not exist, if this action would overburrow it, or if the permission
-    ticket given is insufficient.
+    does not exist, if this action would overburrow it, or if the sender is not
+    the burrow owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The amount of tez to withdraw
     - The ID of the burrow from which the collateral should be withdrawn
 *)
-val entrypoint_withdraw_tez : checker * (permission_redacted_content * Ligo.tez * burrow_id) -> LigoOp.operation list * checker
+val entrypoint_withdraw_tez : checker * (Ligo.tez * burrow_id) -> LigoOp.operation list * checker
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
-    there is not enough collateral, or if the permission ticket given is
-    insufficient.
+    there is not enough collateral, or if the sender is not the burrow owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow from which to mint kit
     - The amount of kit to mint
 *)
-val entrypoint_mint_kit : checker * (permission_redacted_content * burrow_id * kit) -> LigoOp.operation list * checker
+val entrypoint_mint_kit : checker * (burrow_id * kit) -> LigoOp.operation list * checker
 
-(** Deposit/burn a non-negative amount of kit to a burrow. If there is
-    excess kit, simply store it into the burrow. Fail if the burrow does not
-    exist, or if the burrow does not allow kit burnings from anyone and the
-    permission ticket given is insufficient.
+(** Deposit/burn a non-negative amount of kit to a burrow. If there is excess
+    kit, simply store it into the burrow. Fail if the burrow does not exist, or
+    if the sender is not the burrow owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow in which to burn the kit
     - The amount of kit to burn (supplied as a ticket)
 *)
-val entrypoint_burn_kit : checker * (permission_redacted_content option * burrow_id * kit) -> (LigoOp.operation list * checker)
+val entrypoint_burn_kit : checker * (burrow_id * kit) -> (LigoOp.operation list * checker)
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
     if the burrow is already active, if the amount of tez given is less than
-    the creation deposit, or if the permission ticket given is not an admin
-    ticket.
+    the creation deposit, or if the sender is not the burrow owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow to activate
 *)
-val entrypoint_activate_burrow : checker * (permission_redacted_content * burrow_id) -> LigoOp.operation list * checker
+val entrypoint_activate_burrow : checker * burrow_id -> LigoOp.operation list * checker
 
 (** Deativate a currently active burrow. Fails if the burrow does not exist,
     if it is already inactive, if it is overburrowed, if it has kit
-    outstanding, if it has collateral sent off to auctions, or if the
-    permission ticket given is not an admin ticket. If deactivation is
-    successful, make a tez payment to the sender.
+    outstanding, if it has collateral sent off to auctions, or if the sender is
+    not the burrow owner. If deactivation is successful, make a tez payment to
+    the sender.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow to deactivate
 *)
-val entrypoint_deactivate_burrow : checker * (permission_redacted_content * burrow_id) -> LigoOp.operation list * checker
+val entrypoint_deactivate_burrow : checker * burrow_id -> LigoOp.operation list * checker
 
-(** Mark a burrow for liquidation. Fail if the burrow is not a
-    candidate for liquidation or if the burrow does not exist. If
-    successful, the reward is credited to the liquidator.
+(** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
+    liquidation or if the burrow does not exist. If successful, the reward is
+    credited to the liquidator.
 
     Parameters:
     - The ID of the burrow to mark for liquidation
@@ -120,16 +109,15 @@ val entrypoint_touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.ope
 (** Cancel the liquidation of a slice of collateral that has been queued for
     auction. This operation can fail for several reasons:
 
-    - if the permission given is not valid for this operation on the corresponding burrow,
+    - if the sender is not the burrow owner,
     - if the slice is already at the current auction,
     - if the slice is part of an already completed auction, or
     - if the burrow is overburrowed at the moment.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The liquidation slice to cancel
 *)
-val entrypoint_cancel_liquidation_slice : checker * (permission_redacted_content * leaf_ptr) -> LigoOp.operation list * checker
+val entrypoint_cancel_liquidation_slice : checker * leaf_ptr -> LigoOp.operation list * checker
 
 (** Perform maintainance tasks for the burrow.
 
@@ -138,55 +126,14 @@ val entrypoint_cancel_liquidation_slice : checker * (permission_redacted_content
 *)
 val entrypoint_touch_burrow : checker * burrow_id -> LigoOp.operation list * checker
 
-(** Set the delegate of a burrow.
+(** Set the delegate of a burrow. Fail if if the sender is not the burrow
+    owner.
 
     Parameters:
-    - A permission for the burrow (supplied as a ticket)
     - The ID of the burrow to modify
     - The key hash of the new delegate's address, or None to unset the delegate
 *)
-val entrypoint_set_burrow_delegate : checker * (permission_redacted_content * burrow_id * Ligo.key_hash option) -> (LigoOp.operation list * checker)
-
-(** Create a new permission for a burrow. Requires admin rights to perform.
-
-    Parameters:
-    - An existing permission for the burrow (supplied as a ticket)
-    - The ID of the burrow for which to create permissions
-    - The rights to assign to the new permission
-*)
-val entrypoint_make_permission : checker * (permission_redacted_content * burrow_id * rights) -> (LigoOp.operation list * checker)
-
-(** Requires admin. Sets whether or not a burrow accepts all tez deposits
-    without a permission.
-
-    Parameters:
-    - An existing permission for the burrow (supplied as a ticket)
-    - The ID of the burrow for which to create permissions
-    - A boolean: [true] means that permissionless tez deposits are allowed
-      and [false] means that they are not allowed
-*)
-val entrypoint_set_allow_all_tez_deposits : checker * (permission_redacted_content * burrow_id * bool) -> (LigoOp.operation list * checker)
-
-(** Requires admin. Sets whether or not a burrow accepts all kit burns
-    without a permission.
-
-    Parameters:
-    - An existing permission for the burrow (supplied as a ticket)
-    - The ID of the burrow for which to create permissions
-    - A boolean: [true] means that permissionless kit burns are allowed
-      and [false] means that they are not allowed
-*)
-val entrypoint_set_allow_all_kit_burns : checker * (permission_redacted_content * burrow_id * bool) -> (LigoOp.operation list * checker)
-
-(** Requires admin. Increments a counter so that all previous permissions are
-    now invalid and returns a new admin permission. This makes it easy to
-    transfer an admin permission to another party.
-
-    Parameters:
-    - An existing permission for the burrow (supplied as a ticket)
-    - The ID of the burrow for which to create permissions
-*)
-val entrypoint_invalidate_all_permissions : checker * (permission_redacted_content * burrow_id) -> (LigoOp.operation list * checker)
+val entrypoint_set_burrow_delegate : checker * (burrow_id * Ligo.key_hash option) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                              {1 CFMM}                                    *)
@@ -276,21 +223,17 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 type checker_params =
     Touch of unit
   | CreateBurrow of Ligo.key_hash option
-  | DepositTez of (permission option * burrow_id)
-  | WithdrawTez of (permission * Ligo.tez * burrow_id)
-  | MintKit of (permission * burrow_id * kit)
-  | BurnKit of (permission option * burrow_id * kit_token)
-  | ActivateBurrow of (permission * burrow_id)
-  | DeactivateBurrow of (permission * burrow_id)
+  | DepositTez of burrow_id
+  | WithdrawTez of (Ligo.tez * burrow_id)
+  | MintKit of (burrow_id * kit)
+  | BurnKit of (burrow_id * kit_token)
+  | ActivateBurrow of burrow_id
+  | DeactivateBurrow of burrow_id
   | MarkForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
-  | CancelLiquidationSlice of (permission * leaf_ptr)
+  | CancelLiquidationSlice of leaf_ptr
   | TouchBurrow of burrow_id
-  | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
-  | MakePermission of (permission * burrow_id * rights)
-  | SetAllowAllTezDeposits of (permission * burrow_id * bool)
-  | SetAllowAllKitBurns of (permission * burrow_id * bool)
-  | InvalidateAllPermissions of (permission * burrow_id)
+  | SetBurrowDelegate of (burrow_id * Ligo.key_hash option)
   | BuyKit of (ctez * kit * Ligo.timestamp)
   | SellKit of (kit_token * ctez * Ligo.timestamp)
   | AddLiquidity of (ctez * kit_token * Ligo.nat * Ligo.timestamp)
@@ -305,21 +248,17 @@ type checker_params =
 (* These need not be part of the documentation of checker.ml. *)
 val deticketify_touch : unit -> unit
 val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
-val deticketify_deposit_tez : permission option * burrow_id -> permission_redacted_content option * burrow_id
-val deticketify_withdraw_tez : permission * Ligo.tez * burrow_id -> permission_redacted_content * Ligo.tez * burrow_id
-val deticketify_mint_kit : permission * burrow_id * kit -> permission_redacted_content * burrow_id * kit
-val deticketify_burn_kit : permission option * burrow_id * kit_token -> permission_redacted_content option * burrow_id * kit
-val deticketify_activate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
-val deticketify_deactivate_burrow : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_deposit_tez : burrow_id -> burrow_id
+val deticketify_withdraw_tez : Ligo.tez * burrow_id -> Ligo.tez * burrow_id
+val deticketify_mint_kit : burrow_id * kit -> burrow_id * kit
+val deticketify_burn_kit : burrow_id * kit_token -> burrow_id * kit
+val deticketify_activate_burrow : burrow_id -> burrow_id
+val deticketify_deactivate_burrow : burrow_id -> burrow_id
 val deticketify_mark_for_liquidation : burrow_id -> burrow_id
 val deticketify_touch_liquidation_slices : leaf_ptr list -> leaf_ptr list
-val deticketify_cancel_liquidation_slice : permission * leaf_ptr -> permission_redacted_content * leaf_ptr
+val deticketify_cancel_liquidation_slice : leaf_ptr -> leaf_ptr
 val deticketify_touch_burrow : burrow_id -> burrow_id
-val deticketify_set_burrow_delegate : permission * burrow_id * Ligo.key_hash option -> permission_redacted_content * burrow_id * Ligo.key_hash option
-val deticketify_make_permission : permission * burrow_id * rights -> permission_redacted_content * burrow_id * rights
-val deticketify_set_allow_all_tez_deposits : permission * burrow_id * bool -> permission_redacted_content * burrow_id * bool
-val deticketify_set_allow_all_kit_burns : permission * burrow_id * bool -> permission_redacted_content * burrow_id * bool
-val deticketify_invalidate_all_permissions : permission * burrow_id -> permission_redacted_content * burrow_id
+val deticketify_set_burrow_delegate : burrow_id * Ligo.key_hash option -> burrow_id * Ligo.key_hash option
 val deticketify_buy_kit : ctez * kit * Ligo.timestamp -> ctez * kit * Ligo.timestamp
 val deticketify_sell_kit : kit_token * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
 val deticketify_add_liquidity : ctez * kit_token * Ligo.nat * Ligo.timestamp -> ctez * kit * Ligo.nat * Ligo.timestamp

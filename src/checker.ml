@@ -2,7 +2,6 @@ open Ratio
 open Ctez
 open Kit
 open Avl
-open Permission
 open Parameters
 open Cfmm
 open Burrow
@@ -78,7 +77,7 @@ let ensure_no_tez_given () =
   else ()
 
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
-  let burrow = burrow_create state.parameters !Ligo.Tezos.amount delegate_opt in
+  let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
@@ -105,18 +104,13 @@ let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_h
       delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       checker_address in
-  let admin_ticket = issue_permission_ticket AdminRights burrow_address (Ligo.nat_from_literal "0n") in
-  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
-    | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
-
-  let op3 = match (LigoOp.Tezos.get_entrypoint_opt "%transferAddress" !Ligo.Tezos.sender : Ligo.address LigoOp.contract option) with
+  let op2 = match (LigoOp.Tezos.get_entrypoint_opt "%transferAddress" !Ligo.Tezos.sender : Ligo.address LigoOp.contract option) with
     | Some c -> LigoOp.Tezos.address_transaction burrow_address (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferAddress : LigoOp.operation) in
 
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
 
-  ([op1; op2; op3], updated_state)
+  ([op1; op2], updated_state)
 
 let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.operation list * checker =
   let _ = ensure_no_tez_given () in
@@ -125,35 +119,24 @@ let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.ope
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
   (([]: LigoOp.operation list), state)
 
-let entrypoint_deposit_tez (state, p: checker * (permission_redacted_content option * burrow_id)) : (LigoOp.operation list * checker) =
-  let r, burrow_id = p in
+let entrypoint_deposit_tez (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let is_allowed =
-    if burrow_allow_all_tez_deposits burrow then
-      true
-    else
-      let r = ensure_permission_is_present r in
-      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-      does_right_allow_tez_deposits r
-  in
-  if is_allowed then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
     ([op], {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows})
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_mint_kit (state, p: checker * (permission_redacted_content * burrow_id * kit)) : LigoOp.operation list * checker =
-  let r, burrow_id, kit = p in
+let entrypoint_mint_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operation list * checker =
+  let burrow_id, kit = p in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-  if does_right_allow_kit_minting r then
-    (* the permission should support minting kit. *)
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_mint_kit state.parameters kit burrow in
     let kit_tokens = kit_issue kit in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferKit" !Ligo.Tezos.sender : kit_token LigoOp.contract option) with
@@ -166,17 +149,14 @@ let entrypoint_mint_kit (state, p: checker * (permission_redacted_content * burr
       } in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_withdraw_tez (state, p: checker * (permission_redacted_content * Ligo.tez * burrow_id)) : LigoOp.operation list * checker =
-  let (r, tez, burrow_id) = p in
+let entrypoint_withdraw_tez (state, p: checker * (Ligo.tez * burrow_id)) : LigoOp.operation list * checker =
+  let tez, burrow_id = p in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if does_right_allow_tez_withdrawals r then
-    (* the permission should support withdrawing tez. *)
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_withdraw_tez state.parameters tez burrow in
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
@@ -184,22 +164,14 @@ let entrypoint_withdraw_tez (state, p: checker * (permission_redacted_content * 
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_burn_kit (state, p: checker * (permission_redacted_content option * burrow_id * kit)) : LigoOp.operation list * checker =
-  let r, burrow_id, kit = p in
+let entrypoint_burn_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operation list * checker =
+  let burrow_id, kit = p in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let is_allowed =
-    if burrow_allow_all_kit_burnings burrow then
-      true
-    else
-      let r = ensure_permission_is_present r in
-      let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-      does_right_allow_kit_burning r
-  in
-  if is_allowed then
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_burn_kit state.parameters kit burrow in
     (* TODO: What should happen if the following is violated? *)
     assert (state.parameters.circulating_kit >= kit);
@@ -213,16 +185,12 @@ let entrypoint_burn_kit (state, p: checker * (permission_redacted_content option
       } in
     (([]: LigoOp.operation list), state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_activate_burrow (state, p: checker * (permission_redacted_content * burrow_id)) : LigoOp.operation list * checker =
-  let r, burrow_id = p in
+let entrypoint_activate_burrow (state, burrow_id: checker * burrow_id) : LigoOp.operation list * checker =
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins can activate burrows. *)
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" burrow_id : unit LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
@@ -230,17 +198,13 @@ let entrypoint_activate_burrow (state, p: checker * (permission_redacted_content
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_deactivate_burrow (state, p: checker * (permission_redacted_content * burrow_id)) : (LigoOp.operation list * checker) =
-  let r, burrow_id = p in
+let entrypoint_deactivate_burrow (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins (and checker itself, due to liquidations) can deactivate burrows. *)
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
     let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id : (Ligo.tez * Ligo.address) LigoOp.contract option) with
@@ -248,17 +212,14 @@ let entrypoint_deactivate_burrow (state, p: checker * (permission_redacted_conte
       | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
     ([op], updated_state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let entrypoint_set_burrow_delegate (state, p: checker * (permission_redacted_content * burrow_id * Ligo.key_hash option)) : LigoOp.operation list * checker =
-  let r, burrow_id, delegate_opt = p in
+let entrypoint_set_burrow_delegate (state, p: checker * (burrow_id * Ligo.key_hash option)) : LigoOp.operation list * checker =
+  let burrow_id, delegate_opt = p in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if does_right_allow_setting_delegate r then
-    (* the permission should support setting the delegate. *)
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" burrow_id : Ligo.key_hash option LigoOp.contract option) with
       | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
@@ -266,73 +227,7 @@ let entrypoint_set_burrow_delegate (state, p: checker * (permission_redacted_con
     let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
     ([op], state)
   else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-
-let entrypoint_make_permission (state, p: checker * (permission_redacted_content * burrow_id * rights)) : LigoOp.operation list * checker =
-  let r, burrow_id, right = p in
-  let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins can create permissions. *)
-    let ticket = issue_permission_ticket right burrow_id (burrow_permission_version burrow) in
-    let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.perm_transaction ticket (Ligo.tez_from_literal "0mutez") c
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
-    ([op], state) (* unchanged state *)
-  else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-
-let entrypoint_set_allow_all_tez_deposits (state, p: checker * (permission_redacted_content * burrow_id * bool)) : LigoOp.operation list * checker =
-  let r, burrow_id, on = p in
-  let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins can set the allow_all_tez_deposits field. *)
-    let updated_burrow = burrow_set_allow_all_tez_deposits state.parameters burrow on in
-    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    (([]: LigoOp.operation list), updated_state)
-  else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-
-let entrypoint_set_allow_all_kit_burns (state, p: checker * (permission_redacted_content * burrow_id * bool)) : LigoOp.operation list * checker =
-  let r, burrow_id, on = p in
-  let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins can set the allow_all_kit_burnings field. *)
-    let updated_burrow = burrow_set_allow_all_kit_burns state.parameters burrow on in
-    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    (([]: LigoOp.operation list), updated_state)
-  else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-
-let entrypoint_invalidate_all_permissions (state, p: checker * (permission_redacted_content * burrow_id)) : LigoOp.operation list * checker =
-  let r, burrow_id = p in
-  let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state.burrows burrow_id in
-  let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let r = ensure_matching_permission burrow_id (burrow_permission_version burrow) r in
-
-  if is_admin_right r then
-    (* only admins can invalidate all permissions. *)
-    let updated_version, updated_burrow = burrow_increase_permission_version state.parameters burrow in
-    let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
-    let admin_ticket = issue_permission_ticket AdminRights burrow_id updated_version in
-    let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferPermission" !Ligo.Tezos.sender : permission LigoOp.contract option) with
-      | Some c -> LigoOp.Tezos.perm_transaction admin_ticket (Ligo.tez_from_literal "0mutez") c
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferPermission : LigoOp.operation) in
-    ([op], updated_state)
-  else
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 (* TODO: Arthur: one time we might want to trigger garbage collection of
  * slices is during a liquidation. a liquidation creates one slice, so if we
@@ -373,15 +268,11 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   )
 
 (* Cancel the liquidation of a slice. *)
-let entrypoint_cancel_liquidation_slice ((state, (r, leaf_ptr)): checker * (permission_redacted_content * leaf_ptr)) : (LigoOp.operation list * checker) =
+let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
-  let r = ensure_matching_permission cancelled.burrow (burrow_permission_version burrow) r in
-
-  if not (does_right_allow_cancelling_liquidations r) then
-    (Ligo.failwith error_InsufficientPermission : LigoOp.operation list * checker)
-  else
+  if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_return_slice_from_auction cancelled burrow in
     let state =
       { state with
@@ -390,6 +281,8 @@ let entrypoint_cancel_liquidation_slice ((state, (r, leaf_ptr)): checker * (perm
       } in
     assert_checker_invariants state;
     (([]:  LigoOp.operation list), state)
+  else
+    (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
 (* NOTE: It prepends the operation to the list of operations given. This means
  * that if we entrypoint_touch a list of liquidation slices, the order of operations is
@@ -779,21 +672,17 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
 type checker_params =
     Touch of unit
   | CreateBurrow of Ligo.key_hash option
-  | DepositTez of (permission option * burrow_id)
-  | WithdrawTez of (permission * Ligo.tez * burrow_id)
-  | MintKit of (permission * burrow_id * kit)
-  | BurnKit of (permission option * burrow_id * kit_token)
-  | ActivateBurrow of (permission * burrow_id)
-  | DeactivateBurrow of (permission * burrow_id)
+  | DepositTez of burrow_id
+  | WithdrawTez of (Ligo.tez * burrow_id)
+  | MintKit of (burrow_id * kit)
+  | BurnKit of (burrow_id * kit_token)
+  | ActivateBurrow of burrow_id
+  | DeactivateBurrow of burrow_id
   | MarkForLiquidation of burrow_id
   | TouchLiquidationSlices of leaf_ptr list
-  | CancelLiquidationSlice of (permission * leaf_ptr)
+  | CancelLiquidationSlice of leaf_ptr
   | TouchBurrow of burrow_id
-  | SetBurrowDelegate of (permission * burrow_id * Ligo.key_hash option)
-  | MakePermission of (permission * burrow_id * rights)
-  | SetAllowAllTezDeposits of (permission * burrow_id * bool)
-  | SetAllowAllKitBurns of (permission * burrow_id * bool)
-  | InvalidateAllPermissions of (permission * burrow_id)
+  | SetBurrowDelegate of (burrow_id * Ligo.key_hash option)
   | BuyKit of (ctez * kit * Ligo.timestamp)
   | SellKit of (kit_token * ctez * Ligo.timestamp)
   | AddLiquidity of (ctez * kit_token * Ligo.nat * Ligo.timestamp)
@@ -810,29 +699,24 @@ let[@inline] deticketify_touch (p: unit) : unit = p
 (* noop *)
 let[@inline] deticketify_create_burrow (p: Ligo.key_hash option) : Ligo.key_hash option = p
 
-(* removes tickets *)
-let[@inline] deticketify_deposit_tez (permission, burrow_id: permission option * burrow_id) : permission_redacted_content option * burrow_id =
-  (ensure_valid_optional_permission permission, burrow_id)
+(* noop *)
+let[@inline] deticketify_deposit_tez (p: burrow_id) : burrow_id = p
+
+(* noop *)
+let[@inline] deticketify_withdraw_tez (p: Ligo.tez * burrow_id) : Ligo.tez * burrow_id = p
+
+(* noop *)
+let[@inline] deticketify_mint_kit (p: burrow_id * kit) : burrow_id * kit = p
 
 (* removes tickets *)
-let[@inline] deticketify_withdraw_tez (permission, tez, burrow_id: permission * Ligo.tez * burrow_id) : permission_redacted_content * Ligo.tez * burrow_id =
-  (ensure_valid_permission permission, tez, burrow_id)
+let[@inline] deticketify_burn_kit (burrow_id, kit_token: burrow_id * kit_token) : burrow_id * kit =
+  (burrow_id, ensure_valid_kit_token kit_token)
 
-(* removes tickets *)
-let[@inline] deticketify_mint_kit (permission, burrow_id, kit: permission * burrow_id * kit) : permission_redacted_content * burrow_id * kit =
-  (ensure_valid_permission permission, burrow_id, kit)
+(* noop *)
+let[@inline] deticketify_activate_burrow (p: burrow_id) : burrow_id = p
 
-(* removes tickets *)
-let[@inline] deticketify_burn_kit (permission, burrow_id, kit_token: permission option * burrow_id * kit_token) : permission_redacted_content option * burrow_id * kit =
-  (ensure_valid_optional_permission permission, burrow_id, ensure_valid_kit_token kit_token)
-
-(* removes tickets *)
-let[@inline] deticketify_activate_burrow (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
-  (ensure_valid_permission permission, burrow_id)
-
-(* removes tickets *)
-let[@inline] deticketify_deactivate_burrow (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
-  (ensure_valid_permission permission, burrow_id)
+(* noop *)
+let[@inline] deticketify_deactivate_burrow (p: burrow_id) : burrow_id = p
 
 (* noop *)
 let[@inline] deticketify_mark_for_liquidation (burrow_id: burrow_id) : burrow_id = burrow_id
@@ -840,32 +724,14 @@ let[@inline] deticketify_mark_for_liquidation (burrow_id: burrow_id) : burrow_id
 (* noop *)
 let[@inline] deticketify_touch_liquidation_slices (p: leaf_ptr list) : leaf_ptr list = p
 
-(* removes tickets *)
-let[@inline] deticketify_cancel_liquidation_slice (permission, leaf_ptr: permission * leaf_ptr) : permission_redacted_content * leaf_ptr =
-  (ensure_valid_permission permission, leaf_ptr)
+(* noop *)
+let[@inline] deticketify_cancel_liquidation_slice (p: leaf_ptr) : leaf_ptr = p
 
 (* noop *)
 let[@inline] deticketify_touch_burrow (burrow_id: burrow_id) : burrow_id = burrow_id
 
-(* removes tickets *)
-let[@inline] deticketify_set_burrow_delegate (permission, burrow_id, kho: permission * burrow_id * Ligo.key_hash option) : permission_redacted_content * burrow_id * Ligo.key_hash option =
-  (ensure_valid_permission permission, burrow_id, kho)
-
-(* removes tickets *)
-let[@inline] deticketify_make_permission (permission, burrow_id, rights: permission * burrow_id * rights) : permission_redacted_content * burrow_id * rights =
-  (ensure_valid_permission permission, burrow_id, rights)
-
-(* removes tickets *)
-let[@inline] deticketify_set_allow_all_tez_deposits (permission, burrow_id, on: permission * burrow_id * bool) : permission_redacted_content * burrow_id * bool =
-  (ensure_valid_permission permission, burrow_id, on)
-
-(* removes tickets *)
-let[@inline] deticketify_set_allow_all_kit_burns (permission, burrow_id, on: permission * burrow_id * bool) : permission_redacted_content * burrow_id * bool =
-  (ensure_valid_permission permission, burrow_id, on)
-
-(* removes tickets *)
-let[@inline] deticketify_invalidate_all_permissions (permission, burrow_id: permission * burrow_id) : permission_redacted_content * burrow_id =
-  (ensure_valid_permission permission, burrow_id)
+(* noop *)
+let[@inline] deticketify_set_burrow_delegate (p: burrow_id * Ligo.key_hash option) : burrow_id * Ligo.key_hash option = p
 
 (* noop *)
 let[@inline] deticketify_buy_kit (p: ctez * kit * Ligo.timestamp) : ctez * kit * Ligo.timestamp = p
