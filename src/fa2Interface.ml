@@ -247,8 +247,8 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
   List.map
     (fun (req: fa2_balance_of_request) ->
       let key = (req.token_id, req.owner) in
-      let balance = get_fa2_ledger_value ledger key in
-      { request=req; balance = balance; }
+      let blnc = get_fa2_ledger_value ledger key in
+      { request=req; balance = blnc; }
     )
     xs
 
