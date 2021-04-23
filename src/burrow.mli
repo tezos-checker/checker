@@ -13,6 +13,11 @@ val pp_burrow : Format.formatter -> burrow -> unit
 val burrow_owner : burrow -> Ligo.address
 val burrow_collateral_at_auction : burrow -> Ligo.tez
 
+(** Computes the total amount of tez associated with a burrow. This includes
+  * the collateral, collateral_at_auction, and the creation_deposit if the
+  * burrow is active. *)
+val burrow_total_associated_tez : burrow -> Ligo.tez
+
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
   *   tez_collateral < fminting * kit_outstanding * minting_price
@@ -58,7 +63,7 @@ val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidatio
 val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> burrow -> burrow
 
 (** Given an amount of tez as collateral (including a creation deposit, not
-  * counting towards that collateral), create a burrow with its owner set to the 
+  * counting towards that collateral), create a burrow with its owner set to the
   * input address. Fail if the tez given is less than the creation deposit. *)
 val burrow_create : parameters -> Ligo.address -> Ligo.tez -> Ligo.key_hash option -> burrow
 

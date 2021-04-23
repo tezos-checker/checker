@@ -39,6 +39,25 @@ type burrow =
   }
 [@@deriving show]
 
+type liquidation_details =
+  { liquidation_reward : Ligo.tez;
+    tez_to_auction : Ligo.tez;
+    burrow_state : burrow;
+  }
+[@@deriving show]
+
+type liquidation_type =
+  (* partial: some collateral remains in the burrow *)
+  | Partial
+  (* complete: deplete the collateral *)
+  | Complete
+  (* complete: deplete the collateral AND the creation deposit *)
+  | Close
+[@@deriving show]
+
+type liquidation_result = (liquidation_type * liquidation_details) option
+[@@deriving show]
+
 let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
   if p.last_touched = b.last_touched
   then ()
@@ -51,6 +70,14 @@ let[@inline] assert_burrow_invariants (_b: burrow) : unit =
 let[@inline] burrow_owner (b: burrow) : Ligo.address =
   assert_burrow_invariants b;
   b.owner
+
+(** Computes the total amount of tez associated with a burrow. This includes
+  * the collateral, collateral_at_auction, and the creation_deposit if the
+  * burrow is active. *)
+let burrow_total_associated_tez (b: burrow) : Ligo.tez =
+  Ligo.add_tez_tez
+    (Ligo.add_tez_tez b.collateral b.collateral_at_auction)
+    (if b.active then creation_deposit else Ligo.tez_from_literal "0mutez")
 
 let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
@@ -358,24 +385,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
 
   b.active && Ligo.lt_int_int lhs rhs
 
-type liquidation_details =
-  { liquidation_reward : Ligo.tez;
-    tez_to_auction : Ligo.tez;
-    burrow_state : burrow;
-  }
-[@@deriving show]
 
-type liquidation_type =
-  (* partial: some collateral remains in the burrow *)
-  | Partial
-  (* complete: deplete the collateral *)
-  | Complete
-  (* complete: deplete the collateral AND the creation deposit *)
-  | Close
-[@@deriving show]
-
-type liquidation_result = (liquidation_type * liquidation_details) option
-[@@deriving show]
 
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted, calculated as (see
