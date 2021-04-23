@@ -17,8 +17,8 @@ val burrow_allow_all_tez_deposits : burrow -> bool
 val burrow_allow_all_kit_burnings : burrow -> bool
 
 (** Computes the total amount of tez associated with a burrow. This includes
-  * the collateral, collateral_at_auction, and the creation_deposit if the burrow is active
-*)
+  * the collateral, collateral_at_auction, and the creation_deposit if the
+  * burrow is active. *)
 val burrow_total_associated_tez : burrow -> Ligo.tez
 
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
