@@ -365,8 +365,14 @@ let suite =
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
-      let checker = { initial_checker with cfmm = cfmm } in
+
       let sender = alice_addr in
+      let checker =
+        { initial_checker with
+          (* Set up all the existing funds needed. *)
+          cfmm = cfmm;
+          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+        } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
@@ -391,7 +397,12 @@ let suite =
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
-      let checker = { initial_checker with cfmm = cfmm } in
+      let checker =
+        { initial_checker with
+          (* Set up all the existing funds needed. *)
+          cfmm = cfmm;
+          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_amount);
+        } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
       let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
@@ -407,8 +418,13 @@ let suite =
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
-      let checker = { initial_checker with cfmm = cfmm } in
       let sender = alice_addr in
+      let checker =
+        { initial_checker with
+          (* Set up all the existing funds needed. *)
+          cfmm = cfmm;
+          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+        } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
@@ -524,6 +540,10 @@ let suite =
     ("sell_kit - returns expected tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
+
+       let kit_to_sell = kit_of_mukit (Ligo.nat_from_literal "1_000_000n") in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
+
        (* Populate the cfmm with some liquidity *)
        let checker = {
          initial_checker with
@@ -532,9 +552,8 @@ let suite =
            ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
+         fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_to_sell);
        } in
-       let kit_to_sell = kit_of_mukit (Ligo.nat_from_literal "1_000_000n") in
-       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
@@ -563,6 +582,12 @@ let suite =
     ("remove_liquidity - returns expected kit and tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
+
+       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
+       let my_liquidity_tokens = Ligo.nat_from_literal "1n" in
+       let sender = alice_addr in
+
        (* Populate the cfmm with some liquidity *)
        let checker = {
          initial_checker with
@@ -572,11 +597,8 @@ let suite =
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
            lqt = Ligo.nat_from_literal "2n";
          };
+         fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.liquidity_token_id, sender, my_liquidity_tokens);
        } in
-       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
-       let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
-       let my_liquidity_tokens = Ligo.nat_from_literal "1n" in
-       let sender = alice_addr in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let _ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
@@ -618,6 +640,7 @@ let suite =
 
     ("can complete a liquidation auction" >::
      fun _ ->
+(* FIXME:FA2
        Ligo.Tezos.reset ();
        let checker = initial_checker in
 
@@ -684,7 +707,6 @@ let suite =
                )
            ) in
 
-(* FIXME:FA2
        let kit_token = match ops with
          | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
          | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
