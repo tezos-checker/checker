@@ -200,7 +200,7 @@ let ledger_withdraw
   let prev_balance = get_fa2_ledger_value ledger key in
   let new_balance =
     match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amnt) with
-    | None -> failwith "FA2_INSUFFICIENT_BALANCE"
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
     | Some b -> b in
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
@@ -208,13 +208,13 @@ let ledger_withdraw
 let[@inline] fa2_run_update_operators
   (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
   Ligo.List.fold_left
-    (fun (st, x) ->
+    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
       match x with
       | Add_operator op ->
         (* The standard does not specify who is permitted to update operators. We restrict
            it only to the owner. *)
         if op.owner <> !Ligo.Tezos.sender
-        then failwith "UNAUTHORIZED" (* FIXME: error message *)
+        then (failwith "UNAUTHORIZED" : fa2_state) (* FIXME: error message *)
         else
           { st  with
             operators =
@@ -225,7 +225,7 @@ let[@inline] fa2_run_update_operators
           }
       | Remove_operator op ->
         if op.owner <> !Ligo.Tezos.sender
-        then failwith "UNAUTHORIZED" (* FIXME: error message *)
+        then (failwith "UNAUTHORIZED" : fa2_state) (* FIXME: error message *)
         else
           { st  with
             operators =
@@ -261,7 +261,7 @@ let[@inline] fa2_run_transfer
              from_ = !Ligo.Tezos.sender
                 || Ligo.Big_map.mem (!Ligo.Tezos.sender, from_) st.operators in
       if not is_authorized
-      then failwith "UNAUTHORIZED"
+      then (failwith "UNAUTHORIZED" : fa2_state)
       else
         Ligo.List.fold_left
           (fun ((st, x): fa2_state * fa2_transfer_destination) ->
