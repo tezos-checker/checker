@@ -19,6 +19,7 @@ inputs=(
   ctez
   kit
   cfmmTypes
+  fa2Interface
   liquidationAuctionPrimitiveTypes
   mem
   avl
