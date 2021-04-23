@@ -4,7 +4,7 @@ open LiquidationAuctionPrimitiveTypes
 open Tickets
 open CheckerTypes
 open Fa2Interface
-open Cfmm
+open CfmmTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters

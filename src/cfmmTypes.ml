@@ -2,6 +2,8 @@ open Ctez
 open Kit
 open Ratio
 
+type liquidity = Ligo.nat
+
 type cfmm =
   { ctez: ctez;
     kit: kit;

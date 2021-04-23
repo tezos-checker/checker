@@ -5,8 +5,6 @@ open Constants
 open CfmmTypes
 open Error
 
-type liquidity = Ligo.nat
-
 (* When the cfmm is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow
  * is adding liquidity, to kick things off. I would also like to assume that

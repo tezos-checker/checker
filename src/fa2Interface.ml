@@ -1,5 +1,5 @@
 open Kit
-open Cfmm
+open CfmmTypes
 
 (*
  * INTERFACE

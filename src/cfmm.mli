@@ -27,8 +27,6 @@ open CfmmTypes
  * - Ensure that the balances and prices in cfmm do not go too far off.
 *)
 
-type liquidity = Ligo.nat
-
 (** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date

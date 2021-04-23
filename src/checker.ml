@@ -3,6 +3,7 @@ open Ctez
 open Kit
 open Avl
 open Parameters
+open CfmmTypes
 open Cfmm
 open Burrow
 open LiquidationAuction
