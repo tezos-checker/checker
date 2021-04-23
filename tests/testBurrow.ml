@@ -540,7 +540,7 @@ let suite =
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-       let slice = let open LiquidationAuctionPrimitiveTypes in {
+       let slice = LiquidationAuctionPrimitiveTypes.{
            burrow=Ligo.address_from_literal "12345";
            tez=Ligo.tez_from_literal "1mutez";
            min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "1n");
