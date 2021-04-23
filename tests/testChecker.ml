@@ -638,6 +638,10 @@ let suite =
          )
     );
 
+    (* FIXME: There are no tests currently for Checker.Transfer. *)
+    (* FIXME: There are no tests currently for Checker.Balance_of. *)
+    (* FIXME: There are no tests currently for Checker.Update_operators. *)
+
     ("can complete a liquidation auction" >::
      fun _ ->
 (* FIXME:FA2
