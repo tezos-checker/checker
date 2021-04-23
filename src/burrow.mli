@@ -58,8 +58,8 @@ val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidatio
 val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> burrow -> burrow
 
 (** Given an amount of tez as collateral (including a creation deposit, not
-  * counting towards that collateral), create a burrow. Fail if the tez given
-  * is less than the creation deposit. *)
+  * counting towards that collateral), create a burrow with its owner set to the 
+  * input address. Fail if the tez given is less than the creation deposit. *)
 val burrow_create : parameters -> Ligo.address -> Ligo.tez -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
