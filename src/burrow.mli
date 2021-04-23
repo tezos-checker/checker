@@ -10,11 +10,8 @@ val show_burrow : burrow -> string
 val pp_burrow : Format.formatter -> burrow -> unit
 
 (* Burrow API *)
+val burrow_owner : burrow -> Ligo.address
 val burrow_collateral_at_auction : burrow -> Ligo.tez
-
-val burrow_permission_version : burrow -> Ligo.nat
-val burrow_allow_all_tez_deposits : burrow -> bool
-val burrow_allow_all_kit_burnings : burrow -> bool
 
 (** Computes the total amount of tez associated with a burrow. This includes
   * the collateral, collateral_at_auction, and the creation_deposit if the
@@ -66,9 +63,9 @@ val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidatio
 val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> burrow -> burrow
 
 (** Given an amount of tez as collateral (including a creation deposit, not
-  * counting towards that collateral), create a burrow. Fail if the tez given
-  * is less than the creation deposit. *)
-val burrow_create : parameters -> Ligo.tez -> Ligo.key_hash option -> burrow
+  * counting towards that collateral), create a burrow with its owner set to the
+  * input address. Fail if the tez given is less than the creation deposit. *)
+val burrow_create : parameters -> Ligo.address -> Ligo.tez -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
 val burrow_deposit_tez : parameters -> Ligo.tez -> burrow -> burrow
@@ -97,22 +94,6 @@ val burrow_deactivate : parameters -> burrow -> (burrow * Ligo.tez)
 
 (** Set the delegate of a burrow. *)
 val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
-
-(* ************************************************************************* *)
-(*                           Permission-related                              *)
-(* ************************************************************************* *)
-
-(** Requires admin. Sets whether or not to accept all tez deposits without
-  * permissions. *)
-val burrow_set_allow_all_tez_deposits : parameters -> burrow -> bool -> burrow
-
-(** Requires admin. Sets whether or not to accept all kit burns without
-  * permissions. *)
-val burrow_set_allow_all_kit_burns : parameters -> burrow -> bool -> burrow
-
-(** Requires admin. Increases the permission version so that all previous
-  * permissions are now invalid. Returns the new permission version. *)
-val burrow_increase_permission_version : parameters -> burrow -> (Ligo.nat * burrow)
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)
@@ -161,9 +142,7 @@ val burrow_active : burrow -> bool
 
 val make_burrow_for_test :
   active:bool ->
-  permission_version:Ligo.nat ->
-  allow_all_tez_deposits:bool ->
-  allow_all_kit_burnings:bool ->
+  owner:Ligo.address ->
   delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->

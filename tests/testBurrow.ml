@@ -13,9 +13,7 @@ let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_f
     ~outstanding_kit:outstanding_kit
     ~excess_kit:kit_zero
     ~active:active
-    ~permission_version:(Ligo.nat_from_literal "0n")
-    ~allow_all_tez_deposits:false
-    ~allow_all_kit_burnings:false
+    ~owner:bob_addr
     ~delegate:None
     ~collateral:collateral
     ~adjustment_index:fixedpoint_one
@@ -116,30 +114,6 @@ let suite =
               {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
               (Some charles_key_hash)
               burrow_for_needs_touch_tests
-         )
-    );
-
-    ("burrow_set_allow_all_tez_deposits - fails for a burrow which needs to be touched" >::
-     fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_set_allow_all_tez_deposits
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              burrow_for_needs_touch_tests
-              true
-         )
-    );
-
-    ("burrow_set_allow_all_kit_burns - fails for a burrow which needs to be touched" >::
-     fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_set_allow_all_kit_burns
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              burrow_for_needs_touch_tests
-              true
          )
     );
 
@@ -374,9 +348,7 @@ let suite =
                   ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
                   ~excess_kit:kit_zero
                   ~active:true
-                  ~permission_version:(Ligo.nat_from_literal "0n")
-                  ~allow_all_tez_deposits:false
-                  ~allow_all_kit_burnings:false
+                  ~owner:bob_addr
                   ~delegate:None
                   ~collateral:(Ligo.tez_from_literal "10mutez")
                   ~adjustment_index:fixedpoint_one
@@ -384,35 +356,6 @@ let suite =
                   ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
               )
          )
-    );
-
-    ("burrow_increase_permission_version - fails for a burrow which needs to be touched" >::
-     fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_increase_permission_version
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              burrow_for_needs_touch_tests
-         )
-    );
-
-    ("burrow_increase_permission_version - permission version in burrow state matches returned permission version" >::
-     fun _ ->
-       let burrow0 = make_test_burrow
-           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
-           ~active:true
-           ~collateral:(Ligo.tez_from_literal "1mutez") in
-
-       let new_version, burrow = Burrow.burrow_increase_permission_version Parameters.initial_parameters burrow0 in
-
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         new_version
-         (Burrow.burrow_permission_version burrow);
-       assert_bool
-         "New permission version was equal to the original permission version"
-         (not (new_version = (Burrow.burrow_permission_version burrow0)))
     );
 
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
@@ -544,9 +487,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~permission_version:(Ligo.nat_from_literal "0n")
-          ~allow_all_tez_deposits:false
-          ~allow_all_kit_burnings:false
+          ~owner:bob_addr
           ~delegate:None
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one
@@ -575,9 +516,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~permission_version:(Ligo.nat_from_literal "0n")
-          ~allow_all_tez_deposits:false
-          ~allow_all_kit_burnings:false
+          ~owner:bob_addr
           ~delegate:None
           ~collateral:(Ligo.tez_from_literal "1mutez")
           ~adjustment_index:fixedpoint_one
@@ -671,36 +610,6 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"burrow_increase_permission_version - increases burrow permission version by exactly one"
-        ~count:property_test_count
-        TestArbitrary.arb_nat
-      @@ fun initial_permission_version ->
-
-      let burrow0 = Burrow.make_burrow_for_test
-          ~outstanding_kit:kit_zero
-          ~excess_kit:kit_zero
-          ~active:true
-          ~permission_version:initial_permission_version
-          ~allow_all_tez_deposits:false
-          ~allow_all_kit_burnings:false
-          ~delegate:None
-          ~collateral:(Ligo.tez_from_literal "1mutez")
-          ~adjustment_index:fixedpoint_one
-          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-      let new_permission_version, _ = Burrow.burrow_increase_permission_version Parameters.initial_parameters burrow0 in
-
-      assert_equal
-        ~printer:Ligo.string_of_int
-        (Ligo.int_from_literal "1")
-        (Ligo.sub_nat_nat new_permission_version initial_permission_version);
-      true
-    );
-
-    (
-      qcheck_to_ounit
-      @@ QCheck.Test.make
         ~name:"burrow_touch - net kit associated with burrow does not change when no adjustment is required"
         ~count:property_test_count
         (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
@@ -719,9 +628,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~permission_version:(Ligo.nat_from_literal "0n")
-          ~allow_all_tez_deposits:false
-          ~allow_all_kit_burnings:false
+          ~owner:bob_addr
           ~delegate:None
           ~collateral:(Ligo.tez_from_literal "1mutez")
           ~adjustment_index:fixedpoint_one
@@ -750,9 +657,7 @@ let suite =
           ~outstanding_kit:outstanding_kit
           ~excess_kit:kit_zero
           ~active:true
-          ~permission_version:(Ligo.nat_from_literal "0n")
-          ~allow_all_tez_deposits:false
-          ~allow_all_kit_burnings:false
+          ~owner:bob_addr
           ~delegate:None
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one
