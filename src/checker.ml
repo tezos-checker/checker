@@ -146,7 +146,7 @@ let entrypoint_mint_kit (state, p: checker * (burrow_id * kit)) : LigoOp.operati
         parameters = add_outstanding_and_circulating_kit state.parameters kit;
         fa2_state = ledger_issue_kit (state.fa2_state, !Ligo.Tezos.sender, kit);
       } in
-    ([], state)
+    (([]: LigoOp.operation list), state)
   else
     (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
@@ -506,7 +506,7 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 let entrypoint_liquidation_auction_reclaim_bid (state, bid_details: checker * liquidation_auction_bid) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_details in
-  ( [],
+  ( ([]: LigoOp.operation list),
     { state with
       fa2_state =
         ledger_issue_kit (state.fa2_state, !Ligo.Tezos.sender, kit)
@@ -684,7 +684,7 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
 (* ************************************************************************* *)
 
 let entrypoint_transfer (checker, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
-  ( [],
+  ( ([]: LigoOp.operation list),
     { checker with
       fa2_state = fa2_run_transfer (checker.fa2_state, xs)
     }
@@ -697,10 +697,9 @@ let entrypoint_balance_of (checker, param: checker * fa2_balance_of_param) : (Li
   ( [op], checker )
 
 let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
-  ( [],
-
-   { checker with
-      fa2_state = fa2_run_update_operators (checker.fa2_state, xs)
+  ( ([]: LigoOp.operation list),
+    { checker with
+       fa2_state = fa2_run_update_operators (checker.fa2_state, xs)
     }
   )
 

@@ -1,4 +1,3 @@
-open Kit
 open LiquidationAuctionPrimitiveTypes
 
 type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
