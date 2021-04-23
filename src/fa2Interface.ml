@@ -92,10 +92,12 @@ type token_metadata_param =
   handler : (token_metadata list) -> unit;
 }
 
+(* NOTE: This definition collides with Checker's entrypoints.
 type fa2_entry_points =
   | Transfer of fa2_transfer list
   | Balance_of of fa2_balance_of_param
   | Update_operators of fa2_update_operator list
+*)
 
 (*
  TZIP-16 contract metadata storage field type.
