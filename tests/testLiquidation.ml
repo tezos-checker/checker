@@ -1092,9 +1092,12 @@ let test_burrow_request_liquidation_preserves_tez =
 
       assert (Ligo.eq_tez_tez tez_in tez_out);
       (* Also check that tez_to_auction is exactly reflected in collateral_at_auction *)
-      assert (Burrow.burrow_collateral_at_auction burrow0 =
-              (Ligo.sub_tez_tez
-                 (Burrow.burrow_collateral_at_auction liquidation_details.burrow_state) liquidation_details.tez_to_auction)
+      assert (Ligo.eq_tez_tez
+                (Burrow.burrow_collateral_at_auction burrow0)
+                (Ligo.sub_tez_tez
+                   (Burrow.burrow_collateral_at_auction liquidation_details.burrow_state)
+                   liquidation_details.tez_to_auction
+                )
              );
   in
   true
