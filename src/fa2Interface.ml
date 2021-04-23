@@ -185,21 +185,21 @@ let set_fa2_ledger_value
   else Ligo.Big_map.add key value ledger
 
 let ledger_issue
-  (st, tok, addr, amount: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
+  (st, tok, addr, amnt: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
   let ledger = st.ledger in
   let key = (tok , addr) in
   let prev_balance = get_fa2_ledger_value ledger key in
-  let new_balance = Ligo.add_nat_nat prev_balance amount in
+  let new_balance = Ligo.add_nat_nat prev_balance amnt in
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
 
 let ledger_withdraw
-  (st, tok, addr, amount: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
+  (st, tok, addr, amnt: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
   let ledger = st.ledger in
   let key = (tok, addr) in
   let prev_balance = get_fa2_ledger_value ledger key in
   let new_balance =
-    match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amount) with
+    match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amnt) with
     | None -> failwith "FA2_INSUFFICIENT_BALANCE"
     | Some b -> b in
   let ledger = set_fa2_ledger_value ledger key new_balance in
@@ -265,12 +265,12 @@ let[@inline] fa2_run_transfer
       else
         Ligo.List.fold_left
           (fun ((st, x): fa2_state * fa2_transfer_destination) ->
-            let amount = x.amount in
+            let amnt = x.amount in
             let token_id = x.token_id in
             let to_ = x.to_ in
 
-            let st = ledger_withdraw (st, token_id, from_, amount) in
-            let st = ledger_issue (st, token_id, to_, amount) in
+            let st = ledger_withdraw (st, token_id, from_, amnt) in
+            let st = ledger_issue (st, token_id, to_, amnt) in
 
             st
           )
@@ -281,20 +281,20 @@ let[@inline] fa2_run_transfer
     xs
 
 let[@inline] ledger_issue_kit
-  (st, addr, amount: fa2_state * Ligo.address * kit) : fa2_state =
-  ledger_issue (st, kit_token_id, addr, kit_to_mukit_nat amount)
+  (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
+  ledger_issue (st, kit_token_id, addr, kit_to_mukit_nat amnt)
 
 let[@inline] ledger_withdraw_kit
-  (st, addr, amount: fa2_state * Ligo.address * kit) : fa2_state =
-  ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amount)
+  (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
+  ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt)
 
 let[@inline] ledger_issue_liquidity
-  (st, addr, amount: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_issue (st, liquidity_token_id, addr, amount)
+  (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
+  ledger_issue (st, liquidity_token_id, addr, amnt)
 
 let[@inline] ledger_withdraw_liquidity
-  (st, addr, amount: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_withdraw (st, liquidity_token_id, addr, amount)
+  (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
+  ledger_withdraw (st, liquidity_token_id, addr, amnt)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
