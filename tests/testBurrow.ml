@@ -448,6 +448,21 @@ let suite =
          )
     );
 
+    ("burrow_deactivate - does not change burrow owner" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "0mutez") in
+
+       let burrow, _ = Burrow.burrow_deactivate Parameters.initial_parameters burrow0 in
+
+       assert_equal
+         ~printer:Ligo.string_of_address
+         (Burrow.burrow_owner burrow0)
+         (Burrow.burrow_owner burrow)
+    );
+
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises
