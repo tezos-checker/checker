@@ -1084,7 +1084,6 @@ let test_burrow_request_liquidation_preserves_tez =
     ~count:property_test_count
     (arbitrary_burrow initial_parameters)
   @@ fun burrow0 ->
-  let _ = Burrow.burrow_collateral_at_auction in
   let _ = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
     | None -> ()
     | Some (_, liquidation_details) ->
