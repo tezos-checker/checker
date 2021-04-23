@@ -119,6 +119,15 @@ let pp_address = Format.pp_print_string
 
 let address_from_literal s = s
 
+(* contract *)
+type 'parameter contract = Contract of address
+
+(* BEGIN_OCAML *)
+let contract_of_address addr = Contract addr
+let show_contract (Contract address) = "Contract " ^ string_of_address address
+let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contract)
+(* END_OCAML *)
+
 (* int *)
 
 type int = Z.t

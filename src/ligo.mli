@@ -42,7 +42,7 @@ module Bytes: sig
   val pack : 'a -> bytes
 end
 
-(* type 'parameter contract *)
+type 'parameter contract
 (**
    A typed contract.
 
@@ -261,4 +261,8 @@ val pp_ticket : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ticke
 val format_int : String.t -> int -> String.t
 val div_rem_int_int : int -> int -> (int * int)
 val of_string_base_int : Int.t -> String.t -> int
+
+val contract_of_address : address -> 'p contract
+val show_contract : 'p contract -> String.t
+val pp_contract : Format.formatter -> 'p contract -> unit
 (* END_OCAML *)

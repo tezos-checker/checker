@@ -4,11 +4,6 @@ open Tickets
 
 (* contract *)
 
-type 'parameter contract = Contract of address
-
-let show_contract (Contract address) = "Contract " ^ string_of_address address
-let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contract)
-
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressTransactionValue : address -> address transaction_value
@@ -19,7 +14,8 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value (* qualified: we'll have FA2 as well soon *)
+  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value
+  | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
 
 type tez_and_address = (tez * address)
 [@@deriving show]
@@ -40,6 +36,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | TezTransactionValue tz -> string_of_tez tz
   | NatContractTransactionValue c -> show_contract c
   | FA12TransferTransactionValue t -> Fa12Types.show_transfer t
+  | FA2BalanceOfResponseTransactionValue xs -> Fa2Interface.show_fa2_balance_of_response_list xs
 
 (* operation *)
 
@@ -82,11 +79,12 @@ module Tezos = struct
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
   let fa12_transfer_transaction value tez contract = Transaction (FA12TransferTransactionValue value, tez, contract)
+  let fa2_balance_of_response_transaction value tez contract = Transaction (FA2BalanceOfResponseTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
-    Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
+    Some (contract_of_address (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
 
-  let get_contract_opt address = Some (Contract address)
+  let get_contract_opt address = Some (contract_of_address address)
 
   let create_contract code delegate tez store =
     let contract = CreateContract (code, delegate, tez, store) in

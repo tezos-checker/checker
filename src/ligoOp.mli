@@ -2,18 +2,6 @@ open Ligo
 open BurrowTypes
 open Tickets
 
-(* contract *)
-
-type 'parameter contract = Contract of address
-(**
-   A typed contract.
-
-   Use unit as parameter to indicate an implicit account.
-*)
-
-val pp_contract : Format.formatter -> 'parameter contract -> unit
-val show_contract : 'parameter contract -> String.t
-
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressTransactionValue : address -> address transaction_value
@@ -24,7 +12,8 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value (* qualified: we'll have FA2 as well soon *)
+  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value
+  | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
 
 (* operation *)
 
@@ -59,6 +48,7 @@ module Tezos : sig
   val tez_transaction : tez -> tez -> tez contract -> operation
   val nat_contract_transaction : nat contract -> tez -> nat contract contract -> operation
   val fa12_transfer_transaction : Fa12Types.transfer -> tez -> Fa12Types.transfer contract -> operation
+  val fa2_balance_of_response_transaction : Fa2Interface.fa2_balance_of_response list -> tez-> Fa2Interface.fa2_balance_of_response list contract -> operation
 
   val get_entrypoint_opt : string -> address -> 'parameter contract option
   val get_contract_opt : address -> unit contract option (* could also leave it as a parameter *)
