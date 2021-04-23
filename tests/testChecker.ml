@@ -232,13 +232,16 @@ let suite =
     ("burn_kit - owner can burn" >::
      fun _ ->
        Ligo.Tezos.reset ();
+
+       let sender = alice_addr in
+
        (* Create a burrow *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "10_000_000mutez");
        let burrow_id, checker = newly_created_burrow initial_checker in
 
        (* Mint as much kit as possible *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) =
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+       let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
            , Checker.deticketify_mint_kit
@@ -247,17 +250,14 @@ let suite =
                )
            ) in
 
+       (* There should be no operations emitted. *)
        assert_equal [] ops ~printer:show_operation_list;
-(* FIXME:FA2
-       let kit_token = match ops with
-         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
-       in
 
-       (* Burn it back *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       (* The owner should be able to burn it back. *)
+       let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token)) in
-*)
+
        ()
     );
 
@@ -270,7 +270,7 @@ let suite =
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) =
+       let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
            , Checker.deticketify_mint_kit
@@ -279,21 +279,18 @@ let suite =
                )
            ) in
 
+       (* There should be no operations emitted. *)
        assert_equal [] ops ~printer:show_operation_list;
-(* FIXME:FA2
-       let kit_token = match ops with
-         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
-       in
 
-       (* Have the wrong person try to burn it back *)
+       (* Have the wrong person try to burn it back; this should fail. *)
        assert_raises
          (Failure (Ligo.string_of_int error_AuthenticationError))
          (fun () ->
+            let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, bob_addr)) in
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token))
          );
-*)
+
        ()
     );
 
@@ -306,17 +303,31 @@ let suite =
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
+
+      let sender = alice_addr in
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
-(* FIXME:FA2
-      let bought_kit = match ops with
-        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
-        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
-      in
-      bought_kit >= kit_to_mukit_nat min_kit_expected
-*)
-      true
+
+      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
+
+      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+
+      (* There should be only one operation, fetching ctez_amount from the ctez
+         contract, like this:
+           [ Transaction
+               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 47953068211264416255 },
+                 0mutez,
+                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
+               )
+           ]
+         FIXME: explicitly test this.
+      *)
+
+      Ligo.geq_nat_nat
+        senders_new_mukit
+        (Ligo.add_nat_nat senders_old_mukit (kit_to_mukit_nat min_kit_expected))
     );
 
     (
@@ -328,17 +339,33 @@ let suite =
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
+
       let checker = { initial_checker with cfmm = cfmm } in
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, _new_checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
-(* FIXME:FA2
-      let bought_kit = match ops with
-        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> snd (snd (fst (Ligo.Tezos.read_ticket ticket)))
-        | _ -> failwith ("Unexpected transactions, got " ^ show_operation_list ops)
-      in
-      checker.cfmm.kit = kit_add new_checker.cfmm.kit (kit_of_mukit bought_kit)
-*)
-      true
+      let sender = alice_addr in
+
+      let checker_cfmm_old_mukit = kit_to_mukit_nat checker.cfmm.kit in
+      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
+
+      let checker_cfmm_new_mukit = kit_to_mukit_nat checker.cfmm.kit in
+      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+
+      (* There should be only one operation, fetching ctez_amount from the ctez
+         contract, like this:
+           [ Transaction
+               ( { Fa12Types.address_from = alice_addr; address_to = self_address;  value = 2261248476694080604328 },
+                 0mutez,
+                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
+               )
+           ]
+         FIXME: explicitly test this.
+      *)
+
+      Ligo.eq_nat_nat
+        (Ligo.add_nat_nat checker_cfmm_old_mukit senders_old_mukit)
+        (Ligo.add_nat_nat checker_cfmm_new_mukit senders_new_mukit)
     );
 
     (
@@ -474,6 +501,7 @@ let suite =
       @@ fun (min_expected_kit, additional_tez) ->
 
       Ligo.Tezos.reset();
+      let sender = alice_addr in
 
       (* Populate cfmm with initial liquidity *)
       let open Ratio in
@@ -497,16 +525,27 @@ let suite =
       (* Adjust transaction by a random amount of extra tez *)
       let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
-(* FIXME:FA2
-      let (_, (_, kit)), _ = match ops with
-        | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
-        | _ -> failwith ("Expected [_; Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
-      in
-      Ligo.geq_nat_nat kit (kit_to_mukit_nat min_expected_kit)
-*)
-      true
+      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
+
+      (* There should be only one operation, fetching ctez_amount from the ctez
+         contract, like this:
+           [ Transaction
+               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 1335094 },
+                 0mutez,
+                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
+               )
+           ]
+         FIXME: explicitly test this.
+      *)
+
+      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+
+      Ligo.geq_nat_nat
+        senders_new_mukit
+        (Ligo.add_nat_nat senders_old_mukit (kit_to_mukit_nat min_expected_kit))
       (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
        * number of QCheck samples may improve this.
       *)
