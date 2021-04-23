@@ -64,10 +64,9 @@ let[@inline] assert_burrow_invariants (_b: burrow) : unit =
   assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
   ()
 
-
 (** Computes the total amount of tez associated with a burrow. This includes
-  * the collateral, collateral_at_auction, and the creation_deposit if the burrow is active
-*)
+  * the collateral, collateral_at_auction, and the creation_deposit if the
+  * burrow is active. *)
 let burrow_total_associated_tez (b: burrow) : Ligo.tez =
   Ligo.add_tez_tez
     (Ligo.add_tez_tez b.collateral b.collateral_at_auction)
