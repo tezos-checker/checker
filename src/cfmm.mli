@@ -27,6 +27,8 @@ open CfmmTypes
  * - Ensure that the balances and prices in cfmm do not go too far off.
 *)
 
+type liquidity = Ligo.nat
+
 (** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date
@@ -70,9 +72,9 @@ val cfmm_add_liquidity :
   cfmm ->
   ctez (* amount *) ->
   kit (* max kit deposited *) ->
-  Ligo.nat (* min lqt minted *) ->
+  liquidity (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
-  (Ligo.nat * kit * cfmm)
+  (liquidity * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
     succeeds, but might leave the contract without ctez and kit if everybody
@@ -81,7 +83,7 @@ val cfmm_add_liquidity :
 *)
 val cfmm_remove_liquidity :
   cfmm ->
-  Ligo.nat (* lqt burned *) ->
+  liquidity (* lqt burned *) ->
   ctez (* min ctez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->

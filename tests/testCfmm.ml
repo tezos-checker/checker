@@ -4,14 +4,10 @@ open Ratio
 open Ctez
 open Kit
 open Cfmm
-open Tickets
 open CfmmTypes
 open Error
 
 let property_test_count = 100
-
-(* Issue an arbitrary amount of kit (checker-issued) *)
-let arb_positive_kit_token = QCheck.map kit_issue TestArbitrary.arb_positive_kit
 
 (* Compute the current price of kit in ctez, as estimated using the ratio of ctez and kit
  * currently in the cfmm contract. *)

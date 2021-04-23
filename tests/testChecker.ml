@@ -220,7 +220,7 @@ let suite =
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let burrow_id, checker = newly_created_burrow initial_checker in
-       let some_kit = Tickets.kit_issue (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in
+       let some_kit = Kit.kit_of_mukit (Ligo.nat_from_literal "1n") in
 
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))

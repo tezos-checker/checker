@@ -1,3 +1,6 @@
+open Kit
+open Cfmm
+
 (*
  * INTERFACE
  *)
@@ -5,6 +8,10 @@
 (*
 Adapted from:
 https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/proposals/tzip-12/fa2_interface.mligo
+
+Currently we only implement the absolute requirements of the interface. We also:
+  * TODO should consider implementing permission policies
+  * TODO should implement the contract metadata functionality
 *)
 
 type fa2_token_id = Ligo.nat
@@ -142,8 +149,11 @@ Reference:
 https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/proposals/tzip-12/tzip-12.md
 *)
 
+let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
+let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
+
 let assert_valid_fa2_token (n: fa2_token_id): unit =
-  if n == (Ligo.nat_from_literal "0n") || n == (Ligo.nat_from_literal "1n")
+  if n == kit_token_id || n == liquidity_token_id
   then ()
   else failwith "FA2_TOKEN_UNDEFINED" (* FIXME: error message *)
 
@@ -156,6 +166,44 @@ let initial_fa2_state =
   { ledger = (Ligo.Big_map.empty: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map);
     operators = (Ligo.Big_map.empty: (Ligo.address * Ligo.address, unit) Ligo.big_map);
   }
+
+let[@inline] get_fa2_ledger_value
+  (ledger: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map)
+  (key: fa2_token_id * Ligo.address)
+  : Ligo.nat =
+  match Ligo.Big_map.find_opt key ledger with
+  | Some i -> i
+  | None -> Ligo.nat_from_literal "0n"
+
+let set_fa2_ledger_value
+  (ledger: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map)
+  (key: fa2_token_id * Ligo.address)
+  (value: Ligo.nat)
+  : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map =
+  if value == Ligo.nat_from_literal "0n"
+  then Ligo.Big_map.remove key ledger
+  else Ligo.Big_map.add key value ledger
+
+let ledger_issue
+  (st, tok, addr, amount: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
+  let ledger = st.ledger in
+  let key = (tok , addr) in
+  let prev_balance = get_fa2_ledger_value ledger key in
+  let new_balance = Ligo.add_nat_nat prev_balance amount in
+  let ledger = set_fa2_ledger_value ledger key new_balance in
+  { st with ledger = ledger }
+
+let ledger_withdraw
+  (st, tok, addr, amount: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
+  let ledger = st.ledger in
+  let key = (tok, addr) in
+  let prev_balance = get_fa2_ledger_value ledger key in
+  let new_balance =
+    match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amount) with
+    | None -> failwith "FA2_INSUFFICIENT_BALANCE"
+    | Some b -> b in
+  let ledger = set_fa2_ledger_value ledger key new_balance in
+  { st with ledger = ledger }
 
 let[@inline] fa2_run_update_operators
   (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
@@ -199,9 +247,7 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
   List.map
     (fun (req: fa2_balance_of_request) ->
       let key = (req.token_id, req.owner) in
-      let balance = match Ligo.Big_map.find_opt key ledger with
-                    | Some i -> i
-                    | None -> Ligo.nat_from_literal "0n" in
+      let balance = get_fa2_ledger_value ledger key in
       { request=req; balance = balance; }
     )
     xs
@@ -219,37 +265,36 @@ let[@inline] fa2_run_transfer
       else
         Ligo.List.fold_left
           (fun ((st, x): fa2_state * fa2_transfer_destination) ->
-            let ledger = st.ledger in
-
-            let from_key = (x.token_id, from_) in
-            let to_key = (x.token_id, x.to_) in
             let amount = x.amount in
+            let token_id = x.token_id in
+            let to_ = x.to_ in
 
-            let from_balance =
-              match Ligo.Big_map.find_opt from_key ledger with
-              | Some i -> i
-              | None -> Ligo.nat_from_literal "0n" in
+            let st = ledger_withdraw (st, token_id, from_, amount) in
+            let st = ledger_issue (st, token_id, to_, amount) in
 
-            let to_balance =
-              match Ligo.Big_map.find_opt to_key ledger with
-              | Some i -> i
-              | None -> Ligo.nat_from_literal "0n" in
-
-            let ledger =
-              match Ligo.is_nat (Ligo.sub_nat_nat from_balance amount) with
-              | None -> failwith "INSUFFICENT_BALANCE"
-              | Some from_remaining -> Ligo.Big_map.add from_key from_remaining ledger in
-
-            let ledger =
-              Ligo.Big_map.add to_key (Ligo.add_nat_nat to_balance amount) ledger in
-
-            { st with ledger = ledger }
+            st
           )
           st
           tx.txs
     )
     st
     xs
+
+let[@inline] ledger_issue_kit
+  (st, addr, amount: fa2_state * Ligo.address * kit) : fa2_state =
+  ledger_issue (st, kit_token_id, addr, kit_to_mukit_nat amount)
+
+let[@inline] ledger_withdraw_kit
+  (st, addr, amount: fa2_state * Ligo.address * kit) : fa2_state =
+  ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amount)
+
+let[@inline] ledger_issue_liquidity
+  (st, addr, amount: fa2_state * Ligo.address * liquidity) : fa2_state =
+  ledger_issue (st, liquidity_token_id, addr, amount)
+
+let[@inline] ledger_withdraw_liquidity
+  (st, addr, amount: fa2_state * Ligo.address * liquidity) : fa2_state =
+  ledger_withdraw (st, liquidity_token_id, addr, amount)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list

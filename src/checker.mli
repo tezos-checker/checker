@@ -4,6 +4,7 @@ open LiquidationAuctionPrimitiveTypes
 open Tickets
 open CheckerTypes
 open Fa2Interface
+open Cfmm
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -235,7 +236,7 @@ type checker_params =
   | DepositTez of burrow_id
   | WithdrawTez of (Ligo.tez * burrow_id)
   | MintKit of (burrow_id * kit)
-  | BurnKit of (burrow_id * kit_token)
+  | BurnKit of (burrow_id * kit)
   | ActivateBurrow of burrow_id
   | DeactivateBurrow of burrow_id
   | MarkForLiquidation of burrow_id
@@ -244,10 +245,10 @@ type checker_params =
   | TouchBurrow of burrow_id
   | SetBurrowDelegate of (burrow_id * Ligo.key_hash option)
   | BuyKit of (ctez * kit * Ligo.timestamp)
-  | SellKit of (kit_token * ctez * Ligo.timestamp)
-  | AddLiquidity of (ctez * kit_token * Ligo.nat * Ligo.timestamp)
+  | SellKit of (kit * ctez * Ligo.timestamp)
+  | AddLiquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
   | RemoveLiquidity of (liquidity * ctez * kit * Ligo.timestamp)
-  | LiquidationAuctionPlaceBid of kit_token
+  | LiquidationAuctionPlaceBid of kit
   | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
   | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
   | ReceiveSliceFromBurrow of unit
@@ -263,7 +264,7 @@ val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
 val deticketify_deposit_tez : burrow_id -> burrow_id
 val deticketify_withdraw_tez : Ligo.tez * burrow_id -> Ligo.tez * burrow_id
 val deticketify_mint_kit : burrow_id * kit -> burrow_id * kit
-val deticketify_burn_kit : burrow_id * kit_token -> burrow_id * kit
+val deticketify_burn_kit : burrow_id * kit -> burrow_id * kit
 val deticketify_activate_burrow : burrow_id -> burrow_id
 val deticketify_deactivate_burrow : burrow_id -> burrow_id
 val deticketify_mark_for_liquidation : burrow_id -> burrow_id
@@ -272,10 +273,10 @@ val deticketify_cancel_liquidation_slice : leaf_ptr -> leaf_ptr
 val deticketify_touch_burrow : burrow_id -> burrow_id
 val deticketify_set_burrow_delegate : burrow_id * Ligo.key_hash option -> burrow_id * Ligo.key_hash option
 val deticketify_buy_kit : ctez * kit * Ligo.timestamp -> ctez * kit * Ligo.timestamp
-val deticketify_sell_kit : kit_token * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
-val deticketify_add_liquidity : ctez * kit_token * Ligo.nat * Ligo.timestamp -> ctez * kit * Ligo.nat * Ligo.timestamp
+val deticketify_sell_kit : kit * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
+val deticketify_add_liquidity : ctez * kit * Ligo.nat * Ligo.timestamp -> ctez * kit * Ligo.nat * Ligo.timestamp
 val deticketify_remove_liquidity : liquidity * ctez * kit * Ligo.timestamp -> Ligo.nat * ctez * kit * Ligo.timestamp
-val deticketify_liquidation_auction_place_bid : kit_token -> kit
+val deticketify_liquidation_auction_place_bid : kit -> kit
 val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
 val deticketify_receive_slice_from_burrow : unit -> unit
