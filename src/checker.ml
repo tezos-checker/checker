@@ -737,6 +737,9 @@ type lazy_params =
 type strict_params =
   | Balance_of of fa2_balance_of_param
 
+(* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
+ * up parameters we can not serialize here.
+ *)
 type checker_params =
   | LazyParams of lazy_params
   | StrictParams of strict_params
