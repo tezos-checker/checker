@@ -4,6 +4,7 @@ open Burrow
 open OUnit2
 open TestCommon
 open CheckerTypes
+open Fa2Interface
 open Error
 open Ptr
 
@@ -23,6 +24,12 @@ let newly_created_burrow checker =
       Transaction (AddressTransactionValue burrow_id, _, _) ;
     ] -> (burrow_id, checker)
   | _ -> failwith ("Expected [CreateContract _; Transaction (AddressTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+
+let get_balance_of (checker: checker) (addr: Ligo.address) (tok: fa2_token_id): Ligo.nat =
+  let ops, _checker = Checker.strict_entrypoint_balance_of (checker, { requests = [{ owner=addr; token_id=tok }]; callback=Ligo.contract_of_address addr}) in
+  match ops with
+  | [ Transaction (FA2BalanceOfResponseTransactionValue [ { request = _; balance = kit } ], _, _) ] -> kit
+  | _ -> failwith ("Unexpected fa2 response, got: " ^ show_operation_list ops)
 
 let suite =
   "Checker tests" >::: [
@@ -546,9 +553,9 @@ let suite =
       Ligo.geq_nat_nat
         senders_new_mukit
         (Ligo.add_nat_nat senders_old_mukit (kit_to_mukit_nat min_expected_kit))
-      (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
-       * number of QCheck samples may improve this.
-      *)
+        (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
+         * number of QCheck samples may improve this.
+        *)
     );
 
     ("buy_kit - returns expected kit" >::
@@ -565,14 +572,10 @@ let suite =
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, _ = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
-(* FIXME:FA2
-       let (_, (_, kit)), _ = match ops with
-         | [ _; Transaction (KitTransactionValue ticket, _, _) ] -> Ligo.Tezos.read_ticket ticket
-         | _ -> failwith ("Expected [_; Transaction (KitTransactionValue (ticket, _, _))] but got " ^ show_operation_list ops)
-       in
+       let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
+
+       let kit = get_balance_of checker alice_addr kit_token_id in
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
-*)
        ()
     );
 
@@ -640,25 +643,20 @@ let suite =
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, _ = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
-(* FIXME:FA2
-       let kit, ctez = match ops with
-         | [
-           Transaction (FA12TransferTransactionValue transfer, _, _);
-           Transaction (KitTransactionValue ticket, _, _);
-           ] ->
+       let ops, checker = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
+       let ctez = match ops with
+         | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
            begin
              assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
-             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
-             let (_, (_, kit)), _ = Ligo.Tezos.read_ticket ticket in
-             let ctez = transfer.value in
-             (kit, ctez)
+             transfer.value
            end
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
+       let kit = get_balance_of checker sender kit_token_id in
+
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
        assert_equal (Ligo.nat_from_literal "1n") ctez ~printer:Ligo.string_of_nat;
-*)
+
        ()
     );
 
@@ -683,9 +681,18 @@ let suite =
 
     ("can complete a liquidation auction" >::
      fun _ ->
-(* FIXME:FA2
        Ligo.Tezos.reset ();
        let checker = initial_checker in
+
+       (* mint some kit to convert to liquidity *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "200_000_000mutez");
+       let ops, checker = Checker.entrypoint_create_burrow (checker, None) in
+       let burrow_id = match ops with
+         | [ CreateContract _ ; Transaction (AddressTransactionValue burrow_id, _, _) ; ] -> burrow_id
+         | _ -> failwith "unexpected" in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (burrow_id, kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _lqt_minted_ret_kit_ops, checker =
@@ -741,7 +748,7 @@ let suite =
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (_ops, _checker) =
+       let (_ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
            , Checker.deticketify_mint_kit
@@ -750,12 +757,8 @@ let suite =
                )
            ) in
 
-       let kit_token = match ops with
-         | [Transaction (KitTransactionValue ticket, _, _)] -> ticket
-         | _ -> assert_failure ("Expected [Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
-       in
-
-       assert_equal (kit_of_mukit (Ligo.nat_from_literal "4_285_714n")) kit_token ~printer:show_kit_token;
+       let kit = get_balance_of checker bob_addr kit_token_id in
+       assert_equal (Ligo.nat_from_literal "4_285_714n") kit ~printer:Ligo.string_of_nat;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -800,20 +803,18 @@ let suite =
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_after_reward = get_balance_of checker bob_addr kit_token_id in
 
-       let touch_reward = match ops with
-         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
-         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
-       in
+       let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
        assert_equal [] ops ~printer:show_operation_list;
 
        assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "202_000_000n")) (* wow, high reward, many blocks have passed. *)
-         touch_reward
-         ~printer:show_kit_token;
+         (Ligo.int_from_literal "202_000_000") (* wow, high reward, many blocks have passed. *)
+         touch_reward;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
@@ -832,29 +833,26 @@ let suite =
               )
          );
 
-       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_after_reward = get_balance_of checker bob_addr kit_token_id in
 
-       let touch_reward = match ops with
-         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
-         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
-       in
+       let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "500_000n"))
-         touch_reward
-         ~printer:show_kit_token;
+         (Ligo.int_from_literal "500_000")
+         touch_reward;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
-       let touch_reward = match ops with
-         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) -> ticket
-         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: []) but got " ^ show_operation_list ops)
-       in
+       let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
        let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
@@ -868,26 +866,25 @@ let suite =
        in
 
        assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "500_000n"))
+         (Ligo.int_from_literal "500_000")
          touch_reward
-         ~printer:show_kit_token;
+         ~printer:Ligo.string_of_int;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
-       let touch_reward = match ops with
-         | (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (_ :: Transaction (KitTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
-       in
+       let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
 
        assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "21_000_000n"))
+         (Ligo.int_from_literal "21_000_000")
          touch_reward
-         ~printer:show_kit_token;
+         ~printer:Ligo.string_of_int;
 
        (* We don't need to touch the slice on this test case since Checker.entrypoint_touch_with_index
         * already touches the oldest 5 slices. *)
@@ -917,10 +914,9 @@ let suite =
        let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, Checker.deticketify_liquidation_auction_claim_win bid) in
 
        assert_equal
-         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_961mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
-*)
        ()
     );
   ]
