@@ -408,7 +408,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
       cfmm = updated_cfmm;
       (* when sending/receiving kit to/from uniswap, we destroy/create it. an alternative would be to instead
        * transfer them to/from the checker's account via an FA2 transfer call.
-       *)
+      *)
       fa2_state = ledger_issue_kit (state.fa2_state, !Ligo.Tezos.sender, kit_tokens);
     }
   )
@@ -699,7 +699,7 @@ let[@inline] strict_entrypoint_balance_of (checker, param: checker * fa2_balance
 let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
   ( ([]: LigoOp.operation list),
     { checker with
-       fa2_state = fa2_run_update_operators (checker.fa2_state, xs)
+      fa2_state = fa2_run_update_operators (checker.fa2_state, xs)
     }
   )
 
@@ -739,7 +739,7 @@ type strict_params =
 
 (* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
  * up parameters we can not serialize here.
- *)
+*)
 type checker_params =
   | LazyParams of lazy_params
   | StrictParams of strict_params
