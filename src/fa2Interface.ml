@@ -216,7 +216,7 @@ let[@inline] fa2_run_update_operators
          (* The standard does not specify who is permitted to update operators. We restrict
             it only to the owner. *)
          if op.owner <> !Ligo.Tezos.sender
-         then (failwith "UNAUTHORIZED" : fa2_state) (* FIXME: error message *)
+         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
          else
            { st  with
              operators =
@@ -227,7 +227,7 @@ let[@inline] fa2_run_update_operators
            }
        | Remove_operator op ->
          if op.owner <> !Ligo.Tezos.sender
-         then (failwith "UNAUTHORIZED" : fa2_state) (* FIXME: error message *)
+         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
          else
            { st  with
              operators =
@@ -263,7 +263,7 @@ let[@inline] fa2_run_transfer
          from_ = !Ligo.Tezos.sender
          || Ligo.Big_map.mem (!Ligo.Tezos.sender, from_) st.operators in
        if not is_authorized
-       then (failwith "UNAUTHORIZED" : fa2_state)
+       then (failwith "FA2_NOT_OWNER" : fa2_state)
        else
          Ligo.List.fold_left
            (fun ((st, x): fa2_state * fa2_transfer_destination) ->
