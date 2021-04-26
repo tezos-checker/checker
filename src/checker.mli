@@ -222,6 +222,7 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 (* ************************************************************************* *)
 
 val entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
+val strict_entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
 val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.operation list * checker
 
 (*****************************************************************************)
@@ -229,7 +230,7 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 (*****************************************************************************)
 
 (** User-facing checker parameters. These include non-serializable tickets. *)
-type checker_params =
+type lazy_params =
     Touch of unit
   | CreateBurrow of Ligo.key_hash option
   | DepositTez of burrow_id
@@ -253,10 +254,14 @@ type checker_params =
   | ReceiveSliceFromBurrow of unit
   | ReceivePrice of Ligo.nat
   | Transfer of fa2_transfer list
-(* FIXME
-  | Balance_of of fa2_balance_of_param
-*)
   | Update_operators of fa2_update_operator list
+
+type strict_params =
+    Balance_of of fa2_balance_of_param
+
+type checker_params =
+  | LazyParams of lazy_params
+  | StrictParams of strict_params
 
 (**/**)
 (* These need not be part of the documentation of checker.ml. *)
@@ -283,8 +288,5 @@ val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -
 val deticketify_receive_slice_from_burrow : unit -> unit
 val deticketify_receive_price : Ligo.nat -> Ligo.nat
 val deticketify_transfer : fa2_transfer list -> fa2_transfer list
-(* FIXME
-val deticketify_balance_of : fa2_balance_of_param -> fa2_balance_of_param
-*)
 val deticketify_update_operators : fa2_update_operator list -> fa2_update_operator list
 (**/**)

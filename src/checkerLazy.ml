@@ -51,14 +51,21 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
         match op with
         | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
         | SealContract -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-        | CheckerEntrypoint op ->
-          (* BEGIN_LIGO
-             let fid, params = checkerParamsToLazyFunctionId op in
-             (get_lazy_function lazy_functions fid) (checker, params)
-             END_LIGO *)
-          (* BEGIN_OCAML *)
-          runCheckerParams op checker
-          (* END_OCAML *) in
+        | CheckerEntrypoint op -> begin
+          match op with
+          | StrictParams op -> begin
+            match op with
+            | Balance_of p -> strict_entrypoint_balance_of (checker, p)
+            end
+          | LazyParams op ->
+            (* BEGIN_LIGO
+               let fid, params = lazyParamsToLazyFunctionId op in
+               (get_lazy_function lazy_functions fid) (checker, params)
+               END_LIGO *)
+            (* BEGIN_OCAML *)
+            runLazyParams op checker
+            (* END_OCAML *)
+          end in
       (ops, checker, lazy_functions, deployer)
   in
   (ops, (checker, lazy_functions, deployer))

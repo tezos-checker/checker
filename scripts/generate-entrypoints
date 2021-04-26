@@ -35,7 +35,7 @@ puts
 
 puts "type lazy_function = checker * Ligo.bytes -> LigoOp.operation list * checker"
 puts
-puts "let checkerParamsToLazyFunctionId (p: checker_params) : lazy_function_id * Ligo.bytes =
+puts "let lazyParamsToLazyFunctionId (p: lazy_params) : lazy_function_id * Ligo.bytes =
   match p with
 "
 entrypoints.each do |e|
@@ -57,7 +57,7 @@ puts
 
 # Generate an ocaml shim to avoid packing
 puts "(* BEGIN_OCAML *)"
-puts "let runCheckerParams (params: checker_params) (checker: checker): LigoOp.operation list * checker =
+puts "let runLazyParams (params: lazy_params) (checker: checker): LigoOp.operation list * checker =
   match params with
 "
 entrypoints.each do |e|
