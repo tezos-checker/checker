@@ -710,27 +710,27 @@ let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list
 (** User-facing checker parameters. These include non-serializable tickets. *)
 type lazy_params =
     Touch of unit
-  | CreateBurrow of Ligo.key_hash option
-  | DepositTez of burrow_id
-  | WithdrawTez of (Ligo.tez * burrow_id)
-  | MintKit of (burrow_id * kit)
-  | BurnKit of (burrow_id * kit)
-  | ActivateBurrow of burrow_id
-  | DeactivateBurrow of burrow_id
-  | MarkForLiquidation of burrow_id
-  | TouchLiquidationSlices of leaf_ptr list
-  | CancelLiquidationSlice of leaf_ptr
-  | TouchBurrow of burrow_id
-  | SetBurrowDelegate of (burrow_id * Ligo.key_hash option)
-  | BuyKit of (ctez * kit * Ligo.timestamp)
-  | SellKit of (kit * ctez * Ligo.timestamp)
-  | AddLiquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
-  | RemoveLiquidity of (liquidity * ctez * kit * Ligo.timestamp)
-  | LiquidationAuctionPlaceBid of kit
-  | LiquidationAuctionReclaimBid of liquidation_auction_bid_ticket
-  | LiquidationAuctionClaimWin of liquidation_auction_bid_ticket
-  | ReceiveSliceFromBurrow of unit
-  | ReceivePrice of Ligo.nat
+  | Create_burrow of Ligo.key_hash option
+  | Deposit_tez of burrow_id
+  | Withdraw_tez of (Ligo.tez * burrow_id)
+  | Mint_kit of (burrow_id * kit)
+  | Burn_kit of (burrow_id * kit)
+  | Activate_burrow of burrow_id
+  | Deactivate_burrow of burrow_id
+  | Mark_for_liquidation of burrow_id
+  | Touch_liquidation_slices of leaf_ptr list
+  | Cancel_liquidation_slice of leaf_ptr
+  | Touch_burrow of burrow_id
+  | Set_burrow_delegate of (burrow_id * Ligo.key_hash option)
+  | Buy_kit of (ctez * kit * Ligo.timestamp)
+  | Sell_kit of (kit * ctez * Ligo.timestamp)
+  | Add_liquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
+  | Remove_liquidity of (liquidity * ctez * kit * Ligo.timestamp)
+  | Liquidation_auction_place_bid of kit
+  | Liquidation_auction_reclaim_bid of liquidation_auction_bid_ticket
+  | Liquidation_auction_claim_win of liquidation_auction_bid_ticket
+  | Receive_slice_from_burrow of unit
+  | Receive_price of Ligo.nat
   | Transfer of fa2_transfer list
   | Update_operators of fa2_update_operator list
 

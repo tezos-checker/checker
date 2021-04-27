@@ -11,10 +11,7 @@ ARGF.each_line do |line|
 end
 
 def to_entrypoint_name(str)
-  if str == "balance_of" then "Balance_of"
-  elsif str == "update_operators" then "Update_operators"
-  else str.split(/_/).map(&:capitalize).join
-  end
+  str.capitalize
 end
 
 
