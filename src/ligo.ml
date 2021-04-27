@@ -29,7 +29,7 @@ module Big_map = struct
     IntMap.update
       hash
       (fun slot -> match slot with
-         | None  -> Option.map (fun v -> [(k, v)]) v
+         | None -> Option.map (fun v -> [(k, v)]) v
          | Some slot ->
            let rec go xs =
              match xs with
@@ -70,6 +70,7 @@ module Map = Big_map
 
 module List = struct
   let length xs = Z.of_int (List.length xs)
+  let fold_left f acc xs = List.fold_left (fun a b -> f (a, b)) acc xs
 end
 
 (* UTILITY FUNCTIONS *)
@@ -117,6 +118,15 @@ let address_of_string s = s
 let pp_address = Format.pp_print_string
 
 let address_from_literal s = s
+
+(* contract *)
+type 'parameter contract = Contract of address
+
+(* BEGIN_OCAML *)
+let contract_of_address addr = Contract addr
+let show_contract (Contract address) = "Contract " ^ string_of_address address
+let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contract)
+(* END_OCAML *)
 
 (* int *)
 

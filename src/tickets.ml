@@ -1,5 +1,4 @@
 open LiquidationAuctionPrimitiveTypes
-open Kit
 open Common
 open Error
 
@@ -8,76 +7,17 @@ Ticket-based entitities in checker and their expected value/mechanics:
 
 | Ticket           | Multiplicity | (Usably) Splittable              | Tag |
 |------------------|--------------|----------------------------------|-----|
-| kit              | non-negative | Yes (finitely, zero is useless)  |  1n |
-| liquidity        | non-negative | Yes (finitely, zero is useless)  |  2n |
 | liq. auction bid | always one   | No  (zero is useless)            |  4n |
 *)
 
 type token_tag = Ligo.nat
 [@@deriving show]
 
-let[@inline] kit_token_tag       = Ligo.nat_from_literal "1n"
-let[@inline] lqt_token_tag       = Ligo.nat_from_literal "2n"
 let[@inline] liq_auction_bid_tag = Ligo.nat_from_literal "3n"
 
 (* ************************************************************************* *)
 (**                               GENERAL                                    *)
 (* ************************************************************************* *)
-
-(* ************************************************************************* *)
-(**                              KIT TOKENS                                  *)
-(* ************************************************************************* *)
-
-type kit_content = Kit (* NOTE: No need for real content. Unit in Michelson. *)
-[@@deriving show]
-
-type kit_token_content = token_tag * kit_content
-[@@deriving show]
-
-type kit_token = kit_token_content Ligo.ticket
-[@@deriving show]
-
-let[@inline] kit_issue (kit: kit) : kit_token =
-  Ligo.Tezos.create_ticket (kit_token_tag, Kit) (kit_to_mukit_nat kit)
-
-(** Check whether a kit token is valid and return the amount of kit stored in
-  * it if it is. A kit token is valid if (a) it is issued by checker, and (b)
-  * is tagged appropriately. In OCaml/LIGO the type ensures (b), but in
-  * Michelson this is not strictly necessary, hence the runtime check of the
-  * tag. *)
-let[@inline] ensure_valid_kit_token (token: kit_token) : kit =
-  let (issuer, ((tag, _content), mukit)), _same_ticket = Ligo.Tezos.read_ticket token in
-  let is_valid = issuer = checker_address && tag = kit_token_tag in
-  if is_valid
-  then kit_of_mukit mukit
-  else (Ligo.failwith error_InvalidKitToken : kit)
-
-(* ************************************************************************* *)
-(**                           LIQUIDITY TOKENS                               *)
-(* ************************************************************************* *)
-
-type liquidity_content = Lqt (* NOTE: No need for real content. Unit in Michelson. *)
-[@@deriving show]
-
-type liquidity_token_content = token_tag * liquidity_content
-[@@deriving show]
-
-type liquidity = liquidity_token_content Ligo.ticket
-[@@deriving show]
-
-let[@inline] issue_liquidity_tokens (n: Ligo.nat) : liquidity =
-  Ligo.Tezos.create_ticket (lqt_token_tag, Lqt) n
-
-(** Check whether a liquidity token is valid. A liquidity token is valid if (a)
-  * it is issued by checker, and (b) it is tagged appropriately. In OCaml/LIGO
-  * the type ensures (b), but in Michelson this is not strictly necessary,
-  * hence the runtime check of the tag. *)
-let[@inline] ensure_valid_liquidity_token (liquidity: liquidity) : Ligo.nat =
-  let (issuer, ((tag, _content), lqt)), _liquidity = Ligo.Tezos.read_ticket liquidity in
-  let is_valid = issuer = checker_address && tag = lqt_token_tag in
-  if is_valid
-  then lqt
-  else (Ligo.failwith error_InvalidLiquidityToken : Ligo.nat)
 
 (* ************************************************************************* *)
 (**                    LIQUIDATION AUCTION BID TICKETS                       *)

@@ -4,22 +4,16 @@ open Tickets
 
 (* contract *)
 
-type 'parameter contract = Contract of address
-
-let show_contract (Contract address) = "Contract " ^ string_of_address address
-let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contract)
-
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressTransactionValue : address -> address transaction_value
-  | KitTransactionValue : kit_token_content ticket -> kit_token_content ticket transaction_value
-  | LqtTransactionValue : liquidity_token_content ticket -> liquidity_token_content ticket transaction_value
   | LaBidTransactionValue : liquidation_auction_bid_content ticket -> liquidation_auction_bid_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value (* qualified: we'll have FA2 as well soon *)
+  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value
+  | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
 
 type tez_and_address = (tez * address)
 [@@deriving show]
@@ -32,14 +26,13 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   match tv with
   | UnitTransactionValue -> "()"
   | AddressTransactionValue a -> string_of_address a
-  | KitTransactionValue c -> show_ticket pp_kit_token_content c
-  | LqtTransactionValue c -> show_ticket pp_liquidity_token_content c
   | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_content c
   | TezAddressTransactionValue ta -> show_tez_and_address ta
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
   | TezTransactionValue tz -> string_of_tez tz
   | NatContractTransactionValue c -> show_contract c
   | FA12TransferTransactionValue t -> Fa12Types.show_transfer t
+  | FA2BalanceOfResponseTransactionValue xs -> Fa2Interface.show_fa2_balance_of_response_list xs
 
 (* operation *)
 
@@ -74,19 +67,18 @@ module Tezos = struct
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
   let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
-  let kit_transaction value tez contract = Transaction (KitTransactionValue value, tez, contract)
-  let lqt_transaction value tez contract = Transaction (LqtTransactionValue value, tez, contract)
   let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
   let fa12_transfer_transaction value tez contract = Transaction (FA12TransferTransactionValue value, tez, contract)
+  let fa2_balance_of_response_transaction value tez contract = Transaction (FA2BalanceOfResponseTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
-    Some (Contract (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
+    Some (contract_of_address (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
 
-  let get_contract_opt address = Some (Contract address)
+  let get_contract_opt address = Some (contract_of_address address)
 
   let create_contract code delegate tez store =
     let contract = CreateContract (code, delegate, tez, store) in

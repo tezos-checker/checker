@@ -144,9 +144,9 @@ let cfmm_add_liquidity
     (cfmm: cfmm)
     (ctez_amount: ctez)
     (max_kit_deposited: kit)
-    (min_lqt_minted: Ligo.nat)
+    (min_lqt_minted: liquidity)
     (deadline: Ligo.timestamp)
-  : (Ligo.nat * kit * cfmm) =
+  : (liquidity * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in
   if !Ligo.Tezos.now >= deadline then
@@ -196,7 +196,7 @@ let cfmm_add_liquidity
  * want to lose the burrow fees. *)
 let cfmm_remove_liquidity
     (cfmm: cfmm)
-    (lqt_burned: Ligo.nat)
+    (lqt_burned: liquidity)
     (min_ctez_withdrawn: ctez)
     (min_kit_withdrawn: kit)
     (deadline: Ligo.timestamp)

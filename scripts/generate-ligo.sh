@@ -19,6 +19,7 @@ inputs=(
   ctez
   kit
   cfmmTypes
+  fa2Interface
   liquidationAuctionPrimitiveTypes
   mem
   avl
@@ -49,15 +50,6 @@ for name in "${inputs[@]}"; do
     # remove comments wrapped with "{BEGIN,END}_LIGO"
     sed -E 's/([(]\* BEGIN_LIGO)/\1 *)/g' |
     sed -E 's/(END_LIGO \*[)])/(* \1/g' |
-
-    # Replace all "vocal" failwiths with integer failures.
-    # TODO: Ideally we wouldn't have this line.
-    # User-facing errors should all fail using appropriate error codes (see
-    # error.ml) and internal errors should be turned into assertions.
-    # If I understand correctly, we currently have internal errors that use
-    # failwith, and that's why we replace them with "cheap" (failwith 42) here.
-    # Eventually this should go away though.
-    sed -E 's/failwith \"([^\"])*\"/Ligo\.failwith 42/g' |
 
     # Remove ligo qualifiers from identifiers
     sed -E 's/Ligo\.//g' |

@@ -70,9 +70,9 @@ val cfmm_add_liquidity :
   cfmm ->
   ctez (* amount *) ->
   kit (* max kit deposited *) ->
-  Ligo.nat (* min lqt minted *) ->
+  liquidity (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
-  (Ligo.nat * kit * cfmm)
+  (liquidity * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
     succeeds, but might leave the contract without ctez and kit if everybody
@@ -81,7 +81,7 @@ val cfmm_add_liquidity :
 *)
 val cfmm_remove_liquidity :
   cfmm ->
-  Ligo.nat (* lqt burned *) ->
+  liquidity (* lqt burned *) ->
   ctez (* min ctez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->
