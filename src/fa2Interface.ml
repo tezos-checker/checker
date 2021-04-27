@@ -239,16 +239,13 @@ let[@inline] fa2_run_update_operators
     st
     xs
 
-(* FIXME
-   If one of the specified token_ids is not defined within the FA2 contract, the
-   entrypoint MUST fail with the error mnemonic "FA2_TOKEN_UNDEFINED".
-*)
 let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
   : fa2_balance_of_response list =
   let ledger = st.ledger in
   List.map
     (fun (req: fa2_balance_of_request) ->
        let key = (req.token_id, req.owner) in
+       let () = assert_valid_fa2_token req.token_id in
        let blnc = get_fa2_ledger_value ledger key in
        { request=req; balance = blnc; }
     )
@@ -263,13 +260,15 @@ let[@inline] fa2_run_transfer
          from_ = !Ligo.Tezos.sender
          || Ligo.Big_map.mem (!Ligo.Tezos.sender, from_) st.operators in
        if not is_authorized
-       then (failwith "FA2_NOT_OWNER" : fa2_state)
+       then (failwith "FA2_NOT_OPERATOR" : fa2_state)
        else
          Ligo.List.fold_left
            (fun ((st, x): fa2_state * fa2_transfer_destination) ->
               let amnt = x.amount in
-              let token_id = x.token_id in
               let to_ = x.to_ in
+
+              let token_id = x.token_id in
+              let () = assert_valid_fa2_token token_id in
 
               let st = ledger_withdraw (st, token_id, from_, amnt) in
               let st = ledger_issue (st, token_id, to_, amnt) in
