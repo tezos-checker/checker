@@ -55,14 +55,16 @@ let arb_op = QCheck.make op_gen
 (* ========================================================================= *)
 
 (* Helper for converting fractional indices to an actual index based on the length of the queue / list *)
-let percent_to_index (percent:float) (indices:int list) =
+let percent_to_index (percent:float) (indices:'a list) =
   let i = Float.(
       to_int (round (mul percent (float_of_int ((List.length indices) - 1))))
     ) in
   List.nth indices i
 
 (* TODO: The below is not efficient but was easy to write *)
-let drop_last l = List.rev (List.tl (List.rev l))
+let drop_last l = match l with
+  | [] -> []
+  | _ -> List.rev (List.tl (List.rev l))
 
 (* ========================================================================= *)
 (* Model queue *)
@@ -100,31 +102,40 @@ let model_take (limit: Ligo.tez) (model: model) : (liquidation_slice list) =
 (* ========================================================================= *)
 
 (* Apply the given operation to both the model and implementation *)
-let apply_op ((impl: unit), (model: model),(impl_indices: leaf_ptr list), (model_indices: int list)) op =
+let apply_op ((impl: Mem.mem * avl_ptr), (model: model),(impl_indices: leaf_ptr list), (model_indices: int list)) op =
   (* Re-enable this assertion once avl calls are implemented *)
-  (* let _ = assert_equal (List.length impl_indices) (List.length model_indices) in *)
-
+  let _ = assert_equal (List.length impl_indices) (List.length model_indices) in
+  let mem, root_ptr = impl in
   match op with
   | PushLeft slice ->
+    (* Push to model *)
     let _ = enqueue_back model slice in
     let i_model = back_index_exn model in
-    (* let _ = Avl.avl_push impl in *)
-    impl, model, [], [i_model] @ model_indices
+    (* Push to implementation *)
+    let mem, i_impl = Avl.avl_push mem root_ptr slice Avl.Left in
+    (mem, root_ptr), model, [i_impl] @ impl_indices, [i_model] @ model_indices
 
   | PushRight slice ->
+    (* Push to model *)
     let _ = enqueue_front model slice in
     let i_model = back_index_exn model in
-    (impl, model, [], model_indices @ [i_model])
+    (* Push to implementation *)
+    let mem, i_impl = Avl.avl_push mem root_ptr slice Avl.Right in
+    (mem, root_ptr), model,  impl_indices @ [i_impl], model_indices @ [i_model]
 
   | Pop ->
+    (* Pop from front of model *)
     let new_model_indices = match (dequeue_front model) with
-      | None -> []
-      | Some _ ->
-        match model_indices with
-        | [] -> []
-        | _ -> drop_last model_indices
+      | None -> model_indices
+      | Some _ -> drop_last model_indices
     in
-    impl, model, impl_indices, new_model_indices
+    (* Pop from front of implementation *)
+    let mem, popped =  Avl.avl_pop_front mem root_ptr in
+    let new_impl_indices = match popped with
+      | None -> impl_indices
+      | Some _ -> drop_last impl_indices
+    in
+    (mem, root_ptr), model, new_impl_indices, new_model_indices
 
   | Get p ->
     let _ = (match model_indices with
@@ -133,23 +144,40 @@ let apply_op ((impl: unit), (model: model),(impl_indices: leaf_ptr list), (model
           (* Get from model *)
           let _ = get model (percent_to_index p model_indices) in
           (* Get from implementation *)
-          ()
+          let _ = Avl.avl_read_leaf mem (percent_to_index p impl_indices) in ()
+          (* TODO: Compare the two here? *)
       )
     in
     impl, model, impl_indices, model_indices
 
-
   | Delete p ->
-    let new_model, new_model_indices = (match model_indices with
-        | [] -> (model, model_indices)
+    (* TODO clean up this match statement, its a bit clunky *)
+    let new_impl, new_model, new_impl_indices, new_model_indices = (match model_indices with
+        | [] -> (impl, model, impl_indices, model_indices)
         | _ ->
           (* Delete from model *)
           let new_model, new_model_indices = model_delete model (percent_to_index p model_indices) in
           (* Delete from implementation *)
-          new_model, new_model_indices
+          let to_remove = (percent_to_index p impl_indices) in
+          let new_impl = Avl.avl_del mem to_remove in
+          let new_impl_indices = List.filter
+              (fun i -> not ((
+                   Ptr.compare_ptr
+                     (Avl.ptr_of_leaf_ptr to_remove)
+                     (Avl.ptr_of_leaf_ptr i)
+                 ) = 0))
+              impl_indices
+          in
+          let _ = Format.printf "<model_old=%d, impl_old=%d, model_new=%d, impl_new=%d>"
+              (List.length model_indices)
+              (List.length impl_indices)
+              (List.length new_model_indices)
+              (List.length new_impl_indices)
+          in
+          new_impl, new_model, new_impl_indices, new_model_indices
       )
     in
-    impl, new_model, impl_indices, new_model_indices
+    new_impl, new_model, new_impl_indices, new_model_indices
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let suite =
@@ -161,20 +189,22 @@ let suite =
       ~count:10
       (QCheck.small_list arb_op)
     @@ fun ops -> (
-      let _ = List.iter (fun op -> Format.printf "%s@," (show_queue_op op)) ops in
-      (* let _ = List.iter (fun x -> Format.printf "%d@ |," x) model_indices in *)
-      (* let _ = Format.printf "<=== " in *)
-      let model = model_empty () in
+      (* let _ = List.iter (fun op -> Format.printf "%s@," (show_queue_op op)) ops in *)
+
+      let init_model = model_empty () in
+      let init_impl = Avl.avl_mk_empty Mem.mem_empty None in
 
       (* Apply the operations *)
-      let acc = ((), model, ([] : leaf_ptr list), ([]: int list)) in
+      let acc = (init_impl, init_model, ([] : leaf_ptr list), ([]: int list)) in
       let _ = List.fold_left apply_op acc ops in
 
-      (* let _ = show_model model in *)
 
-      (* let _ = List.iter (fun s -> Format.printf "%s@," (show_liquidation_slice s)) e in *)
-      (* let _ = Format.printf "===> " in *)
-      (* let _ = failwith "END HERE." in *)
+      (* TODO: Compare against the model. Either at the end or after each operation? *)
+      (*
+        - Front = Front
+        - Length = Length
+        - Contents = Contents
+      *)
       true
     )
 
