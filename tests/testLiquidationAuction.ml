@@ -6,6 +6,8 @@ open LiquidationAuctionTypes
 open Error
 open Ratio
 
+let property_test_count = 1000
+
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
 let checker_sender = Ligo.address_from_literal "somebody"
@@ -157,4 +159,32 @@ let suite =
 
        ()
     );
+
+    qcheck_to_ounit
+    @@ QCheck.Test.make
+      ~name:"bid can not be zero"
+      ~count:property_test_count
+      QCheck.(0 -- 100)
+    @@ fun blocks_passed ->
+
+    (* Create an auction with one slice *)
+    Ligo.Tezos.reset ();
+    let auctions = liquidation_auction_empty in
+    let (auctions, _) =
+      liquidation_auction_send_to_auction
+        auctions
+        (* Note: The amounts don't matter here. We are only interested in the bidding logic *)
+        { burrow = burrow_id_1; tez = Ligo.tez_from_literal "1_000_000mutez";
+          min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "1n"); (* note: randomly chosen *)
+        } in
+    let start_price = one_ratio in
+    let auctions = liquidation_auction_touch auctions start_price in
+    let current = Option.get auctions.current_auction in
+
+    Ligo.Tezos.new_transaction ~seconds_passed:(blocks_passed*3600) ~blocks_passed:blocks_passed ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BidTooLow))
+      (fun () -> liquidation_auction_place_bid current {address=Ligo.address_from_literal "12345"; kit=kit_zero});
+    ();
+    true
   ]

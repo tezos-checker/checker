@@ -354,17 +354,18 @@ let start_liquidation_auction_if_possible
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
 let liquidation_auction_current_auction_minimum_bid (auction: current_liquidation_auction) : kit =
-  match auction.state with
-  | Descending (start_value, start_time) ->
-    let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
-    let decay =
-      match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
-      | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
-      | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
-    kit_scale start_value decay
-  | Ascending (leading_bid, _timestamp, _level) ->
-    let bid_improvement_factor = fixedpoint_of_ratio_floor bid_improvement_factor in
-    kit_scale leading_bid.kit (fixedpoint_add fixedpoint_one bid_improvement_factor)
+  kit_max (kit_of_mukit (Ligo.nat_from_literal "1n"))
+    (match auction.state with
+     | Descending (start_value, start_time) ->
+       let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
+       let decay =
+         match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
+         | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
+         | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
+       kit_scale start_value decay
+     | Ascending (leading_bid, _timestamp, _level) ->
+       let bid_improvement_factor = fixedpoint_of_ratio_floor bid_improvement_factor in
+       kit_scale leading_bid.kit (fixedpoint_add fixedpoint_one bid_improvement_factor))
 
 (** Check if an auction is complete. A descending auction declines
   * exponentially over time, so it is effectively never complete (George: I
