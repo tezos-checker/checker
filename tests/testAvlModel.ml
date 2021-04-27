@@ -69,6 +69,12 @@ let drop_last l = List.rev (List.tl (List.rev l))
 (* ========================================================================= *)
 type model = liquidation_slice Core_kernel.Deque.t
 
+let show_model queue =
+  let _ = Format.printf "[" in
+  let _ = iteri queue ~f:(fun i e -> Format.printf "(%d, %s);" i (show_liquidation_slice e)) in
+  let _ = Format.printf "]" in
+  ()
+
 let model_empty () = (Core_kernel.Deque.create (): (liquidation_slice Core_kernel.Deque.t))
 
 (* Deletes the element with the provided index (if it exists) and returns a new queue and list of indices *)
@@ -144,14 +150,6 @@ let apply_op ((impl: unit), (model: model),(impl_indices: leaf_ptr list), (model
       )
     in
     impl, new_model, impl_indices, new_model_indices
-
-
-
-let show_model queue =
-  let _ = Format.printf "[" in
-  let _ = iteri queue ~f:(fun i e -> Format.printf "(%d, %s);" i (show_liquidation_slice e)) in
-  let _ = Format.printf "]" in
-  ()
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let suite =
