@@ -221,7 +221,7 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 (**                               FA2                                        *)
 (* ************************************************************************* *)
 
-val entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
+val strict_entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
 val strict_entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
 val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.operation list * checker
 
@@ -253,11 +253,11 @@ type lazy_params =
   | Liquidation_auction_claim_win of liquidation_auction_bid_ticket
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
-  | Transfer of fa2_transfer list
   | Update_operators of fa2_update_operator list
 
 type strict_params =
-    Balance_of of fa2_balance_of_param
+  | Balance_of of fa2_balance_of_param
+  | Transfer of fa2_transfer list
 
 type checker_params =
   | LazyParams of lazy_params

@@ -683,7 +683,7 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
 (**                               FA2                                        *)
 (* ************************************************************************* *)
 
-let entrypoint_transfer (checker, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
+let strict_entrypoint_transfer (checker, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
   ( ([]: LigoOp.operation list),
     { checker with
       fa2_state = fa2_run_transfer (checker.fa2_state, xs)
@@ -731,11 +731,11 @@ type lazy_params =
   | Liquidation_auction_claim_win of liquidation_auction_bid_ticket
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
-  | Transfer of fa2_transfer list
   | Update_operators of fa2_update_operator list
 
 type strict_params =
   | Balance_of of fa2_balance_of_param
+  | Transfer of fa2_transfer list
 
 (* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
  * up parameters we can not serialize here.

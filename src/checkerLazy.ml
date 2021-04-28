@@ -56,6 +56,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
             | StrictParams op -> begin
                 match op with
                 | Balance_of p -> strict_entrypoint_balance_of (checker, p)
+                | Transfer p -> strict_entrypoint_transfer (checker, p)
               end
             | LazyParams op ->
               (* BEGIN_LIGO
