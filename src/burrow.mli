@@ -123,7 +123,7 @@ type liquidation_type =
 
 type liquidation_result = (liquidation_type * liquidation_details) option
 
-val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit
+val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit option
 val compute_expected_kit : parameters -> Ligo.tez -> ratio
 
 val show_liquidation_type : liquidation_type -> string

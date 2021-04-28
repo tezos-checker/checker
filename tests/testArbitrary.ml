@@ -26,7 +26,7 @@ let arb_liquidation_slice_contents =
        LiquidationAuctionPrimitiveTypes.
          ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
           ; burrow = Ligo.address_of_string ""
-          ; min_kit_for_unwarranted = kit_zero
+          ; min_kit_for_unwarranted = Some kit_zero
           })
     )
     QCheck.(0 -- 1000)

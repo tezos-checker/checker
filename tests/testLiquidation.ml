@@ -9,6 +9,9 @@ open TestCommon
 let property_test_count = 1000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
+type kit_option = kit option
+[@@deriving show]
+
 (* Create an arbitrary burrow state, given the set of checker's parameters (NB:
  * most values are fixed). *)
 let arbitrary_burrow (params: parameters) =
@@ -410,8 +413,8 @@ let barely_liquidatable_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "8_677_329n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -480,8 +483,8 @@ let barely_non_complete_liquidatable_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "15_229_815n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -548,8 +551,8 @@ let barely_complete_liquidatable_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "15_229_814n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -616,8 +619,8 @@ let barely_non_close_liquidatable_test =
 
     let expected_min_kit_for_unwarranted = kit_zero in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit = zero_ratio in
@@ -681,8 +684,8 @@ let barely_close_liquidatable_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "18_981_000n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -757,8 +760,8 @@ let partial_liquidation_unit_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "27_141_394n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -823,8 +826,8 @@ let complete_liquidation_unit_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "170_810_000n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
@@ -891,8 +894,8 @@ let complete_and_close_liquidation_test =
 
     let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "189_810_000n") in
     assert_equal
-      ~printer:show_kit
-      expected_min_kit_for_unwarranted
+      ~printer:show_kit_option
+      (Some expected_min_kit_for_unwarranted)
       (compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
