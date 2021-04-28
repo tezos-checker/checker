@@ -56,6 +56,7 @@ threads = []
 threads << Thread.new {
   stdout, stderr, exit_status = Open3.capture3(
     "ligo", "compile-storage",
+    "--now=2021-01-01T10:10:10Z",
     MAIN_FILE, "main",
     "initial_wrapper (\"#{ADDRESS_PLACEHOLDER}\": address)"
   )
