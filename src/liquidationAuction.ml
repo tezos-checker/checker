@@ -533,8 +533,6 @@ let completed_liquidation_auction_won_by_sender
     (avl_storage: mem) (auction_id: liquidation_auction_id): auction_outcome option =
   match avl_root_data avl_storage auction_id with
   | Some outcome ->
-    (* FIXME: where "is" the kit now btw? *)
-    (* NOTE: We no longer check the kit, but I think this is correct. *)
     if outcome.winning_bid.address = !Ligo.Tezos.sender
     then Some outcome
     else (None: auction_outcome option)

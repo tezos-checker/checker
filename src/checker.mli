@@ -197,10 +197,6 @@ val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation
 (** Claim a winning bid for the current or a completed liquidation auction. *)
 val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id -> LigoOp.operation list * checker
 
-(* (\** Increase a failed bid for the current auction. *\)
- * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
- *   -> liquidation_auction_bid_ticket *)
-
 (** Receive a liquidation slice from a burrow; we gather the slices in the
     checker contract, and the checker contract is responsible for transfering
     the lot to the liquidation auction winner. *)

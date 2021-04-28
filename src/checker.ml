@@ -489,14 +489,17 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
   let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
 
-  (* Subtract the kit from the bidder's account. *)
-  let state_fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit) in
-  (* Restore the old winning bid to its owner, if such a bid exists. *)
+  (* Update the fa2_state: (a) subtract the kit from the bidder's account, and
+   * (b) restore the old winning bid to its owner, if such a bid exists. *)
   let state_fa2_state =
-    match old_winning_bid with
-    | None -> state_fa2_state (* nothing to do *)
-    | Some old_winning_bid ->
-      ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+    let state_fa2_state = state.fa2_state in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
+    let state_fa2_state =
+      match old_winning_bid with
+      | None -> state_fa2_state (* nothing to do *)
+      | Some old_winning_bid ->
+        ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+    state_fa2_state in
 
   ( ([]: LigoOp.operation list),
     { state with
@@ -515,9 +518,6 @@ let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liqui
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
   ([op], {state with liquidation_auctions = liquidation_auctions })
-
-(* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
- * *)
 
 let[@inline] entrypoint_receive_slice_from_burrow (state, _: checker * unit) : (LigoOp.operation list * checker) =
   (* NOTE: do we have to register somewhere that we have received this tez? *)
