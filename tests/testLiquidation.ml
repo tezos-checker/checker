@@ -1076,6 +1076,40 @@ let regression_test_72 =
     in
     assert_properties_of_complete_liquidation Parameters.initial_parameters burrow0 liquidation_details
 
+let regression_test_93 =
+  "regression_test_93" >:: fun _ ->
+    let burrow_in =
+      Burrow.make_burrow_for_test
+        ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
+        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3928478924648448718n"))
+        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~excess_kit:kit_zero
+        ~active:true
+        ~owner:bob_addr
+        ~delegate:None
+        ~adjustment_index:fixedpoint_one
+        ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+    (* First liquidation must be complete *)
+    let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow_in with
+      | Some (Burrow.Complete, liquidation_details) -> liquidation_details
+      | liquidation_result -> assert_failure ("Unexpected liquidation result: " ^ Burrow.show_liquidation_result liquidation_result)
+    in
+    assert_properties_of_complete_liquidation Parameters.initial_parameters burrow_in liquidation_details;
+    (* The following line must succeed. *)
+    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
+
+    (* Second liquidation must be close *)
+    let burrow_in = liquidation_details.burrow_state in
+    let liquidation_details = match Burrow.burrow_request_liquidation Parameters.initial_parameters burrow_in with
+      | Some (Burrow.Close, liquidation_details) -> liquidation_details
+      | liquidation_result -> assert_failure ("Unexpected liquidation result: " ^ Burrow.show_liquidation_result liquidation_result)
+    in
+    assert_properties_of_close_liquidation Parameters.initial_parameters burrow_in liquidation_details;
+    (* The following line must succeed. *)
+    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
+    ()
+
 let suite =
   "LiquidationTests" >::: [
     partial_liquidation_unit_test;
@@ -1109,4 +1143,5 @@ let suite =
 
     (* Regression tests *)
     regression_test_72;
+    regression_test_93;
   ]
