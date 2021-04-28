@@ -157,7 +157,7 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
   (* kit partitioning *)
   let (lkit, rkit) =
     match contents_min_kit_for_unwarranted with
-    | None -> (None, None)
+    | None -> ((None: kit option), (None: kit option))
     | Some contents_min_kit_for_unwarranted ->
       let min_kit_for_unwarranted = kit_to_mukit_int contents_min_kit_for_unwarranted in
       let lkit =
