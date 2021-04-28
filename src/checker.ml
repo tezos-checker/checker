@@ -501,7 +501,7 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
 let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions auction_id in
+  let (tez, liquidation_auctions) = liquidation_auction_claim_win state.liquidation_auctions auction_id in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in

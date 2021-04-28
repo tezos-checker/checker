@@ -619,7 +619,7 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
   (contents, outcome, auctions)
 
 (* If successful, it consumes the ticket. *)
-let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
+let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
