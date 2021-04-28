@@ -729,6 +729,12 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
       go (completed_auctions.youngest) None
     );
 
+  (* There are no empty slices. *)
+  let mem = auctions.avl_storage in
+  let nodes = Ligo.Big_map.bindings mem.mem
+              |> List.filter_map (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Leaf l -> Some l; | _ -> None) in
+  List.iter (fun leaf -> assert (leaf.value.contents.tez <> Ligo.tez_from_literal "0mutez")) nodes;
+
   (* TODO: Check if all dangling auctions are empty. *)
 
   ()
