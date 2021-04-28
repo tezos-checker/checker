@@ -487,15 +487,24 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
-  let (new_current_auction, _bid_details) = liquidation_auction_place_bid current_auction bid in
-  (* FIXME: Bigmap update with the bid_details here. *)
+  let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
+
+  (* Subtract the kit from the bidder's account. *)
+  let state_fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit) in
+  (* Restore the old winning bid to its owner, if such a bid exists. *)
+  let state_fa2_state =
+    match old_winning_bid with
+    | None -> state_fa2_state (* nothing to do *)
+    | Some old_winning_bid ->
+      ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+
   ( ([]: LigoOp.operation list),
     { state with
       liquidation_auctions=
         { state.liquidation_auctions with
           current_auction = Some new_current_auction;
         };
-      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit)
+      fa2_state = state_fa2_state;
     }
   )
 

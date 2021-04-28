@@ -442,16 +442,24 @@ let complete_liquidation_auction_if_possible
     end
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
-  * least as much as the liquidation_auction_current_auction_minimum_bid. *)
-let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
-  (* FIXME: Here's where we have to return kit to the failed bid owners, when
-   * the previous state was also Ascending. *)
+  * least as much as the liquidation_auction_current_auction_minimum_bid. If
+  * bid placement is successful return the old winning bid, so that we can
+  * credit their kit back to their account. *)
+let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * (bid option)) =
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
-    ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
-      { auction_id = auction.contents; bid = bid; }
-    )
-  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * liquidation_auction_bid)
+    begin
+      let updated_auction = { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); } in
+
+      match auction.state with
+      (* For descending auctions we don't have to return kit to anyone. *)
+      | Descending _ ->
+        (updated_auction, (None: bid option))
+      (* For ascending auctions we have to credit the last winning bid to their owner. *)
+      | Ascending (leading_bid, _timestamp, _level) ->
+        (updated_auction, Some leading_bid)
+    end
+  else (Ligo.failwith error_BidTooLow : current_liquidation_auction * (bid option))
 
 let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : current_liquidation_auction =
   match auctions.current_auction with
