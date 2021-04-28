@@ -59,7 +59,7 @@ deploy_chunks.each_with_index do |chunk, i|
 
   transfers = chunk.map
     .map { |arg|
-      { destination: "testcontract", amount: "1", entrypoint: "deployFunction", arg: arg  }
+      { destination: "testcontract", amount: "0", entrypoint: "deployFunction", arg: arg  }
     }
   stdout, stderr, exit_status = Open3.capture3(
     "tezos-client",
