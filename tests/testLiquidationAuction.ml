@@ -6,12 +6,7 @@ open LiquidationAuctionTypes
 open Error
 open Ratio
 
-let property_test_count = 10
-(* FIXME: 1000 is waaaay too slow for some reason :/
-     1       Ran: 5 tests in: 0.32 seconds.
-     10      Ran: 5 tests in: 1.22 seconds.
-     100     Ran: 5 tests in: 12.10 seconds.
-*)
+let property_test_count = 1000
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
