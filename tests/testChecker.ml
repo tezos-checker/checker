@@ -839,23 +839,20 @@ let suite =
        let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
-       let _touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
+       let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
-       let (_ops, _checker) =
+       let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
            ( checker
            , (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
            ) in
 
-(*
-       assert_equal [] ops ~printer:show_operation_list;
-*)
+       let auction_id =
+         match checker.liquidation_auctions.current_auction with
+         | None -> assert_failure "entrypoint_liquidation_auction_place_bid should have succeeded"
+         | Some current_auction -> current_auction.contents in
 
-(* FIXME
-       let bid = match ops with
-         | (Transaction (LaBidTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (LaBidTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
-       in
+       assert_equal [] ops ~printer:show_operation_list;
 
        assert_equal
          (Ligo.int_from_literal "500_000")
@@ -893,23 +890,22 @@ let suite =
            [slice] in
        *)
 
-       let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_bool "burrow should have no liquidation slices"
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
 
+       let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_equal
          (Ligo.tez_from_literal "0mutez")
          (burrow_collateral_at_auction result)
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, bid) in
+       let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
        assert_equal
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
-*)
        ()
     );
   ]
