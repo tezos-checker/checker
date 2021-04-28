@@ -1,13 +1,11 @@
 open Ligo
 open BurrowTypes
-open Tickets
 
 (* contract *)
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressTransactionValue : address -> address transaction_value
-  | LaBidTransactionValue : liquidation_auction_bid_content ticket -> liquidation_auction_bid_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
@@ -26,7 +24,6 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   match tv with
   | UnitTransactionValue -> "()"
   | AddressTransactionValue a -> string_of_address a
-  | LaBidTransactionValue c -> show_ticket pp_liquidation_auction_bid_content c
   | TezAddressTransactionValue ta -> show_tez_and_address ta
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
   | TezTransactionValue tz -> string_of_tez tz
@@ -67,7 +64,6 @@ module Tezos = struct
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
   let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
-  let la_bid_transaction value tez contract = Transaction (LaBidTransactionValue value, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)

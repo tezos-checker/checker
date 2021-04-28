@@ -1,11 +1,9 @@
 open Ligo
 open BurrowTypes
-open Tickets
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressTransactionValue : address -> address transaction_value
-  | LaBidTransactionValue : liquidation_auction_bid_content ticket -> liquidation_auction_bid_content ticket transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
@@ -38,7 +36,6 @@ module Tezos : sig
 
   val unit_transaction : unit -> tez -> unit contract -> operation
   val address_transaction : address -> tez -> address contract -> operation
-  val la_bid_transaction : liquidation_auction_bid_content ticket -> tez -> liquidation_auction_bid_content ticket contract -> operation
   val tez_address_transaction : (tez * address) -> tez -> (tez * address) contract -> operation
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
   val tez_transaction : tez -> tez -> tez contract -> operation

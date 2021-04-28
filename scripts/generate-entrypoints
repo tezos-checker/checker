@@ -36,7 +36,7 @@ puts "let lazyParamsToLazyFunctionId (p: lazy_params) : lazy_function_id * Ligo.
   match p with
 "
 entrypoints.each do |e|
-  puts "   | #{to_entrypoint_name e.name} a -> (lazy_id_#{e.name}, Ligo.Bytes.pack (deticketify_#{e.name} a))"
+  puts "   | #{to_entrypoint_name e.name} a -> (lazy_id_#{e.name}, Ligo.Bytes.pack a)"
 end
 
 # Generate wrappers for entrypoint functions
@@ -58,6 +58,6 @@ puts "let runLazyParams (params: lazy_params) (checker: checker): LigoOp.operati
   match params with
 "
 entrypoints.each do |e|
-  puts "   | #{to_entrypoint_name e.name} a -> entrypoint_#{e.name} (checker, deticketify_#{e.name} a)"
+  puts "   | #{to_entrypoint_name e.name} a -> entrypoint_#{e.name} (checker, a)"
 end
 puts "(* END_OCAML *)"

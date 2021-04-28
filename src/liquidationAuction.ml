@@ -75,7 +75,6 @@ open Kit
 open Avl
 open Constants
 open Common
-open Tickets
 open LiquidationAuctionTypes
 open Error
 
@@ -542,15 +541,6 @@ let completed_liquidation_auction_won_by
     then Some outcome
     else (None: auction_outcome option)
   | None -> (None: auction_outcome option)
-
-(* If successful, it consumes the ticket. *)
-let liquidation_auction_reclaim_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : kit =
-  if is_leading_current_liquidation_auction auctions bid_details
-  then (Ligo.failwith error_CannotReclaimLeadingBid : kit)
-  else
-    match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
-    | Some _ -> (Ligo.failwith error_CannotReclaimWinningBid : kit)
-    | None -> bid_details.bid.kit
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
 let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (tree: avl_ptr) : liquidation_auctions =

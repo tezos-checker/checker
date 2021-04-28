@@ -66,3 +66,6 @@ type node =
   | Branch of branch
   | Root of (ptr option * auction_outcome option)
 [@@deriving show]
+
+type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
+[@@deriving show]

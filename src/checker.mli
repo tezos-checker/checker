@@ -1,7 +1,6 @@
 open Ctez
 open Kit
 open LiquidationAuctionPrimitiveTypes
-open Tickets
 open CheckerTypes
 open Fa2Interface
 open CfmmTypes
@@ -195,9 +194,6 @@ val entrypoint_remove_liquidity : checker * (Ligo.nat * ctez * kit * Ligo.timest
     reclaim the kit when outbid. *)
 val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
 
-(** Reclaim a failed bid for the current or a completed liquidation auction. *)
-val entrypoint_liquidation_auction_reclaim_bid : checker * liquidation_auction_bid -> LigoOp.operation list * checker
-
 (** Claim a winning bid for the current or a completed liquidation auction. *)
 val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_bid -> LigoOp.operation list * checker
 
@@ -249,8 +245,7 @@ type lazy_params =
   | Add_liquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
   | Remove_liquidity of (liquidity * ctez * kit * Ligo.timestamp)
   | Liquidation_auction_place_bid of kit
-  | Liquidation_auction_reclaim_bid of liquidation_auction_bid_ticket
-  | Liquidation_auction_claim_win of liquidation_auction_bid_ticket
+  | Liquidation_auction_claim_win of liquidation_auction_bid
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
   | Update_operators of fa2_update_operator list
@@ -262,31 +257,3 @@ type strict_params =
 type checker_params =
   | LazyParams of lazy_params
   | StrictParams of strict_params
-
-(**/**)
-(* These need not be part of the documentation of checker.ml. *)
-val deticketify_touch : unit -> unit
-val deticketify_create_burrow : Ligo.key_hash option -> Ligo.key_hash option
-val deticketify_deposit_tez : burrow_id -> burrow_id
-val deticketify_withdraw_tez : Ligo.tez * burrow_id -> Ligo.tez * burrow_id
-val deticketify_mint_kit : burrow_id * kit -> burrow_id * kit
-val deticketify_burn_kit : burrow_id * kit -> burrow_id * kit
-val deticketify_activate_burrow : burrow_id -> burrow_id
-val deticketify_deactivate_burrow : burrow_id -> burrow_id
-val deticketify_mark_for_liquidation : burrow_id -> burrow_id
-val deticketify_touch_liquidation_slices : leaf_ptr list -> leaf_ptr list
-val deticketify_cancel_liquidation_slice : leaf_ptr -> leaf_ptr
-val deticketify_touch_burrow : burrow_id -> burrow_id
-val deticketify_set_burrow_delegate : burrow_id * Ligo.key_hash option -> burrow_id * Ligo.key_hash option
-val deticketify_buy_kit : ctez * kit * Ligo.timestamp -> ctez * kit * Ligo.timestamp
-val deticketify_sell_kit : kit * ctez * Ligo.timestamp -> kit * ctez * Ligo.timestamp
-val deticketify_add_liquidity : ctez * kit * Ligo.nat * Ligo.timestamp -> ctez * kit * Ligo.nat * Ligo.timestamp
-val deticketify_remove_liquidity : liquidity * ctez * kit * Ligo.timestamp -> Ligo.nat * ctez * kit * Ligo.timestamp
-val deticketify_liquidation_auction_place_bid : kit -> kit
-val deticketify_liquidation_auction_reclaim_bid : liquidation_auction_bid_ticket -> liquidation_auction_bid
-val deticketify_liquidation_auction_claim_win : liquidation_auction_bid_ticket -> liquidation_auction_bid
-val deticketify_receive_slice_from_burrow : unit -> unit
-val deticketify_receive_price : Ligo.nat -> Ligo.nat
-val deticketify_transfer : fa2_transfer list -> fa2_transfer list
-val deticketify_update_operators : fa2_update_operator list -> fa2_update_operator list
-(**/**)
