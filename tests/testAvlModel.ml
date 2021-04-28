@@ -77,7 +77,9 @@ let show_model queue =
 
 let model_empty () = (Core_kernel.Deque.create (): (liquidation_slice Core_kernel.Deque.t))
 
-(* Deletes the element with the provided index (if it exists) and returns a new queue and list of indices *)
+(* Deletes the element with the provided index (if it exists) and returns a new queue and
+ *  list of indices.
+*)
 let model_delete (queue: model) (index: int) : model =
   let filter_index = fun (index: int) (cur_index:int) acc element ->
     if cur_index = index then acc
