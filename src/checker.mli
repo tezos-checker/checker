@@ -195,7 +195,7 @@ val entrypoint_remove_liquidity : checker * (Ligo.nat * ctez * kit * Ligo.timest
 val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
 
 (** Claim a winning bid for the current or a completed liquidation auction. *)
-val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_bid -> LigoOp.operation list * checker
+val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id -> LigoOp.operation list * checker
 
 (* (\** Increase a failed bid for the current auction. *\)
  * val increase_bid : checker -> address:Ligo.address -> increase:kit -> bid_ticket:liquidation_auction_bid_ticket
@@ -245,7 +245,7 @@ type lazy_params =
   | Add_liquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
   | Remove_liquidity of (liquidity * ctez * kit * Ligo.timestamp)
   | Liquidation_auction_place_bid of kit
-  | Liquidation_auction_claim_win of liquidation_auction_bid
+  | Liquidation_auction_claim_win of liquidation_auction_id
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
   | Update_operators of fa2_update_operator list

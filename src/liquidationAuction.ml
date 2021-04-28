@@ -444,6 +444,8 @@ let complete_liquidation_auction_if_possible
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. *)
 let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * liquidation_auction_bid) =
+  (* FIXME: Here's where we have to return kit to the failed bid owners, when
+   * the previous state was also Ascending. *)
   if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
   then
     ( { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); },
@@ -455,20 +457,6 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
   match auctions.current_auction with
   | None -> (Ligo.failwith error_NoOpenAuction : current_liquidation_auction)
   | Some curr -> curr
-
-let is_leading_current_liquidation_auction
-    (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid): bool =
-  match auctions.current_auction with
-  | Some auction ->
-    if ptr_of_avl_ptr auction.contents = ptr_of_avl_ptr bid_details.auction_id
-    then
-      (match auction.state with
-       | Ascending params ->
-         let (bid, _timestamp, _level) = params in
-         bid_eq bid bid_details.bid
-       | Descending _ -> false)
-    else false
-  | None -> false
 
 (* removes the slice from liquidation_auctions, fixing up the necessary pointers.
  * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
@@ -533,11 +521,13 @@ let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr
   then (Ligo.failwith error_UnwarrantedCancellation : liquidation_slice_contents * liquidation_auctions)
   else (contents, auctions)
 
-let completed_liquidation_auction_won_by
-    (avl_storage: mem) (bid_details: liquidation_auction_bid): auction_outcome option =
-  match avl_root_data avl_storage bid_details.auction_id with
+let completed_liquidation_auction_won_by_sender
+    (avl_storage: mem) (auction_id: liquidation_auction_id): auction_outcome option =
+  match avl_root_data avl_storage auction_id with
   | Some outcome ->
-    if bid_eq outcome.winning_bid bid_details.bid
+    (* FIXME: where "is" the kit now btw? *)
+    (* NOTE: We no longer check the kit, but I think this is correct. *)
+    if outcome.winning_bid.address = !Ligo.Tezos.sender
     then Some outcome
     else (None: auction_outcome option)
   | None -> (None: auction_outcome option)
@@ -629,12 +619,12 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
   (contents, outcome, auctions)
 
 (* If successful, it consumes the ticket. *)
-let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (bid_details: liquidation_auction_bid) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by auctions.avl_storage bid_details with
+let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
+  match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
   | Some outcome ->
     (* A winning bid can only be claimed when all the liquidation slices
      * for that lot is cleaned. *)
-    if not (avl_is_empty auctions.avl_storage bid_details.auction_id)
+    if not (avl_is_empty auctions.avl_storage auction_id)
     then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
     else (
       (* When the winner reclaims their bid, we finally remove
@@ -646,8 +636,7 @@ let[@inline] liquidation_auction_reclaim_winning_bid (auctions: liquidation_auct
       assert (outcome.older_auction = None);
       let auctions =
         { auctions with
-          avl_storage =
-            avl_delete_empty_tree auctions.avl_storage bid_details.auction_id } in
+          avl_storage = avl_delete_empty_tree auctions.avl_storage auction_id } in
       (outcome.sold_tez, auctions)
     )
   | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)

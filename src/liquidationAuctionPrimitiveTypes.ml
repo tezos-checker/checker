@@ -27,11 +27,6 @@ type liquidation_auction_id = avl_ptr
 type bid = { address: Ligo.address; kit: kit }
 [@@deriving show]
 
-let bid_eq (b1: bid) (b2: bid) =
-  let {address=a1; kit=k1} = b1 in
-  let {address=a2; kit=k2} = b2 in
-  a1 = a2 && k1 = k2
-
 type auction_outcome = {
   sold_tez: Ligo.tez;
   winning_bid: bid;

@@ -499,10 +499,9 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
     }
   )
 
-let entrypoint_liquidation_auction_claim_win (state, bid_details: checker * liquidation_auction_bid) : (LigoOp.operation list * checker) =
-  (* FIXME: Pass only the avl_ptr as Utku recommended on the issue. *)
+let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in
+  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions auction_id in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
@@ -715,7 +714,7 @@ type lazy_params =
   | Add_liquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
   | Remove_liquidity of (liquidity * ctez * kit * Ligo.timestamp)
   | Liquidation_auction_place_bid of kit
-  | Liquidation_auction_claim_win of liquidation_auction_bid (* FIXME: we should probably pass less here; avl_ptr, as Utku said. *)
+  | Liquidation_auction_claim_win of liquidation_auction_id
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
   | Update_operators of fa2_update_operator list
