@@ -385,6 +385,49 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
 
   b.active && Ligo.lt_int_int lhs rhs
 
+(** Check whether the return of a slice to its burrow (cancellation) is
+  * warranted. For the cancellation to be warranted, it must be the case that
+  * after returning the slice to the burrow, the burrow is optimistically
+  * non-overburrowed (i.e., if all remaining collateral at auction sells at the
+  * current price but with penalties paid, the burrow becomes underburrowed):
+  *
+  *   collateral + slice >= fminting * (outstanding - compute_expected_kit (collateral_at_auction - slice)) * minting_price
+  *
+  * Note that only active burrows can be liquidated; inactive ones are dormant,
+  * until either all pending auctions finish or if their creation deposit is
+  * restored. *)
+let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Ligo.tez) : bool =
+  let _ = ensure_uptodate_burrow p b in
+  assert_burrow_invariants b;
+  assert (Ligo.geq_tez_tez b.collateral_at_auction slice_tez);
+
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let { num = num_ek; den = den_ek; } = compute_expected_kit p (Ligo.sub_tez_tez b.collateral_at_auction slice_tez) in
+
+  (* lhs = (collateral + slice_tez) * den_fm * kit_sf * den_ek * den_mp *)
+  let lhs =
+    Ligo.mul_int_int
+      (tez_to_mutez (Ligo.add_tez_tez b.collateral slice_tez))
+      (Ligo.mul_int_int
+         (Ligo.mul_int_int den_fm kit_scaling_factor_int)
+         (Ligo.mul_int_int den_ek den_mp)
+      ) in
+
+  (* rhs = num_fm * (outstanding * den_ek - kit_sf * num_ek) * num_mp * tez_sf *)
+  let rhs =
+    Ligo.mul_int_int
+      num_fm
+      (Ligo.mul_int_int
+         (Ligo.sub_int_int
+            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+            (Ligo.mul_int_int kit_scaling_factor_int num_ek)
+         )
+         (Ligo.mul_int_int num_mp (Ligo.int_from_literal "1_000_000"))
+      ) in
+
+  b.active && Ligo.geq_int_int lhs rhs
+
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted, calculated as (see
   * docs/burrow-state-liquidations.md for the derivation of this formula):
