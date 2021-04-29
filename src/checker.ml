@@ -282,8 +282,13 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
 (* Cancel the liquidation of a slice. *)
 let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
+  let _ = ensure_valid_leaf_ptr state.liquidation_auctions.avl_storage leaf_ptr in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
+  let _ =
+    if burrow_is_cancellation_warranted state.parameters burrow cancelled.tez
+    then ()
+    else Ligo.failwith error_UnwarrantedCancellation in
   if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_return_slice_from_auction cancelled burrow in
     let state =
