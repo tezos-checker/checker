@@ -58,7 +58,7 @@ let op_gen = QCheck.Gen.(
         | 3 -> map (fun percent -> Get percent) (float_bound_inclusive 1.)
         | 4 -> map (fun percent -> Delete percent) (float_bound_inclusive 1.)
         | 5 -> map (fun tez -> Take (Ligo.tez_from_literal (string_of_int tez ^ "mutez"))) (int_range 0 max_int)
-        | _ -> failwith "Generated more cases then their are in queue_op. Check the int_range bounds in op_gen."
+        | _ -> failwith "Generated more cases than there are in queue_op. Check the int_range bounds in op_gen."
     )
   )
 let arb_op = QCheck.make op_gen
