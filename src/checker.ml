@@ -86,6 +86,14 @@ let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) =
   then ()
   else Ligo.failwith error_InvalidAvlPtr
 
+(* Ensure that the given pointer exists. This does not ensure that it points to
+ * something specific, but merely that the pointer exists and points to
+ * something. *)
+let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) =
+  if mem_is_ptr_valid mem (match leaf_ptr with LeafPtr r -> r)
+  then ()
+  else Ligo.failwith error_InvalidLeafPtr
+
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
@@ -261,7 +269,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
       min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
     } in
 
-  let (updated_liquidation_auctions, _) =
+  let (updated_liquidation_auctions, _leaf_ptr) =
     liquidation_auction_send_to_auction state.liquidation_auctions contents in
 
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
@@ -301,6 +309,8 @@ let touch_liquidation_slice
     (state_burrows: burrow_map)
     (leaf_ptr: leaf_ptr)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+
+  let _ = ensure_valid_leaf_ptr auctions.avl_storage leaf_ptr in
 
   let slice, outcome, auctions = liquidation_auctions_pop_completed_slice auctions leaf_ptr in
 

@@ -816,6 +816,11 @@ let suite =
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "1_009_000mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops;
 
+       let slice =
+         (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices)
+         |> Option.get
+         |> fun i -> i.youngest_slice in
+
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_NoOpenAuction))
@@ -881,20 +886,12 @@ let suite =
          touch_reward
          ~printer:Ligo.string_of_int;
 
-       (* We don't need to touch the slice on this test case since Checker.entrypoint_touch_with_index
-        * already touches the oldest 5 slices. *)
-       (*
-       let slice =
-         (PtrMap.find burrow_id checker.burrows)
-         |> burrow_liquidation_slices
-         |> Option.get
-         |> fun i -> i.youngest in
-
-       let checker =
-         Checker.entrypoint_touch_liquidation_slices
-           checker
-           [slice] in
-       *)
+       (* We don't need to touch the slice on this test case since
+        * Checker.entrypoint_touch_with_index already touches the oldest 5
+        * slices. *)
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidLeafPtr))
+         (fun () -> Checker.entrypoint_touch_liquidation_slices (checker, [slice]));
 
        assert_bool "burrow should have no liquidation slices"
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
