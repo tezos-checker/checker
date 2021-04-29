@@ -543,7 +543,7 @@ let suite =
        let slice = LiquidationAuctionPrimitiveTypes.{
            burrow=Ligo.address_from_literal "12345";
            tez=Ligo.tez_from_literal "1mutez";
-           min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "1n");
+           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
          } in
 
        let burrow = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
@@ -569,7 +569,7 @@ let suite =
        let slice = let open LiquidationAuctionPrimitiveTypes in {
            burrow=Ligo.address_from_literal "12345";
            tez=Ligo.tez_from_literal "1mutez";
-           min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "1n");
+           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
          } in
 
        let burrow = Burrow.burrow_return_slice_from_auction slice burrow0 in

@@ -385,39 +385,52 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
 
   b.active && Ligo.lt_int_int lhs rhs
 
-
-
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted, calculated as (see
   * docs/burrow-state-liquidations.md for the derivation of this formula):
   *
   *   tez_to_auction * (fliquidation * (outstanding_kit - expected_kit_from_auctions)) / collateral
+  *
+  * If the burrow has no collateral left in it (e.g., right after a successful
+  * Complete-liquidation) then we have two cases:
+  * (a) If the outstanding kit is non-zero then there is no way for this
+  *     liquidation to be considered unwarranted. outstanding_kit is infinitely
+  *     many times greater than the collateral.
+  * (b) If the outstanding kit is also zero then the liquidation in question
+  *     shouldn't have happened (so it is by definition unwarranted). I think
+  *     that this is impossible in practice, but it's probably best to account
+  *     for it so that the function is not partial.
 *)
-let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit =
+let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit option =
   let _ = ensure_uptodate_burrow p b in
-  assert (b.collateral <> Ligo.tez_from_literal "0mutez"); (* NOTE: division by zero. FIXME: are we safe from this? *)
 
-  let { num = num_fl; den = den_fl; } = fliquidation in
-  let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
+  if b.collateral = Ligo.tez_from_literal "0mutez" (* NOTE: division by zero. *)
+  then
+    if b.outstanding_kit <> kit_of_mukit (Ligo.nat_from_literal "0n")
+    then (None: kit option) (* (a): infinity, basically *)
+    else (Some kit_zero) (* (b): zero *)
+  else
+    let { num = num_fl; den = den_fl; } = fliquidation in
+    let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
 
-  (* numerator = max 0 (tez_to_auction * num_fl * (den_ek * outstanding_kit - kit_sf * num_ek)) *)
-  let numerator =
+    (* numerator = max 0 (tez_to_auction * num_fl * (den_ek * outstanding_kit - kit_sf * num_ek)) *)
     let numerator =
+      let numerator =
+        Ligo.mul_int_int
+          (Ligo.mul_int_int (tez_to_mutez tez_to_auction) num_fl)
+          (Ligo.sub_int_int
+             (Ligo.mul_int_int den_ek (kit_to_mukit_int b.outstanding_kit))
+             (Ligo.mul_int_int kit_scaling_factor_int num_ek)
+          ) in
+      max_int (Ligo.int_from_literal "0") numerator in
+
+    (* denominator = collateral * den_fl * kit_sf * den_ek *)
+    let denominator =
       Ligo.mul_int_int
-        (Ligo.mul_int_int (tez_to_mutez tez_to_auction) num_fl)
-        (Ligo.sub_int_int
-           (Ligo.mul_int_int den_ek (kit_to_mukit_int b.outstanding_kit))
-           (Ligo.mul_int_int kit_scaling_factor_int num_ek)
-        ) in
-    max_int (Ligo.int_from_literal "0") numerator in
+        (Ligo.mul_int_int (tez_to_mutez b.collateral) den_fl)
+        (Ligo.mul_int_int kit_scaling_factor_int den_ek) in
 
-  (* denominator = collateral * den_fl * kit_sf * den_ek *)
-  let denominator =
-    Ligo.mul_int_int
-      (Ligo.mul_int_int (tez_to_mutez b.collateral) den_fl)
-      (Ligo.mul_int_int kit_scaling_factor_int den_ek) in
-
-  kit_of_fraction_ceil numerator denominator (* Round up here; safer for the system, less so for the burrow *)
+    Some (kit_of_fraction_ceil numerator denominator) (* Round up here; safer for the system, less so for the burrow *)
 
 let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result =
   let _ = ensure_uptodate_burrow p b in

@@ -316,7 +316,11 @@ let touch_liquidation_slice
     in
     let penalty =
       let { num = num_lp; den = den_lp; } = liquidation_penalty in
-      if corresponding_kit < slice.min_kit_for_unwarranted then
+      let liquidation_was_warranted =
+        match slice.min_kit_for_unwarranted with
+        | None -> true
+        | Some min_kit_for_unwarranted -> corresponding_kit < min_kit_for_unwarranted in
+      if liquidation_was_warranted then
         kit_of_fraction_ceil
           (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
           (Ligo.mul_int_int kit_scaling_factor_int den_lp)

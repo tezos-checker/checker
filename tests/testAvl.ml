@@ -70,7 +70,7 @@ let avl_from_list (mem: mem) (root_data: auction_outcome option) (elements: liqu
 let mk_liquidation_slice (n: int): liquidation_slice =
   { contents =
       { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
-      ; min_kit_for_unwarranted = kit_zero
+      ; min_kit_for_unwarranted = Some kit_zero
       ; burrow = Ligo.address_of_string "someburrow"
       }
   ; older = None
