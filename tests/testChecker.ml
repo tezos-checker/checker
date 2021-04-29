@@ -678,6 +678,7 @@ let suite =
     (* FIXME: There are no tests currently for Checker.Transfer. *)
     (* FIXME: There are no tests currently for Checker.Balance_of. *)
     (* FIXME: There are no tests currently for Checker.Update_operators. *)
+    (* FIXME: We need more tests for cancellations of liquidations. *)
 
     ("can complete a liquidation auction" >::
      fun _ ->
@@ -820,6 +821,22 @@ let suite =
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices)
          |> Option.get
          |> fun i -> i.youngest_slice in
+
+       (* We shouldn't be able to cancel the liquidation of this slice if the
+        * prices don't change, even if it's not in an auction yet. *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwarrantedCancellation))
+         (fun () -> Checker.entrypoint_cancel_liquidation_slice (checker, slice));
+
+       (* Trying to cancel a liquidation using an invalid pointer should fail. *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidLeafPtr))
+         (fun () ->
+            let undefined_slice = LiquidationAuctionPrimitiveTypes.LeafPtr (ptr_next checker.liquidation_auctions.avl_storage.last_ptr) in
+            Checker.entrypoint_cancel_liquidation_slice (checker, undefined_slice)
+         );
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
