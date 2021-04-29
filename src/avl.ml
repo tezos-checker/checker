@@ -445,7 +445,7 @@ let avl_push
 let[@inline] avl_push_back (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) =
   avl_push mem root_ptr value Left
 
-(* Pushes the provided value to the back of the queue *)
+(* Pushes the provided value to the front of the queue *)
 let[@inline] avl_push_front (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) =
   avl_push mem root_ptr value Right
 
