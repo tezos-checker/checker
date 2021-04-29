@@ -7,9 +7,9 @@ open LiquidationAuctionPrimitiveTypes
 
 type queue_op =
   (* Place new element in back *)
-    PushLeft of liquidation_slice
+    PushBack of liquidation_slice
   (* Place new element in front of queue *)
-  | PushRight of liquidation_slice
+  | PushFront of liquidation_slice
   (* Remove item from front of queue *)
   | Pop
   (* Read element at queue index i, expressed as a percentage of the queue length *)
@@ -52,8 +52,8 @@ let slice_gen = QCheck.Gen.(
 let op_gen = QCheck.Gen.(
     (int_range 0 5) >>= (
       fun i -> match i with
-        | 0 -> map (fun slice -> PushLeft slice) slice_gen
-        | 1 -> map (fun slice -> PushRight slice) slice_gen
+        | 0 -> map (fun slice -> PushBack slice) slice_gen
+        | 1 -> map (fun slice -> PushFront slice) slice_gen
         | 2 -> return Pop
         | 3 -> map (fun percent -> Get percent) (float_bound_inclusive 1.)
         | 4 -> map (fun percent -> Delete percent) (float_bound_inclusive 1.)
@@ -155,18 +155,18 @@ let apply_op ((impl: Mem.mem * avl_ptr), (model: model)) op =
 
   let mem, root_ptr = impl in
   match op with
-  | PushLeft slice ->
+  | PushBack slice ->
     (* Push to model *)
     let _ = enqueue_back model slice in
     (* Push to implementation *)
-    let mem, _ = Avl.avl_push mem root_ptr slice Avl.Left in
+    let mem, _ = Avl.avl_push_back mem root_ptr slice in
     (mem, root_ptr), model
 
-  | PushRight slice ->
+  | PushFront slice ->
     (* Push to model *)
     let _ = enqueue_front model slice in
     (* Push to implementation *)
-    let mem, _ = Avl.avl_push mem root_ptr slice Avl.Right in
+    let mem, _ = Avl.avl_push_front mem root_ptr slice in
     (mem, root_ptr), model
 
   | Pop ->
