@@ -222,7 +222,8 @@ let suite =
     qcheck_to_ounit
     @@ QCheck.Test.make
       ~name:"Does AVL behave like a model double-ended queue? \u{1F914}"
-      ~count:1000
+      (* FIXME: Increase this count once long running tests are moved to their own suite *)
+      ~count:100
       (QCheck.list arb_op)
     @@ fun ops -> (
       let init_model = model_empty () in
