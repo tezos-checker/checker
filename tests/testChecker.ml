@@ -906,12 +906,18 @@ let suite =
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
+       let (ops, checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
        assert_equal
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
+
+       (* This should fail; shouldn't be able to claim the win twice. *)
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidAuctionId))
+         (fun () -> Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id));
+
        ()
     );
   ]
