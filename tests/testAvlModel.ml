@@ -117,7 +117,6 @@ let percent_to_index (percent:float) (indices:'a list) =
   let i = Float.(
       to_int (round (mul percent (float_of_int ((List.length indices) - 1))))
     ) in
-  (* let _ = Format.printf "[N=%d; i=%d]" ((List.length indices) - 1) i in *)
   List.nth indices i
 
 let rec avl_foldli (impl: Mem.mem * avl_ptr) (acc: 'b) (f: leaf_ptr -> 'b -> liquidation_slice -> 'b) : 'b =
