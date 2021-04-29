@@ -97,7 +97,7 @@ let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_h
                | None -> (failwith "B2" : LigoOp.operation) in
              ([op], s)
            | BurrowSendSliceToChecker tz ->
-             let op = match (LigoOp.Tezos.get_entrypoint_opt "%receiveLiquidationSlice" !Ligo.Tezos.sender : unit Ligo.contract option) with
+             let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_liquidation_slice" !Ligo.Tezos.sender : unit Ligo.contract option) with
                | Some c -> LigoOp.Tezos.unit_transaction () tz c
                | None -> (failwith "B3" : LigoOp.operation) in
              ([op], s)
@@ -647,7 +647,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     assert_checker_invariants state;
 
     (* Create operations to ask the oracles to send updated values. *)
-    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receivePrice" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
+    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
       | Some cb -> cb
       | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
     let oracle = match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint oracle_address : (Ligo.nat Ligo.contract) Ligo.contract option) with

@@ -1,6 +1,6 @@
 (* Oracle data *)
 let oracle_address : Ligo.address = (Ligo.address_from_literal "KT1NNfziS5orym8pLvp2qsTjbq2ai9H8sDSr" : Ligo.address) (* FIXME: Use real address *)
-let oracle_entrypoint : string = "%getPriceTODO" (* FIXME: Use real entrypoint, when chosen *)
+let oracle_entrypoint : string = "%getPrice"
 
 (* Ctez data *)
 let ctez_fa12_address : Ligo.address = (Ligo.address_from_literal "KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr" : Ligo.address) (* FIXME: Use real address *)
