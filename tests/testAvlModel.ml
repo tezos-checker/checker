@@ -240,6 +240,7 @@ let suite =
                 ~msg:"Items in implementation queue did not match items in model queue."
                 ~printer:show_liquidation_slice_list
                 model_elements impl_elements in
+            let _ = Avl.assert_avl_invariants (fst impl) (snd impl) in
             applied
         ) acc ops in
       true
