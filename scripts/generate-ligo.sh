@@ -24,7 +24,6 @@ inputs=(
   mem
   avl
   liquidationAuctionTypes
-  tickets
   burrowTypes
   constants
   parameters

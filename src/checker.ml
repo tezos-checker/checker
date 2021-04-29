@@ -11,7 +11,6 @@ open LiquidationAuctionPrimitiveTypes
 open LiquidationAuctionTypes
 open Common
 open Constants
-open Tickets
 open BurrowTypes
 open CheckerTypes
 open Error
@@ -488,40 +487,37 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
 
-  let (new_current_auction, bid_details) = liquidation_auction_place_bid current_auction bid in
-  let bid_ticket = issue_liquidation_auction_bid_ticket bid_details in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transferLABidTicket" !Ligo.Tezos.sender : liquidation_auction_bid_content Ligo.ticket Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.la_bid_transaction bid_ticket (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferLABidTicket : LigoOp.operation) in
-  ( [op],
+  let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
+
+  (* Update the fa2_state: (a) subtract the kit from the bidder's account, and
+   * (b) restore the old winning bid to its owner, if such a bid exists. *)
+  let state_fa2_state =
+    let state_fa2_state = state.fa2_state in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
+    let state_fa2_state =
+      match old_winning_bid with
+      | None -> state_fa2_state (* nothing to do *)
+      | Some old_winning_bid ->
+        ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+    state_fa2_state in
+
+  ( ([]: LigoOp.operation list),
     { state with
       liquidation_auctions=
         { state.liquidation_auctions with
           current_auction = Some new_current_auction;
         };
-      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit)
+      fa2_state = state_fa2_state;
     }
   )
 
-let entrypoint_liquidation_auction_reclaim_bid (state, bid_details: checker * liquidation_auction_bid) : (LigoOp.operation list * checker) =
+let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let kit = liquidation_auction_reclaim_bid state.liquidation_auctions bid_details in
-  ( ([]: LigoOp.operation list),
-    { state with
-      fa2_state =
-        ledger_issue_kit (state.fa2_state, !Ligo.Tezos.sender, kit)
-    })
-
-let entrypoint_liquidation_auction_claim_win (state, bid_details: checker * liquidation_auction_bid) : (LigoOp.operation list * checker) =
-  let _ = ensure_no_tez_given () in
-  let (tez, liquidation_auctions) = liquidation_auction_reclaim_winning_bid state.liquidation_auctions bid_details in
+  let (tez, liquidation_auctions) = liquidation_auction_claim_win state.liquidation_auctions auction_id in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
   ([op], {state with liquidation_auctions = liquidation_auctions })
-
-(* TODO: Maybe we should provide an entrypoint for increasing a losing bid.
- * *)
 
 let[@inline] entrypoint_receive_slice_from_burrow (state, _: checker * unit) : (LigoOp.operation list * checker) =
   (* NOTE: do we have to register somewhere that we have received this tez? *)
@@ -727,8 +723,7 @@ type lazy_params =
   | Add_liquidity of (ctez * kit * Ligo.nat * Ligo.timestamp)
   | Remove_liquidity of (liquidity * ctez * kit * Ligo.timestamp)
   | Liquidation_auction_place_bid of kit
-  | Liquidation_auction_reclaim_bid of liquidation_auction_bid_ticket
-  | Liquidation_auction_claim_win of liquidation_auction_bid_ticket
+  | Liquidation_auction_claim_win of liquidation_auction_id
   | Receive_slice_from_burrow of unit
   | Receive_price of Ligo.nat
   | Update_operators of fa2_update_operator list
@@ -743,81 +738,3 @@ type strict_params =
 type checker_params =
   | LazyParams of lazy_params
   | StrictParams of strict_params
-
-(* noop *)
-let[@inline] deticketify_touch (p: unit) : unit = p
-
-(* noop *)
-let[@inline] deticketify_create_burrow (p: Ligo.key_hash option) : Ligo.key_hash option = p
-
-(* noop *)
-let[@inline] deticketify_deposit_tez (p: burrow_id) : burrow_id = p
-
-(* noop *)
-let[@inline] deticketify_withdraw_tez (p: Ligo.tez * burrow_id) : Ligo.tez * burrow_id = p
-
-(* noop *)
-let[@inline] deticketify_mint_kit (p: burrow_id * kit) : burrow_id * kit = p
-
-(* noop *)
-let[@inline] deticketify_burn_kit (p: burrow_id * kit) : burrow_id * kit = p
-
-(* noop *)
-let[@inline] deticketify_activate_burrow (p: burrow_id) : burrow_id = p
-
-(* noop *)
-let[@inline] deticketify_deactivate_burrow (p: burrow_id) : burrow_id = p
-
-(* noop *)
-let[@inline] deticketify_mark_for_liquidation (burrow_id: burrow_id) : burrow_id = burrow_id
-
-(* noop *)
-let[@inline] deticketify_touch_liquidation_slices (p: leaf_ptr list) : leaf_ptr list = p
-
-(* noop *)
-let[@inline] deticketify_cancel_liquidation_slice (p: leaf_ptr) : leaf_ptr = p
-
-(* noop *)
-let[@inline] deticketify_touch_burrow (burrow_id: burrow_id) : burrow_id = burrow_id
-
-(* noop *)
-let[@inline] deticketify_set_burrow_delegate (p: burrow_id * Ligo.key_hash option) : burrow_id * Ligo.key_hash option = p
-
-(* noop *)
-let[@inline] deticketify_buy_kit (p: ctez * kit * Ligo.timestamp) : ctez * kit * Ligo.timestamp = p
-
-(* removes tickets *)
-let[@inline] deticketify_sell_kit (kit, ctez, deadline: kit * ctez * Ligo.timestamp) : kit * ctez * Ligo.timestamp =
-  (kit, ctez, deadline)
-
-(* removes tickets *)
-let[@inline] deticketify_add_liquidity (ctez, kit, lqt, deadline: ctez * kit * Ligo.nat * Ligo.timestamp) : ctez * kit * liquidity * Ligo.timestamp =
-  (ctez, kit, lqt, deadline)
-
-(* removes tickets *)
-let[@inline] deticketify_remove_liquidity (lqt, ctez, kit, deadline: liquidity * ctez * kit * Ligo.timestamp) : liquidity * ctez * kit * Ligo.timestamp =
-  (lqt, ctez, kit, deadline)
-
-(* removes tickets *)
-let[@inline] deticketify_liquidation_auction_place_bid (kit: kit) : kit =
-  kit
-
-(* removes tickets *)
-let[@inline] deticketify_liquidation_auction_reclaim_bid (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
-  ensure_valid_liquidation_auction_bid_ticket bid_ticket
-
-(* removes tickets *)
-let[@inline] deticketify_liquidation_auction_claim_win (bid_ticket: liquidation_auction_bid_ticket) : liquidation_auction_bid =
-  ensure_valid_liquidation_auction_bid_ticket bid_ticket
-
-(* noop *)
-let[@inline] deticketify_receive_slice_from_burrow (p: unit) : unit = p
-
-(* noop *)
-let[@inline] deticketify_receive_price (p: Ligo.nat) : Ligo.nat = p
-
-(* noop *)
-let[@inline] deticketify_transfer (p: fa2_transfer list) : fa2_transfer list = p
-
-(* noop *)
-let[@inline] deticketify_update_operators (p: fa2_update_operator list) : fa2_update_operator list = p

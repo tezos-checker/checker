@@ -107,7 +107,7 @@ let suite =
        let burrow_id, checker = newly_created_burrow initial_checker in
        (* Make a deposit *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:deposit;
-       let _, checker = Checker.entrypoint_deposit_tez (checker, Checker.deticketify_deposit_tez burrow_id) in
+       let _, checker = Checker.entrypoint_deposit_tez (checker, burrow_id) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
@@ -124,7 +124,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_AuthenticationError))
-         (fun () -> Checker.entrypoint_deposit_tez (checker, Checker.deticketify_deposit_tez burrow_id))
+         (fun () -> Checker.entrypoint_deposit_tez (checker, burrow_id))
     );
 
     ("withdraw_tez - owner can withdraw" >::
@@ -138,7 +138,7 @@ let suite =
        let burrow_id, checker = newly_created_burrow initial_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_withdraw_tez (checker, Checker.deticketify_withdraw_tez (withdrawal, burrow_id)) in
+       let _, checker = Checker.entrypoint_withdraw_tez (checker, (withdrawal, burrow_id)) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
@@ -157,7 +157,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "42mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-         (fun () -> Checker.entrypoint_withdraw_tez (checker, Checker.deticketify_withdraw_tez (withdrawal, burrow_id)))
+         (fun () -> Checker.entrypoint_withdraw_tez (checker, (withdrawal, burrow_id)))
     );
 
     ("withdraw_tez - non-owner cannot withdraw" >::
@@ -171,7 +171,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_AuthenticationError))
-         (fun () -> Checker.entrypoint_withdraw_tez (checker, Checker.deticketify_withdraw_tez (withdrawal, burrow_id)))
+         (fun () -> Checker.entrypoint_withdraw_tez (checker, (withdrawal, burrow_id)))
     );
 
     ("calculate_touch_reward - expected result for last_touched 2s ago" >::
@@ -232,7 +232,7 @@ let suite =
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-            Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, some_kit))
+            Checker.entrypoint_burn_kit (checker, (burrow_id, some_kit))
          )
     );
 
@@ -251,10 +251,7 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , Checker.deticketify_mint_kit
-               ( burrow_id
-               , kit_of_mukit (Ligo.nat_from_literal "4_285_714n")
-               )
+           , (burrow_id, kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        (* There should be no operations emitted. *)
@@ -263,7 +260,7 @@ let suite =
        (* The owner should be able to burn it back. *)
        let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ = Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token)) in
+       let _ = Checker.entrypoint_burn_kit (checker, (burrow_id, kit_token)) in
 
        ()
     );
@@ -280,10 +277,7 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , Checker.deticketify_mint_kit
-               ( burrow_id
-               , kit_of_mukit (Ligo.nat_from_literal "4_285_714n")
-               )
+           , (burrow_id, kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        (* There should be no operations emitted. *)
@@ -295,7 +289,7 @@ let suite =
          (fun () ->
             let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, bob_addr)) in
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-            Checker.entrypoint_burn_kit (checker, Checker.deticketify_burn_kit (burrow_id, kit_token))
+            Checker.entrypoint_burn_kit (checker, (burrow_id, kit_token))
          );
 
        ()
@@ -409,7 +403,7 @@ let suite =
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
+      let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
@@ -439,7 +433,7 @@ let suite =
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-      let _, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
+      let _, new_checker = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
       kit_add checker.cfmm.kit kit_amount = new_checker.cfmm.kit
     );
 
@@ -461,7 +455,7 @@ let suite =
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let ops, new_checker = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_amount, min_ctez_expected, deadline)) in
+      let ops, new_checker = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
 
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
@@ -486,7 +480,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_set_burrow_delegate (checker, Checker.deticketify_set_burrow_delegate (burrow_id, None))
+            Checker.entrypoint_set_burrow_delegate (checker, (burrow_id, None))
          )
     );
 
@@ -598,7 +592,7 @@ let suite =
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_sell_kit (checker, Checker.deticketify_sell_kit (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
+       let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
        let muctez = match ops with
          | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -617,7 +611,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_sell_kit (initial_checker, Checker.deticketify_sell_kit (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_sell_kit (initial_checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 
@@ -643,7 +637,7 @@ let suite =
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, checker = Checker.entrypoint_remove_liquidity (checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
+       let ops, checker = Checker.entrypoint_remove_liquidity (checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
        let ctez = match ops with
          | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
            begin
@@ -671,7 +665,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_remove_liquidity (initial_checker, Checker.deticketify_remove_liquidity (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_remove_liquidity (initial_checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 
@@ -698,12 +692,11 @@ let suite =
        let _lqt_minted_ret_kit_ops, checker =
          Checker.entrypoint_add_liquidity
            ( checker
-           , Checker.deticketify_add_liquidity
-               ( ctez_of_muctez (Ligo.nat_from_literal "1_000_000n")
-               , kit_one
-               , Ligo.nat_from_literal "1n"
-               , Ligo.timestamp_from_seconds_literal 1
-               )
+           , ( ctez_of_muctez (Ligo.nat_from_literal "1_000_000n")
+             , kit_one
+             , Ligo.nat_from_literal "1n"
+             , Ligo.timestamp_from_seconds_literal 1
+             )
            ) in (* barely on time *)
 
        (* Activation/deactivation tests *)
@@ -724,14 +717,14 @@ let suite =
          in
 
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, Checker.deticketify_deactivate_burrow burrow_id) in
+         let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, burrow_id) in
          assert_equal
            ~printer:show_operation_list
            [LigoOp.Tezos.tez_address_transaction (tez, bob_addr) (Ligo.tez_from_literal "0mutez") (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_id))]
            ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
-         let _ops, checker2 = Checker.entrypoint_activate_burrow (checker1, Checker.deticketify_activate_burrow burrow_id) in
+         let _ops, checker2 = Checker.entrypoint_activate_burrow (checker1, burrow_id) in
          (* FIXME: cfmm contains a ratio, which cannot be compared for equality using (=). So, the next line can give false positives. *)
          assert_equal checker0 checker2;
          () in
@@ -751,10 +744,7 @@ let suite =
        let (_ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , Checker.deticketify_mint_kit
-               ( burrow_id
-               , kit_of_mukit (Ligo.nat_from_literal "4_285_714n")
-               )
+           , (burrow_id, kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        let kit = get_balance_of checker bob_addr kit_token_id in
@@ -775,10 +765,7 @@ let suite =
          (fun () ->
             Checker.entrypoint_mint_kit
               ( checker
-              , Checker.deticketify_mint_kit
-                  ( burrow_id
-                  , kit_of_mukit (Ligo.nat_from_literal "1n")
-                  )
+              , (burrow_id, kit_of_mukit (Ligo.nat_from_literal "1n"))
               )
          );
 
@@ -829,7 +816,7 @@ let suite =
          (fun () ->
             Checker.entrypoint_liquidation_auction_place_bid
               ( checker
-              , Checker.deticketify_liquidation_auction_place_bid (kit_of_mukit (Ligo.nat_from_literal "1_000n"))
+              , (kit_of_mukit (Ligo.nat_from_literal "1_000n"))
               )
          );
 
@@ -857,13 +844,15 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
            ( checker
-           , Checker.deticketify_liquidation_auction_place_bid (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
+           , (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
            ) in
 
-       let bid = match ops with
-         | (Transaction (LaBidTransactionValue ticket, _, _) :: _) -> ticket
-         | _ -> assert_failure ("Expected (Transaction (LaBidTransactionValue ticket, _, _) :: _) but got " ^ show_operation_list ops)
-       in
+       let auction_id =
+         match checker.liquidation_auctions.current_auction with
+         | None -> assert_failure "entrypoint_liquidation_auction_place_bid should have succeeded"
+         | Some current_auction -> current_auction.contents in
+
+       assert_equal [] ops ~printer:show_operation_list;
 
        assert_equal
          (Ligo.int_from_literal "500_000")
@@ -901,17 +890,17 @@ let suite =
            [slice] in
        *)
 
-       let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_bool "burrow should have no liquidation slices"
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
 
+       let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
        assert_equal
          (Ligo.tez_from_literal "0mutez")
          (burrow_collateral_at_auction result)
          ~printer:Ligo.string_of_tez;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, Checker.deticketify_liquidation_auction_claim_win bid) in
+       let (ops, _checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
        assert_equal
          [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
