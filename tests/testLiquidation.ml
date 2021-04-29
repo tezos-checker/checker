@@ -1109,6 +1109,9 @@ let regression_test_93 =
       | liquidation_result -> assert_failure ("Unexpected liquidation result: " ^ Burrow.show_liquidation_result liquidation_result)
     in
     assert_properties_of_close_liquidation Parameters.initial_parameters burrow_in liquidation_details;
+    assert_bool
+      "For this test to be potent the collateral should have been zero"
+      (Ligo.eq_tez_tez (burrow_collateral burrow_in) (Ligo.tez_from_literal "0mutez"));
     (* The following line must succeed. *)
     let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
     ()
