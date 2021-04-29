@@ -624,7 +624,6 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
     | Some outcome -> outcome in
   (contents, outcome, auctions)
 
-(* If successful, it consumes the ticket. *)
 let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
   match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
   | Some outcome ->
