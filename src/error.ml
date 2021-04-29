@@ -1,4 +1,3 @@
-let[@inline] error_CfmmNonPositiveInput                         : Ligo.int = Ligo.int_from_literal "1"
 let[@inline] error_CfmmTooLate                                  : Ligo.int = Ligo.int_from_literal "2"
 
 let[@inline] error_BuyKitTooLowExpectedKit                         : Ligo.int = Ligo.int_from_literal "10"
@@ -29,11 +28,8 @@ let[@inline] error_RemoveLiquidityTooMuchKitWithdrawn              : Ligo.int = 
 let[@inline] error_LiquidationQueueTooLong                         : Ligo.int = Ligo.int_from_literal "50"
 let[@inline] error_BidTooLow                                       : Ligo.int = Ligo.int_from_literal "51"
 let[@inline] error_NoOpenAuction                                   : Ligo.int = Ligo.int_from_literal "52"
-let[@inline] error_CannotReclaimLeadingBid                         : Ligo.int = Ligo.int_from_literal "53"
-let[@inline] error_CannotReclaimWinningBid                         : Ligo.int = Ligo.int_from_literal "54"
 let[@inline] error_NotAllSlicesClaimed                             : Ligo.int = Ligo.int_from_literal "55"
 let[@inline] error_NotAWinningBid                                  : Ligo.int = Ligo.int_from_literal "56"
-let[@inline] error_BidTicketExpired                                : Ligo.int = Ligo.int_from_literal "57"
 
 (*
 let[@inline] error_TouchParametersInThePast                        : Ligo.int = Ligo.int_from_literal "58"
@@ -48,11 +44,6 @@ let[@inline] error_DeactivatingAnInactiveBurrow                    : Ligo.int = 
 let[@inline] error_DeactivatingWithOutstandingKit                  : Ligo.int = Ligo.int_from_literal "66"
 let[@inline] error_DeactivatingWithCollateralAtAuctions            : Ligo.int = Ligo.int_from_literal "67"
 
-let[@inline] error_InvalidKitToken                                 : Ligo.int = Ligo.int_from_literal "70"
-let[@inline] error_InvalidLiquidityToken                           : Ligo.int = Ligo.int_from_literal "71"
-let[@inline] error_InvalidDelegationAuctionTicket                  : Ligo.int = Ligo.int_from_literal "72"
-let[@inline] error_InvalidLiquidationAuctionTicket                 : Ligo.int = Ligo.int_from_literal "73"
-
 let[@inline] error_NonExistentBurrow                               : Ligo.int = Ligo.int_from_literal "81"
 let[@inline] error_BurrowHasCompletedLiquidation                   : Ligo.int = Ligo.int_from_literal "82"
 let[@inline] error_UnwantedTezGiven                                : Ligo.int = Ligo.int_from_literal "83"
@@ -63,16 +54,11 @@ let[@inline] error_NotACompletedSlice                              : Ligo.int = 
 
 let[@inline] error_GetContractOptFailure                           : Ligo.int = Ligo.int_from_literal "90"
 
-let[@inline] error_GetEntrypointOptFailureReceiveLiquidationSlice  : Ligo.int = Ligo.int_from_literal "100"
 let[@inline] error_GetEntrypointOptFailureTransferAddress          : Ligo.int = Ligo.int_from_literal "102"
 let[@inline] error_GetEntrypointOptFailureBurrowStoreTez           : Ligo.int = Ligo.int_from_literal "103"
-let[@inline] error_GetEntrypointOptFailureTransferKit              : Ligo.int = Ligo.int_from_literal "104"
 let[@inline] error_GetEntrypointOptFailureBurrowSendTezTo          : Ligo.int = Ligo.int_from_literal "105"
 let[@inline] error_GetEntrypointOptFailureBurrowSetDelegate        : Ligo.int = Ligo.int_from_literal "106"
 let[@inline] error_GetEntrypointOptFailureBurrowSendSliceToChecker : Ligo.int = Ligo.int_from_literal "107"
-let[@inline] error_GetEntrypointOptFailureTransferDABidTicket      : Ligo.int = Ligo.int_from_literal "108"
-let[@inline] error_GetEntrypointOptFailureTransferLqt              : Ligo.int = Ligo.int_from_literal "109"
-let[@inline] error_GetEntrypointOptFailureTransferLABidTicket      : Ligo.int = Ligo.int_from_literal "110"
 let[@inline] error_UnauthorisedCaller                              : Ligo.int = Ligo.int_from_literal "111"
 let[@inline] error_GetEntrypointOptFailureReceivePrice             : Ligo.int = Ligo.int_from_literal "112"
 let[@inline] error_GetEntrypointOptFailureOracleEntrypoint         : Ligo.int = Ligo.int_from_literal "113"
