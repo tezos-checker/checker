@@ -636,11 +636,9 @@ let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auc
     if not (avl_is_empty auctions.avl_storage auction_id)
     then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
     else (
-      (* When the winner reclaims their bid, we finally remove
-         every reference to the auction. This is just to
-         save storage, what's forbidding double-claiming
-         is the ticket mechanism, not this.
-      *)
+      (* When the winner reclaims their bid, we finally remove every reference
+         to the auction. This saves storage and forbids double-claiming the
+         winnings. *)
       assert (outcome.younger_auction = None);
       assert (outcome.older_auction = None);
       let auctions =

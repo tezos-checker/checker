@@ -915,7 +915,7 @@ let suite =
 
        (* This should fail; shouldn't be able to claim the win twice. *)
        assert_raises
-         (Failure (Ligo.string_of_int error_InvalidAuctionId))
+         (Failure (Ligo.string_of_int error_InvalidAvlPtr))
          (fun () -> Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id));
 
        ()
