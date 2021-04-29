@@ -78,6 +78,14 @@ let ensure_no_tez_given () =
   then Ligo.failwith error_UnwantedTezGiven
   else ()
 
+(* Ensure that the given pointer exists. This does not ensure that it points to
+ * something specific, but merely that the pointer exists and points to
+ * something. *)
+let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) =
+  if mem_is_ptr_valid mem (match avl_ptr with AVLPtr r -> r)
+  then ()
+  else Ligo.failwith error_InvalidAvlPtr
+
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
@@ -520,10 +528,7 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
 let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  let _ =
-    if mem_is_ptr_valid state.liquidation_auctions.avl_storage (match auction_id with AVLPtr r -> r)
-    then ()
-    else Ligo.failwith error_InvalidAuctionId in
+  let _ = ensure_valid_avl_ptr state.liquidation_auctions.avl_storage auction_id in
   let (tez, liquidation_auctions) = liquidation_auction_claim_win state.liquidation_auctions auction_id in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
