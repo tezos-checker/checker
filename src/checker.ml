@@ -78,21 +78,17 @@ let ensure_no_tez_given () =
   then Ligo.failwith error_UnwantedTezGiven
   else ()
 
-(* Ensure that the given pointer exists. This does not ensure that it points to
- * something specific, but merely that the pointer exists and points to
- * something. *)
-let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) =
-  if mem_is_ptr_valid mem (match avl_ptr with AVLPtr r -> r)
-  then ()
-  else Ligo.failwith error_InvalidAvlPtr
+(* Ensure that the given pointer exists and that it points to a Root node. *)
+let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) : unit =
+  match mem_get_opt mem (match avl_ptr with AVLPtr r -> r) with
+  | Some (Root _) -> ()
+  | _ -> Ligo.failwith error_InvalidAvlPtr
 
-(* Ensure that the given pointer exists. This does not ensure that it points to
- * something specific, but merely that the pointer exists and points to
- * something. *)
-let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) =
-  if mem_is_ptr_valid mem (match leaf_ptr with LeafPtr r -> r)
-  then ()
-  else Ligo.failwith error_InvalidLeafPtr
+(* Ensure that the given pointer exists and that it points to a Leaf node. *)
+let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) : unit =
+  match mem_get_opt mem (match leaf_ptr with LeafPtr r -> r) with
+  | Some (Leaf _) -> ()
+  | _ -> Ligo.failwith error_InvalidLeafPtr
 
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
