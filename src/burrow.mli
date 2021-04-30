@@ -40,6 +40,19 @@ val burrow_is_overburrowed : parameters -> burrow -> bool
   * auctions finish or if their creation deposit is restored. *)
 val burrow_is_liquidatable : parameters -> burrow -> bool
 
+(** Check whether the return of a slice to its burrow (cancellation) is
+  * warranted. For the cancellation to be warranted, it must be the case that
+  * after returning the slice to the burrow, the burrow is optimistically
+  * non-overburrowed (i.e., if all remaining collateral at auction sells at the
+  * current price but with penalties paid, the burrow becomes underburrowed):
+  *
+  *   collateral + slice >= fminting * (outstanding - compute_expected_kit (collateral_at_auction - slice)) * minting_price
+  *
+  * Note that only active burrows can be liquidated; inactive ones are dormant,
+  * until either all pending auctions finish or if their creation deposit is
+  * restored. *)
+val burrow_is_cancellation_warranted : parameters -> burrow -> Ligo.tez -> bool
+
 (** Perform housekeeping tasks on the burrow. This includes:
   * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
   * - Update the last observed adjustment index

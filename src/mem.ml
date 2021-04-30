@@ -48,6 +48,10 @@ let[@inline] mem_get (m: mem) (k: ptr) : node =
   | Some v -> v
   | None -> (failwith "mem_get: not found": node)
 
+let[@inline] mem_get_opt (m: mem) (k: ptr) : node option =
+  (* BEGIN_OCAML *) ops := { !ops with reads = !ops.reads + 1; }; (* END_OCAML *)
+  Ligo.Big_map.find_opt k m.mem
+
 let[@inline] mem_update (m: mem) (k: ptr) (f: node -> node) : mem =
   mem_set m k (f (mem_get m k))
 

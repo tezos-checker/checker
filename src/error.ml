@@ -51,6 +51,8 @@ let[@inline] error_AuthenticationError                             : Ligo.int = 
 let[@inline] error_NotLiquidationCandidate                         : Ligo.int = Ligo.int_from_literal "85"
 let[@inline] error_UnwarrantedCancellation                         : Ligo.int = Ligo.int_from_literal "86"
 let[@inline] error_NotACompletedSlice                              : Ligo.int = Ligo.int_from_literal "87"
+let[@inline] error_InvalidAvlPtr                                   : Ligo.int = Ligo.int_from_literal "88"
+let[@inline] error_InvalidLeafPtr                                  : Ligo.int = Ligo.int_from_literal "89"
 
 let[@inline] error_GetContractOptFailure                           : Ligo.int = Ligo.int_from_literal "90"
 

@@ -16,6 +16,7 @@ open CheckerTypes
 open Error
 open Fa12Types
 open Fa2Interface
+open Mem
 
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
@@ -76,6 +77,18 @@ let ensure_no_tez_given () =
   if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
   then Ligo.failwith error_UnwantedTezGiven
   else ()
+
+(* Ensure that the given pointer exists and that it points to a Root node. *)
+let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) : unit =
+  match mem_get_opt mem (match avl_ptr with AVLPtr r -> r) with
+  | Some (Root _) -> ()
+  | _ -> Ligo.failwith error_InvalidAvlPtr
+
+(* Ensure that the given pointer exists and that it points to a Leaf node. *)
+let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) : unit =
+  match mem_get_opt mem (match leaf_ptr with LeafPtr r -> r) with
+  | Some (Leaf _) -> ()
+  | _ -> Ligo.failwith error_InvalidLeafPtr
 
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
   let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
@@ -252,7 +265,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
       min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
     } in
 
-  let (updated_liquidation_auctions, _) =
+  let (updated_liquidation_auctions, _leaf_ptr) =
     liquidation_auction_send_to_auction state.liquidation_auctions contents in
 
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
@@ -269,8 +282,13 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
 (* Cancel the liquidation of a slice. *)
 let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
+  let _ = ensure_valid_leaf_ptr state.liquidation_auctions.avl_storage leaf_ptr in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let burrow = find_burrow state.burrows cancelled.burrow in
+  let _ =
+    if burrow_is_cancellation_warranted state.parameters burrow cancelled.tez
+    then ()
+    else Ligo.failwith error_UnwarrantedCancellation in
   if !Ligo.Tezos.sender = burrow_owner burrow then
     let burrow = burrow_return_slice_from_auction cancelled burrow in
     let state =
@@ -292,6 +310,8 @@ let touch_liquidation_slice
     (state_burrows: burrow_map)
     (leaf_ptr: leaf_ptr)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+
+  let _ = ensure_valid_leaf_ptr auctions.avl_storage leaf_ptr in
 
   let slice, outcome, auctions = liquidation_auctions_pop_completed_slice auctions leaf_ptr in
 
@@ -519,6 +539,7 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
 let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
+  let _ = ensure_valid_avl_ptr state.liquidation_auctions.avl_storage auction_id in
   let (tez, liquidation_auctions) = liquidation_auction_claim_win state.liquidation_auctions auction_id in
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () tez c
