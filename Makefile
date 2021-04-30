@@ -21,8 +21,7 @@ build-ligo: generate-ligo
 test: test-main test-long
 
 test-main: ocaml-src
-	chmod u+x ./scripts/ensure-unique-errors.sh
-	./scripts/ensure-unique-errors.sh
+	bash ./scripts/ensure-unique-errors.sh
 	dune runtest tests/test_suite_main
 
 test-long:
