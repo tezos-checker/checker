@@ -28,7 +28,7 @@ test-coverage:
 	bisect-ppx-report summary
 
 clean:
-	$(RM) -r _build generated
+	$(RM) -r _build generated src/checkerEntrypoints.ml
 
 indent:
 	ocp-indent -i src/*.ml src/*.mli tests/*.ml
