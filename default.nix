@@ -86,9 +86,9 @@ in
          buildInputs =
            # ligo does not compile on macos, also we don't want to
            # compile it in CI
-           pkgs.lib.optionals (pkgsHost.stdenv.isLinux)
-             [ ligoBinary tezosClient ]
-           ++ [ pkgs.niv pkgs.perl pkgs.ruby pkgs.bc ]
+           pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
+           ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
+           ++ [ pkgs.niv pkgs.ruby pkgs.bc ]
            ++ ocamlDeps pkgs;
 
        };
