@@ -5,6 +5,7 @@ open Kit
 open OUnit2
 open Format
 open Ptr
+open Test_lib
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]

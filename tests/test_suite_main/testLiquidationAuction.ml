@@ -1,6 +1,6 @@
 open Kit
 open OUnit2
-open TestCommon
+open Test_lib.TestCommon
 open LiquidationAuction
 open LiquidationAuctionTypes
 open Error

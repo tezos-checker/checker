@@ -1,0 +1,6 @@
+(library
+ (name test_lib)
+ (modules TestArbitrary TestCommon)
+ (libraries src ounit2 qcheck) ;; gotta reference the public_name here.
+ (preprocess
+  (pps ppx_deriving.std)))

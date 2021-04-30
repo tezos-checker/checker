@@ -4,6 +4,7 @@
 open OUnit2
 open Core_kernel.Deque
 open LiquidationAuctionPrimitiveTypes
+open Test_lib
 
 type queue_op =
   (* Place new element in back *)

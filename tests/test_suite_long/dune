@@ -1,0 +1,6 @@
+(test
+ (name tests)
+ (modules Tests TestAvlModel)
+ (libraries src test_lib core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
+ (preprocess
+  (pps ppx_deriving.std)))

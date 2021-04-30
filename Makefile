@@ -22,6 +22,10 @@ test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh
 	dune runtest .
 
+test-main: dune runtest tests/test_suite_main
+
+test-long: dune runtest tests/test_suite_long
+
 test-coverage:
 	dune runtest --instrument-with bisect_ppx --force .
 	bisect-ppx-report html
@@ -31,7 +35,7 @@ clean:
 	$(RM) -r _build generated src/checkerEntrypoints.ml
 
 indent:
-	ocp-indent -i src/*.ml src/*.mli tests/*.ml
+	ocp-indent -i src/*.ml src/*.mli tests/**/*.ml
 	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
 	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
 

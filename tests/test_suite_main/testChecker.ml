@@ -2,7 +2,8 @@ open Ctez
 open Kit
 open Burrow
 open OUnit2
-open TestCommon
+open Test_lib
+open Test_lib.TestCommon
 open CheckerTypes
 open Fa2Interface
 open Error
