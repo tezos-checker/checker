@@ -1,6 +1,6 @@
 # Testing Approaches
 
-**Date: 2021-04-20**
+**Date: 2021-04-30**
 
 The purpose of this document is to outline the current testing approaches which
 have been used in the project. As of the writing of this document, testing is
@@ -23,6 +23,7 @@ So far, testing has focused on the following areas:
      [spec](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA) as well as for properties
      which are assumed in the implementation. The latter are primarily
      math-related.
+  1. Model checking of data structure implementations
 
 Areas which remain to be tested include:
 
@@ -85,6 +86,15 @@ As with many of the unit tests, we have hard-coded the bounds for many of the
 randomized parameters where applicable (e.g. when the range of valid values for
 inputs are dependent on eachother). As described above, this helps make the
 tests more sensitive to changes in complex numerical calculations.
+
+## Model checking
+
+Checker implements a double ended queue which it uses for its liquidation
+auction logic. As an additional check on our implementation, we compare it to a
+model implementation from the `core_kernel` library. The comparison is performed
+by applying a random series of operations on both our and the reference
+implementation using `QCheck` and comparing the two queues at each iteration.
+This test resides in [testAvlModel.ml](../tests/testAvlModel.ml).
 
 ## State management
 
