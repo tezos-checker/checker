@@ -1,9 +1,5 @@
 (* Oracle data *)
-val oracle_address : Ligo.address
 val oracle_entrypoint : string
-
-(* Ctez data *)
-val ctez_fa12_address : Ligo.address
 
 (* Tezos utilities *)
 val checker_address : Ligo.address

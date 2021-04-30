@@ -16,17 +16,6 @@ MAIN_FILE="#{LIGO_DIR}/main.mligo"
 PROTOCOL = "PsFLoren"
 protocol_arg = ["--protocol", PROTOCOL]
 
-# this address is created with a key of 20 bytes of zeroes:
-#
-# import hashlib
-# import base58
-# alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-# prefix = bytes([6, 161, 159])
-# content = bytes([0] * 20)
-# checksum = hashlib.sha256(hashlib.sha256(prefix + content).digest()).digest()[:4]
-# print(base58.b58encode(prefix + content + checksum, alphabet=alphabet))
-ADDRESS_PLACEHOLDER="tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU"
-
 puts "Compiling contract."
 
 # Compile the main contract
@@ -44,26 +33,14 @@ else
   puts "  ~#{output.length / 2} bytes"
 end
 
-puts "Compiling the initial storage and entrypoints."
+puts "Compiling the entrypoints."
 entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
   .scan(/let lazy_id_(\S+) *= \(*(\d*)\)/)
   .map { |g| { name: g[0], fn_id: g[1] }}
 
-initial_storage = nil
 packed_entrypoints = []
 
 threads = []
-threads << Thread.new {
-  stdout, stderr, exit_status = Open3.capture3(
-    "ligo", "compile-storage",
-    "--now=2021-01-01T10:10:10Z",
-    MAIN_FILE, "main",
-    "initial_wrapper (\"#{ADDRESS_PLACEHOLDER}\": address)"
-  )
-  exit_status.success? or raise "compiling initial_wrapper failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
-  initial_storage = stdout
-}
-
 entrypoints.each_slice(entrypoints.length / Etc.nprocessors) { |batch|
   threads << Thread.new {
     batch.each { |entrypoint|
@@ -94,8 +71,6 @@ end
 
 functions_json = {
   lazy_functions: chunked_entrypoints,
-  initial_storage: initial_storage,
-  initial_storage_address_placeholder: ADDRESS_PLACEHOLDER
 }
 
 functions_json = JSON.pretty_generate(functions_json)
