@@ -16,6 +16,12 @@ module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
+let empty_checker =
+  initial_checker
+    { ctez = Ligo.address_of_string "ctez_addr";
+      oracle = Ligo.address_of_string "oracle_addr";
+    }
+
 (* Helper for creating new burrows and extracting their ID from the corresponding Ligo Ops *)
 let newly_created_burrow checker =
   let ops, checker = Checker.entrypoint_create_burrow (checker, None) in
@@ -36,7 +42,7 @@ let suite =
     ("initial touch (noop)" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker1 = initial_checker in
+       let checker1 = empty_checker in
        let ops, checker2 = Checker.touch_with_index checker1 (Ligo.tez_from_literal "0mutez") in
 
        assert_equal [] ops ~printer:show_operation_list;
@@ -49,14 +55,14 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
 
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        assert_bool
          "No matching burrow found after calling create_burrow"
          (Option.is_some (Ligo.Big_map.find_opt burrow_id checker.burrows));
        assert_bool
          "The burrow existed before calling create_burrow"
-         (Option.is_none (Ligo.Big_map.find_opt burrow_id initial_checker.burrows))
+         (Option.is_none (Ligo.Big_map.find_opt burrow_id empty_checker.burrows))
     );
 
     ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
@@ -64,7 +70,7 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
 
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        let expected_collateral = Ligo.tez_from_literal "0mutez" in
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
@@ -80,14 +86,14 @@ let suite =
 
        assert_raises
          (Failure (Ligo.string_of_int error_InsufficientFunds))
-         (fun () -> Checker.entrypoint_create_burrow (initial_checker, None))
+         (fun () -> Checker.entrypoint_create_burrow (empty_checker, None))
     );
 
     ("create_burrow - passes when transaction amount is exactly the creation deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow ->
@@ -104,7 +110,7 @@ let suite =
 
        (* Create the burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:initial_deposit;
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
        (* Make a deposit *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:deposit;
        let _, checker = Checker.entrypoint_deposit_tez (checker, burrow_id) in
@@ -119,7 +125,7 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
 
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        assert_raises
@@ -135,7 +141,7 @@ let suite =
        let expected_collateral = Ligo.sub_tez_tez initial_deposit (Ligo.add_tez_tez Constants.creation_deposit withdrawal) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_withdraw_tez (checker, (withdrawal, burrow_id)) in
@@ -152,7 +158,7 @@ let suite =
        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:initial_deposit;
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "42mutez");
        assert_raises
@@ -166,7 +172,7 @@ let suite =
        let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
        let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:initial_deposit;
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
@@ -225,7 +231,7 @@ let suite =
        Ligo.Tezos.reset ();
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
        let some_kit = Kit.kit_of_mukit (Ligo.nat_from_literal "1n") in
 
        assert_raises
@@ -244,7 +250,7 @@ let suite =
 
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
@@ -270,7 +276,7 @@ let suite =
        Ligo.Tezos.reset ();
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -306,7 +312,7 @@ let suite =
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
 
       let sender = alice_addr in
-      let checker = { initial_checker with cfmm = cfmm } in
+      let checker = { empty_checker with cfmm = cfmm } in
 
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
@@ -341,7 +347,7 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
 
-      let checker = { initial_checker with cfmm = cfmm } in
+      let checker = { empty_checker with cfmm = cfmm } in
       let sender = alice_addr in
 
       let checker_cfmm_old_mukit = kit_to_mukit_nat checker.cfmm.kit in
@@ -378,7 +384,7 @@ let suite =
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
-      let checker = { initial_checker with cfmm = cfmm } in
+      let checker = { empty_checker with cfmm = cfmm } in
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
       let _, new_checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
       ctez_add checker.cfmm.ctez ctez_amount = new_checker.cfmm.ctez
@@ -396,10 +402,10 @@ let suite =
 
       let sender = alice_addr in
       let checker =
-        { initial_checker with
+        { empty_checker with
           (* Set up all the existing funds needed. *)
           cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
@@ -426,10 +432,10 @@ let suite =
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let checker =
-        { initial_checker with
+        { empty_checker with
           (* Set up all the existing funds needed. *)
           cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_amount);
+          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_amount);
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -448,10 +454,10 @@ let suite =
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let sender = alice_addr in
       let checker =
-        { initial_checker with
+        { empty_checker with
           (* Set up all the existing funds needed. *)
           cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
         } in
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
@@ -474,7 +480,7 @@ let suite =
        (* Create a burrow *)
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let burrow_id, checker = newly_created_burrow initial_checker in
+       let burrow_id, checker = newly_created_burrow empty_checker in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
        assert_raises
@@ -507,9 +513,9 @@ let suite =
       (* Populate cfmm with initial liquidity *)
       let open Ratio in
       let checker = {
-        initial_checker with
+        empty_checker with
         cfmm={
-          initial_checker.cfmm with
+          empty_checker.cfmm with
           ctez = cfmm_ctez;
           kit = kit_of_mukit cfmm_kit;
         };
@@ -557,9 +563,9 @@ let suite =
        Ligo.Tezos.reset ();
        (* Populate the cfmm with some liquidity *)
        let checker = {
-         initial_checker with
+         empty_checker with
          cfmm={
-           initial_checker.cfmm with
+           empty_checker.cfmm with
            ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
@@ -582,13 +588,13 @@ let suite =
 
        (* Populate the cfmm with some liquidity *)
        let checker = {
-         initial_checker with
+         empty_checker with
          cfmm={
-           initial_checker.cfmm with
+           empty_checker.cfmm with
            ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
          };
-         fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_to_sell);
+         fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_to_sell);
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -611,7 +617,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_sell_kit (initial_checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_sell_kit (empty_checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 
@@ -626,14 +632,14 @@ let suite =
 
        (* Populate the cfmm with some liquidity *)
        let checker = {
-         initial_checker with
+         empty_checker with
          cfmm={
-           initial_checker.cfmm with
+           empty_checker.cfmm with
            ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
            kit = kit_of_mukit (Ligo.nat_from_literal "2n");
            lqt = Ligo.nat_from_literal "2n";
          };
-         fa2_state = Fa2Interface.ledger_issue (initial_checker.fa2_state, Fa2Interface.liquidity_token_id, sender, my_liquidity_tokens);
+         fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.liquidity_token_id, sender, my_liquidity_tokens);
        } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
@@ -665,7 +671,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () ->
-            Checker.entrypoint_remove_liquidity (initial_checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
+            Checker.entrypoint_remove_liquidity (empty_checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
          )
     );
 
@@ -676,7 +682,7 @@ let suite =
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = initial_checker in
+       let checker = empty_checker in
 
        (* mint some kit to convert to liquidity *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "200_000_000mutez");
