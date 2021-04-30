@@ -39,7 +39,7 @@ let slice_gen = QCheck.Gen.(
           (* TODO: Use arbitrary addresses as well? *)
           burrow=TestCommon.alice_addr;
           tez=tez;
-          min_kit_for_unwarranted=kit;
+          min_kit_for_unwarranted=Some kit;
         } in
         {
           contents=contents;
