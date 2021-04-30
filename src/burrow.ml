@@ -83,6 +83,22 @@ let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral_at_auction
 
+(** Under-collateralization condition: tez < f * kit * price. *)
+let[@inline] undercollateralization_condition (f: ratio) (price: ratio) (tez: ratio) (kit: ratio) : bool =
+  let { num = num_f; den = den_f; } = f in
+  let { num = num_p; den = den_p; } = price in
+  let { num = num_tz; den = den_tz; } = tez in
+  let { num = num_kt; den = den_kt; } = kit in
+  let lhs =
+    Ligo.mul_int_int
+      (Ligo.mul_int_int num_tz den_f)
+      (Ligo.mul_int_int den_kt den_p) in
+  let rhs =
+    Ligo.mul_int_int
+      (Ligo.mul_int_int num_f num_kt)
+      (Ligo.mul_int_int den_tz num_p) in
+  Ligo.lt_int_int lhs rhs
+
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
   *   tez_collateral < fminting * kit_outstanding * minting_price
@@ -96,20 +112,9 @@ let[@inline] burrow_collateral_at_auction (b: burrow) : Ligo.tez =
 let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-
-  let { num = num_fm; den = den_fm; } = fminting in
-  let { num = num_mp; den = den_mp; } = minting_price p in
-  let outstanding_kit = kit_to_mukit_int b.outstanding_kit in
-
-  let lhs =
-    Ligo.mul_int_int
-      (tez_to_mutez b.collateral)
-      (Ligo.mul_int_int den_fm (Ligo.mul_int_int kit_scaling_factor_int den_mp)) in
-  let rhs =
-    Ligo.mul_int_int
-      (Ligo.mul_int_int num_fm (Ligo.mul_int_int outstanding_kit num_mp))
-      (Ligo.int_from_literal "1_000_000") in
-  Ligo.lt_int_int lhs rhs
+  let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
+  let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
+  undercollateralization_condition fminting (minting_price p) tez kit
 
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
@@ -358,32 +363,17 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
 let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
-  let { num = num_fl; den = den_fl; } = fliquidation in
-  let { num = num_lp; den = den_lp; } = liquidation_price p in
-  let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
 
-  (* lhs = collateral * den_fl * kit_sf * den_ek * den_lp *)
-  let lhs =
-    Ligo.mul_int_int
-      (tez_to_mutez b.collateral)
-      (Ligo.mul_int_int
-         (Ligo.mul_int_int den_fl kit_scaling_factor_int)
-         (Ligo.mul_int_int den_ek den_lp)
-      ) in
-
-  (* rhs = num_fl * (kit_outstanding * den_ek - kit_sf * num_ek) * num_lp * tez_sf *)
-  let rhs =
-    Ligo.mul_int_int
-      num_fl
-      (Ligo.mul_int_int
-         (Ligo.sub_int_int
-            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
-            (Ligo.mul_int_int kit_scaling_factor_int num_ek)
-         )
-         (Ligo.mul_int_int num_lp (Ligo.int_from_literal "1_000_000"))
-      ) in
-
-  b.active && Ligo.lt_int_int lhs rhs
+  let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
+  let kit = (* kit = kit_outstanding - expected_kit_from_auctions *)
+    let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
+    { num =
+        Ligo.sub_int_int
+          (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+          (Ligo.mul_int_int kit_scaling_factor_int num_ek);
+      den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
+    } in
+  b.active && undercollateralization_condition fliquidation (liquidation_price p) tez kit
 
 (** Check whether the return of a slice to its burrow (cancellation) is
   * warranted. For the cancellation to be warranted, it must be the case that
@@ -401,32 +391,21 @@ let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Lig
   assert_burrow_invariants b;
   assert (Ligo.geq_tez_tez b.collateral_at_auction slice_tez);
 
-  let { num = num_fm; den = den_fm; } = fminting in
-  let { num = num_mp; den = den_mp; } = minting_price p in
-  let { num = num_ek; den = den_ek; } = compute_expected_kit p (Ligo.sub_tez_tez b.collateral_at_auction slice_tez) in
+  let tez = (* tez = collateral + slice *)
+    { num = tez_to_mutez (Ligo.add_tez_tez b.collateral slice_tez);
+      den = Ligo.int_from_literal "1_000_000";
+    } in
+  let kit = (* kit = outstanding - compute_expected_kit (collateral_at_auction - slice) *)
+    let { num = num_ek; den = den_ek; } =
+      compute_expected_kit p (Ligo.sub_tez_tez b.collateral_at_auction slice_tez) in
+    { num =
+        Ligo.sub_int_int
+          (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+          (Ligo.mul_int_int kit_scaling_factor_int num_ek);
+      den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
+    } in
 
-  (* lhs = (collateral + slice_tez) * den_fm * kit_sf * den_ek * den_mp *)
-  let lhs =
-    Ligo.mul_int_int
-      (tez_to_mutez (Ligo.add_tez_tez b.collateral slice_tez))
-      (Ligo.mul_int_int
-         (Ligo.mul_int_int den_fm kit_scaling_factor_int)
-         (Ligo.mul_int_int den_ek den_mp)
-      ) in
-
-  (* rhs = num_fm * (outstanding * den_ek - kit_sf * num_ek) * num_mp * tez_sf *)
-  let rhs =
-    Ligo.mul_int_int
-      num_fm
-      (Ligo.mul_int_int
-         (Ligo.sub_int_int
-            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
-            (Ligo.mul_int_int kit_scaling_factor_int num_ek)
-         )
-         (Ligo.mul_int_int num_mp (Ligo.int_from_literal "1_000_000"))
-      ) in
-
-  b.active && Ligo.geq_int_int lhs rhs
+  b.active && not (undercollateralization_condition fminting (minting_price p) tez kit)
 
 (** Compute the minumum amount of kit to receive for considering the
   * liquidation unwarranted, calculated as (see
