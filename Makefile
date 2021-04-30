@@ -22,9 +22,11 @@ test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh
 	dune runtest .
 
-test-main: dune runtest tests/test_suite_main
+test-main:
+	dune runtest tests/test_suite_main
 
-test-long: dune runtest tests/test_suite_long
+test-long:
+	dune runtest tests/test_suite_long
 
 test-coverage:
 	dune runtest --instrument-with bisect_ppx --force .

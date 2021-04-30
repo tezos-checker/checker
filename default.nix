@@ -1,4 +1,4 @@
-{ doCheck ? false, isCi ? false }:
+{ doCheck ? false, isCi ? false, skipLongTests ? false }:
 
 let
   sources = import ./nix/sources.nix { };
@@ -70,10 +70,12 @@ in
          '';
 
          inherit doCheck;
-         checkPhase = ''
-           make build-ocaml
-           make test
-         '';
+         checkPhase =
+          let tests = if skipLongTests then "test-main" else "test";
+          in ''
+            make build-ocaml
+            make test ${tests}
+          '';
          installPhase = ''
            mkdir -p $out
            cp generated/michelson/* $out
