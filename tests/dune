@@ -3,6 +3,7 @@
  (modules
   Tests
   TestAvl
+  TestAvlModel
   TestBurrow
   TestFixedPoint
   TestTez
@@ -14,6 +15,6 @@
   TestChecker
   TestArbitrary
   TestCommon)
- (libraries src ounit2 qcheck) ;; gotta reference the public_name here.
+ (libraries src core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
  (preprocess
   (pps ppx_deriving.std)))

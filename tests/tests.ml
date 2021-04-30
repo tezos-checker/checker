@@ -12,6 +12,7 @@ let suite =
     TestLiquidation.suite;
     TestCfmm.suite;
     TestLiquidationAuction.suite;
+    TestAvlModel.suite;
   ]
 
 let () =

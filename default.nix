@@ -37,9 +37,16 @@ let
      ppx_deriving
      zarith
      odoc
+     core_kernel
   ];
 
-  tezosClient = (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client;
+  # We wrap the upstream tezos-client derivation since it also brings some ocaml
+  # packages which are incompatible with ours.
+  tezosClient =
+    let orig = (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client;
+    in pkgsLinux.runCommand "tezos-client" {} ''
+      mkdir -p $out/bin; ln -s ${orig}/bin/tezos-client $out/bin/tezos-client
+    '';
 
 in
 {

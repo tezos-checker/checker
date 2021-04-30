@@ -441,6 +441,14 @@ let avl_push
       (mem, LeafPtr leaf_ptr)
   end
 
+(* Pushes the provided value to the back of the queue *)
+let[@inline] avl_push_back (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) =
+  avl_push mem root_ptr value Left
+
+(* Pushes the provided value to the front of the queue *)
+let[@inline] avl_push_front (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) =
+  avl_push mem root_ptr value Right
+
 let rec balance_bottom_up ((mem, curr_ptr): mem * ptr): mem * avl_ptr =
   let curr = mem_get mem curr_ptr in
   match curr with
@@ -760,4 +768,3 @@ let avl_assert_dangling_pointers (mem: mem) (roots: avl_ptr list) : unit =
   assert (List.length (Ligo.Big_map.bindings mem.mem) = 0)
 
 (* END_OCAML *)
-
