@@ -373,6 +373,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       liquidation_auctions = state_liquidation_auctions;
       last_price = state_last_price;
       fa2_state = state_fa2_state;
+      external_contracts = state_external_contracts;
     } = state in
 
   let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
@@ -386,6 +387,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       liquidation_auctions = state_liquidation_auctions;
       last_price = state_last_price;
       fa2_state = state_fa2_state;
+      external_contracts = state_external_contracts;
     } in
   assert_checker_invariants new_state;
   (new_ops, new_state)
@@ -403,7 +405,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
       address_to = checker_address;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : transfer Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
     | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
   ( [op],
@@ -425,7 +427,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : transfer Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
     | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
   ( [op],
@@ -445,7 +447,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
       address_to = checker_address;
       value = ctez_to_muctez_nat ctez_deposited;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : transfer Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
     | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
   ( [op],
@@ -468,7 +470,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : transfer Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
     | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
   ( [op],
@@ -634,6 +636,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           liquidation_auctions = state_liquidation_auctions;
           last_price = state_last_price;
           fa2_state = state_fa2_state;
+          external_contracts = state_external_contracts;
         } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
         touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
@@ -645,6 +648,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           liquidation_auctions = state_liquidation_auctions;
           last_price = state_last_price;
           fa2_state = state_fa2_state;
+          external_contracts = state_external_contracts;
         } in
       (ops, new_state) in
 
@@ -654,7 +658,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
       | Some cb -> cb
       | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-    let oracle = match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint oracle_address : (Ligo.nat Ligo.contract) Ligo.contract option) with
+    let oracle = match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint state.external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
       | Some c -> c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint : (Ligo.nat Ligo.contract) Ligo.contract) in
     let op = LigoOp.Tezos.nat_contract_transaction cb (Ligo.tez_from_literal "0mutez") oracle in
@@ -674,7 +678,7 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 
 let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
-  if !Ligo.Tezos.sender <> oracle_address then
+  if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
     (([]: LigoOp.operation list), {state with last_price = Some price})
