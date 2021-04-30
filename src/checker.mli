@@ -209,9 +209,9 @@ val entrypoint_receive_slice_from_burrow : checker * unit -> (LigoOp.operation l
 (** Receive a price from the oracle. *)
 val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
-(* ************************************************************************* *)
-(**                               FA2                                        *)
-(* ************************************************************************* *)
+(*****************************************************************************)
+(**                             {1 FA2}                                      *)
+(*****************************************************************************)
 
 val strict_entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
 val strict_entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
