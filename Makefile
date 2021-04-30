@@ -18,11 +18,10 @@ generate-ligo: ocaml-src
 build-ligo: generate-ligo
 	ruby ./scripts/compile-ligo.rb
 
-test: ocaml-src
-	sh ./scripts/ensure-unique-errors.sh
-	dune runtest .
+test: test-main test-long
 
-test-main:
+test-main: ocaml-src
+	sh ./scripts/ensure-unique-errors.sh
 	dune runtest tests/test_suite_main
 
 test-long:

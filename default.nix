@@ -74,7 +74,7 @@ in
           let tests = if skipLongTests then "test-main" else "test";
           in ''
             make build-ocaml
-            make test ${tests}
+            make ${tests}
           '';
          installPhase = ''
            mkdir -p $out
