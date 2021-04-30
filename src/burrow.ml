@@ -557,41 +557,6 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
           )
 
 (* BEGIN_OCAML *)
-(* NOTE: Only to be used for testing, otherwise this function is not needed. *)
-let _model_compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.tez =
-  assert_burrow_invariants b;
-  let oustanding_kit = kit_to_ratio b.outstanding_kit in
-  let collateral = ratio_of_tez b.collateral in
-  let collateral_at_auction = ratio_of_tez b.collateral_at_auction in
-  let minting_price = minting_price p in
-  let { num = x_num; den = x_den; } =
-    (div_ratio
-       (sub_ratio
-          (sub_ratio
-             (mul_ratio
-                (mul_ratio oustanding_kit fminting)
-                minting_price
-             )
-             (mul_ratio
-                (mul_ratio
-                   (sub_ratio one_ratio liquidation_penalty)
-                   fminting
-                )
-                collateral_at_auction
-             )
-          )
-          collateral
-       )
-       (sub_ratio
-          (mul_ratio
-             (sub_ratio one_ratio liquidation_penalty)
-             fminting
-          )
-          one_ratio
-       )
-    ) in
-  fraction_to_tez_ceil x_num x_den
-
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral
