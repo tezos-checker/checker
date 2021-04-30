@@ -8,7 +8,6 @@ open Cfmm
 open CfmmTypes
 open Error
 
-
 let property_test_count = 100
 
 (* Compute the current price of kit in ctez, as estimated using the ratio of ctez and kit
