@@ -89,7 +89,7 @@ let liquidation_auction_send_to_auction
      >= max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
-    let old_burrow_slices =  Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
+    let old_burrow_slices = Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
 
     let slice = {
       contents = contents;
@@ -673,7 +673,7 @@ let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidatio
         Some leaf_ptr
     end
 
-let is_burrow_done_with_liquidations (auctions: liquidation_auctions) (burrow: Ligo.address) =
+let is_burrow_done_with_liquidations (auctions: liquidation_auctions) (burrow: burrow_id) =
   match Ligo.Big_map.find_opt burrow auctions.burrow_slices with
   | None -> true
   | Some bs ->

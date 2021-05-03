@@ -3,6 +3,7 @@ open BurrowTypes
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
+  | AddressNatTransactionValue : (address * nat) -> (address * nat) transaction_value
   | AddressTransactionValue : address -> address transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
@@ -20,7 +21,7 @@ type operation =
       ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
       key_hash option *
       tez *
-      address
+      burrow_storage
   (**
       An operation emitted by the contract
   *)
@@ -35,6 +36,7 @@ module Tezos : sig
   val set_delegate : key_hash option -> operation
 
   val unit_transaction : unit -> tez -> unit contract -> operation
+  val address_nat_transaction : address * nat -> tez -> (address * nat) contract -> operation
   val address_transaction : address -> tez -> address contract -> operation
   val tez_address_transaction : (tez * address) -> tez -> (tez * address) contract -> operation
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
@@ -50,6 +52,6 @@ module Tezos : sig
     ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) ->
     key_hash option ->
     tez ->
-    address ->
+    burrow_storage ->
     (operation * address)
 end

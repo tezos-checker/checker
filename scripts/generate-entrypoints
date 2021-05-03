@@ -21,6 +21,7 @@ puts <<EOF
 open CheckerTypes
 open Checker
 open Kit
+open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Ctez
 open Fa2Interface
