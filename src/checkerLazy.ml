@@ -4,13 +4,13 @@ open Checker
 open Fa2Interface
 open Error
 
+(* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
+ * up parameters we can not serialize here.
+*)
 type strict_params =
   | Balance_of of fa2_balance_of_param
   | Transfer of fa2_transfer list
 
-(* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
- * up parameters we can not serialize here.
-*)
 type checker_params =
   | LazyParams of lazy_params
   | StrictParams of strict_params
