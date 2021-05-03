@@ -491,12 +491,12 @@ let suite =
     );
 
     (
-      let cfmm_kit = Ligo.nat_from_literal ("1_000n") in
-      let cfmm_ctez = ctez_of_muctez (Ligo.nat_from_literal ("1_000n")) in
+      let cfmm_kit = Ligo.nat_from_literal ("1n") in
+      let cfmm_ctez = ctez_of_muctez (Ligo.nat_from_literal ("1n")) in
       (* The maximum amount of kit that you can buy with a finite amount of tez is
        * (1 - fee) * cfmm.kit - 1
       *)
-      let max_buyable_kit = 997 in
+      let max_buyable_kit = 1 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
       let arb_tez = TestArbitrary.arb_small_tez in
 
@@ -509,7 +509,6 @@ let suite =
 
       Ligo.Tezos.reset();
       let sender = alice_addr in
-
       (* Populate cfmm with initial liquidity *)
       let open Ratio in
       let checker = {
@@ -519,7 +518,16 @@ let suite =
           ctez = cfmm_ctez;
           kit = kit_of_mukit cfmm_kit;
         };
+        fa2_state = (Fa2Interface.ledger_issue_kit (empty_checker.fa2_state, alice_addr, kit_of_mukit (Ligo.nat_from_literal "10n")));
       } in
+
+      (* EXPERIMENTING: ADD SOME LIQUIDITY BEFORE BUYING *)
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+      let _, checker =
+        let args = (Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.nat_from_literal "1n", (Ligo.timestamp_from_seconds_literal 1)) in
+        Checker.entrypoint_add_liquidity (checker, args)
+      in
+
       (* Calculate minimum tez to get the min_expected kit given the state of the cfmm defined above*)
       let ratio_minimum_tez = div_ratio
           (ratio_of_nat cfmm_kit)
