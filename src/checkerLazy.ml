@@ -1,7 +1,19 @@
 open CheckerEntrypoints
 open CheckerTypes
 open Checker
+open Fa2Interface
 open Error
+
+(* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
+ * up parameters we can not serialize here.
+*)
+type strict_params =
+  | Balance_of of fa2_balance_of_param
+  | Transfer of fa2_transfer list
+
+type checker_params =
+  | LazyParams of lazy_params
+  | StrictParams of strict_params
 
 type params =
   | DeployFunction of (lazy_function_id * Ligo.bytes)
