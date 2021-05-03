@@ -90,7 +90,6 @@ let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) : unit =
   | _ -> Ligo.failwith error_InvalidLeafPtr
 
 let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_hash option) =
-  let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let op1, burrow_address =
     LigoOp.Tezos.create_contract
       (fun (p, s : burrow_parameter * burrow_storage) ->
@@ -121,6 +120,7 @@ let[@inline] entrypoint_create_burrow (state, delegate_opt: checker * Ligo.key_h
     | Some c -> LigoOp.Tezos.address_transaction burrow_address (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureTransferAddress : LigoOp.operation) in
 
+  let burrow = burrow_create state.parameters !Ligo.Tezos.sender !Ligo.Tezos.amount delegate_opt in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_address (Some burrow) state.burrows} in
 
   ([op1; op2], updated_state)
