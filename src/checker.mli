@@ -14,6 +14,11 @@ val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 
 (**/**)
 (* FOR TESTING. *)
+val assert_checker_invariants : checker -> unit
+(**/**)
+
+(**/**)
+(* FOR TESTING. *)
 val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 (**/**)
 
