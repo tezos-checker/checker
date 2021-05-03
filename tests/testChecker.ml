@@ -949,16 +949,17 @@ let suite =
          | [_; Transaction (AddressTransactionValue burrow_id, _, _)] -> burrow_id
          | _ -> assert_failure ("Unexpected operation list: " ^ show_operation_list ops)
        in
+       (* CALCULATIONS
+          ~~~~~~~~~~~~
+          Tez in the burrow is (1_001_001mutez + 1tez) so the reward is
+          (1tez + 1_001mutez = 1_001_001). This means that
+          - The slice we WOULD send to auctions is empty.
+          - The burrow remains is empty so the next liquidation WOULD create another empty slice to auctions.
+       *)
 
        (* Mint as much kit as possible. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_id, kit_of_mukit (Ligo.nat_from_literal "476_667n"))) in
-
-       (* Ensure that the burrow is not overburrowed before. *)
-       begin match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | None -> assert_failure "bug"
-       | Some burrow -> assert_bool "cannot be overburrowed right after minting" (not (Burrow.burrow_is_overburrowed checker.parameters burrow))
-       end;
 
        (* Let some time pass. Over time the burrows with outstanding kit should
 	* become overburrowed, and eventually liquidatable. Note that this
@@ -969,49 +970,16 @@ let suite =
        let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "10_005_000mutez") in
        let _ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
 
-       let _ = (* Ensure that the burrow is liquidatable. *)
-         let burrow = match Ligo.Big_map.find_opt burrow_id checker.burrows with
-           | None -> assert_failure "bug"
-           | Some burrow -> burrow in
-         assert_bool "needs to be liquidatable for the test to be potent." (Burrow.burrow_is_liquidatable checker.parameters burrow);
-         () in
-
        (* Let's mark the burrow for liquidation now (first pass: leaves it empty but active). *)
-       (* Tez in the burrow is (1_001_001mutez + 1tez) so the reward is
-        * (1tez + 1_001mutez = 1_001_001). This means that
-        * - The slice we WOULD send to auctions is empty.
-        * - The burrow remains is empty so the next liquidation WOULD create another empty slice to auctions.
-       *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let (ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
-
-       print_string (show_operation_list ops ^ "\n");
-
-       (* Show me *)
-       begin match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | None -> assert_failure "bug"
-       | Some burrow -> print_string (show_burrow burrow ^ "\n")
-       end;
-
-       (*
-       Checker.assert_checker_invariants checker;
-       *)
+       let (_ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
+       Checker.assert_checker_invariants checker; (* Ensures no empty slices in the queue. *)
 
        (* Let's mark the burrow for liquidation now (second pass: deactivates it). *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (_ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
-
-       (* Show me *)
-       begin match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | None -> assert_failure "bug"
-       | Some burrow -> print_string (show_burrow burrow ^ "\n")
-       end;
-
-       (*
-       Checker.assert_checker_invariants checker;
-       *)
+       Checker.assert_checker_invariants checker; (* Ensures no empty slices in the queue. *)
 
        ()
-       (* assert_failure "Gotta implement this one" *)
     );
   ]

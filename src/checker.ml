@@ -258,25 +258,32 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
     | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
     | Some type_and_details -> let _, details = type_and_details in details
   in
-  let contents =
-    { burrow = burrow_id;
-      tez = tez_to_auction;
-      min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
-    } in
 
-  let (updated_liquidation_auctions, _leaf_ptr) =
-    liquidation_auction_send_to_auction state.liquidation_auctions contents in
+  let state =
+    if Ligo.eq_tez_tez tez_to_auction (Ligo.tez_from_literal "0mutez") then
+      (* If the slice would be empty, don't create it. *)
+      { state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows; }
+    else
+      (* Otherwise do. *)
+      let contents =
+        { burrow = burrow_id;
+          tez = tez_to_auction;
+          min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow tez_to_auction;
+        } in
+      let (updated_liquidation_auctions, _leaf_ptr) =
+        liquidation_auction_send_to_auction state.liquidation_auctions contents in
+      { state with
+        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+        liquidation_auctions = updated_liquidation_auctions;
+      } in
+
+  assert_checker_invariants state;
 
   let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () liquidation_reward c
     | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
 
-  ( [op],
-    { state with
-      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-      liquidation_auctions = updated_liquidation_auctions;
-    }
-  )
+  ([op], state)
 
 (* Cancel the liquidation of a slice. *)
 let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation list * checker) =
