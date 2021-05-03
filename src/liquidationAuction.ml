@@ -529,7 +529,9 @@ let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =
   let (contents, root, auctions) = pop_slice auctions leaf_ptr in
+  (* If the leaf doesn't belong to the queue, no need to cancel it. *)
   if ptr_of_avl_ptr root <> ptr_of_avl_ptr auctions.queued_slices
+  (* FIXME: I (Dorran) think that we might be overloading the term 'unwarranted' here? *)
   then (Ligo.failwith error_UnwarrantedCancellation : liquidation_slice_contents * liquidation_auctions)
   else (contents, auctions)
 
@@ -720,6 +722,8 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
   let nodes = Ligo.Big_map.bindings mem.mem
               |> List.filter_map (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Leaf l -> Some l; | _ -> None) in
   List.iter (fun leaf -> assert (leaf.value.contents.tez <> Ligo.tez_from_literal "0mutez")) nodes;
+
+  (* TODO [Dorran]: Might want to add assertion for slice pointers here *)
 
   (* TODO: Check if all dangling auctions are empty. *)
 
