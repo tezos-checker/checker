@@ -3,7 +3,6 @@ open Kit
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa2Interface
-open CfmmTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
