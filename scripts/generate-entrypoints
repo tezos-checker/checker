@@ -20,9 +20,24 @@ puts <<EOF
 
 open CheckerTypes
 open Checker
+open Kit
+open LiquidationAuctionPrimitiveTypes
+open Ctez
+open Fa2Interface
 
 EOF
 
+
+# Generate the lazy_params type
+
+puts "type lazy_params ="
+entrypoints.each do |e|
+  puts "   | #{to_entrypoint_name e.name} of #{e.param_sig}"
+end
+
+puts
+
+# Generate unique identifiers for entrypoint functions
 puts "type lazy_function_id = Ligo.int"
 puts
 entrypoints.each.with_index do |e, n|
