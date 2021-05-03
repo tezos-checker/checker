@@ -22,7 +22,7 @@
   CheckerEntrypoints
   CheckerTypes
   Constants
-  CheckerLazy
+  CheckerMain
   Mem
   Avl
   Ctez

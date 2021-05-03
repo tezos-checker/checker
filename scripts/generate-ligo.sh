@@ -33,7 +33,7 @@ inputs=(
   liquidationAuction
   checker
   checkerEntrypoints
-  checkerLazy
+  checkerMain
 )
 
 for name in "${inputs[@]}"; do
