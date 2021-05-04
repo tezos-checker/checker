@@ -20,6 +20,8 @@
 project = 'Checker'
 copyright = '2021, Tweag'
 author = 'Tweag'
+version = '1.0rc'
+release = '1.0rc'
 
 
 # -- General configuration ---------------------------------------------------
