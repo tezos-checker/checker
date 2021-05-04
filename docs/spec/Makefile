@@ -7,6 +7,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
+SOURCE_DATE_EPOCH = $(shell date '+%s')
 
 # Put it first so that "make" without argument is like "make help".
 help:
