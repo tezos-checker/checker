@@ -967,8 +967,14 @@ let suite =
 	* fees alone if the index remains the same. *)
        let blocks_passed = 211 in (* NOTE: I am a little surprised/worried about this being again 211... *)
        Ligo.Tezos.new_transaction ~seconds_passed:(60*blocks_passed) ~blocks_passed:blocks_passed ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "10_005_000mutez") in
+       let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_105_283mutez") in (* sup *)
        let _ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
+
+       (* Ensure that the burrow is liquidatable. *)
+       begin match Ligo.Big_map.find_opt burrow_id checker.burrows with
+       | None -> assert_failure "bug"
+       | Some burrow -> assert_bool "burrow needs to be liquidatable for the test to be potent." (Burrow.burrow_is_liquidatable checker.parameters burrow);
+       end;
 
        (* Let's mark the burrow for liquidation now (first pass: leaves it empty but active). *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
