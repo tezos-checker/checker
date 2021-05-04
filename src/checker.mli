@@ -91,12 +91,13 @@ val entrypoint_activate_burrow : checker * Ligo.nat -> LigoOp.operation list * c
     if it is already inactive, if it is overburrowed, if it has kit
     outstanding, if it has collateral sent off to auctions, or if the sender is
     not the burrow owner. If deactivation is successful, make a tez payment to
-    the sender.
+    the given address.
 
     Parameters:
     - The ID of the burrow to deactivate
+    - The address to make the tez payment to
 *)
-val entrypoint_deactivate_burrow : checker * Ligo.nat -> LigoOp.operation list * checker
+val entrypoint_deactivate_burrow : checker * (Ligo.nat * Ligo.address) -> LigoOp.operation list * checker
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     liquidation or if the burrow does not exist. If successful, the reward is

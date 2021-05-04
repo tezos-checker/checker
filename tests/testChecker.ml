@@ -715,11 +715,11 @@ let suite =
            burrow_address
              (Option.get (Ligo.Big_map.find_opt (bob_addr, Ligo.nat_from_literal "0n") checker0.burrows)) in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, Ligo.nat_from_literal "0n") in
+         let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, (Ligo.nat_from_literal "0n", alice_addr)) in
          assert_equal
            ~printer:show_operation_list
            [ LigoOp.Tezos.tez_address_transaction
-               (tez, bob_addr)
+               (tez, alice_addr)
                (Ligo.tez_from_literal "0mutez")
                (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
            ]

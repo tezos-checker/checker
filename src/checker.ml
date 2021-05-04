@@ -199,7 +199,7 @@ let entrypoint_activate_burrow (state, burrow_no: checker * Ligo.nat) : LigoOp.o
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
   ([op], state)
 
-let entrypoint_deactivate_burrow (state, burrow_no: checker * Ligo.nat) : (LigoOp.operation list * checker) =
+let entrypoint_deactivate_burrow (state, (burrow_no, receiver): checker * (Ligo.nat * Ligo.address)) : (LigoOp.operation list * checker) =
   let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
@@ -207,7 +207,7 @@ let entrypoint_deactivate_burrow (state, burrow_no: checker * Ligo.nat) : (LigoO
   let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
+    | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, receiver) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
   ([op], updated_state)
 
