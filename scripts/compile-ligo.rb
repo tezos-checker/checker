@@ -41,7 +41,7 @@ entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
 packed_entrypoints = []
 
 threads = []
-entrypoints.each_slice(entrypoints.length / Etc.nprocessors) { |batch|
+entrypoints.each_slice([entrypoints.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |entrypoint|
       stdout, stderr, exit_status = Open3.capture3(
