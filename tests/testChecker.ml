@@ -933,11 +933,8 @@ let suite =
 
        (* Create a burrow with a very little tez in it. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "2_001_001mutez");
-       let (ops, checker) = Checker.entrypoint_create_burrow (checker, None) in
-       let burrow_id = match ops with
-         | [_; Transaction (AddressTransactionValue burrow_id, _, _)] -> burrow_id
-         | _ -> assert_failure ("Unexpected operation list: " ^ show_operation_list ops)
-       in
+       let (_, burrow_no) as burrow_id, checker = newly_created_burrow checker "0n" in
+
        (* CALCULATIONS
           ~~~~~~~~~~~~
           Tez in the burrow is (1_001_001mutez + 1tez) so the reward is
@@ -948,7 +945,7 @@ let suite =
 
        (* Mint as much kit as possible. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-       let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_id, kit_of_mukit (Ligo.nat_from_literal "476_667n"))) in
+       let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_no, kit_of_mukit (Ligo.nat_from_literal "476_667n"))) in
 
        (* Let some time pass. Over time the burrows with outstanding kit should
 	* become overburrowed, and eventually liquidatable. Note that this
