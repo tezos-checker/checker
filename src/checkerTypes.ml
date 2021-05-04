@@ -4,8 +4,6 @@ open Parameters
 open LiquidationAuctionTypes
 open Fa2Interface
 
-type burrow_id = Ligo.address
-
 type burrow_map = (burrow_id, burrow) Ligo.big_map
 
 type external_contracts = {

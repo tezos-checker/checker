@@ -1,5 +1,6 @@
 open Ctez
 open Kit
+open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa2Interface
@@ -38,7 +39,7 @@ val calculate_touch_reward : Ligo.timestamp -> kit
     Parameters:
     - An optional delegate address for the freshly-originated burrow contract
 *)
-val entrypoint_create_burrow : checker * Ligo.key_hash option -> (LigoOp.operation list * checker)
+val entrypoint_create_burrow : checker * (Ligo.nat * Ligo.key_hash option) -> (LigoOp.operation list * checker)
 
 (** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
     the burrow does not exist, or if the sender is not the burrow owner.
@@ -46,7 +47,7 @@ val entrypoint_create_burrow : checker * Ligo.key_hash option -> (LigoOp.operati
     Parameters:
     - The ID of the burrow into which the collateral will be deposited
 *)
-val entrypoint_deposit_tez : checker * burrow_id -> (LigoOp.operation list * checker)
+val entrypoint_deposit_tez : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
     does not exist, if this action would overburrow it, or if the sender is not
@@ -56,7 +57,7 @@ val entrypoint_deposit_tez : checker * burrow_id -> (LigoOp.operation list * che
     - The amount of tez to withdraw
     - The ID of the burrow from which the collateral should be withdrawn
 *)
-val entrypoint_withdraw_tez : checker * (Ligo.tez * burrow_id) -> LigoOp.operation list * checker
+val entrypoint_withdraw_tez : checker * (Ligo.tez * Ligo.nat) -> LigoOp.operation list * checker
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
     there is not enough collateral, or if the sender is not the burrow owner.
@@ -65,7 +66,7 @@ val entrypoint_withdraw_tez : checker * (Ligo.tez * burrow_id) -> LigoOp.operati
     - The ID of the burrow from which to mint kit
     - The amount of kit to mint
 *)
-val entrypoint_mint_kit : checker * (burrow_id * kit) -> LigoOp.operation list * checker
+val entrypoint_mint_kit : checker * (Ligo.nat * kit) -> LigoOp.operation list * checker
 
 (** Deposit/burn a non-negative amount of kit to a burrow. If there is excess
     kit, simply store it into the burrow. Fail if the burrow does not exist, or
@@ -75,7 +76,7 @@ val entrypoint_mint_kit : checker * (burrow_id * kit) -> LigoOp.operation list *
     - The ID of the burrow in which to burn the kit
     - The amount of kit to burn (supplied as a ticket)
 *)
-val entrypoint_burn_kit : checker * (burrow_id * kit) -> (LigoOp.operation list * checker)
+val entrypoint_burn_kit : checker * (Ligo.nat * kit) -> (LigoOp.operation list * checker)
 
 (** Activate a currently inactive burrow. Fail if the burrow does not exist,
     if the burrow is already active, if the amount of tez given is less than
@@ -84,7 +85,7 @@ val entrypoint_burn_kit : checker * (burrow_id * kit) -> (LigoOp.operation list 
     Parameters:
     - The ID of the burrow to activate
 *)
-val entrypoint_activate_burrow : checker * burrow_id -> LigoOp.operation list * checker
+val entrypoint_activate_burrow : checker * Ligo.nat -> LigoOp.operation list * checker
 
 (** Deativate a currently active burrow. Fails if the burrow does not exist,
     if it is already inactive, if it is overburrowed, if it has kit
@@ -95,7 +96,7 @@ val entrypoint_activate_burrow : checker * burrow_id -> LigoOp.operation list * 
     Parameters:
     - The ID of the burrow to deactivate
 *)
-val entrypoint_deactivate_burrow : checker * burrow_id -> LigoOp.operation list * checker
+val entrypoint_deactivate_burrow : checker * Ligo.nat -> LigoOp.operation list * checker
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     liquidation or if the burrow does not exist. If successful, the reward is
@@ -138,7 +139,7 @@ val entrypoint_touch_burrow : checker * burrow_id -> LigoOp.operation list * che
     - The ID of the burrow to modify
     - The key hash of the new delegate's address, or None to unset the delegate
 *)
-val entrypoint_set_burrow_delegate : checker * (burrow_id * Ligo.key_hash option) -> (LigoOp.operation list * checker)
+val entrypoint_set_burrow_delegate : checker * (Ligo.nat * Ligo.key_hash option) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                              {1 CFMM}                                    *)
@@ -204,7 +205,7 @@ val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id 
 (** Receive a liquidation slice from a burrow; we gather the slices in the
     checker contract, and the checker contract is responsible for transfering
     the lot to the liquidation auction winner. *)
-val entrypoint_receive_slice_from_burrow : checker * unit -> (LigoOp.operation list * checker)
+val entrypoint_receive_slice_from_burrow : checker * burrow_id -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                            {1 ORACLE}                                    *)
