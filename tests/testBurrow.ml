@@ -7,13 +7,15 @@ open TestCommon
 let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
+let burrow_addr = Ligo.address_of_string "BURROW_ADDR"
+
 (* Create a burrow from an amount of kit outstanding and tez collateral along with
  * an active flag. The rest of the parameters are fixed. *)
 let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_for_test
     ~outstanding_kit:outstanding_kit
     ~excess_kit:kit_zero
     ~active:active
-    ~owner:bob_addr
+    ~address:burrow_addr
     ~delegate:None
     ~collateral:collateral
     ~adjustment_index:fixedpoint_one
@@ -105,7 +107,7 @@ let suite =
        assert_equal ~printer:show_kit kit_zero (Burrow.burrow_excess_kit burrow)
     );
 
-    ("burrow_burn_kit - does not change burrow owner" >::
+    ("burrow_burn_kit - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -116,8 +118,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address burrow)
     );
 
     ("burrow_set_delegate - fails for a burrow which needs to be touched" >::
@@ -132,7 +134,7 @@ let suite =
          )
     );
 
-    ("burrow_set_delegate - does not change burrow owner" >::
+    ("burrow_set_delegate - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -143,8 +145,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address burrow)
     );
 
     ("burrow_is_overburrowed - fails for a burrow which needs to be touched" >::
@@ -192,7 +194,7 @@ let suite =
          (Burrow.burrow_excess_kit burrow)
     );
 
-    ("burrow_deposit_tez - does not change burrow owner" >::
+    ("burrow_deposit_tez - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -203,8 +205,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     ("burrow_withdraw_tez - fails for a burrow which needs to be touched" >::
@@ -237,7 +239,7 @@ let suite =
          (Burrow.burrow_collateral burrow)
     );
 
-    ("burrow_withdraw_tez - does not change burrow owner" >::
+    ("burrow_withdraw_tez - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -248,8 +250,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     ("burrow_mint_kit - burrow after successful minting has expected collateral" >::
@@ -282,7 +284,7 @@ let suite =
          )
     );
 
-    ("burrow_mint_kit - does not change burrow owner" >::
+    ("burrow_mint_kit - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -293,8 +295,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     ("burrow_activate - fails for a burrow which needs to be touched" >::
@@ -355,7 +357,7 @@ let suite =
        assert_bool "burrow was not flagged as active after calling burrow_activate" (Burrow.burrow_active burrow)
     );
 
-    ("burrow_activate - does not change burrow owner" >::
+    ("burrow_activate - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -366,8 +368,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     ("burrow_deactivate - fails for a burrow which needs to be touched" >::
@@ -438,7 +440,7 @@ let suite =
                   ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
                   ~excess_kit:kit_zero
                   ~active:true
-                  ~owner:bob_addr
+                  ~address:burrow_addr
                   ~delegate:None
                   ~collateral:(Ligo.tez_from_literal "10mutez")
                   ~adjustment_index:fixedpoint_one
@@ -448,7 +450,7 @@ let suite =
          )
     );
 
-    ("burrow_deactivate - does not change burrow owner" >::
+    ("burrow_deactivate - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -459,8 +461,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
@@ -497,19 +499,19 @@ let suite =
          )
     );
 
-    (* Note: this is a bit overkill but testing anyways since the owner field is extremely important *)
-    ("burrow_create - owner matches provided address" >::
+    (* Note: this is a bit overkill but testing anyways since the address field is extremely important *)
+    ("burrow_create - address matches provided address" >::
      fun _ ->
-       let burrow = Burrow.burrow_create Parameters.initial_parameters alice_addr Constants.creation_deposit None in
+       let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit None in
 
        assert_equal
          ~printer:Ligo.string_of_address
-         alice_addr
-         (Burrow.burrow_owner burrow)
+         burrow_addr
+         (Burrow.burrow_address burrow)
 
     );
 
-    ("burrow_touch - does not change burrow owner" >::
+    ("burrow_touch - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -524,24 +526,24 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
-    ("burrow_return_kit_from_auction - does not change burrow owner" >::
+    ("burrow_return_kit_from_auction - does not change burrow address" >::
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
            ~excess_kit:kit_zero
            ~active:true
-           ~owner:bob_addr
+           ~address:burrow_addr
            ~delegate:None
            ~collateral:(Ligo.tez_from_literal "0mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
        let slice = LiquidationAuctionPrimitiveTypes.{
-           burrow=Ligo.address_from_literal "12345";
+           burrow=(Ligo.address_from_literal "12345", Ligo.nat_from_literal "0n");
            tez=Ligo.tez_from_literal "1mutez";
            min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
          } in
@@ -550,24 +552,24 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
-    ("burrow_return_slice_from_auction - does not change burrow owner" >::
+    ("burrow_return_slice_from_auction - does not change burrow address" >::
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
            ~excess_kit:kit_zero
            ~active:true
-           ~owner:bob_addr
+           ~address:burrow_addr
            ~delegate:None
            ~collateral:(Ligo.tez_from_literal "0mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
        let slice = let open LiquidationAuctionPrimitiveTypes in {
-           burrow=Ligo.address_from_literal "12345";
+           burrow=(Ligo.address_from_literal "12345", Ligo.nat_from_literal "0n");
            tez=Ligo.tez_from_literal "1mutez";
            min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
          } in
@@ -576,8 +578,8 @@ let suite =
 
        assert_equal
          ~printer:Ligo.string_of_address
-         (Burrow.burrow_owner burrow0)
-         (Burrow.burrow_owner burrow)
+         (Burrow.burrow_address burrow0)
+         (Burrow.burrow_address  burrow)
     );
 
     (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction
@@ -675,7 +677,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~owner:bob_addr
+          ~address:burrow_addr
           ~delegate:None
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one
@@ -704,7 +706,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~owner:bob_addr
+          ~address:burrow_addr
           ~delegate:None
           ~collateral:(Ligo.tez_from_literal "1mutez")
           ~adjustment_index:fixedpoint_one
@@ -816,7 +818,7 @@ let suite =
           ~outstanding_kit:outstanding
           ~excess_kit:excess
           ~active:true
-          ~owner:bob_addr
+          ~address:burrow_addr
           ~delegate:None
           ~collateral:(Ligo.tez_from_literal "1mutez")
           ~adjustment_index:fixedpoint_one
@@ -845,7 +847,7 @@ let suite =
           ~outstanding_kit:outstanding_kit
           ~excess_kit:kit_zero
           ~active:true
-          ~owner:bob_addr
+          ~address:burrow_addr
           ~delegate:None
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one

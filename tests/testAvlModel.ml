@@ -37,7 +37,7 @@ let slice_gen = QCheck.Gen.(
     map (fun (tez, kit) ->
         let contents = {
           (* TODO: Use arbitrary addresses as well? *)
-          burrow=TestCommon.alice_addr;
+          burrow=(TestCommon.alice_addr, Ligo.nat_from_literal "0n");
           tez=tez;
           min_kit_for_unwarranted=Some kit;
         } in
