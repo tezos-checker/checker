@@ -148,6 +148,7 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
         last_touched = p.last_touched;
       }
   in
+  assert (burrow.address = burrow_out.address);
   burrow_out
 
 let burrow_return_slice_from_auction
@@ -162,6 +163,7 @@ let burrow_return_slice_from_auction
       collateral = Ligo.add_tez_tez burrow.collateral slice.tez;
       collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction slice.tez;
     } in
+  assert (burrow.address = burrow_out.address);
   burrow_out
 
 let burrow_return_kit_from_auction
@@ -177,6 +179,7 @@ let burrow_return_kit_from_auction
         collateral_at_auction = Ligo.sub_tez_tez burrow.collateral_at_auction slice.tez;
       }
   in
+  assert (burrow.address = burrow_out.address);
   burrow_out
 
 let burrow_create (p: parameters) (addr: Ligo.address) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
@@ -199,6 +202,7 @@ let[@inline] burrow_deposit_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burr
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   let burrow_out = { b with collateral = Ligo.add_tez_tez b.collateral t } in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (** Withdraw a non-negative amount of tez from the burrow, as long as this will
@@ -211,6 +215,7 @@ let burrow_withdraw_tez (p: parameters) (t: Ligo.tez) (b: burrow) : burrow =
     then (Ligo.failwith error_WithdrawTezFailure : burrow)
     else burrow
   in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (** Mint a non-negative amount of kits from the burrow, as long as this will
@@ -224,6 +229,7 @@ let burrow_mint_kit (p: parameters) (kit: kit) (b: burrow) : burrow =
     then (Ligo.failwith error_MintKitFailure : burrow)
     else burrow
   in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (** Deposit/burn a non-negative amount of kit to the burrow. If there is
@@ -232,6 +238,7 @@ let[@inline] burrow_burn_kit (p: parameters) (k: kit) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   let burrow_out = rebalance_kit { b with excess_kit = kit_add b.excess_kit k } in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (** Activate a currently inactive burrow. This operation will fail if either
@@ -251,6 +258,7 @@ let burrow_activate (p: parameters) (tez: Ligo.tez) (b: burrow) : burrow =
         collateral = Ligo.sub_tez_tez tez creation_deposit;
       }
   in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
@@ -277,12 +285,14 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
         } in
       (updated_burrow, return)
   in
+  assert (b.address = burrow_out.address);
   burrow_out, return
 
 let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash option) (b: burrow) : burrow =
   let _ = ensure_uptodate_burrow p b in
   assert_burrow_invariants b;
   let burrow_out = { b with delegate = new_delegate; } in
+  assert (b.address = burrow_out.address);
   burrow_out
 
 (* ************************************************************************* *)
