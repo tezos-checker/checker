@@ -115,7 +115,7 @@ val entrypoint_touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.ope
 (** Cancel the liquidation of a slice of collateral that has been queued for
     auction. This operation can fail for several reasons:
 
-    Ligo.nat - if the sender is not the burrow owner,
+    - if the sender is not the burrow owner,
     - if the slice is already at the current auction,
     - if the slice is part of an already completed auction, or
     - if the burrow is overburrowed at the moment.
