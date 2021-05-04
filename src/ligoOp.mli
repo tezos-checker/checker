@@ -4,7 +4,6 @@ open BurrowTypes
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressNatTransactionValue : (address * nat) -> (address * nat) transaction_value
-  | AddressTransactionValue : address -> address transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
@@ -37,7 +36,6 @@ module Tezos : sig
 
   val unit_transaction : unit -> tez -> unit contract -> operation
   val address_nat_transaction : address * nat -> tez -> (address * nat) contract -> operation
-  val address_transaction : address -> tez -> address contract -> operation
   val tez_address_transaction : (tez * address) -> tez -> (tez * address) contract -> operation
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
   val tez_transaction : tez -> tez -> tez contract -> operation

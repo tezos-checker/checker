@@ -6,7 +6,6 @@ open BurrowTypes
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
   | AddressNatTransactionValue : (address * nat) -> (address * nat) transaction_value
-  | AddressTransactionValue : address -> address transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
@@ -27,7 +26,6 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   fun tv ->
   match tv with
   | UnitTransactionValue -> "()"
-  | AddressTransactionValue a -> string_of_address a
   | AddressNatTransactionValue p -> show_address_and_nat p
   | TezAddressTransactionValue ta -> show_tez_and_address ta
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
@@ -69,7 +67,6 @@ module Tezos = struct
 
   let unit_transaction () tez contract = Transaction (UnitTransactionValue, tez, contract)
   let address_nat_transaction p tez contract = Transaction (AddressNatTransactionValue p, tez, contract)
-  let address_transaction address tez contract = Transaction (AddressTransactionValue address, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
   let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
