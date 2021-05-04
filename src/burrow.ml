@@ -13,7 +13,7 @@ type burrow =
      * "closed"/inactive otherwise. Paying the creation deposit re-activates
      * a "closed" burrow. *)
     active : bool;
-    (* Address of the contract holding burrows collaeral. *)
+    (* Address of the contract holding the burrow's collateral. *)
     address: Ligo.address;
     (* The delegate for the tez (collateral + creation_deposit) the burrow
      * holds. *)
