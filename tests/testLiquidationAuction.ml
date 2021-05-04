@@ -219,6 +219,79 @@ let suite =
         true
       )
     );
+    (
+      qcheck_to_ounit
+      @@ QCheck.Test.make
+        ~name:"liquidation_auctions_pop_completed_slice - preserves linked list properties"
+        ~count:property_test_count
+        (QCheck.make (QCheck.Gen.(pair (gen_liquidation_slice_contents_list 100) (float_bound_inclusive 1.))))
+      @@
+      fun (slice_contents_list, percent) ->  (
+        (* Cancelling a random element from the slice list *)
+        let i_to_pop = Float.(
+            to_int (round (mul percent (float_of_int ((List.length slice_contents_list) - 1))))
+          ) in
+        (* Populate the liquidation slice list, noting the pointer of the element we want to pop *)
+        let auctions, _, slice_to_pop = List.fold_left
+            (fun (a, curr_length, slice_to_pop) slice_contents ->
+               let auctions_out, new_slice = liquidation_auction_send_to_auction a slice_contents in
+               if curr_length = i_to_pop then
+                 (* Ensure that the slice is associated with a completed auction *)
+                 let auction_ptr = (Avl.avl_find_root auctions_out.avl_storage new_slice) in
+                 let avl_out = Avl.avl_modify_root_data auctions_out.avl_storage auction_ptr
+                     (fun outcome -> match outcome with
+                        | _ -> Some {
+                            sold_tez = Ligo.tez_from_literal "1mutez";
+                            winning_bid = {address=Ligo.address_of_string "someone" ; kit=kit_of_mukit (Ligo.nat_from_literal "1_000_000n")};
+                            younger_auction = None;
+                            older_auction = None;
+                          }
+                     ) in
+                 let completed_auctions = Some {youngest=auction_ptr; oldest=auction_ptr} in
+                 {auctions_out with avl_storage=avl_out; completed_auctions=completed_auctions}, curr_length + 1, Some new_slice
+               else
+                 auctions_out, curr_length + 1, slice_to_pop
+            )
+            (liquidation_auction_empty, 0, None)
+            slice_contents_list
+        in
+        let slice_to_pop = match slice_to_pop with
+          | Some p -> p
+          | None -> failwith "did not find the expected index when populating the slice lists"
+        in
+
+        (* Pop the slice from the list *)
+        let popped_contents, _, auctions_out = liquidation_auctions_pop_completed_slice auctions slice_to_pop in
+
+        (* Run assertions on all burrow slice lists*)
+        let _ = List.map (
+            fun (burrow, _) ->
+              (* Read data from the list for assertions *)
+              let contents_in = List.(map (fun x -> x.contents) (get_burrow_slices auctions burrow)) in
+              let contents_out = List.(map (fun x -> x.contents) (get_burrow_slices auctions_out burrow)) in
+              let expected_contents =
+                if burrow = popped_contents.burrow then
+                  let i_to_pop = index_of_leaf auctions burrow slice_to_pop in
+                  List.filteri (fun i _ -> if i == i_to_pop then false else true) contents_in
+                else
+                  contents_in
+              in
+
+              let _ = assert_equal popped_contents (List.nth slice_contents_list i_to_pop) in
+              let _ = assert_equal ((List.length expected_contents)) (List.length contents_out) ~printer:string_of_int in
+              let _ = assert_equal expected_contents contents_out ~printer:show_slice_content_list in
+              ()
+          )
+            (Ligo.Big_map.bindings auctions_out.burrow_slices)
+        in
+        true
+      )
+    );
+
+    (* TODO [Dorran] - Need a test for start_liquidation_auction_if_possible which checks the slice pointers
+       I don't really know what properties we can test here, since the output list will have an unknown length (we can write a unit test though)
+       We can* however add the burrow slice list assertions within the function itself to ensure those invariants aren't broken.
+    *)
 
     (* ("test starts descending auction" >::
        fun _ ->
