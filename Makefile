@@ -35,7 +35,10 @@ indent:
 	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
 	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
 
-docs: ocaml-src
+spec:
+	make -C docs/spec html
+
+docs: ocaml-src spec
 	cd src && dune build @doc
 	@echo "Docs generated in _build/default/_doc/_html"
 
@@ -44,4 +47,4 @@ distclean: clean
 install-git-hooks:
 	@[ -x .git/hooks/pre-commit ] || (cd .git/hooks && rm -f pre-commit && ln -s ../.pre-commit-hook.sh pre-commit && echo "pre-commit hook installed")
 
-.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent docs distclean install-git-hooks
+.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent spec docs distclean install-git-hooks
