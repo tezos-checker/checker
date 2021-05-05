@@ -126,7 +126,7 @@ val entrypoint_touch_liquidation_slices : checker * leaf_ptr list -> (LigoOp.ope
 *)
 val entrypoint_cancel_liquidation_slice : checker * leaf_ptr -> LigoOp.operation list * checker
 
-(** Perform maintainance tasks for the burrow.
+(** Perform maintenance tasks for the burrow.
 
     Parameters:
     - The ID of the burrow
@@ -156,7 +156,7 @@ val entrypoint_set_burrow_delegate : checker * (Ligo.nat * Ligo.key_hash option)
 *)
 val entrypoint_buy_kit : checker * (ctez * kit * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some kit to the cfmm contract. Fail if the desired amount of tez
+(** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
     cannot be bought or if the deadline has passed.
 
     Parameters:
@@ -167,8 +167,8 @@ val entrypoint_buy_kit : checker * (ctez * kit * Ligo.timestamp) -> LigoOp.opera
 val entrypoint_sell_kit : checker * (kit * ctez * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Buy some liquidity (liquidity tokens) from the cfmm contract, by
-    giving it some tez and some kit. If the given amounts do not have the
-    right ratio, the cfmm contract keeps as much of the given tez and kit
+    giving it some ctez and some kit. If the given amounts do not have the
+    right ratio, the cfmm contract keeps as much of the given ctez and kit
     as possible with the right ratio, and returns the leftovers, along with
     the liquidity tokens.
 
