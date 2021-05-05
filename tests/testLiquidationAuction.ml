@@ -122,7 +122,12 @@ let suite =
                let slices_in = get_burrow_slices auctions slice_contents.burrow in
                let slices_out = get_burrow_slices auctions_out slice_contents.burrow in
                let index_new_slice = index_of_leaf auctions_out slice_contents.burrow new_slice in
-               let slices_without_new_one = List.filteri (fun i _ -> if i == index_new_slice then false else true) slices_out in
+               let slices_without_new_one = snd (
+                   List.fold_left
+                     (fun (i, xs) x -> if i == index_new_slice then (i+1, xs) else (i+1, List.append xs [x]) ) (0, [])
+                     slices_out
+                 )
+               in
 
                assert_liquidation_auction_invariants auctions;
                (* We should have inserted one element into our original list *)
