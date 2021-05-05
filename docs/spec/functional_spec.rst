@@ -286,16 +286,18 @@ Query balance
 -------------
 
 ::
-  balance_of: (pair (list %requests (pair (address %owner) (nat %token_id)))
-                    (contract %callback
-                       (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))``
+
+    balance_of: (pair (list %requests (pair (address %owner) (nat %token_id)))
+                      (contract %callback
+                         (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))``
 
 Update operators
 ----------------
 
 ::
-  update_operators: (list (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
-                              (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
+
+     update_operators: (list (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
+                                (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
 
 
 Deployment
