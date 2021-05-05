@@ -74,9 +74,9 @@ let get_burrow_slices auctions burrow_id = match Ligo.Big_map.find_opt burrow_id
   | None -> []
 
 let suite =
-  let burrow_id_1 = Ligo.address_of_string "burrow_1" in
-  let burrow_id_2 = Ligo.address_of_string "burrow_2" in
-  let burrow_id_3 = Ligo.address_of_string "burrow_3" in
+  let burrow_id_1 = (Ligo.address_of_string "burrow_1", Ligo.nat_from_literal "0n") in
+  let burrow_id_2 = (Ligo.address_of_string "burrow_2", Ligo.nat_from_literal "0n") in
+  let burrow_id_3 = (Ligo.address_of_string "burrow_3", Ligo.nat_from_literal "0n") in
 
   "Liquidation auction tests" >::: [
 

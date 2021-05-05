@@ -3,6 +3,9 @@ open LiquidationAuctionPrimitiveTypes
 open Mem
 open Avl
 
+type burrow_id = Ligo.address * Ligo.nat
+[@@deriving show]
+
 type burrow_liquidation_slices =
   { oldest_slice: leaf_ptr;
     youngest_slice: leaf_ptr
@@ -33,7 +36,7 @@ type liquidation_auctions = {
   current_auction: current_liquidation_auction option;
   completed_auctions: completed_liquidation_auctions option;
 
-  burrow_slices: (Ligo.address, burrow_liquidation_slices) Ligo.big_map;
+  burrow_slices: (burrow_id, burrow_liquidation_slices) Ligo.big_map;
 }
 
 let liquidation_auction_empty : liquidation_auctions =
@@ -43,5 +46,5 @@ let liquidation_auction_empty : liquidation_auctions =
     queued_slices = queued_slices;
     current_auction = (None: current_liquidation_auction option);
     completed_auctions = (None: completed_liquidation_auctions option);
-    burrow_slices = (Ligo.Big_map.empty: (Ligo.address, burrow_liquidation_slices) Ligo.big_map);
+    burrow_slices = (Ligo.Big_map.empty: (burrow_id, burrow_liquidation_slices) Ligo.big_map);
   }

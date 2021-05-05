@@ -10,7 +10,7 @@ val show_burrow : burrow -> string
 val pp_burrow : Format.formatter -> burrow -> unit
 
 (* Burrow API *)
-val burrow_owner : burrow -> Ligo.address
+val burrow_address : burrow -> Ligo.address
 val burrow_collateral_at_auction : burrow -> Ligo.tez
 
 (** Computes the total amount of tez associated with a burrow. This includes
@@ -155,7 +155,7 @@ val burrow_active : burrow -> bool
 
 val make_burrow_for_test :
   active:bool ->
-  owner:Ligo.address ->
+  address:Ligo.address ->
   delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->

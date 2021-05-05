@@ -25,7 +25,7 @@ let arb_liquidation_slice_contents =
     (fun tz ->
        LiquidationAuctionPrimitiveTypes.
          ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
-          ; burrow = Ligo.address_of_string ""
+          ; burrow = (Ligo.address_of_string "", Ligo.nat_from_literal "0n")
           ; min_kit_for_unwarranted = Some kit_zero
           })
     )
