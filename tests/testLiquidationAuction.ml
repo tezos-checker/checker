@@ -25,7 +25,7 @@ let gen_liquidation_slice_contents =
       (fun (tz, adrr) ->
          LiquidationAuctionPrimitiveTypes.
            ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
-            ; burrow = Ligo.address_of_string ("burrow_" ^ adrr )
+            ; burrow = (Ligo.address_of_string ("burrow_" ^ adrr ), Ligo.nat_from_literal "1n")
             ; min_kit_for_unwarranted = Some kit_zero
             })
       )
@@ -62,7 +62,7 @@ let index_of_leaf auctions burrow_id leaf =
   in
   let burrow_slices = match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
     | Some burrow_slices -> burrow_slices
-    | None -> failwith ("No burrow_slices found for burrow_id " ^ (Ligo.string_of_address burrow_id))
+    | None -> failwith ("No burrow_slices found for burrow.")
   in
   walk_with_index auctions.avl_storage 0 burrow_slices.youngest_slice
 

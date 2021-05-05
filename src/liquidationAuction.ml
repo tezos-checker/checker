@@ -117,7 +117,7 @@ let fold_burrow_slices
 let assert_burrow_slices_invariants auctions burrow_id =
   let burrow_slices = match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
     | Some bs -> bs
-    | None -> failwith ("could not find burrow slice in auctions for burrow: " ^ Ligo.string_of_address burrow_id)
+    | None -> failwith ("could not find burrow slice in auctions for burrow")
   in
   let collect_slices = fun acc slice -> List.append acc [slice] in
   let slices_using_oldest_ptr = fold_burrow_slices ~direction:FromOldest collect_slices [] auctions.avl_storage burrow_slices in
