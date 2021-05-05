@@ -1,14 +1,14 @@
 open Kit
 open OUnit2
-(* open TestCommon *)
+open TestCommon
 open LiquidationAuction
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 
 open Error
-(* open Ratio *)
+open Ratio
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
-let property_test_count = 1000
+let property_test_count = 100
 
 let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
@@ -49,26 +49,6 @@ let repeat n x =
   in
   append_duplicate (n+1) [] x
 
-type direction = Younger | Older
-
-let rec walk_slice storage acc index direction =
-  let slice = Avl.avl_read_leaf storage index in
-  let next_leaf, slices = match direction with
-    | Younger -> slice.younger, List.append [slice] acc
-    | Older -> slice.older, List.append acc [slice]
-  in
-  match next_leaf with
-  | None ->  slices
-  | Some next_index -> walk_slice storage slices next_index direction
-
-(* Gets all of the slices by walking from the starting index and walking in the older direction *)
-let collect_slices_from_youngest (storage: Mem.mem) (start_index: leaf_ptr) =
-  walk_slice storage [] start_index Older
-
-(* Gets all of the slices by walking from the starting index and walking in the younger direction *)
-let collect_slices_from_oldest (storage: Mem.mem) (start_index: leaf_ptr) =
-  walk_slice storage [] start_index Younger
-
 let index_of_leaf auctions burrow_id leaf =
   let rec walk_with_index storage curr_index curr_leaf_ptr =
     if curr_leaf_ptr = leaf then
@@ -86,22 +66,17 @@ let index_of_leaf auctions burrow_id leaf =
   in
   walk_with_index auctions.avl_storage 0 burrow_slices.youngest_slice
 
-let assert_properties_of_burrow_slice storage burrow_slice =
-  let slices_using_oldest_ptr = collect_slices_from_oldest storage burrow_slice.oldest_slice in
-  let slices_using_youngest_ptr = collect_slices_from_youngest storage burrow_slice.youngest_slice in
-  assert_equal slices_using_oldest_ptr slices_using_youngest_ptr
-
+(* Gets all of the slices associated with burrow as a list *)
 let get_burrow_slices auctions burrow_id = match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
-  | Some burrow_slice ->
-    (* FIXME: Can move this assertion to the actual liquidationAuction module *)
-    let _ = assert_properties_of_burrow_slice auctions.avl_storage burrow_slice in
-    collect_slices_from_youngest auctions.avl_storage burrow_slice.youngest_slice
+  (* Note: returns slices in list where head is youngest slice *)
+  | Some burrow_slices ->
+    fold_burrow_slices ~direction:FromYoungest (fun acc s -> List.append acc [s]) [] auctions.avl_storage burrow_slices
   | None -> []
 
 let suite =
   let burrow_id_1 = Ligo.address_of_string "burrow_1" in
-  (* let burrow_id_2 = Ligo.address_of_string "burrow_2" in
-     let burrow_id_3 = Ligo.address_of_string "burrow_3" in *)
+  let burrow_id_2 = Ligo.address_of_string "burrow_2" in
+  let burrow_id_3 = Ligo.address_of_string "burrow_3" in
 
   "Liquidation auction tests" >::: [
 
@@ -133,7 +108,7 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auction_send_to_auction - preserves linked list properties"
+        ~name:"liquidation_auction_send_to_auction - preserves list properties"
         ~count:property_test_count
         (QCheck.make (gen_liquidation_slice_contents_list 100))
       @@
@@ -144,16 +119,17 @@ let suite =
                let auctions_out, new_slice = liquidation_auction_send_to_auction auctions slice_contents in
 
                (* Gather data for assertions *)
-               let contents_in = List.(map (fun x -> x.contents) (get_burrow_slices auctions slice_contents.burrow)) in
-               let contents_out = List.(map (fun x -> x.contents) (get_burrow_slices auctions_out slice_contents.burrow)) in
+               let slices_in = get_burrow_slices auctions slice_contents.burrow in
+               let slices_out = get_burrow_slices auctions_out slice_contents.burrow in
                let index_new_slice = index_of_leaf auctions_out slice_contents.burrow new_slice in
-               let contents_without_new_one = List.filteri (fun i _ -> if i == index_new_slice then false else true) contents_out in
+               let slices_without_new_one = List.filteri (fun i _ -> if i == index_new_slice then false else true) slices_out in
 
+               assert_liquidation_auction_invariants auctions;
                (* We should have inserted one element into our original list *)
-               let _ = assert_equal ((List.length contents_in) + 1) (List.length contents_out) ~printer:string_of_int  in
+               assert_equal ((List.length slices_in) + 1) (List.length slices_out) ~printer:string_of_int;
                (* Removing the new element from the list should produce the input list *)
                (* Note: comparing by content since the pointers will change when inserting *)
-               let _ = assert_equal contents_in contents_without_new_one ~printer:show_slice_content_list in
+               assert_equal slices_in slices_without_new_one ~printer:show_slice_content_list;
                auctions_out
             )
             liquidation_auction_empty
@@ -166,7 +142,7 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auctions_cancel_slice - preserves linked list properties"
+        ~name:"liquidation_auctions_cancel_slice - preserves list properties"
         ~count:property_test_count
         (QCheck.make (QCheck.Gen.(pair (gen_liquidation_slice_contents_list 100) (float_bound_inclusive 1.))))
       @@
@@ -199,30 +175,36 @@ let suite =
         let _ = List.map (
             fun (burrow, _) ->
               (* Read data from the list for assertions *)
-              let contents_in = List.(map (fun x -> x.contents) (get_burrow_slices auctions burrow)) in
-              let contents_out = List.(map (fun x -> x.contents) (get_burrow_slices auctions_out burrow)) in
-              let expected_contents =
+              let slices_in = get_burrow_slices auctions burrow in
+              let slices_out = get_burrow_slices auctions_out burrow in
+              let expected_slices =
+                (* If the popped slice belongs to this burrow, we don't expect to find it in the output *)
                 if burrow = popped_contents.burrow then
                   let i_to_pop = index_of_leaf auctions burrow slice_to_pop in
-                  List.filteri (fun i _ -> if i == i_to_pop then false else true) contents_in
+                  (* Note: would have used List.filteri here, but it doesn't exist in OCaml 4.10 *)
+                  let _, filtered = List.fold_left (fun (i, xs) x -> if i == i_to_pop then (i+1, xs) else (i+1, List.append xs [x])) (0, []) slices_in in
+                  filtered
                 else
-                  contents_in
+                  (* Otherwise the output should just be the input *)
+                  slices_in
               in
 
-              let _ = assert_equal popped_contents (List.nth slice_contents_list i_to_pop) in
-              let _ = assert_equal ((List.length expected_contents)) (List.length contents_out) ~printer:string_of_int in
-              let _ = assert_equal expected_contents contents_out ~printer:show_slice_content_list in
-              ()
+              assert_liquidation_auction_invariants auctions;
+              assert_liquidation_auction_invariants auctions_out;
+              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
+              assert_equal ((List.length expected_slices)) (List.length slices_out) ~printer:string_of_int;
+              assert_equal expected_slices slices_out ~printer:show_slice_content_list
           )
             (Ligo.Big_map.bindings auctions_out.burrow_slices)
         in
         true
       )
     );
+
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auctions_pop_completed_slice - preserves linked list properties"
+        ~name:"liquidation_auctions_pop_completed_slice - preserves list properties"
         ~count:property_test_count
         (QCheck.make (QCheck.Gen.(pair (gen_liquidation_slice_contents_list 100) (float_bound_inclusive 1.))))
       @@
@@ -267,20 +249,22 @@ let suite =
         let _ = List.map (
             fun (burrow, _) ->
               (* Read data from the list for assertions *)
-              let contents_in = List.(map (fun x -> x.contents) (get_burrow_slices auctions burrow)) in
-              let contents_out = List.(map (fun x -> x.contents) (get_burrow_slices auctions_out burrow)) in
+              let slices_in = get_burrow_slices auctions burrow in
+              let slices_out = get_burrow_slices auctions_out burrow in
               let expected_contents =
                 if burrow = popped_contents.burrow then
                   let i_to_pop = index_of_leaf auctions burrow slice_to_pop in
-                  List.filteri (fun i _ -> if i == i_to_pop then false else true) contents_in
+                  let _, filtered = List.fold_left (fun (i, xs) x -> if i == i_to_pop then (i+1, xs) else (i+1, List.append xs [x])) (0, []) slices_in in
+                  filtered
                 else
-                  contents_in
+                  slices_in
               in
 
-              let _ = assert_equal popped_contents (List.nth slice_contents_list i_to_pop) in
-              let _ = assert_equal ((List.length expected_contents)) (List.length contents_out) ~printer:string_of_int in
-              let _ = assert_equal expected_contents contents_out ~printer:show_slice_content_list in
-              ()
+              assert_liquidation_auction_invariants auctions;
+              assert_liquidation_auction_invariants auctions_out;
+              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
+              assert_equal ((List.length expected_contents)) (List.length slices_out) ~printer:string_of_int;
+              assert_equal expected_contents slices_out ~printer:show_slice_content_list
           )
             (Ligo.Big_map.bindings auctions_out.burrow_slices)
         in
@@ -288,13 +272,8 @@ let suite =
       )
     );
 
-    (* TODO [Dorran] - Need a test for start_liquidation_auction_if_possible which checks the slice pointers
-       I don't really know what properties we can test here, since the output list will have an unknown length (we can write a unit test though)
-       We can* however add the burrow slice list assertions within the function itself to ensure those invariants aren't broken.
-    *)
-
-    (* ("test starts descending auction" >::
-       fun _ ->
+    ("test starts descending auction" >::
+     fun _ ->
        Ligo.Tezos.reset();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -338,10 +317,10 @@ let suite =
          (kit_of_mukit (Ligo.nat_from_literal "1_960_394n"))
          (liquidation_auction_current_auction_minimum_bid current)
          ~printer:show_kit;
-       );
+    );
 
-       ("test batches up auction lots" >::
-       fun _ ->
+    ("test batches up auction lots" >::
+     fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -365,10 +344,10 @@ let suite =
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
-       );
+    );
 
-       ("test splits up auction lots to fit batch size" >::
-       fun _ ->
+    ("test splits up auction lots to fit batch size" >::
+     fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -392,10 +371,10 @@ let suite =
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
-       );
+    );
 
-       ("test bidding" >::
-       fun _ ->
+    ("test bidding" >::
+     fun _ ->
        Ligo.Tezos.reset ();
        let auctions = liquidation_auction_empty in
        let (auctions, _) =
@@ -433,33 +412,34 @@ let suite =
          (fun () -> liquidation_auction_place_bid current {address=bidder; kit=kit_of_mukit (Ligo.nat_from_literal "3_000_000n")});
 
        ()
-       );
+    );
 
-       qcheck_to_ounit
-       @@ QCheck.Test.make
-       ~name:"bid can not be zero"
-       ~count:property_test_count
-       QCheck.(0 -- 100)
-       @@ fun blocks_passed ->
+    qcheck_to_ounit
+    @@ QCheck.Test.make
+      ~name:"bid can not be zero"
+      ~count:property_test_count
+      QCheck.(0 -- 100)
+    @@ fun blocks_passed ->
 
-       (* Create an auction with one slice *)
-       Ligo.Tezos.reset ();
-       let auctions = liquidation_auction_empty in
-       let (auctions, _) =
-       liquidation_auction_send_to_auction
+    (* Create an auction with one slice *)
+    Ligo.Tezos.reset ();
+    let auctions = liquidation_auction_empty in
+    let (auctions, _) =
+      liquidation_auction_send_to_auction
         auctions
         (* Note: The amounts don't matter here. We are only interested in the bidding logic *)
         { burrow = burrow_id_1; tez = Ligo.tez_from_literal "1_000_000mutez";
           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n")); (* note: randomly chosen *)
         } in
-       let start_price = one_ratio in
-       let auctions = liquidation_auction_touch auctions start_price in
-       let current = Option.get auctions.current_auction in
+    let start_price = one_ratio in
+    let auctions = liquidation_auction_touch auctions start_price in
+    let current = Option.get auctions.current_auction in
 
-       Ligo.Tezos.new_transaction ~seconds_passed:(blocks_passed*3600) ~blocks_passed:blocks_passed ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_raises
-       (Failure (Ligo.string_of_int error_BidTooLow))
-       (fun () -> liquidation_auction_place_bid current {address=Ligo.address_from_literal "12345"; kit=kit_zero});
-       ();
-       true *)
+    Ligo.Tezos.new_transaction ~seconds_passed:(blocks_passed*3600) ~blocks_passed:blocks_passed ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    assert_raises
+      (Failure (Ligo.string_of_int error_BidTooLow))
+      (fun () -> liquidation_auction_place_bid current {address=Ligo.address_from_literal "12345"; kit=kit_zero});
+    ();
+    true
+
   ]
