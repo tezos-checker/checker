@@ -5,7 +5,12 @@
 * Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
 * The source code lives in the [src](./src) folder.
 * The tests live in the [tests](./tests) folder.
-* Documentation, quite underdeveloped at the moment, lives in the [docs](./docs) folder.
+
+# Documentation
+
+Various ad-hoc documentation can be found in the [docs](./docs) folder. 
+
+The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed).
 
 ## Development
 
