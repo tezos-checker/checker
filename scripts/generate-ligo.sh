@@ -70,6 +70,8 @@ for name in "${inputs[@]}"; do
     sed 's/^ *assert .*//g' |
     sed 's/^ *assert_burrow_invariants .*//g' |
     sed 's/^ *assert_checker_invariants .*//g' |
+    sed 's/^ *assert_liquidation_auction_invariants .*//g' |
+    sed 's/^ *assert_burrow_slices_invariants .*//g' |
 
     # replace 'int_from_literal' with its argument and replace
     # the double quotes with parentheses (for the potential sign)

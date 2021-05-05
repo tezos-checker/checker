@@ -78,6 +78,96 @@ open Common
 open LiquidationAuctionTypes
 open Error
 
+
+(* BEGIN_OCAML *)
+
+let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : Ligo.tez option =
+  match auctions.current_auction with
+  | None -> (None: Ligo.tez option)
+  | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
+
+(* Linked lists are parameterized by pointers in the "younger" and "older" directions*)
+type walk_direction = FromYoungest | FromOldest
+
+(* Fold over the doubly-linked list defined by burrow slices *)
+let fold_burrow_slices
+    ?direction:(direction=FromYoungest)
+    (f: ('a -> liquidation_slice_contents -> 'a))
+    (acc: 'a)
+    (avl_storage: Mem.mem)
+    (burrow_slices: burrow_liquidation_slices) =
+
+  let rec walk_slice f acc leaf =
+    let slice = Avl.avl_read_leaf avl_storage leaf in
+    let acc = f acc slice.contents in
+    let next_leaf = match direction with
+      | FromOldest -> slice.younger
+      | FromYoungest -> slice.older
+    in
+    match next_leaf with
+    | None -> acc
+    | Some next_leaf -> walk_slice f acc next_leaf
+  in
+  let starting_leaf = match direction with
+    | FromOldest -> burrow_slices.oldest_slice
+    | FromYoungest -> burrow_slices.youngest_slice
+  in
+  walk_slice f acc starting_leaf
+
+let assert_burrow_slices_invariants auctions burrow_id =
+  let burrow_slices = match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
+    | Some bs -> bs
+    | None -> failwith ("could not find burrow slice in auctions for burrow: " ^ Ligo.string_of_address burrow_id)
+  in
+  let collect_slices = fun acc slice -> List.append acc [slice] in
+  let slices_using_oldest_ptr = fold_burrow_slices ~direction:FromOldest collect_slices [] auctions.avl_storage burrow_slices in
+  let slices_using_youngest_ptr = fold_burrow_slices ~direction:FromYoungest collect_slices [] auctions.avl_storage burrow_slices in
+  assert (slices_using_oldest_ptr = (List.rev slices_using_youngest_ptr))
+
+(* Checks if some invariants of auctions structure holds. *)
+let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
+
+  (* All AVL trees in the storage are valid. *)
+  let mem = auctions.avl_storage in
+  let roots = Ligo.Big_map.bindings mem.mem
+              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
+              |> List.map (fun (p, _) -> AVLPtr p) in
+  List.iter (assert_avl_invariants mem) roots;
+
+  (* There are no dangling pointers in the storage. *)
+  avl_assert_dangling_pointers mem roots;
+
+  (* Completed_auctions linked list is correct. *)
+  auctions.completed_auctions
+  |> Option.iter (fun completed_auctions ->
+      let rec go (curr: avl_ptr) (prev: avl_ptr option) =
+        let curr_data = Option.get (avl_root_data mem curr) in
+        assert (curr_data.younger_auction = prev);
+        match curr_data.older_auction with
+        | Some next -> go next (Some curr)
+        | None ->  assert (curr = completed_auctions.oldest) in
+      go (completed_auctions.youngest) None
+    );
+
+  (* There are no empty slices. *)
+  let mem = auctions.avl_storage in
+  let nodes = Ligo.Big_map.bindings mem.mem
+              |> List.filter_map (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Leaf l -> Some l; | _ -> None) in
+  let _ = List.iter (fun leaf -> assert (leaf.value.contents.tez <> Ligo.tez_from_literal "0mutez")) nodes in
+
+  (* Burrow slice list invariants are obeyed for all burrow slice lists*)
+  let _ = List.map (
+      fun (burrow_id, _) ->
+        assert_burrow_slices_invariants auctions burrow_id
+    )
+      (Ligo.Big_map.bindings auctions.burrow_slices) in
+
+  (* FIXME: Check if all dangling auctions are empty. *)
+
+  ()
+
+(* END_OCAML *)
+
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.
  * Initially that node belongs to 'queued_slices' tree, but this can change over time
  * when we start auctions.
@@ -131,6 +221,7 @@ let liquidation_auction_send_to_auction
             new_burrow_slices
             auctions.burrow_slices;
       } in
+    assert_liquidation_auction_invariants new_state;
     (new_state, ret)
 
 (** Split a liquidation slice into two. The first of the two slices is the
@@ -350,7 +441,9 @@ let start_liquidation_auction_if_possible
         Some
           { contents = new_auction;
             state = Descending (start_value, !Ligo.Tezos.now); } in
-      { auctions with current_auction = current_auction; }
+      let auctions_out = { auctions with current_auction = current_auction; } in
+      assert_liquidation_auction_invariants auctions_out;
+      auctions_out
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
@@ -391,59 +484,62 @@ let is_liquidation_auction_complete
 
 let complete_liquidation_auction_if_possible
     (auctions: liquidation_auctions): liquidation_auctions =
-  match auctions.current_auction with
-  | None -> auctions
-  | Some curr -> begin
-      match is_liquidation_auction_complete curr.state with
-      | None -> auctions
-      | Some winning_bid ->
-        let (storage, completed_auctions) = match auctions.completed_auctions with
-          | None ->
-            let outcome =
-              { winning_bid = winning_bid;
-                sold_tez=avl_tez auctions.avl_storage curr.contents;
-                younger_auction=(None: liquidation_auction_id option);
-                older_auction=(None: liquidation_auction_id option);
-              } in
-            let storage =
-              avl_modify_root_data
-                auctions.avl_storage
-                curr.contents
-                (fun (_prev: auction_outcome option) ->
-                   assert (Option.is_none _prev);
-                   Some outcome) in
-            (storage, {youngest=curr.contents; oldest=curr.contents})
-          | Some params ->
-            let {youngest=youngest; oldest=oldest} = params in
-            let outcome =
-              { winning_bid = winning_bid;
-                sold_tez=avl_tez auctions.avl_storage curr.contents;
-                younger_auction=Some youngest;
-                older_auction=(None: liquidation_auction_id option);
-              } in
-            let storage =
-              avl_modify_root_data
-                auctions.avl_storage
-                curr.contents
-                (fun (_prev: auction_outcome option) ->
-                   assert (Option.is_none _prev);
-                   Some outcome) in
-            let storage =
-              avl_modify_root_data
-                storage
-                youngest
-                (fun (prev: auction_outcome option) ->
-                   match prev with
-                   | None -> (failwith "completed auction without outcome" : auction_outcome option)
-                   | Some xs -> Some ({xs with younger_auction=Some curr.contents})
-                ) in
-            (storage, {youngest=curr.contents; oldest=oldest; }) in
-        { auctions with
-          avl_storage = storage;
-          current_auction=(None: current_liquidation_auction option);
-          completed_auctions=Some completed_auctions;
-        }
-    end
+  let auctions_out = match auctions.current_auction with
+    | None -> auctions
+    | Some curr -> begin
+        match is_liquidation_auction_complete curr.state with
+        | None -> auctions
+        | Some winning_bid ->
+          let (storage, completed_auctions) = match auctions.completed_auctions with
+            | None ->
+              let outcome =
+                { winning_bid = winning_bid;
+                  sold_tez=avl_tez auctions.avl_storage curr.contents;
+                  younger_auction=(None: liquidation_auction_id option);
+                  older_auction=(None: liquidation_auction_id option);
+                } in
+              let storage =
+                avl_modify_root_data
+                  auctions.avl_storage
+                  curr.contents
+                  (fun (_prev: auction_outcome option) ->
+                     assert (Option.is_none _prev);
+                     Some outcome) in
+              (storage, {youngest=curr.contents; oldest=curr.contents})
+            | Some params ->
+              let {youngest=youngest; oldest=oldest} = params in
+              let outcome =
+                { winning_bid = winning_bid;
+                  sold_tez=avl_tez auctions.avl_storage curr.contents;
+                  younger_auction=Some youngest;
+                  older_auction=(None: liquidation_auction_id option);
+                } in
+              let storage =
+                avl_modify_root_data
+                  auctions.avl_storage
+                  curr.contents
+                  (fun (_prev: auction_outcome option) ->
+                     assert (Option.is_none _prev);
+                     Some outcome) in
+              let storage =
+                avl_modify_root_data
+                  storage
+                  youngest
+                  (fun (prev: auction_outcome option) ->
+                     match prev with
+                     | None -> (failwith "completed auction without outcome" : auction_outcome option)
+                     | Some xs -> Some ({xs with younger_auction=Some curr.contents})
+                  ) in
+              (storage, {youngest=curr.contents; oldest=oldest; }) in
+          { auctions with
+            avl_storage = storage;
+            current_auction=(None: current_liquidation_auction option);
+            completed_auctions=Some completed_auctions;
+          }
+      end
+  in
+  assert_liquidation_auction_invariants auctions_out;
+  auctions_out
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. If
@@ -528,7 +624,9 @@ let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation
   )
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =
+  assert_liquidation_auction_invariants auctions;
   let (contents, root, auctions) = pop_slice auctions leaf_ptr in
+  assert_liquidation_auction_invariants auctions;
   (* If the leaf doesn't belong to the queue, no need to cancel it. *)
   if ptr_of_avl_ptr root <> ptr_of_avl_ptr auctions.queued_slices
   (* FIXME: I (Dorran) think that we might be overloading the term 'unwarranted' here? *)
@@ -546,6 +644,7 @@ let completed_liquidation_auction_won_by_sender
 
 (* Removes the auction from completed lots list, while preserving the auction itself. *)
 let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (tree: avl_ptr) : liquidation_auctions =
+  assert_liquidation_auction_invariants auctions;
   let storage = auctions.avl_storage in
 
   let outcome = match avl_root_data storage tree with
@@ -609,18 +708,22 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
              younger_auction = (None: liquidation_auction_id option);
              older_auction = (None: liquidation_auction_id option)}) in
 
-  { auctions with
-    completed_auctions = completed_auctions;
-    avl_storage = storage
-  }
+  let auctions_out =
+    { auctions with
+      completed_auctions = completed_auctions;
+      avl_storage = storage
+    } in
+  assert_liquidation_auction_invariants auctions_out;
+  auctions_out
 
 let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * auction_outcome * liquidation_auctions =
+  assert_liquidation_auction_invariants auctions;
   let (contents, root, auctions) = pop_slice auctions leaf_ptr in
 
   (* When the auction has no slices left, we pop it from the linked list
    * of lots. We do not delete the auction itself from the storage, since
    * we still want the winner to be able to claim its result. *)
-  let auctions =
+  let auctions_out =
     if avl_is_empty auctions.avl_storage root
     then liquidation_auction_pop_completed_auction auctions root
     else auctions in
@@ -628,33 +731,41 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
     match avl_root_data auctions.avl_storage root with
     | None -> (Ligo.failwith error_NotACompletedSlice: auction_outcome)
     | Some outcome -> outcome in
-  (contents, outcome, auctions)
+  assert_liquidation_auction_invariants auctions_out;
+  (contents, outcome, auctions_out)
 
 let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
-  match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
-  | Some outcome ->
-    (* A winning bid can only be claimed when all the liquidation slices
-     * for that lot is cleaned. *)
-    if not (avl_is_empty auctions.avl_storage auction_id)
-    then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
-    else (
-      (* When the winner reclaims their bid, we finally remove every reference
-         to the auction. This saves storage and forbids double-claiming the
-         winnings. *)
-      assert (outcome.younger_auction = None);
-      assert (outcome.older_auction = None);
-      let auctions =
-        { auctions with
-          avl_storage = avl_delete_empty_tree auctions.avl_storage auction_id } in
-      (outcome.sold_tez, auctions)
-    )
-  | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
-
+  assert_liquidation_auction_invariants auctions;
+  let sold_tez, auctions_out = match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
+    | Some outcome ->
+      (* A winning bid can only be claimed when all the liquidation slices
+       * for that lot is cleaned. *)
+      if not (avl_is_empty auctions.avl_storage auction_id)
+      then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
+      else (
+        (* When the winner reclaims their bid, we finally remove every reference
+           to the auction. This saves storage and forbids double-claiming the
+           winnings. *)
+        assert (outcome.younger_auction = None);
+        assert (outcome.older_auction = None);
+        let auctions =
+          { auctions with
+            avl_storage = avl_delete_empty_tree auctions.avl_storage auction_id } in
+        (outcome.sold_tez, auctions)
+      )
+    | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
+  in
+  assert_liquidation_auction_invariants auctions_out;
+  sold_tez, auctions_out
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
-  (start_liquidation_auction_if_possible price
-     (complete_liquidation_auction_if_possible
-        auctions))
+  assert_liquidation_auction_invariants auctions;
+  let auctions_out =
+    (start_liquidation_auction_if_possible price
+       (complete_liquidation_auction_if_possible
+          auctions)) in
+  assert_liquidation_auction_invariants auctions_out;
+  auctions_out
 
 (*
  * - Cancel auction
@@ -684,48 +795,3 @@ let is_burrow_done_with_liquidations (auctions: liquidation_auctions) (burrow: L
     (match outcome with
      | None -> true
      | Some _ -> false)
-
-(* BEGIN_OCAML *)
-
-let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : Ligo.tez option =
-  match auctions.current_auction with
-  | None -> (None: Ligo.tez option)
-  | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
-
-(* Checks if some invariants of auctions structure holds. *)
-let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
-
-  (* All AVL trees in the storage are valid. *)
-  let mem = auctions.avl_storage in
-  let roots = Ligo.Big_map.bindings mem.mem
-              |> List.filter (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Root _ -> true; | _ -> false)
-              |> List.map (fun (p, _) -> AVLPtr p) in
-  List.iter (assert_avl_invariants mem) roots;
-
-  (* There are no dangling pointers in the storage. *)
-  avl_assert_dangling_pointers mem roots;
-
-  (* Completed_auctions linked list is correct. *)
-  auctions.completed_auctions
-  |> Option.iter (fun completed_auctions ->
-      let rec go (curr: avl_ptr) (prev: avl_ptr option) =
-        let curr_data = Option.get (avl_root_data mem curr) in
-        assert (curr_data.younger_auction = prev);
-        match curr_data.older_auction with
-        | Some next -> go next (Some curr)
-        | None ->  assert (curr = completed_auctions.oldest) in
-      go (completed_auctions.youngest) None
-    );
-
-  (* There are no empty slices. *)
-  let mem = auctions.avl_storage in
-  let nodes = Ligo.Big_map.bindings mem.mem
-              |> List.filter_map (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Leaf l -> Some l; | _ -> None) in
-  List.iter (fun leaf -> assert (leaf.value.contents.tez <> Ligo.tez_from_literal "0mutez")) nodes;
-
-  (* TODO [Dorran]: Might want to add assertion for slice pointers here *)
-
-  (* TODO: Check if all dangling auctions are empty. *)
-
-  ()
-(* END_OCAML *)
