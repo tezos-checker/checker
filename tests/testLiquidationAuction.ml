@@ -199,8 +199,7 @@ let suite =
                 if burrow = popped_contents.burrow then
                   let i_to_pop = index_of_leaf auctions burrow slice_to_pop in
                   (* Note: would have used List.filteri here, but it doesn't exist in OCaml 4.10 *)
-                  let _, filtered = List.fold_left (fun (i, xs) x -> if i == i_to_pop then (i+1, xs) else (i+1, List.append xs [x])) (0, []) slices_in in
-                  filtered
+                  List.filteri (fun i _ -> if i == i_to_pop then false else true) slices_in
                 else
                   (* Otherwise the output should just be the input *)
                   slices_in
@@ -277,8 +276,7 @@ let suite =
               let expected_contents =
                 if burrow = popped_contents.burrow then
                   let i_to_pop = index_of_leaf auctions burrow slice_to_pop in
-                  let _, filtered = List.fold_left (fun (i, xs) x -> if i == i_to_pop then (i+1, xs) else (i+1, List.append xs [x])) (0, []) slices_in in
-                  filtered
+                  List.filteri (fun i _ -> if i == i_to_pop then false else true) slices_in
                 else
                   slices_in
               in
