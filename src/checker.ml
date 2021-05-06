@@ -449,9 +449,11 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -469,9 +471,11 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
       address_to = checker_address;
       value = ctez_to_muctez_nat ctez_deposited;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -492,9 +496,11 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
