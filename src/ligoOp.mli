@@ -8,7 +8,7 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | FA12TransferTransactionValue : Fa12Types.transfer -> Fa12Types.transfer transaction_value
+  | FA12TransferTransactionValue : Fa12Types.fa12_transfer -> Fa12Types.fa12_transfer transaction_value
   | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
 
 (* operation *)
@@ -40,7 +40,7 @@ module Tezos : sig
   val opt_key_hash_transaction : key_hash option -> tez -> key_hash option contract -> operation
   val tez_transaction : tez -> tez -> tez contract -> operation
   val nat_contract_transaction : nat contract -> tez -> nat contract contract -> operation
-  val fa12_transfer_transaction : Fa12Types.transfer -> tez -> Fa12Types.transfer contract -> operation
+  val fa12_transfer_transaction : Fa12Types.fa12_transfer -> tez -> Fa12Types.fa12_transfer contract -> operation
   val fa2_balance_of_response_transaction : Fa2Interface.fa2_balance_of_response list -> tez-> Fa2Interface.fa2_balance_of_response list contract -> operation
 
   val get_entrypoint_opt : string -> address -> 'parameter contract option

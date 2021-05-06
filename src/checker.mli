@@ -3,6 +3,7 @@ open Kit
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
+open Fa12Types
 open Fa2Interface
 
 (** Perform housekeeping tasks on the contract state. This includes:
@@ -27,6 +28,13 @@ val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
 (* FOR TESTING. *)
 val calculate_touch_reward : Ligo.timestamp -> kit
 (**/**)
+
+(*****************************************************************************)
+(**                            External calls                                *)
+(*****************************************************************************)
+
+val get_transfer_ctez_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 
 (*****************************************************************************)
 (**                            {1 BURROWS}                                   *)
