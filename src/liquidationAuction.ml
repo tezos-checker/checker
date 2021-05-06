@@ -449,9 +449,9 @@ let start_liquidation_auction_if_possible
         Some
           { contents = new_auction;
             state = Descending (start_value, !Ligo.Tezos.now); } in
-      let auctions_out = { auctions with current_auction = current_auction; } in
-      assert_liquidation_auction_invariants auctions_out;
-      auctions_out
+      let auctions = { auctions with current_auction = current_auction; } in
+      assert_liquidation_auction_invariants auctions;
+      auctions
 
 (** Compute the current threshold for a bid to be accepted. For a descending
   * auction this amounts to the reserve price (which is exponentially
@@ -492,7 +492,7 @@ let is_liquidation_auction_complete
 
 let complete_liquidation_auction_if_possible
     (auctions: liquidation_auctions): liquidation_auctions =
-  let auctions_out = match auctions.current_auction with
+  let auctions = match auctions.current_auction with
     | None -> auctions
     | Some curr -> begin
         match is_liquidation_auction_complete curr.state with
@@ -546,8 +546,8 @@ let complete_liquidation_auction_if_possible
           }
       end
   in
-  assert_liquidation_auction_invariants auctions_out;
-  auctions_out
+  assert_liquidation_auction_invariants auctions;
+  auctions
 
 (** Place a bid in the current auction. Fail if the bid is too low (must be at
   * least as much as the liquidation_auction_current_auction_minimum_bid. If
@@ -716,13 +716,13 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
              younger_auction = (None: liquidation_auction_id option);
              older_auction = (None: liquidation_auction_id option)}) in
 
-  let auctions_out =
+  let auctions =
     { auctions with
       completed_auctions = completed_auctions;
       avl_storage = storage
     } in
-  assert_liquidation_auction_invariants auctions_out;
-  auctions_out
+  assert_liquidation_auction_invariants auctions;
+  auctions
 
 let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * auction_outcome * liquidation_auctions =
   assert_liquidation_auction_invariants auctions;
@@ -731,7 +731,7 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
   (* When the auction has no slices left, we pop it from the linked list
    * of lots. We do not delete the auction itself from the storage, since
    * we still want the winner to be able to claim its result. *)
-  let auctions_out =
+  let auctions =
     if avl_is_empty auctions.avl_storage root
     then liquidation_auction_pop_completed_auction auctions root
     else auctions in
@@ -739,12 +739,12 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
     match avl_root_data auctions.avl_storage root with
     | None -> (Ligo.failwith error_NotACompletedSlice: auction_outcome)
     | Some outcome -> outcome in
-  assert_liquidation_auction_invariants auctions_out;
-  (contents, outcome, auctions_out)
+  assert_liquidation_auction_invariants auctions;
+  (contents, outcome, auctions)
 
 let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
   assert_liquidation_auction_invariants auctions;
-  let sold_tez, auctions_out = match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
+  let sold_tez, auctions = match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
     | Some outcome ->
       (* A winning bid can only be claimed when all the liquidation slices
        * for that lot is cleaned. *)
@@ -763,17 +763,17 @@ let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auc
       )
     | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
   in
-  assert_liquidation_auction_invariants auctions_out;
-  sold_tez, auctions_out
+  assert_liquidation_auction_invariants auctions;
+  sold_tez, auctions
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
   assert_liquidation_auction_invariants auctions;
-  let auctions_out =
+  let auctions =
     (start_liquidation_auction_if_possible price
        (complete_liquidation_auction_if_possible
           auctions)) in
-  assert_liquidation_auction_invariants auctions_out;
-  auctions_out
+  assert_liquidation_auction_invariants auctions;
+  auctions
 
 (*
  * - Cancel auction
