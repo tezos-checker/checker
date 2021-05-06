@@ -40,6 +40,8 @@ let gen_liquidation_slice_contents_list max_length=
 (* ========================================================================= *)
 (* Utils for working with liquidation slices and the linked list they form *)
 (* ========================================================================= *)
+
+(* Repeats input x n times *)
 let repeat n x =
   let rec append_duplicate max_length xs x =
     if (List.length xs) >= max_length then
@@ -49,6 +51,7 @@ let repeat n x =
   in
   append_duplicate (n+1) [] x
 
+(* Calculates the integer index of a given burrow slice pointer in the burrow_slices list *)
 let index_of_leaf auctions burrow_id leaf =
   let rec walk_with_index storage curr_index curr_leaf_ptr =
     if curr_leaf_ptr = leaf then
@@ -68,7 +71,7 @@ let index_of_leaf auctions burrow_id leaf =
 
 (* Gets all of the slices associated with burrow as a list *)
 let get_burrow_slices auctions burrow_id = match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
-  (* Note: returns slices in list where head is youngest slice *)
+  (* Note: returns slices in a list where head is youngest slice *)
   | Some burrow_slices ->
     fold_burrow_slices ~direction:FromYoungest (fun acc s -> List.append acc [s]) [] auctions.avl_storage burrow_slices
   | None -> []
@@ -108,12 +111,16 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auction_send_to_auction - preserves list properties"
+        ~name:"liquidation_auction_send_to_auction - inserts slice into burrow_slices list"
         ~count:property_test_count
         (QCheck.make (gen_liquidation_slice_contents_list 100))
       @@
       fun slice_contents_list ->  (
+        (* This test sends a random set of slices to auction and checks that the burrow slice list
+         * in the auction state is updated to include the new slice.
+        *)
         let _ = List.fold_left
+            (* For each input slice: *)
             (fun auctions slice_contents ->
                (* Send this slice to auction *)
                let auctions_out, new_slice = liquidation_auction_send_to_auction auctions slice_contents in
@@ -130,6 +137,7 @@ let suite =
                in
 
                assert_liquidation_auction_invariants auctions;
+               assert_liquidation_auction_invariants auctions_out;
                (* We should have inserted one element into our original list *)
                assert_equal ((List.length slices_in) + 1) (List.length slices_out) ~printer:string_of_int;
                (* Removing the new element from the list should produce the input list *)
@@ -147,16 +155,20 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auctions_cancel_slice - preserves list properties"
+        ~name:"liquidation_auctions_cancel_slice - removes slice from burrow_slices list"
         ~count:property_test_count
         (QCheck.make (QCheck.Gen.(pair (gen_liquidation_slice_contents_list 100) (float_bound_inclusive 1.))))
       @@
       fun (slice_contents_list, percent) ->  (
-        (* Cancelling a random element from the slice list *)
+        (* This test populates an auction queue with random slices and tests that
+         * canceling a random slice correctly removes the burrow slice list in the auction state.
+        *)
+        (* Setup: Populating an auction queue with random slices and noting a slice in the queue to pop for the test. *)
+        (* Pick a random element from the input slice list to cancel *)
         let i_to_pop = Float.(
             to_int (round (mul percent (float_of_int ((List.length slice_contents_list) - 1))))
           ) in
-        (* Populate the liquidation slice list, noting the pointer of the element we want to pop *)
+        (* Populate the liquidation auction queue, noting the pointer of the element we want to pop *)
         let auctions, _, slice_to_pop = List.fold_left
             (fun (a, curr_length, slice_to_pop) slice_contents ->
                let auctions_out, new_slice = liquidation_auction_send_to_auction a slice_contents in
@@ -209,21 +221,27 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"liquidation_auctions_pop_completed_slice - preserves list properties"
+        ~name:"liquidation_auctions_pop_completed_slice - removes slice from burrow_slices list"
         ~count:property_test_count
         (QCheck.make (QCheck.Gen.(pair (gen_liquidation_slice_contents_list 100) (float_bound_inclusive 1.))))
       @@
+      (* This test populates a completed auction with random slices and tests that
+       * popping a completed slice correctly removes the slice from the burrow slice list in the auction state.
+      *)
       fun (slice_contents_list, percent) ->  (
-        (* Cancelling a random element from the slice list *)
+        (* Setup: Populating a completed auction with random slices and noting a slice in the queue to pop for the test. *)
+        (* Pick a random element from the input slice list to pop *)
         let i_to_pop = Float.(
             to_int (round (mul percent (float_of_int ((List.length slice_contents_list) - 1))))
           ) in
-        (* Populate the liquidation slice list, noting the pointer of the element we want to pop *)
+        (* Populate the liquidation auction queue, noting the pointer of the element we want to pop *)
         let auctions, _, slice_to_pop = List.fold_left
             (fun (a, curr_length, slice_to_pop) slice_contents ->
                let auctions_out, new_slice = liquidation_auction_send_to_auction a slice_contents in
                if curr_length = i_to_pop then
-                 (* Ensure that the slice is associated with a completed auction *)
+                 (* For this test to succeeed, the slice must be associated with a completed auction.
+                  * Creating a completed auction manually here for simplicity.
+                 *)
                  let auction_ptr = (Avl.avl_find_root auctions_out.avl_storage new_slice) in
                  let avl_out = Avl.avl_modify_root_data auctions_out.avl_storage auction_ptr
                      (fun outcome -> match outcome with
