@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "huxian-py"
+version = "0.1.0"
+description = "foo"
+authors = ["Utku Demir <me@utdemir.com.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pytezos = "^3.1.0"
+eth-hash = "*"
+pytest-runner = "2.6.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
