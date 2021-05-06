@@ -58,10 +58,10 @@ let assert_checker_invariants (state: checker) : unit =
 (**                           EXTERNAL_CONTRACTS                             *)
 (* ************************************************************************* *)
 
-let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contracts): transfer Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez : transfer Ligo.contract option) with
+let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez : fa12_transfer Ligo.contract option) with
   | Some c -> c
-  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : transfer Ligo.contract)
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
 
 let[@inline] get_oracle_entrypoint (external_contracts: external_contracts): (Ligo.nat Ligo.contract) Ligo.contract =
   match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with

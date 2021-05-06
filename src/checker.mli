@@ -33,7 +33,7 @@ val calculate_touch_reward : Ligo.timestamp -> kit
 (**                            External calls                                *)
 (*****************************************************************************)
 
-val get_transfer_ctez_entrypoint : external_contracts -> transfer Ligo.contract
+val get_transfer_ctez_entrypoint : external_contracts -> fa12_transfer Ligo.contract
 val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 
 (*****************************************************************************)
