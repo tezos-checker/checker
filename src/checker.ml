@@ -556,10 +556,9 @@ let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liqui
 
 let[@inline] entrypoint_receive_slice_from_burrow (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in (* only accept from burrows! *)
-  let () = if !Ligo.Tezos.sender = burrow_address burrow
-    then ()
-    else Ligo.failwith error_AuthenticationError in
-  (([]: LigoOp.operation list), state)
+  if !Ligo.Tezos.sender = burrow_address burrow
+  then (([]: LigoOp.operation list), state)
+  else (Ligo.failwith error_AuthenticationError : (LigoOp.operation list * checker))
 
 (* ************************************************************************* *)
 (**                              TOUCHING                                    *)
