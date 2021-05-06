@@ -119,10 +119,18 @@ let assert_burrow_slices_invariants auctions burrow_id =
     | Some bs -> bs
     | None -> failwith ("could not find burrow slice in auctions for burrow")
   in
+  (* Traversing the list from opposite directions should return the same elements in opposite order *)
   let collect_slices = fun acc slice -> List.append acc [slice] in
   let slices_using_oldest_ptr = fold_burrow_slices ~direction:FromOldest collect_slices [] auctions.avl_storage burrow_slices in
   let slices_using_youngest_ptr = fold_burrow_slices ~direction:FromYoungest collect_slices [] auctions.avl_storage burrow_slices in
-  assert (slices_using_oldest_ptr = (List.rev slices_using_youngest_ptr))
+  assert (slices_using_oldest_ptr = (List.rev slices_using_youngest_ptr));
+
+  (* FIXME: Assert that no slices exist in auctions.queued_slices, auctions.completed_auctions, and auctions.current_auction which
+   * are missing from the burrow_slices list.
+  *)
+
+  (* All slices in this list should belong to the same burrow *)
+  List.iter (fun slice -> assert (slice.burrow = burrow_id)) slices_using_oldest_ptr
 
 (* Checks if some invariants of auctions structure holds. *)
 let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : unit =
