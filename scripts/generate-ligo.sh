@@ -11,7 +11,7 @@ mkdir -p "$target_dir"
 
 inputs=(
   error
-  fa12Types
+  fa12Interface
   ptr
   common
   ratio

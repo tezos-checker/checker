@@ -3,7 +3,7 @@ open Kit
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
-open Fa12Types
+open Fa12Interface
 open Fa2Interface
 
 (** Perform housekeeping tasks on the contract state. This includes:

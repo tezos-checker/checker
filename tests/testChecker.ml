@@ -321,7 +321,7 @@ let suite =
       (* There should be only one operation, fetching ctez_amount from the ctez
          contract, like this:
            [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 47953068211264416255 },
+               ( { Fa12Interface.address_from = alice_addr; address_to = self_address; value = 47953068211264416255 },
                  0mutez,
                  Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
                )
@@ -359,7 +359,7 @@ let suite =
       (* There should be only one operation, fetching ctez_amount from the ctez
          contract, like this:
            [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address;  value = 2261248476694080604328 },
+               ( { Fa12Interface.address_from = alice_addr; address_to = self_address;  value = 2261248476694080604328 },
                  0mutez,
                  Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
                )
@@ -537,7 +537,7 @@ let suite =
       (* There should be only one operation, fetching ctez_amount from the ctez
          contract, like this:
            [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 1335094 },
+               ( { Fa12Interface.address_from = alice_addr; address_to = self_address; value = 1335094 },
                  0mutez,
                  Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
                )

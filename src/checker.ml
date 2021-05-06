@@ -13,7 +13,7 @@ open Constants
 open BurrowTypes
 open CheckerTypes
 open Error
-open Fa12Types
+open Fa12Interface
 open Fa2Interface
 open Mem
 

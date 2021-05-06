@@ -10,7 +10,7 @@ type 'parameter transaction_value = (* GADT *)
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
   | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
-  | FA12TransferTransactionValue : Fa12Types.fa12_transfer -> Fa12Types.fa12_transfer transaction_value
+  | FA12TransferTransactionValue : Fa12Interface.fa12_transfer -> Fa12Interface.fa12_transfer transaction_value
   | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
 
 type address_and_nat = (address * nat)
@@ -31,7 +31,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
   | TezTransactionValue tz -> string_of_tez tz
   | NatContractTransactionValue c -> show_contract c
-  | FA12TransferTransactionValue t -> Fa12Types.show_fa12_transfer t
+  | FA12TransferTransactionValue t -> Fa12Interface.show_fa12_transfer t
   | FA2BalanceOfResponseTransactionValue xs -> Fa2Interface.show_fa2_balance_of_response_list xs
 
 (* operation *)
