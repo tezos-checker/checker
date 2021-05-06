@@ -3,29 +3,32 @@ open Kit
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
+open Fa12Interface
 open Fa2Interface
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
-    - Updating cfmm parameters (e.g. adding accrued burrowing fees to it)
-    - Update auction-related info (e.g. start a new auction)
-    - NOTE: the list is not exhaustive at the moment.
+    - Accruing burrowing fees to the cfmm
+    - Updating auction-related info (completing an old / starting a new auction)
+    - Processing a limited number of liquidation slices from completed auctions
+    - Updating the index by consulting the oracle
 *)
 val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 
 (**/**)
-(* FOR TESTING. *)
+(* ONLY EXPOSED FOR TESTING REASONS. *)
 val assert_checker_invariants : checker -> unit
-(**/**)
-
-(**/**)
-(* FOR TESTING. *)
 val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
+val calculate_touch_reward : Ligo.timestamp -> kit
 (**/**)
 
+(*****************************************************************************)
+(*                            External calls                                 *)
+(*****************************************************************************)
+
 (**/**)
-(* FOR TESTING. *)
-val calculate_touch_reward : Ligo.timestamp -> kit
+val get_transfer_ctez_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 (**/**)
 
 (*****************************************************************************)
@@ -37,6 +40,8 @@ val calculate_touch_reward : Ligo.timestamp -> kit
     creation deposit.
 
     Parameters:
+    - A new ID to be used for the newly-created burrow, that is distinct from
+      all previously-used ones for this burrow owner
     - An optional delegate address for the freshly-originated burrow contract
 *)
 val entrypoint_create_burrow : checker * (Ligo.nat * Ligo.key_hash option) -> (LigoOp.operation list * checker)
@@ -195,24 +200,41 @@ val entrypoint_remove_liquidity : checker * (Ligo.nat * ctez * kit * Ligo.timest
 (**                      {1 LIQUIDATION AUCTIONS}                            *)
 (*****************************************************************************)
 
-(** Bid in current liquidation auction. Fail if the auction is closed, or if the bid is
-    too low. If successful, return a ticket which can be used to
-    reclaim the kit when outbid. *)
+(** Bid in the current liquidation auction. Fail if there is no ongoing
+    auction, or if the bid is too low.
+
+    Parameters:
+    - The amount of kit to be bid
+*)
 val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
 
-(** Claim a winning bid for the current or a completed liquidation auction. *)
+(** Claim the rewards of a completed liquidation auction. Fails if the sender
+    is not the auction winner, if the auction is still ongoing, or if the
+    completed auction still has unprocessed liquidation slices.
+
+    Parameters:
+    - The id of the completed auction
+*)
 val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id -> LigoOp.operation list * checker
 
-(** Receive a liquidation slice from a burrow; we gather the slices in the
-    checker contract, and the checker contract is responsible for transfering
-    the lot to the liquidation auction winner. *)
+(** (INTERNAL) Receive a liquidation slice (tez) from a burrow; we gather the
+    slices in the checker contract, and the checker contract is responsible for
+    transfering the lot to the liquidation auction winner.
+
+    Parameters:
+    - The ID of the burrow sending the slice
+*)
 val entrypoint_receive_slice_from_burrow : checker * burrow_id -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                            {1 ORACLE}                                    *)
 (*****************************************************************************)
 
-(** Receive a price from the oracle. *)
+(** (INTERNAL) Receive a price from the oracle.
+
+    Parameters:
+    - The current index, as a fixedpoint with a scaling factor of 1_000_000
+*)
 val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)

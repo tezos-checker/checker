@@ -40,7 +40,7 @@
   BurrowTypes
   Ligo
   LigoOp
-  Fa12Types
+  Fa12Interface
   Fa2Interface
   Error
   Common)

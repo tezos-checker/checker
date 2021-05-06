@@ -314,20 +314,19 @@ let suite =
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
+      let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
       let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
-      (* There should be only one operation, fetching ctez_amount from the ctez
-         contract, like this:
-           [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 47953068211264416255 },
-                 0mutez,
-                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
-               )
-           ]
-         FIXME: explicitly test this.
-      *)
+      begin match ops with
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+          begin
+            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
+          end
+        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+      end;
 
       Ligo.geq_nat_nat
         senders_new_mukit
@@ -351,21 +350,20 @@ let suite =
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
+      let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
       let checker_cfmm_new_mukit = kit_to_mukit_nat checker.cfmm.kit in
       let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
-      (* There should be only one operation, fetching ctez_amount from the ctez
-         contract, like this:
-           [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address;  value = 2261248476694080604328 },
-                 0mutez,
-                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
-               )
-           ]
-         FIXME: explicitly test this.
-      *)
+      begin match ops with
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+          begin
+            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
+          end
+        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+      end;
 
       Ligo.eq_nat_nat
         (Ligo.add_nat_nat checker_cfmm_old_mukit senders_old_mukit)
@@ -532,18 +530,17 @@ let suite =
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
+      let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
 
-      (* There should be only one operation, fetching ctez_amount from the ctez
-         contract, like this:
-           [ Transaction
-               ( { Fa12Types.address_from = alice_addr; address_to = self_address; value = 1335094 },
-                 0mutez,
-                 Contract KT1QYTVYqpnTDR56uY42cNp4GNEGU2oMJeBr%transfer
-               )
-           ]
-         FIXME: explicitly test this.
-      *)
+      begin match ops with
+        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+          begin
+            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal (Ligo.abs (Common.tez_to_mutez tez_provided)) transfer.value ~printer:Ligo.string_of_nat
+          end
+        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+      end;
 
       let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 

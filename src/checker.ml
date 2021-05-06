@@ -13,7 +13,7 @@ open Constants
 open BurrowTypes
 open CheckerTypes
 open Error
-open Fa12Types
+open Fa12Interface
 open Fa2Interface
 open Mem
 
@@ -53,6 +53,20 @@ let assert_checker_invariants (state: checker) : unit =
     )
     (Ligo.Big_map.bindings state.burrows)
 (* END_OCAML *)
+
+(* ************************************************************************* *)
+(**                           EXTERNAL_CONTRACTS                             *)
+(* ************************************************************************* *)
+
+let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez : fa12_transfer Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
+
+let[@inline] get_oracle_entrypoint (external_contracts: external_contracts): (Ligo.nat Ligo.contract) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint: (Ligo.nat Ligo.contract) Ligo.contract)
 
 (* ************************************************************************* *)
 (**                               BURROWS                                    *)
@@ -412,9 +426,10 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
       address_to = checker_address;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+        LigoOp.Tezos.fa12_transfer_transaction
+          transfer (Ligo.tez_from_literal "0mutez")
+          (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -434,9 +449,11 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -454,9 +471,11 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
       address_to = checker_address;
       value = ctez_to_muctez_nat ctez_deposited;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -477,9 +496,11 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" state.external_contracts.ctez : transfer Ligo.contract option) with
-    | Some c -> (LigoOp.Tezos.fa12_transfer_transaction transfer (Ligo.tez_from_literal "0mutez") c)
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : LigoOp.operation) in
+  let op =
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer
+      (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
   ( [op],
     { state with
       cfmm = updated_cfmm;
@@ -535,10 +556,9 @@ let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liqui
 
 let[@inline] entrypoint_receive_slice_from_burrow (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   let burrow = find_burrow state.burrows burrow_id in (* only accept from burrows! *)
-  let () = if !Ligo.Tezos.sender = burrow_address burrow
-    then ()
-    else Ligo.failwith error_AuthenticationError in
-  (([]: LigoOp.operation list), state)
+  if !Ligo.Tezos.sender = burrow_address burrow
+  then (([]: LigoOp.operation list), state)
+  else (Ligo.failwith error_AuthenticationError : (LigoOp.operation list * checker))
 
 (* ************************************************************************* *)
 (**                              TOUCHING                                    *)
@@ -668,10 +688,11 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
     let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
       | Some cb -> cb
       | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-    let oracle = match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint state.external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
-      | Some c -> c
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint : (Ligo.nat Ligo.contract) Ligo.contract) in
-    let op = LigoOp.Tezos.nat_contract_transaction cb (Ligo.tez_from_literal "0mutez") oracle in
+    let op =
+       LigoOp.Tezos.nat_contract_transaction
+         cb
+         (Ligo.tez_from_literal "0mutez")
+         (get_oracle_entrypoint state.external_contracts)  in
     let ops = (op :: ops) in (* FIXME: op should be at the end, not the beginning *)
 
     (ops, state)
