@@ -10,6 +10,7 @@ type burrow_liquidation_slices =
   { oldest_slice: leaf_ptr;
     youngest_slice: leaf_ptr
   }
+[@@deriving show]
 
 type liquidation_auction_state =
   | Descending of (kit * Ligo.timestamp)
