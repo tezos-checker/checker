@@ -77,7 +77,7 @@ open Constants
 open Common
 open LiquidationAuctionTypes
 open Error
-
+open DoublyLinkedLists
 
 (* BEGIN_OCAML *)
 
@@ -187,39 +187,43 @@ let liquidation_auction_send_to_auction
      >= max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
-    let old_burrow_slices = Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
+    let burrow_slices = SliceList.from_auction_state auctions contents.burrow in
+    let storage, burrow_slices, (Element (ret, _)) = SliceList.append burrow_slices auctions.avl_storage auctions.queued_slices contents in
+    let state = {auctions with avl_storage=storage} in
+    (SliceList.to_auction_state state burrow_slices, ret)
+(* let old_burrow_slices = Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in *)
 
-    let slice = {
-      contents = contents;
-      older = (
-        match old_burrow_slices with
-        | None -> (None : leaf_ptr option)
-        | Some i -> Some i.youngest_slice
-      );
-      younger = (None: leaf_ptr option);
-    } in
+(* let slice = {
+   contents = contents;
+   older = (
+    match old_burrow_slices with
+    | None -> (None : leaf_ptr option)
+    | Some i -> Some i.youngest_slice
+   );
+   younger = (None: leaf_ptr option);
+   } in *)
 
-    let (new_storage, ret) =
-      avl_push auctions.avl_storage auctions.queued_slices slice Left in
+(* let (new_storage, ret) =
+   avl_push auctions.avl_storage auctions.queued_slices slice Left in *)
 
-    (* Fixup the previous youngest pointer since the newly added slice
-     * is even younger.
-    *)
-    let new_storage, new_burrow_slices = (
-      match old_burrow_slices with
-      | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
-      | Some old_slices ->
-        ( mem_update
-            new_storage
-            (ptr_of_leaf_ptr old_slices.youngest_slice)
-            (fun (older: node) ->
-               let older = node_leaf older in
-               Leaf { older with value = { older.value with younger = Some ret; }; }
-            )
-        , { old_slices with youngest_slice = ret }
+(* Fixup the previous youngest pointer since the newly added slice
+ * is even younger.
+*)
+(* let new_storage, new_burrow_slices = (
+   match old_burrow_slices with
+   | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
+   | Some old_slices ->
+    ( mem_update
+        new_storage
+        (ptr_of_leaf_ptr old_slices.youngest_slice)
+        (fun (older: node) ->
+           let older = node_leaf older in
+           Leaf { older with value = { older.value with younger = Some ret; }; }
         )
-    ) in
-
+    , { old_slices with youngest_slice = ret }
+    )
+   ) in *)
+(*
     let new_state =
       { auctions with
         avl_storage = new_storage;
@@ -230,7 +234,7 @@ let liquidation_auction_send_to_auction
             auctions.burrow_slices;
       } in
     assert_liquidation_auction_invariants new_state;
-    (new_state, ret)
+    (new_state, ret) *)
 
 (** Split a liquidation slice into two. The first of the two slices is the
   * "older" of the two (i.e. it is the one to be included in the auction we are
