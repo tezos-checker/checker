@@ -32,6 +32,7 @@
   Burrow
   Cfmm
   CfmmTypes
+  DoublyLinkedLists
   LiquidationAuction
   LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes
