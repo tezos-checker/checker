@@ -24,7 +24,7 @@ type parameters =
   }
 [@@deriving show]
 
-(** Initial state of the parameters. TODO: Contents TBD. *)
+(** Initial state of the parameters. *)
 let initial_parameters : parameters =
   { q = fixedpoint_one;
     index = Ligo.tez_from_literal "1_000_000mutez";
@@ -34,10 +34,8 @@ let initial_parameters : parameters =
     drift_derivative = fixedpoint_zero;
     burrow_fee_index = fixedpoint_one;
     imbalance_index = fixedpoint_one;
-    (* Cannot be zero because then it stays
-     * zero forever; only multiplications occur. *)
-    outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "1n");
-    circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1n");
+    outstanding_kit = kit_zero;
+    circulating_kit = kit_zero;
     last_touched = !Ligo.Tezos.now;
   }
 
