@@ -479,7 +479,11 @@ let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: 
     circulating_kit = kit_add parameters.circulating_kit kit;
   }
 
-(** Remove some kit from the total amount of kit required to close all burrows. *)
-let[@inline] remove_outstanding_kit (parameters: parameters) (kit: kit) : parameters =
+(** Remove some kit from the total amount of kit required to close all burrows
+    and the kit in circulation. This is the case when a burrow owner burns kit. *)
+let[@inline] remove_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (parameters.outstanding_kit >= kit);
-  { parameters with outstanding_kit = kit_sub parameters.outstanding_kit kit; }
+  { parameters with
+    outstanding_kit = kit_sub parameters.outstanding_kit kit;
+    circulating_kit = kit_sub parameters.circulating_kit kit;
+  }

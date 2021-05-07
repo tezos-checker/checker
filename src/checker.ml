@@ -194,10 +194,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let state =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-     parameters =
-       remove_outstanding_kit
-         (remove_circulating_kit state.parameters kit)
-         kit;
+     parameters = remove_outstanding_and_circulating_kit state.parameters kit;
      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit);
     } in
   (([]: LigoOp.operation list), state)
