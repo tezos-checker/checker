@@ -310,7 +310,7 @@ let touch_liquidation_slice
     (auctions: liquidation_auctions)
     (state_burrows: burrow_map)
     (leaf_ptr: leaf_ptr)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
 
   let _ = ensure_valid_leaf_ptr auctions.avl_storage leaf_ptr in
 
@@ -362,20 +362,27 @@ let touch_liquidation_slice
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" (burrow_address burrow): Ligo.tez Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_transaction slice.tez (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
-  ((op :: ops), auctions, state_burrows, kit_to_burn)
+  ((op :: ops), auctions, state_burrows, kit_to_repay, kit_to_burn)
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
  * computed are independent from each other, this needs not be a problem. *)
 let rec touch_liquidation_slices_rec
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * leaf_ptr list)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
   match slices with
-  | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+  | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
   | x::xs ->
-    let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+    let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
       touch_liquidation_slice ops state_liquidation_auctions state_burrows x in
-    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs)
+    touch_liquidation_slices_rec
+      ( new_ops,
+        new_state_liquidation_auctions,
+        new_state_burrows,
+        kit_add old_kit_to_repay new_kit_to_repay,
+        kit_add old_kit_to_burn new_kit_to_burn,
+        xs
+      )
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
@@ -394,9 +401,11 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       external_contracts = state_external_contracts;
     } = state in
 
-  let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, slices) in
-  let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
+  let new_ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
+    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, kit_zero, slices) in
+  let state_parameters =
+    let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
+    remove_circulating_kit state_parameters kit_to_burn in
 
   let new_state =
     { burrows = state_burrows;
@@ -587,17 +596,24 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * the order the input slices were processed in). However, since the operations
  * computed are independent from each other, this needs not be a problem. *)
 let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * int)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * int)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
   if maximum <= 0 then
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
   else
     match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
     | Some leaf ->
-      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
         touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
-      touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
+      touch_oldest
+        ( new_ops,
+          new_state_liquidation_auctions,
+          new_state_burrows,
+          kit_add old_kit_to_repay new_kit_to_repay,
+          kit_add old_kit_to_burn new_kit_to_burn,
+          maximum - 1
+        )
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order in which the things are expected to happen). However, all inputs
@@ -665,9 +681,11 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           fa2_state = state_fa2_state;
           external_contracts = state_external_contracts;
         } = state in
-      let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-        touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
-      let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
+      let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
+        touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
+      let state_parameters =
+        let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
+        remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
           cfmm = state_cfmm;
