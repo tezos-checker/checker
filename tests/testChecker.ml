@@ -17,6 +17,8 @@ module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
+let checker_address = !Ligo.Tezos.self_address
+
 let empty_checker =
   initial_checker
     { ctez = Ligo.address_of_string "ctez_addr";
@@ -322,7 +324,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -359,7 +361,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -408,7 +410,7 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
             transfer.value
           end
@@ -461,7 +463,7 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
             transfer.value
           end
@@ -536,7 +538,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (Ligo.abs (Common.tez_to_mutez tez_provided)) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -641,7 +643,7 @@ let suite =
        let ctez = match ops with
          | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
            begin
-             assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+             assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
              transfer.value
            end
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)

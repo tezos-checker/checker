@@ -1,9 +1,6 @@
 (* Oracle data *)
 let oracle_entrypoint : string = "%getPrice"
 
-(* Tezos utilities *)
-let checker_address : Ligo.address = !Ligo.Tezos.self_address
-
 (* OPERATIONS ON int *)
 let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
 let max_int (x: Ligo.int) (y: Ligo.int) = if Ligo.geq_int_int x y then x else y

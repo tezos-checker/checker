@@ -133,7 +133,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
       )
       delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
-      {checker_address = checker_address; burrow_id = burrow_id; } in
+      {checker_address = !Ligo.Tezos.self_address; burrow_id = burrow_id; } in
 
   let burrow = burrow_create state.parameters burrow_address !Ligo.Tezos.amount delegate_opt in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
@@ -429,7 +429,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
   let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctez min_kit_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
-      address_to = checker_address;
+      address_to = !Ligo.Tezos.self_address;
       value = ctez_to_muctez_nat ctez;
     } in
   let op =
@@ -451,7 +451,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
   let _ = ensure_no_tez_given () in
   let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctez_expected deadline in
   let transfer =
-    { address_from = checker_address;
+    { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
@@ -474,7 +474,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
     cfmm_add_liquidity state.cfmm ctez_deposited max_kit_deposited min_lqt_minted deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
-      address_to = checker_address;
+      address_to = !Ligo.Tezos.self_address;
       value = ctez_to_muctez_nat ctez_deposited;
     } in
   let op =
@@ -498,7 +498,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
   let (ctez, kit_tokens, updated_cfmm) =
     cfmm_remove_liquidity state.cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   let transfer =
-    { address_from = checker_address;
+    { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
