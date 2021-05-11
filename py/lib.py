@@ -105,11 +105,18 @@ def deploy_ctez(tz, ctez_dir):
           os.path.join(tmpdir, "deploy.sh")
         ], cwd=ctez_dir)
 
-        addr = subprocess.check_output(
-          tc_cmd + [ "show", "known", "contract", "fa12_ctez" ]
-        ).decode("utf-8").strip()
+        def get_ctez_contract(c):
+           addr = subprocess.check_output(
+             tc_cmd + [ "show", "known", "contract", c ]
+           ).decode("utf-8").strip()
+           return tz.contract(addr)
 
-        return tz.contract(addr)
+        return {
+          "ctez": get_ctez_contract("ctez"),
+          "fa12_ctez": get_ctez_contract("fa12_ctez"),
+          "cfmm": get_ctez_contract("cfmm"),
+          "fa12_lqt": get_ctez_contract("fa12_lqt"),
+        }
 
 
 

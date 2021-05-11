@@ -29,9 +29,9 @@ checker = deploy_checker(
   tz,
   checker_dir="../generated/michelson",
   oracle=oracle.context.address,
-  ctez=ctez.context.address
+  ctez=ctez["fa12_ctez"].context.address
 )
 
-print(checker)
+print("Checker deployed to address:", checker.context.address)
 
 print("done")
