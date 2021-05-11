@@ -16,3 +16,5 @@ _opam
 # editors
 .vscode
 /result
+
+__pycache__
