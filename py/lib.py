@@ -1,5 +1,9 @@
 import os
+import re
 import json
+import shlex
+import tempfile
+import subprocess
 from pprint import pprint
 
 import pytezos
@@ -58,3 +62,54 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
     )
 
     return checker
+
+def deploy_ctez(tz, ctez_dir):
+    with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
+        os.environ["TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER"] = "yes"
+        os.mkdir(os.path.join(tmpdir, "tezos-client"))
+        tc_cmd = [
+          "tezos-client",
+          "--base-dir", os.path.join(tmpdir, "tezos-client"),
+          "--endpoint", tz.shell.node.uri
+        ]
+
+        subprocess.check_call(tc_cmd + ["bootstrapped"])
+        subprocess.check_call(
+          tc_cmd + [
+            "import", "secret", "key",
+            "bootstrap1",
+            "unencrypted:{}".format(tz.context.key.secret_key())
+        ])
+
+        with open(os.path.join(ctez_dir, "deploy.sh"), "r") as deploy_script:
+            with open(os.path.join(tmpdir, "deploy.sh"), "w") as new_deploy_script:
+                new = deploy_script.read()
+
+                new = re.sub(
+                  "^TZC=.*",
+                  "TZC=\"{}\"".format(shlex.join(tc_cmd)),
+                  new,
+                  flags=re.MULTILINE
+                )
+
+                new = re.sub(
+                  ".*create mockup.*", "",
+                  new,
+                  flags=re.MULTILINE
+                )
+
+                new_deploy_script.write(new)
+
+        subprocess.check_call([
+          "bash",
+          os.path.join(tmpdir, "deploy.sh")
+        ], cwd=ctez_dir)
+
+        addr = subprocess.check_output(
+          tc_cmd + [ "show", "known", "contract", "fa12_ctez" ]
+        ).decode("utf-8").strip()
+
+        return tz.contract(addr)
+
+
+

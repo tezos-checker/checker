@@ -11,6 +11,12 @@ tz = pytezos.pytezos.using(
 )
 tz.loglevel = logging.WARN
 
+print("Deploying ctez contract.")
+ctez = deploy_ctez(
+  tz,
+  ctez_dir="../vendor/ctez"
+)
+
 print("Deploying the mock oracle.")
 oracle = deploy_contract(
   tz,
@@ -23,7 +29,7 @@ checker = deploy_checker(
   tz,
   checker_dir="../generated/michelson",
   oracle=oracle.context.address,
-  ctez="bar"
+  ctez=ctez.context.address
 )
 
 print(checker)
