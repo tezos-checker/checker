@@ -15,7 +15,7 @@
    (:standard -warn-error -A -w -53))))
 
 (library
- (name huxian)
+ (name checker)
  (public_name src)
  (modules
   Checker

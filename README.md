@@ -1,6 +1,6 @@
 [![Build Status](https://github.com/tezos-checker/huxian/workflows/CI/badge.svg)](https://github.com/tezos-checker/huxian/actions)
 
-# Huxian
+# Checker
 
 * Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
 * The source code lives in the [src](./src) folder.

@@ -53,7 +53,7 @@ in
   michelson =
     let pkgs = pkgsLinux;
     in pkgs.stdenv.mkDerivation {
-         name = "huxian-michelson";
+         name = "checker-michelson";
          buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
          src =
            let filter =
@@ -62,7 +62,7 @@ in
            in pkgsHost.lib.cleanSourceWith {
                 inherit filter;
                 src = ./.;
-                name = "huxian-source";
+                name = "checker-source";
               };
          buildPhase = ''
            export HOME=$(mktemp -d)
@@ -82,7 +82,7 @@ in
   shell =
     let pkgs = pkgsHost;
     in pkgs.mkShell {
-         name = "huxian-shell";
+         name = "checker-shell";
          buildInputs =
            # ligo does not compile on macos, also we don't want to
            # compile it in CI
