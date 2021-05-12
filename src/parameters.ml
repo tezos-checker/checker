@@ -58,48 +58,51 @@ let liquidation_price (p: parameters) : ratio =
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
-    (burrowed) and the amount of kit that are currently in circulation,
-    compute the current imbalance adjustment (can be either a fee or a
-    bonus).
-
-    If we call "burrowed" the total amount of kit necessary to close all
-    existing burrows, and "circulating" the total amount of kit in circulation,
-    then the imbalance fee/bonus is calculated as follows (per year):
+    (outstanding) and the amount of kit that is currently in circulation
+    (circulating), compute the current imbalance adjustment using the following
+    formula:
     {[
-      min((circulating - burrowed) / burrowed,   0.20) * (1/0.20) * 0.05 , if circulating >= burrowed
-      max((circulating - burrowed) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
+      clamp
+        ( imbalance_scaling_factor * (circulating - outstanding) / circulating,
+          -imbalance_limit,
+          +imbalance_limit
+        )
     ]}
 
     or, equivalently,
     {[
-      min(5 * (circulating - burrowed),   burrowed) / (20 * burrowed) , if circulating >= burrowed
-      max(5 * (circulating - burrowed), - burrowed) / (20 * burrowed) , otherwise
+      min (imbalance_scaling_factor * (circulating - outstanding) / circulating, +imbalance_limit), if circulating >= outstanding
+      max (imbalance_scaling_factor * (circulating - outstanding) / circulating, -imbalance_limit), if circulating < outstanding
     ]}
 
     Edge cases:
-    - [burrowed = 0] and [circulating = 0].
+    - [circulating = 0] and [outstanding = 0].
         The imbalance fee/bonus is 0.
-    - [burrowed = 0] and [circulating > 0].
-        Well, burrowed is "infinitely" smaller than circulating so let's
-        saturate the imbalance to 5 cNp.
-    NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
-      doing conditionals and save gas costs. Messes only slightly with the
-      computations, but can save quite some gas. *)
-let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
-  let burrowed = kit_to_mukit_int burrowed in
+    - [circulating = 0] and [outstanding > 0].
+        Well, outstanding is "infinitely" greater than circulating so let's
+        saturate the imbalance to -imbalance_limit.
+*)
+let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
+  let outstanding = kit_to_mukit_int outstanding in
   let circulating = kit_to_mukit_int circulating in
-  if burrowed = Ligo.int_from_literal "0" && circulating = Ligo.int_from_literal "0" then
+  let { num = num_il; den = den_il; } = imbalance_limit in
+
+  if circulating = Ligo.int_from_literal "0" && outstanding = Ligo.int_from_literal "0" then
     zero_ratio
-  else if burrowed = Ligo.int_from_literal "0" && circulating <> Ligo.int_from_literal "0" then
-    make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")
-  else if Ligo.geq_int_int circulating burrowed then
-    make_real_unsafe
-      (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int circulating burrowed)) burrowed)
-      (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
-  else (* circulating < burrowed *)
-    make_real_unsafe
-      (neg_int (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int burrowed circulating)) burrowed))
-      (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
+  else if circulating = Ligo.int_from_literal "0" && outstanding <> Ligo.int_from_literal "0" then
+    make_real_unsafe (neg_int num_il) den_il
+  else
+    let { num = num_isf; den = den_isf; } = imbalance_scaling_factor in
+    let denominator = Ligo.mul_int_int den_isf circulating in
+
+    if Ligo.geq_int_int circulating outstanding then
+      make_real_unsafe
+        (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int circulating outstanding)) den_il) (Ligo.mul_int_int num_il denominator))
+        (Ligo.mul_int_int den_il denominator)
+    else (* circulating < outstanding *)
+      make_real_unsafe
+        (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
+        (Ligo.mul_int_int den_il denominator)
 
 (** Compute the current adjustment index. Basically this is the product of
     the burrow fee index and the imbalance adjustment index.
@@ -329,9 +332,9 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
     )
 
 (** Calculate the current imbalance index based on the last amount of
-    outstanding (burrowed) kit, the last amount of circulating kit, the last
-    imbalance index, and the number of seconds that have elapsed, using the
-    following formula:
+    outstanding kit, the last amount of circulating kit, the last imbalance
+    index, and the number of seconds that have elapsed, using the following
+    formula:
     {[
       imbalance_index_{i+1} = FLOOR (
         imbalance_index_i * (1 + imbalance * (t_{i+1} - t_i) / <seconds_in_a_year>)

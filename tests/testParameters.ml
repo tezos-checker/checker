@@ -123,93 +123,103 @@ let test_compute_drift_derivative_high_negative_acceleration =
 
 let test_compute_imbalance_all_zero =
   "test_compute_imbalance_all_zero" >:: fun _ ->
-    let burrowed    = kit_zero in
+    let outstanding = kit_zero in
     let circulating = kit_zero in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       zero_ratio
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
-let test_compute_imbalance_zero_burrowed =
-  "test_compute_imbalance_zero_burrowed" >:: fun _ ->
-    let burrowed    = kit_zero in
+let test_compute_imbalance_zero_outstanding =
+  "test_compute_imbalance_zero_outstanding" >:: fun _ ->
+    let outstanding = kit_zero in
     let circulating = kit_one in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
+
+let test_compute_imbalance_zero_circulating =
+  "test_compute_imbalance_zero_circulating" >:: fun _ ->
+    let outstanding = kit_one in
+    let circulating = kit_zero in
+    assert_equal
+      ~printer:show_ratio
+      ~cmp:eq_ratio_ratio
+      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       zero_ratio
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_001n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "833_333_334n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
-      (compute_imbalance burrowed circulating)
+      (make_ratio (Ligo.int_from_literal "-166666666") (Ligo.int_from_literal "3333333336")) (* JUST BELOW SATURATION *)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "800_000_000n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "833_333_333n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal   "833_333_334n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "800_000_001n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "83333333") (Ligo.int_from_literal "1666666668")) (* JUST BELOW SATURATION *)
-      (compute_imbalance burrowed circulating)
+      (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal   "833_333_333n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "800_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
-    let burrowed    = kit_of_mukit (Ligo.nat_from_literal             "1n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
       (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (compute_imbalance burrowed circulating)
+      (compute_imbalance outstanding circulating)
 
 (* ************************************************************************* *)
 (*                compute_imbalance (property-based tests)                   *)
@@ -657,7 +667,8 @@ let suite =
 
     (* compute_imbalance (unit tests) *)
     test_compute_imbalance_all_zero;
-    test_compute_imbalance_zero_burrowed;
+    test_compute_imbalance_zero_outstanding;
+    test_compute_imbalance_zero_circulating;
     test_compute_imbalance_equal;
 
     test_compute_imbalance_positive_small;
