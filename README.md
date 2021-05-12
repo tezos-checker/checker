@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/tzConnectBerlin/huxian/workflows/CI/badge.svg)](https://github.com/tzConnectBerlin/huxian/actions)
+[![Build Status](https://github.com/tezos-checker/huxian/workflows/CI/badge.svg)](https://github.com/tezos-checker/huxian/actions)
 
 # Huxian
 

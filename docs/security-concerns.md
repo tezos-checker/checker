@@ -8,7 +8,7 @@ the short term.
 
 We recently noticed that different token kinds in checker, though having
 different types in LIGO, could have the same type and representation in
-Michelson (see [issue](https://github.com/tzConnectBerlin/huxian/issues/34)).
+Michelson (see [issue](https://github.com/tezos-checker/huxian/issues/34)).
 Since this is not just about data that checker deals with internally, but
 refers to data sent over the wire, it is a serious hazard. For example, checker
 can issue a number of `kit` (e.g. via `%mintKit`) and send them to
@@ -17,7 +17,7 @@ both `kit` and `tez` (e.g. via `%removeLiquidity`).
 
 Hopefully this is easy to fix, by tagging each kind of token with a different
 runtime content (see
-[here](https://github.com/tzConnectBerlin/huxian/pull/41)).
+[here](https://github.com/tezos-checker/huxian/pull/41)).
 
 However, there might be more issues like this within checker, where we have
 assumed that some cases cannot occur, because they are ill-typed in LIGO. LIGO,
