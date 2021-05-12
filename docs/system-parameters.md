@@ -1,4 +1,3 @@
-
 # System Parameters
 
 A operational description of Checker's internal parameters, and operations on
@@ -172,12 +171,12 @@ but `imbalance_rate` varies, depending on the difference between
 `old_outstanding_kit` and `old_circulating_kit`:
 ```
 imbalance_rate =
-  min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
-  max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
+  min(5 * (circulating - burrowed),   burrowed) / (20 * burrowed) , if circulating >= burrowed
+  max(5 * (circulating - burrowed), - burrowed) / (20 * burrowed) , otherwise
 ```
 And in the edge cases the `imbalance_rate` is calculated as follows:
 * if `old_outstanding_kit = 0` and `old_circulating_kit = 0` then `imbalance_rate = 0`.
-* if `old_outstanding_kit = 0` and `old_circulating_kit > 0` then `imbalance_rate = -0.05`
+* if `old_outstanding_kit = 0` and `old_circulating_kit > 0` then `imbalance_rate = 0.05`
   (the outstanding kit is _infinitely_ smaller than the circulating kit, so the rate is saturated).
 
 ###  Intermediate `outstanding_kit`
