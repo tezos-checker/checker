@@ -232,5 +232,5 @@ parameters, we do not perform any of the above.
 * `seconds_in_a_day  = 86400 (= 24 * 60 * 60)`
 * `low_bracket  = 0.005`
 * `high_bracket = 0.05`
-* `imbalance_scaling_factor = 0.25`
+* `imbalance_scaling_factor = 0.75`
 * `imbalance_limit = 0.05`

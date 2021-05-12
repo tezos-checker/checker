@@ -164,17 +164,17 @@ let test_compute_imbalance_equal =
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "833_333_334n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_001n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-166666666") (Ligo.int_from_literal "3333333336")) (* JUST BELOW SATURATION *)
+      (make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
       (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "833_333_333n") in
+    let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
@@ -193,17 +193,17 @@ let test_compute_imbalance_negative_capped =
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "800_000_001n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_334n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
       ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "199999999") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
+      (make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
       (compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "800_000_000n") in
+    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_333n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_equal
       ~printer:show_ratio
