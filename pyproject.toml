@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "checker"
+version = "0.1.0"
+description = ""
+authors = [""]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+checker-client = { path = "./client" }
+checker-e2e = { path = "./e2e" }
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

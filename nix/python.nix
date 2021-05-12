@@ -1,11 +1,9 @@
-let sources = import ../nix/sources.nix {};
-in
-
-{ pkgs ? import sources.nixpkgs {} }:
+{ pkgs }:
 
 let
 poetryPkgs = pkgs.poetry2nix.mkPoetryPackages {
-  projectDir = ./.;
+  projectDir = ./../client;
+  poetrylock = ../poetry.lock;
   overrides = pkgs.poetry2nix.overrides.withDefaults (self: super: {
     # remove eth-hash dependency because eth-hash also depends on eth-utils causing a cycle.
     eth-utils = super.eth-utils.overridePythonAttrs (old: {
@@ -39,14 +37,15 @@ poetryPkgs = pkgs.poetry2nix.mkPoetryPackages {
     pytezos = super.pytezos.override (old: {
       buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libsodium ];
     });
+    # TODO: Upstream these overrides where possible.
   });
 };
 
 in
-pkgs.mkShell {
+
+{
   buildInputs = [
     (poetryPkgs.python.withPackages (_: poetryPkgs.poetryPackages))
-    pkgs.libsodium.dev
   ];
   shellHook = ''
     export LD_LIBRARY_PATH=${pkgs.libsodium}/lib

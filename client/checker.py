@@ -1,14 +1,28 @@
 import os
 import re
 import json
+import time
 import shlex
 import tempfile
+import threading
 import subprocess
 from pprint import pprint
 
 import pytezos
 
-def deploy_contract(tz, *, source_file, initial_storage):
+def _wait_or_bake(thing, bake):
+     if bake is None:
+        return thing.inject(min_confirmations=1, time_between_blocks=10)
+     else:
+        ret = thing.inject()
+        time.sleep(2)
+        bake()
+        time.sleep(2)
+        bake()
+        time.sleep(2)
+        return ret
+
+def deploy_contract(tz, *, source_file, initial_storage, bake=None):
     script = (
        pytezos.ContractInterface
          .from_file(source_file)
@@ -20,8 +34,8 @@ def deploy_contract(tz, *, source_file, initial_storage):
         .origination(script)
         .autofill()
         .sign()
-        .inject(min_confirmations=1, time_between_blocks=5)
     )
+    origination = _wait_or_bake(origination, bake)
 
     opg = tz.shell.blocks[origination["branch"]:].find_operation(origination["hash"])
     res = pytezos.operation.result.OperationResult.from_operation_group(opg)
@@ -29,13 +43,14 @@ def deploy_contract(tz, *, source_file, initial_storage):
     addr = res[0].originated_contracts[0]
     return tz.contract(addr)
 
-def deploy_checker(tz, checker_dir, *, oracle, ctez):
+def deploy_checker(tz, checker_dir, *, oracle, ctez, bake=None):
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
       tz,
       source_file=os.path.join(checker_dir, "main.tz"),
-      initial_storage=({}, { "unsealed": tz.key.public_key_hash() })
+      initial_storage=({}, { "unsealed": tz.key.public_key_hash() }),
+      bake=bake
     )
     print("Checker address: {}".format(checker.context.address))
 
@@ -47,24 +62,46 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
         print("Deploying: {}".format(fun["name"]))
         for chunk_no, chunk in enumerate(fun["chunks"]):
             arg = (int(fun["fn_id"]), "0x"+chunk)
-            (checker
-              .deployFunction(arg)
-              .as_transaction().autofill().sign()
-              .inject(min_confirmations=1, time_between_blocks=5)
+            _wait_or_bake(
+              (checker
+                .deployFunction(arg)
+                .as_transaction().autofill().sign()
+              ),
+              bake
             )
             print("  deployed: chunk {}.".format(chunk_no))
 
     print("Sealing.")
-    (checker
-       .sealContract((oracle, ctez))
-       .as_transaction().autofill().sign()
-       .inject(min_confirmations=1, time_between_blocks=5)
+    _wait_or_bake(
+      checker
+         .sealContract((oracle, ctez))
+         .as_transaction().autofill().sign(),
+      bake
     )
 
     return checker
 
-def deploy_ctez(tz, ctez_dir):
-    with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
+class BakeThread(threading.Thread):
+    def __init__(self, bake, *args, **kwargs):
+        threading.Thread.__init__(self, *args, **kwargs)
+        self._stop = threading.Event()
+        self.bake = bake
+
+    def run(self):
+        while not self._stop.is_set():
+            time.sleep(1)
+            self.bake()
+
+    def stop(self):
+        self._stop.set()
+        time.sleep(1)
+
+def deploy_ctez(tz, ctez_dir, bake=None):
+   if bake is not None:
+      bake_thread = BakeThread(bake)
+      bake_thread.start()
+
+   with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
         os.environ["TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER"] = "yes"
         os.mkdir(os.path.join(tmpdir, "tezos-client"))
         tc_cmd = [
@@ -110,6 +147,9 @@ def deploy_ctez(tz, ctez_dir):
              tc_cmd + [ "show", "known", "contract", c ]
            ).decode("utf-8").strip()
            return tz.contract(addr)
+
+        if bake is not None:
+            bake_thread.stop()
 
         return {
           "ctez": get_ctez_contract("ctez"),
