@@ -183,7 +183,7 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
 (** Calculate the current burrow fee index based on the last index and the
     number of seconds that have elapsed.
     {[
-      burrow_fee_index_{i+1} = FLOOR (burrow_fee_index_i * (1 + burrow_fee_percentage * (t_{i+1} - t_i)) / <seconds_in_a_year>)
+      burrow_fee_index_{i+1} = FLOOR (burrow_fee_index_i * (1 + burrow_fee_percentage * ((t_{i+1} - t_i) / <seconds_in_a_year>)))
     ]}
     Keep in mind that this formula means that the burrow fee index is
     ever-increasing. *)
