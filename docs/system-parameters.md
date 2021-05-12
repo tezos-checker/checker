@@ -1,4 +1,3 @@
-
 # System Parameters
 
 A operational description of Checker's internal parameters, and operations on
@@ -172,13 +171,22 @@ but `imbalance_rate` varies, depending on the difference between
 `old_outstanding_kit` and `old_circulating_kit`:
 ```
 imbalance_rate =
-  min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
-  max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
+  clamp
+    ( imbalance_scaling_factor * (circulating - outstanding) / circulating,
+      -imbalance_limit,
+      +imbalance_limit
+    )
+```
+or, equivalently:
+```
+imbalance_rate =
+  min (imbalance_scaling_factor * (circulating - outstanding) / circulating, +imbalance_limit), if circulating >= outstanding
+  max (imbalance_scaling_factor * (circulating - outstanding) / circulating, -imbalance_limit), if circulating < outstanding
 ```
 And in the edge cases the `imbalance_rate` is calculated as follows:
-* if `old_outstanding_kit = 0` and `old_circulating_kit = 0` then `imbalance_rate = 0`.
-* if `old_outstanding_kit = 0` and `old_circulating_kit > 0` then `imbalance_rate = -0.05`
-  (the outstanding kit is _infinitely_ smaller than the circulating kit, so the rate is saturated).
+* if `old_circulating_kit = 0` and `old_outstanding_kit = 0` then `imbalance_rate = 0`.
+* if `old_circulating_kit = 0` and `old_outstanding_kit > 0` then `imbalance_rate = -imbalance_limit`.
+  (the outstanding kit is _infinitely_ greater than the circulating kit, so the rate is saturated).
 
 ###  Intermediate `outstanding_kit`
 In order to compute the updates for the two remaining fields (`outstanding_kit`
@@ -224,3 +232,5 @@ parameters, we do not perform any of the above.
 * `seconds_in_a_day  = 86400 (= 24 * 60 * 60)`
 * `low_bracket  = 0.005`
 * `high_bracket = 0.05`
+* `imbalance_scaling_factor = 0.75`
+* `imbalance_limit = 0.05`

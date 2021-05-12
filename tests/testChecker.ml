@@ -911,7 +911,7 @@ let suite =
        let (ops, checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
        assert_equal
-         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_156_451mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
 
