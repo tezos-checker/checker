@@ -66,14 +66,14 @@ let liquidation_price (p: parameters) : ratio =
     existing burrows, and "circulating" the total amount of kit in circulation,
     then the imbalance fee/bonus is calculated as follows (per year):
     {[
-      min((burrowed - circulating) / burrowed,   0.20) * (1/0.20) * 0.05 , if burrowed >= circulating
-      max((burrowed - circulating) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
+      min((circulating - burrowed) / burrowed,   0.20) * (1/0.20) * 0.05 , if circulating >= burrowed
+      max((circulating - burrowed) / burrowed, - 0.20) * (1/0.20) * 0.05 , otherwise
     ]}
 
     or, equivalently,
     {[
-      min(5 * (burrowed - circulating),   burrowed) / (20 * burrowed) , if burrowed >= circulating
-      max(5 * (burrowed - circulating), - burrowed) / (20 * burrowed) , otherwise
+      min(5 * (circulating - burrowed),   burrowed) / (20 * burrowed) , if circulating >= burrowed
+      max(5 * (circulating - burrowed), - burrowed) / (20 * burrowed) , otherwise
     ]}
 
     Edge cases:
@@ -81,7 +81,7 @@ let liquidation_price (p: parameters) : ratio =
         The imbalance fee/bonus is 0.
     - [burrowed = 0] and [circulating > 0].
         Well, burrowed is "infinitely" smaller than circulating so let's
-        saturate the imbalance to -5 cNp.
+        saturate the imbalance to 5 cNp.
     NOTE: Alternatively: add (universally) 1mukit to the denominator to avoid
       doing conditionals and save gas costs. Messes only slightly with the
       computations, but can save quite some gas. *)
@@ -91,14 +91,14 @@ let[@inline] compute_imbalance (burrowed: kit) (circulating: kit) : ratio =
   if burrowed = Ligo.int_from_literal "0" && circulating = Ligo.int_from_literal "0" then
     zero_ratio
   else if burrowed = Ligo.int_from_literal "0" && circulating <> Ligo.int_from_literal "0" then
-    make_real_unsafe (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")
-  else if Ligo.geq_int_int burrowed circulating then
+    make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")
+  else if Ligo.geq_int_int circulating burrowed then
     make_real_unsafe
-      (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int burrowed circulating)) burrowed)
+      (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int circulating burrowed)) burrowed)
       (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
-  else (* burrowed < circulating *)
+  else (* circulating < burrowed *)
     make_real_unsafe
-      (neg_int (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int circulating burrowed)) burrowed))
+      (neg_int (min_int (Ligo.mul_int_int (Ligo.int_from_literal "5") (Ligo.sub_int_int burrowed circulating)) burrowed))
       (Ligo.mul_int_int (Ligo.int_from_literal "20") burrowed)
 
 (** Compute the current adjustment index. Basically this is the product of
