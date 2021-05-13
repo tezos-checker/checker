@@ -88,7 +88,7 @@ in
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
            ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
-           ++ (with pkgs; [ niv ruby bc sphinx ])
+           ++ (with pkgs; [ niv ruby bc sphinx python3Packages.sphinx_rtd_theme ])
            ++ ocamlDeps pkgs;
        };
 }
