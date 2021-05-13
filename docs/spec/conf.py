@@ -22,8 +22,8 @@ import sphinx_rtd_theme
 project = 'Checker'
 copyright = '2021, Tweag'
 author = 'Tweag'
-version = '1.0rc'
-release = '1.0rc'
+version = '0.1alpha'
+release = '0.1alpha'
 
 
 # -- General configuration ---------------------------------------------------
