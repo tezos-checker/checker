@@ -48,22 +48,23 @@ let
       mkdir -p $out/bin; ln -s ${orig}/bin/tezos-client $out/bin/tezos-client
     '';
 
-in
+  checkerSource =
+    let filter =
+          let ignored = gitignoreNix.gitignoreFilter ./.;
+          in  path: type: ignored path type && builtins.baseNameOf path != "ligo";
+    in pkgsHost.lib.cleanSourceWith {
+      inherit filter;
+      src = ./.;
+      name = "checker-source";
+    };
+in rec
 {
   michelson =
     let pkgs = pkgsLinux;
     in pkgs.stdenv.mkDerivation {
          name = "checker-michelson";
          buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
-         src =
-           let filter =
-             let ignored = gitignoreNix.gitignoreFilter ./.;
-             in  path: type: ignored path type && builtins.baseNameOf path != "ligo";
-           in pkgsHost.lib.cleanSourceWith {
-                inherit filter;
-                src = ./.;
-                name = "checker-source";
-              };
+         src = checkerSource;
          buildPhase = ''
            export HOME=$(mktemp -d)
            make build-ligo
@@ -79,6 +80,21 @@ in
            cp generated/michelson/* $out
          '';
        };
+
+  spec =
+    let pkgs = pkgsHost;
+    in pkgs.stdenv.mkDerivation {
+      src = checkerSource;
+      name = "checker-spec";
+      buildInputs = with pkgs; [ sphinx python3Packages.sphinx_rtd_theme ];
+      buildPhase = ''
+        make spec
+      '';
+      installPhase = ''
+        cp -R docs/spec/_build/html $out
+      '';
+    };
+
   shell =
     let pkgs = pkgsHost;
     in pkgs.mkShell {
@@ -88,7 +104,9 @@ in
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
            ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
-           ++ (with pkgs; [ niv ruby bc sphinx python3Packages.sphinx_rtd_theme ])
+           ++ (with pkgs; [ niv ruby bc ])
+           ++ spec.buildInputs
            ++ ocamlDeps pkgs;
+
        };
 }
