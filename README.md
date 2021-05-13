@@ -1,4 +1,5 @@
 [![Build Status](https://github.com/tezos-checker/huxian/workflows/CI/badge.svg)](https://github.com/tezos-checker/huxian/actions)
+[![Docs](https://readthedocs.org/projects/checker/badge/?version=latest)](https://checker.readthedocs.io/en/latest/)
 
 # Checker
 
@@ -18,7 +19,7 @@ it for anything serious.*
 
 Various ad-hoc documentation can be found in the [docs](./docs) folder. 
 
-The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed).
+The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed). These docs are published at [checker.readthedocs.io](https://checker.readthedocs.io/).
 
 ## Development
 
