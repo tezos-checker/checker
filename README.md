@@ -3,9 +3,9 @@
 
 # Checker
 
-Checker is an in-development robocoin system for the Tezos blockchain,
-and is a project supported by Nomadic Labs, Tweag and TZ Connect
-Berlin.
+Checker is an in-development "robocoin" system for the Tezos blockchain,
+and is a project supported by [Nomadic Labs](https://nomadic-labs.com/),
+[Tweag](https://tweag.io/) and TZ Connect Berlin.
 
 **The code within is currently unverified and unaudited, and is made
 publicly available only for exploration purposes. You should not use
