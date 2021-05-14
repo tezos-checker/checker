@@ -670,6 +670,18 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
+    (* Create an operation to ask the oracles to send updated values. This
+       should be the last operation we emit, so that the system parameters do
+       not change between touching different slices. *)
+    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
+      | Some cb -> cb
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
+    let op =
+       LigoOp.Tezos.nat_contract_transaction
+         cb
+         (Ligo.tez_from_literal "0mutez")
+         (get_oracle_entrypoint state.external_contracts) in
+
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state =
       let
@@ -682,7 +694,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           external_contracts = state_external_contracts;
         } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
-        touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
+        touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
       let state_parameters =
         let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
         remove_circulating_kit state_parameters kit_to_burn in
@@ -698,17 +710,6 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       (ops, new_state) in
 
     assert_checker_invariants state;
-
-    (* Create operations to ask the oracles to send updated values. *)
-    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
-      | Some cb -> cb
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-    let op =
-       LigoOp.Tezos.nat_contract_transaction
-         cb
-         (Ligo.tez_from_literal "0mutez")
-         (get_oracle_entrypoint state.external_contracts)  in
-    let ops = (op :: ops) in (* FIXME: op should be at the end, not the beginning *)
 
     (ops, state)
 

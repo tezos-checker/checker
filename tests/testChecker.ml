@@ -769,8 +769,7 @@ let suite =
           	* take more time I guess). *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let _ops, checker =
-         Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
+       let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
        assert_equal [] ops ~printer:show_operation_list;
@@ -878,7 +877,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
-       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -890,6 +889,16 @@ let suite =
          (Ligo.int_from_literal "21_000_000")
          touch_reward
          ~printer:Ligo.string_of_int;
+
+       (* Check that all the requests for burrows to send tez come _before_ the
+        * request to the oracle to update the index. *)
+       begin match ops with
+       | [
+           Transaction (TezTransactionValue _, _, _);
+           Transaction (NatContractTransactionValue _, _, _);
+         ] -> ()
+       | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
+       end;
 
        (* We don't need to touch the slice on this test case since
         * Checker.entrypoint_touch_with_index already touches the oldest 5
