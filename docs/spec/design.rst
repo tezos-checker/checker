@@ -116,10 +116,11 @@ exponential can be approximated by :math:`exp(x) = 1+x`\ .
 Oracles
 ~~~~~~~
 
-A set of :math:`n\_oracle` oracle feeds
-:math:`o^{1, t}, \ldots o^{n\_oracle, t}` provides the **tez**
-denominated value of the external index (e.g. 1 CHF). The median of
-these oracles gives a feed which we label :math:`tz_t`.
+An oracle feed provides the **tez**-denominated value of the external
+index (e.g. 1 CHF), which we label :math:`tz_t`. The contract
+providing the oracle feed should be reliable: for some external
+measures it might be advisable for that contract to give Checker the
+median of three or more externally-observed values.
 
 Filtered oracle feeds
 ^^^^^^^^^^^^^^^^^^^^^
@@ -127,8 +128,7 @@ Filtered oracle feeds
 Protected index
 '''''''''''''''
 
-The feed with the median of the external oracle values is itself
-filtered.
+The feed of external oracle values is itself filtered.
 
 We define the **protected index**, :math:`\widehat{tz}_t`, as:
 
@@ -410,16 +410,7 @@ balance is adjusted anytime the checker contract is called, looking back
 at the last time the contract was called and calculating the fee
 incurred in between.
 
-The contract’s implied xtz/kit price is used as part of the oracle.
-
 The right to bake for this contract is automatically auctioned off to
 the best bidder, the proceeds of the auction only accrue to the pool
 with a delay of 1 cycle.
 
-Governance
-----------
-
-Checker attempts to minimize governance. It may be necessary however to
-remove a bad oracle feed or to tweak the parameters used in the system.
-We suggest a protocol amendment where bakers signal in block their
-desire to remove or add oracle feeds.
