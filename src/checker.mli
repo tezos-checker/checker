@@ -250,3 +250,4 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 (*****************************************************************************)
 
 val view_buy_kit_min_kit_expected : (checker * ctez) -> kit
+val view_sell_kit_min_ctez_expected : (checker * kit) -> ctez

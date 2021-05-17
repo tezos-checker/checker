@@ -94,20 +94,14 @@ let cfmm_buy_kit
     else
       (bought_kit, cfmm)
 
-let cfmm_sell_kit
+let cfmm_view_min_ctez_expected_cfmm_sell_kit
     (cfmm: cfmm)
     (kit_amount: kit)
-    (min_ctez_expected: ctez)
-    (deadline: Ligo.timestamp)
   : (ctez * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
   if (kit_amount = kit_zero) then
     (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
-  else if !Ligo.Tezos.now >= deadline then
-    (Ligo.failwith error_CfmmTooLate : (ctez * cfmm))
-  else if (min_ctez_expected = ctez_zero) then
-    (Ligo.failwith error_SellKitTooLowExpectedTez : (ctez * cfmm))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -125,19 +119,36 @@ let cfmm_sell_kit
         (Ligo.int_from_literal "1_000_000")
         (Ligo.mul_int_int (kit_to_mukit_int new_cfmm_kit) den_uf) in
     let bought_ctez = ctez_of_fraction_floor numerator denominator in
-
-    if bought_ctez < min_ctez_expected then
-      (Ligo.failwith error_SellKitPriceFailure : (ctez * cfmm))
-    else if bought_ctez > cfmm.ctez then
+    if bought_ctez > cfmm.ctez then
       (Ligo.failwith error_SellKitTooMuchTezBought : (ctez * cfmm))
     else
-      let remaining_ctez = ctez_sub cfmm.ctez bought_ctez in
       ( bought_ctez,
         { cfmm with
           kit = new_cfmm_kit;
-          ctez = remaining_ctez;
+          ctez = ctez_sub cfmm.ctez bought_ctez;
         }
       )
+
+let cfmm_sell_kit
+    (cfmm: cfmm)
+    (kit_amount: kit)
+    (min_ctez_expected: ctez)
+    (deadline: Ligo.timestamp)
+  : (ctez * cfmm) =
+  let cfmm = cfmm_sync_last_observed cfmm in
+  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
+  if (kit_amount = kit_zero) then
+    (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
+  else if !Ligo.Tezos.now >= deadline then
+    (Ligo.failwith error_CfmmTooLate : (ctez * cfmm))
+  else if (min_ctez_expected = ctez_zero) then
+    (Ligo.failwith error_SellKitTooLowExpectedTez : (ctez * cfmm))
+  else
+    let (bought_ctez, cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit cfmm kit_amount in
+    if bought_ctez < min_ctez_expected then
+      (Ligo.failwith error_SellKitPriceFailure : (ctez * cfmm))
+    else
+      (bought_ctez, cfmm)
 
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the

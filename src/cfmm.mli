@@ -45,6 +45,9 @@ val cfmm_buy_kit :
   Ligo.timestamp (* deadline *) ->
   (kit * cfmm)
 
+(** TODO: Compute how much ctez can be bought. *)
+val cfmm_view_min_ctez_expected_cfmm_sell_kit : cfmm -> kit -> (ctez * cfmm)
+
 (** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
     cannot be bought or if the deadline has passed. *)
 val cfmm_sell_kit :

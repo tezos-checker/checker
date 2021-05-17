@@ -761,3 +761,7 @@ let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list
 let view_buy_kit_min_kit_expected (state, ctez: checker * ctez) : kit =
   let (kit, _cfmm) = cfmm_view_min_kit_expected_buy_kit state.cfmm ctez in
   kit
+
+let view_sell_kit_min_ctez_expected (state, kit: checker * kit) : ctez =
+  let (ctez, _cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit state.cfmm kit in
+  ctez
