@@ -402,15 +402,13 @@ CFMM
 
 There is a CFMM (Constant Function Market Maker) exchange facility
 attached to the checker contract. It is much like a standard CFMM
-contract (including the ability to mint and redeem tokens representing a
-contribution of liquidity to the contract) except that its balance in
-kit increases over time as kits are minted out of burrows to pay for
-part of the burrowing fee, and tez are sometimes forfeited to it. This
-balance is adjusted anytime the checker contract is called, looking back
-at the last time the contract was called and calculating the fee
-incurred in between.
+contract (including the ability to mint and redeem tokens representing
+a contribution of liquidity to the contract) except that its balance
+in kit increases over time as kits are minted out of burrows to pay
+for part of the burrowing fee, and tez are sometimes forfeited to it
+(TODO: still true?). This balance is adjusted any time the checker
+contract is called, looking back at the last time the contract was
+called and calculating the fee incurred in between.
 
-The right to bake for this contract is automatically auctioned off to
-the best bidder, the proceeds of the auction only accrue to the pool
-with a delay of 1 cycle.
-
+The contract’s implied ctez/kit price is used as part of the parameter
+calculations.
