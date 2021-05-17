@@ -40,20 +40,14 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
       last_level = !Ligo.Tezos.level;
     }
 
-let cfmm_buy_kit
+let cfmm_view_min_kit_expected_buy_kit
     (cfmm: cfmm)
     (ctez_amount: ctez)
-    (min_kit_expected: kit)
-    (deadline: Ligo.timestamp)
-  : (kit * cfmm) =
+  : (kit (* min_kit_expected *) * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
   if (ctez_amount = ctez_zero) then
     (Ligo.failwith error_BuyKitNoTezGiven : (kit * cfmm))
-  else if (!Ligo.Tezos.now >= deadline) then
-    (Ligo.failwith error_CfmmTooLate : (kit * cfmm))
-  else if (min_kit_expected = kit_zero) then
-    (Ligo.failwith error_BuyKitTooLowExpectedKit : (kit * cfmm))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -71,19 +65,34 @@ let cfmm_buy_kit
         kit_scaling_factor_int
         (Ligo.mul_int_int (ctez_to_muctez_int new_cfmm_ctez) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
-
-    if bought_kit < min_kit_expected then
-      (Ligo.failwith error_BuyKitPriceFailure : (kit * cfmm))
-    else if bought_kit > cfmm.kit then
+    if bought_kit > cfmm.kit then
       (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * cfmm))
     else
-      let remaining_kit = kit_sub cfmm.kit bought_kit in
       ( bought_kit,
         { cfmm with
-          kit = remaining_kit;
+          kit = kit_sub cfmm.kit bought_kit;
           ctez = new_cfmm_ctez;
         }
       )
+
+let cfmm_buy_kit
+    (cfmm: cfmm)
+    (ctez_amount: ctez)
+    (min_kit_expected: kit)
+    (deadline: Ligo.timestamp)
+  : (kit * cfmm) =
+  if (ctez_amount = ctez_zero) then
+    (Ligo.failwith error_BuyKitNoTezGiven : (kit * cfmm))
+  else if (!Ligo.Tezos.now >= deadline) then
+    (Ligo.failwith error_CfmmTooLate : (kit * cfmm))
+  else if (min_kit_expected = kit_zero) then
+    (Ligo.failwith error_BuyKitTooLowExpectedKit : (kit * cfmm))
+  else
+    let (bought_kit, cfmm) = cfmm_view_min_kit_expected_buy_kit cfmm ctez_amount in
+    if bought_kit < min_kit_expected then
+      (Ligo.failwith error_BuyKitPriceFailure : (kit * cfmm))
+    else
+      (bought_kit, cfmm)
 
 let cfmm_sell_kit
     (cfmm: cfmm)

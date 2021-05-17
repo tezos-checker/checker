@@ -244,3 +244,9 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 val strict_entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
 val strict_entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
 val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.operation list * checker
+
+(*****************************************************************************)
+(**                            {1 VIEWS}                                     *)
+(*****************************************************************************)
+
+val view_buy_kit_min_kit_expected : (checker * ctez) -> kit

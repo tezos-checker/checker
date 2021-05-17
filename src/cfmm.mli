@@ -33,6 +33,9 @@ open CfmmTypes
     kit_in_ctez, because it is a little harder to manipulate. *)
 val cfmm_kit_in_ctez_in_prev_block : cfmm -> Ratio.ratio
 
+(** TODO: Compute how much kit can be bought. *)
+val cfmm_view_min_kit_expected_buy_kit : cfmm -> ctez -> (kit * cfmm)
+
 (** Buy some kit from the cfmm contract by providing some ctez. Fail if the
     desired amount of kit cannot be bought or if the deadline has passed. *)
 val cfmm_buy_kit :
