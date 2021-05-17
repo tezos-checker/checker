@@ -1,9 +1,6 @@
 (* Oracle data *)
 val oracle_entrypoint : string
 
-(* Tezos utilities *)
-val checker_address : Ligo.address
-
 (* OPERATIONS ON int *)
 val min_int : Ligo.int -> Ligo.int -> Ligo.int
 val max_int : Ligo.int -> Ligo.int -> Ligo.int

@@ -133,7 +133,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
       )
       delegate_opt
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
-      {checker_address = checker_address; burrow_id = burrow_id; } in
+      {checker_address = !Ligo.Tezos.self_address; burrow_id = burrow_id; } in
 
   let burrow = burrow_create state.parameters burrow_address !Ligo.Tezos.amount delegate_opt in
   let updated_state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
@@ -194,10 +194,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let state =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
-     parameters =
-       remove_outstanding_kit
-         (remove_circulating_kit state.parameters kit)
-         kit;
+     parameters = remove_outstanding_and_circulating_kit state.parameters kit;
      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit);
     } in
   (([]: LigoOp.operation list), state)
@@ -313,7 +310,7 @@ let touch_liquidation_slice
     (auctions: liquidation_auctions)
     (state_burrows: burrow_map)
     (leaf_ptr: leaf_ptr)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
 
   let _ = ensure_valid_leaf_ptr auctions.avl_storage leaf_ptr in
 
@@ -365,20 +362,27 @@ let touch_liquidation_slice
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" (burrow_address burrow): Ligo.tez Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_transaction slice.tez (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
-  ((op :: ops), auctions, state_burrows, kit_to_burn)
+  ((op :: ops), auctions, state_burrows, kit_to_repay, kit_to_burn)
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
  * computed are independent from each other, this needs not be a problem. *)
 let rec touch_liquidation_slices_rec
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * leaf_ptr list)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, slices: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * leaf_ptr list)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
   match slices with
-  | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+  | [] -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
   | x::xs ->
-    let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+    let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
       touch_liquidation_slice ops state_liquidation_auctions state_burrows x in
-    touch_liquidation_slices_rec (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, xs)
+    touch_liquidation_slices_rec
+      ( new_ops,
+        new_state_liquidation_auctions,
+        new_state_burrows,
+        kit_add old_kit_to_repay new_kit_to_repay,
+        kit_add old_kit_to_burn new_kit_to_burn,
+        xs
+      )
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
@@ -397,9 +401,11 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       external_contracts = state_external_contracts;
     } = state in
 
-  let new_ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, slices) in
-  let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
+  let new_ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
+    touch_liquidation_slices_rec (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, kit_zero, slices) in
+  let state_parameters =
+    let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
+    remove_circulating_kit state_parameters kit_to_burn in
 
   let new_state =
     { burrows = state_burrows;
@@ -423,7 +429,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
   let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctez min_kit_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
-      address_to = checker_address;
+      address_to = !Ligo.Tezos.self_address;
       value = ctez_to_muctez_nat ctez;
     } in
   let op =
@@ -445,7 +451,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
   let _ = ensure_no_tez_given () in
   let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctez_expected deadline in
   let transfer =
-    { address_from = checker_address;
+    { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
@@ -468,7 +474,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
     cfmm_add_liquidity state.cfmm ctez_deposited max_kit_deposited min_lqt_minted deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
-      address_to = checker_address;
+      address_to = !Ligo.Tezos.self_address;
       value = ctez_to_muctez_nat ctez_deposited;
     } in
   let op =
@@ -492,7 +498,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
   let (ctez, kit_tokens, updated_cfmm) =
     cfmm_remove_liquidity state.cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   let transfer =
-    { address_from = checker_address;
+    { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
       value = ctez_to_muctez_nat ctez;
     } in
@@ -590,17 +596,24 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * the order the input slices were processed in). However, since the operations
  * computed are independent from each other, this needs not be a problem. *)
 let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * int)
-  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit) =
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * int)
+  : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
   if maximum <= 0 then
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
   else
     match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_burn)
+    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
     | Some leaf ->
-      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_burn =
+      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
         touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
-      touch_oldest (new_ops, new_state_liquidation_auctions, new_state_burrows, kit_add old_kit_to_burn new_kit_to_burn, maximum - 1)
+      touch_oldest
+        ( new_ops,
+          new_state_liquidation_auctions,
+          new_state_burrows,
+          kit_add old_kit_to_repay new_kit_to_repay,
+          kit_add old_kit_to_burn new_kit_to_burn,
+          maximum - 1
+        )
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order in which the things are expected to happen). However, all inputs
@@ -657,6 +670,18 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
+    (* Create an operation to ask the oracles to send updated values. This
+       should be the last operation we emit, so that the system parameters do
+       not change between touching different slices. *)
+    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
+      | Some cb -> cb
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
+    let op =
+       LigoOp.Tezos.nat_contract_transaction
+         cb
+         (Ligo.tez_from_literal "0mutez")
+         (get_oracle_entrypoint state.external_contracts) in
+
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state =
       let
@@ -668,9 +693,11 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           fa2_state = state_fa2_state;
           external_contracts = state_external_contracts;
         } = state in
-      let ops, state_liquidation_auctions, state_burrows, kit_to_burn =
-        touch_oldest (([]: LigoOp.operation list), state_liquidation_auctions, state_burrows, kit_zero, number_of_slices_to_process) in
-      let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
+      let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
+        touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
+      let state_parameters =
+        let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
+        remove_circulating_kit state_parameters kit_to_burn in
       let new_state =
         { burrows = state_burrows;
           cfmm = state_cfmm;
@@ -683,17 +710,6 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       (ops, new_state) in
 
     assert_checker_invariants state;
-
-    (* Create operations to ask the oracles to send updated values. *)
-    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
-      | Some cb -> cb
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-    let op =
-       LigoOp.Tezos.nat_contract_transaction
-         cb
-         (Ligo.tez_from_literal "0mutez")
-         (get_oracle_entrypoint state.external_contracts)  in
-    let ops = (op :: ops) in (* FIXME: op should be at the end, not the beginning *)
 
     (ops, state)
 

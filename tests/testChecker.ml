@@ -17,6 +17,8 @@ module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 type operation_list = LigoOp.operation list
 [@@deriving show]
 
+let checker_address = !Ligo.Tezos.self_address
+
 let empty_checker =
   initial_checker
     { ctez = Ligo.address_of_string "ctez_addr";
@@ -322,7 +324,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -359,7 +361,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -408,7 +410,7 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
             transfer.value
           end
@@ -461,7 +463,7 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
             assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
             transfer.value
           end
@@ -536,7 +538,7 @@ let suite =
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal Common.checker_address transfer.address_to ~printer:Ligo.string_of_address;
+            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
             assert_equal (Ligo.abs (Common.tez_to_mutez tez_provided)) transfer.value ~printer:Ligo.string_of_nat
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -641,7 +643,7 @@ let suite =
        let ctez = match ops with
          | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
            begin
-             assert_equal Common.checker_address transfer.address_from ~printer:Ligo.string_of_address;
+             assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
              transfer.value
            end
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -767,8 +769,7 @@ let suite =
           	* take more time I guess). *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let _ops, checker =
-         Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
+       let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
        assert_equal [] ops ~printer:show_operation_list;
@@ -876,7 +877,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
-       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
+       let ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -888,6 +889,16 @@ let suite =
          (Ligo.int_from_literal "21_000_000")
          touch_reward
          ~printer:Ligo.string_of_int;
+
+       (* Check that all the requests for burrows to send tez come _before_ the
+        * request to the oracle to update the index. *)
+       begin match ops with
+       | [
+           Transaction (TezTransactionValue _, _, _);
+           Transaction (NatContractTransactionValue _, _, _);
+         ] -> ()
+       | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
+       end;
 
        (* We don't need to touch the slice on this test case since
         * Checker.entrypoint_touch_with_index already touches the oldest 5
@@ -909,7 +920,7 @@ let suite =
        let (ops, checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
        assert_equal
-         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_155_964mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_156_451mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
          ops
          ~printer:show_operation_list;
 

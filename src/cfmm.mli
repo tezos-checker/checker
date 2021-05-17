@@ -63,7 +63,7 @@ val cfmm_sell_kit :
  * anytime for a fraction of the assets A and B. The reason to do this in
  * cfmm is that usage of cfmm costs 0.3%, and that ultimately can
  * grow the balance of the assets in the contract. An additional reason
- * to do it in huxian is that the kit balance of the cfmm contract is
+ * to do it in checker is that the kit balance of the cfmm contract is
  * continuously credited with the burrow fee taken from burrow holders.
 *)
 val cfmm_add_liquidity :

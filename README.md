@@ -1,6 +1,15 @@
-[![Build Status](https://github.com/tzConnectBerlin/huxian/workflows/CI/badge.svg)](https://github.com/tzConnectBerlin/huxian/actions)
+[![Build Status](https://github.com/tezos-checker/huxian/workflows/CI/badge.svg)](https://github.com/tezos-checker/huxian/actions)
+[![Docs](https://readthedocs.org/projects/checker/badge/?version=latest)](https://checker.readthedocs.io/en/latest/)
 
-# Huxian
+# Checker
+
+Checker is an in-development "robocoin" system for the Tezos blockchain,
+and is a project supported by [Nomadic Labs](https://nomadic-labs.com/),
+[Tweag](https://tweag.io/) and TZ Connect Berlin.
+
+**The code here is currently unverified and unaudited, and is made
+publicly available only for exploration and discussion purposes.
+You should not use it for anything serious.**
 
 * Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
 * The source code lives in the [src](./src) folder.
@@ -8,9 +17,9 @@
 
 # Documentation
 
-Various ad-hoc documentation can be found in the [docs](./docs) folder. 
+Various ad-hoc documentation can be found in the [docs](./docs) folder.
 
-The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed).
+The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed). These docs are published at [checker.readthedocs.io](https://checker.readthedocs.io/).
 
 ## Development
 
@@ -81,10 +90,4 @@ And finally, deploy the contract (and packed entrypoints) to the sandbox:
 
 ```console
 $ ./scripts/deploy-contract.sh
-```
-
-To call the contract, we can use the [call-contract.sh](./scripts/call-contract.sh) helper script:
-
-```console
-$ ./scripts/call-contract.sh 'Touch ()'
 ```

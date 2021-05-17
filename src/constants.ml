@@ -14,6 +14,13 @@ let[@inline] creation_deposit : Ligo.tez = Ligo.tez_from_literal "1_000_000mutez
 (** Yearly burrow fee percentage. *)
 let[@inline] burrow_fee_percentage : ratio = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") (* 0.005 *)
 
+(** Factor used to scale down the imbalance rate. The higher the value, the
+    faster the imbalance rate saturates. *)
+let[@inline] imbalance_scaling_factor : ratio = make_real_unsafe (Ligo.int_from_literal "3") (Ligo.int_from_literal "4") (* 0.75 *)
+
+(** Maximum yearly imbalance rate. *)
+let[@inline] imbalance_limit = make_real_unsafe (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")
+
 (** The percentage of a burrow's collateral that we offer to whoever triggers
     the burrow's liquidation. *)
 let[@inline] liquidation_reward_percentage : ratio =
