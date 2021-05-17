@@ -11,6 +11,7 @@ Checker - A Robocoin System for Tezos
    :caption: Contents:
 
    introduction
+   design
    functional_spec
    deploying
 
