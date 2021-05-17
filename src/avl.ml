@@ -441,6 +441,8 @@ let avl_push
       (mem, LeafPtr leaf_ptr)
   end
 
+type queue_end = Front | Back
+
 (* Pushes the provided value to the back of the queue *)
 let[@inline] avl_push_back (mem: mem) (root_ptr: avl_ptr) (value: liquidation_slice) =
   avl_push mem root_ptr value Left

@@ -31,6 +31,7 @@ inputs=(
   checkerTypes
   cfmm
   liquidationAuction
+  sliceList
   checker
   checkerEntrypoints
   checkerMain

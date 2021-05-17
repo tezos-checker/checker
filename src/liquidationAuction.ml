@@ -77,7 +77,6 @@ open Constants
 open Common
 open LiquidationAuctionTypes
 open Error
-open DoublyLinkedLists
 
 (* BEGIN_OCAML *)
 
@@ -188,7 +187,7 @@ let liquidation_auction_send_to_auction
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let burrow_slices = SliceList.from_auction_state auctions contents.burrow in
-    let storage, burrow_slices, (Element (ret, _)) = SliceList.append burrow_slices auctions.avl_storage auctions.queued_slices contents in
+    let storage, burrow_slices, (Element (ret, _)) = SliceList.append burrow_slices auctions.avl_storage auctions.queued_slices Back contents in
     let state = {auctions with avl_storage=storage} in
     (SliceList.to_auction_state state burrow_slices, ret)
 
@@ -251,120 +250,23 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
   if queued_amount < split_threshold
   then
     (* split next thing *)
-    let (storage, next) = avl_pop_front storage queued_slices in
+    let next = avl_peek_front storage queued_slices in
     match next with
     | Some (_slice_ptr, slice) ->
       (* 1: split the contents *)
       let (part1_contents, part2_contents) =
-        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice.contents in
+        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice.value.contents in
 
-      (* 2: create and push the two slices to the AVL, but initially without
-       * pointers to their neighbors. Before adding the slices to the AVL we
-       * cannot have this information. *)
-      let part1 = make_standalone_slice part1_contents in
-      let (storage, part1_leaf_ptr) = avl_push storage new_auction part1 Left in
-
-      let part2 = make_standalone_slice part2_contents in
-      let (storage, part2_leaf_ptr) = avl_push storage queued_slices part2 Right in
-
-      (* 3: fixup the pointers within slice 1 (the older of the two) as follows:
-       * - part1.older = slice.older
-       * - part1.younger = part2
-      *)
-      let storage =
-        avl_update_leaf
-          storage
-          part1_leaf_ptr
-          (fun (node: liquidation_slice) ->
-             { node with
-               younger = Some part2_leaf_ptr;
-               older = slice.older;
-             }
-          ) in
-
-      (* 4: fixup the pointers within slice 2 (the younger of the two) as follows:
-       * - part2.older = part1
-       * - part2.younger = slice.younger
-      *)
-      let storage =
-        avl_update_leaf
-          storage
-          part2_leaf_ptr
-          (fun (node: liquidation_slice) ->
-             { node with
-               younger = slice.younger;
-               older = Some part1_leaf_ptr;
-             }
-          ) in
-
-      (* 5: fixup the "younger" pointer within slice.older so that it now
-       * points to part1 instead of slice. Nothing to be done if slice is the
-       * oldest. *)
-      let storage =
-        match slice.older with
-        | None -> storage (* slice was the oldest, nothing to change. *)
-        | Some older_ptr ->
-          avl_update_leaf
-            storage
-            older_ptr
-            (fun (older: liquidation_slice) ->
-               assert (older.younger = Some _slice_ptr);
-               { older with younger = Some part1_leaf_ptr }
-            ) in
-
-      (* 6: fixup the "older" pointer within slice.younger so that it now
-       * points to part2 instead of slice. Nothing to be done if slice is the
-       * youngest. *)
-      let storage =
-        match slice.younger with
-        | None -> storage (* slice was the youngest, nothing to change. *)
-        | Some younger_ptr ->
-          avl_update_leaf
-            storage
-            younger_ptr
-            (fun (younger: liquidation_slice) ->
-               assert (younger.older = Some _slice_ptr);
-               { younger with older = Some part2_leaf_ptr }
-            ) in
-
-      (* 7: fixup the pointers to the oldest and youngest slices of the burrow.
-       * If slice is not the oldest or the youngest itself these should remain
-       * unaltered. If it's the oldest, then part1 now becomes the oldest, and
-       * if it's the youngest then part2 now becomes the youngest. *)
-      let new_burrow_slices =
-        match Ligo.Big_map.find_opt slice.contents.burrow auctions.burrow_slices with
-        | None -> (failwith "this should be impossible, right?" : burrow_liquidation_slices)
-        | Some old_slices ->
-          { oldest_slice =
-              (match slice.older with
-               | None ->
-                 assert (old_slices.oldest_slice = _slice_ptr);
-                 part1_leaf_ptr (* slice was the oldest, now part1 is. *)
-               | Some _ ->
-                 assert (old_slices.oldest_slice <> _slice_ptr);
-                 old_slices.oldest_slice (* there was another; it remains as it was *)
-              );
-            youngest_slice =
-              (match slice.younger with
-               | None ->
-                 assert (old_slices.youngest_slice = _slice_ptr);
-                 part2_leaf_ptr (* slice was the youngest, now part2 is. *)
-               | Some _ ->
-                 assert (old_slices.youngest_slice <> _slice_ptr);
-                 old_slices.youngest_slice (* there was another; it remains as it was *)
-              );
-          } in
-
-      let auctions =
-        { auctions with
-          avl_storage = storage;
-          burrow_slices =
-            Ligo.Big_map.add
-              slice.contents.burrow
-              new_burrow_slices
-              auctions.burrow_slices;
-        } in
-
+      (* Remove the element we are splitting *)
+      let element, burrow_slices = SliceList.from_leaf_ptr auctions _slice_ptr in
+      let storage, burrow_slices, _, _ = SliceList.remove burrow_slices auctions.avl_storage element in
+      (* Push the first portion of the slice to the back of the new auction *)
+      let storage, burrow_slices, _ = SliceList.append burrow_slices storage new_auction Back part1_contents in
+      (* Push the remainder of the slice to the front of the auction queue *)
+      let storage, burrow_slices, _ = SliceList.append burrow_slices storage queued_slices Front part2_contents in
+      (* Update auction state *)
+      let auctions = {auctions with avl_storage=storage;} in
+      let auctions = SliceList.to_auction_state auctions burrow_slices in
       (auctions, new_auction)
     | None ->
       (auctions, new_auction)
@@ -538,12 +440,13 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
  * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
 *)
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
-  let element, burrow_slices = SliceList.from_leaf_ptr auctions leaf_ptr in
-  let avl_storage, burrow_slices, root_ptr, contents = SliceList.remove burrow_slices auctions.avl_storage element in
+  let open SliceList in
+  let element, burrow_slices = from_leaf_ptr auctions leaf_ptr in
+  let avl_storage, burrow_slices, root_ptr, contents = remove burrow_slices auctions.avl_storage element in
   let auctions = {auctions with avl_storage=avl_storage;} in
   ( contents
   , root_ptr
-  , SliceList.to_auction_state auctions burrow_slices
+  , to_auction_state auctions burrow_slices
   )
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =
