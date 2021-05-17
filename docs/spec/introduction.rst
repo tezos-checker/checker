@@ -4,6 +4,9 @@ Introduction
 .. figure:: https://i.imgur.com/3VmpA2q.jpg
    :alt: a kit
 
+What is Checker?
+================
+
 **Checker** is a generic piece of software for creating *robocoins* on
 the `Tezos blockchain <https://tezos.com/>`_.
 
@@ -37,8 +40,8 @@ Any number of Checker deployments can exist on a Tezos chain, each
 managing a separate robocoin which tracks a different external measure
 of value.
 
-System Overview of a Checker Deployment
----------------------------------------
+System overview of a Checker deployment
+=======================================
 
 TODO: diagram showing Checker, its collaborating contracts, and key subsystems
 
