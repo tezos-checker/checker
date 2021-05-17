@@ -40,7 +40,7 @@ class SandboxedTestCase(unittest.TestCase):
          shell="http://127.0.0.1:{}".format(port),
          key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt" # bob's key from "edobox info"
        )
-       self.client.loglevel = logging.WARN
+       self.client.loglevel = logging.ERROR
 
     def tearDown(self):
        self.docker_container.kill()
@@ -72,11 +72,11 @@ class E2ETest(SandboxedTestCase):
 
         (checker.create_burrow((1, None)).with_amount(10_000_000)
           .as_transaction().autofill(branch_offset=1).sign()
-          .inject(min_confirmations=1, time_between_blocks=2))
+          .inject(min_confirmations=1, time_between_blocks=3))
 
         (checker.mint_kit((1, 1_000_000))
           .as_transaction().autofill(branch_offset=1).sign()
-          .inject(min_confirmations=1, time_between_blocks=2))
+          .inject(min_confirmations=1, time_between_blocks=3))
 
 if __name__ == '__main__':
     unittest.main()
