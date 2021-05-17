@@ -191,50 +191,6 @@ let liquidation_auction_send_to_auction
     let storage, burrow_slices, (Element (ret, _)) = SliceList.append burrow_slices auctions.avl_storage auctions.queued_slices contents in
     let state = {auctions with avl_storage=storage} in
     (SliceList.to_auction_state state burrow_slices, ret)
-(* let old_burrow_slices = Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in *)
-
-(* let slice = {
-   contents = contents;
-   older = (
-    match old_burrow_slices with
-    | None -> (None : leaf_ptr option)
-    | Some i -> Some i.youngest_slice
-   );
-   younger = (None: leaf_ptr option);
-   } in *)
-
-(* let (new_storage, ret) =
-   avl_push auctions.avl_storage auctions.queued_slices slice Left in *)
-
-(* Fixup the previous youngest pointer since the newly added slice
- * is even younger.
-*)
-(* let new_storage, new_burrow_slices = (
-   match old_burrow_slices with
-   | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
-   | Some old_slices ->
-    ( mem_update
-        new_storage
-        (ptr_of_leaf_ptr old_slices.youngest_slice)
-        (fun (older: node) ->
-           let older = node_leaf older in
-           Leaf { older with value = { older.value with younger = Some ret; }; }
-        )
-    , { old_slices with youngest_slice = ret }
-    )
-   ) in *)
-(*
-    let new_state =
-      { auctions with
-        avl_storage = new_storage;
-        burrow_slices =
-          Ligo.Big_map.add
-            contents.burrow
-            new_burrow_slices
-            auctions.burrow_slices;
-      } in
-    assert_liquidation_auction_invariants new_state;
-    (new_state, ret) *)
 
 (** Split a liquidation slice into two. The first of the two slices is the
   * "older" of the two (i.e. it is the one to be included in the auction we are
@@ -582,57 +538,12 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
  * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
 *)
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
-  let avl_storage = auctions.avl_storage in
-
-  (* pop the leaf from the storage *)
-  let leaf = avl_read_leaf avl_storage leaf_ptr in
-  let avl_storage, root_ptr = avl_del avl_storage leaf_ptr in
-
-  (* fixup burrow_slices *)
-  let burrow_slices = match Ligo.Big_map.find_opt leaf.contents.burrow auctions.burrow_slices with
-    | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
-    | Some s -> s in
-  let burrow_slices =
-    match (leaf.older, leaf.younger) with
-    | (None, None) -> (* leaf *) (None: burrow_liquidation_slices option)
-    | (None, Some younger) -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
-    | (Some older, None) -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
-    | (Some _, Some _) -> (* ... - leaf - ... *) Some burrow_slices
-  in
-
-  (* fixup older and younger pointers *)
-  let avl_storage = (
-    match leaf.younger with
-    | None -> avl_storage
-    | Some younger_ptr ->
-      avl_update_leaf
-        avl_storage
-        younger_ptr
-        (fun (younger: liquidation_slice) ->
-           assert (younger.older = Some leaf_ptr);
-           { younger with older = leaf.older }
-        )
-  ) in
-  let avl_storage = (
-    match leaf.older with
-    | None -> avl_storage
-    | Some older_ptr ->
-      avl_update_leaf
-        avl_storage
-        older_ptr
-        (fun (older: liquidation_slice) ->
-           assert (older.younger = Some leaf_ptr);
-           { older with younger = leaf.younger }
-        )
-  ) in
-
-  (* return *)
-  ( leaf.contents
+  let element, burrow_slices = SliceList.from_leaf_ptr auctions leaf_ptr in
+  let avl_storage, burrow_slices, root_ptr, contents = SliceList.remove burrow_slices auctions.avl_storage element in
+  let auctions = {auctions with avl_storage=avl_storage;} in
+  ( contents
   , root_ptr
-  , { auctions with
-      avl_storage = avl_storage;
-      burrow_slices = Ligo.Big_map.update leaf.contents.burrow burrow_slices auctions.burrow_slices;
-    }
+  , SliceList.to_auction_state auctions burrow_slices
   )
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =

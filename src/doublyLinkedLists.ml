@@ -39,6 +39,15 @@ module SliceList = struct
           };
       }
 
+  (* Constructs an element from a burrow leaf in the AVL *)
+  let from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) =
+    let slice = avl_read_leaf auctions.avl_storage ptr in
+    let element = Element (ptr, slice) in
+    let list = from_auction_state auctions slice.contents.burrow in
+    (* TODO: What if burrow list is empty? In old implementation we throw an invariant error *)
+    (* FIXME: Add assertion here that checks if the element exists in the list *)
+    element, list
+
   (* Updates the burrow slices in the provided auction state using the given burrow slice list *)
   let to_auction_state (auctions: liquidation_auctions) (l: t) =
     match l with SliceList meta ->
@@ -85,7 +94,7 @@ module SliceList = struct
       storage, SliceList {meta with bounds=Some bounds;}, Element (ptr, slice)
 
   (* Removes and returns the last element (the youngest) from the list in same time as ref_del
-   * (TODO: What is this, logn?).
+   * FIXME: This function might not be required in the Ligo code
   *)
   let pop (l:t) (storage:mem) =
     let meta = match l with SliceList m -> m in
@@ -118,7 +127,8 @@ module SliceList = struct
     assert (meta.burrow = slice.contents.burrow);
     match meta.bounds with
     (* FIXME: Throw specific error here *)
-    | None -> (failwith "Attempting to remove an element from an empty list" : mem*t*liquidation_slice_contents)
+    (* FIXME: This does not seem to be updating pointers of neighboring elements in the list *)
+    | None -> (failwith "Attempting to remove an element from an empty list" : mem*t*avl_ptr*liquidation_slice_contents)
     | Some bounds ->
       (* Update the list metadata: *)
       (* Case 1: We are removing the youngest slice *)
@@ -148,8 +158,8 @@ module SliceList = struct
         else Some bounds
       in
       (* Delete the element from the AVL backend *)
-      let storage, _ = avl_del storage ptr in
-      storage, SliceList {meta with bounds=bounds;}, slice.contents
+      let storage, root_ptr = avl_del storage ptr in
+      storage, SliceList {meta with bounds=bounds;}, root_ptr, slice.contents
 
   (* BEGIN OCAML *)
   (* Extra functionality we want for testing, etc. can go here.
