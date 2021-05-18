@@ -1,7 +1,7 @@
 from typing import Optional
 import click
 
-from client import checker as checker_client
+from checker_client import checker as checker_lib
 import pytezos
 import os
 from pathlib import Path
@@ -54,9 +54,19 @@ class ConfigSchema(Schema):
 
 @click.group()
 @click.pass_context
-@click.option("--config", "config_file", default=CONFIG_FILE, help="path to CLI config file")
+@click.option(
+    "--config",
+    "config_file",
+    default=CONFIG_FILE,
+    help="path to CLI config file",
+    show_default=True,
+)
 def cli(ctx, config_file):
-    """Checker command line utilities"""
+    """Checker command line utilities
+
+    By default this tool caches options for things like addresses in the
+    specified config file to make chaining calls easier.
+    """
     config_file = Path(config_file)
     if config_file.exists():
         config = Config.load(config_file)
@@ -68,7 +78,7 @@ def cli(ctx, config_file):
 
 @cli.group()
 def sandbox():
-    """Interact with the Tezos sandbox for Checker"""
+    """Interact with the local Tezos sandbox for Checker"""
     pass
 
 
@@ -76,7 +86,7 @@ def sandbox():
 @click.pass_obj
 def start(config: Config):
     """Starts the sandbox"""
-    if checker_client.is_sandbox_container_running(Config.sandbox_container):
+    if checker_lib.is_sandbox_container_running(Config.sandbox_container):
         click.echo(f"Container {Config.sandbox_container} is already running.")
     else:
         click.echo("Starting sandbox container...")
@@ -84,7 +94,7 @@ def start(config: Config):
             click.echo(f"Selected host port {config.sandbox_port} for sandbox.")
             config.sandbox_port = portpicker.pick_unused_port()
         config.dump()
-        checker_client.start_sandbox(config.sandbox_container, config.sandbox_port)
+        checker_lib.start_sandbox(config.sandbox_container, config.sandbox_port)
         click.echo("Sandbox started.")
 
 
@@ -92,18 +102,18 @@ def start(config: Config):
 @click.pass_obj
 def stop(config: Config):
     """Stops the sandbox"""
-    if not checker_client.is_sandbox_container_running(Config.sandbox_container):
+    if not checker_lib.is_sandbox_container_running(Config.sandbox_container):
         click.echo(f"Container {Config.sandbox_container} is already stopped.")
     else:
         click.echo("Stopping sandbox container...")
-        checker_client.stop_sandbox(config.sandbox_container)
+        checker_lib.stop_sandbox(config.sandbox_container)
         click.echo("Sandbox stopped.")
 
 
 @cli.group()
-@click.option("--address")
-@click.option("--port", type=int)
-@click.option("--key")
+@click.option("--address", help="Address of tezos node for tezos-client")
+@click.option("--port", type=int, help="Port of tezos node for tezos-client")
+@click.option("--key", help="Private key for tezos-client (file or contents)")
 @click.pass_obj
 def deploy(config: Config, address=None, port=None, key=None):
     """Deploy Checker and supporting contracts"""
@@ -148,7 +158,7 @@ def checker(config: Config, checker_dir, oracle, ctez):
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
-    checker = checker_client.deploy_checker(
+    checker = checker_lib.deploy_checker(
         client, checker_dir, oracle=config.oracle_address, ctez=config.ctez_address
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
@@ -173,7 +183,7 @@ def ctez(config: Config, ctez_dir):
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
-    ctez = checker_client.deploy_ctez(
+    ctez = checker_lib.deploy_ctez(
         client,
         ctez_dir=ctez_dir,
     )
@@ -199,7 +209,7 @@ def mock_oracle(config: Config, oracle_src):
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
-    oracle = checker_client.deploy_contract(
+    oracle = checker_lib.deploy_contract(
         client,
         source_file=oracle_src,
         initial_storage=(client.key.public_key_hash(), 1000000),

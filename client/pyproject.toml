@@ -3,12 +3,9 @@ name = "checker-client"
 version = "0.1.0"
 description = ""
 authors = []
-packages = [
-  { include = "checker.py" }
-]
 
 [tool.poetry.scripts]
-checker = 'client.cli:cli'
+checker = 'checker_client.cli:cli'
 
 [tool.poetry.dependencies]
 python = "^3.8"

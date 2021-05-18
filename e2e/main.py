@@ -1,7 +1,5 @@
-import argparse
 import logging
 import os
-import sys
 import time
 import unittest
 
@@ -9,12 +7,10 @@ import docker
 import portpicker
 import pytezos
 import requests
-from docker.models.containers import Container
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 
-sys.path.append(os.path.join(PROJECT_ROOT, "client"))
-from checker import *
+from checker_client.checker import *
 
 
 class SandboxedTestCase(unittest.TestCase):
