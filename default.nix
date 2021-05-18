@@ -1,4 +1,4 @@
-{ doCheck ? false, isCi ? false }:
+{ doCheck ? false }:
 
 let
   sources = import ./nix/sources.nix { };
@@ -104,7 +104,7 @@ in rec
            # ligo does not compile on macos, also we don't want to
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
-           ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
+           ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ tezosClient ]
            ++ (with pkgs; [ niv ruby bc sphinx poetry ])
            ++ spec.buildInputs
            ++ ocamlDeps pkgs
