@@ -1,14 +1,13 @@
-from typing import Optional
 import click
 
 from checker_client import checker as checker_lib
 import pytezos
-import os
 from pathlib import Path
 from dataclasses import dataclass
 from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
 import portpicker
+import pprint
 
 CONFIG_FILE = Path.home().joinpath(Path(".checker"))
 
@@ -217,6 +216,13 @@ def mock_oracle(config: Config, oracle_src):
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
     config.oracle_address = oracle.context.address
     config.dump()
+
+
+@cli.command()
+@click.pass_obj
+def show_config(config):
+    """Show the current CLI config"""
+    click.echo(pprint.pformat(ConfigSchema().dump(config)))
 
 
 if __name__ == "__main__":
