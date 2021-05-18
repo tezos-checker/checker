@@ -782,3 +782,6 @@ let view_remove_liquidity_min_ctez_withdrawn (state, lqt: checker * liquidity) :
 let view_remove_liquidity_min_kit_withdrawn (state, lqt: checker * liquidity) : kit =
   let (_ctez, kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   kit
+
+let view_burrow_max_mintable_kit (state, burrow_id: checker * burrow_id) : kit =
+  burrow_max_mintable_kit state.parameters (find_burrow state.burrows burrow_id)
