@@ -10,5 +10,9 @@ jobs:
     steps:
     - uses: cachix/install-nix-action@v13
     - uses: actions/checkout@v2
+    - uses: cachix/cachix-action@v10
+      with:
+        name: tezos-checker
+        authToken: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - name: Build spec
       run: nix-build -A spec
