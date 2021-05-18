@@ -42,7 +42,7 @@ For extracting (haddock-style) documentation from the code using dune, type
 
 ## Local Deployment
 
-The contract can be deployed to a local sandbox run using Docker. Note that this workflow has only been tested on Linux.
+The contract can be deployed to a local, Docker sandbox run using the provided [client library](./client). Note that this workflow has only been tested on Linux.
 
 First, enter a nix shell:
 ```console
@@ -55,39 +55,18 @@ Generate the LIGO and Michelson code:
 $ make build-ligo
 ```
 
-Start the Tezos sandbox. This will run a couple of Tezos nodes in a local network using Docker.
+Use the client to start the sandbox and deploy the required ctez and mock oracle contracts:
 
 ```console
-$ ./scripts/run-sandbox.sh
+$ checker sandbox start
+$ checker deploy mock-oracle
+$ checker deploy ctez
 ```
 
-Since the sandbox runs in the foreground, open another terminal and enter a nix shell:
+> Note: If no port is specified, the client will attempt to select a default one. To view the port number for
+> use with tezos-client, etc. you can use: `checker show-config`.
+
+And finally, deploy checker itself:
 ```console
-$ nix-shell
-```
-
-The first time you deploy the contract locally, you will need to configure your local tezos-client to use the sandbox. This step can be skipped when you want to
-re-deploy the contract later.
-
-```console
-## Clean-up left-over configuration
-
-$ tezos-client config reset
-
-## Configure the client to communicate with the sandbox
-
-$ tezos-client --endpoint http://localhost:20000 bootstrapped
-$ tezos-client --endpoint http://localhost:20000 config update
-
-## Import the secret keys for two pre-existing accounts, alice and bob:
-
-$ tezos-client import secret key alice unencrypted:edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq --force
-
-$ tezos-client import secret key bob unencrypted:edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt --force
-```
-
-And finally, deploy the contract (and packed entrypoints) to the sandbox:
-
-```console
-$ ./scripts/deploy-contract.sh
+$ checker deploy checker
 ```
