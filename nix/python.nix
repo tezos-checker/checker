@@ -2,8 +2,7 @@
 
 let
 poetryPkgs = pkgs.poetry2nix.mkPoetryPackages {
-  projectDir = ./../client;
-  poetrylock = ../poetry.lock;
+  projectDir = ../.;
   overrides = pkgs.poetry2nix.overrides.withDefaults (self: super: {
     # remove eth-hash dependency because eth-hash also depends on eth-utils causing a cycle.
     eth-utils = super.eth-utils.overridePythonAttrs (old: {

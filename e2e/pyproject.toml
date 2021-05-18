@@ -3,6 +3,9 @@ name = "checker-e2e"
 version = "0.1.0"
 description = ""
 authors = []
+packages = [
+  { include = "main.py" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
