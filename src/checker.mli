@@ -254,3 +254,5 @@ val view_buy_kit_min_kit_expected : (checker * ctez) -> kit
 val view_sell_kit_min_ctez_expected : (checker * kit) -> ctez
 val view_add_liquidity_max_kit_deposited : (checker * ctez) -> kit
 val view_add_liquidity_min_lqt_minted : (checker * ctez) -> liquidity
+val view_remove_liquidity_min_ctez_withdrawn : (checker * liquidity) -> ctez
+val view_remove_liquidity_min_kit_withdrawn : (checker * liquidity) -> kit

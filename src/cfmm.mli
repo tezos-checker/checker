@@ -83,6 +83,9 @@ val cfmm_add_liquidity :
   Ligo.timestamp (* deadline *) ->
   (liquidity * kit * cfmm)
 
+(** TODO: Compute how much ctez and how much kit can be expected for the given liquidity to be burned. *)
+val cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity : cfmm -> liquidity -> (ctez * kit * cfmm)
+
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
     succeeds, but might leave the contract without ctez and kit if everybody
     sells their liquidity. I think it is unlikely to happen, since the last

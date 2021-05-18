@@ -774,3 +774,11 @@ let view_add_liquidity_max_kit_deposited (state, ctez: checker * ctez) : kit =
 let view_add_liquidity_min_lqt_minted (state, ctez: checker * ctez) : liquidity =
   let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
   lqt
+
+let view_remove_liquidity_min_ctez_withdrawn (state, lqt: checker * liquidity) : ctez =
+  let (ctez, _kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
+  ctez
+
+let view_remove_liquidity_min_kit_withdrawn (state, lqt: checker * liquidity) : kit =
+  let (_ctez, kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
+  kit

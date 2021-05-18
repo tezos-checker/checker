@@ -218,30 +218,17 @@ let cfmm_add_liquidity
       *)
       (lqt_minted, kit_to_return, cfmm)
 
-(* Selling liquidity always succeeds, but might leave the contract
- * without ctez and kit if everybody sells their liquidity. I think
- * it is unlikely to happen, since the last liquidity holders wouldn't
- * want to lose the burrow fees. *)
-let cfmm_remove_liquidity
+let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     (cfmm: cfmm)
     (lqt_burned: liquidity)
-    (min_ctez_withdrawn: ctez)
-    (min_kit_withdrawn: kit)
-    (deadline: Ligo.timestamp)
   : (ctez * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
-  if !Ligo.Tezos.now >= deadline then
-    (Ligo.failwith error_CfmmTooLate : (ctez * kit * cfmm))
-  else if lqt_burned = Ligo.nat_from_literal "0n" then
+  if lqt_burned = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
-  else if min_ctez_withdrawn = ctez_zero then
-    (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (ctez * kit * cfmm))
-  else if min_kit_withdrawn = kit_zero then
-    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (ctez * kit * cfmm))
+  else if lqt_burned >= cfmm.lqt then
+    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctez * kit * cfmm))
   else
-    let _ = assert (lqt_burned <= cfmm.lqt) in (* the ticket mechanism should enforce this *)
-
     let ctez_withdrawn =
       ctez_of_fraction_floor
         (Ligo.mul_int_int (ctez_to_muctez_int cfmm.ctez) (Ligo.int lqt_burned))
@@ -252,12 +239,8 @@ let cfmm_remove_liquidity
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (Ligo.int lqt_burned))
         (Ligo.mul_int_int kit_scaling_factor_int (Ligo.int cfmm.lqt))
     in
-    if ctez_withdrawn < min_ctez_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (ctez * kit * cfmm))
-    else if ctez_withdrawn > cfmm.ctez then
+    if ctez_withdrawn > cfmm.ctez then
       (Ligo.failwith error_RemoveLiquidityTooMuchTezWithdrawn : (ctez * kit * cfmm))
-    else if kit_withdrawn < min_kit_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (ctez * kit * cfmm))
     else if kit_withdrawn > cfmm.kit then
       (Ligo.failwith error_RemoveLiquidityTooMuchKitWithdrawn : (ctez * kit * cfmm))
     else
@@ -273,6 +256,37 @@ let cfmm_remove_liquidity
                       kit = remaining_kit;
                       lqt = remaining_lqt } in
       (ctez_withdrawn, kit_withdrawn, updated)
+
+(* Selling liquidity always succeeds, but might leave the contract
+ * without ctez and kit if everybody sells their liquidity. I think
+ * it is unlikely to happen, since the last liquidity holders wouldn't
+ * want to lose the burrow fees. *)
+let cfmm_remove_liquidity
+    (cfmm: cfmm)
+    (lqt_burned: liquidity)
+    (min_ctez_withdrawn: ctez)
+    (min_kit_withdrawn: kit)
+    (deadline: Ligo.timestamp)
+  : (ctez * kit * cfmm) =
+  if !Ligo.Tezos.now >= deadline then
+    (Ligo.failwith error_CfmmTooLate : (ctez * kit * cfmm))
+  else if lqt_burned = Ligo.nat_from_literal "0n" then
+    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
+  else if lqt_burned >= cfmm.lqt then
+    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctez * kit * cfmm))
+  else if min_ctez_withdrawn = ctez_zero then
+    (Ligo.failwith error_RemoveLiquidityNoTezWithdrawnExpected : (ctez * kit * cfmm))
+  else if min_kit_withdrawn = kit_zero then
+    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (ctez * kit * cfmm))
+  else
+    let (ctez_withdrawn, kit_withdrawn, cfmm) =
+      cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity cfmm lqt_burned in
+    if ctez_withdrawn < min_ctez_withdrawn then
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughTez : (ctez * kit * cfmm))
+    else if kit_withdrawn < min_kit_withdrawn then
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (ctez * kit * cfmm))
+    else
+      (ctez_withdrawn, kit_withdrawn, cfmm)
 
 let cfmm_add_accrued_kit (cfmm: cfmm) (accrual: kit) : cfmm =
   let cfmm = cfmm_sync_last_observed cfmm in
