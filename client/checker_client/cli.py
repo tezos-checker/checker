@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
 import portpicker
-import pprint
+import json
 
 CONFIG_FILE = Path.home().joinpath(Path(".checker"))
 
@@ -222,7 +222,7 @@ def mock_oracle(config: Config, oracle_src):
 @click.pass_obj
 def show_config(config):
     """Show the current CLI config"""
-    click.echo(pprint.pformat(ConfigSchema().dump(config)))
+    click.echo(json.dumps(ConfigSchema().dump(config), indent=4, sort_keys=True))
 
 
 if __name__ == "__main__":
