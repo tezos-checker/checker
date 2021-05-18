@@ -38,6 +38,14 @@ poetryPkgs = pkgs.poetry2nix.mkPoetryPackages {
       buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libsodium ];
     });
     # TODO: Upstream these overrides where possible.
+
+    # Below is a workaround until https://github.com/nix-community/poetry2nix/pull/304
+    markupsafe = super.markupsafe.override (old: {
+      src = pkgs.fetchurl {
+        url = "https://files.pythonhosted.org/packages/67/6a/5b3ed5c122e20c33d2562df06faf895a6b91b0a6b96a4626440ffe1d5c8e/MarkupSafe-2.0.0.tar.gz";
+        hash = "sha256-T64Gd/cS7gkHIdixf0EvHLzu+/DcGA/pG6syMvOLRSc=";
+      };
+    });
   });
 };
 
