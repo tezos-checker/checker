@@ -86,6 +86,9 @@ for name in "${inputs[@]}"; do
     # replace 'address_from_literal' with its argument (keep the double quotes)
     sed -E 's/address_from_literal \"([0-9a-zA-Z]+)\"/\"\1\"/g' |
 
+    # replace 'bytes_from_literal' with its argument and remove the double quotes
+    sed -E 's/bytes_from_literal \"([^"]+)\"/\1/g' |
+
     # remove the dereferences from Ligo.Tezos values
     sed -E 's/!(Tezos\.)/\1/g' |
 

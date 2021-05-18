@@ -109,6 +109,12 @@ module Bytes = struct
   let pack (_: 'a) = ""
 end
 
+let bytes_from_literal s =
+  let prefix = String.sub s 0 2 in
+  if prefix = "0x"
+  then s
+  else failwith ("Ligo.bytes_from_literal: invalid bytes literal: " ^ s)
+
 (* address *)
 
 type address = string
