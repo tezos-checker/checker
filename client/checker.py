@@ -1,23 +1,19 @@
 import json
+import logging
 import os
 import re
 import shlex
 import subprocess
 import tempfile
-import threading
 import time
+
 import docker
-from pprint import pprint
-from docker.client import DockerClient
-import portpicker
 import pytezos
 import requests
-import logging
 
 
-def start_sandbox(name: str):
+def start_sandbox(name: str, port: int):
     docker_client = docker.from_env()
-    port = portpicker.pick_unused_port()
     docker_container = docker_client.containers.run(
         "tqtezos/flextesa:20210316",
         command=["edobox", "start"],
