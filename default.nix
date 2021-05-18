@@ -97,6 +97,7 @@ in rec
 
   shell =
     let pkgs = pkgsHost;
+        pythonDeps = import ./nix/python.nix { inherit pkgs; };
     in pkgs.mkShell {
          name = "checker-shell";
          buildInputs =
@@ -104,9 +105,12 @@ in rec
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
            ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
-           ++ (with pkgs; [ niv ruby bc ])
+           ++ (with pkgs; [ niv ruby bc sphinx poetry ])
            ++ spec.buildInputs
-           ++ ocamlDeps pkgs;
-
+           ++ ocamlDeps pkgs
+           ++ pythonDeps.buildInputs;
+         shellHook = ''
+           ${pythonDeps.shellHook}
+         '';
        };
 }

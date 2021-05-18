@@ -53,7 +53,7 @@ entrypoints.each_slice([entrypoints.length / Etc.nprocessors, 1].max) { |batch|
       packed_entrypoints << {
         name: entrypoint[:name],
         fn_id: entrypoint[:fn_id],
-        bytes: stdout.delete_prefix("0x")
+        bytes: stdout.strip().delete_prefix("0x")
       }
     }
   }
