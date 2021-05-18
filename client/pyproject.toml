@@ -11,6 +11,7 @@ packages = [
 python = "^3.8"
 pytezos = "^3.1.0"
 eth-hash = "*"
+click = "^7.1.2"
 pytest-runner = "2.6.2"
 
 [tool.poetry.dev-dependencies]
@@ -18,3 +19,10 @@ pytest-runner = "2.6.2"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[flake8]
+max-line-length = 99
+
+[tool.black]
+line-length = 99
+target-version = ["py38"]
