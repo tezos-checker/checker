@@ -21,6 +21,6 @@ jobs:
     - uses: cachix/cachix-action@v10
       with:
         name: tezos-checker
-        authToken: '${{ secrets.CACHIX_SIGNING_KEY }}'
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build and test
       run: nix-build -A michelson --arg doCheck true
