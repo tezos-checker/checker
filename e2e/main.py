@@ -6,6 +6,7 @@ import unittest
 import argparse
 
 import docker
+import requests
 import portpicker
 from docker.models.containers import Container
 
@@ -33,14 +34,21 @@ class SandboxedTestCase(unittest.TestCase):
          remove=True,
        )
 
-       # wait some time for the node to start
-       time.sleep(10)
-
        self.client = pytezos.pytezos.using(
          shell="http://127.0.0.1:{}".format(port),
          key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt" # bob's key from "edobox info"
        )
        self.client.loglevel = logging.ERROR
+
+       # wait some time for the node to start
+       while True:
+           try:
+               self.client.shell.node.get("/version/")
+               break
+           except requests.exceptions.ConnectionError:
+               time.sleep(0.1)
+       # wait until a block is mined
+       time.sleep(3)
 
     def tearDown(self):
        self.docker_container.kill()
