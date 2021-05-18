@@ -785,3 +785,9 @@ let view_remove_liquidity_min_kit_withdrawn (state, lqt: checker * liquidity) : 
 
 let view_burrow_max_mintable_kit (state, burrow_id: checker * burrow_id) : kit =
   burrow_max_mintable_kit state.parameters (find_burrow state.burrows burrow_id)
+
+let view_is_burrow_overburrowed (state, burrow_id: checker * burrow_id) : bool =
+  burrow_is_overburrowed state.parameters (find_burrow state.burrows burrow_id)
+
+let view_is_burrow_liquidatable (state, burrow_id: checker * burrow_id) : bool =
+  burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)

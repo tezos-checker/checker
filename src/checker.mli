@@ -256,4 +256,7 @@ val view_add_liquidity_max_kit_deposited : (checker * ctez) -> kit
 val view_add_liquidity_min_lqt_minted : (checker * ctez) -> liquidity
 val view_remove_liquidity_min_ctez_withdrawn : (checker * liquidity) -> ctez
 val view_remove_liquidity_min_kit_withdrawn : (checker * liquidity) -> kit
+
 val view_burrow_max_mintable_kit : (checker * burrow_id) -> kit
+val view_is_burrow_overburrowed : (checker * burrow_id) -> bool
+val view_is_burrow_liquidatable : (checker * burrow_id) -> bool
