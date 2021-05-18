@@ -23,4 +23,4 @@ jobs:
         name: tezos-checker
         authToken: '${{ secrets.CACHIX_SIGNING_KEY }}'
     - name: Build and test
-      run: nix-build -A michelson --arg doCheck true --arg isCi true
+      run: nix-build -A michelson --arg doCheck true
