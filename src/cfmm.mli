@@ -57,6 +57,9 @@ val cfmm_sell_kit :
   Ligo.timestamp (* deadline *) ->
   (ctez * cfmm)
 
+(** TODO: Compute how much kit is needed and how much liquidity can be added. *)
+val cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity : cfmm -> ctez -> (liquidity * kit * cfmm)
+
 (** Buy some liquidity from the cfmm contract, by giving it some ctez and
     some kit. If the given amounts does not have the right ratio, we
     liquidate as much as we can with the right ratio, and return the

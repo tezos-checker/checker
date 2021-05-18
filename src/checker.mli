@@ -5,6 +5,7 @@ open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa12Interface
 open Fa2Interface
+open CfmmTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -251,3 +252,5 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 
 val view_buy_kit_min_kit_expected : (checker * ctez) -> kit
 val view_sell_kit_min_ctez_expected : (checker * kit) -> ctez
+val view_add_liquidity_max_kit_deposited : (checker * ctez) -> kit
+val view_add_liquidity_min_lqt_minted : (checker * ctez) -> liquidity

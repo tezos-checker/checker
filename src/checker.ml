@@ -4,6 +4,7 @@ open Kit
 open Avl
 open Parameters
 open Cfmm
+open CfmmTypes
 open Burrow
 open LiquidationAuction
 open LiquidationAuctionPrimitiveTypes
@@ -765,3 +766,11 @@ let view_buy_kit_min_kit_expected (state, ctez: checker * ctez) : kit =
 let view_sell_kit_min_ctez_expected (state, kit: checker * kit) : ctez =
   let (ctez, _cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit state.cfmm kit in
   ctez
+
+let view_add_liquidity_max_kit_deposited (state, ctez: checker * ctez) : kit =
+  let (_lqt, kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
+  kit
+
+let view_add_liquidity_min_lqt_minted (state, ctez: checker * ctez) : liquidity =
+  let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
+  lqt

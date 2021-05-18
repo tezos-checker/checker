@@ -135,8 +135,6 @@ let cfmm_sell_kit
     (min_ctez_expected: ctez)
     (deadline: Ligo.timestamp)
   : (ctez * cfmm) =
-  let cfmm = cfmm_sync_last_observed cfmm in
-  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
   if (kit_amount = kit_zero) then
     (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
   else if !Ligo.Tezos.now >= deadline then
@@ -149,6 +147,33 @@ let cfmm_sell_kit
       (Ligo.failwith error_SellKitPriceFailure : (ctez * cfmm))
     else
       (bought_ctez, cfmm)
+
+let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
+    (cfmm: cfmm)
+    (ctez_amount: ctez)
+  : (liquidity * kit * cfmm) =
+  let cfmm = cfmm_sync_last_observed cfmm in
+  let cfmm = cfmm_assert_initialized cfmm in
+  if ctez_amount = ctez_zero then
+    (Ligo.failwith error_AddLiquidityNoTezGiven : (Ligo.nat * kit * cfmm))
+  else
+    let cfmm_ctez = ctez_to_muctez_int cfmm.ctez in
+    let lqt_minted =
+      fraction_to_nat_floor
+        (Ligo.mul_int_int (Ligo.int cfmm.lqt) (ctez_to_muctez_int ctez_amount))
+        cfmm_ctez in
+    let kit_deposited =
+      kit_of_fraction_ceil
+        (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_int ctez_amount))
+        (Ligo.mul_int_int kit_scaling_factor_int cfmm_ctez) in
+    ( lqt_minted,
+      kit_deposited,
+      { cfmm with
+        kit = kit_add cfmm.kit kit_deposited;
+        ctez = ctez_add cfmm.ctez ctez_amount;
+        lqt = Ligo.add_nat_nat cfmm.lqt lqt_minted;
+      }
+    )
 
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
@@ -167,8 +192,6 @@ let cfmm_add_liquidity
     (min_lqt_minted: liquidity)
     (deadline: Ligo.timestamp)
   : (liquidity * kit * cfmm) =
-  let cfmm = cfmm_sync_last_observed cfmm in
-  let cfmm = cfmm_assert_initialized cfmm in
   if !Ligo.Tezos.now >= deadline then
     (Ligo.failwith error_CfmmTooLate : (Ligo.nat * kit * cfmm))
   else if ctez_amount = ctez_zero then
@@ -178,18 +201,8 @@ let cfmm_add_liquidity
   else if min_lqt_minted = Ligo.nat_from_literal "0n" then
     (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (Ligo.nat * kit * cfmm))
   else
-    let effective_ctez_balance = ctez_to_muctez_int cfmm.ctez in
-    let lqt_minted =
-      fraction_to_nat_floor
-        (Ligo.mul_int_int (Ligo.int cfmm.lqt) (ctez_to_muctez_int ctez_amount))
-        effective_ctez_balance
-    in
-    let kit_deposited =
-      kit_of_fraction_ceil
-        (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_int ctez_amount))
-        (Ligo.mul_int_int kit_scaling_factor_int effective_ctez_balance)
-    in
-
+    let (lqt_minted, kit_deposited, cfmm) =
+      cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity cfmm ctez_amount in
     if lqt_minted < min_lqt_minted then
       (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (Ligo.nat * kit * cfmm))
     else if max_kit_deposited < kit_deposited then
@@ -198,17 +211,12 @@ let cfmm_add_liquidity
       (Ligo.failwith error_AddLiquidityZeroKitDeposited : (Ligo.nat * kit * cfmm))
     else
       let kit_to_return = kit_sub max_kit_deposited kit_deposited in
-      let updated = { cfmm with
-                      kit = kit_add cfmm.kit kit_deposited;
-                      ctez = ctez_add cfmm.ctez ctez_amount;
-                      lqt = Ligo.add_nat_nat cfmm.lqt lqt_minted;
-                    } in
       (* EXPECTED PROPERTY: kit_to_return + final_cfmm_kit = max_kit_deposited + initial_cfmm_kit
        * which follows from the definitions:
-       *  kit_to_return     = max_kit_deposited   - kit_deposited
-       *  final_cfmm_kit = initial_cfmm_kit + kit_deposited
+       *  kit_to_return  = max_kit_deposited - kit_deposited
+       *  final_cfmm_kit = initial_cfmm_kit  + kit_deposited
       *)
-      (lqt_minted, kit_to_return, updated)
+      (lqt_minted, kit_to_return, cfmm)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without ctez and kit if everybody sells their liquidity. I think
