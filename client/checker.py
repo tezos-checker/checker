@@ -6,9 +6,61 @@ import subprocess
 import tempfile
 import threading
 import time
+import docker
 from pprint import pprint
-
+from docker.client import DockerClient
+import portpicker
 import pytezos
+import requests
+import logging
+
+
+def start_sandbox(name: str):
+    docker_client = docker.from_env()
+    port = portpicker.pick_unused_port()
+    docker_container = docker_client.containers.run(
+        "tqtezos/flextesa:20210316",
+        command=["edobox", "start"],
+        environment={"block_time": 1},
+        ports={"20000/tcp": port},
+        name=name,
+        detach=True,
+        remove=True,
+    )
+    client = pytezos.pytezos.using(
+        shell="http://127.0.0.1:{}".format(port),
+        key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "edobox info"
+    )
+    # Increase log level to avoid connection errors
+    client.loglevel = logging.ERROR
+    # wait some time for the node to start
+    while True:
+        try:
+            client.shell.node.get("/version/")
+            break
+        except requests.exceptions.ConnectionError:
+            time.sleep(0.1)
+    # wait until a block is mined
+    time.sleep(3)
+    return client, docker_client, docker_container
+
+
+def stop_sandbox(name: str):
+    docker_client = docker.from_env()
+    container = docker_client.containers.get(name)
+    container.kill()
+
+
+def is_sandbox_container_running(name: str):
+    docker_client = docker.from_env()
+    try:
+        container = docker_client.containers.get(name)
+    except docker.errors.NotFound:
+        return False
+    if container.status == "running":
+        return True
+    else:
+        return False
 
 
 def deploy_contract(tz, *, source_file, initial_storage):

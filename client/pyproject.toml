@@ -7,9 +7,14 @@ packages = [
   { include = "checker.py" }
 ]
 
+[tool.poetry.scripts]
+checker = 'client.cli:cli'
+
 [tool.poetry.dependencies]
 python = "^3.8"
 pytezos = "^3.1.0"
+docker = "^5.0.0"
+marshmallow = "^3.12.1"
 eth-hash = "*"
 click = "^7.1.2"
 pytest-runner = "2.6.2"
