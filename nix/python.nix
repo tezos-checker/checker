@@ -30,6 +30,7 @@ poetryPkgs = pkgs.poetry2nix.mkPoetryPackages {
     fastecdsa = super.fastecdsa.overridePythonAttrs (old: {
       buildInputs = old.buildInputs ++ [ pkgs.gmp.dev ];
     });
+    # upstream issue: https://github.com/nix-community/poetry2nix/issues/306
     pendulum = super.pendulum.override {
       preferWheel = true;
     };
