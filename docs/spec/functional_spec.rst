@@ -289,7 +289,7 @@ Query balance
 
     balance_of: (pair (list %requests (pair (address %owner) (nat %token_id)))
                       (contract %callback
-                         (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))``
+                         (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))
 
 Update operators
 ----------------
