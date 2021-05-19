@@ -78,7 +78,6 @@ def cli(ctx, config_file):
     can be viewed using `show-config`.
     """
     config_file = Path(config_file)
-    print(config_file)
     # Ensure directory exists
     if not config_file.parent.exists():
         config_file.parent.mkdir(parents=True)
@@ -97,17 +96,21 @@ def sandbox():
 
 
 @sandbox.command()
+@click.option("--port", type=int, help="The port on which the sandbox should listen")
 @click.pass_obj
-def start(config: Config):
+def start(config: Config, port=None):
     """Starts the sandbox"""
     if checker_lib.is_sandbox_container_running(Config.sandbox_container):
         click.echo(f"Container {Config.sandbox_container} is already running.")
     else:
-        click.echo("Starting sandbox container...")
-        if not portpicker.is_port_free(config.sandbox_port):
-            click.echo(f"Selected host port {config.sandbox_port} for sandbox.")
-            config.sandbox_port = portpicker.pick_unused_port()
-        config.dump()
+        if port is not None:
+            config.sandbox_port = port
+            # Note: also setting the default tezos client port here as well which optimizes
+            # the experience for people primarily working with the sandbox. If this proves
+            # annoying we can remove this line.
+            config.tezos_port = port
+            config.dump()
+        click.echo(f"Starting sandbox container using host port {config.sandbox_port}...")
         checker_lib.start_sandbox(config.sandbox_container, config.sandbox_port)
         click.echo("Sandbox started.")
 
