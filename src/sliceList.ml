@@ -12,7 +12,9 @@ open LiquidationAuctionPrimitiveTypes
 type slice_list_element = SliceListElement of (leaf_ptr * liquidation_slice)
 [@@deriving show]
 
-let slice_list_element_contents e = match e with SliceListElement (_, contents) -> contents.contents
+let slice_list_element_contents (e: slice_list_element) =
+  match e with
+  | SliceListElement (_, contents) -> contents.contents
 
 type slice_list_bounds = {
   slice_list_youngest_ptr : leaf_ptr;
@@ -72,7 +74,7 @@ let slice_list_from_queue_head (auctions: liquidation_auctions) =
     let element = SliceListElement (ptr, slice.value) in
     let list = slice_list_from_auction_state auctions slice.value.contents.burrow in
     Some (element, list)
-  | None -> None
+  | None -> (None : (slice_list_element * slice_list) option)
 
 (* Updates the burrow slices in the provided auction state using the given burrow slice list *)
 let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) =
