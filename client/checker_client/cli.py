@@ -1,15 +1,23 @@
-import click
-
-from checker_client import checker as checker_lib
-import pytezos
-from pathlib import Path
+import json
+import os
 from dataclasses import dataclass
+from pathlib import Path
+
+import click
+import portpicker
+import pytezos
 from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
-import portpicker
-import json
 
-CONFIG_FILE = Path.home().joinpath(Path(".checker"))
+from checker_client import checker as checker_lib
+
+CONFIG_FILE_BASE = Path(".checker")
+CONFIG_DIR = os.getenv("XDG_CONFIG_HOME")
+if not CONFIG_DIR:
+    CONFIG_DIR = Path.home().joinpath(".config")
+else:
+    CONFIG_DIR = Path(CONFIG_DIR)
+CONFIG_FILE = CONFIG_DIR.joinpath(CONFIG_FILE_BASE)
 
 
 @dataclass
@@ -70,6 +78,10 @@ def cli(ctx, config_file):
     can be viewed using `show-config`.
     """
     config_file = Path(config_file)
+    print(config_file)
+    # Ensure directory exists
+    if not config_file.parent.exists():
+        config_file.parent.mkdir(parents=True)
     if config_file.exists():
         config = Config.load(config_file)
     else:
