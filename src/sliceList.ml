@@ -1,6 +1,8 @@
-(* Double-linked lists which act as an index for data stored in the AVL queue.
- * I would have really liked for these to be polymorphic, but can't find a way
- * to make this happen in Ligo.
+(* Double-linked list for burrow slices which acts as a higher-level interface for data stored in the AVL queue.
+ * This data structure allows for fast lookups of slices for a specific burrow, and
+ * functions which are adding or removing slices from the queue should use this module instead of
+ * AVL.ml directly since this module will automatically ensure that the burrow slice lists stay up
+ * to date.
 *)
 open Avl
 open Mem
@@ -8,21 +10,33 @@ open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 
 type slice_list_element = SliceListElement of (leaf_ptr * liquidation_slice)
+[@@deriving show]
+
+let slice_list_element_contents e = match e with SliceListElement (_, contents) -> contents.contents
 
 type slice_list_bounds = {
   slice_list_youngest_ptr : leaf_ptr;
   slice_list_oldest_ptr : leaf_ptr;
 }
+[@@deriving show]
 
 type slice_list_meta = {
   slice_list_burrow: burrow_id;
   slice_list_bounds: slice_list_bounds option
 }
+[@@deriving show]
 
 (* Question: Is it worth storing one of the end elements within the SliceList?  *)
 type slice_list = SliceList of slice_list_meta
+[@@deriving show]
 
-let empty (burrow: burrow_id) = SliceList {slice_list_burrow=burrow; slice_list_bounds=(None:slice_list_bounds option);}
+let slice_list_empty (burrow: burrow_id) = SliceList {slice_list_burrow=burrow; slice_list_bounds=(None:slice_list_bounds option);}
+
+let slice_list_is_empty (l: slice_list) =
+  let meta = match l with SliceList meta -> meta in
+  match meta.slice_list_bounds with
+  | Some _ -> false
+  | None -> true
 
 (* Constructs a burrow slice list for the given burrow id using the provided auction state *)
 let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) =
@@ -37,16 +51,28 @@ let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: b
         };
     }
 
-(* TODO: Constructor for creating a list / element from the front of avl queue *)
-
 (* Constructs an element from a burrow leaf in the AVL *)
 let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) =
   let slice = avl_read_leaf auctions.avl_storage ptr in
   let element = SliceListElement (ptr, slice) in
   let list = slice_list_from_auction_state auctions slice.contents.burrow in
-  (* TODO: What if burrow list is empty? In old implementation we throw an invariant error *)
+  let _ = if slice_list_is_empty list then
+      failwith "invariant violation: corresponding list for slice was empty"
+    else ()
+  in
   (* FIXME: Add assertion here that checks if the element exists in the list *)
   element, list
+
+(* Constructs an element from the first item in the auction queue.
+   Does NOT remove the corresponding slice from the queue. *)
+let slice_list_from_queue_head (auctions: liquidation_auctions) =
+  match avl_peek_front auctions.avl_storage auctions.queued_slices with
+  | Some (ptr, slice) ->
+    (* Constructing the element directly since we already have read its contents *)
+    let element = SliceListElement (ptr, slice.value) in
+    let list = slice_list_from_auction_state auctions slice.value.contents.burrow in
+    Some (element, list)
+  | None -> None
 
 (* Updates the burrow slices in the provided auction state using the given burrow slice list *)
 let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) =
@@ -68,7 +94,7 @@ let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list)
 *)
 let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) =
   let meta = match l with SliceList m -> m in
-  (* FIXME: Throw a specific error here *)
+  (* FIXME: Perhaps throw specific error code here? *)
   assert (slice_contents.burrow = meta.slice_list_burrow);
   match meta.slice_list_bounds with
   (* List is empty, creating the first element *)
@@ -88,8 +114,11 @@ let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id)
   | Some bounds ->
     (* The new element is now the youngest *)
     let slice = {younger=(None: leaf_ptr option); older=Some bounds.slice_list_youngest_ptr; contents=slice_contents;} in
-    (* Write the new slice to AVL backend *)
-    let storage, ptr = avl_push_back storage root slice in
+    (* Write slice to AVL backend *)
+    let storage, ptr = match queue_end with
+      | Back -> avl_push_back storage root slice
+      | Front -> avl_push_front storage root slice
+    in
     (* Touch up the old element in the backend *)
     let former_youngest = bounds.slice_list_youngest_ptr in
     let storage = avl_update_leaf storage former_youngest (fun (s: liquidation_slice) -> {s with younger = Some ptr}) in
@@ -97,41 +126,13 @@ let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id)
     let bounds = {bounds with slice_list_youngest_ptr = ptr} in
     storage, SliceList {meta with slice_list_bounds=Some bounds;}, SliceListElement (ptr, slice)
 
-(* Removes and returns the last element (the youngest) from the list in same time as ref_del
- * FIXME: This function might not be required in the Ligo code
-*)
-let slice_list_pop (l:slice_list) (storage:mem) =
-  let meta = match l with SliceList m -> m in
-  match meta.slice_list_bounds with
-  | None -> storage, l, (None: liquidation_slice_contents option)
-  | Some bounds ->
-    let slice_ptr = bounds.slice_list_youngest_ptr in
-    let slice = avl_read_leaf storage bounds.slice_list_youngest_ptr in
-    let new_youngest = slice.older in
-    (* Remove the pointers from the popped element and remove it from the storage*)
-    let slice = {slice with younger = (None: leaf_ptr option); older=(None: leaf_ptr option);} in
-    let storage, _ = avl_del storage slice_ptr in
-    (* Touch up the *new* youngest slice *)
-    (match new_youngest with
-     (* No older slices, the list is now empty *)
-     | None -> storage, SliceList {meta with slice_list_bounds=(None:slice_list_bounds option)}, Some slice.contents
-     (* 1 or more older slices, the next slice is now the youngest *)
-     | Some new_youngest_ptr ->
-       (* Need to update the slice itself and the list metadata *)
-       let storage = avl_update_leaf storage new_youngest_ptr (fun (s: liquidation_slice) -> {s with younger = (None: leaf_ptr option)}) in
-       let bounds = {bounds with slice_list_youngest_ptr=new_youngest_ptr;} in
-       (* Update the list metadata with the new youngest slice *)
-       storage, SliceList {meta with slice_list_bounds=Some bounds;}, Some slice.contents
-    )
-
 (* Remove the element from the list, returning its contents *)
 let slice_list_remove (l:slice_list) (storage:mem) (e:slice_list_element) =
   let meta = match l with SliceList m -> m in
   let ptr, slice = match e with SliceListElement (ptr, slice) -> ptr, slice in
   assert (meta.slice_list_burrow = slice.contents.burrow);
   match meta.slice_list_bounds with
-  (* FIXME: Throw specific error here *)
-  (* FIXME: This does not seem to be updating pointers of neighboring elements in the list *)
+  (* FIXME: Perhaps throw specific error code here? *)
   | None -> (failwith "Attempting to remove an element from an empty list" : mem*slice_list*avl_ptr*liquidation_slice_contents)
   | Some bounds ->
     (* Update the list metadata: *)
@@ -178,5 +179,15 @@ let slice_list_remove (l:slice_list) (storage:mem) (e:slice_list_element) =
 (* Extra functionality we want for testing, etc. can go here.
       e.g. folds, length, map
 *)
-type slice_list_direction = Older | Younger
+let slice_list_youngest (l: slice_list) (storage: mem) =
+  let meta = match l with SliceList meta -> meta in
+  match meta.slice_list_bounds with
+  | Some bounds -> Some (SliceListElement (bounds.slice_list_youngest_ptr, avl_read_leaf storage bounds.slice_list_youngest_ptr))
+  | None -> None
+
+let slice_list_oldest (l: slice_list) (storage: mem) =
+  let meta = match l with SliceList meta -> meta in
+  match meta.slice_list_bounds with
+  | Some bounds -> Some (SliceListElement (bounds.slice_list_oldest_ptr, avl_read_leaf storage bounds.slice_list_oldest_ptr))
+  | None -> None
 (* END_OCAML *)

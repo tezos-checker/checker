@@ -13,6 +13,7 @@
   TestCfmm
   TestLiquidationAuction
   TestChecker
+  TestSliceList
   TestArbitrary
   TestCommon)
  (libraries src core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
