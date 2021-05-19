@@ -32,6 +32,21 @@ else
   status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
   puts "  ~#{output.length / 2} bytes"
 end
+puts "Compiling the views."
+
+views = File.read("#{LIGO_DIR}/checker.mligo")
+  .scan(/let view_(\S+) *\([^:]*:[^*]*\* *([^)]*)\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1], return_ty: g[2].strip }}
+
+packed_views = []
+
+threads = []
+views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
+  threads << Thread.new {
+    # TODO process views
+  }
+}
+threads.each(&:join)
 
 puts "Compiling the entrypoints."
 entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
@@ -71,6 +86,7 @@ end
 
 functions_json = {
   lazy_functions: chunked_entrypoints,
+  views: packed_views
 }
 
 functions_json = JSON.pretty_generate(functions_json)
