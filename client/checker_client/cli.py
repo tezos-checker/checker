@@ -63,8 +63,11 @@ class ConfigSchema(Schema):
 def cli(ctx, config_file):
     """Checker command line utilities
 
-    By default this tool caches options for things like addresses in the
-    specified config file to make chaining calls easier.
+    By default this tool saves arguments and command
+    outputs locally (see the --config flag). This
+    allows the output of commands to be used as the default
+    arguments for subsequent commands. The current defaults
+    can be viewed using `show-config`.
     """
     config_file = Path(config_file)
     if config_file.exists():
