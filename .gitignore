@@ -16,3 +16,10 @@ _opam
 # editors
 .vscode
 /result
+
+# python stuff
+__pycache__
+.python-version
+
+# tezos client scripts
+*2net.sh

@@ -41,7 +41,7 @@ to achieve a certain degree of steadiness with respect to a **target**,
 which is expressed in terms of a **quantity** and an **index**.
 
 The word “kit” is chosen because it’s short, simple to pronounce, and
-means a baby fox (which seem appropriate for a smart currency).
+means a baby fox (which seems appropriate for a smart currency).
 
 The **quantity**, :math:`q_{t_i}`, expressed in
 :math:`\mathrm{kit}^{-1}`, is a time-dependent property of the system
@@ -134,8 +134,8 @@ We define the **protected index**, :math:`\widehat{tz}_t`, as:
 
 .. math:: \widehat{tz}_{t_i} = \widehat{tz}_{t_{i-1}} \times \mathrm{clamp}\!\left(\frac{tz_{t_i}}{\widehat{tz}_{t_{i-1}} }, e^{-\epsilon (t_{i}-t_{i-1})}, e^{\epsilon (t_{i}-t_{i-1})}\right)
 
-where ``clamp(x, min, max)`` returns ``x`` constrained to the inclusive
-range from ``min`` to ``max``.
+where :math:`\mathrm{clamp}\!(x, \mathrm{min}, \mathrm{max})` returns :math:`\mathrm{x}` constrained to the inclusive
+range from :math:`\mathrm{min}` to :math:`\mathrm{max}`.
 
 We suggest a value of :math:`\epsilon = 0.05~\mathrm{cNp/min}` – that’s
 about 72 cNp / day, so the filter can catch up to a 2x or 0.5x move in
@@ -144,7 +144,7 @@ about 72 cNp / day, so the filter can catch up to a 2x or 0.5x move in
 :math:`\widehat{tz}_t` is like the suspension of a car, it lags behind
 large moves, but is insensitive to spikes (real or fabricated).
 
-In addition, we define the following prices [mjg suggest creating a
+In addition, we define the following prices [TODO: mjg suggest creating a
 subsection for “Prices” and moving the indexes below down a level. Or
 (because they’re quite short), perhaps the below is actually an itemised
 list]
@@ -164,10 +164,10 @@ miminum of :math:`tz_t` and :math:`\widehat{tz_t}`.
 Changing oracle feeds
 ^^^^^^^^^^^^^^^^^^^^^
 
-The set of feeds [mjg if symbol exists, put it here] is initially fixed.
+The set of feeds [TODO: mjg if symbol exists, put it here] is initially fixed.
 A Tezos protocol upgrade is **strongly recommended** to give bakers the
 ability to signal in each block support for the addition or removal of
-oracle feeds. [mjg I think this may be what is intended:] We **strongly
+oracle feeds. [TODO: mjg I think this may be what is intended:] We **strongly
 recommend** that the current Tezos protocol be upgraded to allow bakers
 to signal in each block support for adding or removing oracles.
 
@@ -265,8 +265,7 @@ If the owner closes the burrow, the deposit is recovered with it. We
 propose to set the deposit at 1 tez.
 
 Since the burrow holds tez on the owner’s behalf, the owner may
-optionally specify a delegate for that balance, and they may also grant
-permissions for other users to perform actions on the burrow.
+optionally specify a delegate for that balance.
 
 Burrowing and overburrowing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -275,20 +274,20 @@ Burrowing and overburrowing
 accrue to an **outstanding** kits balance. To avoid overpopulation of
 kits, the burrowing is limited depending on the number of tez in the
 burrow in relation to the outstanding kit balance. Generally, kits can
-be minted so long as the tez in the burrow is at least :math:`f` times
+be minted so long as the tez in the burrow is at least :math:`f^{minting}` times
 the number of outstanding kits multiplied by :math:`q_t` multiplied by
-:math:`tz^{minting}_t`. We propose :math:`f = 2`.
+:math:`tz^{minting}_t`. We propose :math:`f^{minting} = 2.1`.
 
 Assume for instance :math:`tz^{minting}_t = 0.36 \textrm{xtz}` and
 :math:`q_t = 1.015`. To mint 10 kits, one would require
-:math:`2 \times 10 \times 0.36 \times 1.015 = 7.308~\mathrm{xtz}` in the
+:math:`2.1 \times 10 \times 0.36 \times 1.015 = 7.673~\mathrm{xtz}` in the
 burrow. When further kits can no longer be burrowed due to insufficient
 tez collateral, the burrow is said to be **overburrowed**.
 
 Even once further minting is blocked due to overburrowing, market
 fluctuations in kit and tez values may lead to a situation in which the
 ratio of kits outstanding versus tez in the burrow exceeds a higher
-safety threshold of :math:`f q_t tz^{liquidation}_t`, in which case the
+safety threshold of :math:`f^{liquidation} q_t tz^{liquidation}_t`, in which case the
 burrow is considered under-collateralized and can be marked for
 liquidation, as we’ll see later.
 
@@ -301,7 +300,7 @@ balance, but this amount does not represent kits given to the burrow
 owner. The result of this is that over time slightly more kits are
 required to be burned in a burrow in order to release its collateral.
 
-A 0.5 cNp fee per year is assessed and implicitly credited to a tez /
+A 0.5 cNp fee per year is assessed and implicitly credited to a ctez /
 kit CFMM exchange contract which is described below in this document.
 It’s important that this is done implicitly, i.e. whenever the CFMM
 contract is called, it knows exactly what its balance is.
@@ -394,7 +393,7 @@ known (after an auction) we look at whether that liquidation was
 destroy 10% of the kit proceeds of the auction. These 10% do not go
 towards reducing the outstanding kit balance of the burrow, they are
 just gone, for everyone. If it turned out that a liquidation was not
-warranted, that is a little bit unfair to the burrow owner, so then all
+warranted, all
 100% of the liquidation proceeds are credited to the burrow.
 
 CFMM

@@ -1,4 +1,4 @@
-{ doCheck ? false, isCi ? false }:
+{ doCheck ? false }:
 
 let
   sources = import ./nix/sources.nix { };
@@ -97,16 +97,20 @@ in rec
 
   shell =
     let pkgs = pkgsHost;
+        pythonDeps = import ./nix/python.nix { inherit pkgs; };
     in pkgs.mkShell {
          name = "checker-shell";
          buildInputs =
            # ligo does not compile on macos, also we don't want to
            # compile it in CI
            pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
-           ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux && !isCi) [ tezosClient ]
-           ++ (with pkgs; [ niv ruby bc ])
+           ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ tezosClient ]
+           ++ (with pkgs; [ niv ruby bc sphinx poetry ])
            ++ spec.buildInputs
-           ++ ocamlDeps pkgs;
-
+           ++ ocamlDeps pkgs
+           ++ pythonDeps.buildInputs;
+         shellHook = ''
+           ${pythonDeps.shellHook}
+         '';
        };
 }

@@ -18,5 +18,9 @@ jobs:
     steps:
     - uses: cachix/install-nix-action@v13
     - uses: actions/checkout@v2
+    - uses: cachix/cachix-action@v10
+      with:
+        name: tezos-checker
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - name: Build and test
-      run: nix-build -A michelson --arg doCheck true --arg isCi true
+      run: nix-build -A michelson --arg doCheck true

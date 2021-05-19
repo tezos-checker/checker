@@ -75,4 +75,4 @@ collateralising its robocoin algorithmically based on its current
 market price and the target oracle feed, such that the price drifts
 towards the target.
 
-An FA1.2 interface is provided for each deployment's robocoin.
+An FA2 interface is provided for each deployment's robocoin.

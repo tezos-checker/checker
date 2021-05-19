@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "checker-client"
+version = "0.1.0"
+description = ""
+authors = []
+
+[tool.poetry.scripts]
+checker = 'checker_client.cli:cli'
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pytezos = "^3.1.0"
+docker = "^5.0.0"
+marshmallow = "^3.12.1"
+eth-hash = "*"
+click = "^7.1.2"
+pytest-runner = "2.6.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[flake8]
+max-line-length = 99
+
+[tool.black]
+line-length = 99
+target-version = ["py38"]
