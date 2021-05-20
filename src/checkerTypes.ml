@@ -45,4 +45,3 @@ type wrapper =
   ; metadata: (string, Ligo.bytes) Ligo.big_map
   ; deployment_state : deployment_state
   }
-
