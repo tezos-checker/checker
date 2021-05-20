@@ -82,8 +82,6 @@ views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
 }
 threads.each(&:join)
 
-puts packed_views.inspect
-
 puts "Compiling the entrypoints."
 entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
   .scan(/let lazy_id_(\S+) *= \(*(\d*)\)/)
