@@ -299,6 +299,38 @@ let suite =
          (Burrow.burrow_address  burrow)
     );
 
+    ("burrow_mint_kit - minting burrow_max_mintable_kit succeeds" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "12_345_678_904mutez") in
+
+       let burrow_max_mintable_kit = Burrow.burrow_max_mintable_kit Parameters.initial_parameters burrow0 in
+       let burrow = Burrow.burrow_mint_kit Parameters.initial_parameters burrow_max_mintable_kit burrow0 in
+
+       assert_equal
+         ~printer:show_kit
+         burrow_max_mintable_kit
+         (Burrow.burrow_outstanding_kit burrow)
+    );
+
+    ("burrow_mint_kit - minting more than burrow_max_mintable_kit fails" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_MintKitFailure))
+         (fun () ->
+            let burrow0 = make_test_burrow
+                ~outstanding_kit:kit_zero
+                ~active:true
+                ~collateral:(Ligo.tez_from_literal "12_345_678_904mutez") in
+
+            let burrow_max_mintable_kit = Burrow.burrow_max_mintable_kit Parameters.initial_parameters burrow0 in
+            let just_over_max_mintable_kit = Kit.kit_add burrow_max_mintable_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) in
+            Burrow.burrow_mint_kit Parameters.initial_parameters just_over_max_mintable_kit burrow0
+         )
+    );
+
     ("burrow_activate - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises

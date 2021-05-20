@@ -113,6 +113,22 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
   let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
   undercollateralization_condition fminting (minting_price p) tez kit
 
+(*  max_kit_outstanding = FLOOR (tez_collateral / (fminting * minting_price)) *)
+let burrow_max_mintable_kit (p: parameters) (b: burrow) : kit =
+  let _ = ensure_uptodate_burrow p b in
+  assert_burrow_invariants b;
+  let { num = num_fm; den = den_fm; } = fminting in
+  let { num = num_mp; den = den_mp; } = minting_price p in
+  let numerator =
+    Ligo.mul_int_int
+      (tez_to_mutez b.collateral)
+      (Ligo.mul_int_int den_fm den_mp) in
+  let denominator =
+    Ligo.mul_int_int
+      (Ligo.int_from_literal "1_000_000")
+      (Ligo.mul_int_int num_fm num_mp) in
+  kit_of_fraction_floor numerator denominator
+
 (** Rebalance the kit inside the burrow so that either outstanding_kit is zero
   * or b.outstanding_kit is zero. *)
 let rebalance_kit (b: burrow) : burrow =

@@ -27,6 +27,9 @@ val burrow_total_associated_tez : burrow -> Ligo.tez
 *)
 val burrow_is_overburrowed : parameters -> burrow -> bool
 
+(** The maximum number of kit, given the current collateral in the burrow. *)
+val burrow_max_mintable_kit : parameters -> burrow -> kit
+
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
   *

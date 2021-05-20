@@ -5,6 +5,7 @@ open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa12Interface
 open Fa2Interface
+open CfmmTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -244,3 +245,18 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 val strict_entrypoint_transfer : checker * fa2_transfer list -> LigoOp.operation list * checker
 val strict_entrypoint_balance_of : checker * fa2_balance_of_param -> LigoOp.operation list * checker
 val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.operation list * checker
+
+(*****************************************************************************)
+(**                            {1 VIEWS}                                     *)
+(*****************************************************************************)
+
+val view_buy_kit_min_kit_expected : (ctez * checker) -> kit
+val view_sell_kit_min_ctez_expected : (kit * checker) -> ctez
+val view_add_liquidity_max_kit_deposited : (ctez * checker) -> kit
+val view_add_liquidity_min_lqt_minted : (ctez * checker) -> liquidity
+val view_remove_liquidity_min_ctez_withdrawn : (liquidity * checker) -> ctez
+val view_remove_liquidity_min_kit_withdrawn : (liquidity * checker) -> kit
+
+val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
+val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
+val view_is_burrow_liquidatable : (burrow_id * checker) -> bool

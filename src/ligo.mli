@@ -170,6 +170,7 @@ val nat_from_literal : String.t -> nat         (* IN LIGO: drop nat_from_literal
 val tez_from_literal : String.t -> tez         (* IN LIGO: drop tez_from_literal and the double quotes. *)
 val address_from_literal : String.t -> address (* IN LIGO: type-annotate with "address". *)
 val key_hash_from_literal : String.t -> key_hash (* IN LIGO: type-annotate with "key_hash". *)
+val bytes_from_literal : String.t -> bytes     (* IN LIGO: replace the double quotes with parens *)
 
 val int_from_int64: Int64.t -> int                      (* NON-LIGO, temporary*)
 val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)

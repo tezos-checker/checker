@@ -84,13 +84,44 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
     checker = deploy_contract(
         tz,
         source_file=os.path.join(checker_dir, "main.tz"),
-        initial_storage=({}, {"unsealed": tz.key.public_key_hash()}),
+        initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
     )
 
     print("Checker address: {}".format(checker.context.address))
 
     with open(os.path.join(checker_dir, "functions.json")) as f:
         functions = json.load(f)
+
+    print("Deploying the TZIP-16 metadata.")
+    metadata = {
+      "interfaces": ["TZIP-012-4b3c67aad5abb"],
+      "views": [
+        { "name": view["name"],
+          "implementations": [ { "michelsonStorageView": { "parameter": view["parameter"],
+                                                           "returnType": view["returnType"],
+                                                           "code": view["code"]
+                                                         }
+                               }
+                             ]
+        }
+        for view in functions["views"]
+      ],
+
+      # This field is supposed to be optional but it mistakenly was required before
+      # pytezos commit 12911835
+      "errors": []
+    }
+    metadata_ser = json.dumps(metadata).encode("utf-8")
+    chunk_size = 10 * 1024
+    metadata_chunks = [metadata_ser[i:i+chunk_size] for i in range(0, len(metadata_ser), chunk_size)]
+    for chunk_no, chunk in enumerate(metadata_chunks, 1):
+      print("Deploying TZIP-16 metadata: chunk {} of {}".format(chunk_no, len(metadata_chunks)))
+      (checker.deployMetadata(chunk)
+        .as_transaction()
+        .autofill(branch_offset=1)
+        .sign()
+        .inject(min_confirmations=1, time_between_blocks=5)
+      )
 
     # TODO: implement the batching logic here for speed (see the previous ruby script)
     for fun in functions["lazy_functions"]:

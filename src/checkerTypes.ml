@@ -31,3 +31,17 @@ let initial_checker (external_contracts: external_contracts) =
     fa2_state = initial_fa2_state;
     external_contracts = external_contracts;
   }
+
+type lazy_function_id = Ligo.int
+
+type deployment_state =
+  | Unsealed of Ligo.address
+  | Sealed of checker
+
+type lazy_function_map = (lazy_function_id, Ligo.bytes) Ligo.big_map
+type wrapper =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  { lazy_functions : lazy_function_map
+  ; metadata: (string, Ligo.bytes) Ligo.big_map
+  ; deployment_state : deployment_state
+  }
