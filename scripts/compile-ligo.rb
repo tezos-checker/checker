@@ -35,8 +35,8 @@ end
 
 puts "Compiling the views."
 
-views = File.read("#{LIGO_DIR}/checker.mligo")
-  .scan(/let view_(\S+) *\([^:]*:([^*]*)\* *[^)]*\) *: *([^=]*)/)
+views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+  .scan(/let wrapper_view_(\S+) *\([^:]*:([^*]*)\* *[^)]*\) *: *([^=]*)/)
   .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
 
 def compile_type_json(type)
@@ -75,7 +75,7 @@ views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
         :name => view[:name],
         :parameter => compile_type_json(view[:param_ty]),
         :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("view_#{view[:name]}")
+        :code => compile_code_json("wrapper_view_#{view[:name]}")
       }
     }
   }

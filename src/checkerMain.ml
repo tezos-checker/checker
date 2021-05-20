@@ -21,18 +21,6 @@ type params =
   | SealContract of (Ligo.address * Ligo.address)
   | CheckerEntrypoint of checker_params
 
-type deployment_state =
-  | Unsealed of Ligo.address
-  | Sealed of checker
-
-type lazy_function_map = (lazy_function_id, Ligo.bytes) Ligo.big_map
-type wrapper =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  { lazy_functions : lazy_function_map
-  ; metadata: (string, Ligo.bytes) Ligo.big_map
-  ; deployment_state : deployment_state
-  }
-
 (*
 This is only for convenience, to actually create the storage just craft it manually by:
 
