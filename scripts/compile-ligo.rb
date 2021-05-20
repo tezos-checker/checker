@@ -32,21 +32,57 @@ else
   status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
   puts "  ~#{output.length / 2} bytes"
 end
+
 puts "Compiling the views."
 
 views = File.read("#{LIGO_DIR}/checker.mligo")
-  .scan(/let view_(\S+) *\([^:]*:[^*]*\* *([^)]*)\) *: *([^=]*)/)
-  .map { |g| { name: g[0], param_ty: g[1], return_ty: g[2].strip }}
+  .scan(/let view_(\S+) *\([^:]*:([^*]*)\* *[^)]*\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+def compile_type_json(type)
+  # TZIP-16 requires us to specify the argument and the return type of views, however
+  # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
+  # in the generated michelson and grab the type from there.
+  stdout, stderr, exit_status = Open3.capture3(
+    "ligo", "compile-expression", "cameligo",
+    "--init-file", MAIN_FILE,
+    "--michelson-format", "json",
+    "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"
+  )
+  exit_status.success? or raise "compiling type #{type} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
+  obj = JSON.parse(stdout)
+  obj[0]["args"][0]
+end
+
+def compile_code_json(expr)
+  stdout, stderr, exit_status = Open3.capture3(
+    "ligo", "compile-expression", "cameligo",
+    "--init-file", MAIN_FILE,
+    "--michelson-format", "json",
+    expr
+  )
+  exit_status.success? or raise "compiling expression #{expr} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
+  JSON.parse(stdout)
+end
 
 packed_views = []
 
 threads = []
 views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
-    # TODO process views
+    batch.each { |view|
+      packed_views << {
+        :name => view[:name],
+        :parameter => compile_type_json(view[:param_ty]),
+        :returnType => compile_type_json(view[:return_ty]),
+        :code => compile_code_json("view_#{view[:name]}")
+      }
+    }
   }
 }
 threads.each(&:join)
+
+puts packed_views.inspect
 
 puts "Compiling the entrypoints."
 entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")

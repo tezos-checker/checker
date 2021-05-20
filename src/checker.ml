@@ -759,35 +759,35 @@ let entrypoint_update_operators (checker, xs: checker * fa2_update_operator list
 (**                               VIEWS                                      *)
 (* ************************************************************************* *)
 
-let view_buy_kit_min_kit_expected (state, ctez: checker * ctez) : kit =
+let view_buy_kit_min_kit_expected (ctez, state: ctez * checker) : kit =
   let (kit, _cfmm) = cfmm_view_min_kit_expected_buy_kit state.cfmm ctez in
   kit
 
-let view_sell_kit_min_ctez_expected (state, kit: checker * kit) : ctez =
+let view_sell_kit_min_ctez_expected (kit, state: kit * checker) : ctez =
   let (ctez, _cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit state.cfmm kit in
   ctez
 
-let view_add_liquidity_max_kit_deposited (state, ctez: checker * ctez) : kit =
+let view_add_liquidity_max_kit_deposited (ctez, state: ctez * checker) : kit =
   let (_lqt, kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
   kit
 
-let view_add_liquidity_min_lqt_minted (state, ctez: checker * ctez) : liquidity =
+let view_add_liquidity_min_lqt_minted (ctez, state: ctez * checker) : liquidity =
   let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
   lqt
 
-let view_remove_liquidity_min_ctez_withdrawn (state, lqt: checker * liquidity) : ctez =
+let view_remove_liquidity_min_ctez_withdrawn (lqt, state: liquidity * checker) : ctez =
   let (ctez, _kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   ctez
 
-let view_remove_liquidity_min_kit_withdrawn (state, lqt: checker * liquidity) : kit =
+let view_remove_liquidity_min_kit_withdrawn (lqt, state: liquidity * checker) : kit =
   let (_ctez, kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   kit
 
-let view_burrow_max_mintable_kit (state, burrow_id: checker * burrow_id) : kit =
+let view_burrow_max_mintable_kit (burrow_id, state: burrow_id * checker) : kit =
   burrow_max_mintable_kit state.parameters (find_burrow state.burrows burrow_id)
 
-let view_is_burrow_overburrowed (state, burrow_id: checker * burrow_id) : bool =
+let view_is_burrow_overburrowed (burrow_id, state: burrow_id * checker) : bool =
   burrow_is_overburrowed state.parameters (find_burrow state.burrows burrow_id)
 
-let view_is_burrow_liquidatable (state, burrow_id: checker * burrow_id) : bool =
+let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)

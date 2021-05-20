@@ -250,13 +250,13 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 (**                            {1 VIEWS}                                     *)
 (*****************************************************************************)
 
-val view_buy_kit_min_kit_expected : (checker * ctez) -> kit
-val view_sell_kit_min_ctez_expected : (checker * kit) -> ctez
-val view_add_liquidity_max_kit_deposited : (checker * ctez) -> kit
-val view_add_liquidity_min_lqt_minted : (checker * ctez) -> liquidity
-val view_remove_liquidity_min_ctez_withdrawn : (checker * liquidity) -> ctez
-val view_remove_liquidity_min_kit_withdrawn : (checker * liquidity) -> kit
+val view_buy_kit_min_kit_expected : (ctez * checker) -> kit
+val view_sell_kit_min_ctez_expected : (kit * checker) -> ctez
+val view_add_liquidity_max_kit_deposited : (ctez * checker) -> kit
+val view_add_liquidity_min_lqt_minted : (ctez * checker) -> liquidity
+val view_remove_liquidity_min_ctez_withdrawn : (liquidity * checker) -> ctez
+val view_remove_liquidity_min_kit_withdrawn : (liquidity * checker) -> kit
 
-val view_burrow_max_mintable_kit : (checker * burrow_id) -> kit
-val view_is_burrow_overburrowed : (checker * burrow_id) -> bool
-val view_is_burrow_liquidatable : (checker * burrow_id) -> bool
+val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
+val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
+val view_is_burrow_liquidatable : (burrow_id * checker) -> bool
