@@ -190,7 +190,13 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let updated_burrow = burrow_burn_kit state.parameters kit burrow in
-  (* TODO: What should happen if the following is violated? *)
+  (* Note: there should be no way to remove more kit from circulation than what
+   * is already in circulation. If anyone tries to do so, it means that they
+   * try to remove kit they do not own. So, either
+   * [remove_outstanding_and_circulating_kit] below will fail first (illegal
+   * subtraction), or [ledger_withdraw_kit] below will fail first (attempt to
+   * move kit that is not owned by the sender). Either way I (George) think
+   * that this assertion is only useful for our unit tests. *)
   assert (state.parameters.circulating_kit >= kit);
   let state =
     {state with
