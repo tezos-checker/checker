@@ -11,13 +11,16 @@ import docker
 import pytezos
 import requests
 
+# Note: Setting this to 1 causes weird issues. Keep it >= 2s.
+SANDBOX_TIME_BETWEEN_BLOCKS = 5
+
 
 def start_sandbox(name: str, port: int):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
         "tqtezos/flextesa:20210316",
         command=["edobox", "start"],
-        environment={"block_time": 1},
+        environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
         ports={"20000/tcp": port},
         name=name,
         detach=True,
@@ -59,16 +62,19 @@ def is_sandbox_container_running(name: str):
         return False
 
 
-def deploy_contract(tz, *, source_file, initial_storage):
+def deploy_contract(tz, *, source_file, initial_storage, num_blocks_wait=100):
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
     )
 
+    # FIXME: Can remove this statement after debugging
+    print(f"Detected block time: {tz.shell.block.context.constants()['time_between_blocks']}")
+
     origination = (
         tz.origination(script)
-        .autofill(branch_offset=1)
+        .autofill()
         .sign()
-        .inject(min_confirmations=1, time_between_blocks=5)
+        .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
     )
 
     opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
@@ -78,13 +84,14 @@ def deploy_contract(tz, *, source_file, initial_storage):
     return tz.contract(addr)
 
 
-def deploy_checker(tz, checker_dir, *, oracle, ctez):
+def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
         tz,
         source_file=os.path.join(checker_dir, "main.tz"),
         initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
+        num_blocks_wait=num_blocks_wait,
     )
 
     print("Checker address: {}".format(checker.context.address))
@@ -94,34 +101,40 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
 
     print("Deploying the TZIP-16 metadata.")
     metadata = {
-      "interfaces": ["TZIP-012-4b3c67aad5abb"],
-      "views": [
-        { "name": view["name"],
-          "implementations": [ { "michelsonStorageView": { "parameter": view["parameter"],
-                                                           "returnType": view["returnType"],
-                                                           "code": view["code"]
-                                                         }
-                               }
-                             ]
-        }
-        for view in functions["views"]
-      ],
-
-      # This field is supposed to be optional but it mistakenly was required before
-      # pytezos commit 12911835
-      "errors": []
+        "interfaces": ["TZIP-012-4b3c67aad5abb"],
+        "views": [
+            {
+                "name": view["name"],
+                "implementations": [
+                    {
+                        "michelsonStorageView": {
+                            "parameter": view["parameter"],
+                            "returnType": view["returnType"],
+                            "code": view["code"],
+                        }
+                    }
+                ],
+            }
+            for view in functions["views"]
+        ],
+        # This field is supposed to be optional but it mistakenly was required before
+        # pytezos commit 12911835
+        "errors": [],
     }
     metadata_ser = json.dumps(metadata).encode("utf-8")
     chunk_size = 10 * 1024
-    metadata_chunks = [metadata_ser[i:i+chunk_size] for i in range(0, len(metadata_ser), chunk_size)]
+    metadata_chunks = [
+        metadata_ser[i : i + chunk_size] for i in range(0, len(metadata_ser), chunk_size)
+    ]
     for chunk_no, chunk in enumerate(metadata_chunks, 1):
-      print("Deploying TZIP-16 metadata: chunk {} of {}".format(chunk_no, len(metadata_chunks)))
-      (checker.deployMetadata(chunk)
-        .as_transaction()
-        .autofill(branch_offset=1)
-        .sign()
-        .inject(min_confirmations=1, time_between_blocks=5)
-      )
+        print("Deploying TZIP-16 metadata: chunk {} of {}".format(chunk_no, len(metadata_chunks)))
+        (
+            checker.deployMetadata(chunk)
+            .as_transaction()
+            .autofill()
+            .sign()
+            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+        )
 
     # TODO: implement the batching logic here for speed (see the previous ruby script)
     for fun in functions["lazy_functions"]:
@@ -131,9 +144,9 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
             (
                 checker.deployFunction(arg)
                 .as_transaction()
-                .autofill(branch_offset=1)
+                .autofill()
                 .sign()
-                .inject(min_confirmations=1, time_between_blocks=5)
+                .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
             )
             print("  deployed: chunk {}.".format(chunk_no))
 
@@ -141,9 +154,9 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
     (
         checker.sealContract((oracle, ctez))
         .as_transaction()
-        .autofill(branch_offset=1)
+        .autofill()
         .sign()
-        .inject(min_confirmations=1, time_between_blocks=5)
+        .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
     )
 
     return checker

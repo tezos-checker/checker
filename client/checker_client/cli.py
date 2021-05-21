@@ -155,8 +155,15 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez):
+def checker(config: Config, checker_dir, oracle, ctez, wait):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -176,7 +183,11 @@ def checker(config: Config, checker_dir, oracle, ctez):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     checker = checker_lib.deploy_checker(
-        client, checker_dir, oracle=config.oracle_address, ctez=config.ctez_address
+        client,
+        checker_dir,
+        oracle=config.oracle_address,
+        ctez=config.ctez_address,
+        num_blocks_wait=wait,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
@@ -192,8 +203,15 @@ def checker(config: Config, checker_dir, oracle, ctez):
     default="vendor/ctez",
     show_default=True,
 )
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
 @click.pass_obj
-def ctez(config: Config, ctez_dir):
+def ctez(config: Config, ctez_dir, wait):
     """
     Deploy a ctez contract (dev only)
     """
@@ -218,8 +236,15 @@ def ctez(config: Config, ctez_dir):
     default="util/mock_oracle.tz",
     show_default=True,
 )
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
 @click.pass_obj
-def mock_oracle(config: Config, oracle_src):
+def mock_oracle(config: Config, oracle_src, wait):
     """
     Deploy the mock oracle contract (dev only)
     """
@@ -230,6 +255,7 @@ def mock_oracle(config: Config, oracle_src):
         client,
         source_file=oracle_src,
         initial_storage=(client.key.public_key_hash(), 1000000),
+        num_blocks_wait=wait,
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
     config.oracle_address = oracle.context.address
