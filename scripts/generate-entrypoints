@@ -9,7 +9,7 @@ ARGF.each_line do |line|
    case line
    when /^val +entrypoint_(\S+).*checker\s+\*\s+(.*?)\s+->/ then entrypoints << EntrypointInfo.new( $1, $2)
    when /^val +entrypoint_/ then raise "#{ARGF.filename}:#{ARGF.lineno}: Unrecognised entrypoint decl #{line}"
-   when /^val view_(\S+) *: *\(([^*]*)\*.*-> *(.*)/ then views << ViewInfo.new($1, $2.strip, $3.strip)
+   when /^val view_(\S+) *: *\((.*?) *\* *checker\) *-> *(.*)/ then views << ViewInfo.new($1, $2.strip, $3.strip)
    when /^val +view/ then raise "#{ARGF.filename}:#{ARGF.lineno}: Unrecognised view decl #{line}"
    end
 end

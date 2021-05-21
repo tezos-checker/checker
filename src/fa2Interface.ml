@@ -161,12 +161,16 @@ let assert_valid_fa2_token (n: fa2_token_id): unit =
 
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
-    operators : (Ligo.address * Ligo.address, unit) Ligo.big_map;
+    operators : ( Ligo.address (* operator *)
+                * Ligo.address (* owner *)
+                * fa2_token_id
+                , unit
+                ) Ligo.big_map;
   }
 
 let initial_fa2_state =
   { ledger = (Ligo.Big_map.empty: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map);
-    operators = (Ligo.Big_map.empty: (Ligo.address * Ligo.address, unit) Ligo.big_map);
+    operators = (Ligo.Big_map.empty: (Ligo.address * Ligo.address * fa2_token_id, unit) Ligo.big_map);
   }
 
 let[@inline] get_fa2_ledger_value
@@ -207,6 +211,9 @@ let ledger_withdraw
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
 
+let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
+  owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
+
 let[@inline] fa2_run_update_operators
     (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
   Ligo.List.fold_left
@@ -221,7 +228,7 @@ let[@inline] fa2_run_update_operators
            { st  with
              operators =
                Ligo.Big_map.add
-                 (op.operator, op.owner)
+                 (op.operator, op.owner, op.token_id)
                  ()
                  st.operators;
            }
@@ -232,21 +239,28 @@ let[@inline] fa2_run_update_operators
            { st  with
              operators =
                Ligo.Big_map.remove
-                 (op.operator, op.owner)
+                 (op.operator, op.owner, op.token_id)
                  st.operators;
            }
     )
     st
     xs
 
+let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
+  let ledger = st.ledger in
+  let key = (token_id, owner) in
+  let () = assert_valid_fa2_token token_id in
+  get_fa2_ledger_value ledger key
+
+let[@inline] fa2_all_tokens : Ligo.nat list =
+  [ kit_token_id; liquidity_token_id ]
+
 let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
   : fa2_balance_of_response list =
-  let ledger = st.ledger in
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let key = (req.token_id, req.owner) in
        let () = assert_valid_fa2_token req.token_id in
-       let blnc = get_fa2_ledger_value ledger key in
+       let blnc = fa2_get_balance (st, req.owner, req.token_id) in
        { request=req; balance = blnc; }
     )
     xs
@@ -256,24 +270,24 @@ let[@inline] fa2_run_transfer
   Ligo.List.fold_left
     (fun ((st, tx): fa2_state * fa2_transfer) ->
        let from_ = tx.from_ in
-       let is_authorized =
-         from_ = !Ligo.Tezos.sender
-         || Ligo.Big_map.mem (!Ligo.Tezos.sender, from_) st.operators in
-       if not is_authorized
-       then (failwith "FA2_NOT_OPERATOR" : fa2_state)
-       else
+
          Ligo.List.fold_left
            (fun ((st, x): fa2_state * fa2_transfer_destination) ->
-              let amnt = x.amount in
-              let to_ = x.to_ in
-
               let token_id = x.token_id in
-              let () = assert_valid_fa2_token token_id in
 
-              let st = ledger_withdraw (st, token_id, from_, amnt) in
-              let st = ledger_issue (st, token_id, to_, amnt) in
+              if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
+              then (failwith "FA2_NOT_OPERATOR" : fa2_state)
+              else begin
+                let amnt = x.amount in
+                let to_ = x.to_ in
 
-              st
+                let () = assert_valid_fa2_token token_id in
+
+                let st = ledger_withdraw (st, token_id, from_, amnt) in
+                let st = ledger_issue (st, token_id, to_, amnt) in
+
+                st
+              end
            )
            st
            tx.txs
