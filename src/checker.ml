@@ -536,16 +536,19 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
   let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
 
-  (* Update the fa2_state: (a) subtract the kit from the bidder's account, and
-   * (b) restore the old winning bid to its owner, if such a bid exists. *)
+  (* Update the fa2_state: (a) restore the old winning bid to its owner (if
+   * such a bid exists), and (b) subtract [kit] from the bidder's account. By
+   * performing the operation in this order we allow users to just increase
+   * their bid without having to have in their accounts [old_bid + new_bid]
+   * kit; having [new_bid] is enough. *)
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
     let state_fa2_state =
       match old_winning_bid with
       | None -> state_fa2_state (* nothing to do *)
       | Some old_winning_bid ->
         ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
     state_fa2_state in
 
   ( ([]: LigoOp.operation list),
