@@ -22,5 +22,7 @@ jobs:
       with:
         name: tezos-checker
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - name: Build the shell.nix and check formatting
+      run: nix-shell --pure --run 'treefmt --quiet --fail-on-change'
     - name: Build and test
       run: nix-build -A michelson --arg doCheck true
