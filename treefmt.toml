@@ -1,0 +1,12 @@
+[formatter.nix]
+command = "nixpkgs-fmt"
+includes = ["*.nix"]
+
+[formatter.ocaml]
+command = "ocp-indent"
+includes = ["*.ml", "*.mli"]
+
+# [formatter.python]
+# command = "black"
+# includes = ["*.py"]
+# excludes = ["vendor/"]
