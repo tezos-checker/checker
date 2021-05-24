@@ -31,7 +31,7 @@ clean:
 	$(RM) -r _build generated src/checkerEntrypoints.ml
 
 indent:
-	ocp-indent -i src/*.ml src/*.mli tests/*.ml
+	treefmt -q
 	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
 	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
 
