@@ -24,10 +24,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c23146505c35a07bafbecf36af4f9ebde2bb7dfd",
-        "sha256": "15d0pwdf0xlpnvkdsg3arvx3v8jyi2ji7r9w8slrpdgfgrbfak4q",
+        "rev": "d46a6a8d28269c7fbf42386d9af4e99eff4605a8",
+        "sha256": "1s62546qdn5hjdspmq93nqs674y9awxv7wqwqgbamd6m97vwzwzm",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/c23146505c35a07bafbecf36af4f9ebde2bb7dfd.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/d46a6a8d28269c7fbf42386d9af4e99eff4605a8.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "tezos-packaging": {
@@ -36,10 +36,10 @@
         "homepage": "",
         "owner": "serokell",
         "repo": "tezos-packaging",
-        "rev": "056277b258067e6b9bcd85ccb43364ea3a3109c7",
-        "sha256": "1p6304lbvp6h5bg7r7gjyqf8b24pwf9rs2iq7jqb6ba0ipvfi05f",
+        "rev": "67f01875cf7a27894bce330192eb71bd929c15ac",
+        "sha256": "092w2vdkjqfmhis54x4b0qfzym78h3rgbbv3cwqwkamwibbmi3nj",
         "type": "tarball",
-        "url": "https://github.com/serokell/tezos-packaging/archive/056277b258067e6b9bcd85ccb43364ea3a3109c7.tar.gz",
+        "url": "https://github.com/serokell/tezos-packaging/archive/67f01875cf7a27894bce330192eb71bd929c15ac.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
