@@ -154,7 +154,7 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
 let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
 
-let assert_valid_fa2_token (n: fa2_token_id): unit =
+let ensure_valid_fa2_token (n: fa2_token_id): unit =
   if n = kit_token_id || n = liquidity_token_id
   then ()
   else failwith "FA2_TOKEN_UNDEFINED" (* FIXME: error message *)
@@ -249,7 +249,7 @@ let[@inline] fa2_run_update_operators
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
-  let () = assert_valid_fa2_token token_id in
+  let () = ensure_valid_fa2_token token_id in
   get_fa2_ledger_value ledger key
 
 let[@inline] fa2_all_tokens : Ligo.nat list =
@@ -281,7 +281,7 @@ let[@inline] fa2_run_transfer
                 let amnt = x.amount in
                 let to_ = x.to_ in
 
-                let () = assert_valid_fa2_token token_id in
+                let () = ensure_valid_fa2_token token_id in
 
                 let st = ledger_withdraw (st, token_id, from_, amnt) in
                 let st = ledger_issue (st, token_id, to_, amnt) in
