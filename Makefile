@@ -1,4 +1,4 @@
-all: install-git-hooks build test
+all: build test
 
 build: build-ocaml build-ligo
 
@@ -51,7 +51,4 @@ docs: ocaml-src spec
 
 distclean: clean
 
-install-git-hooks:
-	@[ -x .git/hooks/pre-commit ] || (cd .git/hooks && rm -f pre-commit && ln -s ../.pre-commit-hook.sh pre-commit && echo "pre-commit hook installed")
-
-.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent spec docs distclean install-git-hooks watch-spec view-spec
+.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent spec docs distclean watch-spec view-spec
