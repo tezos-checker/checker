@@ -4,6 +4,7 @@ includes = ["*.nix"]
 
 [formatter.ocaml]
 command = "ocp-indent"
+options = [ "--inplace" ]
 includes = ["*.ml", "*.mli"]
 
 # [formatter.python]
