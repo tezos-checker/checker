@@ -800,3 +800,33 @@ let view_is_burrow_overburrowed (burrow_id, state: burrow_id * checker) : bool =
 
 let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)
+
+(* ************************************************************************* *)
+(**                            FA2_VIEWS                                     *)
+(* ************************************************************************* *)
+
+let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * checker) : Ligo.nat =
+  fa2_get_balance (state.fa2_state, owner, token_id)
+
+let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
+  (* TODO: we should have assertions that the total amounts in parameters and cfmm is consistent with
+     what's in the ledger. Alternatively, we can use the ledger as a source of truth and remove
+     parameters.circulating_kit and cfmm.lqt.
+   *)
+  if token_id = kit_token_id then kit_to_mukit_nat state.parameters.circulating_kit
+  else if token_id = liquidity_token_id then  state.cfmm.lqt
+  else failwith "FA2_TOKEN_UNDEFINED"
+
+let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
+  fa2_all_tokens
+
+let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * checker): bool =
+  fa2_is_operator (state.fa2_state, owner, operator, token_id)
+
+(* TODO
+This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
+
+[1]: https://gitlab.com/tzip/tzip/-/blob/4b3c67/proposals/tzip-12/tzip-12.md#token-metadata-storage-access
+*)
+let view_token_metadata (_token_id, _state: fa2_token_id * checker) : fa2_token_id * (string, Ligo.bytes) Ligo.map =
+  failwith "FA2_NOT_IMPLEMENTED"

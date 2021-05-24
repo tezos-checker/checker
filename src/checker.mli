@@ -260,3 +260,9 @@ val view_remove_liquidity_min_kit_withdrawn : (liquidity * checker) -> kit
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
 val view_is_burrow_liquidatable : (burrow_id * checker) -> bool
+
+val view_get_balance : ((Ligo.address * fa2_token_id) * checker) -> Ligo.nat
+val view_total_supply : (fa2_token_id * checker) -> Ligo.nat
+val view_all_tokens : (unit * checker) -> fa2_token_id list
+val view_is_operator : ((Ligo.address * (Ligo.address * fa2_token_id)) * checker) -> bool
+val view_token_metadata : (fa2_token_id * checker) -> fa2_token_id * (string, Ligo.bytes) Ligo.map
