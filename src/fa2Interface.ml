@@ -259,7 +259,6 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let () = assert_valid_fa2_token req.token_id in
        let blnc = fa2_get_balance (st, req.owner, req.token_id) in
        { request=req; balance = blnc; }
     )
