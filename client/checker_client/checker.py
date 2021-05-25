@@ -1,15 +1,17 @@
+from pytezos.client import PyTezosClient
+from client.checker_client.cli import ctez
 import json
 import logging
 import os
-import re
-import shlex
 import subprocess
 import tempfile
 import time
-
 import docker
 import pytezos
 import requests
+from pathlib import Path
+import math
+from decimal import Decimal
 
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
 SANDBOX_TIME_BETWEEN_BLOCKS = 5
@@ -62,7 +64,14 @@ def is_sandbox_container_running(name: str):
         return False
 
 
-def deploy_contract(tz, *, source_file, initial_storage, num_blocks_wait=100):
+def deploy_contract(
+    tz: PyTezosClient,
+    *,
+    source_file,
+    initial_storage,
+    initial_balance=0,
+    num_blocks_wait=100,
+):
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
     )
@@ -71,7 +80,7 @@ def deploy_contract(tz, *, source_file, initial_storage, num_blocks_wait=100):
     print(f"Detected block time: {tz.shell.block.context.constants()['time_between_blocks']}")
 
     origination = (
-        tz.origination(script)
+        tz.origination(script, balance=initial_balance)
         .autofill()
         .sign()
         .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
@@ -162,55 +171,114 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
     return checker
 
 
-def deploy_ctez(tz, ctez_dir):
-    with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
-        os.environ["TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER"] = "yes"
-        os.mkdir(os.path.join(tmpdir, "tezos-client"))
-        tc_cmd = [
-            "tezos-client",
-            "--base-dir",
-            os.path.join(tmpdir, "tezos-client"),
-            "--endpoint",
-            tz.shell.node.uri,
-        ]
-
-        subprocess.check_call(tc_cmd + ["bootstrapped"])
-        subprocess.check_call(
-            tc_cmd
-            + [
-                "import",
-                "secret",
-                "key",
-                "bootstrap1",
-                "unencrypted:{}".format(tz.context.key.secret_key()),
-            ]
+def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
+    """Compiles an mligo file into michelson using ligo"""
+    with out_file.open("wb") as f:
+        subprocess.run(
+            ["ligo", "compile-contract", str(src_file), entrypoint],
+            check=True,
+            stdout=f,
         )
 
-        with open(os.path.join(ctez_dir, "deploy.sh"), "r") as deploy_script:
-            with open(os.path.join(tmpdir, "deploy.sh"), "w") as new_deploy_script:
-                new = deploy_script.read()
 
-                new = re.sub(
-                    "^TZC=.*", 'TZC="{}"'.format(shlex.join(tc_cmd)), new, flags=re.MULTILINE
-                )
+def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
+    """Compiles and deploys the ctez contracts.
 
-                new = re.sub(".*create mockup.*", "", new, flags=re.MULTILINE)
+    Should probably eventually be moved to the ctez repo itself...
+    """
+    tmpdir = tempfile.TemporaryDirectory(suffix="-checker-ctez")
+    with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
+        tmpdir = Path(tmpdir)
+        ctez_src = Path(ctez_dir).joinpath("ctez.mligo")
+        fa12_src = Path(ctez_dir).joinpath("fa12.mligo")
+        cfmm_src = Path(ctez_dir).joinpath("cfmm_tez_ctez.mligo")
 
-                new_deploy_script.write(new)
+        ctez_michelson = tmpdir.joinpath(ctez_src.with_suffix(".tz").name)
+        fa12_michelson = tmpdir.joinpath(fa12_src.with_suffix(".tz").name)
+        cfmm_michelson = tmpdir.joinpath(cfmm_src.with_suffix(".tz").name)
 
-        subprocess.check_call(["bash", os.path.join(tmpdir, "deploy.sh")], cwd=ctez_dir)
+        ligo_compile(ctez_src, "main", ctez_michelson)
+        ligo_compile(fa12_src, "main", fa12_michelson)
+        ligo_compile(cfmm_src, "main", cfmm_michelson)
 
-        def get_ctez_contract(c):
-            addr = (
-                subprocess.check_output(tc_cmd + ["show", "known", "contract", c])
-                .decode("utf-8")
-                .strip()
-            )
-            return tz.contract(addr)
+        print("Deploying ctez contract...")
+        ctez_storage = {
+            "ovens": {},
+            "target": 1 << 48,
+            "drift": 0,
+            "last_drift_update": math.floor(time.time()),
+            "ctez_fa12_address": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
+            "cfmm_address": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
+        }
+        ctez = deploy_contract(tz, source_file=str(ctez_michelson), initial_storage=ctez_storage)
+        print("Done.")
+
+        print("Deploying ctez FA1.2 contract...")
+        fa12_ctez_storage = {
+            "tokens": {"tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU": 1},
+            "allowances": {},
+            "admin": tz.key.public_key_hash(),
+            "total_supply": 1,
+        }
+        fa12_ctez = deploy_contract(
+            tz, source_file=str(fa12_michelson), initial_storage=fa12_ctez_storage
+        )
+        print("Done.")
+
+        print("Deploying ctez CFMM contract...")
+        cfmm_storage = {
+            "tokenPool": 1,
+            "cashPool": 1,
+            "lqtTotal": 1,
+            "pendingPoolUpdates": 0,
+            "tokenAddress": fa12_ctez.context.address,
+            "lqtAddress": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
+            "lastOracleUpdate": math.floor(time.time()),
+            "consumerEntrypoint": ctez.context.address,
+        }
+        cfmm = deploy_contract(
+            tz,
+            source_file=str(cfmm_michelson),
+            initial_storage=cfmm_storage,
+            initial_balance=Decimal(0.000001),
+        )
+        print("Done.")
+
+        print("Deploying liquidity contract...")
+        fa12_lqt_storage = {
+            "tokens": {"tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU": 1},
+            "allowances": {},
+            "admin": cfmm.context.address,
+            "total_supply": 1,
+        }
+        fa12_lqt = deploy_contract(
+            tz, source_file=str(fa12_michelson), initial_storage=fa12_lqt_storage
+        )
+        print("Done.")
+
+        print("Setting liquidity address in CFMM contract...")
+        (
+            cfmm.setLqtAddress(fa12_lqt.context.address)
+            .as_transaction()
+            .autofill()
+            .sign()
+            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+        )
+        print("Done.")
+
+        print("Setting CFMM amd ctez FA1.2 addresses in ctez contract...")
+        (
+            ctez.set_addresses((cfmm.context.address, fa12_ctez.context.address))
+            .as_transaction()
+            .autofill()
+            .sign()
+            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+        )
+        print("Done.")
 
         return {
-            "ctez": get_ctez_contract("ctez"),
-            "fa12_ctez": get_ctez_contract("fa12_ctez"),
-            "cfmm": get_ctez_contract("cfmm"),
-            "fa12_lqt": get_ctez_contract("fa12_lqt"),
+            "ctez": ctez,
+            "fa12_ctez": fa12_ctez,
+            "cfmm": cfmm,
+            "fa12_lqt": fa12_lqt,
         }
