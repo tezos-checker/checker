@@ -1,17 +1,17 @@
-from pytezos.client import PyTezosClient
-from client.checker_client.cli import ctez
 import json
 import logging
+import math
 import os
 import subprocess
 import tempfile
 import time
+from decimal import Decimal
+from pathlib import Path
+
 import docker
 import pytezos
 import requests
-from pathlib import Path
-import math
-from decimal import Decimal
+from pytezos.client import PyTezosClient
 
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
 SANDBOX_TIME_BETWEEN_BLOCKS = 5
