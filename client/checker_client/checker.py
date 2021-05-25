@@ -6,11 +6,71 @@ import shlex
 import subprocess
 import tempfile
 import time
+from collections import namedtuple
 
 import docker
 import pytezos
 import requests
 
+# attrs should be a dict from strings to bytes.
+TokenMetadata = namedtuple("TokenMetadata", ["id", "attrs"])
+
+def compile_view_fa2_token_metadata(tokens: TokenMetadata):
+    from pytezos.michelson.types.core import NatType, StringType, BytesType
+    from pytezos.michelson.types.pair import PairType
+    from pytezos.michelson.types.map import EltLiteral, MapType
+
+    # this map is of type:
+    #   map nat (nat, map string bytes)
+    elt = MapType.from_items([
+      ( NatType.from_value(token.id),
+        PairType.from_comb([
+          NatType.from_value(token.id),
+          MapType.from_items([
+            ( StringType.from_value(key),
+              BytesType.from_value(value)
+            ) for key, value in sorted(token.attrs.items())
+          ])
+        ])
+      )
+      for token in tokens
+    ])
+
+    # Below code takes a '(nat, state)', looks up the 'nat' from the map above ('elt'),
+    # and returns the result.
+    code = [
+      # get the 'fst' of the '(nat, state)' pair
+      { "prim": "CAR" },
+      # push the 'elt' to the stack
+      { "prim": "PUSH", "args": [ elt.as_micheline_expr(), elt.to_micheline_value() ] },
+      # swap the top two elements (to match 'get's parameter order)
+      { "prim": "SWAP" },
+      # lookup the given 'nat' from the map
+      { "prim": "GET" },
+      # fail if we don't get something, return otherwise
+      { "prim": "IF_NONE",
+        "args":
+          [ # if none
+            [ { "prim": "PUSH", "args": [ { "prim": "string" }, { "string": "FA2_UNKNOWN_TOKEN" } ] },
+              { "prim": "FAILWITH" }
+            ],
+            # if not none
+            []
+          ]
+      }
+    ]
+
+    return {
+      "name": "token_metadata",
+      "code": code,
+      "parameter": { "prim": "nat" },
+      "returnType": { "prim": "pair",
+                      "args": [
+                        { "prim": "nat" },
+                        { "prim": "map", "args": [ { "prim": "string" }, { "prim": "bytes" } ] }
+                      ]
+                    }
+    }
 
 def start_sandbox(name: str, port: int):
     docker_client = docker.from_env()
@@ -104,7 +164,7 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
                                }
                              ]
         }
-        for view in functions["views"]
+        for view in functions["views"] + [compile_view_fa2_token_metadata([TokenMetadata(1, {'name': b'kit', 'decimals': b'6'})])] #TODO
       ],
 
       # This field is supposed to be optional but it mistakenly was required before
