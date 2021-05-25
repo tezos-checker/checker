@@ -24,7 +24,7 @@ type checker =
 (** Make a fresh state. *)
 let initial_checker (external_contracts: external_contracts) =
   { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
-    cfmm = initial_cfmm;
+    cfmm = initial_cfmm ();
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     last_price = (None : Ligo.nat option);
