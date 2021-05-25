@@ -190,7 +190,13 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let updated_burrow = burrow_burn_kit state.parameters kit burrow in
-  (* TODO: What should happen if the following is violated? *)
+  (* Note: there should be no way to remove more kit from circulation than what
+   * is already in circulation. If anyone tries to do so, it means that they
+   * try to remove kit they do not own. So, either
+   * [remove_outstanding_and_circulating_kit] below will fail first (illegal
+   * subtraction), or [ledger_withdraw_kit] below will fail first (attempt to
+   * move kit that is not owned by the sender). Either way I (George) think
+   * that this assertion is only useful for our unit tests. *)
   assert (state.parameters.circulating_kit >= kit);
   let state =
     {state with
@@ -530,16 +536,19 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
 
   let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
 
-  (* Update the fa2_state: (a) subtract the kit from the bidder's account, and
-   * (b) restore the old winning bid to its owner, if such a bid exists. *)
+  (* Update the fa2_state: (a) restore the old winning bid to its owner (if
+   * such a bid exists), and (b) subtract [kit] from the bidder's account. By
+   * performing the operation in this order we allow users to just increase
+   * their bid without having to have in their accounts [old_bid + new_bid]
+   * kit; having [new_bid] is enough. *)
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
     let state_fa2_state =
       match old_winning_bid with
       | None -> state_fa2_state (* nothing to do *)
       | Some old_winning_bid ->
         ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
     state_fa2_state in
 
   ( ([]: LigoOp.operation list),
@@ -791,3 +800,34 @@ let view_is_burrow_overburrowed (burrow_id, state: burrow_id * checker) : bool =
 
 let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)
+
+(* ************************************************************************* *)
+(**                            FA2_VIEWS                                     *)
+(* ************************************************************************* *)
+
+let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * checker) : Ligo.nat =
+  fa2_get_balance (state.fa2_state, owner, token_id)
+
+let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
+  (* TODO: we should have assertions that the total amounts in parameters and cfmm is consistent with
+     what's in the ledger. Alternatively, we can use the ledger as a source of truth and remove
+     parameters.circulating_kit and cfmm.lqt.
+   *)
+  if token_id = kit_token_id then kit_to_mukit_nat state.parameters.circulating_kit
+  else if token_id = liquidity_token_id then  state.cfmm.lqt
+  else failwith "FA2_TOKEN_UNDEFINED"
+
+let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
+  fa2_all_tokens
+
+let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * checker): bool =
+  fa2_is_operator (state.fa2_state, owner, operator, token_id)
+
+(* TODO
+This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
+
+[1]: https://gitlab.com/tzip/tzip/-/blob/4b3c67/proposals/tzip-12/tzip-12.md#token-metadata-storage-access
+
+let view_token_metadata (_token_id, _state: fa2_token_id * checker) : fa2_token_id * (string, Ligo.bytes) Ligo.map =
+  failwith "FA2_NOT_IMPLEMENTED"
+*)
