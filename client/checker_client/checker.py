@@ -5,11 +5,10 @@ import os
 import subprocess
 import tempfile
 import time
+from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
-from typing import Optional
-from collections import namedtuple
-from typing import Optional, List
+from typing import List, Optional
 
 import docker
 import pytezos
@@ -79,9 +78,9 @@ TokenMetadata = namedtuple("TokenMetadata", ["id", "attrs"])
 
 
 def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
-    from pytezos.michelson.types.core import NatType, StringType, BytesType
-    from pytezos.michelson.types.pair import PairType
+    from pytezos.michelson.types.core import BytesType, NatType, StringType
     from pytezos.michelson.types.map import EltLiteral, MapType
+    from pytezos.michelson.types.pair import PairType
 
     # this map is of type:
     #   map nat (nat, map string bytes)
@@ -176,14 +175,12 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     last_level = 0
     while True:
         # Wait until enough blocks have been baked for further deploy operations, etc.
-        # using an 10% in case baking is slower than expected.
         level = client.shell.head.level()
         if level != last_level:
             print(f"Sandbox at level {level} / {wait_for_level}")
             last_level = level
         if level >= wait_for_level:
             break
-
     return client, docker_client, docker_container
 
 
@@ -217,9 +214,6 @@ def deploy_contract(
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
     )
-
-    # FIXME: Can remove this statement after debugging
-    print(f"Detected block time: {tz.shell.block.context.constants()['time_between_blocks']}")
 
     origination = (
         tz.origination(script, balance=initial_balance)

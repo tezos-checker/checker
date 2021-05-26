@@ -7,9 +7,9 @@ import click
 import pytezos
 from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
+from pytezos.operation import MAX_OPERATIONS_TTL
 
 from checker_client import checker as checker_lib
-from pytezos.operation import MAX_OPERATIONS_TTL
 
 CONFIG_FILE_BASE = Path(".checker")
 CONFIG_DIR = os.getenv("XDG_CONFIG_HOME")
