@@ -7,15 +7,65 @@ import subprocess
 import tempfile
 import time
 from collections import namedtuple
+from typing import Optional, List
 
 import docker
 import pytezos
 import requests
 
+default_token_metadata = {
+  "kit": {
+     "name": "kit",
+     "symbol": "KIT",
+  },
+  "liquidity": {
+     "name": "liquidity",
+     "symbol": "LQDT",
+  }
+}
+
+def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], token_info):
+    # start with defaults
+    metadata = default_token_metadata
+
+    # insert the user overrides
+    if token_metadata_file:
+        with open(token_metadata_file) as f:
+           for tok, ms in json.load(f).items():
+               metadata[tok].update(ms)
+
+    # insert the required metadata
+    metadata["kit"]["decimals"] = token_info["kit_decimal_digits"]
+    metadata["liquidity"]["decimals"] = 0
+
+    # convert the attributes to bytes
+    for attrs in metadata.values():
+        for k, v in attrs.items():
+            if isinstance(v, bytes):
+                pass
+            elif isinstance(v, str):
+                v = v.encode("utf-8")
+            elif isinstance(v, int):
+                v = str(v).encode("utf-8")
+            elif isinstance(v, dict):
+                v = json.dumps(v).encode("utf-8")
+            else:
+                raise "error encoding the token metadata, key: {}".format(k)
+            attrs[k] = v
+
+    # create the TokenMetadata objects
+    tokens = [
+      TokenMetadata(token_info["kit_token_id"], metadata["kit"]),
+      TokenMetadata(token_info["liquidity_token_id"], metadata["liquidity"]),
+    ]
+
+    # compile and return the view
+    return compile_view_fa2_token_metadata(tokens)
+
 # attrs should be a dict from strings to bytes.
 TokenMetadata = namedtuple("TokenMetadata", ["id", "attrs"])
 
-def compile_view_fa2_token_metadata(tokens: TokenMetadata):
+def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
     from pytezos.michelson.types.core import NatType, StringType, BytesType
     from pytezos.michelson.types.pair import PairType
     from pytezos.michelson.types.map import EltLiteral, MapType
@@ -138,7 +188,7 @@ def deploy_contract(tz, *, source_file, initial_storage):
     return tz.contract(addr)
 
 
-def deploy_checker(tz, checker_dir, *, oracle, ctez):
+def deploy_checker(tz, checker_dir, *, oracle, ctez, token_metadata_file = None):
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
@@ -153,6 +203,12 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
         functions = json.load(f)
 
     print("Deploying the TZIP-16 metadata.")
+
+    token_metadata_view = get_token_metadata_view_from_file(
+      token_metadata_file = token_metadata_file,
+      token_info = functions["token_info"],
+    )
+
     metadata = {
       "interfaces": ["TZIP-012-4b3c67aad5abb"],
       "views": [
@@ -164,7 +220,7 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez):
                                }
                              ]
         }
-        for view in functions["views"] + [compile_view_fa2_token_metadata([TokenMetadata(1, {'name': b'kit', 'decimals': b'6'})])] #TODO
+        for view in functions["views"] + [token_metadata_view]
       ],
 
       # This field is supposed to be optional but it mistakenly was required before

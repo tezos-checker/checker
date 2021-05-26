@@ -155,8 +155,9 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
+@click.option("--token-metadata", type=click.Path(exists=True), help="optional JSON file containing the TZIP-12 token_metadata.")
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez):
+def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -176,7 +177,10 @@ def checker(config: Config, checker_dir, oracle, ctez):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     checker = checker_lib.deploy_checker(
-        client, checker_dir, oracle=config.oracle_address, ctez=config.ctez_address
+        client, checker_dir,
+        oracle=config.oracle_address,
+        ctez=config.ctez_address,
+        token_metadata_file=token_metadata
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
