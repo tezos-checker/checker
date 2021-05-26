@@ -10,7 +10,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.8"
 checker-client = { path = "../client" }
-docker = "^5.0.0"
+docker = "^4.4.4"
 portpicker = "^1.3.9"
 
 [tool.poetry.dev-dependencies]
