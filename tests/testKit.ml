@@ -10,6 +10,16 @@ let suite =
   "KitTests" >::: [
     "kit arithmetic" >::
     (fun _ ->
+       (* scaling factor (int) *)
+       assert_equal ~printer:Ligo.string_of_int
+         (Common.pow_int_nat (Ligo.int_from_literal "10") kit_decimal_digits)
+         kit_scaling_factor_int;
+
+       (* scaling factor (nat) *)
+       assert_equal ~printer:Ligo.string_of_int
+         kit_scaling_factor_int
+         (Ligo.int kit_scaling_factor_nat);
+
        (* add *)
        assert_equal ~printer:show_kt
          (kit_of_mukit (Ligo.nat_from_literal "8_000_000n"))
