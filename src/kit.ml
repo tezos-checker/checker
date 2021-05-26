@@ -2,6 +2,8 @@ open Common
 open FixedPoint
 
 type kit = Ligo.nat
+
+let[@inline] kit_decimal_digits = Ligo.nat_from_literal "6n"
 let[@inline] kit_scaling_factor_int = Ligo.int_from_literal "1_000_000"
 let[@inline] kit_scaling_factor_nat = Ligo.nat_from_literal "1_000_000n"
 
