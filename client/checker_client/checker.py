@@ -19,8 +19,8 @@ default_token_metadata = {
      "symbol": "KIT",
   },
   "liquidity": {
-     "name": "liquidity",
-     "symbol": "LQDT",
+     "name": "kit liquidity",
+     "symbol": "KTLQ",
   }
 }
 
