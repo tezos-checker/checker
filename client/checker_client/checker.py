@@ -7,17 +7,23 @@ import tempfile
 import time
 from decimal import Decimal
 from pathlib import Path
+from typing import Optional
 
 import docker
 import pytezos
 import requests
 from pytezos.client import PyTezosClient
 
+# Time between blocks for sandbox container
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
 SANDBOX_TIME_BETWEEN_BLOCKS = 5
+# Number of retries to use when awaiting new blocks
+WAIT_BLOCK_ATTEMPTS = 10
+# Interval between retries when awaiting new blocks
+WAIT_BLOCK_DELAY = 5
 
 
-def start_sandbox(name: str, port: int):
+def start_sandbox(name: str, port: int, wait_for_level=0):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
         "tqtezos/flextesa:20210316",
@@ -41,8 +47,19 @@ def start_sandbox(name: str, port: int):
             break
         except requests.exceptions.ConnectionError:
             time.sleep(0.1)
-    # wait until a block is mined
-    time.sleep(3)
+
+    print(f"Sandbox initialized. Waiting for expected level to be reached... ")
+    last_level = 0
+    while True:
+        # Wait until enough blocks have been baked for further deploy operations, etc.
+        # using an 10% in case baking is slower than expected.
+        level = client.shell.head.level()
+        if level != last_level:
+            print(f"Sandbox at level {level} / {wait_for_level}")
+            last_level = level
+        if level >= wait_for_level:
+            break
+
     return client, docker_client, docker_container
 
 
@@ -71,6 +88,7 @@ def deploy_contract(
     initial_storage,
     initial_balance=0,
     num_blocks_wait=100,
+    ttl: Optional[int] = None,
 ):
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
@@ -81,9 +99,14 @@ def deploy_contract(
 
     origination = (
         tz.origination(script, balance=initial_balance)
-        .autofill()
+        .autofill(ttl=ttl)
         .sign()
-        .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+        .inject(
+            min_confirmations=1,
+            num_blocks_wait=num_blocks_wait,
+            max_iterations=WAIT_BLOCK_ATTEMPTS,
+            delay_sec=WAIT_BLOCK_DELAY,
+        )
     )
 
     opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
@@ -93,7 +116,9 @@ def deploy_contract(
     return tz.contract(addr)
 
 
-def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
+def deploy_checker(
+    tz, checker_dir, *, oracle, ctez, num_blocks_wait=100, ttl: Optional[int] = None
+):
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
@@ -101,6 +126,7 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
         source_file=os.path.join(checker_dir, "main.tz"),
         initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
         num_blocks_wait=num_blocks_wait,
+        ttl=ttl,
     )
 
     print("Checker address: {}".format(checker.context.address))
@@ -140,9 +166,14 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
         (
             checker.deployMetadata(chunk)
             .as_transaction()
-            .autofill()
+            .autofill(ttl=ttl)
             .sign()
-            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+            .inject(
+                min_confirmations=1,
+                num_blocks_wait=num_blocks_wait,
+                max_iterations=WAIT_BLOCK_ATTEMPTS,
+                delay_sec=WAIT_BLOCK_DELAY,
+            )
         )
 
     # TODO: implement the batching logic here for speed (see the previous ruby script)
@@ -153,9 +184,14 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
             (
                 checker.deployFunction(arg)
                 .as_transaction()
-                .autofill()
+                .autofill(ttl=ttl)
                 .sign()
-                .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+                .inject(
+                    min_confirmations=1,
+                    num_blocks_wait=num_blocks_wait,
+                    max_iterations=WAIT_BLOCK_ATTEMPTS,
+                    delay_sec=WAIT_BLOCK_DELAY,
+                )
             )
             print("  deployed: chunk {}.".format(chunk_no))
 
@@ -163,9 +199,14 @@ def deploy_checker(tz, checker_dir, *, oracle, ctez, num_blocks_wait=100):
     (
         checker.sealContract((oracle, ctez))
         .as_transaction()
-        .autofill()
+        .autofill(ttl=ttl)
         .sign()
-        .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+        .inject(
+            min_confirmations=1,
+            num_blocks_wait=num_blocks_wait,
+            max_iterations=WAIT_BLOCK_ATTEMPTS,
+            delay_sec=WAIT_BLOCK_DELAY,
+        )
     )
 
     return checker
@@ -181,7 +222,7 @@ def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
         )
 
 
-def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
+def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[int] = None):
     """Compiles and deploys the ctez contracts.
 
     Should probably eventually be moved to the ctez repo itself...
@@ -210,7 +251,9 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
             "ctez_fa12_address": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
             "cfmm_address": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
         }
-        ctez = deploy_contract(tz, source_file=str(ctez_michelson), initial_storage=ctez_storage)
+        ctez = deploy_contract(
+            tz, source_file=str(ctez_michelson), initial_storage=ctez_storage, ttl=ttl
+        )
         print("Done.")
 
         print("Deploying ctez FA1.2 contract...")
@@ -221,7 +264,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
             "total_supply": 1,
         }
         fa12_ctez = deploy_contract(
-            tz, source_file=str(fa12_michelson), initial_storage=fa12_ctez_storage
+            tz, source_file=str(fa12_michelson), initial_storage=fa12_ctez_storage, ttl=ttl
         )
         print("Done.")
 
@@ -241,6 +284,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
             source_file=str(cfmm_michelson),
             initial_storage=cfmm_storage,
             initial_balance=Decimal(0.000001),
+            ttl=ttl,
         )
         print("Done.")
 
@@ -252,7 +296,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
             "total_supply": 1,
         }
         fa12_lqt = deploy_contract(
-            tz, source_file=str(fa12_michelson), initial_storage=fa12_lqt_storage
+            tz, source_file=str(fa12_michelson), initial_storage=fa12_lqt_storage, ttl=ttl
         )
         print("Done.")
 
@@ -260,9 +304,14 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
         (
             cfmm.setLqtAddress(fa12_lqt.context.address)
             .as_transaction()
-            .autofill()
+            .autofill(ttl=ttl)
             .sign()
-            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+            .inject(
+                min_confirmations=1,
+                num_blocks_wait=num_blocks_wait,
+                max_iterations=WAIT_BLOCK_ATTEMPTS,
+                delay_sec=WAIT_BLOCK_DELAY,
+            )
         )
         print("Done.")
 
@@ -270,9 +319,14 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100):
         (
             ctez.set_addresses((cfmm.context.address, fa12_ctez.context.address))
             .as_transaction()
-            .autofill()
+            .autofill(ttl=ttl)
             .sign()
-            .inject(min_confirmations=1, num_blocks_wait=num_blocks_wait)
+            .inject(
+                min_confirmations=1,
+                num_blocks_wait=num_blocks_wait,
+                max_iterations=WAIT_BLOCK_ATTEMPTS,
+                delay_sec=WAIT_BLOCK_DELAY,
+            )
         )
         print("Done.")
 
