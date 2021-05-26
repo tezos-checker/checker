@@ -184,8 +184,13 @@ def deploy(config: Config, address=None, port=None, key=None):
     show_default=True,
     help="The number of blocks to wait for an operation group to finish",
 )
+@click.option(
+    "--token-metadata",
+    type=click.Path(exists=True),
+    help="optional JSON file containing the TZIP-12 token_metadata.",
+)
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez, wait):
+def checker(config: Config, checker_dir, oracle, ctez, wait, token_metadata):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -211,6 +216,7 @@ def checker(config: Config, checker_dir, oracle, ctez, wait):
         ctez=config.ctez_address,
         num_blocks_wait=wait,
         ttl=_patch_operation_ttl(config.tezos_address),
+        token_metadata_file=token_metadata,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
