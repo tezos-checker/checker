@@ -12,6 +12,7 @@ val kit_max : kit -> kit -> kit
 
 val kit_zero : kit
 val kit_one : kit
+val kit_decimal_digits : Ligo.nat
 val kit_scaling_factor_int : Ligo.int
 
 (* Conversions to/from other types. *)
