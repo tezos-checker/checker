@@ -4,6 +4,11 @@ Functional Specification
 Working with burrows
 ====================
 
+Burrows are implicitly associated with their owner via the caller's
+address. A caller can operate multiple burrows over time: owners are
+expected to identify each burrow uniquely with an arbitrary numeric ID
+they supply. These numbers need not be contiguous.
+
 Create a burrow
 ---------------
 
