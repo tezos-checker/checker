@@ -313,5 +313,13 @@ let[@inline] ledger_withdraw_liquidity
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
 [@@deriving show]
-(* END_OCAML *)
 
+let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
+  Ligo.Big_map.bindings st.ledger
+  |> List.filter (fun ((id, _owner), _amnt) -> id = token_id)
+  |> List.map (fun ((_id, _owner), amnt) -> amnt)
+  |> List.fold_left (fun x y -> Ligo.add_nat_nat x y) (Ligo.nat_from_literal "0n")
+
+let fa2_get_total_kit_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st kit_token_id
+let fa2_get_total_lqt_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st liquidity_token_id
+(* END_OCAML *)

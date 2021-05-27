@@ -25,6 +25,29 @@ let empty_checker =
       oracle = Ligo.address_of_string "oracle_addr";
     }
 
+(* The starting checker state should satisfy the invariants to begin with. *)
+let _ = Checker.assert_checker_invariants empty_checker
+
+(* Enhance the initial checker state with a populated cfmm in a consistent way. *)
+let empty_checker_with_cfmm (cfmm: CfmmTypes.cfmm) =
+  let checker_kit = kit_sub cfmm.kit (kit_of_mukit (Ligo.nat_from_literal "1n")) in
+  let checker_liquidity =
+    match Ligo.is_nat (Ligo.sub_nat_nat cfmm.lqt (Ligo.nat_from_literal "1n")) with
+    | None -> failwith "empty_checker_with_cfmm: cfmm with zero liquidity in it"
+    | Some lqt -> lqt in
+  let checker =
+    { empty_checker with
+      parameters = { empty_checker.parameters with circulating_kit = checker_kit };
+      cfmm = cfmm;
+      fa2_state =
+        let fa2_state = initial_fa2_state in
+        let fa2_state = ledger_issue_liquidity (fa2_state, !Ligo.Tezos.self_address, checker_liquidity) in
+        let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, checker_kit) in
+        fa2_state;
+    } in
+  Checker.assert_checker_invariants checker;
+  checker
+
 (* Helper for creating new burrows and extracting their ID from the corresponding Ligo Ops *)
 let newly_created_burrow (checker: checker) (burrow_no: string) : burrow_id * checker =
   let _ops, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
@@ -311,7 +334,7 @@ let suite =
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
 
       let sender = alice_addr in
-      let checker = { empty_checker with cfmm = cfmm } in
+      let checker = empty_checker_with_cfmm cfmm in
 
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
@@ -345,7 +368,7 @@ let suite =
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
 
-      let checker = { empty_checker with cfmm = cfmm } in
+      let checker = empty_checker_with_cfmm cfmm in
       let sender = alice_addr in
 
       let checker_cfmm_old_mukit = kit_to_mukit_nat checker.cfmm.kit in
@@ -381,7 +404,7 @@ let suite =
         ~count:property_test_count
         make_inputs_for_buy_kit_to_succeed
       @@ fun (cfmm, ctez_amount, min_kit_expected, deadline) ->
-      let checker = { empty_checker with cfmm = cfmm } in
+      let checker = empty_checker_with_cfmm cfmm in
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
       let _, new_checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
       ctez_add checker.cfmm.ctez ctez_amount = new_checker.cfmm.ctez
@@ -396,14 +419,15 @@ let suite =
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
-
       let sender = alice_addr in
       let checker =
-        { empty_checker with
-          (* Set up all the existing funds needed. *)
-          cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+        let checker = empty_checker_with_cfmm cfmm in
+        { checker with
+          parameters =
+            { checker.parameters with circulating_kit = kit_add checker.parameters.circulating_kit kit_amount };
+          fa2_state = ledger_issue_kit (checker.fa2_state, sender, kit_amount);
         } in
+      Checker.assert_checker_invariants checker;
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
@@ -428,14 +452,17 @@ let suite =
         ~count:property_test_count
         make_inputs_for_sell_kit_to_succeed
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
+      let sender = alice_addr in
       let checker =
-        { empty_checker with
-          (* Set up all the existing funds needed. *)
-          cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_amount);
+        let checker = empty_checker_with_cfmm cfmm in
+        { checker with
+          parameters =
+            { checker.parameters with circulating_kit = kit_add checker.parameters.circulating_kit kit_amount };
+          fa2_state = ledger_issue_kit (checker.fa2_state, sender, kit_amount);
         } in
+      Checker.assert_checker_invariants checker;
 
-      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+      Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let _, new_checker = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
       kit_add checker.cfmm.kit kit_amount = new_checker.cfmm.kit
     );
@@ -451,11 +478,13 @@ let suite =
       @@ fun (cfmm, kit_amount, min_ctez_expected, deadline) ->
       let sender = alice_addr in
       let checker =
-        { empty_checker with
-          (* Set up all the existing funds needed. *)
-          cfmm = cfmm;
-          fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, sender, kit_to_mukit_nat kit_amount);
+        let checker = empty_checker_with_cfmm cfmm in
+        { checker with
+          parameters =
+            { checker.parameters with circulating_kit = kit_add checker.parameters.circulating_kit kit_amount };
+          fa2_state = ledger_issue_kit (checker.fa2_state, sender, kit_amount);
         } in
+      Checker.assert_checker_invariants checker;
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, new_checker = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctez_expected, deadline)) in
@@ -509,14 +538,13 @@ let suite =
 
       (* Populate cfmm with initial liquidity *)
       let open Ratio in
-      let checker = {
-        empty_checker with
-        cfmm={
-          empty_checker.cfmm with
-          ctez = cfmm_ctez;
-          kit = kit_of_mukit cfmm_kit;
-        };
-      } in
+      let checker =
+        empty_checker_with_cfmm
+          { empty_checker.cfmm with
+            ctez = cfmm_ctez;
+            kit = kit_of_mukit cfmm_kit;
+          } in
+
       (* Calculate minimum tez to get the min_expected kit given the state of the cfmm defined above*)
       let ratio_minimum_tez = div_ratio
           (ratio_of_nat cfmm_kit)
@@ -558,14 +586,12 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
        (* Populate the cfmm with some liquidity *)
-       let checker = {
-         empty_checker with
-         cfmm={
-           empty_checker.cfmm with
-           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-           kit = kit_of_mukit (Ligo.nat_from_literal "2n");
-         };
-       } in
+       let checker =
+         empty_checker_with_cfmm
+           { empty_checker.cfmm with
+             ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
+             kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+           } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
@@ -582,16 +608,20 @@ let suite =
        let kit_to_sell = kit_of_mukit (Ligo.nat_from_literal "1_000_000n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
-       (* Populate the cfmm with some liquidity *)
-       let checker = {
-         empty_checker with
-         cfmm={
-           empty_checker.cfmm with
-           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-           kit = kit_of_mukit (Ligo.nat_from_literal "2n");
-         };
-         fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.kit_token_id, alice_addr, kit_to_mukit_nat kit_to_sell);
-       } in
+       let checker =
+         let checker =
+           empty_checker_with_cfmm
+             { empty_checker.cfmm with
+               ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
+               kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+               lqt = Ligo.nat_from_literal "1n";
+             } in
+         { checker with
+           parameters =
+             { checker.parameters with circulating_kit = kit_add checker.parameters.circulating_kit kit_to_sell };
+           fa2_state = ledger_issue_kit (checker.fa2_state, alice_addr, kit_to_sell);
+         } in
+       Checker.assert_checker_invariants checker;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
@@ -626,17 +656,23 @@ let suite =
        let my_liquidity_tokens = Ligo.nat_from_literal "1n" in
        let sender = alice_addr in
 
-       (* Populate the cfmm with some liquidity *)
-       let checker = {
-         empty_checker with
-         cfmm={
-           empty_checker.cfmm with
-           ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-           kit = kit_of_mukit (Ligo.nat_from_literal "2n");
-           lqt = Ligo.nat_from_literal "2n";
-         };
-         fa2_state = Fa2Interface.ledger_issue (empty_checker.fa2_state, Fa2Interface.liquidity_token_id, sender, my_liquidity_tokens);
-       } in
+       (* Populate the cfmm with some liquidity (carefully crafted) *)
+       let checker =
+         { empty_checker with
+           parameters = { empty_checker.parameters with circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1n")};
+           cfmm =
+             { empty_checker.cfmm with
+               ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
+               kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+               lqt = Ligo.nat_from_literal "2n";
+             };
+           fa2_state =
+             let fa2_state = initial_fa2_state in
+             let fa2_state = ledger_issue_liquidity (fa2_state, sender, my_liquidity_tokens) in
+             let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, kit_of_mukit (Ligo.nat_from_literal "1n")) in
+             fa2_state;
+         } in
+       Checker.assert_checker_invariants checker;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, checker = Checker.entrypoint_remove_liquidity (checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
@@ -652,7 +688,6 @@ let suite =
 
        assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
        assert_equal (Ligo.nat_from_literal "1n") ctez ~printer:Ligo.string_of_nat;
-
        ()
     );
 
