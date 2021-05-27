@@ -448,9 +448,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
     state_parameters in
 
   let state_fa2_state =
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_repay) in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_burn) in
-    state_fa2_state in
+    ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
 
   let state =
     { burrows = state_burrows;
@@ -741,9 +739,18 @@ let rec touch_oldest
  * should be safe to leave the order of the transaction reversed. *)
 let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
+  let
+    { burrows = state_burrows;
+      cfmm = state_cfmm;
+      parameters = state_parameters;
+      liquidation_auctions = state_liquidation_auctions;
+      last_price = state_last_price;
+      fa2_state = state_fa2_state;
+      external_contracts = state_external_contracts;
+    } = state in
   assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
   let _ = ensure_no_tez_given () in
-  if state.parameters.last_touched = !Ligo.Tezos.now then
+  if state_parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     (([]: LigoOp.operation list), state)
   else
@@ -754,36 +761,28 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
 
     (* 1: Mint some kit out of thin air to reward the contract toucher, and
      * update the circulating kit accordingly.*)
-    let state =
-      let reward = calculate_touch_reward state.parameters.last_touched in
-      { state with
-        parameters = add_circulating_kit state.parameters reward;
-        fa2_state = ledger_issue_kit (state.fa2_state, !Ligo.Tezos.sender, reward);
-      } in
+    let state_parameters, state_fa2_state =
+      let reward = calculate_touch_reward state_parameters.last_touched in
+      let state_parameters = add_circulating_kit state_parameters reward in
+      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, reward) in
+      state_parameters, state_fa2_state in
 
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let state =
-      let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state.cfmm) in (* FIXME: times ctez_in_tez *)
-      let total_accrual_to_cfmm, updated_parameters = parameters_touch index kit_in_tez_in_prev_block state.parameters in
-      { state with
-        parameters = updated_parameters; (* NOTE: circulating kit already inlcludes the accrual to the CFMM. *)
-        cfmm = cfmm_add_accrued_kit state.cfmm total_accrual_to_cfmm;
-        fa2_state = ledger_issue_kit (state.fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm);
-      } in
+    let state_parameters, state_cfmm, state_fa2_state =
+      let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
+      let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in (* NOTE: circulating kit here already inlcludes the accrual to the CFMM. *)
+      let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
+      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm) in
+      state_parameters, state_cfmm, state_fa2_state in
 
     (* 3: Update auction-related info (e.g. start a new auction). Note that we
      * always start auctions using the current liquidation price. We could also
      * have calculated the price right now directly using the oracle feed as
      * (tz_t * q_t), or use the current minting price, but using the
      * liquidation price is the safest option. *)
-    let state =
-      { state with
-        liquidation_auctions =
-          liquidation_auction_touch
-            state.liquidation_auctions
-            (liquidation_price state.parameters);
-      } in
+    let state_liquidation_auctions =
+      liquidation_auction_touch state_liquidation_auctions (liquidation_price state_parameters) in
 
     (* 4: Touch oldest liquidation slices *)
     (* TODO: Touch only runs at most once per block. But it might be beneficial
@@ -799,30 +798,18 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
        LigoOp.Tezos.nat_contract_transaction
          cb
          (Ligo.tez_from_literal "0mutez")
-         (get_oracle_entrypoint state.external_contracts) in
+         (get_oracle_entrypoint state_external_contracts) in
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state =
-      let
-        { burrows = state_burrows;
-          cfmm = state_cfmm;
-          parameters = state_parameters;
-          liquidation_auctions = state_liquidation_auctions;
-          last_price = state_last_price;
-          fa2_state = state_fa2_state;
-          external_contracts = state_external_contracts;
-        } = state in
       let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
         touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
       let state_parameters =
         let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
         let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
         state_parameters in
-
       let state_fa2_state =
-        let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_repay) in
-        let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_burn) in
-        state_fa2_state in
+        ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
 
       let new_state =
         { burrows = state_burrows;
