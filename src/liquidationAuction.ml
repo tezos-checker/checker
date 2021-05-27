@@ -188,9 +188,8 @@ let liquidation_auction_send_to_auction
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let burrow_slices = slice_list_from_auction_state auctions contents.burrow in
-    let storage, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions.avl_storage auctions.queued_slices Back contents in
-    let state = {auctions with avl_storage=storage} in
-    (slice_list_to_auction_state state burrow_slices, ret)
+    let auctions, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions Back contents in
+    (slice_list_to_auction_state auctions burrow_slices, ret)
 
 (** Split a liquidation slice into two. The first of the two slices is the
   * "older" of the two (i.e. it is the one to be included in the auction we are
@@ -259,13 +258,12 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       let (part1_contents, part2_contents) =
         split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) (slice_list_element_contents element) in
       (* Remove the element we are splitting *)
-      let storage, burrow_slices, _, _ = slice_list_remove burrow_slices auctions.avl_storage element in
+      let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
       (* Push the first portion of the slice to the back of the new auction *)
-      let storage, burrow_slices, _ = slice_list_append burrow_slices storage new_auction Back part1_contents in
+      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions Back part1_contents in
       (* Push the remainder of the slice to the front of the auction queue *)
-      let storage, burrow_slices, _ = slice_list_append burrow_slices storage queued_slices Front part2_contents in
+      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions Front part2_contents in
       (* Update auction state *)
-      let auctions = {auctions with avl_storage=storage;} in
       let auctions = slice_list_to_auction_state auctions burrow_slices in
       (auctions, new_auction)
     (* Case: no more slices in queue, nothing to split *)
@@ -442,8 +440,7 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
 *)
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
   let element, burrow_slices = slice_list_from_leaf_ptr auctions leaf_ptr in
-  let avl_storage, burrow_slices, root_ptr, contents = slice_list_remove burrow_slices auctions.avl_storage element in
-  let auctions = {auctions with avl_storage=avl_storage;} in
+  let auctions, burrow_slices, root_ptr, contents = slice_list_remove burrow_slices auctions element in
   ( contents
   , root_ptr
   , slice_list_to_auction_state auctions burrow_slices

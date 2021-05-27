@@ -52,13 +52,13 @@ let suite =
       (
         let _ = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let storage, burrow_slices, element = slice_list_append burrow_slices auctions.avl_storage auctions.queued_slices Avl.Front slice_contents in
-              let youngest = match (slice_list_youngest burrow_slices storage) with
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Front slice_contents in
+              let youngest = match (slice_list_youngest burrow_slices auctions) with
                 | Some expected_element -> expected_element
                 | None -> failwith "slice list should have bounds after appending but has none."
               in
               assert_equal youngest element ~printer:show_slice_list_element ~msg:"new element is youngest one";
-              ({auctions with avl_storage = storage;}, burrow_slices)
+              (auctions, burrow_slices)
           )
             (liquidation_auction_empty, slice_list_empty burrow_id_1)
             slice_contents_list
@@ -82,7 +82,7 @@ let suite =
               let storage = auctions.avl_storage in
 
               (* Test adding to the front of AVL queue *)
-              let storage, burrow_slices, element = slice_list_append burrow_slices storage root_ptr Avl.Front slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Front slice_contents in
               let _ = match element with SliceListElement (ptr, slice) ->
                 let avl_value = Avl.avl_peek_front storage root_ptr in
                 match avl_value with
@@ -93,7 +93,7 @@ let suite =
               in
 
               (* Test adding to the back of AVL queue *)
-              let storage, burrow_slices, element = slice_list_append burrow_slices storage root_ptr Avl.Back slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Back slice_contents in
               let _ = match element with SliceListElement (_, slice) ->
                 (* Note: didn't know how to get the last item in the queue without doing this. *)
                 let avl_value = List.hd (List.rev (TestAvl.avl_to_list storage root_ptr)) in
@@ -120,30 +120,29 @@ let suite =
       fun (first_section, slice_to_remove, second_section) ->
       (
         let auctions = liquidation_auction_empty in
-        let root_ptr = auctions.queued_slices in
         let queue_end = Avl.Front in
         (* Pre-populate first part of list*)
-        let storage, burrow_slices = List.fold_left (
-            fun (storage, burrow_slices) slice_contents ->
-              let storage, burrow_slices, _ = slice_list_append burrow_slices storage root_ptr queue_end slice_contents in
-              (storage, burrow_slices)
+        let auctions, burrow_slices = List.fold_left (
+            fun (auctions, burrow_slices) slice_contents ->
+              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queue_end slice_contents in
+              (auctions, burrow_slices)
           )
-            (auctions.avl_storage, slice_list_empty burrow_id_1) first_section in
+            (auctions, slice_list_empty burrow_id_1) first_section in
         (* Add the element which we will later remove *)
-        let storage, burrow_slices, to_remove = slice_list_append burrow_slices storage root_ptr queue_end slice_to_remove in
+        let auctions, burrow_slices, to_remove = slice_list_append burrow_slices auctions queue_end slice_to_remove in
         (* Populate the rest of the list *)
-        let storage, burrow_slices = List.fold_left (
-            fun (storage, burrow_slices) slice_contents ->
-              let storage, burrow_slices, _ = slice_list_append burrow_slices storage root_ptr queue_end slice_contents in
-              (storage, burrow_slices)
+        let auctions, burrow_slices = List.fold_left (
+            fun (auctions, burrow_slices) slice_contents ->
+              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queue_end slice_contents in
+              (auctions, burrow_slices)
           )
-            (storage, burrow_slices) second_section in
+            (auctions, burrow_slices) second_section in
 
         (* Remove an element from the list *)
         let removed_ptr = match to_remove with SliceListElement (ptr, _) -> ptr in
-        let storage, _, _, _  = slice_list_remove burrow_slices storage to_remove in
+        let auctions, _, _, _  = slice_list_remove burrow_slices auctions to_remove in
         (* Retrieving the slice from the AVL backend should now fail *)
-        assert_raises (Failure "mem_get: not found") (fun () -> Avl.avl_read_leaf storage removed_ptr);
+        assert_raises (Failure "mem_get: not found") (fun () -> Avl.avl_read_leaf auctions.avl_storage removed_ptr);
         true
       )
     );
