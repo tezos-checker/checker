@@ -19,8 +19,8 @@ class SandboxedTestCase(unittest.TestCase):
 
         port = portpicker.pick_unused_port()
         self.docker_container = self.docker_client.containers.run(
-            "tqtezos/flextesa:20210316",
-            command=["edobox", "start"],
+            "tqtezos/flextesa:20210514",
+            command=["flobox", "start"],
             environment={"block_time": 1},
             ports={"20000/tcp": port},
             name="checker-e2e-container-{}".format(port),
@@ -30,7 +30,7 @@ class SandboxedTestCase(unittest.TestCase):
 
         self.client = pytezos.pytezos.using(
             shell="http://127.0.0.1:{}".format(port),
-            key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "edobox info"
+            key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
         )
         self.client.loglevel = logging.ERROR
 

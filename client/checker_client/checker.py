@@ -149,8 +149,8 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
 def start_sandbox(name: str, port: int, wait_for_level=0):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
-        "tqtezos/flextesa:20210316",
-        command=["edobox", "start"],
+        "tqtezos/flextesa:20210514",
+        command=["flobox", "start"],
         environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
         ports={"20000/tcp": port},
         name=name,
@@ -159,7 +159,7 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     )
     client = pytezos.pytezos.using(
         shell="http://127.0.0.1:{}".format(port),
-        key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "edobox info"
+        key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
     )
     # Increase log level to avoid connection errors
     client.loglevel = logging.ERROR
