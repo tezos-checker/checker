@@ -45,7 +45,7 @@ class Config:
     sandbox_container: str = "checker-sandbox-node"
     tezos_address: str = "http://127.0.0.1"
     tezos_port: int = 18731
-    tezos_key: str = "edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt"  # bob's private key from "edobox info"
+    tezos_key: str = "edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt"  # bob's private key from "flobox info"
     ctez_address: str = ""
     oracle_address: str = ""
     checker_address: str = ""
