@@ -189,7 +189,9 @@ let liquidation_auction_send_to_auction
   else
     let burrow_slices = slice_list_from_auction_state auctions contents.burrow in
     let auctions, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions auctions.queued_slices QueueBack contents in
-    (slice_list_to_auction_state auctions burrow_slices, ret)
+    let auctions = slice_list_to_auction_state auctions burrow_slices in
+    assert_liquidation_auction_invariants auctions;
+    (auctions, ret)
 
 (** Split a liquidation slice into two. The first of the two slices is the
   * "older" of the two (i.e. it is the one to be included in the auction we are
@@ -247,30 +249,31 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
   let auctions = { auctions with avl_storage = storage } in
 
   let queued_amount = avl_tez storage new_auction in
-  if queued_amount < split_threshold
-  then
-    (* split next thing *)
-    let next = slice_list_from_queue_head auctions in
-    match next with
-    (* Case: there is a slice to split *)
-    | Some (element, burrow_slices) ->
-      (* Split the contents *)
-      let (part1_contents, part2_contents) =
-        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) (slice_list_element_contents element) in
-      (* Remove the element we are splitting *)
-      let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
-      (* Push the first portion of the slice to the back of the new auction *)
-      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions new_auction QueueBack part1_contents in
-      (* Push the remainder of the slice to the front of the auction queue *)
-      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queued_slices QueueFront part2_contents in
-      (* Update auction state *)
-      let auctions = slice_list_to_auction_state auctions burrow_slices in
-      (auctions, new_auction)
-    (* Case: no more slices in queue, nothing to split *)
-    | None ->
-      (auctions, new_auction)
-  else
-    (auctions, new_auction)
+  let auctions = if queued_amount < split_threshold
+    then
+      (* split next thing *)
+      let next = slice_list_from_queue_head auctions in
+      match next with
+      (* Case: there is a slice to split *)
+      | Some (element, burrow_slices) ->
+        (* Split the contents *)
+        let (part1_contents, part2_contents) =
+          split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) (slice_list_element_contents element) in
+        (* Remove the element we are splitting *)
+        let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
+        (* Push the first portion of the slice to the back of the new auction *)
+        let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions new_auction QueueBack part1_contents in
+        (* Push the remainder of the slice to the front of the auction queue *)
+        let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queued_slices QueueFront part2_contents in
+        (* Update auction state *)
+        slice_list_to_auction_state auctions burrow_slices
+      (* Case: no more slices in queue, nothing to split *)
+      | None -> auctions
+    else
+      auctions
+  in
+  assert_liquidation_auction_invariants auctions;
+  (auctions, new_auction)
 
 let start_liquidation_auction_if_possible
     (start_price: ratio) (auctions: liquidation_auctions): liquidation_auctions =
@@ -441,9 +444,11 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
   let element, burrow_slices = slice_list_from_leaf_ptr auctions leaf_ptr in
   let auctions, burrow_slices, root_ptr, contents = slice_list_remove burrow_slices auctions element in
+  let auctions = slice_list_to_auction_state auctions burrow_slices in
+  assert_liquidation_auction_invariants auctions;
   ( contents
   , root_ptr
-  , slice_list_to_auction_state auctions burrow_slices
+  , auctions
   )
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =
