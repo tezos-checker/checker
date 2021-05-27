@@ -52,7 +52,7 @@ let suite =
       (
         let _ = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Front slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueFront slice_contents in
               let youngest = match (slice_list_youngest burrow_slices auctions) with
                 | Some expected_element -> expected_element
                 | None -> failwith "slice list should have bounds after appending but has none."
@@ -78,13 +78,10 @@ let suite =
       (
         let _ = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let root_ptr = auctions.queued_slices in
-              let storage = auctions.avl_storage in
-
               (* Test adding to the front of AVL queue *)
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Front slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueFront slice_contents in
               let _ = match element with SliceListElement (ptr, slice) ->
-                let avl_value = Avl.avl_peek_front storage root_ptr in
+                let avl_value = Avl.avl_peek_front auctions.avl_storage auctions.queued_slices in
                 match avl_value with
                 | None -> failwith "AVL was empty after appending slice to list"
                 | Some (avl_ptr, avl_slice) ->
@@ -93,14 +90,14 @@ let suite =
               in
 
               (* Test adding to the back of AVL queue *)
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions Avl.Back slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueBack slice_contents in
               let _ = match element with SliceListElement (_, slice) ->
                 (* Note: didn't know how to get the last item in the queue without doing this. *)
-                let avl_value = List.hd (List.rev (TestAvl.avl_to_list storage root_ptr)) in
+                let avl_value = List.hd (List.rev (TestAvl.avl_to_list auctions.avl_storage auctions.queued_slices)) in
                 assert_equal slice avl_value ~printer:show_liquidation_slice;
               in
 
-              ({auctions with avl_storage = storage;}, burrow_slices)
+              (auctions, burrow_slices)
 
           )
             (liquidation_auction_empty, slice_list_empty burrow_id_1)
@@ -120,7 +117,7 @@ let suite =
       fun (first_section, slice_to_remove, second_section) ->
       (
         let auctions = liquidation_auction_empty in
-        let queue_end = Avl.Front in
+        let queue_end = QueueFront in
         (* Pre-populate first part of list*)
         let auctions, burrow_slices = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->

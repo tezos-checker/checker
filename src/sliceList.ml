@@ -53,7 +53,7 @@ let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: b
     }
 
 (* Constructs an element from a burrow leaf in the AVL *)
-let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) : (slice_list_element * slice_list) =
+let[@inline] slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) : (slice_list_element * slice_list) =
   let slice = avl_read_leaf auctions.avl_storage ptr in
   let element = SliceListElement (ptr, slice) in
   let list = slice_list_from_auction_state auctions slice.contents.burrow in
@@ -66,7 +66,7 @@ let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) : 
 
 (* Constructs an element from the first item in the auction queue.
    Does NOT remove the corresponding slice from the queue. *)
-let slice_list_from_queue_head (auctions: liquidation_auctions) : (slice_list_element * slice_list) option =
+let[@inline] slice_list_from_queue_head (auctions: liquidation_auctions) : (slice_list_element * slice_list) option =
   match avl_peek_front auctions.avl_storage auctions.queued_slices with
   | Some (ptr, slice) ->
     (* Constructing the element directly since we already have read its contents *)
@@ -88,6 +88,8 @@ let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list)
     let burrow_slices = Ligo.Big_map.update meta.slice_list_burrow burrow_liquidation_slice auctions.burrow_slices in
     {auctions with burrow_slices = burrow_slices;}
 
+(* End of the AVL auction queue to use when inserting slice list elements *)
+type queue_end = QueueFront | QueueBack
 
 (* Appends a new element to the list. This element will be the "youngest" one in the list.
    You must specify an avl root which this new element will reside under along with the
@@ -104,8 +106,8 @@ let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (queue_end:
     let slice = {younger=(None: leaf_ptr option); older=(None: leaf_ptr option); contents=slice_contents;} in
     (* Write slice to AVL backend *)
     let storage, ptr = match queue_end with
-      | Back -> avl_push_back storage auctions.queued_slices slice
-      | Front -> avl_push_front storage auctions.queued_slices slice
+      | QueueBack -> avl_push_back storage auctions.queued_slices slice
+      | QueueFront -> avl_push_front storage auctions.queued_slices slice
     in
     let bounds = {
       slice_list_youngest_ptr=ptr;
@@ -118,8 +120,8 @@ let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (queue_end:
     let slice = {younger=(None: leaf_ptr option); older=Some bounds.slice_list_youngest_ptr; contents=slice_contents;} in
     (* Write slice to AVL backend *)
     let storage, ptr = match queue_end with
-      | Back -> avl_push_back storage auctions.queued_slices slice
-      | Front -> avl_push_front storage auctions.queued_slices slice
+      | QueueBack -> avl_push_back storage auctions.queued_slices slice
+      | QueueFront -> avl_push_front storage auctions.queued_slices slice
     in
     (* Touch up the old element in the backend *)
     let former_youngest = bounds.slice_list_youngest_ptr in
