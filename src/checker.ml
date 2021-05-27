@@ -737,7 +737,7 @@ let rec touch_oldest
  * exceptions (1. setting the delegate, and 2. call/callback to the oract), all
  * of the operations are outwards calls, to other contracts (no callbacks). It
  * should be safe to leave the order of the transaction reversed. *)
-let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let
     { burrows = state_burrows;
@@ -761,20 +761,14 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
 
     (* 1: Mint some kit out of thin air to reward the contract toucher, and
      * update the circulating kit accordingly.*)
-    let state_parameters, state_fa2_state =
-      let reward = calculate_touch_reward state_parameters.last_touched in
-      let state_parameters = add_circulating_kit state_parameters reward in
-      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, reward) in
-      state_parameters, state_fa2_state in
+    let reward = calculate_touch_reward state_parameters.last_touched in
+    let state_parameters = add_circulating_kit state_parameters reward in
 
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let state_parameters, state_cfmm, state_fa2_state =
-      let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
-      let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in (* NOTE: circulating kit here already inlcludes the accrual to the CFMM. *)
-      let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
-      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm) in
-      state_parameters, state_cfmm, state_fa2_state in
+    let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
+    let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in (* NOTE: circulating kit here already inlcludes the accrual to the CFMM. *)
+    let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
 
     (* 3: Update auction-related info (e.g. start a new auction). Note that we
      * always start auctions using the current liquidation price. We could also
@@ -801,27 +795,30 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
          (get_oracle_entrypoint state_external_contracts) in
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
-    let ops, state =
-      let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
-        touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
-      let state_parameters =
-        let state_parameters = remove_outstanding_and_circulating_kit state_parameters kit_to_repay in
-        let state_parameters = remove_circulating_kit state_parameters kit_to_burn in
-        state_parameters in
-      let state_fa2_state =
-        ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
+    let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
+      touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
+    let state_parameters =
+      { state_parameters with
+        outstanding_kit = kit_sub state_parameters.outstanding_kit kit_to_repay;
+        circulating_kit = kit_sub state_parameters.circulating_kit (kit_add kit_to_repay kit_to_burn);
+      } in
 
-      let state =
-        { burrows = state_burrows;
-          cfmm = state_cfmm;
-          parameters = state_parameters;
-          liquidation_auctions = state_liquidation_auctions;
-          last_price = state_last_price;
-          fa2_state = state_fa2_state;
-          external_contracts = state_external_contracts;
-        } in
+    (* Do all the ledger stuff at the end, in one go *)
+    let state_fa2_state =
+      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, reward) in
+      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm) in
+      let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
+      state_fa2_state in
 
-      (ops, state) in
+    let state =
+      { burrows = state_burrows;
+        cfmm = state_cfmm;
+        parameters = state_parameters;
+        liquidation_auctions = state_liquidation_auctions;
+        last_price = state_last_price;
+        fa2_state = state_fa2_state;
+        external_contracts = state_external_contracts;
+      } in
 
     assert_checker_invariants state;
 
