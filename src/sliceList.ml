@@ -12,7 +12,7 @@ open LiquidationAuctionPrimitiveTypes
 type slice_list_element = SliceListElement of (leaf_ptr * liquidation_slice)
 [@@deriving show]
 
-let slice_list_element_contents (e: slice_list_element) =
+let slice_list_element_contents (e: slice_list_element) : liquidation_slice_contents =
   match e with
   | SliceListElement (_, contents) -> contents.contents
 
@@ -32,16 +32,16 @@ type slice_list_meta = {
 type slice_list = SliceList of slice_list_meta
 [@@deriving show]
 
-let slice_list_empty (burrow: burrow_id) = SliceList {slice_list_burrow=burrow; slice_list_bounds=(None:slice_list_bounds option);}
+let slice_list_empty (burrow: burrow_id) : slice_list = SliceList {slice_list_burrow=burrow; slice_list_bounds=(None:slice_list_bounds option);}
 
-let slice_list_is_empty (l: slice_list) =
+let slice_list_is_empty (l: slice_list) : bool =
   let meta = match l with SliceList meta -> meta in
   match meta.slice_list_bounds with
   | Some _ -> false
   | None -> true
 
 (* Constructs a burrow slice list for the given burrow id using the provided auction state *)
-let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) =
+let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) : slice_list =
   match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
   | None -> SliceList {slice_list_burrow=burrow_id; slice_list_bounds=(None:slice_list_bounds option)}
   | Some bs ->
@@ -54,7 +54,7 @@ let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: b
     }
 
 (* Constructs an element from a burrow leaf in the AVL *)
-let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) =
+let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) : (slice_list_element * slice_list) =
   let slice = avl_read_leaf auctions.avl_storage ptr in
   let element = SliceListElement (ptr, slice) in
   let list = slice_list_from_auction_state auctions slice.contents.burrow in
@@ -67,7 +67,7 @@ let slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: leaf_ptr) =
 
 (* Constructs an element from the first item in the auction queue.
    Does NOT remove the corresponding slice from the queue. *)
-let slice_list_from_queue_head (auctions: liquidation_auctions) =
+let slice_list_from_queue_head (auctions: liquidation_auctions) : (slice_list_element * slice_list) option =
   match avl_peek_front auctions.avl_storage auctions.queued_slices with
   | Some (ptr, slice) ->
     (* Constructing the element directly since we already have read its contents *)
@@ -77,7 +77,7 @@ let slice_list_from_queue_head (auctions: liquidation_auctions) =
   | None -> (None : (slice_list_element * slice_list) option)
 
 (* Updates the burrow slices in the provided auction state using the given burrow slice list *)
-let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) =
+let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) : liquidation_auctions =
   match l with SliceList meta ->
     let burrow_liquidation_slice = match meta.slice_list_bounds with
       | None -> (None: burrow_liquidation_slices option)
@@ -94,7 +94,7 @@ let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list)
    You must specify an avl root which this new element will reside under along with the
    end of the avl queue which you would like to place the element at.
 *)
-let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) =
+let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) : (mem * slice_list * slice_list_element) =
   let meta = match l with SliceList m -> m in
   (* FIXME: Perhaps throw specific error code here? *)
   assert (slice_contents.burrow = meta.slice_list_burrow);
@@ -129,7 +129,7 @@ let slice_list_append (l:slice_list) (storage:mem) (root:liquidation_auction_id)
     storage, SliceList {meta with slice_list_bounds=Some bounds;}, SliceListElement (ptr, slice)
 
 (* Remove the element from the list, returning its contents *)
-let slice_list_remove (l:slice_list) (storage:mem) (e:slice_list_element) =
+let slice_list_remove (l:slice_list) (storage:mem) (e:slice_list_element) : (mem * slice_list * liquidation_auction_id * liquidation_slice_contents) =
   let meta = match l with SliceList m -> m in
   let ptr, slice = match e with SliceListElement (ptr, slice) -> ptr, slice in
   assert (meta.slice_list_burrow = slice.contents.burrow);
@@ -181,13 +181,15 @@ let slice_list_remove (l:slice_list) (storage:mem) (e:slice_list_element) =
 (* Extra functionality we want for testing, etc. can go here.
       e.g. folds, length, map
 *)
-let slice_list_youngest (l: slice_list) (storage: mem) =
+(* Gets the youngest element of the list *)
+let slice_list_youngest (l: slice_list) (storage: mem) : slice_list_element option =
   let meta = match l with SliceList meta -> meta in
   match meta.slice_list_bounds with
   | Some bounds -> Some (SliceListElement (bounds.slice_list_youngest_ptr, avl_read_leaf storage bounds.slice_list_youngest_ptr))
   | None -> None
 
-let slice_list_oldest (l: slice_list) (storage: mem) =
+(* Gets the oldest element of the list *)
+let slice_list_oldest (l: slice_list) (storage: mem) : slice_list_element option =
   let meta = match l with SliceList meta -> meta in
   match meta.slice_list_bounds with
   | Some bounds -> Some (SliceListElement (bounds.slice_list_oldest_ptr, avl_read_leaf storage bounds.slice_list_oldest_ptr))
