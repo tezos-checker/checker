@@ -112,7 +112,7 @@ rec
         # compile it in CI
         pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ ligoBinary ]
         ++ pkgs.lib.optionals (pkgsHost.stdenv.isLinux) [ tezosClient ]
-        ++ (with pkgs; [ niv ruby bc sphinx poetry entr nodePackages.live-server fd ])
+        ++ (with pkgs; [ niv ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt ])
         ++ spec.buildInputs
         ++ ocamlDeps pkgs
         ++ pythonDeps.buildInputs;
