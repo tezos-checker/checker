@@ -52,7 +52,7 @@ let suite =
       (
         let _ = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueFront slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions auctions.queued_slices QueueFront slice_contents in
               let youngest = match (slice_list_youngest burrow_slices auctions) with
                 | Some expected_element -> expected_element
                 | None -> failwith "slice list should have bounds after appending but has none."
@@ -79,7 +79,7 @@ let suite =
         let _ = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
               (* Test adding to the front of AVL queue *)
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueFront slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions auctions.queued_slices QueueFront slice_contents in
               let _ = match element with SliceListElement (ptr, slice) ->
                 let avl_value = Avl.avl_peek_front auctions.avl_storage auctions.queued_slices in
                 match avl_value with
@@ -90,7 +90,7 @@ let suite =
               in
 
               (* Test adding to the back of AVL queue *)
-              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions QueueBack slice_contents in
+              let auctions, burrow_slices, element = slice_list_append burrow_slices auctions auctions.queued_slices QueueBack slice_contents in
               let _ = match element with SliceListElement (_, slice) ->
                 (* Note: didn't know how to get the last item in the queue without doing this. *)
                 let avl_value = List.hd (List.rev (TestAvl.avl_to_list auctions.avl_storage auctions.queued_slices)) in
@@ -121,16 +121,16 @@ let suite =
         (* Pre-populate first part of list*)
         let auctions, burrow_slices = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queue_end slice_contents in
+              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions auctions.queued_slices queue_end slice_contents in
               (auctions, burrow_slices)
           )
             (auctions, slice_list_empty burrow_id_1) first_section in
         (* Add the element which we will later remove *)
-        let auctions, burrow_slices, to_remove = slice_list_append burrow_slices auctions queue_end slice_to_remove in
+        let auctions, burrow_slices, to_remove = slice_list_append burrow_slices auctions auctions.queued_slices queue_end slice_to_remove in
         (* Populate the rest of the list *)
         let auctions, burrow_slices = List.fold_left (
             fun (auctions, burrow_slices) slice_contents ->
-              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queue_end slice_contents in
+              let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions auctions.queued_slices queue_end slice_contents in
               (auctions, burrow_slices)
           )
             (auctions, burrow_slices) second_section in

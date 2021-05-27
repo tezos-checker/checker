@@ -95,7 +95,7 @@ type queue_end = QueueFront | QueueBack
    You must specify an avl root which this new element will reside under along with the
    end of the avl queue which you would like to place the element at.
 *)
-let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) : (liquidation_auctions * slice_list * slice_list_element) =
+let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) : (liquidation_auctions * slice_list * slice_list_element) =
   let storage = auctions.avl_storage in
   let meta = match l with SliceList m -> m in
   (* FIXME: Perhaps throw specific error code here? *)
@@ -106,8 +106,8 @@ let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (queue_end:
     let slice = {younger=(None: leaf_ptr option); older=(None: leaf_ptr option); contents=slice_contents;} in
     (* Write slice to AVL backend *)
     let storage, ptr = match queue_end with
-      | QueueBack -> avl_push_back storage auctions.queued_slices slice
-      | QueueFront -> avl_push_front storage auctions.queued_slices slice
+      | QueueBack -> avl_push_back storage root slice
+      | QueueFront -> avl_push_front storage root slice
     in
     let bounds = {
       slice_list_youngest_ptr=ptr;
@@ -120,8 +120,8 @@ let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (queue_end:
     let slice = {younger=(None: leaf_ptr option); older=Some bounds.slice_list_youngest_ptr; contents=slice_contents;} in
     (* Write slice to AVL backend *)
     let storage, ptr = match queue_end with
-      | QueueBack -> avl_push_back storage auctions.queued_slices slice
-      | QueueFront -> avl_push_front storage auctions.queued_slices slice
+      | QueueBack -> avl_push_back storage root slice
+      | QueueFront -> avl_push_front storage root slice
     in
     (* Touch up the old element in the backend *)
     let former_youngest = bounds.slice_list_youngest_ptr in

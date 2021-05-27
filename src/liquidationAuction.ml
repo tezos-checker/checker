@@ -188,7 +188,7 @@ let liquidation_auction_send_to_auction
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let burrow_slices = slice_list_from_auction_state auctions contents.burrow in
-    let auctions, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions QueueBack contents in
+    let auctions, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions auctions.queued_slices QueueBack contents in
     (slice_list_to_auction_state auctions burrow_slices, ret)
 
 (** Split a liquidation slice into two. The first of the two slices is the
@@ -260,9 +260,9 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       (* Remove the element we are splitting *)
       let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
       (* Push the first portion of the slice to the back of the new auction *)
-      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions QueueBack part1_contents in
+      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions new_auction QueueBack part1_contents in
       (* Push the remainder of the slice to the front of the auction queue *)
-      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions QueueFront part2_contents in
+      let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queued_slices QueueFront part2_contents in
       (* Update auction state *)
       let auctions = slice_list_to_auction_state auctions burrow_slices in
       (auctions, new_auction)
