@@ -33,6 +33,9 @@ open CfmmTypes
     kit_in_ctez, because it is a little harder to manipulate. *)
 val cfmm_kit_in_ctez_in_prev_block : cfmm -> Ratio.ratio
 
+(** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
+val cfmm_view_min_kit_expected_buy_kit : cfmm -> ctez -> (kit * cfmm)
+
 (** Buy some kit from the cfmm contract by providing some ctez. Fail if the
     desired amount of kit cannot be bought or if the deadline has passed. *)
 val cfmm_buy_kit :
@@ -42,6 +45,9 @@ val cfmm_buy_kit :
   Ligo.timestamp (* deadline *) ->
   (kit * cfmm)
 
+(** Compute the maximum [min_ctez_expected] for [cfmm_sell_kit] to succeed. *)
+val cfmm_view_min_ctez_expected_cfmm_sell_kit : cfmm -> kit -> (ctez * cfmm)
+
 (** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
     cannot be bought or if the deadline has passed. *)
 val cfmm_sell_kit :
@@ -50,6 +56,10 @@ val cfmm_sell_kit :
   ctez (* min ctez expected *) ->
   Ligo.timestamp (* deadline *) ->
   (ctez * cfmm)
+
+(** Compute the minimum [max_kit_deposited] and the maximum [min_lqt_minted]
+    for [cfmm_add_liquidity] to succeed. *)
+val cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity : cfmm -> ctez -> (liquidity * kit * cfmm)
 
 (** Buy some liquidity from the cfmm contract, by giving it some ctez and
     some kit. If the given amounts does not have the right ratio, we
@@ -73,6 +83,10 @@ val cfmm_add_liquidity :
   liquidity (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
   (liquidity * kit * cfmm)
+
+(** Compute the maximum [min_ctez_withdrawn] and the minimum
+    [min_kit_withdrawn] for [cfmm_remove_liquidity] to succeed. *)
+val cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity : cfmm -> liquidity -> (ctez * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
     succeeds, but might leave the contract without ctez and kit if everybody

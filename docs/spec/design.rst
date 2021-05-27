@@ -144,10 +144,7 @@ about 72 cNp / day, so the filter can catch up to a 2x or 0.5x move in
 :math:`\widehat{tz}_t` is like the suspension of a car, it lags behind
 large moves, but is insensitive to spikes (real or fabricated).
 
-In addition, we define the following prices [TODO: mjg suggest creating a
-subsection for “Prices” and moving the indexes below down a level. Or
-(because they’re quite short), perhaps the below is actually an itemised
-list]
+In addition, we define the following prices
 
 Minting index
 '''''''''''''
@@ -164,10 +161,8 @@ miminum of :math:`tz_t` and :math:`\widehat{tz_t}`.
 Changing oracle feeds
 ^^^^^^^^^^^^^^^^^^^^^
 
-The set of feeds [TODO: mjg if symbol exists, put it here] is initially fixed.
-A Tezos protocol upgrade is **strongly recommended** to give bakers the
-ability to signal in each block support for the addition or removal of
-oracle feeds. [TODO: mjg I think this may be what is intended:] We **strongly
+The Oracle feed is initially fixed.
+We **strongly
 recommend** that the current Tezos protocol be upgraded to allow bakers
 to signal in each block support for adding or removing oracles.
 
@@ -404,8 +399,7 @@ attached to the checker contract. It is much like a standard CFMM
 contract (including the ability to mint and redeem tokens representing
 a contribution of liquidity to the contract) except that its balance
 in kit increases over time as kits are minted out of burrows to pay
-for part of the burrowing fee, and tez are sometimes forfeited to it
-(TODO: still true?). This balance is adjusted any time the checker
+for part of the burrowing fee. This balance is adjusted any time the checker
 contract is called, looking back at the last time the contract was
 called and calculating the fee incurred in between.
 

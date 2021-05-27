@@ -18,7 +18,7 @@ type cfmm =
     ctez/kit). The price will eventually reach the value it should, but this
     saves us from having the first/non-first liquidity provider separation, and
     all division-by-zero checks. *)
-let initial_cfmm : cfmm =
+let initial_cfmm () : cfmm =
   { ctez = ctez_of_muctez (Ligo.nat_from_literal "1n");
     kit = kit_of_mukit (Ligo.nat_from_literal "1n");
     lqt = Ligo.nat_from_literal "1n";

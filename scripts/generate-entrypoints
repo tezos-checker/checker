@@ -1,12 +1,16 @@
 #!/usr/bin/env ruby
 
 EntrypointInfo = Struct.new(:name, :param_sig)
+ViewInfo= Struct.new(:name, :param_sig, :return_sig)
 
+views = []
 entrypoints = []
 ARGF.each_line do |line|
    case line
    when /^val +entrypoint_(\S+).*checker\s+\*\s+(.*?)\s+->/ then entrypoints << EntrypointInfo.new( $1, $2)
    when /^val +entrypoint_/ then raise "#{ARGF.filename}:#{ARGF.lineno}: Unrecognised entrypoint decl #{line}"
+   when /^val view_(\S+) *: *\((.*?) *\* *checker\) *-> *(.*)/ then views << ViewInfo.new($1, $2.strip, $3.strip)
+   when /^val +view/ then raise "#{ARGF.filename}:#{ARGF.lineno}: Unrecognised view decl #{line}"
    end
 end
 
@@ -25,6 +29,8 @@ open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Ctez
 open Fa2Interface
+open Error
+open CfmmTypes
 
 EOF
 
@@ -39,8 +45,6 @@ end
 puts
 
 # Generate unique identifiers for entrypoint functions
-puts "type lazy_function_id = Ligo.int"
-puts
 entrypoints.each.with_index do |e, n|
   puts "let[@inline] lazy_id_#{e.name} = Ligo.int_from_literal \"#{n}\""
 end
@@ -64,6 +68,17 @@ let lazy_fun_#{entrypoint.name} (checker, params: checker * Ligo.bytes): LigoOp.
   | Some p -> entrypoint_#{entrypoint.name} (checker, p)
   | None -> (failwith \"unexpected params\": LigoOp.operation list * checker)
 END_LIGO *)
+"
+end
+puts
+
+# Generate views for entrypoint functions
+views.each do |view|
+  puts "
+let wrapper_view_#{view.name} (param, wrapper: #{view.param_sig} * wrapper): #{view.return_sig} =
+  match wrapper.deployment_state with
+  | Sealed checker -> view_#{view.name} (param, checker)
+  | Unsealed _ -> (Ligo.failwith error_ContractNotDeployed: #{view.return_sig})
 "
 end
 puts

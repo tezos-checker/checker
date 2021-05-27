@@ -55,6 +55,11 @@ Generate the LIGO and Michelson code:
 $ make build-ligo
 ```
 
+Ensure that the submodules (ctez in particular) are up-to-date:
+```console
+$ git pull --recurse-submodules
+```
+
 Use the client to start the sandbox and deploy the required ctez and mock oracle contracts:
 
 ```console

@@ -24,6 +24,7 @@ let[@inline] error_RemoveLiquidityCantWithdrawEnoughTez            : Ligo.int = 
 let[@inline] error_RemoveLiquidityTooMuchTezWithdrawn              : Ligo.int = Ligo.int_from_literal "45"
 let[@inline] error_RemoveLiquidityCantWithdrawEnoughKit            : Ligo.int = Ligo.int_from_literal "46"
 let[@inline] error_RemoveLiquidityTooMuchKitWithdrawn              : Ligo.int = Ligo.int_from_literal "47"
+let[@inline] error_RemoveLiquidityTooMuchLiquidityWithdrawn        : Ligo.int = Ligo.int_from_literal "48"
 
 let[@inline] error_LiquidationQueueTooLong                         : Ligo.int = Ligo.int_from_literal "50"
 let[@inline] error_BidTooLow                                       : Ligo.int = Ligo.int_from_literal "51"

@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import click
-import portpicker
 import pytezos
 from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
+from pytezos.operation import MAX_OPERATIONS_TTL
 
 from checker_client import checker as checker_lib
 
@@ -18,6 +18,24 @@ if not CONFIG_DIR:
 else:
     CONFIG_DIR = Path(CONFIG_DIR)
 CONFIG_FILE = CONFIG_DIR.joinpath(CONFIG_FILE_BASE)
+
+
+# FIXME: This feels wrong. Depending on the answer to the below issue, we might
+# end up needing to update this value.
+# https://github.com/baking-bad/pytezos/issues/229
+SANDBOX_TTL = MAX_OPERATIONS_TTL
+
+# FIXME: This whole function is bit of a hack. See the comment above.
+def _patch_operation_ttl(node_address: str) -> int:
+    # Checks if the node is running on the local loopback and if so,
+    # returns a shorter ttl to allow operations on the sandbox to run
+    # as fast as possible.
+    if any([loopback in node_address for loopback in ("localhost", "127.0.0.1")]):
+        ttl = SANDBOX_TTL
+        print(f"Detected sandbox address. Using operation ttl={ttl}")
+    else:
+        ttl = None
+    return ttl
 
 
 @dataclass
@@ -111,7 +129,11 @@ def start(config: Config, port=None):
             config.tezos_port = port
             config.dump()
         click.echo(f"Starting sandbox container using host port {config.sandbox_port}...")
-        checker_lib.start_sandbox(config.sandbox_container, config.sandbox_port)
+        checker_lib.start_sandbox(
+            config.sandbox_container,
+            config.sandbox_port,
+            wait_for_level=(MAX_OPERATIONS_TTL - SANDBOX_TTL),
+        )
         click.echo("Sandbox started.")
 
 
@@ -155,8 +177,20 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
+@click.option(
+    "--token-metadata",
+    type=click.Path(exists=True),
+    help="optional JSON file containing the TZIP-12 token_metadata.",
+)
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez):
+def checker(config: Config, checker_dir, oracle, ctez, wait, token_metadata):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -176,7 +210,13 @@ def checker(config: Config, checker_dir, oracle, ctez):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     checker = checker_lib.deploy_checker(
-        client, checker_dir, oracle=config.oracle_address, ctez=config.ctez_address
+        client,
+        checker_dir,
+        oracle=config.oracle_address,
+        ctez=config.ctez_address,
+        num_blocks_wait=wait,
+        ttl=_patch_operation_ttl(config.tezos_address),
+        token_metadata_file=token_metadata,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
@@ -192,8 +232,15 @@ def checker(config: Config, checker_dir, oracle, ctez):
     default="vendor/ctez",
     show_default=True,
 )
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
 @click.pass_obj
-def ctez(config: Config, ctez_dir):
+def ctez(config: Config, ctez_dir, wait):
     """
     Deploy a ctez contract (dev only)
     """
@@ -201,8 +248,7 @@ def ctez(config: Config, ctez_dir):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     ctez = checker_lib.deploy_ctez(
-        client,
-        ctez_dir=ctez_dir,
+        client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config.tezos_address)
     )
     click.echo(f"ctez contract deployed with address: {ctez['fa12_ctez'].context.address}")
     config.ctez_address = ctez["fa12_ctez"].context.address
@@ -218,8 +264,15 @@ def ctez(config: Config, ctez_dir):
     default="util/mock_oracle.tz",
     show_default=True,
 )
+@click.option(
+    "--wait",
+    type=int,
+    default=100,
+    show_default=True,
+    help="The number of blocks to wait for an operation group to finish",
+)
 @click.pass_obj
-def mock_oracle(config: Config, oracle_src):
+def mock_oracle(config: Config, oracle_src, wait):
     """
     Deploy the mock oracle contract (dev only)
     """
@@ -230,6 +283,8 @@ def mock_oracle(config: Config, oracle_src):
         client,
         source_file=oracle_src,
         initial_storage=(client.key.public_key_hash(), 1000000),
+        num_blocks_wait=wait,
+        ttl=_patch_operation_ttl(config.tezos_address),
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
     config.oracle_address = oracle.context.address

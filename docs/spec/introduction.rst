@@ -43,7 +43,7 @@ of value.
 System overview of a Checker deployment
 =======================================
 
-TODO: diagram showing Checker, its collaborating contracts, and key subsystems
+.. image:: _static/system-diagram.svg
 
 Checker is a single smart contract which is tied at deployment time to
 two external contracts:
