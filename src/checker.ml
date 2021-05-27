@@ -811,7 +811,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
       let state_fa2_state =
         ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
 
-      let new_state =
+      let state =
         { burrows = state_burrows;
           cfmm = state_cfmm;
           parameters = state_parameters;
@@ -821,7 +821,7 @@ let touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list 
           external_contracts = state_external_contracts;
         } in
 
-      (ops, new_state) in
+      (ops, state) in
 
     assert_checker_invariants state;
 
