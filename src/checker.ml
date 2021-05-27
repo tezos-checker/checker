@@ -938,9 +938,16 @@ let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * 
 
 let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
   assert_checker_invariants state;
-  if token_id = kit_token_id then kit_to_mukit_nat state.parameters.circulating_kit
-  else if token_id = liquidity_token_id then  state.cfmm.lqt
-  else failwith "FA2_TOKEN_UNDEFINED"
+  if token_id = kit_token_id then
+    kit_to_mukit_nat state.parameters.circulating_kit
+  else if token_id = liquidity_token_id then
+    begin
+      match Ligo.is_nat (Ligo.sub_nat_nat state.cfmm.lqt (Ligo.nat_from_literal "1n")) with
+      | None -> failwith "impossible"
+      | Some lqt -> lqt
+    end
+  else
+    failwith "FA2_TOKEN_UNDEFINED"
 
 let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
   assert_checker_invariants _state;
