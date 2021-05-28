@@ -8,7 +8,6 @@ open Error
 open Common
 
 type burrow =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { (* Whether the creation deposit for the burrow has been paid. If the
      * creation deposit has been paid, the burrow is considered "active" and
      * "closed"/inactive otherwise. Paying the creation deposit re-activates
@@ -38,7 +37,6 @@ type burrow =
 [@@deriving show]
 
 type liquidation_details =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { liquidation_reward : Ligo.tez;
     tez_to_auction : Ligo.tez;
     burrow_state : burrow;

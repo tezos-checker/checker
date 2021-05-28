@@ -7,7 +7,6 @@ type burrow_id = Ligo.address * Ligo.nat
 [@@deriving show]
 
 type burrow_liquidation_slices =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { oldest_slice: leaf_ptr;
     youngest_slice: leaf_ptr
   }
@@ -18,30 +17,27 @@ type liquidation_auction_state =
   | Ascending of (bid * Ligo.timestamp * Ligo.nat)
 [@@deriving show]
 
-type current_liquidation_auction =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  { contents: avl_ptr;
-    state: liquidation_auction_state;
-  }
+type current_liquidation_auction = {
+  contents: avl_ptr;
+  state: liquidation_auction_state;
+}
 [@@deriving show]
 
 type completed_liquidation_auctions =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  { youngest: avl_ptr;
-    oldest: avl_ptr;
+  { youngest: avl_ptr
+  ; oldest: avl_ptr
   }
 [@@deriving show]
 
-type liquidation_auctions =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  { avl_storage: mem;
+type liquidation_auctions = {
+  avl_storage: mem;
 
-    queued_slices: avl_ptr;
-    current_auction: current_liquidation_auction option;
-    completed_auctions: completed_liquidation_auctions option;
+  queued_slices: avl_ptr;
+  current_auction: current_liquidation_auction option;
+  completed_auctions: completed_liquidation_auctions option;
 
-    burrow_slices: (burrow_id, burrow_liquidation_slices) Ligo.big_map;
-  }
+  burrow_slices: (burrow_id, burrow_liquidation_slices) Ligo.big_map;
+}
 
 let liquidation_auction_empty : liquidation_auctions =
   let avl_storage = mem_empty in

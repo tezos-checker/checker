@@ -6,14 +6,12 @@ open Fa2Interface
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
 
-type external_contracts =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  { oracle : Ligo.address;
-    ctez : Ligo.address;
-  }
+type external_contracts = {
+  oracle : Ligo.address;
+  ctez : Ligo.address;
+}
 
 type checker =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { burrows : burrow_map;
     cfmm : cfmm;
     parameters : parameters;
