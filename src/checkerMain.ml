@@ -68,11 +68,11 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
           (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
         | SealContract (oracle_addr, ctez_addr) ->
           let external_contracts = { oracle = oracle_addr; ctez = ctez_addr; } in
-
+(* FIXME:
           (* check if the given oracle and ctez contracts have the entrypoints we need *)
           let _ = get_transfer_ctez_entrypoint external_contracts in
           let _ = get_oracle_entrypoint external_contracts in
-
+*)
           (* emit a touch operation to checker *)
           let touchOp =
              match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
