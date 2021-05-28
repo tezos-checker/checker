@@ -5,6 +5,7 @@ open Common
 open Constants
 
 type parameters =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
     q : fixedpoint; (* 1/kit, really *)
     index: Ligo.tez;

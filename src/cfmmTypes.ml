@@ -5,6 +5,7 @@ open Ratio
 type liquidity = Ligo.nat
 
 type cfmm =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { ctez: ctez;
     kit: kit;
     lqt: Ligo.nat;

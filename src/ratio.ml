@@ -2,10 +2,11 @@ open Common
 
 (** A rational is represented as a pair numerator/denominator, reduced to have
   * a positive denominator. This form is canonical. *)
-type ratio = {
-  num: Ligo.int; (** Numerator. *)
-  den: Ligo.int; (** Denominator, > 0 *)
-}
+type ratio =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  { num: Ligo.int; (** Numerator. *)
+    den: Ligo.int; (** Denominator, > 0 *)
+  }
 
 (* make and normalize n/d, assuming d > 0 *)
 let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =

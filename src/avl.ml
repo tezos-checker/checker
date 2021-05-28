@@ -315,12 +315,13 @@ type direction =
 
 (* ************************** *)
 
-type ref_join_data = {
-  join_direction: direction;
-  ptr: ptr;
-  to_fix: ptr;
-  parent_ptr: ptr;
-}
+type ref_join_data =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  { join_direction: direction;
+    ptr: ptr;
+    to_fix: ptr;
+    parent_ptr: ptr;
+  }
 
 let ref_join_post_processing
     (data: ref_join_data)
@@ -565,10 +566,11 @@ let avl_pop_front (mem: mem) (root_ptr: avl_ptr) : mem * (leaf_ptr * liquidation
 
 (* ************************** *)
 
-type ref_split_data = {
-  rec_direction: direction;
-  branch: branch;
-}
+type ref_split_data =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  { rec_direction: direction;
+    branch: branch;
+  }
 
 let ref_split_post_processing
     (data : ref_split_data)

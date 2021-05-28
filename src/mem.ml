@@ -13,10 +13,11 @@ open LiquidationAuctionPrimitiveTypes
  * int64 is big enough that it shouldn't be an issue.
  *)
 
-type mem = {
-  mem: (ptr, node) Ligo.big_map;
-  last_ptr: ptr;
-}
+type mem =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  { mem: (ptr, node) Ligo.big_map;
+    last_ptr: ptr;
+  }
 
 (* BEGIN_OCAML *)
 type ops = { reads: int; writes: int }

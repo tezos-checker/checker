@@ -1,6 +1,7 @@
 open LiquidationAuctionTypes
 
 type burrow_storage =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   { checker_address: Ligo.address;
     burrow_id: burrow_id
   }
