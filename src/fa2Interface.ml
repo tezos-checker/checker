@@ -323,7 +323,7 @@ let[@inline] ledger_withdraw_kit
 
 let[@inline] ledger_move_kit
     (st, addr_from, addr_to, amnt: fa2_state * Ligo.address * Ligo.address * kit) : fa2_state =
-  ledger_move (st, kit_token_id, addr_to, addr_from, kit_to_mukit_nat amnt)
+  ledger_move (st, kit_token_id, addr_from, addr_to, kit_to_mukit_nat amnt)
 
 let[@inline] ledger_issue_liquidity
     (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
@@ -335,7 +335,7 @@ let[@inline] ledger_withdraw_liquidity
 
 let[@inline] ledger_move_liquidity
     (st, addr_from, addr_to, amnt: fa2_state * Ligo.address * Ligo.address * kit) : fa2_state =
-  ledger_move (st, liquidity_token_id, addr_to, addr_from, kit_to_mukit_nat amnt)
+  ledger_move (st, liquidity_token_id, addr_from, addr_to, kit_to_mukit_nat amnt)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
