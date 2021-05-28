@@ -793,8 +793,7 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
     (* Do all the ledger stuff at the end, in one go *)
     let state_fa2_state =
       let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, reward) in
-      let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm) in
-      let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_add kit_to_repay kit_to_burn) in
+      let state_fa2_state = ledger_issue_then_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm, kit_add kit_to_repay kit_to_burn) in
       state_fa2_state in
 
     let state =
