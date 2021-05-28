@@ -211,6 +211,22 @@ let ledger_withdraw
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
 
+let[@inline] ledger_issue_then_withdraw
+    (st, tok, addr, amnt_to_issue, amnt_to_withdraw: fa2_state * fa2_token_id * Ligo.address * Ligo.nat * Ligo.nat) : fa2_state =
+  let ledger = st.ledger in
+  let key = (tok , addr) in
+  let balance_ = get_fa2_ledger_value ledger key in
+  (* ISSUE *)
+  let balance_ = Ligo.add_nat_nat balance_ amnt_to_issue in
+  (* WITHDRAW *)
+  let balance_ =
+    match Ligo.is_nat (Ligo.sub_nat_nat balance_ amnt_to_withdraw) with
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
+    | Some b -> b in
+  (* UPDATE STATE *)
+  let ledger = set_fa2_ledger_value ledger key balance_ in
+  { st with ledger = ledger }
+
 let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
 
@@ -301,6 +317,10 @@ let[@inline] ledger_issue_kit
 let[@inline] ledger_withdraw_kit
     (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
   ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt)
+
+let[@inline] ledger_issue_then_withdraw_kit
+    (st, addr, amnt_to_issue, amnt_to_withdraw: fa2_state * Ligo.address * kit * kit) : fa2_state =
+  ledger_issue_then_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt_to_issue, kit_to_mukit_nat amnt_to_withdraw)
 
 let[@inline] ledger_issue_liquidity
     (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =

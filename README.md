@@ -11,7 +11,8 @@ and is a project supported by [Nomadic Labs](https://nomadic-labs.com/),
 publicly available only for exploration and discussion purposes.
 You should not use it for anything serious.**
 
-* Technical document can be found [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
+* Original technical (currently out-of-date) document can be found
+  [here](https://hackmd.io/teMO2x9PRRy1iTBtrSMBvA?view).
 * The source code lives in the [src](./src) folder.
 * The tests live in the [tests](./tests) folder.
 
@@ -19,19 +20,32 @@ You should not use it for anything serious.**
 
 Various ad-hoc documentation can be found in the [docs](./docs) folder.
 
-The full docs are taking shape under [docs/spec](./docs/spec): use `make spec` to build them if you're in a Nix shell or have `sphinx` installed). These docs are published at [checker.readthedocs.io](https://checker.readthedocs.io/).
+The full docs are taking shape under [docs/spec](./docs/spec): use `make spec`
+to build them if you're in a Nix shell or have `sphinx` installed). These docs
+are published at [checker.readthedocs.io](https://checker.readthedocs.io/).
 
 ## Development
 
-Currently the team uses [Nix](https://nixos.org/) to provide all dependencies, including OCaml packages and appropriate (perhaps even patched) versions of Ligo and other necessary tools, so this is the recommended method. For the curious, the dependencies are listed in `shell.nix`.
+Currently the team uses [Nix](https://nixos.org/) to provide all dependencies,
+including OCaml packages and appropriate (perhaps even patched) versions of
+Ligo and other necessary tools, so this is the recommended method. For the
+curious, the dependencies are listed in `shell.nix`.
 
-Within a `nix-shell` (the first time this might take a while, since it must fetch all dependencies), type
+Note also that deploying checker depends on having a
+[ctez](https://github.com/tezos-checker/ctez) instance running, so after
+cloning make sure to fetch all submodules via
+```console
+$ git submodule update --init
+```
 
-* `make build-ocaml` to build and compile the ocaml code (in [./src](./src))
-* `make generate-ligo` to generate the ligo code (in [./generated/ligo](./generated/ligo))
-* `make build-ligo` to generate the michelson code (in [./generated/michelson](./generated/michelson))
+Within a `nix-shell` (the first time this might take a while, since it must
+fetch all dependencies), type
+
+* `make build-ocaml` to build and compile the ocaml code (in [./src](./src)).
+* `make generate-ligo` to generate the ligo code (in `./generated/ligo`).
+* `make build-ligo` to generate the michelson code (in `./generated/michelson`).
 * `make build` to do all of the above.
-* `make test` to run all the (OCaml) tests ([./src/tests.ml](./src/tests.ml)). (note: this might take a while. If you're in a hurry you might want to comment out `TestAvl.suite` in `tests.ml` temporarily).
+* `make test` to run all the (OCaml) tests ([./src/tests.ml](./src/tests.ml)). Note that this takes several minutes.
 * `make` to do all the above.
 
 For test coverage report using bisect_ppx, type
@@ -42,7 +56,9 @@ For extracting (haddock-style) documentation from the code using dune, type
 
 ## Local Deployment
 
-The contract can be deployed to a local, Docker sandbox run using the provided [client library](./client). Note that this workflow has only been tested on Linux.
+The contract can be deployed to a local, Docker sandbox run using the provided
+[client library](./client). Note that this workflow has only been tested on
+Linux.
 
 First, enter a nix shell:
 ```console
@@ -60,7 +76,8 @@ Ensure that the submodules (ctez in particular) are up-to-date:
 $ git pull --recurse-submodules
 ```
 
-Use the client to start the sandbox and deploy the required ctez and mock oracle contracts:
+Use the client to start the sandbox and deploy the required ctez and mock
+oracle contracts:
 
 ```console
 $ checker sandbox start
@@ -68,8 +85,9 @@ $ checker deploy mock-oracle
 $ checker deploy ctez
 ```
 
-> Note: If no port is specified, the client will attempt to select a default one. To view the port number for
-> use with tezos-client, etc. you can use: `checker show-config`.
+> Note: If no port is specified, the client will attempt to select a default
+> one. To view the port number for use with tezos-client, etc. you can use:
+> `checker show-config`.
 
 And finally, deploy checker itself:
 ```console
