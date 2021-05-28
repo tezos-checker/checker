@@ -481,11 +481,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
           transfer (Ligo.tez_from_literal "0mutez")
           (get_transfer_ctez_entrypoint state.external_contracts) in
 
-  let state_fa2_state =
-    let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_tokens) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, kit_tokens) in
-    state_fa2_state in
+  let state_fa2_state = ledger_move_kit (state.fa2_state, !Ligo.Tezos.self_address, !Ligo.Tezos.sender, kit_tokens) in
 
   assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
   assert (fa2_get_total_lqt_balance state.fa2_state = fa2_get_total_lqt_balance state_fa2_state); (* preservation of lqt *)
@@ -519,11 +515,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
       (Ligo.tez_from_literal "0mutez")
       (get_transfer_ctez_entrypoint state.external_contracts) in
 
-  let state_fa2_state =
-    let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, kit) in
-    state_fa2_state in
+  let state_fa2_state = ledger_move_kit (state.fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.self_address, kit) in
 
   assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
   assert (fa2_get_total_lqt_balance state.fa2_state = fa2_get_total_lqt_balance state_fa2_state); (* preservation of lqt *)
@@ -558,8 +550,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, deposited_kit) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, deposited_kit) in
+    let state_fa2_state = ledger_move_kit (state_fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.self_address, deposited_kit) in
     let state_fa2_state = ledger_issue_liquidity (state_fa2_state, !Ligo.Tezos.sender, lqt_tokens) in (* create *)
     state_fa2_state in
 
@@ -596,8 +587,7 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
     let state_fa2_state = ledger_withdraw_liquidity (state_fa2_state, !Ligo.Tezos.sender, lqt_burned) in (* destroy *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_tokens) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, kit_tokens) in
+    let state_fa2_state = ledger_move_kit (state_fa2_state, !Ligo.Tezos.self_address, !Ligo.Tezos.sender, kit_tokens) in
     state_fa2_state in
 
   assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
@@ -638,14 +628,11 @@ let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoO
       match old_winning_bid with
       | None -> state_fa2_state (* nothing to do *)
       | Some old_winning_bid ->
-        let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, old_winning_bid.kit) in
-        let state_fa2_state = ledger_issue_kit (state_fa2_state, old_winning_bid.address, old_winning_bid.kit) in
-        state_fa2_state in
+        ledger_move_kit (state_fa2_state, !Ligo.Tezos.self_address, old_winning_bid.address, old_winning_bid.kit) in
     assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
 
     (* credit the new winning bid to checker *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, kit) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, kit) in
+    let state_fa2_state = ledger_move_kit (state_fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.self_address, kit) in
     assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
     state_fa2_state in
 
