@@ -211,6 +211,25 @@ let ledger_withdraw
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
 
+let[@inline] ledger_move
+    (st, tok, addr_from, addr_to, amnt: fa2_state * fa2_token_id * Ligo.address * Ligo.address * Ligo.nat) : fa2_state =
+  let ledger = st.ledger in
+  (* WITHDRAW *)
+  let key = (tok, addr_from) in
+  let prev_balance = get_fa2_ledger_value ledger key in
+  let new_balance =
+    match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amnt) with
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
+    | Some b -> b in
+  let ledger = set_fa2_ledger_value ledger key new_balance in
+  (* ISSUE *)
+  let key = (tok, addr_to) in
+  let prev_balance = get_fa2_ledger_value ledger key in
+  let new_balance = Ligo.add_nat_nat prev_balance amnt in
+  let ledger = set_fa2_ledger_value ledger key new_balance in
+  (* UPDATE STATE *)
+  { st with ledger = ledger }
+
 let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
 
@@ -302,6 +321,10 @@ let[@inline] ledger_withdraw_kit
     (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
   ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt)
 
+let[@inline] ledger_move_kit
+    (st, addr_from, addr_to, amnt: fa2_state * Ligo.address * Ligo.address * kit) : fa2_state =
+  ledger_move (st, kit_token_id, addr_to, addr_from, kit_to_mukit_nat amnt)
+
 let[@inline] ledger_issue_liquidity
     (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
   ledger_issue (st, liquidity_token_id, addr, amnt)
@@ -309,6 +332,10 @@ let[@inline] ledger_issue_liquidity
 let[@inline] ledger_withdraw_liquidity
     (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
   ledger_withdraw (st, liquidity_token_id, addr, amnt)
+
+let[@inline] ledger_move_liquidity
+    (st, addr_from, addr_to, amnt: fa2_state * Ligo.address * Ligo.address * kit) : fa2_state =
+  ledger_move (st, liquidity_token_id, addr_to, addr_from, kit_to_mukit_nat amnt)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
