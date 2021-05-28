@@ -22,7 +22,7 @@ type checker =
   }
 
 (** Make a fresh state. *)
-let initial_checker (external_contracts: external_contracts) =
+let[@inline] initial_checker (external_contracts: external_contracts) =
   { burrows = (Ligo.Big_map.empty: (burrow_id, burrow) Ligo.big_map);
     cfmm = initial_cfmm ();
     parameters = initial_parameters;
