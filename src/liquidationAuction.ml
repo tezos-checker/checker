@@ -766,7 +766,7 @@ let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auc
   assert_liquidation_auction_invariants auctions;
   sold_tez, auctions
 
-let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
+let[@inline] liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
   assert_liquidation_auction_invariants auctions;
   let auctions =
     (start_liquidation_auction_if_possible price

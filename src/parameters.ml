@@ -397,7 +397,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
     (Tezos.now), (b) the current index (the median of the oracles right now),
     and (c) the current price of kit in tez, as given by the cfmm
     sub-contract. *)
-let parameters_touch
+let[@inline] parameters_touch
     (current_index: Ligo.tez)
     (current_kit_in_tez: ratio)
     (parameters: parameters)

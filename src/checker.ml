@@ -343,7 +343,7 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
 (* NOTE: It prepends the operation to the list of operations given. This means
  * that if we entrypoint_touch a list of liquidation slices, the order of operations is
  * reversed. *)
-let touch_liquidation_slice
+let[@inline] touch_liquidation_slice
     (ops: LigoOp.operation list)
     (auctions: liquidation_auctions)
     (state_burrows: burrow_map)
@@ -690,7 +690,7 @@ let[@inline] entrypoint_receive_slice_from_burrow (state, burrow_id: checker * b
   * contract. We use a bracketed calculation, where for the first
   * touch_reward_low_bracket seconds the reward increases by touch_low_reward
   * per second, and after that by touch_high_reward per second. *)
-let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
+let[@inline] calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
   let duration_in_seconds = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now last_touched in
   let low_duration = min_int duration_in_seconds touch_reward_low_bracket in
   let high_duration =
