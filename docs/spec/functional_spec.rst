@@ -342,7 +342,7 @@ Estimate yield when selling kit for ctez
 
 ``sell_kit_min_ctez_expected : nat -> nat``
 
-Get the minimum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+Get the minimum amount (in ``muctez``) that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -350,12 +350,12 @@ Get the minimum amount (in ``mukit``) that can be expected for the given amount 
 | kit           | nat                   | The amount of kit in mukit                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-TODO view summary
------------------
+Estimate kit requirements when adding liquidity
+-----------------------------------------------
 
 ``add_liquidity_max_kit_deposited : nat -> nat``
 
-TODO Returns the amount (in ``mukit``) ...
+Get the minimum amount (in ``mukit``) that needs to be deposited when adding liquidity for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -363,12 +363,12 @@ TODO Returns the amount (in ``mukit``) ...
 | ctez          | nat                   | The amount of ctez                                                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-TODO view summary
------------------
+Estimate yield when adding liquidity
+------------------------------------
 
 ``add_liquidity_min_lqt_minted : nat -> nat``
 
-TODO Returns the amount of the liquidity token ...
+Get the maximum amount of the liquidity token that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -376,12 +376,12 @@ TODO Returns the amount of the liquidity token ...
 | ctez          | nat                   | The amount of ctez                                                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-TODO view summary
------------------
+Estimate ctez yield when removing liquidity
+-------------------------------------------
 
 ``remove_liquidity_min_ctez_withdrawn : nat -> nat``
 
-TODO Returns the amount (in ``ctez``) ....
+Get the maximum amount of ctez (in ``muctez``) that can be expected for the given amount of liquidity token, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -389,12 +389,12 @@ TODO Returns the amount (in ``ctez``) ....
 | liquidity     | nat                   | The amount of liquidity token                                           |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-TODO view summary
------------------
+Estimate kit yield when removing liquidity
+------------------------------------------
 
 ``remove_liquidity_min_kit_withdrawn : nat -> nat``
 
-TODO Returns the amount (in ``mukit``) ....
+Get the maximum amount of kit (in ``mukit``) that can be expected for the given amount of liquidity token, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
