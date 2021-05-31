@@ -392,7 +392,7 @@ TODO Returns the amount (in ``ctez``) ....
 TODO view summary
 -----------------
 
-``remove_liquidity_min_kit_withdrawn : liquidity -> kit``
+``remove_liquidity_min_kit_withdrawn : nat -> nat``
 
 TODO Returns the amount (in ``mukit``) ....
 
@@ -406,7 +406,7 @@ TODO Returns the amount (in ``mukit``) ....
 Find maximum kit that can be minted
 -----------------------------------
 
-``burrow_max_mintable_kit : nat -> kit``
+``burrow_max_mintable_kit : nat -> nat``
 
 Returns the maximum amount (in ``mukit``) that can be minted from the given burrow.
 
