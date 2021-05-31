@@ -450,6 +450,13 @@ Prior to sealing, the bytecode for each lazy function must be deployed.
 
 ``deployFunction: (pair int bytes)``
 
+Deploy metadata
+---------------
+
+Prior to sealing, the bytecode for all metadata must be deployed.
+
+``deployMetadata: bytes``
+
 Seal the contract and make it ready for use
 -------------------------------------------
 
