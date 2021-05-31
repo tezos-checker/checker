@@ -305,6 +305,141 @@ Update operators
                                 (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
 
 
+FA2 Views
+=========
+
+Checker exposes a number of FA2 views in its contract
+metadata. Standard token views are provided, as are a number of custom
+views provided for integration convenience, e.g. for use by front-end
+applications.
+
+Standard FA2 views
+------------------
+
+The following standard FA2 views are supported:
+
+* ``get_balance``
+* ``total_supply``
+* ``all_tokens``
+* ``is_operator``
+
+
+Estimate yield when buying kit with ctez
+----------------------------------------
+
+``buy_kit_min_kit_expected : nat -> nat``
+
+Get the minimum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate yield when selling kit for ctez
+----------------------------------------
+
+``sell_kit_min_ctez_expected : nat -> nat``
+
+Get the minimum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| kit           | nat                   | The amount of kit in mukit                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+TODO view summary
+-----------------
+
+``add_liquidity_max_kit_deposited : nat -> nat``
+
+TODO Returns the amount (in ``mukit``) ...
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+TODO view summary
+-----------------
+
+``add_liquidity_min_lqt_minted : nat -> nat``
+
+TODO Returns the amount of the liquidity token ...
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+TODO view summary
+-----------------
+
+``remove_liquidity_min_ctez_withdrawn : nat -> nat``
+
+TODO Returns the amount (in ``ctez``) ....
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| liquidity     | nat                   | The amount of liquidity token                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+TODO view summary
+-----------------
+
+``remove_liquidity_min_kit_withdrawn : liquidity -> kit``
+
+TODO Returns the amount (in ``mukit``) ....
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| liquidity     | nat                   | The amount of liquidity token                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+Find maximum kit that can be minted
+-----------------------------------
+
+``burrow_max_mintable_kit : nat -> kit``
+
+Returns the maximum amount (in ``mukit``) that can be minted from the given burrow.
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Check whether a burrow is overburrowed
+--------------------------------------
+
+``is_burrow_overburrowed : nat -> bool``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Check whether a burrow can be liquidated
+----------------------------------------
+
+``is_burrow_liquidatable : nat -> bool``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+
 Deployment
 ==========
 
