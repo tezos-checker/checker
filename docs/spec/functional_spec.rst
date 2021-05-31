@@ -329,7 +329,7 @@ Estimate yield when buying kit with ctez
 
 ``buy_kit_min_kit_expected : nat -> nat``
 
-Get the minimum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+Get the maximum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -342,7 +342,7 @@ Estimate yield when selling kit for ctez
 
 ``sell_kit_min_ctez_expected : nat -> nat``
 
-Get the minimum amount (in ``muctez``) that can be expected for the given amount of ctez, based on the current market price
+Get the maximum amount (in ``muctez``) that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
