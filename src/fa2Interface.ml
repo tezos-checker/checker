@@ -157,7 +157,7 @@ let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
 let ensure_valid_fa2_token (n: fa2_token_id): unit =
   if n = kit_token_id || n = liquidity_token_id
   then ()
-  else failwith "FA2_TOKEN_UNDEFINED" (* FIXME: error message *)
+  else failwith "FA2_TOKEN_UNDEFINED"
 
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
@@ -239,7 +239,7 @@ let[@inline] fa2_run_update_operators
          (* The standard does not specify who is permitted to update operators. We restrict
             it only to the owner. *)
          if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
          else
            { st  with
              operators =
@@ -250,7 +250,7 @@ let[@inline] fa2_run_update_operators
            }
        | Remove_operator op ->
          if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
          else
            { st  with
              operators =

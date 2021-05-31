@@ -23,9 +23,7 @@ open CfmmTypes
      https://gitlab.com/camlcase-dev/dexter/-/blob/master/ligo/dexter.ligo
      https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
 *)
-(* Remaining TODO for cfmm.mli:
- * - Ensure that the balances and prices in cfmm do not go too far off.
-*)
+(* TODO: Ensure that the balances and prices in cfmm do not go too far off. *)
 
 (** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
     contract), as it was at the end of the last block. This is to be used when
