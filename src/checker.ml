@@ -940,7 +940,7 @@ let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
 
 let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * checker): bool =
   assert_checker_invariants state;
-  fa2_is_operator (state.fa2_state, owner, operator, token_id)
+  fa2_is_operator (state.fa2_state, operator, owner, token_id)
 
 (* TODO
 This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
