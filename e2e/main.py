@@ -1,12 +1,15 @@
 import logging
 import os
+import json
 import time
 import unittest
+from pprint import pprint
 
 import docker
 import portpicker
 import pytezos
 import requests
+from pytezos.operation import MAX_OPERATIONS_TTL
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 
@@ -48,26 +51,50 @@ class E2ETest(SandboxedTestCase):
             checker_dir=os.path.join(PROJECT_ROOT, "generated/michelson"),
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
+            num_blocks_wait=100,
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deployment finished.")
+        gas_costs = {}
 
-        (
-            checker.create_burrow((1, None))
-            .with_amount(10_000_000)
-            .as_transaction()
-            .autofill(branch_offset=1)
-            .sign()
-            .inject(min_confirmations=1, time_between_blocks=3)
-        )
+        def call_endpoint(contract, name, param, amount=0):
+            ret = (
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign()
+                .inject(
+                   min_confirmations=1,
+                   num_blocks_wait=100,
+                   max_iterations=WAIT_BLOCK_ATTEMPTS,
+                   delay_sec=WAIT_BLOCK_DELAY
+                )
+            )
+            return ret
 
-        (
-            checker.mint_kit((1, 1_000_000))
-            .as_transaction()
-            .autofill(branch_offset=1)
-            .sign()
-            .inject(min_confirmations=1, time_between_blocks=3)
-        )
+        def call_checker_endpoint(name, param, amount=0):
+            ret = call_endpoint(checker, name, param, amount)
+            gas_costs[name] = ret["contents"][0]["gas_limit"]
+            return ret
+
+
+        # get some kit
+        call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
+        call_checker_endpoint("mint_kit", (1, 1_000_000))
+        call_checker_endpoint("touch", None)
+
+        # get some ctez
+        call_endpoint(ctez["ctez"], "create", (1, None, { "any": None }), amount=1_000_000)
+        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+
+        # TODO add liquidity to checker
+
+        # TODO use uniswap
+
+        print("Gas costs:")
+        print(json.dumps(gas_costs, indent=4))
 
 
 if __name__ == "__main__":
