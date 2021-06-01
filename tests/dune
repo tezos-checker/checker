@@ -14,6 +14,7 @@
   TestLiquidationAuction
   TestChecker
   TestArbitrary
+  TestFa2Interface
   TestCommon)
  (libraries src core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
  (preprocess

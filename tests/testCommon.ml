@@ -1,5 +1,6 @@
 let alice_addr = Ligo.address_from_literal "alice_addr"
 let bob_addr = Ligo.address_from_literal "bob_addr"
+let leena_addr = Ligo.address_from_literal "leena_addr"
 let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t

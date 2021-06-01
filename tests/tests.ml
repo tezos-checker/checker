@@ -13,6 +13,7 @@ let suite =
     TestCfmm.suite;
     TestLiquidationAuction.suite;
     TestAvlModel.suite;
+    TestFa2Interface.suite;
   ]
 
 let () =

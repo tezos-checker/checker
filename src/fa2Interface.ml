@@ -214,7 +214,7 @@ let[@inline] ledger_issue_then_withdraw
   let ledger = set_fa2_ledger_value ledger key balance_ in
   { st with ledger = ledger }
 
-let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
+let[@inline] fa2_is_operator (st, operator, owner, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
 
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
@@ -299,13 +299,13 @@ let[@inline] fa2_run_transfer
          (fun ((st, x): fa2_state * fa2_transfer_destination) ->
             let { to_ = to_; token_id = token_id; amount = amnt; } = x in
             if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
-            then (failwith "FA2_NOT_OPERATOR" : fa2_state)
-            else begin
+            then
               let () = ensure_valid_fa2_token token_id in
               let st = ledger_withdraw (st, token_id, from_, amnt) in
               let st = ledger_issue (st, token_id, to_, amnt) in
               st
-            end
+            else
+              (failwith "FA2_NOT_OPERATOR" : fa2_state)
          )
          st
          txs
