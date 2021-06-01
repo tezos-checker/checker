@@ -2,18 +2,20 @@ open OUnit2
 
 let suite =
   "CheckerTests" >::: [
+    (* fast *)
     TestChecker.suite;
     TestFixedPoint.suite;
     TestTez.suite;
     TestKit.suite;
-    TestAvl.suite;
     TestBurrow.suite;
     TestParameters.suite;
-    TestLiquidation.suite;
     TestCfmm.suite;
+    TestFa2Interface.suite;
+    TestLiquidation.suite;
+    (* slow *)
+    TestAvl.suite;
     TestLiquidationAuction.suite;
     TestAvlModel.suite;
-    TestFa2Interface.suite;
   ]
 
 let () =
