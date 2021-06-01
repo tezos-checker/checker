@@ -15,52 +15,31 @@ from checker_client.checker import *
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
-        self.docker_client = docker.from_env()
-
         port = portpicker.pick_unused_port()
-        self.docker_container = self.docker_client.containers.run(
-            "tqtezos/flextesa:20210514",
-            command=["flobox", "start"],
-            environment={"block_time": 1},
-            ports={"20000/tcp": port},
-            name="checker-e2e-container-{}".format(port),
-            detach=True,
-            remove=True,
-        )
-
-        self.client = pytezos.pytezos.using(
-            shell="http://127.0.0.1:{}".format(port),
-            key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
-        )
-        self.client.loglevel = logging.ERROR
-
-        # wait some time for the node to start
-        while True:
-            try:
-                self.client.shell.node.get("/version/")
-                break
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.1)
-        # wait until a block is mined
-        time.sleep(3)
+        client, docker_client, docker_container = start_sandbox("checker-e2e-container-{}".format(port), port)
+        self.docker_container = docker_container
+        self.client = client
 
     def tearDown(self):
         self.docker_container.kill()
 
-
 class E2ETest(SandboxedTestCase):
     def test_e2e(self):
+        gas_costs = {}
+
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
             self.client,
             source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
             initial_storage=(self.client.key.public_key_hash(), 1000000),
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
             ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying Checker.")
