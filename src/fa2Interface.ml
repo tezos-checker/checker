@@ -55,19 +55,6 @@ type fa2_balance_of_param =
     callback : (fa2_balance_of_response list) Ligo.contract;
   }
 
-type fa2_operator_param =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  {
-    owner : Ligo.address;
-    operator : Ligo.address;
-    token_id: fa2_token_id;
-  }
-
-type fa2_update_operator =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  | Add_operator of fa2_operator_param
-  | Remove_operator of fa2_operator_param
-
 type token_metadata =
   (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   {
@@ -106,6 +93,7 @@ type token_metadata_param =
 *)
 type contract_metadata = (string, Ligo.bytes) Ligo.big_map
 
+(*
 (* FA2 hooks interface *)
 
 type fa2_transfer_destination_descriptor =
@@ -130,7 +118,6 @@ type transfer_descriptor_param =
     operator : Ligo.address;
   }
 
-(*
 Entrypoints for sender/receiver hooks
 
 type fa2_token_receiver =
@@ -230,38 +217,6 @@ let[@inline] ledger_issue_then_withdraw
 let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
 
-let[@inline] fa2_run_update_operators
-    (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
-  Ligo.List.fold_left
-    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
-       match x with
-       | Add_operator op ->
-         (* The standard does not specify who is permitted to update operators. We restrict
-            it only to the owner. *)
-         if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.add
-                 (op.operator, op.owner, op.token_id)
-                 ()
-                 st.operators;
-           }
-       | Remove_operator op ->
-         if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.remove
-                 (op.operator, op.owner, op.token_id)
-                 st.operators;
-           }
-    )
-    st
-    xs
-
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
@@ -275,37 +230,85 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let blnc = fa2_get_balance (st, req.owner, req.token_id) in
+       let { owner = owner; token_id = token_id; } = req in
+       let blnc = fa2_get_balance (st, owner, token_id) in
        { request=req; balance = blnc; }
     )
+    xs
+
+type fa2_operator_param =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  {
+    owner : Ligo.address;
+    operator : Ligo.address;
+    token_id: fa2_token_id;
+  }
+
+type fa2_update_operator =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  | Add_operator of fa2_operator_param
+  | Remove_operator of fa2_operator_param
+
+let[@inline] fa2_run_update_operators
+    (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
+  Ligo.List.fold_left
+    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
+       match x with
+       | Add_operator op ->
+         let { owner = owner;
+               operator = operator;
+               token_id = token_id;
+             } = op in
+         (* The standard does not specify who is permitted to update operators. We restrict
+            it only to the owner. *)
+         if owner <> !Ligo.Tezos.sender
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
+         else
+           { st  with
+             operators =
+               Ligo.Big_map.add
+                 (operator, owner, token_id)
+                 ()
+                 st.operators;
+           }
+       | Remove_operator op ->
+         let { owner = owner;
+               operator = operator;
+               token_id = token_id;
+             } = op in
+         if owner <> !Ligo.Tezos.sender
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
+         else
+           { st  with
+             operators =
+               Ligo.Big_map.remove
+                 (operator, owner, token_id)
+                 st.operators;
+           }
+    )
+    st
     xs
 
 let[@inline] fa2_run_transfer
     (st, xs: fa2_state * fa2_transfer list) : fa2_state =
   Ligo.List.fold_left
     (fun ((st, tx): fa2_state * fa2_transfer) ->
-       let from_ = tx.from_ in
+       let { from_ = from_; txs = txs; } = tx in
 
-         Ligo.List.fold_left
-           (fun ((st, x): fa2_state * fa2_transfer_destination) ->
-              let token_id = x.token_id in
-
-              if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
-              then (failwith "FA2_NOT_OPERATOR" : fa2_state)
-              else begin
-                let amnt = x.amount in
-                let to_ = x.to_ in
-
-                let () = ensure_valid_fa2_token token_id in
-
-                let st = ledger_withdraw (st, token_id, from_, amnt) in
-                let st = ledger_issue (st, token_id, to_, amnt) in
-
-                st
-              end
-           )
-           st
-           tx.txs
+       Ligo.List.fold_left
+         (fun ((st, x): fa2_state * fa2_transfer_destination) ->
+            let { to_ = to_; token_id = token_id; amount = amnt; } = x in
+            if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
+            then (failwith "FA2_NOT_OPERATOR" : fa2_state)
+            else begin
+              let () = ensure_valid_fa2_token token_id in
+              let st = ledger_withdraw (st, token_id, from_, amnt) in
+              let st = ledger_issue (st, token_id, to_, amnt) in
+              st
+            end
+         )
+         st
+         txs
     )
     st
     xs
