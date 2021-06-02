@@ -17,7 +17,7 @@ from pytezos.client import PyTezosClient
 
 # Time between blocks for sandbox container
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
-SANDBOX_TIME_BETWEEN_BLOCKS = 5
+SANDBOX_TIME_BETWEEN_BLOCKS = 2
 # Number of retries to use when awaiting new blocks
 WAIT_BLOCK_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks

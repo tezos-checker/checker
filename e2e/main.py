@@ -1,9 +1,10 @@
-import logging
 import os
 import json
 import time
+import logging
 import unittest
 from pprint import pprint
+from datetime import datetime
 
 import docker
 import portpicker
@@ -89,9 +90,14 @@ class E2ETest(SandboxedTestCase):
         call_endpoint(ctez["ctez"], "create", (1, None, { "any": None }), amount=1_000_000)
         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
 
+        # approve checker to spend the ctez
+        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
+
         # TODO add liquidity to checker
+        call_checker_endpoint("add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20))
 
         # TODO use uniswap
+        call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
 
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))
