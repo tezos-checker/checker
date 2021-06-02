@@ -849,12 +849,14 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
 
 let strict_entrypoint_transfer (state, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
+  let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_transfer (state.fa2_state, xs) } in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
 let[@inline] strict_entrypoint_balance_of (state, param: checker * fa2_balance_of_param) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
+  let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (state.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
@@ -863,6 +865,7 @@ let[@inline] strict_entrypoint_balance_of (state, param: checker * fa2_balance_o
 
 let entrypoint_update_operators (state, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
+  let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
