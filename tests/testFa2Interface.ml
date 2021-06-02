@@ -20,6 +20,16 @@ let mk_kit_tx ~from_ ~to_ ~amount =
       ];
   }
 
+let mk_lqt_tx ~from_ ~to_ ~amount =
+  { from_ = from_;
+    txs =
+      [ { to_ = to_;
+          token_id = liquidity_token_id;
+          amount = amount;
+        }
+      ];
+  }
+
 let add_kit_operator ~owner ~operator =
   Add_operator {
     owner = owner;
@@ -32,6 +42,13 @@ let remove_kit_operator ~owner ~operator =
     owner = owner;
     operator = operator;
     token_id = kit_token_id;
+  }
+
+let add_lqt_operator ~owner ~operator =
+  Add_operator {
+    owner = owner;
+    operator = operator;
+    token_id = liquidity_token_id;
   }
 
 let suite =
@@ -455,14 +472,108 @@ let suite =
        ()
     );
 
+    ("fa2_run_transfer - transfers (liquidity) funds as expected" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let fa2_state_in = initial_fa2_state in
+
+       (* All interesting accounts initially empty. *)
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in leena_addr);
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in bob_addr);
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in alice_addr);
+
+       (* Populate all accounts with different amounts. *)
+       let fa2_state_in =
+         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, leena_addr, (Ligo.nat_from_literal "7_000_000n")) in
+         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, bob_addr,   (Ligo.nat_from_literal "8_000_000n")) in
+         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, alice_addr, (Ligo.nat_from_literal "9_000_000n")) in
+         fa2_state_in in
+
+       (* Ensure all accounts have the expected liquidity in them. *)
+       assert_nat_equal ~expected:((Ligo.nat_from_literal "7_000_000n")) ~real:(ask_lqt_of fa2_state_in leena_addr);
+       assert_nat_equal ~expected:((Ligo.nat_from_literal "8_000_000n")) ~real:(ask_lqt_of fa2_state_in bob_addr);
+       assert_nat_equal ~expected:((Ligo.nat_from_literal "9_000_000n")) ~real:(ask_lqt_of fa2_state_in alice_addr);
+
+       (* Scenario 1: Alice sends funds to leena directly. *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let amount = (Ligo.nat_from_literal "123_456n") in
+       let tx = mk_lqt_tx ~from_:alice_addr ~to_:leena_addr ~amount:amount in
+       let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
+
+       assert_nat_equal (* leena's amount goes up *)
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) amount)
+         ~real:(ask_lqt_of fa2_state_out leena_addr);
+       assert_nat_equal (* alice's amount goes down *)
+         ~expected:(ask_lqt_of fa2_state_in alice_addr)
+         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out alice_addr) amount);
+       assert_nat_equal (* total amount of liquidity token stays the same *)
+         ~expected:(fa2_get_total_lqt_balance fa2_state_in)
+         ~real:(fa2_get_total_lqt_balance fa2_state_out);
+
+       (* Scenario 2: Leena authorizes alice to send funds; alice sends funds to bob. *)
+       let fa2_state_in = fa2_state_out in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let update_op = add_lqt_operator ~owner:leena_addr ~operator:alice_addr in
+       let fa2_state_in = fa2_run_update_operators (fa2_state_in, [update_op]) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let amount = (Ligo.nat_from_literal "1_500_000n") in
+       let tx = mk_lqt_tx ~from_:leena_addr ~to_:bob_addr ~amount:amount in
+       let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
+
+       assert_nat_equal (* leena's amount goes down *)
+         ~expected:(ask_lqt_of fa2_state_in leena_addr)
+         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) amount);
+       assert_nat_equal (* bob's amount goes up *)
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in bob_addr) amount)
+         ~real:(ask_lqt_of fa2_state_out bob_addr);
+       assert_nat_equal (* total amount of liquidity token stays the same *)
+         ~expected:(fa2_get_total_lqt_balance fa2_state_in)
+         ~real:(fa2_get_total_lqt_balance fa2_state_out);
+
+       (* Scenario 3: Alice is authorized by leena to send funds; alice sends
+        * funds first from leena to alice, and then from alice to bob. If the
+        * order of execution is not correct, the numbers are high enough for
+        * this operation to fail. *)
+       let fa2_state_in = fa2_state_out in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let amount1 = (Ligo.nat_from_literal "5_623_456n") in
+       let tx1 = mk_lqt_tx ~from_:leena_addr ~to_:alice_addr ~amount:amount1 in
+       let amount2 = (Ligo.nat_from_literal "14_500_000n") in
+       let tx2 = mk_lqt_tx ~from_:alice_addr ~to_:bob_addr ~amount:amount2 in
+
+       (* The numbers are too high for the operations to be executed in the wrong order. *)
+       assert_raises
+         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (fun () -> fa2_run_transfer (fa2_state_in, [tx2; tx1]));
+
+       let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx1; tx2]) in
+
+       assert_nat_equal (* leena's amount goes down by amount1 *)
+         ~expected:(ask_lqt_of fa2_state_in leena_addr)
+         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) amount1);
+       assert_nat_equal (* alice's amount goes up by amount1 by down by amount2 *)
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in alice_addr) amount1)
+         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out alice_addr) amount2);
+       assert_nat_equal (* bob's amount goes up by amount2 *)
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in bob_addr) amount2)
+         ~real:(ask_lqt_of fa2_state_out bob_addr);
+       assert_nat_equal (* total amount of liquidity token stays the same *)
+         ~expected:(fa2_get_total_lqt_balance fa2_state_in)
+         ~real:(fa2_get_total_lqt_balance fa2_state_out);
+
+       ()
+    );
+
     (* TODO: test that the order of execution of operations is as expected (need more than on tx for that). *)
     (* TODO: test all ownership variations. *)
     (* TODO: ensure all amounts change as expected as well. *)
     (* TODO: test the rest of the functions in fa2Interface.ml too. *)
 
+
     (* TODO: test fa2_get_balance *)
     (* TODO: test fa2_run_balance_of *)
 
+    (* FIXME: fa2_run_transfer could use some more testing on the liquidity side. *)
     (* FIXME: Not sure how to always make sure that fa2_all_tokens lists all
      * valid tokens. Perhaps with an external script, like we do to check that
      * there are no duplicate error codes? *)
