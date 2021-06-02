@@ -5,6 +5,9 @@ let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
+let assert_nat_equal ~expected:expected ~real:real = OUnit2.assert_equal ~printer:Ligo.string_of_nat expected real
+let assert_kit_equal ~expected:expected ~real:real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
+
 let cfmm_make_for_test ~ctez ~kit ~lqt ~kit_in_ctez_in_prev_block ~last_level =
   { CfmmTypes.ctez = ctez;
     CfmmTypes.kit = kit;

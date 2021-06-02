@@ -4,14 +4,35 @@ open TestArbitrary
 open Fa2Interface
 open Kit
 
-type just_boolean = bool
-[@@deriving show]
-
 let property_test_count = 100
 
 (* Utility functions *)
 let ask_kit_of fa2_state addr = kit_of_mukit (fa2_get_balance (fa2_state, addr, kit_token_id))
 let ask_lqt_of fa2_state addr = fa2_get_balance (fa2_state, addr, liquidity_token_id)
+
+let mk_kit_tx ~from_ ~to_ ~amount =
+  { from_ = from_;
+    txs =
+      [ { to_ = to_;
+          token_id = kit_token_id;
+          amount = amount;
+        }
+      ];
+  }
+
+let add_kit_operator ~owner ~operator =
+  Add_operator {
+    owner = owner;
+    operator = operator;
+    token_id = kit_token_id;
+  }
+
+let remove_kit_operator ~owner ~operator =
+  Remove_operator {
+    owner = owner;
+    operator = operator;
+    token_id = kit_token_id;
+  }
 
 let suite =
   "Fa2Interface tests" >::: [
@@ -24,13 +45,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Add_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
-
+       let update_op = add_kit_operator ~owner:alice_addr ~operator:bob_addr in
        let _fa2_state = fa2_run_update_operators (fa2_state, [update_op]) in
        ()
     );
@@ -41,13 +56,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Add_operator {
-           owner = bob_addr;
-           operator = leena_addr;
-           token_id = kit_token_id;
-         } in
-
+       let update_op = add_kit_operator ~owner:bob_addr ~operator:leena_addr in
        assert_raises
          (Failure "FA2_NOT_OWNER")
          (fun () -> fa2_run_update_operators (fa2_state, [update_op]))
@@ -59,12 +68,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Remove_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
+       let update_op = remove_kit_operator ~owner:alice_addr ~operator:bob_addr in
 
        let _fa2_state = fa2_run_update_operators (fa2_state, [update_op]) in
        ()
@@ -76,12 +80,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Remove_operator {
-           owner = bob_addr;
-           operator = leena_addr;
-           token_id = kit_token_id;
-         } in
+       let update_op = remove_kit_operator ~owner:bob_addr ~operator:leena_addr in
 
        assert_raises
          (Failure "FA2_NOT_OWNER")
@@ -94,12 +93,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Add_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
+       let update_op = add_kit_operator ~owner:alice_addr ~operator:bob_addr in
 
        assert_bool
          "Test potency: starting operators"
@@ -111,13 +105,7 @@ let suite =
          "Add_operator did not add the operator"
          (fa2_is_operator (fa2_state, bob_addr, alice_addr, kit_token_id));
 
-       let update_op =
-         Remove_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
-
+       let update_op = remove_kit_operator ~owner:alice_addr ~operator:bob_addr in
        let fa2_state = fa2_run_update_operators (fa2_state, [update_op]) in
 
        assert_bool
@@ -133,18 +121,8 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let add_operator_op =
-         Add_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
-       let remove_operator_op =
-         Remove_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
+       let add_operator_op = add_kit_operator ~owner:alice_addr ~operator:bob_addr in
+       let remove_operator_op = remove_kit_operator ~owner:alice_addr ~operator:bob_addr in
 
        assert_bool
          "Test potency: starting operators"
@@ -173,24 +151,22 @@ let suite =
     (* TODO: ledger_*_kit functions do not perform any permission check. This
      * we can only check at a higher level, probably with e2e tests. *)
 
-    ("ledger_issue_kit/ledger_withdraw_kit issue/withdraw expected kit" >::
+    ("ledger_issue_kit/ledger_withdraw_kit issues/withdraws expected kit" >::
      fun _ ->
        Ligo.Tezos.reset ();
 
        (* Leena's account initially empty. *)
        let fa2_state_in = initial_fa2_state in
-       assert_equal
-         ~printer:show_kit
-         kit_zero
-         (ask_kit_of fa2_state_in leena_addr);
+       assert_kit_equal
+         ~expected:kit_zero
+         ~real:(ask_kit_of fa2_state_in leena_addr);
 
        (* Withdrawing an empty amount from an empty account should succeed just fine. *)
        let kit_amount = kit_zero in
        let fa2_state_out = ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount) in
-       assert_equal
-         ~printer:show_kit
-         (ask_kit_of fa2_state_in leena_addr)
-         (ask_kit_of fa2_state_out leena_addr);
+       assert_kit_equal
+         ~expected:(ask_kit_of fa2_state_in leena_addr)
+         ~real:(ask_kit_of fa2_state_out leena_addr);
 
        (* Withdrawing a non-empty amount from an empty account should fail. *)
        let fa2_state_in = fa2_state_out in
@@ -205,19 +181,17 @@ let suite =
        let fa2_state_in = fa2_state_out in
        let kit_amount = kit_of_mukit (Ligo.nat_from_literal "123_456n") in
        let fa2_state_out = ledger_issue_kit (fa2_state_in, leena_addr, kit_amount) in
-       assert_equal
-         ~printer:show_kit
-         (kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
-         (ask_kit_of fa2_state_out leena_addr);
+       assert_kit_equal
+         ~expected:(kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
+         ~real:(ask_kit_of fa2_state_out leena_addr);
 
        (* Issue an amount, starting from non-zero. *)
        let fa2_state_in = fa2_state_out in
        let kit_amount = kit_of_mukit (Ligo.nat_from_literal "789_012_345n") in
        let fa2_state_out = ledger_issue_kit (fa2_state_in, leena_addr, kit_amount) in
-       assert_equal
-         ~printer:show_kit
-         (kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
-         (ask_kit_of fa2_state_out leena_addr);
+       assert_kit_equal
+         ~expected:(kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
+         ~real:(ask_kit_of fa2_state_out leena_addr);
 
        (* Withdrawing more than the entire amount should fail. *)
        let fa2_state_in = fa2_state_out in
@@ -232,19 +206,17 @@ let suite =
        let fa2_state_in = fa2_state_out in
        let kit_amount = kit_sub (ask_kit_of fa2_state_in leena_addr) (kit_of_mukit (Ligo.nat_from_literal "1_234n")) in
        let fa2_state_out = ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount) in
-       assert_equal
-         ~printer:show_kit
-         (ask_kit_of fa2_state_in leena_addr)
-         (kit_add (ask_kit_of fa2_state_out leena_addr) kit_amount);
+       assert_kit_equal
+         ~expected:(ask_kit_of fa2_state_in leena_addr)
+         ~real:(kit_add (ask_kit_of fa2_state_out leena_addr) kit_amount);
 
        (* Withdrawing the entire amount should succeed. *)
        let fa2_state_in = fa2_state_out in
        let kit_amount = ask_kit_of fa2_state_in leena_addr in
        let fa2_state_out = ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount) in
-       assert_equal
-         ~printer:show_kit
-         kit_zero
-         (ask_kit_of fa2_state_out leena_addr);
+       assert_kit_equal
+         ~expected:kit_zero
+         ~real:(ask_kit_of fa2_state_out leena_addr);
 
        ()
     );
@@ -275,24 +247,22 @@ let suite =
     (* TODO: ledger_*_liquidity functions do not perform any permission check.
      * This we can only check at a higher level, probably with e2e tests. *)
 
-    ("ledger_issue_liquidity/ledger_withdraw_liquidity issue/withdraw expected liquidity" >::
+    ("ledger_issue_liquidity/ledger_withdraw_liquidity issues/withdraws expected liquidity" >::
      fun _ ->
        Ligo.Tezos.reset ();
 
        (* Leena's account initially empty. *)
        let fa2_state_in = initial_fa2_state in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (Ligo.nat_from_literal "0n")
-         (ask_lqt_of fa2_state_in leena_addr);
+       assert_nat_equal
+         ~expected:(Ligo.nat_from_literal "0n")
+         ~real:(ask_lqt_of fa2_state_in leena_addr);
 
        (* Withdrawing an empty amount from an empty account should succeed just fine. *)
        let lqt_amount = (Ligo.nat_from_literal "0n") in
        let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (ask_lqt_of fa2_state_in leena_addr)
-         (ask_lqt_of fa2_state_out leena_addr);
+       assert_nat_equal
+         ~expected:(ask_lqt_of fa2_state_in leena_addr)
+         ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        (* Withdrawing a non-empty amount from an empty account should fail. *)
        let fa2_state_in = fa2_state_out in
@@ -307,19 +277,17 @@ let suite =
        let fa2_state_in = fa2_state_out in
        let lqt_amount = (Ligo.nat_from_literal "123_456n") in
        let fa2_state_out = ledger_issue_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
-         (ask_lqt_of fa2_state_out leena_addr);
+       assert_nat_equal
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
+         ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        (* Issue an amount, starting from non-zero. *)
        let fa2_state_in = fa2_state_out in
        let lqt_amount = (Ligo.nat_from_literal "789_012_345n") in
        let fa2_state_out = ledger_issue_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
-         (ask_lqt_of fa2_state_out leena_addr);
+       assert_nat_equal
+         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
+         ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        (* Withdrawing more than the entire amount should fail. *)
        let fa2_state_in = fa2_state_out in
@@ -337,19 +305,17 @@ let suite =
          | None -> assert_failure "impossible"
          | Some lqt -> lqt in
        let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (ask_lqt_of fa2_state_in leena_addr)
-         (Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) lqt_amount);
+       assert_nat_equal
+         ~expected:(ask_lqt_of fa2_state_in leena_addr)
+         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) lqt_amount);
 
        (* Withdrawing the entire amount should succeed. *)
        let fa2_state_in = fa2_state_out in
        let lqt_amount = ask_lqt_of fa2_state_in leena_addr in
        let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_equal
-         ~printer:Ligo.string_of_nat
-         (Ligo.nat_from_literal "0n")
-         (ask_lqt_of fa2_state_out leena_addr);
+       assert_nat_equal
+         ~expected:(Ligo.nat_from_literal "0n")
+         ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        ()
     );
@@ -364,15 +330,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let tx =
-         { from_ = alice_addr;
-           txs =
-             [ { to_ = bob_addr;
-                 token_id = kit_token_id;
-                 amount = Ligo.nat_from_literal "0n";
-               }
-             ];
-         } in
+       let tx = mk_kit_tx ~from_:alice_addr ~to_:bob_addr ~amount:(Ligo.nat_from_literal "0n") in
        let _fa2_state = fa2_run_transfer (fa2_state, [tx]) in
        ()
     );
@@ -383,16 +341,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let tx =
-         { from_ = alice_addr;
-           txs =
-             [ { to_ = bob_addr;
-                 token_id = kit_token_id;
-                 amount = Ligo.nat_from_literal "0n";
-               }
-             ];
-         } in
-
+       let tx = mk_kit_tx ~from_:alice_addr ~to_:bob_addr ~amount:(Ligo.nat_from_literal "0n") in
        assert_raises
          (Failure "FA2_NOT_OPERATOR")
          (fun () -> fa2_run_transfer (fa2_state, [tx]))
@@ -404,25 +353,12 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let fa2_state = initial_fa2_state in
-       let update_op =
-         Add_operator {
-           owner = alice_addr;
-           operator = bob_addr;
-           token_id = kit_token_id;
-         } in
+       let update_op = add_kit_operator ~owner:alice_addr ~operator:bob_addr in
 
        let fa2_state = fa2_run_update_operators (fa2_state, [update_op]) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let tx =
-         { from_ = alice_addr;
-           txs =
-             [ { to_ = leena_addr;
-                 token_id = kit_token_id;
-                 amount = Ligo.nat_from_literal "0n";
-               }
-             ];
-         } in
+       let tx = mk_kit_tx ~from_:alice_addr ~to_:leena_addr ~amount:(Ligo.nat_from_literal "0n") in
        let _fa2_state = fa2_run_transfer (fa2_state, [tx]) in
        ()
     );
@@ -433,7 +369,10 @@ let suite =
     (* TODO: test the rest of the functions in fa2Interface.ml too. *)
 
     (* TODO: test fa2_get_balance *)
-    (* TODO: test fa2_all_tokens *)
     (* TODO: test fa2_run_balance_of *)
     (* TODO: test fa2_run_transfer *)
+
+    (* FIXME: Not sure how to always make sure that fa2_all_tokens lists all
+     * valid tokens. Perhaps with an external script, like we do to check that
+     * there are no duplicate error codes? *)
   ]
