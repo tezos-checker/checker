@@ -706,6 +706,41 @@ let suite =
          )
     );
 
+    (* ************************************************************************* *)
+    (**                               FA2                                        *)
+    (* ************************************************************************* *)
+    ("strict_entrypoint_transfer (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.strict_entrypoint_transfer (empty_checker, []))
+    );
+
+    ("strict_entrypoint_balance_of (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+
+       let fa2_balance_of_param =
+         { requests = [];
+           callback = Ligo.contract_of_address (Ligo.address_of_string "test address");
+         } in
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.strict_entrypoint_balance_of (empty_checker, fa2_balance_of_param))
+    );
+
+    ("entrypoint_update_operators (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
+    );
+
     (* FIXME: There are no tests currently for Checker.Transfer. *)
     (* FIXME: There are no tests currently for Checker.Balance_of. *)
     (* FIXME: There are no tests currently for Checker.Update_operators. *)
