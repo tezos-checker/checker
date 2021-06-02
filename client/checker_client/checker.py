@@ -391,7 +391,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[
         fa12_ctez_storage = {
             "tokens": {"tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU": 1},
             "allowances": {},
-            "admin": tz.key.public_key_hash(),
+            "admin": ctez.context.address,
             "total_supply": 1,
         }
         fa12_ctez = deploy_contract(
