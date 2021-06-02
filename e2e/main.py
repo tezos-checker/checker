@@ -96,7 +96,7 @@ class E2ETest(SandboxedTestCase):
         # TODO add liquidity to checker
         call_checker_endpoint("add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20))
 
-        # TODO use uniswap
+        # TODO use cfmm
         call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
 
         print("Gas costs:")
