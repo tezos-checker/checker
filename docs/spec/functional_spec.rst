@@ -198,8 +198,8 @@ Provide liquidity
 
 Deposit some ctez and kit for liquidity in exchange for receiving
 liquidity tokens. If the given amounts do not have the right ratio,
-the CFMM contract keeps as much of the given ctez and kit as possible
-with the right ratio, and returns the leftovers, along with the
+the CFMM contract keeps all the ctez given and as much of the given kit as
+possible with the right ratio, and returns the leftovers, along with the
 liquidity tokens.
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``

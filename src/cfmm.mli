@@ -61,8 +61,8 @@ val cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity : cfmm -> ctez
 
 (** Buy some liquidity from the cfmm contract, by giving it some ctez and
     some kit. If the given amounts does not have the right ratio, we
-    liquidate as much as we can with the right ratio, and return the
-    leftovers, along with the liquidity tokens. *)
+    liquidate all the ctez given and as much kit as we can with the right
+    ratio, and return the leftovers, along with the liquidity tokens. *)
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
  * same proportion as the contract la / lb = a / b . Assuming there are n
