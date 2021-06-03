@@ -1,26 +1,16 @@
+"""Utilities for working with contracts which use big_maps
+"""
+
 from typing import Any, Dict, Optional, Set
-from pytezos import operation, pytezos
+
 from pytezos.client import PyTezosClient
-from pytezos.contract.call import ContractCall
 from pytezos.contract.interface import ContractInterface
 from pytezos.michelson.micheline import micheline_value_to_python_object
-from pytezos.michelson.types.adt import ADTMixin
-from pytezos.michelson.types.base import MichelsonType, Undefined
-from pytezos.michelson.types.pair import PairType
 from pytezos.michelson.types import ListType
-from pytezos.operation.group import OperationGroup
-from pytezos.rpc.helpers import ForgeOperationsQuery
-from pytezos.rpc.protocol import BlockQuery
+from pytezos.michelson.types.adt import ADTMixin
+from pytezos.michelson.types.base import Undefined
+from pytezos.michelson.types.big_map import BigMapType
 from pytezos.rpc.search import BlockSliceQuery
-from pytezos.michelson.types.big_map import BigMapType, big_map_diff_to_lazy_diff
-from checker_client import checker as checker_lib
-import json
-from pytezos.michelson.sections.storage import StorageSection
-from pytezos.operation.content import format_mutez
-from pprint import pprint
-
-# def skip_nones(**kwargs) -> dict:
-#     return {k: v for k, v in kwargs.items() if v is not None}
 
 
 def scan_bigmap_keys(
@@ -65,28 +55,23 @@ def scan_bigmap_keys(
                         and contract_address not in op_result["originated_contracts"]
                     ):
                         continue
-                    if (
-                        op["kind"] == "transaction"
-                        and op["destination"] != contract_address
-                    ):
+                    if op["kind"] == "transaction" and op["destination"] != contract_address:
                         continue
                     block_diffs += op_result["lazy_storage_diff"]
         diffs += block_diffs
         if block_diffs:
             blocks_since_update = 0
+        if (
+            end_after_blocks
+            and blocks_since_update is not None
+            and blocks_since_update >= end_after_blocks
+        ):
+            print(f"No storage updates found since {blocks_since_update} blocks. Ending scan.")
+            break
         # Only increment if we have already found the first block operating on this contract
         if not block_diffs and blocks_since_update is not None:
             blocks_since_update += 1
 
-        if (
-            end_after_blocks
-            and blocks_since_update is not None
-            and blocks_since_update > end_after_blocks
-        ):
-            print(
-                f"No storage updates found since {blocks_since_update} blocks. Ending scan."
-            )
-            break
     # Now we can extract the keys from the diffs
     keys = {}
     for diff in diffs:
@@ -175,95 +160,3 @@ def storage_with_bigmaps(
         return storage
 
     return _rec_load_storage(contract, contract_bigmap_keys, contract.storage.data)
-
-
-client = pytezos.using(
-    "http://localhost:11112",
-    key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",
-)
-checker_address = "KT1PwzHsf6FkA3EsRe7WrfMscNfer5krHQMd"
-checker = client.contract(checker_address)
-
-checker_bigmap_keys = scan_bigmap_keys(client, checker_address, end_after_blocks=5)
-storage = storage_with_bigmaps(checker, checker_bigmap_keys)
-
-pprint(storage)
-
-# # Create call to `default` entrypoint
-# call = checker.create_burrow((2, None)).with_amount(2_000_000)
-
-
-# def trace_code(
-#     call: ContractCall,
-#     storage=None,
-#     source=None,
-#     sender=None,
-#     amount=None,
-#     balance=None,
-#     chain_id=None,
-#     gas_limit=None,
-# ):
-#     """Execute using RPC interpreter.
-
-#     :param storage: initial storage as Python object, leave None if you want to generate a dummy one
-#     :param source: patch SOURCE
-#     :param sender: patch SENDER
-#     :param amount: patch AMOUNT
-#     :param balance: patch BALANCE
-#     :param chain_id: patch CHAIN_ID
-#     :param gas_limit: restrict max consumed gas
-#     :rtype: ContractCallResult
-#     """
-#     storage_ty = StorageSection.match(call.context.storage_expr)
-#     if storage is None:
-#         initial_storage = storage_ty.dummy(call.context).to_micheline_value(
-#             lazy_diff=True
-#         )
-#     else:
-#         initial_storage = storage_ty.from_python_object(storage).to_micheline_value(
-#             lazy_diff=True
-#         )
-#     script = [
-#         call.context.parameter_expr,
-#         call.context.storage_expr,
-#         call.context.code_expr,
-#     ]
-#     query = skip_nones(
-#         script=script,
-#         storage=initial_storage,
-#         entrypoint=call.parameters["entrypoint"],
-#         input=call.parameters["value"],
-#         amount=format_mutez(amount or call.amount),
-#         chain_id=chain_id or call.context.get_chain_id(),
-#         source=sender,
-#         payer=source,
-#         balance=str(balance or 0),
-#         gas=str(gas_limit) if gas_limit is not None else None,
-#     )
-#     res = call.shell.blocks[call.block_id].helpers.scripts.trace_code.post(query)
-#     # TODO: Add a contructor here for the trace_code output
-#     # ContractCallResult.from_run_code(res, parameters=call.parameters, context=call.context)
-#     return res
-
-
-# result = trace_code(
-#     call,
-#     storage=test,
-#     source="tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6",
-#     gas_limit=100_000_000,
-# )
-
-# with open("test_trace.json", "w") as f:
-#     json.dump(result, f)
-
-
-# gas_trace = [int(t["gas"]) for t in result["trace"]]
-# print(call.as_transaction().autofill().contents)
-
-# print((1_040_000_000 - min(gas_trace)) / 1000)
-
-# # Node interpreter
-# call.run_operation()
-
-# print(result)
-# # TODO: Can we get the gas used from this??
