@@ -464,7 +464,7 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
        let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
        let decay =
          match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
-         | None -> (failwith "TODO: is this possible?" : fixedpoint) (* TODO *)
+         | None -> (failwith "TODO: is this possible?" : fixedpoint)
          | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
        kit_scale start_value decay
      | Ascending (leading_bid, _timestamp, _level) ->
@@ -778,8 +778,6 @@ let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : 
 (*
  * - Cancel auction
  *
- * TODO: how to see current leading bid? FA2?
- * TODO: return kit to losing bidders
  * TODO: when liquidation result was "close", what happens after the tez is sold? Might we find that we didn't need to close it after all?
  *)
 

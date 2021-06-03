@@ -17,7 +17,7 @@ from pytezos.client import PyTezosClient
 
 # Time between blocks for sandbox container
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
-SANDBOX_TIME_BETWEEN_BLOCKS = 5
+SANDBOX_TIME_BETWEEN_BLOCKS = 2
 # Number of retries to use when awaiting new blocks
 WAIT_BLOCK_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks
@@ -391,7 +391,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[
         fa12_ctez_storage = {
             "tokens": {"tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU": 1},
             "allowances": {},
-            "admin": tz.key.public_key_hash(),
+            "admin": ctez.context.address,
             "total_supply": 1,
         }
         fa12_ctez = deploy_contract(
