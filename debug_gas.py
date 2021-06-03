@@ -1,13 +1,18 @@
 from typing import Any, Dict, Set
-from pytezos import pytezos
+from pytezos import operation, pytezos
 from pytezos.contract.call import ContractCall
 from pytezos.contract.interface import ContractInterface
 from pytezos.michelson.micheline import micheline_value_to_python_object
+from pytezos.michelson.types.adt import ADTMixin
+from pytezos.michelson.types.base import MichelsonType, Undefined
+from pytezos.michelson.types.pair import PairType
+from pytezos.operation.group import OperationGroup
+from pytezos.rpc.helpers import ForgeOperationsQuery
 from pytezos.rpc.protocol import BlockQuery
 from pytezos.rpc.search import BlockSliceQuery
 from pytezos.michelson.types.big_map import BigMapType, big_map_diff_to_lazy_diff
 from checker_client import checker as checker_lib
-
+import json
 from pytezos.michelson.sections.storage import StorageSection
 from pytezos.operation.content import format_mutez
 
@@ -38,7 +43,7 @@ client = pytezos.using(
 
 
 # The contract for which we want to read all big maps
-contract_id = "KT1FwfJ3xM2qqU7xn7QkjufYgnxFqgJh9qaV"
+contract_id = "KT1PwzHsf6FkA3EsRe7WrfMscNfer5krHQMd"
 # Which block to start scanning for diffs
 start_from_block = 1
 # End the scan after N blocks without updates to the contract storage
@@ -84,6 +89,8 @@ for diff in diffs:
         continue
     bigmap_id = diff["id"]
     diff = diff["diff"]
+    # Note: diffs of action type "alloc" allocate a big map, and those with
+    # action "update" update a key value pair
     if diff["action"] != "update":
         continue
 
@@ -92,6 +99,8 @@ for diff in diffs:
     for update in diff["updates"]:
         key = micheline_value_to_python_object(update["key"])
         # If the update removes the key value pair, remove it from our map
+        # TODO: I am pretty sure this is safe for cases where the value gets updated to
+        # an Option, but am not 100% sure.
         if micheline_value_to_python_object(update["value"]) is None:
             keys[bigmap_id].remove(key)
         # Otherwise record the key
@@ -102,40 +111,79 @@ checker = client.contract(contract_id)
 s = checker.storage()
 
 
-# If a key is updated with a non-None value, keep it. Otherwise remove it.
 def render_bigmap(
     field: str, bigmap_id: int, keys: Dict[int, Set[Any]], contract: ContractInterface
 ):
     full_map = {}
-    for key in keys[f"{bigmap_id}"]:
+    bigmap_id = bigmap_id
+    if bigmap_id not in keys:
+        return {}
+    for key in keys[bigmap_id]:
         # Call tezos to get the value for this key
         full_map[key] = contract.storage[field][key]()
     return full_map
 
 
-def rec_render_bigmap(contract: ContractInterface, keys):
-    the_map = {}
-    for mich_field in checker.storage.data:
-        if isinstance(mich_field, BigMapType):
-            the_map[mich_field.field_name] = render_bigmap(
-                mich_field.field_name,
-                mich_field.to_python_object(),
-                keys,
-                contract,
-            )
-    data = checker.storage()
-    data.update(the_map)
+def storage_with_bigmaps(
+    contract: ContractInterface,
+    contract_bigmap_keys: Dict[int, Set[Any]],
+    michelson_data: MichelsonType,
+):
+    storage = {}
+    # This node is a big map, let's populate it with its data
+    if isinstance(michelson_data, BigMapType):
+        return render_bigmap(
+            michelson_data.field_name,
+            michelson_data.to_python_object(),
+            keys,
+            contract,
+        )
+    # This node is not a big map and has no children, just return it
+    if not hasattr(michelson_data, "items"):
+        # Only render items which are not "undefined". Pytezos uses same behavior internally.
+        if michelson_data is Undefined:
+            return Undefined
+        return michelson_data.to_python_object()
+    # Otherwise, this element is a container with child elements, recurse into them
+    if isinstance(michelson_data, ADTMixin):
+        # Because reasons, need to select the second element from this generator
+        child_iterator = map((lambda e: e[1]), michelson_data.iter_values())
+    else:
+        child_iterator = iter(michelson_data.items)
+    for child in child_iterator:
+        child_data = storage_with_bigmaps(contract, contract_bigmap_keys, child)
+        if child_data is Undefined:
+            continue
+        storage[child.field_name] = child_data
+    return storage
 
-    # TODO: Recurse subfields
-    return data
 
+# def rec_render_bigmap(michelson_data: MichelsonType):
+#     the_map = {}
+#     if isinstance(michelson_data, BigMapType):
+#         the_map[michelson_data.field_name] = render_bigmap(
+#             mich_field.field_name,
+#             mich_field.to_python_object(),
+#             keys,
+#             contract,
+#         )
+#     if hasattr(michelson_data, "items"):
+#         for field in michelson_data:
+#             rec_render_bigmap(field)
+
+#         # .items has a list of subfields
+
+#     data = checker.storage()
+#     data.update(the_map)
+
+#     # TODO: Recurse subf
+
+test = storage_with_bigmaps(checker, keys, checker.storage.data)
 
 with_funcs = rec_render_bigmap(checker, keys)
 
 # Create call to `default` entrypoint
-call = checker.mintKit(
-    ("KT1AmN2S3hwzijmMKyvXw41MPWCCwDUqTfZr", "KT1BSYRtp4pYo4RQj7BhyTbBg7zCGnHr2LL3")
-)
+call = checker.create_burrow((2, None)).with_amount(2_000_000)
 
 
 def trace_code(
@@ -186,9 +234,35 @@ def trace_code(
         gas=str(gas_limit) if gas_limit is not None else None,
     )
     res = call.shell.blocks[call.block_id].helpers.scripts.trace_code.post(query)
+    op_results = []
+    query_op = OperationGroup(context=call.context, contents=res["operations"])
+
+    # t = OperationGroup(context=client.context).origination(
+    #     script=op["script"],
+    #     balance=op["balance"],
+    #     delegate=None,
+    # )
+
+    for op in res["operations"]:
+        #     # Only works shallowly at the moment
+        query_op = skip_nones(
+            script=op["script"]["code"],
+            storage=op["script"]["storage"],
+            entrypoint=None,
+            input={},
+            amount=str(0),
+            chain_id=chain_id or call.context.get_chain_id(),
+            source=None,
+            payer=None,
+            balance=format_mutez(op["balance"]),
+            gas=str(gas_limit) if gas_limit is not None else None,
+        )
+        op_res = call.shell.blocks[call.block_id].helpers.scripts.trace_code.post(
+            query_op
+        )
     # TODO: Add a contructor here for the trace_code output
     # ContractCallResult.from_run_code(res, parameters=call.parameters, context=call.context)
-    return res
+    return res, op_results
 
 
 result = trace_code(
@@ -198,14 +272,17 @@ result = trace_code(
     gas_limit=None,
 )
 
-# sum([int(t["gas"]) for t in result["trace"]])
+with open("test_trace.json", "w") as f:
+    json.dump(result, f)
+
+
+gas_trace = [int(t["gas"]) for t in result["trace"]]
+print(call.as_transaction().autofill().contents)
+
+print((1_040_000_000 - min(gas_trace)) / 1000)
 
 # Node interpreter
-result = call.run_code(
-    storage=with_funcs,
-    source="tz1aSkwEot3L2kmUvcoxzjMomb9mvBNuzFK6",
-    gas_limit=None,
-)
+call.run_operation()
 
 print(result)
 # TODO: Can we get the gas used from this??
