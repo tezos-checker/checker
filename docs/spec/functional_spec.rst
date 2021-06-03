@@ -167,7 +167,7 @@ desired amount of kit cannot be bought or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | An amount of ctez to be sold for kit                                    |
+| ctez          | nat                   | An amount of ctez to be sold for kit, in muctez                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected to be bought, in mukit               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -188,7 +188,7 @@ cannot be bought or if the deadline has passed.
 +===============+=======================+=========================================================================+
 | kit           | nat                   | The amount of kit to be sold, in mukit                                  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected to be bought                        |
+| ctez          | nat                   | The minimum amount of ctez expected to be bought, in muctez             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -207,7 +207,7 @@ liquidity tokens.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to supply as liquidity                               |
+| ctez          | nat                   | The amount of ctez to supply as liquidity, in muctez                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The amount of kit to supply as liquidity, in mukit                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -230,7 +230,7 @@ ratio.
 +===============+=======================+=========================================================================+
 | amount        | nat                   | The number of liquidity tokens to redeem                                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected                                     |
+| ctez          | nat                   | The minimum amount of ctez expected, in muctez                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected, in mukit                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -334,7 +334,7 @@ Get the maximum amount (in ``mukit``) that can be expected for the given amount 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez                                                      |
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate yield when selling kit for ctez
@@ -347,7 +347,7 @@ Get the maximum amount (in ``muctez``) that can be expected for the given amount
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| kit           | nat                   | The amount of kit in mukit                                              |
+| kit           | nat                   | The amount of kit, in mukit                                             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate kit requirements when adding liquidity
@@ -360,7 +360,7 @@ Get the minimum amount (in ``mukit``) that needs to be deposited when adding liq
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez                                                      |
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate yield when adding liquidity
@@ -373,7 +373,7 @@ Get the maximum amount of the liquidity token that can be expected for the given
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez                                                      |
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate ctez yield when removing liquidity
