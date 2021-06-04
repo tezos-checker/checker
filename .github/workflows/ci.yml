@@ -3,24 +3,26 @@ name: CI
 on:
   pull_request:
     paths-ignore:
-    - '**/*.md'
-    - 'docs/**/*'
-    - '.readthedocs.yaml'
+      - "**/*.md"
+      - "docs/**/*"
+      - ".readthedocs.yaml"
   push:
     paths-ignore:
-    - '**/*.md'
-    - 'docs/**/*'
-    - '.readthedocs.yaml'
+      - "**/*.md"
+      - "docs/**/*"
+      - ".readthedocs.yaml"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: cachix/install-nix-action@v13
-    - uses: actions/checkout@v2
-    - uses: cachix/cachix-action@v10
-      with:
-        name: tezos-checker
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - name: Build and test
-      run: nix-build -A michelson --arg doCheck true
+      - uses: cachix/install-nix-action@v13
+      - uses: actions/checkout@v2
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+      - name: Build and test
+        run: nix-build -A michelson -o ./generated/michelson --arg doCheck true
+      - name: End to end tests
+          nix-shell --command 'python e2e/main.py'
