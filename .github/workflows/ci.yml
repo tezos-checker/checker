@@ -25,4 +25,4 @@ jobs:
       - name: Build and test
         run: nix-build -A michelson -o ./generated/michelson --arg doCheck true
       - name: End to end tests
-          nix-shell --command 'python e2e/main.py'
+        run: nix-shell --command 'python e2e/main.py'
