@@ -3,13 +3,15 @@ open TestCommon
 open TestArbitrary
 open Fa2Interface
 open Kit
+open Lqt
 
 let property_test_count = 100
 
 (* Utility functions *)
 let ask_kit_of fa2_state addr = kit_of_mukit (fa2_get_balance (fa2_state, addr, kit_token_id))
-let ask_lqt_of fa2_state addr = fa2_get_balance (fa2_state, addr, liquidity_token_id)
+let ask_lqt_of fa2_state addr = lqt_of_denomination (fa2_get_balance (fa2_state, addr, lqt_token_id))
 
+(* FIXME: more sharing is now possible *)
 let mk_kit_tx ~from_ ~to_ ~amount =
   { from_ = from_;
     txs =
@@ -24,12 +26,13 @@ let mk_lqt_tx ~from_ ~to_ ~amount =
   { from_ = from_;
     txs =
       [ { to_ = to_;
-          token_id = liquidity_token_id;
-          amount = amount;
+          token_id = lqt_token_id;
+          amount = lqt_to_denomination_nat amount;
         }
       ];
   }
 
+(* FIXME: more sharing is now possible *)
 let add_kit_operator ~owner ~operator =
   Add_operator {
     owner = owner;
@@ -48,7 +51,7 @@ let add_lqt_operator ~owner ~operator =
   Add_operator {
     owner = owner;
     operator = operator;
-    token_id = liquidity_token_id;
+    token_id = lqt_token_id;
   }
 
 let suite =
@@ -264,20 +267,20 @@ let suite =
     (* TODO: ledger_*_liquidity functions do not perform any permission check.
      * This we can only check at a higher level, probably with e2e tests. *)
 
-    ("ledger_issue_liquidity/ledger_withdraw_liquidity issues/withdraws expected liquidity" >::
+    ("ledger_issue_lqt/ledger_withdraw_lqt issues/withdraws expected liquidity" >::
      fun _ ->
        Ligo.Tezos.reset ();
 
        (* Leena's account initially empty. *)
        let fa2_state_in = initial_fa2_state in
-       assert_nat_equal
-         ~expected:(Ligo.nat_from_literal "0n")
+       assert_lqt_equal
+         ~expected:lqt_zero
          ~real:(ask_lqt_of fa2_state_in leena_addr);
 
        (* Withdrawing an empty amount from an empty account should succeed just fine. *)
-       let lqt_amount = (Ligo.nat_from_literal "0n") in
-       let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_nat_equal
+       let lqt_amount = lqt_of_denomination (Ligo.nat_from_literal "0n") in
+       let fa2_state_out = ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount) in
+       assert_lqt_equal
          ~expected:(ask_lqt_of fa2_state_in leena_addr)
          ~real:(ask_lqt_of fa2_state_out leena_addr);
 
@@ -286,24 +289,24 @@ let suite =
        assert_raises
          (Failure "FA2_INSUFFICIENT_BALANCE")
          (fun () ->
-            let lqt_amount = (Ligo.nat_from_literal "1n") in
-            ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount)
+            let lqt_amount = lqt_of_denomination (Ligo.nat_from_literal "1n") in
+            ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount)
          );
 
        (* Issue an amount, starting from zero. *)
        let fa2_state_in = fa2_state_out in
-       let lqt_amount = (Ligo.nat_from_literal "123_456n") in
-       let fa2_state_out = ledger_issue_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_nat_equal
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
+       let lqt_amount = lqt_of_denomination (Ligo.nat_from_literal "123_456n") in
+       let fa2_state_out = ledger_issue_lqt (fa2_state_in, leena_addr, lqt_amount) in
+       assert_lqt_equal
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
          ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        (* Issue an amount, starting from non-zero. *)
        let fa2_state_in = fa2_state_out in
-       let lqt_amount = (Ligo.nat_from_literal "789_012_345n") in
-       let fa2_state_out = ledger_issue_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_nat_equal
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
+       let lqt_amount = lqt_of_denomination (Ligo.nat_from_literal "789_012_345n") in
+       let fa2_state_out = ledger_issue_lqt (fa2_state_in, leena_addr, lqt_amount) in
+       assert_lqt_equal
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in leena_addr) lqt_amount)
          ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        (* Withdrawing more than the entire amount should fail. *)
@@ -311,27 +314,24 @@ let suite =
        assert_raises
          (Failure "FA2_INSUFFICIENT_BALANCE")
          (fun () ->
-            let lqt_amount = Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) ((Ligo.nat_from_literal "1n")) in
-            ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount)
+            let lqt_amount = lqt_add (ask_lqt_of fa2_state_in leena_addr) (lqt_of_denomination (Ligo.nat_from_literal "1n")) in
+            ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount)
          );
 
        (* Withdrawing less than entire amount should succeed. *)
        let fa2_state_in = fa2_state_out in
-       let lqt_amount =
-         match Ligo.is_nat (Ligo.sub_nat_nat (ask_lqt_of fa2_state_in leena_addr) ((Ligo.nat_from_literal "1_234n"))) with
-         | None -> assert_failure "impossible"
-         | Some lqt -> lqt in
-       let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_nat_equal
+       let lqt_amount = lqt_sub (ask_lqt_of fa2_state_in leena_addr) (lqt_of_denomination (Ligo.nat_from_literal "1_234n")) in
+       let fa2_state_out = ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount) in
+       assert_lqt_equal
          ~expected:(ask_lqt_of fa2_state_in leena_addr)
-         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) lqt_amount);
+         ~real:(lqt_add (ask_lqt_of fa2_state_out leena_addr) lqt_amount);
 
        (* Withdrawing the entire amount should succeed. *)
        let fa2_state_in = fa2_state_out in
        let lqt_amount = ask_lqt_of fa2_state_in leena_addr in
-       let fa2_state_out = ledger_withdraw_liquidity (fa2_state_in, leena_addr, lqt_amount) in
-       assert_nat_equal
-         ~expected:(Ligo.nat_from_literal "0n")
+       let fa2_state_out = ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount) in
+       assert_lqt_equal
+         ~expected:lqt_zero
          ~real:(ask_lqt_of fa2_state_out leena_addr);
 
        ()
@@ -414,7 +414,7 @@ let suite =
        assert_kit_equal (* alice's amount goes down *)
          ~expected:(ask_kit_of fa2_state_in alice_addr)
          ~real:(kit_add (ask_kit_of fa2_state_out alice_addr) amount);
-       assert_nat_equal (* total amount of kit stays the same *)
+       assert_kit_equal (* total amount of kit stays the same *)
          ~expected:(fa2_get_total_kit_balance fa2_state_in)
          ~real:(fa2_get_total_kit_balance fa2_state_out);
 
@@ -434,7 +434,7 @@ let suite =
        assert_kit_equal (* bob's amount goes up *)
          ~expected:(kit_add (ask_kit_of fa2_state_in bob_addr) amount)
          ~real:(ask_kit_of fa2_state_out bob_addr);
-       assert_nat_equal (* total amount of kit stays the same *)
+       assert_kit_equal (* total amount of kit stays the same *)
          ~expected:(fa2_get_total_kit_balance fa2_state_in)
          ~real:(fa2_get_total_kit_balance fa2_state_out);
 
@@ -465,7 +465,7 @@ let suite =
        assert_kit_equal (* bob's amount goes up by amount2 *)
          ~expected:(kit_add (ask_kit_of fa2_state_in bob_addr) amount2)
          ~real:(ask_kit_of fa2_state_out bob_addr);
-       assert_nat_equal (* total amount of kit stays the same *)
+       assert_kit_equal (* total amount of kit stays the same *)
          ~expected:(fa2_get_total_kit_balance fa2_state_in)
          ~real:(fa2_get_total_kit_balance fa2_state_out);
 
@@ -478,35 +478,35 @@ let suite =
        let fa2_state_in = initial_fa2_state in
 
        (* All interesting accounts initially empty. *)
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in leena_addr);
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in bob_addr);
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:(ask_lqt_of fa2_state_in alice_addr);
+       assert_lqt_equal ~expected:lqt_zero ~real:(ask_lqt_of fa2_state_in leena_addr);
+       assert_lqt_equal ~expected:lqt_zero ~real:(ask_lqt_of fa2_state_in bob_addr);
+       assert_lqt_equal ~expected:lqt_zero ~real:(ask_lqt_of fa2_state_in alice_addr);
 
        (* Populate all accounts with different amounts. *)
        let fa2_state_in =
-         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, leena_addr, (Ligo.nat_from_literal "7_000_000n")) in
-         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, bob_addr,   (Ligo.nat_from_literal "8_000_000n")) in
-         let fa2_state_in = ledger_issue_liquidity (fa2_state_in, alice_addr, (Ligo.nat_from_literal "9_000_000n")) in
+         let fa2_state_in = ledger_issue_lqt (fa2_state_in, leena_addr, lqt_of_denomination (Ligo.nat_from_literal "7_000_000n")) in
+         let fa2_state_in = ledger_issue_lqt (fa2_state_in, bob_addr,   lqt_of_denomination (Ligo.nat_from_literal "8_000_000n")) in
+         let fa2_state_in = ledger_issue_lqt (fa2_state_in, alice_addr, lqt_of_denomination (Ligo.nat_from_literal "9_000_000n")) in
          fa2_state_in in
 
        (* Ensure all accounts have the expected liquidity in them. *)
-       assert_nat_equal ~expected:((Ligo.nat_from_literal "7_000_000n")) ~real:(ask_lqt_of fa2_state_in leena_addr);
-       assert_nat_equal ~expected:((Ligo.nat_from_literal "8_000_000n")) ~real:(ask_lqt_of fa2_state_in bob_addr);
-       assert_nat_equal ~expected:((Ligo.nat_from_literal "9_000_000n")) ~real:(ask_lqt_of fa2_state_in alice_addr);
+       assert_lqt_equal ~expected:(lqt_of_denomination (Ligo.nat_from_literal "7_000_000n")) ~real:(ask_lqt_of fa2_state_in leena_addr);
+       assert_lqt_equal ~expected:(lqt_of_denomination (Ligo.nat_from_literal "8_000_000n")) ~real:(ask_lqt_of fa2_state_in bob_addr);
+       assert_lqt_equal ~expected:(lqt_of_denomination (Ligo.nat_from_literal "9_000_000n")) ~real:(ask_lqt_of fa2_state_in alice_addr);
 
        (* Scenario 1: Alice sends funds to leena directly. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount = (Ligo.nat_from_literal "123_456n") in
+       let amount = lqt_of_denomination (Ligo.nat_from_literal "123_456n") in
        let tx = mk_lqt_tx ~from_:alice_addr ~to_:leena_addr ~amount:amount in
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
 
-       assert_nat_equal (* leena's amount goes up *)
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in leena_addr) amount)
+       assert_lqt_equal (* leena's amount goes up *)
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in leena_addr) amount)
          ~real:(ask_lqt_of fa2_state_out leena_addr);
-       assert_nat_equal (* alice's amount goes down *)
+       assert_lqt_equal (* alice's amount goes down *)
          ~expected:(ask_lqt_of fa2_state_in alice_addr)
-         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out alice_addr) amount);
-       assert_nat_equal (* total amount of liquidity token stays the same *)
+         ~real:(lqt_add (ask_lqt_of fa2_state_out alice_addr) amount);
+       assert_lqt_equal (* total amount of liquidity token stays the same *)
          ~expected:(fa2_get_total_lqt_balance fa2_state_in)
          ~real:(fa2_get_total_lqt_balance fa2_state_out);
 
@@ -516,17 +516,17 @@ let suite =
        let update_op = add_lqt_operator ~owner:leena_addr ~operator:alice_addr in
        let fa2_state_in = fa2_run_update_operators (fa2_state_in, [update_op]) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount = (Ligo.nat_from_literal "1_500_000n") in
+       let amount = lqt_of_denomination (Ligo.nat_from_literal "1_500_000n") in
        let tx = mk_lqt_tx ~from_:leena_addr ~to_:bob_addr ~amount:amount in
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
 
-       assert_nat_equal (* leena's amount goes down *)
+       assert_lqt_equal (* leena's amount goes down *)
          ~expected:(ask_lqt_of fa2_state_in leena_addr)
-         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) amount);
-       assert_nat_equal (* bob's amount goes up *)
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in bob_addr) amount)
+         ~real:(lqt_add (ask_lqt_of fa2_state_out leena_addr) amount);
+       assert_lqt_equal (* bob's amount goes up *)
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in bob_addr) amount)
          ~real:(ask_lqt_of fa2_state_out bob_addr);
-       assert_nat_equal (* total amount of liquidity token stays the same *)
+       assert_lqt_equal (* total amount of liquidity token stays the same *)
          ~expected:(fa2_get_total_lqt_balance fa2_state_in)
          ~real:(fa2_get_total_lqt_balance fa2_state_out);
 
@@ -536,9 +536,9 @@ let suite =
         * this operation to fail. *)
        let fa2_state_in = fa2_state_out in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount1 = (Ligo.nat_from_literal "5_623_456n") in
+       let amount1 = lqt_of_denomination (Ligo.nat_from_literal "5_623_456n") in
        let tx1 = mk_lqt_tx ~from_:leena_addr ~to_:alice_addr ~amount:amount1 in
-       let amount2 = (Ligo.nat_from_literal "14_500_000n") in
+       let amount2 = lqt_of_denomination (Ligo.nat_from_literal "14_500_000n") in
        let tx2 = mk_lqt_tx ~from_:alice_addr ~to_:bob_addr ~amount:amount2 in
 
        (* The numbers are too high for the operations to be executed in the wrong order. *)
@@ -548,16 +548,16 @@ let suite =
 
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx1; tx2]) in
 
-       assert_nat_equal (* leena's amount goes down by amount1 *)
+       assert_lqt_equal (* leena's amount goes down by amount1 *)
          ~expected:(ask_lqt_of fa2_state_in leena_addr)
-         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out leena_addr) amount1);
-       assert_nat_equal (* alice's amount goes up by amount1 by down by amount2 *)
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in alice_addr) amount1)
-         ~real:(Ligo.add_nat_nat (ask_lqt_of fa2_state_out alice_addr) amount2);
-       assert_nat_equal (* bob's amount goes up by amount2 *)
-         ~expected:(Ligo.add_nat_nat (ask_lqt_of fa2_state_in bob_addr) amount2)
+         ~real:(lqt_add (ask_lqt_of fa2_state_out leena_addr) amount1);
+       assert_lqt_equal (* alice's amount goes up by amount1 by down by amount2 *)
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in alice_addr) amount1)
+         ~real:(lqt_add (ask_lqt_of fa2_state_out alice_addr) amount2);
+       assert_lqt_equal (* bob's amount goes up by amount2 *)
+         ~expected:(lqt_add (ask_lqt_of fa2_state_in bob_addr) amount2)
          ~real:(ask_lqt_of fa2_state_out bob_addr);
-       assert_nat_equal (* total amount of liquidity token stays the same *)
+       assert_lqt_equal (* total amount of liquidity token stays the same *)
          ~expected:(fa2_get_total_lqt_balance fa2_state_in)
          ~real:(fa2_get_total_lqt_balance fa2_state_out);
 

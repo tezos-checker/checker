@@ -3,6 +3,7 @@ open TestCommon
 open Ratio
 open Ctez
 open Kit
+open Lqt
 open Cfmm
 open CfmmTypes
 open Error
@@ -25,7 +26,7 @@ let cfmm_liquidity_tokens_extant (u: cfmm) = u.lqt
 let eq_cfmm (u1: cfmm) (u2: cfmm) : bool =
   ctez_compare u1.ctez u2.ctez = 0
   && kit_compare u1.kit u2.kit = 0
-  && Ligo.eq_nat_nat u1.lqt u2.lqt
+  && lqt_compare u1.lqt u2.lqt = 0
   && eq_ratio_ratio u1.kit_in_ctez_in_prev_block u2.kit_in_ctez_in_prev_block
   && Ligo.eq_nat_nat u1.last_level u2.last_level
 
@@ -44,8 +45,8 @@ let make_inputs_for_add_liquidity_to_succeed =
        in
        let min_lqt_minted =
          let { num = x_num; den = x_den; } =
-           mul_ratio (ratio_of_nat lqt) (make_ratio (ctez_to_muctez_int amount) (ctez_to_muctez_int ctez)) in
-         fraction_to_nat_floor x_num x_den
+           mul_ratio (lqt_to_ratio lqt) (make_ratio (ctez_to_muctez_int amount) (ctez_to_muctez_int ctez)) in
+         lqt_of_fraction_floor x_num x_den
        in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (cfmm, amount, max_kit_deposited, min_lqt_minted, deadline)
@@ -59,8 +60,8 @@ let make_inputs_for_remove_liquidity_to_succeed =
     (fun ((ctez, kit, lqt, cfmm), factor) ->
        let lqt_to_burn =
          let { num = x_num; den = x_den; } =
-           div_ratio (ratio_of_nat lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))) in
-         fraction_to_nat_floor x_num x_den
+           div_ratio (lqt_to_ratio lqt) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))) in
+         lqt_of_fraction_floor x_num x_den
        in
 
        (* let lqt_to_burn = if lqt_to_burn = Ligo.int_from_literal 0 then Ligo.int_from_literal 1 else lqt_to_burn in *)
@@ -68,12 +69,12 @@ let make_inputs_for_remove_liquidity_to_succeed =
        let lqt_burned = lqt_to_burn in
        let min_ctez_withdrawn =
          let { num = x_num; den = x_den; } =
-           div_ratio (mul_ratio (ratio_of_ctez ctez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+           div_ratio (mul_ratio (ratio_of_ctez ctez) (lqt_to_ratio lqt_to_burn)) (lqt_to_ratio lqt) in
          ctez_of_fraction_floor x_num x_den
        in
        let min_kit_withdrawn =
          let { num = x_num; den = x_den; } =
-           div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+           div_ratio (mul_ratio (kit_to_ratio kit) (lqt_to_ratio lqt_to_burn)) (lqt_to_ratio lqt) in
          kit_of_fraction_floor x_num x_den
        in
 
@@ -84,21 +85,21 @@ let make_inputs_for_remove_liquidity_to_succeed =
         * We make the generator thus ensure that at least 1mukit and 1muctez
         * will be returned. *)
        let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn =
-         if lqt_to_burn = Ligo.nat_from_literal "0n" || min_ctez_withdrawn = ctez_zero || min_kit_withdrawn = kit_zero then
+         if lqt_to_burn = lqt_zero || min_ctez_withdrawn = ctez_zero || min_kit_withdrawn = kit_zero then
            let lqt_to_burn =
              let least_kit_percentage = (div_ratio (kit_to_ratio (kit_of_mukit (Ligo.nat_from_literal "1n"))) (kit_to_ratio kit)) in
              let least_ctez_percentage = make_ratio (ctez_to_muctez_int (ctez_of_muctez (Ligo.nat_from_literal "1n"))) (ctez_to_muctez_int ctez) in
-             let as_q = (mul_ratio (ratio_of_nat lqt) (max_ratio least_kit_percentage least_ctez_percentage)) in
-             Option.get (Ligo.is_nat (Common.cdiv_int_int as_q.num as_q.den)) in
+             let as_q = (mul_ratio (lqt_to_ratio lqt) (max_ratio least_kit_percentage least_ctez_percentage)) in
+             lqt_of_fraction_ceil as_q.num as_q.den in
            let lqt_burned = lqt_to_burn in
            let min_ctez_withdrawn =
              let { num = x_num; den = x_den; } =
-               div_ratio (mul_ratio (ratio_of_ctez ctez) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+               div_ratio (mul_ratio (ratio_of_ctez ctez) (lqt_to_ratio lqt_to_burn)) (lqt_to_ratio lqt) in
              ctez_of_fraction_floor x_num x_den
            in
            let min_kit_withdrawn =
              let { num = x_num; den = x_den; } =
-               div_ratio (mul_ratio (kit_to_ratio kit) (ratio_of_nat lqt_to_burn)) (ratio_of_nat lqt) in
+               div_ratio (mul_ratio (kit_to_ratio kit) (lqt_to_ratio lqt_to_burn)) (lqt_to_ratio lqt) in
              kit_of_fraction_floor x_num x_den
            in
            (lqt_burned, min_ctez_withdrawn, min_kit_withdrawn)
@@ -205,7 +206,7 @@ let buy_kit_unit_test =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "10_000_000n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
@@ -215,7 +216,7 @@ let buy_kit_unit_test =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "11_000_000n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "4_546_364n"))
-        ~lqt:(Ligo.nat_from_literal "1n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
     in
@@ -386,7 +387,7 @@ let sell_kit_unit_test =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "10_000_000n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
@@ -395,7 +396,7 @@ let sell_kit_unit_test =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "8_336_667n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "6_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctez_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
     in
@@ -570,17 +571,17 @@ let add_liquidity_unit_test =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "8_336_667n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "6_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
-    let expected_returned_liquidity = Ligo.nat_from_literal "2n" in
+    let expected_returned_liquidity = lqt_of_denomination (Ligo.nat_from_literal "2n") in
     let expected_returned_kit = kit_of_mukit (Ligo.nat_from_literal "5_605_758n") in
     let expected_updated_cfmm : cfmm =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "28_336_667n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "20_394_242n"))
-        ~lqt:(Ligo.nat_from_literal "3n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "3n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
@@ -590,10 +591,10 @@ let add_liquidity_unit_test =
         cfmm
         (ctez_of_muctez (Ligo.nat_from_literal "20_000_000n"))
         (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
-        (Ligo.nat_from_literal "2n")
+        (lqt_of_denomination (Ligo.nat_from_literal "2n"))
         (Ligo.timestamp_from_seconds_literal 1) in
-    assert_equal ~printer:Ligo.string_of_nat expected_returned_liquidity returned_liquidity;
-    assert_equal ~printer:show_kit expected_returned_kit returned_kit;
+    assert_lqt_equal ~expected:expected_returned_liquidity ~real:returned_liquidity;
+    assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
     assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm
 
 let test_add_liquidity_failures =
@@ -603,7 +604,7 @@ let test_add_liquidity_failures =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "1000_000_000n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1000n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1000n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
     assert_raises
@@ -613,7 +614,7 @@ let test_add_liquidity_failures =
            cfmm
            ctez_zero
            (kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
-           (Ligo.nat_from_literal "2n")
+           (lqt_of_denomination (Ligo.nat_from_literal "2n"))
            (Ligo.timestamp_from_seconds_literal 1)
       );
     assert_raises
@@ -623,7 +624,7 @@ let test_add_liquidity_failures =
            cfmm
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
-           (Ligo.nat_from_literal "2n")
+           (lqt_of_denomination (Ligo.nat_from_literal "2n"))
            (Ligo.timestamp_from_seconds_literal 1)
       );
     assert_raises
@@ -633,7 +634,7 @@ let test_add_liquidity_failures =
            cfmm
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
-           (Ligo.nat_from_literal "0n")
+           lqt_zero
            (Ligo.timestamp_from_seconds_literal 1)
       )
 
@@ -731,7 +732,7 @@ let test_remove_liquidity_failures =
       cfmm_make_for_test
         ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "1000_000_000n"))
         ~kit:(kit_of_mukit (Ligo.nat_from_literal "5000_000_000n"))
-        ~lqt:(Ligo.nat_from_literal "1000n")
+        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1000n"))
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
     let (liq, _kit, cfmm) =
@@ -739,14 +740,14 @@ let test_remove_liquidity_failures =
         { cfmm with ctez = ctez_add cfmm.ctez (ctez_of_muctez (Ligo.nat_from_literal "10_000_000n")) }
         (ctez_of_muctez (Ligo.nat_from_literal "101_000_000n"))
         (kit_of_mukit (Ligo.nat_from_literal "500_000_000n"))
-        (Ligo.nat_from_literal "1n")
+        (lqt_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_raises
       (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
       (fun () ->
          cfmm_remove_liquidity
            cfmm
-           (Ligo.nat_from_literal "0n")
+           lqt_zero
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            (Ligo.timestamp_from_seconds_literal 100)

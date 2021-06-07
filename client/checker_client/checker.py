@@ -46,7 +46,7 @@ def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], tok
 
     # insert the required metadata
     metadata["kit"]["decimals"] = token_info["kit_decimal_digits"]
-    metadata["liquidity"]["decimals"] = 0
+    metadata["liquidity"]["decimals"] = token_info["lqt_decimal_digits"]
 
     # convert the attributes to bytes
     for attrs in metadata.values():
@@ -66,7 +66,7 @@ def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], tok
     # create the TokenMetadata objects
     tokens = [
         TokenMetadata(token_info["kit_token_id"], metadata["kit"]),
-        TokenMetadata(token_info["liquidity_token_id"], metadata["liquidity"]),
+        TokenMetadata(token_info["lqt_token_id"], metadata["liquidity"]),
     ]
 
     # compile and return the view

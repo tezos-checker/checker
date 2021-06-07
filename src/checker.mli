@@ -1,11 +1,11 @@
 open Ctez
 open Kit
+open Lqt
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa12Interface
 open Fa2Interface
-open CfmmTypes
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -184,7 +184,7 @@ val entrypoint_sell_kit : checker * (kit * ctez * Ligo.timestamp) -> LigoOp.oper
     - The minimum number of liquidity tokens expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_add_liquidity : checker * (ctez * kit * Ligo.nat * Ligo.timestamp) -> LigoOp.operation list * checker
+val entrypoint_add_liquidity : checker * (ctez * kit * lqt * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Sell some liquidity (liquidity tokens) to the cfmm contract in
     exchange for the corresponding ctez and kit of the right ratio.
@@ -195,7 +195,7 @@ val entrypoint_add_liquidity : checker * (ctez * kit * Ligo.nat * Ligo.timestamp
     - The minimum amount of kit expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_remove_liquidity : checker * (Ligo.nat * ctez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
+val entrypoint_remove_liquidity : checker * (lqt * ctez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                      {1 LIQUIDATION AUCTIONS}                            *)
@@ -253,9 +253,9 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 val view_buy_kit_min_kit_expected : (ctez * checker) -> kit
 val view_sell_kit_min_ctez_expected : (kit * checker) -> ctez
 val view_add_liquidity_max_kit_deposited : (ctez * checker) -> kit
-val view_add_liquidity_min_lqt_minted : (ctez * checker) -> liquidity
-val view_remove_liquidity_min_ctez_withdrawn : (liquidity * checker) -> ctez
-val view_remove_liquidity_min_kit_withdrawn : (liquidity * checker) -> kit
+val view_add_liquidity_min_lqt_minted : (ctez * checker) -> lqt
+val view_remove_liquidity_min_ctez_withdrawn : (lqt * checker) -> ctez
+val view_remove_liquidity_min_kit_withdrawn : (lqt * checker) -> kit
 
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool

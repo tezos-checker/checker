@@ -1,6 +1,7 @@
 open Ratio
 open Ctez
 open Kit
+open Lqt
 open Avl
 open Parameters
 open Cfmm
@@ -24,7 +25,7 @@ let assert_checker_invariants (state: checker) : unit =
   assert_liquidation_auction_invariants state.liquidation_auctions;
   (* Check that the total kit tracked on the fa2 ledger is consistent with
    * (i.e., equal to) the circulating kit as stored in the state parameters. *)
-  assert (fa2_get_total_kit_balance state.fa2_state = kit_to_mukit_nat state.parameters.circulating_kit);
+  assert (fa2_get_total_kit_balance state.fa2_state = state.parameters.circulating_kit);
   (* Check that the total kit that checker owns (plus one - because of the
    * phantom kit token in the cfmm) is at least as much as the total kit in the
    * cfmm. Of course there can be more, e.g., from pending bids, or because of
@@ -33,7 +34,7 @@ let assert_checker_invariants (state: checker) : unit =
   (* Check that the total number of liquidity tokens tracked on the fa2 ledger
    * is consistent with (i.e., 1 token less than - because of the phantom lqt
    * token in the cfmm) the total number of liquidity tokens in the cfmm. *)
-  assert (Ligo.add_nat_nat (fa2_get_total_lqt_balance state.fa2_state) (Ligo.nat_from_literal "1n") = state.cfmm.lqt);
+  assert (lqt_add (fa2_get_total_lqt_balance state.fa2_state) (lqt_of_denomination (Ligo.nat_from_literal "1n")) = state.cfmm.lqt);
   (* Per-burrow assertions *)
   List.iter
     (fun (burrow_address, burrow) ->
@@ -539,7 +540,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
 
   ([op], state)
 
-let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let ctez_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
   let _ = ensure_no_tez_given () in
@@ -562,11 +563,11 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
     let state_fa2_state = state.fa2_state in
     let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.sender, deposited_kit) in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, deposited_kit) in
-    let state_fa2_state = ledger_issue_liquidity (state_fa2_state, !Ligo.Tezos.sender, lqt_tokens) in (* create *)
+    let state_fa2_state = ledger_issue_lqt (state_fa2_state, !Ligo.Tezos.sender, lqt_tokens) in (* create *)
     state_fa2_state in
 
   assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
-  assert (Ligo.add_nat_nat (fa2_get_total_lqt_balance state.fa2_state) lqt_tokens = fa2_get_total_lqt_balance state_fa2_state);
+  assert (lqt_add (fa2_get_total_lqt_balance state.fa2_state) lqt_tokens = fa2_get_total_lqt_balance state_fa2_state);
 
   let state =
     { state with
@@ -578,7 +579,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * Ligo.nat * Ligo.
 
   ([op], state)
 
-let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline = p in
   let _ = ensure_no_tez_given () in
@@ -597,13 +598,13 @@ let entrypoint_remove_liquidity (state, p: checker * (Ligo.nat * ctez * kit * Li
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
-    let state_fa2_state = ledger_withdraw_liquidity (state_fa2_state, !Ligo.Tezos.sender, lqt_burned) in (* destroy *)
+    let state_fa2_state = ledger_withdraw_lqt (state_fa2_state, !Ligo.Tezos.sender, lqt_burned) in (* destroy *)
     let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_tokens) in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, kit_tokens) in
     state_fa2_state in
 
   assert (fa2_get_total_kit_balance state.fa2_state = fa2_get_total_kit_balance state_fa2_state); (* preservation of kit *)
-  assert (fa2_get_total_lqt_balance state.fa2_state = Ligo.add_nat_nat (fa2_get_total_lqt_balance state_fa2_state) lqt_burned);
+  assert (fa2_get_total_lqt_balance state.fa2_state = lqt_add (fa2_get_total_lqt_balance state_fa2_state) lqt_burned);
 
   let state =
     { state with
@@ -889,17 +890,17 @@ let view_add_liquidity_max_kit_deposited (ctez, state: ctez * checker) : kit =
   let (_lqt, kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
   kit
 
-let view_add_liquidity_min_lqt_minted (ctez, state: ctez * checker) : liquidity =
+let view_add_liquidity_min_lqt_minted (ctez, state: ctez * checker) : lqt =
   assert_checker_invariants state;
   let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
   lqt
 
-let view_remove_liquidity_min_ctez_withdrawn (lqt, state: liquidity * checker) : ctez =
+let view_remove_liquidity_min_ctez_withdrawn (lqt, state: lqt * checker) : ctez =
   assert_checker_invariants state;
   let (ctez, _kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   ctez
 
-let view_remove_liquidity_min_kit_withdrawn (lqt, state: liquidity * checker) : kit =
+let view_remove_liquidity_min_kit_withdrawn (lqt, state: lqt * checker) : kit =
   assert_checker_invariants state;
   let (_ctez, kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   kit
@@ -928,12 +929,8 @@ let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
   assert_checker_invariants state;
   if token_id = kit_token_id then
     kit_to_mukit_nat state.parameters.circulating_kit
-  else if token_id = liquidity_token_id then
-    begin
-      match Ligo.is_nat (Ligo.sub_nat_nat state.cfmm.lqt (Ligo.nat_from_literal "1n")) with
-      | None -> failwith "impossible"
-      | Some lqt -> lqt
-    end
+  else if token_id = lqt_token_id then
+    lqt_to_denomination_nat (lqt_sub state.cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")))
   else
     failwith "FA2_TOKEN_UNDEFINED"
 
