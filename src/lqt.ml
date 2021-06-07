@@ -2,9 +2,9 @@ open Common
 
 type lqt = Ligo.nat
 
-let[@inline] lqt_decimal_digits = Ligo.nat_from_literal "0n"
-let[@inline] lqt_scaling_factor_int = Ligo.int_from_literal "1"
-let[@inline] lqt_scaling_factor_nat = Ligo.nat_from_literal "1n"
+let[@inline] lqt_decimal_digits = Ligo.nat_from_literal "6n"
+let[@inline] lqt_scaling_factor_int = Ligo.int_from_literal "1_000_000"
+let[@inline] lqt_scaling_factor_nat = Ligo.nat_from_literal "1_000_000n"
 
 (* Basic arithmetic operations. *)
 let[@inline] lqt_add (x: lqt) (y: lqt) = Ligo.add_nat_nat x y

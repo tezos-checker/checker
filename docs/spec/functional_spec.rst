@@ -211,7 +211,7 @@ liquidity tokens.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The amount of kit to supply as liquidity, in mukit                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought            |
+| min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought, in mulqt  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -228,7 +228,7 @@ ratio.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| amount        | nat                   | The number of liquidity tokens to redeem                                |
+| amount        | nat                   | The number of liquidity tokens to redeem, in mulqt                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | ctez          | nat                   | The minimum amount of ctez expected, in muctez                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -368,7 +368,7 @@ Estimate yield when adding liquidity
 
 ``add_liquidity_min_lqt_minted : nat -> nat``
 
-Get the maximum amount of the liquidity token that can be expected for the given amount of ctez, based on the current market price
+Get the maximum amount of the liquidity token (in ``mulqt``) that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -386,7 +386,7 @@ Get the maximum amount of ctez (in ``muctez``) that can be expected for the give
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| liquidity     | nat                   | The amount of liquidity token                                           |
+| liquidity     | nat                   | The amount of liquidity token, in mulqt                                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate kit yield when removing liquidity
@@ -399,7 +399,7 @@ Get the maximum amount of kit (in ``mukit``) that can be expected for the given 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| liquidity     | nat                   | The amount of liquidity token                                           |
+| liquidity     | nat                   | The amount of liquidity token, in mulqt                                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 

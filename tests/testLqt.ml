@@ -34,7 +34,7 @@ let suite =
        (* show *)
        assert_equal
          ~printer:(fun x -> x)
-         "50309951lqt"
+         "50.309951lqt"
          (show_lqt (lqt_of_denomination (Ligo.nat_from_literal "50_309_951n")));
     )
   ]
