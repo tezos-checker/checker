@@ -5,8 +5,7 @@ open Common
 open Constants
 
 type parameters =
-  { (* TODO: Perhaps maintain 1/q instead of q? TBD *)
-    q : fixedpoint; (* 1/kit, really *)
+  { q : fixedpoint; (* 1/kit, really *)
     index: Ligo.tez;
     protected_index: Ligo.tez;
     target: fixedpoint;

@@ -19,6 +19,7 @@ inputs=(
   fixedPoint
   ctez
   kit
+  lqt
   cfmmTypes
   fa2Interface
   liquidationAuctionPrimitiveTypes

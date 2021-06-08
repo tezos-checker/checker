@@ -17,7 +17,7 @@ from pytezos.client import PyTezosClient
 
 # Time between blocks for sandbox container
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
-SANDBOX_TIME_BETWEEN_BLOCKS = 5
+SANDBOX_TIME_BETWEEN_BLOCKS = 2
 # Number of retries to use when awaiting new blocks
 WAIT_BLOCK_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks
@@ -46,7 +46,7 @@ def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], tok
 
     # insert the required metadata
     metadata["kit"]["decimals"] = token_info["kit_decimal_digits"]
-    metadata["liquidity"]["decimals"] = 0
+    metadata["liquidity"]["decimals"] = token_info["lqt_decimal_digits"]
 
     # convert the attributes to bytes
     for attrs in metadata.values():
@@ -66,7 +66,7 @@ def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], tok
     # create the TokenMetadata objects
     tokens = [
         TokenMetadata(token_info["kit_token_id"], metadata["kit"]),
-        TokenMetadata(token_info["liquidity_token_id"], metadata["liquidity"]),
+        TokenMetadata(token_info["lqt_token_id"], metadata["liquidity"]),
     ]
 
     # compile and return the view
@@ -391,7 +391,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[
         fa12_ctez_storage = {
             "tokens": {"tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU": 1},
             "allowances": {},
-            "admin": tz.key.public_key_hash(),
+            "admin": ctez.context.address,
             "total_supply": 1,
         }
         fa12_ctez = deploy_contract(

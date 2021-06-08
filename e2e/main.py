@@ -1,12 +1,12 @@
-import logging
+import json
 import os
-import time
+from collections import OrderedDict
 import unittest
+from datetime import datetime
 
-import docker
 import portpicker
-import pytezos
-import requests
+from pytezos.contract.interface import ContractInterface
+from pytezos.operation import MAX_OPERATIONS_TTL
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 
@@ -15,52 +15,46 @@ from checker_client.checker import *
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
-        self.docker_client = docker.from_env()
-
         port = portpicker.pick_unused_port()
-        self.docker_container = self.docker_client.containers.run(
-            "tqtezos/flextesa:20210514",
-            command=["flobox", "start"],
-            environment={"block_time": 1},
-            ports={"20000/tcp": port},
-            name="checker-e2e-container-{}".format(port),
-            detach=True,
-            remove=True,
+        client, docker_client, docker_container = start_sandbox(
+            "checker-e2e-container-{}".format(port), port
         )
-
-        self.client = pytezos.pytezos.using(
-            shell="http://127.0.0.1:{}".format(port),
-            key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
-        )
-        self.client.loglevel = logging.ERROR
-
-        # wait some time for the node to start
-        while True:
-            try:
-                self.client.shell.node.get("/version/")
-                break
-            except requests.exceptions.ConnectionError:
-                time.sleep(0.1)
-        # wait until a block is mined
-        time.sleep(3)
+        self.docker_client = docker_client
+        self.docker_container = docker_container
+        self.client = client
 
     def tearDown(self):
         self.docker_container.kill()
+        self.docker_client.close()
+
+
+def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
+    # TODO: There might be a way to get this from contract metadata
+    kit_token_id = 0
+    kit_balance = checker.metadata.getBalance((address, kit_token_id)).storage_view()
+    assert expected_kit == kit_balance
 
 
 class E2ETest(SandboxedTestCase):
     def test_e2e(self):
+        gas_costs = {}
+        account = self.client.key.public_key_hash()
+        # ===============================================================================
+        # Deploy contracts
+        # ===============================================================================
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
             self.client,
             source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
             initial_storage=(self.client.key.public_key_hash(), 1000000),
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
             ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying Checker.")
@@ -69,26 +63,105 @@ class E2ETest(SandboxedTestCase):
             checker_dir=os.path.join(PROJECT_ROOT, "generated/michelson"),
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
+            num_blocks_wait=100,
+            ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deployment finished.")
+        gas_costs = {}
 
-        (
-            checker.create_burrow((1, None))
-            .with_amount(10_000_000)
-            .as_transaction()
-            .autofill(branch_offset=1)
-            .sign()
-            .inject(min_confirmations=1, time_between_blocks=3)
-        )
+        def call_endpoint(contract, name, param, amount=0):
+            ret = (
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign()
+                .inject(
+                    min_confirmations=1,
+                    num_blocks_wait=100,
+                    max_iterations=WAIT_BLOCK_ATTEMPTS,
+                    delay_sec=WAIT_BLOCK_DELAY,
+                )
+            )
+            return ret
 
-        (
-            checker.mint_kit((1, 1_000_000))
-            .as_transaction()
-            .autofill(branch_offset=1)
-            .sign()
-            .inject(min_confirmations=1, time_between_blocks=3)
+        def call_checker_endpoint(name, param, amount=0):
+            print("Calling", name, "with", param)
+            ret = call_endpoint(checker, name, param, amount)
+            gas_costs[name] = ret["contents"][0]["gas_limit"]
+            return ret
+
+        # ===============================================================================
+        # Burrows
+        # ===============================================================================
+        # Create a burrow
+        call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
+        assert_kit_balance(checker, account, 0)
+
+        # Get some kit
+        call_checker_endpoint("mint_kit", (1, 1_000_000))
+        assert_kit_balance(checker, account, 1_000_000)
+
+        # Deposit tez
+        call_checker_endpoint("deposit_tez", 1, amount=2_000_000)
+
+        # Withdraw tez
+        call_checker_endpoint("withdraw_tez", (2_000_000, 1))
+
+        # Set delegate
+        call_checker_endpoint("set_burrow_delegate", (1, account))
+
+        # Deactivate a burrow
+        call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
+        call_checker_endpoint("deactivate_burrow", (2, account))
+
+        # Touch checker
+        call_checker_endpoint("touch", None)
+
+        # Touch burrow
+        call_checker_endpoint("touch_burrow", (account, 1))
+
+        # ===============================================================================
+        # CFMM
+        # ===============================================================================
+        # Get some ctez
+        call_endpoint(
+            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
         )
+        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+        # Approve checker to spend the ctez
+        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
+
+        call_checker_endpoint(
+            "add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20)
+        )
+        # Note: not adding FA2 balance assertions here since the amount of kit depends on the price
+        # and adding an assertion might make the test flaky
+        call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
+        call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
+
+        call_checker_endpoint(
+            "remove_liquidity", (5, 1, 1, int(datetime.now().timestamp()) + 20)
+        )
+        # ===============================================================================
+        # Liquidation Auctions
+        # ===============================================================================
+        # TODO: Trigger liquidation auction and call endpoints:
+        # * mark_for_liquidation
+        # * cancel_liquidation_slice
+        # * liquidation_auction_claim_win
+        # * liquidation_auction_place_bid
+        # * touch_liquidation_slices
+        # ===============================================================================
+
+        print("Gas costs:")
+        gas_costs_sorted = OrderedDict()
+        for k, v in sorted(
+            gas_costs.items(), key=lambda tup: int(tup[1]), reverse=True
+        ):
+            gas_costs_sorted[k] = v
+        print(json.dumps(gas_costs_sorted, indent=4))
 
 
 if __name__ == "__main__":

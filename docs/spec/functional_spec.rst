@@ -167,7 +167,7 @@ desired amount of kit cannot be bought or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | An amount of ctez to be sold for kit                                    |
+| ctez          | nat                   | An amount of ctez to be sold for kit, in muctez                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected to be bought, in mukit               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -188,7 +188,7 @@ cannot be bought or if the deadline has passed.
 +===============+=======================+=========================================================================+
 | kit           | nat                   | The amount of kit to be sold, in mukit                                  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected to be bought                        |
+| ctez          | nat                   | The minimum amount of ctez expected to be bought, in muctez             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -198,8 +198,8 @@ Provide liquidity
 
 Deposit some ctez and kit for liquidity in exchange for receiving
 liquidity tokens. If the given amounts do not have the right ratio,
-the CFMM contract keeps as much of the given ctez and kit as possible
-with the right ratio, and returns the leftovers, along with the
+the CFMM contract keeps all the ctez given and as much of the given kit as
+possible with the right ratio, and returns the leftovers, along with the
 liquidity tokens.
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``
@@ -207,11 +207,11 @@ liquidity tokens.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to supply as liquidity                               |
+| ctez          | nat                   | The amount of ctez to supply as liquidity, in muctez                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The amount of kit to supply as liquidity, in mukit                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought            |
+| min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought, in mulqt  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -228,9 +228,9 @@ ratio.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| amount        | nat                   | The number of liquidity tokens to redeem                                |
+| amount        | nat                   | The number of liquidity tokens to redeem, in mulqt                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected                                     |
+| ctez          | nat                   | The minimum amount of ctez expected, in muctez                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected, in mukit                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -305,6 +305,141 @@ Update operators
                                 (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
 
 
+FA2 Views
+=========
+
+Checker exposes a number of FA2 views in its contract
+metadata. Standard token views are provided, as are a number of custom
+views provided for integration convenience, e.g. for use by front-end
+applications.
+
+Standard FA2 views
+------------------
+
+The following standard FA2 views are supported:
+
+* ``get_balance``
+* ``total_supply``
+* ``all_tokens``
+* ``is_operator``
+
+
+Estimate yield when buying kit with ctez
+----------------------------------------
+
+``buy_kit_min_kit_expected : nat -> nat``
+
+Get the maximum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate yield when selling kit for ctez
+----------------------------------------
+
+``sell_kit_min_ctez_expected : nat -> nat``
+
+Get the maximum amount (in ``muctez``) that can be expected for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| kit           | nat                   | The amount of kit, in mukit                                             |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate kit requirements when adding liquidity
+-----------------------------------------------
+
+``add_liquidity_max_kit_deposited : nat -> nat``
+
+Get the minimum amount (in ``mukit``) that needs to be deposited when adding liquidity for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate yield when adding liquidity
+------------------------------------
+
+``add_liquidity_min_lqt_minted : nat -> nat``
+
+Get the maximum amount of the liquidity token (in ``mulqt``) that can be expected for the given amount of ctez, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| ctez          | nat                   | The amount of ctez, in muctez                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate ctez yield when removing liquidity
+-------------------------------------------
+
+``remove_liquidity_min_ctez_withdrawn : nat -> nat``
+
+Get the maximum amount of ctez (in ``muctez``) that can be expected for the given amount of liquidity token, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| liquidity     | nat                   | The amount of liquidity token, in mulqt                                 |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Estimate kit yield when removing liquidity
+------------------------------------------
+
+``remove_liquidity_min_kit_withdrawn : nat -> nat``
+
+Get the maximum amount of kit (in ``mukit``) that can be expected for the given amount of liquidity token, based on the current market price
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| liquidity     | nat                   | The amount of liquidity token, in mulqt                                 |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+Find maximum kit that can be minted
+-----------------------------------
+
+``burrow_max_mintable_kit : nat -> nat``
+
+Returns the maximum amount (in ``mukit``) that can be minted from the given burrow.
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Check whether a burrow is overburrowed
+--------------------------------------
+
+``is_burrow_overburrowed : nat -> bool``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Check whether a burrow can be liquidated
+----------------------------------------
+
+``is_burrow_liquidatable : nat -> bool``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow                                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+
 Deployment
 ==========
 
@@ -314,6 +449,13 @@ Deploy a lazy function
 Prior to sealing, the bytecode for each lazy function must be deployed.
 
 ``deployFunction: (pair int bytes)``
+
+Deploy metadata
+---------------
+
+Prior to sealing, the bytecode for all metadata must be deployed.
+
+``deployMetadata: bytes``
 
 Seal the contract and make it ready for use
 -------------------------------------------

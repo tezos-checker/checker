@@ -1,5 +1,6 @@
 open Ctez
 open Kit
+open Lqt
 open Burrow
 open OUnit2
 open TestCommon
@@ -31,17 +32,14 @@ let _ = Checker.assert_checker_invariants empty_checker
 (* Enhance the initial checker state with a populated cfmm in a consistent way. *)
 let empty_checker_with_cfmm (cfmm: CfmmTypes.cfmm) =
   let checker_kit = kit_sub cfmm.kit (kit_of_mukit (Ligo.nat_from_literal "1n")) in
-  let checker_liquidity =
-    match Ligo.is_nat (Ligo.sub_nat_nat cfmm.lqt (Ligo.nat_from_literal "1n")) with
-    | None -> failwith "empty_checker_with_cfmm: cfmm with zero liquidity in it"
-    | Some lqt -> lqt in
+  let checker_liquidity = lqt_sub cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")) in
   let checker =
     { empty_checker with
       parameters = { empty_checker.parameters with circulating_kit = checker_kit };
       cfmm = cfmm;
       fa2_state =
         let fa2_state = initial_fa2_state in
-        let fa2_state = ledger_issue_liquidity (fa2_state, !Ligo.Tezos.self_address, checker_liquidity) in
+        let fa2_state = ledger_issue_lqt (fa2_state, !Ligo.Tezos.self_address, checker_liquidity) in
         let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, checker_kit) in
         fa2_state;
     } in
@@ -614,7 +612,7 @@ let suite =
              { empty_checker.cfmm with
                ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
                kit = kit_of_mukit (Ligo.nat_from_literal "2n");
-               lqt = Ligo.nat_from_literal "1n";
+               lqt = lqt_of_denomination (Ligo.nat_from_literal "1n");
              } in
          { checker with
            parameters =
@@ -653,7 +651,7 @@ let suite =
 
        let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
-       let my_liquidity_tokens = Ligo.nat_from_literal "1n" in
+       let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
        let sender = alice_addr in
 
        (* Populate the cfmm with some liquidity (carefully crafted) *)
@@ -664,11 +662,11 @@ let suite =
              { empty_checker.cfmm with
                ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
                kit = kit_of_mukit (Ligo.nat_from_literal "2n");
-               lqt = Ligo.nat_from_literal "2n";
+               lqt = lqt_of_denomination (Ligo.nat_from_literal "2n");
              };
            fa2_state =
              let fa2_state = initial_fa2_state in
-             let fa2_state = ledger_issue_liquidity (fa2_state, sender, my_liquidity_tokens) in
+             let fa2_state = ledger_issue_lqt (fa2_state, sender, my_liquidity_tokens) in
              let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, kit_of_mukit (Ligo.nat_from_literal "1n")) in
              fa2_state;
          } in
@@ -696,7 +694,7 @@ let suite =
        Ligo.Tezos.reset ();
        let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
-       let my_liquidity_tokens = Ligo.nat_from_literal "1n" in
+       let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
        assert_raises
@@ -704,6 +702,41 @@ let suite =
          (fun () ->
             Checker.entrypoint_remove_liquidity (empty_checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
          )
+    );
+
+    (* ************************************************************************* *)
+    (**                               FA2                                        *)
+    (* ************************************************************************* *)
+    ("strict_entrypoint_transfer (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.strict_entrypoint_transfer (empty_checker, []))
+    );
+
+    ("strict_entrypoint_balance_of (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+
+       let fa2_balance_of_param =
+         { requests = [];
+           callback = Ligo.contract_of_address (Ligo.address_of_string "test address");
+         } in
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.strict_entrypoint_balance_of (empty_checker, fa2_balance_of_param))
+    );
+
+    ("entrypoint_update_operators (FA2) - transaction with value > 0 fails" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+         (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
     );
 
     (* FIXME: There are no tests currently for Checker.Transfer. *)
@@ -728,7 +761,7 @@ let suite =
            ( checker
            , ( ctez_of_muctez (Ligo.nat_from_literal "1_000_000n")
              , kit_one
-             , Ligo.nat_from_literal "1n"
+             , lqt_of_denomination (Ligo.nat_from_literal "1n")
              , Ligo.timestamp_from_seconds_literal 1
              )
            ) in (* barely on time *)

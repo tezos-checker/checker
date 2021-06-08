@@ -1,5 +1,5 @@
 open Kit
-open CfmmTypes
+open Lqt
 
 (*
  * INTERFACE
@@ -55,19 +55,6 @@ type fa2_balance_of_param =
     callback : (fa2_balance_of_response list) Ligo.contract;
   }
 
-type fa2_operator_param =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  {
-    owner : Ligo.address;
-    operator : Ligo.address;
-    token_id: fa2_token_id;
-  }
-
-type fa2_update_operator =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  | Add_operator of fa2_operator_param
-  | Remove_operator of fa2_operator_param
-
 type token_metadata =
   (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   {
@@ -106,6 +93,7 @@ type token_metadata_param =
 *)
 type contract_metadata = (string, Ligo.bytes) Ligo.big_map
 
+(*
 (* FA2 hooks interface *)
 
 type fa2_transfer_destination_descriptor =
@@ -130,7 +118,6 @@ type transfer_descriptor_param =
     operator : Ligo.address;
   }
 
-(*
 Entrypoints for sender/receiver hooks
 
 type fa2_token_receiver =
@@ -152,12 +139,12 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 *)
 
 let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
-let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
+let[@inline] lqt_token_id = Ligo.nat_from_literal "1n"
 
 let ensure_valid_fa2_token (n: fa2_token_id): unit =
-  if n = kit_token_id || n = liquidity_token_id
+  if n = kit_token_id || n = lqt_token_id
   then ()
-  else failwith "FA2_TOKEN_UNDEFINED" (* FIXME: error message *)
+  else failwith "FA2_TOKEN_UNDEFINED"
 
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
@@ -227,40 +214,8 @@ let[@inline] ledger_issue_then_withdraw
   let ledger = set_fa2_ledger_value ledger key balance_ in
   { st with ledger = ledger }
 
-let[@inline] fa2_is_operator (st, owner, operator, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
+let[@inline] fa2_is_operator (st, operator, owner, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
-
-let[@inline] fa2_run_update_operators
-    (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
-  Ligo.List.fold_left
-    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
-       match x with
-       | Add_operator op ->
-         (* The standard does not specify who is permitted to update operators. We restrict
-            it only to the owner. *)
-         if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.add
-                 (op.operator, op.owner, op.token_id)
-                 ()
-                 st.operators;
-           }
-       | Remove_operator op ->
-         if op.owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state) (* FIXME: error message *)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.remove
-                 (op.operator, op.owner, op.token_id)
-                 st.operators;
-           }
-    )
-    st
-    xs
 
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
@@ -269,43 +224,91 @@ let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa
   get_fa2_ledger_value ledger key
 
 let[@inline] fa2_all_tokens : Ligo.nat list =
-  [ kit_token_id; liquidity_token_id ]
+  [ kit_token_id; lqt_token_id ]
 
 let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let blnc = fa2_get_balance (st, req.owner, req.token_id) in
+       let { owner = owner; token_id = token_id; } = req in
+       let blnc = fa2_get_balance (st, owner, token_id) in
        { request=req; balance = blnc; }
     )
+    xs
+
+type fa2_operator_param =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  {
+    owner : Ligo.address;
+    operator : Ligo.address;
+    token_id: fa2_token_id;
+  }
+
+type fa2_update_operator =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  | Add_operator of fa2_operator_param
+  | Remove_operator of fa2_operator_param
+
+let[@inline] fa2_run_update_operators
+    (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
+  Ligo.List.fold_left
+    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
+       match x with
+       | Add_operator op ->
+         let { owner = owner;
+               operator = operator;
+               token_id = token_id;
+             } = op in
+         (* The standard does not specify who is permitted to update operators. We restrict
+            it only to the owner. *)
+         if owner <> !Ligo.Tezos.sender
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
+         else
+           { st  with
+             operators =
+               Ligo.Big_map.add
+                 (operator, owner, token_id)
+                 ()
+                 st.operators;
+           }
+       | Remove_operator op ->
+         let { owner = owner;
+               operator = operator;
+               token_id = token_id;
+             } = op in
+         if owner <> !Ligo.Tezos.sender
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
+         else
+           { st  with
+             operators =
+               Ligo.Big_map.remove
+                 (operator, owner, token_id)
+                 st.operators;
+           }
+    )
+    st
     xs
 
 let[@inline] fa2_run_transfer
     (st, xs: fa2_state * fa2_transfer list) : fa2_state =
   Ligo.List.fold_left
     (fun ((st, tx): fa2_state * fa2_transfer) ->
-       let from_ = tx.from_ in
+       let { from_ = from_; txs = txs; } = tx in
 
-         Ligo.List.fold_left
-           (fun ((st, x): fa2_state * fa2_transfer_destination) ->
-              let token_id = x.token_id in
-
-              if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
-              then (failwith "FA2_NOT_OPERATOR" : fa2_state)
-              else begin
-                let amnt = x.amount in
-                let to_ = x.to_ in
-
-                let () = ensure_valid_fa2_token token_id in
-
-                let st = ledger_withdraw (st, token_id, from_, amnt) in
-                let st = ledger_issue (st, token_id, to_, amnt) in
-
-                st
-              end
-           )
-           st
-           tx.txs
+       Ligo.List.fold_left
+         (fun ((st, x): fa2_state * fa2_transfer_destination) ->
+            let { to_ = to_; token_id = token_id; amount = amnt; } = x in
+            if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
+            then
+              let () = ensure_valid_fa2_token token_id in
+              let st = ledger_withdraw (st, token_id, from_, amnt) in
+              let st = ledger_issue (st, token_id, to_, amnt) in
+              st
+            else
+              (failwith "FA2_NOT_OPERATOR" : fa2_state)
+         )
+         st
+         txs
     )
     st
     xs
@@ -322,13 +325,13 @@ let[@inline] ledger_issue_then_withdraw_kit
     (st, addr, amnt_to_issue, amnt_to_withdraw: fa2_state * Ligo.address * kit * kit) : fa2_state =
   ledger_issue_then_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt_to_issue, kit_to_mukit_nat amnt_to_withdraw)
 
-let[@inline] ledger_issue_liquidity
-    (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_issue (st, liquidity_token_id, addr, amnt)
+let[@inline] ledger_issue_lqt
+    (st, addr, amnt: fa2_state * Ligo.address * lqt) : fa2_state =
+  ledger_issue (st, lqt_token_id, addr, lqt_to_denomination_nat amnt)
 
-let[@inline] ledger_withdraw_liquidity
-    (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_withdraw (st, liquidity_token_id, addr, amnt)
+let[@inline] ledger_withdraw_lqt
+    (st, addr, amnt: fa2_state * Ligo.address * lqt) : fa2_state =
+  ledger_withdraw (st, lqt_token_id, addr, lqt_to_denomination_nat amnt)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
@@ -340,6 +343,6 @@ let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
   |> List.map (fun ((_id, _owner), amnt) -> amnt)
   |> List.fold_left (fun x y -> Ligo.add_nat_nat x y) (Ligo.nat_from_literal "0n")
 
-let fa2_get_total_kit_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st kit_token_id
-let fa2_get_total_lqt_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st liquidity_token_id
+let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_mukit (fa2_get_token_balance st kit_token_id)
+let fa2_get_total_lqt_balance (st: fa2_state) : lqt = lqt_of_denomination (fa2_get_token_balance st lqt_token_id)
 (* END_OCAML *)
