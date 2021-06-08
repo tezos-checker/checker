@@ -42,74 +42,65 @@ let test_compute_drift_derivative_no_acceleration =
   "test_compute_drift_derivative_no_acceleration" >:: fun _ ->
     (* exp( 0 ): 1 *)
     let target = fixedpoint_one in
-    assert_equal
-      ~printer:show_fixedpoint
-      fixedpoint_zero
-      (compute_drift_derivative target);
+    assert_fixedpoint_equal
+      ~expected:fixedpoint_zero
+      ~real:(compute_drift_derivative target);
 
     (* exp( low ): 201/200 = 1.005 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0147AE147AE147AE" in
-    assert_equal
-      ~printer:show_fixedpoint
-      fixedpoint_zero
-      (compute_drift_derivative target);
+    assert_fixedpoint_equal
+      ~expected:fixedpoint_zero
+      ~real:(compute_drift_derivative target);
 
     (* exp(-low ): 199/200 = 0.995 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.FEB851EB851EB852" in
-    assert_equal
-      ~printer:show_fixedpoint
-      fixedpoint_zero
-      (compute_drift_derivative target)
+    assert_fixedpoint_equal
+      ~expected:fixedpoint_zero
+      ~real:(compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_positive_acceleration =
   "test_compute_drift_derivative_low_positive_acceleration" >:: fun _ ->
     (* exp( low ): 201/200 = 1.005 (rounded UP) *)
     let target = fixedpoint_of_hex_string "1.0147AE147AE147AF" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "0.000000000003C547")
-      (compute_drift_derivative target);
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "0.000000000003C547")
+      ~real:(compute_drift_derivative target);
 
     (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCC" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "0.000000000003C547")
-      (compute_drift_derivative target)
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "0.000000000003C547")
+      ~real:(compute_drift_derivative target)
 
 let test_compute_drift_derivative_low_negative_acceleration =
   "test_compute_drift_derivative_low_negative_acceleration" >:: fun _ ->
     (* exp(-low ): 199/200 = 0.995 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "0.FEB851EB851EB851" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "-0.000000000003C547")
-      (compute_drift_derivative target);
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "-0.000000000003C547")
+      ~real:(compute_drift_derivative target);
 
     (* exp(-high): 19/20   = 0.95 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.F333333333333334" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "-0.000000000003C547")
-      (compute_drift_derivative target)
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "-0.000000000003C547")
+      ~real:(compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_positive_acceleration =
   "test_compute_drift_derivative_high_positive_acceleration" >:: fun _ ->
     (* exp( high): 21/20   = 1.05 (rounded UP) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCD" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "0.000000000012DA63")
-      (compute_drift_derivative target)
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "0.000000000012DA63")
+      ~real:(compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_negative_acceleration =
   "test_compute_drift_derivative_high_negative_acceleration" >:: fun _ ->
     (* exp(-high): 19/20   = 0.95 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "0.F333333333333333" in
-    assert_equal
-      ~printer:show_fixedpoint
-      (fixedpoint_of_hex_string "-0.000000000012DA63")
-      (compute_drift_derivative target)
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "-0.000000000012DA63")
+      ~real:(compute_drift_derivative target)
 
 (* ************************************************************************* *)
 (*                     compute_imbalance (unit tests)                        *)
@@ -119,101 +110,81 @@ let test_compute_imbalance_all_zero =
   "test_compute_imbalance_all_zero" >:: fun _ ->
     let outstanding = kit_zero in
     let circulating = kit_zero in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      zero_ratio
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:zero_ratio
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_zero_outstanding =
   "test_compute_imbalance_zero_outstanding" >:: fun _ ->
     let outstanding = kit_zero in
     let circulating = kit_one in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_zero_circulating =
   "test_compute_imbalance_zero_circulating" >:: fun _ ->
     let outstanding = kit_one in
     let circulating = kit_zero in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      zero_ratio
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:zero_ratio
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_001n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_000n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_334n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_333n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
     let outstanding = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    assert_equal
-      ~printer:show_ratio
-      ~cmp:eq_ratio_ratio
-      (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
-      (compute_imbalance outstanding circulating)
+    assert_ratio_equal
+      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~real:(compute_imbalance outstanding circulating)
 
 (* ************************************************************************* *)
 (*                compute_imbalance (property-based tests)                   *)
@@ -338,10 +309,9 @@ let test_protected_index_follows_index =
 
   let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
 
-  assert_equal
-    (compare new_params.index params.index)
-    (compare new_params.protected_index params.protected_index)
-    ~printer:string_of_int;
+  assert_stdlib_int_equal
+    ~expected:(compare new_params.index params.index)
+    ~real:(compare new_params.protected_index params.protected_index);
   true
 
 (* The protected index should not follow the tendency of the given index "too
@@ -365,13 +335,13 @@ let test_protected_index_pace =
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
     Ligo.Tezos.reset();
     let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
-    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "1_030_420mutez") new_params.protected_index;
+    assert_tez_equal ~expected:(Ligo.tez_from_literal "1_030_420mutez") ~real:new_params.protected_index;
     (* One day, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
     Ligo.Tezos.reset();
     let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
-    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "2_053_031mutez") new_params.protected_index;
+    assert_tez_equal ~expected:(Ligo.tez_from_literal "2_053_031mutez") ~real:new_params.protected_index;
 
     (* DOWNWARD MOVES *)
     let very_low_index =
@@ -382,13 +352,13 @@ let test_protected_index_pace =
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
     Ligo.Tezos.reset();
     let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
-    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "970_407mutez") new_params.protected_index;
+    assert_tez_equal ~expected:(Ligo.tez_from_literal "970_407mutez") ~real:new_params.protected_index;
     (* One day, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
     Ligo.Tezos.reset();
     let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
-    assert_equal ~printer:Ligo.string_of_tez (Ligo.tez_from_literal "486_151mutez") new_params.protected_index
+    assert_tez_equal ~expected:(Ligo.tez_from_literal "486_151mutez") ~real:new_params.protected_index
 
 (* ************************************************************************* *)
 (*                                 Prices                                    *)
@@ -440,10 +410,9 @@ let test_minting_index_high_unbounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
-  assert_equal
-    index
-    (tz_minting new_params)
-    ~printer:Ligo.string_of_tez;
+  assert_tez_equal
+    ~expected:index
+    ~real:(tz_minting new_params);
   true
 
 (* The pace of change of the liquidation index is bounded on the high side.
@@ -492,10 +461,9 @@ let test_liquidation_index_low_unbounded =
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
   let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
-  assert_equal
-    index
-    (tz_liquidation new_params)
-    ~printer:Ligo.string_of_tez;
+  assert_tez_equal
+    ~expected:index
+    ~real:(tz_liquidation new_params);
   true
 
 (* ************************************************************************* *)
@@ -524,8 +492,9 @@ let test_touch_1 =
     let new_index = Ligo.tez_from_literal "340_000mutez" in
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
-    assert_equal
-      { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
+    assert_parameters_equal
+      ~expected:{
+        q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
         index = Ligo.tez_from_literal "340_000mutez";
         protected_index = Ligo.tez_from_literal "340_000mutez";
         target = fixedpoint_of_hex_string "1.00D6E1B366FF4BEE"; (* 1.00327883367481013224 *)
@@ -537,12 +506,8 @@ let test_touch_1 =
         circulating_kit = kit_of_mukit (Ligo.nat_from_literal "0_000_000n"); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = !Ligo.Tezos.now;
       }
-      new_parameters
-      ~printer:show_parameters;
-    assert_equal
-      kit_zero (* NOTE: I'd expect this to be higher I think. *)
-      total_accrual_to_cfmm
-      ~printer:show_kit
+      ~real:new_parameters;
+    assert_kit_equal ~expected:kit_zero ~real:total_accrual_to_cfmm (* NOTE: I'd expect this to be higher I think. *)
 
 (* Just a simple unit test, testing nothing specific, really. *)
 let test_touch_2 =
@@ -566,8 +531,9 @@ let test_touch_2 =
     let new_index = Ligo.tez_from_literal "340_000mutez" in
     let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
-    assert_equal
-      { q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5";
+    assert_parameters_equal
+      ~expected:{
+        q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5";
         index = Ligo.tez_from_literal "340000mutez";
         protected_index = Ligo.tez_from_literal "340000mutez";
         target = fixedpoint_of_hex_string "1.00D6E1B366FF4BEE";
@@ -579,12 +545,10 @@ let test_touch_2 =
         circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1_000_001n");
         last_touched = !Ligo.Tezos.now;
       }
-      new_parameters
-      ~printer:show_parameters;
-    assert_equal
-      (kit_of_mukit (Ligo.nat_from_literal "1n"))
-      total_accrual_to_cfmm
-      ~printer:show_kit
+      ~real:new_parameters;
+    assert_kit_equal
+      ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+      ~real:total_accrual_to_cfmm
 
 let suite =
   "Parameters tests" >::: [

@@ -15,9 +15,6 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 module PtrMap = Map.Make(struct type t = ptr let compare = compare_ptr end)
 
-type operation_list = LigoOp.operation list
-[@@deriving show]
-
 let checker_address = !Ligo.Tezos.self_address
 
 let empty_checker =
@@ -65,7 +62,7 @@ let suite =
        let checker1 = empty_checker in
        let ops, checker2 = Checker.touch_with_index checker1 (Ligo.tez_from_literal "0mutez") in
 
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
        assert_equal checker1 checker2; (* NOTE: we really want them to be identical here, hence the '='. *)
        ()
     );
@@ -94,7 +91,7 @@ let suite =
 
        let expected_collateral = Ligo.tez_from_literal "0mutez" in
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
+       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -117,7 +114,7 @@ let suite =
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow ->
-         assert_equal (burrow_collateral burrow) (Ligo.tez_from_literal "0mutez") ~printer:Ligo.string_of_tez
+         assert_tez_equal ~expected:(Ligo.tez_from_literal "0mutez") ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -136,7 +133,7 @@ let suite =
        let _, checker = Checker.entrypoint_deposit_tez (checker, burrow_no) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
+       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -167,7 +164,7 @@ let suite =
        let _, checker = Checker.entrypoint_withdraw_tez (checker, (withdrawal, Ligo.nat_from_literal "0n")) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_equal (burrow_collateral burrow) expected_collateral ~printer:Ligo.string_of_tez
+       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -212,7 +209,7 @@ let suite =
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
-       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+       assert_int_equal ~expected:expected_reward ~real:actual_reward;
     );
 
     ("calculate_touch_reward - expected result for last_touched 3s ago" >::
@@ -227,7 +224,7 @@ let suite =
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
-       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+       assert_int_equal ~expected:expected_reward ~real:actual_reward;
     );
 
     ("calculate_touch_reward - expected result for last_touched 4s ago" >::
@@ -242,7 +239,7 @@ let suite =
 
        let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
 
-       assert_equal expected_reward actual_reward ~printer:Ligo.string_of_int;
+       assert_int_equal ~expected:expected_reward ~real:actual_reward;
 
     );
 
@@ -281,7 +278,7 @@ let suite =
            ) in
 
        (* There should be no operations emitted. *)
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
 
        (* The owner should be able to burn it back. *)
        let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
@@ -307,7 +304,7 @@ let suite =
            ) in
 
        (* There should be no operations emitted. *)
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
 
        (* Have the wrong person try to burn it back; this should fail. *)
        assert_raises
@@ -344,9 +341,9 @@ let suite =
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
-            assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
+            assert_address_equal ~expected:sender ~real:transfer.address_from;
+            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
+            assert_nat_equal ~expected:(ctez_to_muctez_nat ctez_amount) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -381,9 +378,9 @@ let suite =
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
-            assert_equal (ctez_to_muctez_nat ctez_amount) transfer.value ~printer:Ligo.string_of_nat
+            assert_address_equal ~expected:sender ~real:transfer.address_from;
+            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
+            assert_nat_equal ~expected:(ctez_to_muctez_nat ctez_amount) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -432,8 +429,8 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
+            assert_address_equal ~expected:checker_address ~real:transfer.address_from;
+            assert_address_equal ~expected:sender ~real:transfer.address_to;
             transfer.value
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -490,8 +487,8 @@ let suite =
       let bought_muctez = match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal sender transfer.address_to ~printer:Ligo.string_of_address;
+            assert_address_equal ~expected:checker_address ~real:transfer.address_from;
+            assert_address_equal ~expected:sender ~real:transfer.address_to;
             transfer.value
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
@@ -563,9 +560,9 @@ let suite =
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
-            assert_equal sender transfer.address_from ~printer:Ligo.string_of_address;
-            assert_equal checker_address transfer.address_to ~printer:Ligo.string_of_address;
-            assert_equal (Ligo.abs (Common.tez_to_mutez tez_provided)) transfer.value ~printer:Ligo.string_of_nat
+            assert_address_equal ~expected:sender ~real:transfer.address_from;
+            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
+            assert_nat_equal ~expected:(Ligo.abs (Common.tez_to_mutez tez_provided)) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -595,7 +592,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
 
        let kit = get_balance_of checker alice_addr kit_token_id in
-       assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
        ()
     );
 
@@ -628,7 +625,7 @@ let suite =
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
 
-       assert_equal (Ligo.nat_from_literal "1n") muctez ~printer:Ligo.string_of_nat
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:muctez
     );
 
     ("sell_kit - transaction with value > 0 fails" >::
@@ -677,15 +674,15 @@ let suite =
        let ctez = match ops with
          | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
            begin
-             assert_equal checker_address transfer.address_from ~printer:Ligo.string_of_address;
+             assert_address_equal ~expected:checker_address ~real:transfer.address_from;
              transfer.value
            end
          | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
        in
        let kit = get_balance_of checker sender kit_token_id in
 
-       assert_equal (Ligo.nat_from_literal "1n") kit ~printer:Ligo.string_of_nat;
-       assert_equal (Ligo.nat_from_literal "1n") ctez ~printer:Ligo.string_of_nat;
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:ctez;
        ()
     );
 
@@ -769,8 +766,7 @@ let suite =
          let (ops, checker0) = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
          (* created burrow should be deposited (incl. the creation deposit) *)
          let () = match ops with
-           | [ CreateContract (_, _, sent_tez, _) ; ] ->
-             assert_equal tez sent_tez ~printer:Ligo.string_of_tez;
+           | [ CreateContract (_, _, sent_tez, _) ; ] -> assert_tez_equal ~expected:tez ~real:sent_tez
            | _ -> assert_failure ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops) in
 
          let burrow_addr =
@@ -778,14 +774,14 @@ let suite =
              (Option.get (Ligo.Big_map.find_opt (bob_addr, Ligo.nat_from_literal "0n") checker0.burrows)) in
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
          let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, (Ligo.nat_from_literal "0n", alice_addr)) in
-         assert_equal
-           ~printer:show_operation_list
-           [ LigoOp.Tezos.tez_address_transaction
-               (tez, alice_addr)
-               (Ligo.tez_from_literal "0mutez")
-               (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
-           ]
-           ops;
+         assert_operation_list_equal
+           ~expected:[
+               LigoOp.Tezos.tez_address_transaction
+                 (tez, alice_addr)
+                 (Ligo.tez_from_literal "0mutez")
+                 (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
+             ]
+           ~real:ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
          let _ops, checker2 = Checker.entrypoint_activate_burrow (checker1, Ligo.nat_from_literal "0n") in
@@ -806,7 +802,7 @@ let suite =
            ) in
 
        let kit = get_balance_of checker bob_addr kit_token_id in
-       assert_equal (Ligo.nat_from_literal "4_285_714n") kit ~printer:Ligo.string_of_nat;
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "4_285_714n") ~real:kit;
 
        assert_bool
          "should not be overburrowed right after minting"
@@ -835,7 +831,7 @@ let suite =
        let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_001mutez") in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
 
        assert_bool
          "if the index goes up, then burrows should become overburrowed"
@@ -854,19 +850,17 @@ let suite =
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
 
-       assert_equal
-         ~printer:Ligo.string_of_int
-         (Ligo.int_from_literal "202_000_000") (* wow, high reward, many blocks have passed. *)
-         touch_reward;
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "202_000_000") (* wow, high reward, many blocks have passed. *)
+         ~real:touch_reward;
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
-       assert_equal
-         ~printer:show_operation_list
-         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "1_009_000mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
-         ops;
+       assert_operation_list_equal
+         ~expected:[LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "1_009_000mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         ~real:ops;
 
        let slice =
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices)
@@ -908,10 +902,9 @@ let suite =
        assert_bool "should start an auction"
          (Option.is_some checker.liquidation_auctions.current_auction);
 
-       assert_equal
-         ~printer:Ligo.string_of_int
-         (Ligo.int_from_literal "500_000")
-         touch_reward;
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "500_000")
+         ~real:touch_reward;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -932,12 +925,11 @@ let suite =
          | None -> assert_failure "entrypoint_liquidation_auction_place_bid should have succeeded"
          | Some current_auction -> current_auction.contents in
 
-       assert_equal [] ops ~printer:show_operation_list;
+       assert_operation_list_equal ~expected:[] ~real:ops;
 
-       assert_equal
-         (Ligo.int_from_literal "500_000")
-         touch_reward
-         ~printer:Ligo.string_of_int;
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "500_000")
+         ~real:touch_reward;
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
@@ -950,10 +942,9 @@ let suite =
        assert_bool "auction should be completed"
          (Option.is_none checker.liquidation_auctions.current_auction);
 
-       assert_equal
-         (Ligo.int_from_literal "21_000_000")
-         touch_reward
-         ~printer:Ligo.string_of_int;
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "21_000_000")
+         ~real:touch_reward;
 
        (* Check that all the requests for burrows to send tez come _before_ the
         * request to the oracle to update the index. *)
@@ -976,18 +967,16 @@ let suite =
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
 
        let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
-       assert_equal
-         (Ligo.tez_from_literal "0mutez")
-         (burrow_collateral_at_auction result)
-         ~printer:Ligo.string_of_tez;
+       assert_tez_equal
+         ~expected:(Ligo.tez_from_literal "0mutez")
+         ~real:(burrow_collateral_at_auction result);
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (ops, checker) = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_id) in
 
-       assert_equal
-         [LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_156_451mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
-         ops
-         ~printer:show_operation_list;
+       assert_operation_list_equal
+         ~expected:[LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "3_156_451mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         ~real:ops;
 
        (* This should fail; shouldn't be able to claim the win twice. *)
        assert_raises

@@ -23,13 +23,6 @@ let cfmm_kit_times_ctez (u: cfmm) =
 (* Reveal the current number of liquidity tokens extant. *)
 let cfmm_liquidity_tokens_extant (u: cfmm) = u.lqt
 
-let eq_cfmm (u1: cfmm) (u2: cfmm) : bool =
-  ctez_compare u1.ctez u2.ctez = 0
-  && kit_compare u1.kit u2.kit = 0
-  && lqt_compare u1.lqt u2.lqt = 0
-  && eq_ratio_ratio u1.kit_in_ctez_in_prev_block u2.kit_in_ctez_in_prev_block
-  && Ligo.eq_nat_nat u1.last_level u2.last_level
-
 (* amount > 0xtz *)
 (* max_kit_deposited = CEIL{kit * amount / ctez} *)
 (* min_lqt_minted = FLOOR{lqt * amount / ctez} *)
@@ -230,8 +223,8 @@ let buy_kit_unit_test =
         (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_mukit (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
-    assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
+    assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
+    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
@@ -242,8 +235,8 @@ let buy_kit_unit_test =
         (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_mukit (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
-    assert_equal ~printer:show_kit expected_returned_kit returned_kit;
-    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
+    assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
+    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -410,8 +403,8 @@ let sell_kit_unit_test =
         kit_one
         (ctez_of_muctez (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
-    assert_equal ~printer:show_ctez expected_returned_ctez returned_ctez;
-    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
+    assert_ctez_equal ~expected:expected_returned_ctez ~real:returned_ctez;
+    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
     (* Low expectations and on time (tight): pass *)
     Ligo.Tezos.reset ();
@@ -422,8 +415,8 @@ let sell_kit_unit_test =
         kit_one
         (ctez_of_muctez (Ligo.nat_from_literal "1_663_333n"))
         (Ligo.timestamp_from_seconds_literal 2) in
-    assert_equal ~printer:show_ctez expected_returned_ctez returned_ctez;
-    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm;
+    assert_ctez_equal ~expected:expected_returned_ctez ~real:returned_ctez;
+    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
     (* High expectations but on time (tight): fail *)
     Ligo.Tezos.reset ();
@@ -595,7 +588,7 @@ let add_liquidity_unit_test =
         (Ligo.timestamp_from_seconds_literal 1) in
     assert_lqt_equal ~expected:expected_returned_liquidity ~real:returned_liquidity;
     assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
-    assert_equal ~printer:show_cfmm ~cmp:eq_cfmm expected_updated_cfmm updated_cfmm
+    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm
 
 let test_add_liquidity_failures =
   "add liquidity failure conditions" >:: fun _ ->

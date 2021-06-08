@@ -5,9 +5,49 @@ let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
-let assert_nat_equal ~expected:expected ~real:real = OUnit2.assert_equal ~printer:Ligo.string_of_nat expected real
-let assert_kit_equal ~expected:expected ~real:real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
-let assert_lqt_equal ~expected:expected ~real:real = OUnit2.assert_equal ~printer:Lqt.show_lqt expected real
+let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
+let assert_string_equal ~expected ~real = OUnit2.assert_equal ~printer:(fun x -> x) expected real
+
+let assert_tez_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_tez expected real
+let assert_nat_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_nat expected real
+let assert_int_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_int expected real
+let assert_kit_equal ~expected ~real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
+let assert_lqt_equal ~expected ~real = OUnit2.assert_equal ~printer:Lqt.show_lqt expected real
+let assert_ratio_equal ~expected ~real = OUnit2.assert_equal ~printer:Ratio.show_ratio ~cmp:Ratio.eq_ratio_ratio expected real
+let assert_address_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_address expected real
+let assert_fixedpoint_equal ~expected ~real = OUnit2.assert_equal ~printer:FixedPoint.show_fixedpoint expected real
+let assert_liquidation_result_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_liquidation_result expected real
+let assert_avl_ptr_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_avl_ptr expected real
+let assert_ctez_equal ~expected ~real = OUnit2.assert_equal ~printer:Ctez.show_ctez expected real
+let assert_parameters_equal ~expected ~real = OUnit2.assert_equal ~printer:Parameters.show_parameters expected real (* FIXME: contains a ratio *)
+let assert_liquidation_slice_contents_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_liquidation_slice_contents expected real
+
+type kit_option = Kit.kit option [@@deriving show]
+let assert_kit_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_kit_option expected real
+
+type tez_option = Ligo.tez option [@@deriving show]
+let assert_tez_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_tez_option expected real
+
+type slice_content_list = LiquidationAuctionPrimitiveTypes.liquidation_slice_contents list [@@deriving show]
+let assert_slice_content_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_slice_content_list expected real
+
+type liquidation_slice_list = LiquidationAuctionPrimitiveTypes.liquidation_slice list [@@deriving show]
+let assert_liquidation_slice_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_liquidation_slice_list expected real
+
+type operation_list = LigoOp.operation list [@@deriving show]
+let assert_operation_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_operation_list expected real
+
+type slice_option = LiquidationAuctionPrimitiveTypes.liquidation_slice option [@@deriving show]
+let assert_slice_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_slice_option expected real
+
+let eq_cfmm (u1: CfmmTypes.cfmm) (u2: CfmmTypes.cfmm) : bool =
+  Ctez.ctez_compare u1.ctez u2.ctez = 0
+  && Kit.kit_compare u1.kit u2.kit = 0
+  && Lqt.lqt_compare u1.lqt u2.lqt = 0
+  && Ratio.eq_ratio_ratio u1.kit_in_ctez_in_prev_block u2.kit_in_ctez_in_prev_block
+  && Ligo.eq_nat_nat u1.last_level u2.last_level
+
+let assert_cfmm_equal ~expected ~real = OUnit2.assert_equal ~printer:CfmmTypes.show_cfmm ~cmp:eq_cfmm expected real
 
 let cfmm_make_for_test ~ctez ~kit ~lqt ~kit_in_ctez_in_prev_block ~last_level =
   { CfmmTypes.ctez = ctez;

@@ -55,8 +55,8 @@ let suite =
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            burrow0 in
 
-       assert_equal ~printer:show_kit kit_zero (Burrow.burrow_outstanding_kit burrow);
-       assert_equal ~printer:show_kit kit_zero (Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_burn_kit - burning greater than outstanding_kit returns burrow with expected excess and outstanding kit" >::
@@ -71,8 +71,8 @@ let suite =
            (kit_of_mukit (Ligo.nat_from_literal "2n"))
            burrow0 in
 
-       assert_equal ~printer:show_kit kit_zero (Burrow.burrow_outstanding_kit burrow);
-       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) (Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_burn_kit - burning less than outstanding_kit returns burrow with expected excess and outstanding kit" >::
@@ -87,8 +87,8 @@ let suite =
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            burrow0 in
 
-       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) (Burrow.burrow_outstanding_kit burrow);
-       assert_equal ~printer:show_kit kit_zero (Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_burn_kit - burning zero kit returns burrow with expected excess and outstanding kit" >::
@@ -103,8 +103,8 @@ let suite =
            kit_zero
            burrow0 in
 
-       assert_equal ~printer:show_kit (kit_of_mukit (Ligo.nat_from_literal "1n")) (Burrow.burrow_outstanding_kit burrow);
-       assert_equal ~printer:show_kit kit_zero (Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_burn_kit - does not change burrow address" >::
@@ -116,10 +116,9 @@ let suite =
 
        let burrow = Burrow.burrow_burn_kit Parameters.initial_parameters (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address burrow)
     );
 
     ("burrow_set_delegate - fails for a burrow which needs to be touched" >::
@@ -143,10 +142,9 @@ let suite =
 
        let burrow = Burrow.burrow_set_delegate Parameters.initial_parameters (Some charles_key_hash) burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address burrow)
     );
 
     ("burrow_is_overburrowed - fails for a burrow which needs to be touched" >::
@@ -184,14 +182,12 @@ let suite =
            (Ligo.tez_from_literal "1mutez")
            burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_tez
-         (Ligo.tez_from_literal "101mutez")
-         (Burrow.burrow_collateral burrow);
-       assert_equal
-         ~printer:show_kit
-         kit_zero
-         (Burrow.burrow_excess_kit burrow)
+       assert_tez_equal
+         ~expected:(Ligo.tez_from_literal "101mutez")
+         ~real:(Burrow.burrow_collateral burrow);
+       assert_kit_equal
+         ~expected:kit_zero
+         ~real:(Burrow.burrow_excess_kit burrow)
     );
 
     ("burrow_deposit_tez - does not change burrow address" >::
@@ -203,10 +199,9 @@ let suite =
 
        let burrow = Burrow.burrow_deposit_tez Parameters.initial_parameters (Ligo.tez_from_literal "1mutez") burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_withdraw_tez - fails for a burrow which needs to be touched" >::
@@ -233,10 +228,9 @@ let suite =
            (Ligo.tez_from_literal "1mutez")
            burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_tez
-         (Ligo.tez_from_literal "99mutez")
-         (Burrow.burrow_collateral burrow)
+       assert_tez_equal
+         ~expected:(Ligo.tez_from_literal "99mutez")
+         ~real:(Burrow.burrow_collateral burrow)
     );
 
     ("burrow_withdraw_tez - does not change burrow address" >::
@@ -248,10 +242,9 @@ let suite =
 
        let burrow = Burrow.burrow_withdraw_tez Parameters.initial_parameters (Ligo.tez_from_literal "1mutez") burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_mint_kit - burrow after successful minting has expected collateral" >::
@@ -266,10 +259,9 @@ let suite =
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            burrow0 in
 
-       assert_equal
-         ~printer:show_kit
-         (kit_of_mukit (Ligo.nat_from_literal "2n"))
-         (Burrow.burrow_outstanding_kit burrow)
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2n"))
+         ~real:(Burrow.burrow_outstanding_kit burrow)
     );
 
     ("burrow_mint_kit - fails for a burrow which needs to be touched" >::
@@ -293,10 +285,9 @@ let suite =
 
        let burrow = Burrow.burrow_mint_kit Parameters.initial_parameters (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_mint_kit - minting burrow_max_mintable_kit succeeds" >::
@@ -309,10 +300,9 @@ let suite =
        let burrow_max_mintable_kit = Burrow.burrow_max_mintable_kit Parameters.initial_parameters burrow0 in
        let burrow = Burrow.burrow_mint_kit Parameters.initial_parameters burrow_max_mintable_kit burrow0 in
 
-       assert_equal
-         ~printer:show_kit
-         burrow_max_mintable_kit
-         (Burrow.burrow_outstanding_kit burrow)
+       assert_kit_equal
+         ~expected:burrow_max_mintable_kit
+         ~real:(Burrow.burrow_outstanding_kit burrow)
     );
 
     ("burrow_mint_kit - minting more than burrow_max_mintable_kit fails" >::
@@ -398,10 +388,9 @@ let suite =
 
        let burrow = Burrow.burrow_activate Parameters.initial_parameters Constants.creation_deposit burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_deactivate - fails for a burrow which needs to be touched" >::
@@ -491,10 +480,9 @@ let suite =
 
        let burrow, _ = Burrow.burrow_deactivate Parameters.initial_parameters burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_is_liquidatable - fails for a burrow which needs to be touched" >::
@@ -536,10 +524,9 @@ let suite =
      fun _ ->
        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit None in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         burrow_addr
-         (Burrow.burrow_address burrow)
+       assert_address_equal
+         ~expected:burrow_addr
+         ~real:(Burrow.burrow_address burrow)
 
     );
 
@@ -556,10 +543,9 @@ let suite =
 
        let burrow = Burrow.burrow_touch parameters burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_return_kit_from_auction - does not change burrow address" >::
@@ -582,10 +568,9 @@ let suite =
 
        let burrow = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     ("burrow_return_slice_from_auction - does not change burrow address" >::
@@ -608,10 +593,9 @@ let suite =
 
        let burrow = Burrow.burrow_return_slice_from_auction slice burrow0 in
 
-       assert_equal
-         ~printer:Ligo.string_of_address
-         (Burrow.burrow_address burrow0)
-         (Burrow.burrow_address  burrow)
+       assert_address_equal
+         ~expected:(Burrow.burrow_address burrow0)
+         ~real:(Burrow.burrow_address  burrow)
     );
 
     (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction
@@ -769,10 +753,9 @@ let suite =
           tez_to_deposit
           burrow0 in
 
-      assert_equal
-        ~printer:Ligo.string_of_tez
-        (Ligo.add_tez_tez (Burrow.burrow_collateral burrow0) tez_to_deposit)
-        (Burrow.burrow_collateral burrow);
+      assert_tez_equal
+        ~expected:(Ligo.add_tez_tez (Burrow.burrow_collateral burrow0) tez_to_deposit)
+        ~real:(Burrow.burrow_collateral burrow);
       true
     );
 
@@ -792,14 +775,12 @@ let suite =
           Parameters.initial_parameters
           burrow0 in
 
-      assert_equal
-        ~printer:Ligo.string_of_tez
-        (Ligo.tez_from_literal ("0mutez"))
-        (Burrow.burrow_collateral burrow);
-      assert_equal
-        ~printer:Ligo.string_of_tez
-        (Ligo.add_tez_tez Constants.creation_deposit collateral_balance_tez)
-        returned_tez;
+      assert_tez_equal
+        ~expected:(Ligo.tez_from_literal ("0mutez"))
+        ~real:(Burrow.burrow_collateral burrow);
+      assert_tez_equal
+        ~expected:(Ligo.add_tez_tez Constants.creation_deposit collateral_balance_tez)
+        ~real:returned_tez;
       true
     );
 
@@ -822,10 +803,9 @@ let suite =
       (* Reactivate it with the tez returned from deactivating it *)
       let burrow = Burrow.burrow_activate Parameters.initial_parameters tez deactivated_burrow in
 
-      assert_equal
-        ~printer:Ligo.string_of_tez
-        starting_collateral
-        (Burrow.burrow_collateral burrow);
+      assert_tez_equal
+        ~expected:starting_collateral
+        ~real:(Burrow.burrow_collateral burrow);
       true
     );
 

@@ -5,10 +5,9 @@ open Kit
 open OUnit2
 open Format
 open Ptr
+open TestCommon
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
-type liquidation_slice_list = liquidation_slice list [@@deriving show]
-type slice_option = liquidation_slice option [@@deriving show]
 
 let nTez (i: int) : Ligo.tez = Ligo.tez_from_literal (string_of_int (1_000_000 * i) ^ "mutez")
 
@@ -134,7 +133,7 @@ let suite =
        let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Left in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
-       assert_equal expected actual ~printer:show_liquidation_slice_list);
+       assert_liquidation_slice_list_equal ~expected:expected ~real:actual);
 
     "test_push_front_singleton" >::
     (fun _ ->
@@ -142,7 +141,7 @@ let suite =
        let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Right in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
-       assert_equal expected actual ~printer:show_liquidation_slice_list);
+       assert_liquidation_slice_list_equal ~expected:expected ~real:actual);
 
     "test_from_list" >::
     (fun _ ->
@@ -154,14 +153,14 @@ let suite =
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
-       assert_equal elements actual ~printer:show_liquidation_slice_list);
+       assert_liquidation_slice_list_equal ~expected:elements ~real:actual);
 
     "test_pop_front_empty" >::
     (fun _ ->
        let (mem, root) = avl_from_list mem_empty None [] in
        let (mem, x) = avl_pop_front mem root in
-       assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal None (Option.map snd x) ~printer:show_slice_option;
+       assert_liquidation_slice_list_equal ~expected:[] ~real:(avl_to_list mem root);
+       assert_slice_option_equal ~expected:None ~real:(Option.map snd x);
     );
 
     "test_pop_front" >::
@@ -169,11 +168,11 @@ let suite =
        let elements = [ mk_liquidation_slice 1; mk_liquidation_slice 2 ] in
        let (mem, root) = avl_from_list mem_empty None elements in
        let (mem, x) = avl_pop_front mem root in
-       assert_equal [ mk_liquidation_slice 2 ] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal (Some (mk_liquidation_slice 1)) (Option.map snd x) ~printer:show_slice_option;
+       assert_liquidation_slice_list_equal ~expected:[mk_liquidation_slice 2] ~real:(avl_to_list mem root);
+       assert_slice_option_equal ~expected:(Some (mk_liquidation_slice 1)) ~real:(Option.map snd x);
        let (mem, x) = avl_pop_front mem root in
-       assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal (Some (mk_liquidation_slice 2)) (Option.map snd x) ~printer:show_slice_option;
+       assert_liquidation_slice_list_equal ~expected:[] ~real:(avl_to_list mem root);
+       assert_slice_option_equal ~expected:(Some (mk_liquidation_slice 2)) ~real:(Option.map snd x);
     );
 
     "test_del_singleton" >::
@@ -182,9 +181,9 @@ let suite =
        let (mem, root) = avl_mk_empty mem_empty None in
        let (mem, elem) = avl_push mem root (mk_liquidation_slice 1) Left in
        let (mem, root_) = avl_del mem elem in
-       assert_equal root root_ ~printer:show_avl_ptr;
-       assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
-       assert_equal 1 (List.length (Mem.mem_bindings mem)) ~printer:string_of_int;
+       assert_avl_ptr_equal ~expected:root ~real:root_;
+       assert_liquidation_slice_list_equal ~expected:[] ~real:(avl_to_list mem root);
+       assert_stdlib_int_equal ~expected:1 ~real:(List.length (Mem.mem_bindings mem));
     );
 
     "test_del" >::
@@ -203,14 +202,14 @@ let suite =
        avl_assert_dangling_pointers mem [root];
 
        let (mem, root_) = avl_del mem elem in
-       assert_equal root root_ ~printer:show_avl_ptr;
+       assert_avl_ptr_equal ~expected:root ~real:root_;
 
        assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
 
        let actual = avl_to_list mem root in
        let expected = fst_elements @ snd_elements in
-       assert_equal expected actual ~printer:show_liquidation_slice_list);
+       assert_liquidation_slice_list_equal ~expected:expected ~real:actual);
 
     "test_empty_from_list_to_list" >::
     (fun _ ->
@@ -218,7 +217,7 @@ let suite =
        let (mem, root) = avl_from_list mem_empty None elements in
        let actual = avl_to_list mem root in
        let expected = [] in
-       assert_equal expected actual ~printer:show_liquidation_slice_list);
+       assert_liquidation_slice_list_equal ~expected:expected ~real:actual);
 
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list TestArbitrary.arb_liquidation_slice)
@@ -229,7 +228,7 @@ let suite =
 
      let actual = avl_to_list mem root in
 
-     assert_equal xs actual ~printer:show_liquidation_slice_list;
+     assert_liquidation_slice_list_equal ~expected:xs ~real:actual;
      true
     );
 
@@ -248,7 +247,7 @@ let suite =
      assert_avl_invariants mem root;
 
      let (mem, root_) = avl_del mem to_del in
-     assert_equal root root_ ~printer:show_avl_ptr;
+     assert_avl_ptr_equal ~expected:root ~real:root_;
      (*
      printf "- %s %s %s ----------\n"
        (show_liquidation_slice_list left_items)
@@ -261,7 +260,7 @@ let suite =
      let actual = avl_to_list mem root in
      let expected = left_items @ right_items in
 
-     assert_equal expected actual ~printer:show_liquidation_slice_list;
+     assert_liquidation_slice_list_equal ~expected:expected ~real:actual;
      true
     );
     (qcheck_to_ounit
@@ -279,7 +278,7 @@ let suite =
 
      let actual = avl_to_list mem left_tree in
      let expected = ls @ rs in
-     assert_equal expected actual ~printer:show_liquidation_slice_list;
+     assert_liquidation_slice_list_equal ~expected:expected ~real:actual;
      true
     );
     (qcheck_to_ounit
@@ -310,9 +309,8 @@ let suite =
 
      let (expected_left, expected_right) = split_list limit xs in
 
-     assert_equal expected_left actual_left ~printer:show_liquidation_slice_list;
-
-     assert_equal expected_right actual_right ~printer:show_liquidation_slice_list;
+     assert_liquidation_slice_list_equal ~expected:expected_left  ~real:actual_left;
+     assert_liquidation_slice_list_equal ~expected:expected_right ~real:actual_right;
 
      true
     );
@@ -329,7 +327,7 @@ let suite =
 
      let actual = avl_to_list mem left in
      let expected = xs in
-     assert_equal expected actual ~printer:show_liquidation_slice_list;
+     assert_liquidation_slice_list_equal ~expected:expected ~real:actual;
      true
     );
     "bench_large_ops" >::
@@ -364,7 +362,7 @@ let suite =
            let (mem, root) = avl_from_list mem_empty None xs in
            assert_avl_invariants mem root;
            let actual = avl_to_list mem root in
-           assert_equal xs actual ~printer:show_liquidation_slice_list
+           assert_liquidation_slice_list_equal ~expected:xs ~real:actual
          )
     );
   ]

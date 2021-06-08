@@ -1,6 +1,7 @@
 open OUnit2
 open Ratio
 open FixedPoint
+open TestCommon
 
 let suite =
   "FixedPoint tests" >::: [
@@ -10,25 +11,20 @@ let suite =
        let fp2 = fixedpoint_of_hex_string "3" in
        let fp5 = fixedpoint_of_hex_string "-28" in
        let two = fixedpoint_of_hex_string "2" in
-       assert_equal
-         ~printer:show_fixedpoint
-         (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "8")))
-         (fixedpoint_add fp1 fp2);
-       assert_equal
-         ~printer:show_fixedpoint
-         (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
-         (fixedpoint_sub fp1 fp2);
-       assert_equal
-         ~printer:show_fixedpoint
-         (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "4")))
-         (fixedpoint_pow two (Ligo.nat_from_literal "2n"));
-       assert_equal
-         ~printer:show_fixedpoint
-         (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
-         (fixedpoint_pow two (Ligo.nat_from_literal "1n"));
-       assert_equal
-         ~printer:show_fixedpoint
-         (fixedpoint_one)
-         (fixedpoint_pow fp5 (Ligo.nat_from_literal "0n"));
+       assert_fixedpoint_equal
+         ~expected:(fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "8")))
+         ~real:(fixedpoint_add fp1 fp2);
+       assert_fixedpoint_equal
+         ~expected:(fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
+         ~real:(fixedpoint_sub fp1 fp2);
+       assert_fixedpoint_equal
+         ~expected:(fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "4")))
+         ~real:(fixedpoint_pow two (Ligo.nat_from_literal "2n"));
+       assert_fixedpoint_equal
+         ~expected:(fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
+         ~real:(fixedpoint_pow two (Ligo.nat_from_literal "1n"));
+       assert_fixedpoint_equal
+         ~expected:(fixedpoint_one)
+         ~real:(fixedpoint_pow fp5 (Ligo.nat_from_literal "0n"));
     );
   ]
