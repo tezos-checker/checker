@@ -31,14 +31,7 @@ class SandboxedTestCase(unittest.TestCase):
 def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
     # TODO: There might be a way to get this from contract metadata
     kit_token_id = 0
-    # FIXME: Once https://github.com/baking-bad/pytezos/issues/233 is resolved we can
-    # also use a view for this instead of accessing storage directly.
-    try:
-        kit_balance = checker.storage["deployment_state"]["sealed"]["fa2_state"][
-            "ledger"
-        ][(kit_token_id, address)]()
-    except KeyError:
-        kit_balance = 0
+    kit_balance = checker.metadata.getBalance((address, kit_token_id)).storage_view()
     assert expected_kit == kit_balance
 
 
