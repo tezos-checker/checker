@@ -362,7 +362,7 @@ let suite =
            let (mem, root) = avl_from_list mem_empty None xs in
            assert_avl_invariants mem root;
            let actual = avl_to_list mem root in
-           assert_liquidation_slice_list_equal ~expected:xs ~real:actual
+           assert_equal xs actual
          )
     );
   ]
