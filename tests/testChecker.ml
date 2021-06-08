@@ -857,6 +857,7 @@ let suite =
        assert_equal [] ops ~printer:show_operation_list;
 
        assert_equal
+         ~printer:Ligo.string_of_int
          (Ligo.int_from_literal "202_000_000") (* wow, high reward, many blocks have passed. *)
          touch_reward;
 
@@ -908,6 +909,7 @@ let suite =
          (Option.is_some checker.liquidation_auctions.current_auction);
 
        assert_equal
+         ~printer:Ligo.string_of_int
          (Ligo.int_from_literal "500_000")
          touch_reward;
 

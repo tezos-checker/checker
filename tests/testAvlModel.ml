@@ -20,6 +20,7 @@ type queue_op =
   | Take of Ligo.tez
 [@@deriving show]
 
+type slice_option = liquidation_slice option [@@deriving show]
 type liquidation_slice_list = liquidation_slice list [@@deriving show]
 
 (* ========================================================================= *)
@@ -178,7 +179,7 @@ let apply_op ((impl: Mem.mem * avl_ptr), (model: model)) op =
       | None -> None
       | Some (_, slice) -> Some slice
     in
-    let _ = assert_equal popped_model popped_impl in
+    assert_equal popped_model popped_impl ~printer:show_slice_option;
     (mem, root_ptr), model
 
   | Get p ->
@@ -237,10 +238,10 @@ let suite =
             let applied = apply_op acc op in
             let impl, model = applied in
             let impl_elements, model_elements = get_all_elements impl model in
-            let _ = assert_equal
-                ~msg:"Items in implementation queue did not match items in model queue."
-                ~printer:show_liquidation_slice_list
-                model_elements impl_elements in
+            assert_equal
+              ~msg:"Items in implementation queue did not match items in model queue."
+              ~printer:show_liquidation_slice_list
+              model_elements impl_elements;
             let _ = Avl.assert_avl_invariants (fst impl) (snd impl) in
             applied
         ) acc ops in

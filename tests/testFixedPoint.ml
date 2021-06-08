@@ -2,8 +2,6 @@ open OUnit2
 open Ratio
 open FixedPoint
 
-type fp = fixedpoint[@@deriving show]
-
 let suite =
   "FixedPoint tests" >::: [
     "fixedpoint arithmetic" >::
@@ -13,23 +11,23 @@ let suite =
        let fp5 = fixedpoint_of_hex_string "-28" in
        let two = fixedpoint_of_hex_string "2" in
        assert_equal
-         ~printer:show_fp
+         ~printer:show_fixedpoint
          (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "8")))
          (fixedpoint_add fp1 fp2);
        assert_equal
-         ~printer:show_fp
+         ~printer:show_fixedpoint
          (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
          (fixedpoint_sub fp1 fp2);
        assert_equal
-         ~printer:show_fp
+         ~printer:show_fixedpoint
          (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "4")))
          (fixedpoint_pow two (Ligo.nat_from_literal "2n"));
        assert_equal
-         ~printer:show_fp
+         ~printer:show_fixedpoint
          (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "2")))
          (fixedpoint_pow two (Ligo.nat_from_literal "1n"));
        assert_equal
-         ~printer:show_fp
+         ~printer:show_fixedpoint
          (fixedpoint_one)
          (fixedpoint_pow fp5 (Ligo.nat_from_literal "0n"));
     );

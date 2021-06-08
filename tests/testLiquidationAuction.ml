@@ -14,6 +14,7 @@ let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
 let checker_sender = Ligo.address_from_literal "somebody"
 
+type tez_option = Ligo.tez option [@@deriving show]
 type slice_content_list = liquidation_slice_contents list [@@deriving show]
 
 (* ========================================================================= *)
@@ -207,7 +208,7 @@ let suite =
 
               assert_liquidation_auction_invariants auctions;
               assert_liquidation_auction_invariants auctions_out;
-              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
+              assert_equal popped_contents (List.nth slice_contents_list i_to_pop) ~printer:show_liquidation_slice_contents;
               assert_equal ((List.length expected_slices)) (List.length slices_out) ~printer:string_of_int;
               assert_equal expected_slices slices_out ~printer:show_slice_content_list
           )
@@ -283,7 +284,7 @@ let suite =
 
               assert_liquidation_auction_invariants auctions;
               assert_liquidation_auction_invariants auctions_out;
-              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
+              assert_equal popped_contents (List.nth slice_contents_list i_to_pop) ~printer:show_liquidation_slice_contents;
               assert_equal ((List.length expected_contents)) (List.length slices_out) ~printer:string_of_int;
               assert_equal expected_contents slices_out ~printer:show_slice_content_list
           )
@@ -307,6 +308,7 @@ let suite =
        let auctions = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
        assert_equal
+         ~printer:show_tez_option
          (Some (Ligo.tez_from_literal "2_000_000mutez"))
          (liquidation_auction_current_auction_tez auctions);
        assert_equal
@@ -364,7 +366,7 @@ let suite =
            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
+       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions) ~printer:show_tez_option;
     );
 
     ("test splits up auction lots to fit batch size" >::
@@ -391,7 +393,7 @@ let suite =
            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
+       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions) ~printer:show_tez_option;
     );
 
     ("test bidding" >::

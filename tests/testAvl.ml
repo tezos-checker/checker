@@ -142,7 +142,7 @@ let suite =
        let (mem, _) = avl_push mem root (mk_liquidation_slice 0) Right in
        let actual = avl_to_list mem root in
        let expected = [mk_liquidation_slice 0] in
-       assert_equal expected actual);
+       assert_equal expected actual ~printer:show_liquidation_slice_list);
 
     "test_from_list" >::
     (fun _ ->
@@ -182,9 +182,9 @@ let suite =
        let (mem, root) = avl_mk_empty mem_empty None in
        let (mem, elem) = avl_push mem root (mk_liquidation_slice 1) Left in
        let (mem, root_) = avl_del mem elem in
-       assert_equal root root_;
-       assert_equal [] (avl_to_list mem root);
-       assert_equal 1 (List.length (Mem.mem_bindings mem))
+       assert_equal root root_ ~printer:show_avl_ptr;
+       assert_equal [] (avl_to_list mem root) ~printer:show_liquidation_slice_list;
+       assert_equal 1 (List.length (Mem.mem_bindings mem)) ~printer:string_of_int;
     );
 
     "test_del" >::
@@ -203,7 +203,7 @@ let suite =
        avl_assert_dangling_pointers mem [root];
 
        let (mem, root_) = avl_del mem elem in
-       assert_equal root root_;
+       assert_equal root root_ ~printer:show_avl_ptr;
 
        assert_avl_invariants mem root;
        avl_assert_dangling_pointers mem [root];
@@ -218,7 +218,7 @@ let suite =
        let (mem, root) = avl_from_list mem_empty None elements in
        let actual = avl_to_list mem root in
        let expected = [] in
-       assert_equal expected actual);
+       assert_equal expected actual ~printer:show_liquidation_slice_list);
 
     (qcheck_to_ounit
      @@ QCheck.Test.make ~name:"prop_from_list_to_list" ~count:property_test_count (QCheck.list TestArbitrary.arb_liquidation_slice)
@@ -248,7 +248,7 @@ let suite =
      assert_avl_invariants mem root;
 
      let (mem, root_) = avl_del mem to_del in
-     assert_equal root root_;
+     assert_equal root root_ ~printer:show_avl_ptr;
      (*
      printf "- %s %s %s ----------\n"
        (show_liquidation_slice_list left_items)
@@ -310,15 +310,9 @@ let suite =
 
      let (expected_left, expected_right) = split_list limit xs in
 
-     assert_equal
-       expected_left
-       actual_left
-       ~printer:show_liquidation_slice_list;
+     assert_equal expected_left actual_left ~printer:show_liquidation_slice_list;
 
-     assert_equal
-       expected_right
-       actual_right
-       ~printer:show_liquidation_slice_list;
+     assert_equal expected_right actual_right ~printer:show_liquidation_slice_list;
 
      true
     );
@@ -370,7 +364,7 @@ let suite =
            let (mem, root) = avl_from_list mem_empty None xs in
            assert_avl_invariants mem root;
            let actual = avl_to_list mem root in
-           assert_equal actual xs
+           assert_equal xs actual ~printer:show_liquidation_slice_list
          )
     );
   ]
