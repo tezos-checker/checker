@@ -1,5 +1,5 @@
 open Kit
-open CfmmTypes
+open Lqt
 
 (*
  * INTERFACE
@@ -139,10 +139,10 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 *)
 
 let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
-let[@inline] liquidity_token_id = Ligo.nat_from_literal "1n"
+let[@inline] lqt_token_id = Ligo.nat_from_literal "1n"
 
 let ensure_valid_fa2_token (n: fa2_token_id): unit =
-  if n = kit_token_id || n = liquidity_token_id
+  if n = kit_token_id || n = lqt_token_id
   then ()
   else failwith "FA2_TOKEN_UNDEFINED"
 
@@ -224,7 +224,7 @@ let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa
   get_fa2_ledger_value ledger key
 
 let[@inline] fa2_all_tokens : Ligo.nat list =
-  [ kit_token_id; liquidity_token_id ]
+  [ kit_token_id; lqt_token_id ]
 
 let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
   : fa2_balance_of_response list =
@@ -325,13 +325,13 @@ let[@inline] ledger_issue_then_withdraw_kit
     (st, addr, amnt_to_issue, amnt_to_withdraw: fa2_state * Ligo.address * kit * kit) : fa2_state =
   ledger_issue_then_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt_to_issue, kit_to_mukit_nat amnt_to_withdraw)
 
-let[@inline] ledger_issue_liquidity
-    (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_issue (st, liquidity_token_id, addr, amnt)
+let[@inline] ledger_issue_lqt
+    (st, addr, amnt: fa2_state * Ligo.address * lqt) : fa2_state =
+  ledger_issue (st, lqt_token_id, addr, lqt_to_denomination_nat amnt)
 
-let[@inline] ledger_withdraw_liquidity
-    (st, addr, amnt: fa2_state * Ligo.address * liquidity) : fa2_state =
-  ledger_withdraw (st, liquidity_token_id, addr, amnt)
+let[@inline] ledger_withdraw_lqt
+    (st, addr, amnt: fa2_state * Ligo.address * lqt) : fa2_state =
+  ledger_withdraw (st, lqt_token_id, addr, lqt_to_denomination_nat amnt)
 
 (* BEGIN_OCAML *)
 type fa2_balance_of_response_list = fa2_balance_of_response list
@@ -343,6 +343,6 @@ let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
   |> List.map (fun ((_id, _owner), amnt) -> amnt)
   |> List.fold_left (fun x y -> Ligo.add_nat_nat x y) (Ligo.nat_from_literal "0n")
 
-let fa2_get_total_kit_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st kit_token_id
-let fa2_get_total_lqt_balance (st: fa2_state) : Ligo.nat = fa2_get_token_balance st liquidity_token_id
+let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_mukit (fa2_get_token_balance st kit_token_id)
+let fa2_get_total_lqt_balance (st: fa2_state) : lqt = lqt_of_denomination (fa2_get_token_balance st lqt_token_id)
 (* END_OCAML *)

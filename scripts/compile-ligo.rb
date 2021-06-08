@@ -133,8 +133,9 @@ stdout, stderr, exit_status = Open3.capture3(
   "--init-file", MAIN_FILE, "--michelson-format", "json",
   '''Map.literal
        [ ("kit_token_id", kit_token_id)
-       ; ("liquidity_token_id", liquidity_token_id)
+       ; ("lqt_token_id", lqt_token_id)
        ; ("kit_decimal_digits", kit_decimal_digits)
+       ; ("lqt_decimal_digits", lqt_decimal_digits)
        ]
   '''
 )

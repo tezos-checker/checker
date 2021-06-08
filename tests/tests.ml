@@ -7,6 +7,7 @@ let suite =
     TestFixedPoint.suite;
     TestTez.suite;
     TestKit.suite;
+    TestLqt.suite;
     TestBurrow.suite;
     TestParameters.suite;
     TestCfmm.suite;

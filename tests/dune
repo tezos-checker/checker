@@ -8,6 +8,7 @@
   TestFixedPoint
   TestTez
   TestKit
+  TestLqt
   TestParameters
   TestLiquidation
   TestCfmm
