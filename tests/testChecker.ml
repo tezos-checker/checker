@@ -739,11 +739,6 @@ let suite =
          (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
     );
 
-    (* FIXME: There are no tests currently for Checker.Transfer. *)
-    (* FIXME: There are no tests currently for Checker.Balance_of. *)
-    (* FIXME: There are no tests currently for Checker.Update_operators. *)
-    (* FIXME: We need more tests for cancellations of liquidations. *)
-
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();

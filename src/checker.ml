@@ -355,11 +355,11 @@ let touch_liquidation_slice
 
   let slice, outcome, auctions = liquidation_auctions_pop_completed_slice auctions leaf_ptr in
 
-  (* How much kit should be given to the burrow and how much should be burned. *)
-  (* FIXME: we treat each slice in a lot separately, so Sum(kit_to_repay_i +
-   * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due
-   * to truncation. That could be a problem; the extra kit, no matter how
-   * small, must be dealt with (e.g. be removed from the circulating kit).
+  (* How much kit should be given to the burrow and how much should be burned.
+   * Note that we treat each slice in a lot separately, so Sum(kit_to_repay_i +
+   * kit_to_burn_i)_{1..n} might not add up to outcome.winning_bid.kit, due to
+   * truncation. That could be a problem; the extra kit, no matter how small,
+   * must be dealt with (e.g. be removed from the circulating kit).
    *
    *   kit_corresponding_to_slice =
    *     FLOOR (outcome.winning_bid.kit * (leaf.tez / outcome.sold_tez))
@@ -751,7 +751,7 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
-  assert (state.parameters.last_touched <= !Ligo.Tezos.now); (* FIXME: I think this should be translated to LIGO actually. *)
+  assert (state.parameters.last_touched <= !Ligo.Tezos.now);
   let _ = ensure_no_tez_given () in
   if state_parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)

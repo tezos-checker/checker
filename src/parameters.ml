@@ -215,7 +215,6 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
 *)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
-  (* TODO: ADD MORE ASSERTIONS: STRICTLY POSITIVE LAST PROTECTED INDEX *)
   let last_protected_index = tez_to_mutez last_protected_index in
   fraction_to_tez_floor
     (clamp_int
