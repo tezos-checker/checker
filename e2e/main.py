@@ -94,6 +94,7 @@ class E2ETest(SandboxedTestCase):
             return ret
 
         def call_checker_endpoint(name, param, amount=0):
+            print("Calling", name, "with", param)
             ret = call_endpoint(checker, name, param, amount)
             gas_costs[name] = ret["contents"][0]["gas_limit"]
             return ret
