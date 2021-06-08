@@ -18,15 +18,9 @@ jobs:
     steps:
       - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
-        with:
-          submodules: true
       - uses: cachix/cachix-action@v10
         with:
           name: tezos-checker
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build shell dependencies
-        run: nix-shell --run ':'
       - name: Build and test
-        run: nix-build -A michelson -o ./generated/michelson --arg doCheck true
-      - name: End to end tests
-        run: nix-shell --run 'python e2e/main.py'
+        run: nix-build -A michelson --arg doCheck true
