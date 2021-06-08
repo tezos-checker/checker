@@ -1,5 +1,6 @@
 open Ctez
 open Kit
+open Lqt
 open CfmmTypes
 
 (* The general concept of cfmm is that you have quantity a of an asset A
@@ -57,7 +58,7 @@ val cfmm_sell_kit :
 
 (** Compute the minimum [max_kit_deposited] and the maximum [min_lqt_minted]
     for [cfmm_add_liquidity] to succeed. *)
-val cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity : cfmm -> ctez -> (liquidity * kit * cfmm)
+val cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity : cfmm -> ctez -> (lqt * kit * cfmm)
 
 (** Buy some liquidity from the cfmm contract, by giving it some ctez and
     some kit. If the given amounts does not have the right ratio, we
@@ -78,13 +79,13 @@ val cfmm_add_liquidity :
   cfmm ->
   ctez (* amount *) ->
   kit (* max kit deposited *) ->
-  liquidity (* min lqt minted *) ->
+  lqt (* min lqt minted *) ->
   Ligo.timestamp (* deadline *) ->
-  (liquidity * kit * cfmm)
+  (lqt * kit * cfmm)
 
 (** Compute the maximum [min_ctez_withdrawn] and the minimum
     [min_kit_withdrawn] for [cfmm_remove_liquidity] to succeed. *)
-val cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity : cfmm -> liquidity -> (ctez * kit * cfmm)
+val cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity : cfmm -> lqt -> (ctez * kit * cfmm)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
     succeeds, but might leave the contract without ctez and kit if everybody
@@ -93,7 +94,7 @@ val cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity : cfmm 
 *)
 val cfmm_remove_liquidity :
   cfmm ->
-  liquidity (* lqt burned *) ->
+  lqt (* lqt burned *) ->
   ctez (* min ctez withdrawn *) ->
   kit (* min kit withdrawn *) ->
   Ligo.timestamp (* deadline *) ->

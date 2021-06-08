@@ -25,12 +25,12 @@ puts <<EOF
 open CheckerTypes
 open Checker
 open Kit
+open Lqt
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Ctez
 open Fa2Interface
 open Error
-open CfmmTypes
 
 EOF
 

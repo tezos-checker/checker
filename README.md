@@ -31,9 +31,8 @@ including OCaml packages and appropriate (perhaps even patched) versions of
 Ligo and other necessary tools, so this is the recommended method. For the
 curious, the dependencies are listed in `shell.nix`.
 
-Note also that deploying checker depends on having a
-[ctez](https://github.com/tezos-checker/ctez) instance running, so after
-cloning make sure to fetch all submodules via
+For development, you'll also need the [ctez](https://github.com/tezos-checker/ctez)
+submodule. To fetch all submodules, run:
 ```console
 $ git submodule update --init
 ```
