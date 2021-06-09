@@ -775,11 +775,6 @@ let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : 
   assert_liquidation_auction_invariants auctions;
   auctions
 
-(*
- * - Cancel auction
- *
- * TODO: when liquidation result was "close", what happens after the tez is sold? Might we find that we didn't need to close it after all?
- *)
 
 let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidation_auctions) : leaf_ptr option =
   match auctions.completed_auctions with

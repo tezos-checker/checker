@@ -272,12 +272,6 @@ let entrypoint_set_burrow_delegate (state, (burrow_no, delegate_opt): checker * 
   assert_checker_invariants state;
   ([op], state)
 
-(* TODO: Arthur: one time we might want to trigger garbage collection of
- * slices is during a liquidation. a liquidation creates one slice, so if we
- * clear one pending slice when that happens it won't grow unbounded (yes,
- * there are degenerate cases where the queue starts growing much faster that
- * the auctions are happening and in those instances it could grow unbounded,
- * but roughly speaking in most cases it should average out) *)
 let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
@@ -341,9 +335,9 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   else
     (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-(* NOTE: It prepends the operation to the list of operations given. This means
- * that if we entrypoint_touch a list of liquidation slices, the order of operations is
- * reversed. *)
+(* Note that this function prepends the operation to the list of operations
+ * given. This means that if we entrypoint_touch a list of liquidation slices,
+ * the order of operations is reversed. *)
 let touch_liquidation_slice
     (ops: LigoOp.operation list)
     (auctions: liquidation_auctions)
@@ -711,9 +705,10 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
     )
     (Ligo.mul_int_int den_tlr den_thr)
 
-(* NOTE: The list of operations returned is in reverse order (with respect to
- * the order the input slices were processed in). However, since the operations
- * computed are independent from each other, this needs not be a problem. *)
+(* Note that the list of operations returned is in reverse order (with respect
+ * to the order the input slices were processed in). However, since the
+ * operations computed are independent from each other, this needs not be a
+ * problem. *)
 let rec touch_oldest
     (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * int)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
@@ -734,7 +729,7 @@ let rec touch_oldest
           maximum - 1
         )
 
-(* NOTE: The list of operations returned is in reverse order (with respect to
+(* Note that the list of operations returned is in reverse order (with respect to
  * the order in which the things are expected to happen). However, all inputs
  * to those operations are computed in the correct order, and, with two
  * exceptions (1. setting the delegate, and 2. call/callback to the oract), all
@@ -770,7 +765,8 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
     let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
-    let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in (* NOTE: circulating kit here already inlcludes the accrual to the CFMM. *)
+    let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in
+    (* Note: state_parameters.circulating kit here already inlcludes the accrual to the CFMM. *)
     let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
 
     (* 3: Update auction-related info (e.g. start a new auction). Note that we

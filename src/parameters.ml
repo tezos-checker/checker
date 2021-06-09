@@ -13,10 +13,6 @@ type parameters =
     drift: fixedpoint;
     burrow_fee_index: fixedpoint;
     imbalance_index: fixedpoint;
-    (* TODO: Test that this value does not drift too far from the real value
-     * (the total amount of kit needed to close all burrows). Errors of a few
-     * percents per year are NOT acceptable. Errors of 0.1% or so per year
-     * would be tolerable. *)
     outstanding_kit: kit;
     circulating_kit: kit;
     last_touched: Ligo.timestamp;
@@ -402,7 +398,7 @@ let parameters_touch
   : kit * parameters =
   let
     { q = parameters_q;
-      index = _parameters_index; (* NOTE: unused. Always set to the new one. *)
+      index = _parameters_index; (* unused. Always set to the new one. *)
       protected_index = parameters_protected_index;
       target = parameters_target;
       drift_derivative = parameters_drift_derivative;
