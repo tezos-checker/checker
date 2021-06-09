@@ -4,6 +4,7 @@
 open OUnit2
 open Core_kernel.Deque
 open LiquidationAuctionPrimitiveTypes
+open TestCommon
 
 type queue_op =
   (* Place new element in back *)
@@ -20,7 +21,7 @@ type queue_op =
   | Take of Ligo.tez
 [@@deriving show]
 
-type liquidation_slice_list = liquidation_slice list [@@deriving show]
+type slice_option = liquidation_slice option [@@deriving show]
 
 (* ========================================================================= *)
 (* Random inputs for QCheck *)
@@ -37,7 +38,7 @@ let slice_gen = QCheck.Gen.(
     map (fun (tez, kit) ->
         let contents = {
           (* TODO: Use arbitrary addresses as well? *)
-          burrow=(TestCommon.alice_addr, Ligo.nat_from_literal "0n");
+          burrow=(alice_addr, Ligo.nat_from_literal "0n");
           tez=tez;
           min_kit_for_unwarranted=Some kit;
         } in
@@ -178,7 +179,7 @@ let apply_op ((impl: Mem.mem * avl_ptr), (model: model)) op =
       | None -> None
       | Some (_, slice) -> Some slice
     in
-    let _ = assert_equal popped_model popped_impl in
+    assert_slice_option_equal ~expected:popped_model ~real:popped_impl;
     (mem, root_ptr), model
 
   | Get p ->
@@ -212,7 +213,7 @@ let apply_op ((impl: Mem.mem * avl_ptr), (model: model)) op =
     let new_mem, split_ptr = Avl.avl_take mem root_ptr tez_limit None in
     (* Take slices from front of implementation *)
     let slices_impl = avl_foldl (new_mem, split_ptr) [] (fun acc e -> List.append acc [e]) in
-    let _ = assert_equal slices_model slices_impl ~printer:show_liquidation_slice_list in
+    assert_liquidation_slice_list_equal ~expected:slices_model ~real:slices_impl;
     (new_mem, root_ptr), model
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -237,10 +238,10 @@ let suite =
             let applied = apply_op acc op in
             let impl, model = applied in
             let impl_elements, model_elements = get_all_elements impl model in
-            let _ = assert_equal
-                ~msg:"Items in implementation queue did not match items in model queue."
-                ~printer:show_liquidation_slice_list
-                model_elements impl_elements in
+            (* Items in implementation queue must match items in model queue. *)
+            assert_liquidation_slice_list_equal
+              ~expected:model_elements
+              ~real:impl_elements;
             let _ = Avl.assert_avl_invariants (fst impl) (snd impl) in
             applied
         ) acc ops in

@@ -14,8 +14,6 @@ let checker_address = Ligo.address_from_literal "checker"
 let checker_amount = Ligo.tez_from_literal "0mutez"
 let checker_sender = Ligo.address_from_literal "somebody"
 
-type slice_content_list = liquidation_slice_contents list [@@deriving show]
-
 (* ========================================================================= *)
 (* QCheck arbitrary values *)
 (* ========================================================================= *)
@@ -139,10 +137,10 @@ let suite =
                assert_liquidation_auction_invariants auctions;
                assert_liquidation_auction_invariants auctions_out;
                (* We should have inserted one element into our original list *)
-               assert_equal ((List.length slices_in) + 1) (List.length slices_out) ~printer:string_of_int;
+               assert_stdlib_int_equal ~expected:((List.length slices_in) + 1) ~real:(List.length slices_out);
                (* Removing the new element from the list should produce the input list *)
                (* Note: comparing by content since the pointers will change when inserting *)
-               assert_equal slices_in slices_without_new_one ~printer:show_slice_content_list;
+               assert_slice_content_list_equal ~expected:slices_in ~real:slices_without_new_one;
                auctions_out
             )
             liquidation_auction_empty
@@ -207,9 +205,9 @@ let suite =
 
               assert_liquidation_auction_invariants auctions;
               assert_liquidation_auction_invariants auctions_out;
-              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
-              assert_equal ((List.length expected_slices)) (List.length slices_out) ~printer:string_of_int;
-              assert_equal expected_slices slices_out ~printer:show_slice_content_list
+              assert_liquidation_slice_contents_equal ~expected:popped_contents ~real:(List.nth slice_contents_list i_to_pop);
+              assert_stdlib_int_equal ~expected:((List.length expected_slices)) ~real:(List.length slices_out);
+              assert_slice_content_list_equal ~expected:expected_slices ~real:slices_out;
           )
             (Ligo.Big_map.bindings auctions_out.burrow_slices)
         in
@@ -283,9 +281,9 @@ let suite =
 
               assert_liquidation_auction_invariants auctions;
               assert_liquidation_auction_invariants auctions_out;
-              assert_equal popped_contents (List.nth slice_contents_list i_to_pop);
-              assert_equal ((List.length expected_contents)) (List.length slices_out) ~printer:string_of_int;
-              assert_equal expected_contents slices_out ~printer:show_slice_content_list
+              assert_liquidation_slice_contents_equal ~expected:popped_contents ~real:(List.nth slice_contents_list i_to_pop);
+              assert_stdlib_int_equal ~expected:((List.length expected_contents)) ~real:(List.length slices_out);
+              assert_slice_content_list_equal ~expected:expected_contents ~real:slices_out;
           )
             (Ligo.Big_map.bindings auctions_out.burrow_slices)
         in
@@ -306,38 +304,32 @@ let suite =
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
-       assert_equal
-         (Some (Ligo.tez_from_literal "2_000_000mutez"))
-         (liquidation_auction_current_auction_tez auctions);
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_tez_option_equal
+         ~expected:(Some (Ligo.tez_from_literal "2_000_000mutez"))
+         ~real:(liquidation_auction_current_auction_tez auctions);
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
        (* Price of descending auction should go down... *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "1_999_666n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "1_999_666n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "1_999_333n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "1_999_333n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
        Ligo.Tezos.new_transaction ~seconds_passed:58 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "1_980_098n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "1_980_098n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "1_960_394n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "1_960_394n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
     );
 
     ("test batches up auction lots" >::
@@ -364,7 +356,9 @@ let suite =
            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
+       assert_tez_option_equal
+         ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
+         ~real:(liquidation_auction_current_auction_tez auctions);
     );
 
     ("test splits up auction lots to fit batch size" >::
@@ -391,7 +385,9 @@ let suite =
            } in
        let start_price = one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_equal (Some (Ligo.tez_from_literal "10_000_000_000mutez")) (liquidation_auction_current_auction_tez auctions);
+       assert_tez_option_equal
+         ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
+         ~real:(liquidation_auction_current_auction_tez auctions);
     );
 
     ("test bidding" >::
@@ -419,10 +415,9 @@ let suite =
          (fun () -> liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "1_999_999n"); });
        (* On/Above minimum bid, we get a bid ticket and our bid plus 0.33 cNp becomes the new minimum bid *)
        let (current, _) = liquidation_auction_place_bid current { address = bidder; kit = kit_of_mukit (Ligo.nat_from_literal "2_000_000n"); } in
-       assert_equal
-         (kit_of_mukit (Ligo.nat_from_literal "2_006_599n"))
-         (liquidation_auction_current_auction_minimum_bid current)
-         ~printer:show_kit;
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_006_599n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
        (* Minimum bid does not drop over time *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* Can increase the bid.*)
