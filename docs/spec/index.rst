@@ -13,12 +13,12 @@ Checker - A Robocoin System for Tezos
    introduction
    design
    functional_spec
+   operational
    deploying
+   glossary
 
 
 Indices and tables
 ------------------
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
