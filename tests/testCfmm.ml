@@ -786,10 +786,7 @@ let suite =
     test_sell_kit_preserves_kit;
     test_sell_kit_preserves_ctez;
 
-    (* add_liquidity (first) *)
-    (* TODO: add unit tests and property-based random tests *)
-
-    (* add_liquidity (non-first) *)
+    (* add_liquidity *)
     add_liquidity_unit_test;
     test_add_liquidity_failures;
     test_add_liquidity_might_decrease_price;

@@ -11,7 +11,6 @@ let property_test_count = 100
 let ask_kit_of fa2_state addr = kit_of_mukit (fa2_get_balance (fa2_state, addr, kit_token_id))
 let ask_lqt_of fa2_state addr = lqt_of_denomination (fa2_get_balance (fa2_state, addr, lqt_token_id))
 
-(* FIXME: more sharing is now possible *)
 let mk_kit_tx ~from_ ~to_ ~amount =
   { from_ = from_;
     txs =
@@ -32,13 +31,15 @@ let mk_lqt_tx ~from_ ~to_ ~amount =
       ];
   }
 
-(* FIXME: more sharing is now possible *)
-let add_kit_operator ~owner ~operator =
+let add_operator ~owner ~operator ~token_id =
   Add_operator {
     owner = owner;
     operator = operator;
-    token_id = kit_token_id;
+    token_id = token_id;
   }
+
+let add_kit_operator ~owner ~operator = add_operator ~owner ~operator ~token_id:kit_token_id
+let add_lqt_operator ~owner ~operator = add_operator ~owner ~operator ~token_id:lqt_token_id
 
 let remove_kit_operator ~owner ~operator =
   Remove_operator {
@@ -47,12 +48,6 @@ let remove_kit_operator ~owner ~operator =
     token_id = kit_token_id;
   }
 
-let add_lqt_operator ~owner ~operator =
-  Add_operator {
-    owner = owner;
-    operator = operator;
-    token_id = lqt_token_id;
-  }
 
 let suite =
   "Fa2Interface tests" >::: [
@@ -168,8 +163,6 @@ let suite =
     (* ************************************************************************* *)
     (**                              ledger_*_kit tests                              *)
     (* ************************************************************************* *)
-    (* TODO: ledger_*_kit functions do not perform any permission check. This
-     * we can only check at a higher level, probably with e2e tests. *)
 
     ("ledger_issue_kit/ledger_withdraw_kit issues/withdraws expected kit" >::
      fun _ ->
@@ -264,8 +257,6 @@ let suite =
     (* ************************************************************************* *)
     (**                        ledger_*_liquidity tests                          *)
     (* ************************************************************************* *)
-    (* TODO: ledger_*_liquidity functions do not perform any permission check.
-     * This we can only check at a higher level, probably with e2e tests. *)
 
     ("ledger_issue_lqt/ledger_withdraw_lqt issues/withdraws expected liquidity" >::
      fun _ ->
@@ -563,12 +554,6 @@ let suite =
 
        ()
     );
-
-    (* TODO: test that the order of execution of operations is as expected (need more than on tx for that). *)
-    (* TODO: test all ownership variations. *)
-    (* TODO: ensure all amounts change as expected as well. *)
-    (* TODO: test the rest of the functions in fa2Interface.ml too. *)
-
 
     (* TODO: test fa2_get_balance *)
     (* TODO: test fa2_run_balance_of *)
