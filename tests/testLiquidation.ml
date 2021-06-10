@@ -67,6 +67,12 @@ let arbitrary_burrow (params: parameters) =
     )
     arb_smart_tez_kit
 
+let show_liquidation_situation params burrow =
+  match burrow_request_liquidation params burrow with
+  | None -> print_string "\nUnwarranted"
+  | Some (liquidation_ty, _liquidation_details) ->
+    print_string ("\n" ^ show_liquidation_type liquidation_ty)
+
 (*
 Other properties
 ~~~~~~~~~~~~~~~~
@@ -98,6 +104,7 @@ let liquidatable_implies_overburrowed =
     ~count:property_test_count
     (arbitrary_burrow params)
   @@ fun burrow ->
+  show_liquidation_situation params burrow;
   (* several cases fail the premise but we we have quite some cases
    * succeeding as well, so it should be okay. *)
   QCheck.(
@@ -113,6 +120,7 @@ let optimistically_overburrowed_implies_overburrowed =
     ~count:property_test_count
     (arbitrary_burrow params)
   @@ fun burrow ->
+  show_liquidation_situation params burrow;
   QCheck.(
     burrow_is_optimistically_overburrowed params burrow
     ==> burrow_is_overburrowed params burrow
@@ -249,6 +257,7 @@ let test_general_liquidation_properties =
     ~count:property_test_count
     (arbitrary_burrow params)
   @@ fun burrow ->
+  show_liquidation_situation params burrow;
   match burrow_request_liquidation params burrow with
   (* If a liquidation was deemed Unnecessary then is_liquidatable
    * must be false for the input burrow. *)
@@ -997,17 +1006,18 @@ let test_burrow_request_liquidation_preserves_tez =
     ~name:"burrow_request_liquidation - total tez is preserved"
     ~count:property_test_count
     (arbitrary_burrow initial_parameters)
-  @@ fun burrow0 ->
-  let _ = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
+  @@ fun burrow ->
+  show_liquidation_situation params burrow;
+  let _ = match Burrow.burrow_request_liquidation initial_parameters burrow with
     | None -> ()
     | Some (_, liquidation_details) ->
-      let tez_in = burrow_total_associated_tez burrow0 in
+      let tez_in = burrow_total_associated_tez burrow in
       let tez_out = Ligo.add_tez_tez liquidation_details.liquidation_reward (burrow_total_associated_tez liquidation_details.burrow_state) in
 
       assert (Ligo.eq_tez_tez tez_in tez_out);
       (* Also check that tez_to_auction is exactly reflected in collateral_at_auction *)
       assert (Ligo.eq_tez_tez
-                (Burrow.burrow_collateral_at_auction burrow0)
+                (Burrow.burrow_collateral_at_auction burrow)
                 (Ligo.sub_tez_tez
                    (Burrow.burrow_collateral_at_auction liquidation_details.burrow_state)
                    liquidation_details.tez_to_auction
