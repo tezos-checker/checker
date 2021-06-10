@@ -480,9 +480,9 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
       value = ctez_to_muctez_nat ctez;
     } in
   let op =
-        LigoOp.Tezos.fa12_transfer_transaction
-          transfer (Ligo.tez_from_literal "0mutez")
-          (get_transfer_ctez_entrypoint state.external_contracts) in
+    LigoOp.Tezos.fa12_transfer_transaction
+      transfer (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctez_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -792,10 +792,10 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
       | Some cb -> cb
       | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
     let op =
-       LigoOp.Tezos.nat_contract_transaction
-         cb
-         (Ligo.tez_from_literal "0mutez")
-         (get_oracle_entrypoint state_external_contracts) in
+      LigoOp.Tezos.nat_contract_transaction
+        cb
+        (Ligo.tez_from_literal "0mutez")
+        (get_oracle_entrypoint state_external_contracts) in
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state_liquidation_auctions, state_burrows, kit_to_repay, kit_to_burn =
@@ -943,10 +943,10 @@ let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Lig
   fa2_is_operator (state.fa2_state, operator, owner, token_id)
 
 (* TODO
-This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
+   This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
 
-[1]: https://gitlab.com/tzip/tzip/-/blob/4b3c67/proposals/tzip-12/tzip-12.md#token-metadata-storage-access
+   [1]: https://gitlab.com/tzip/tzip/-/blob/4b3c67/proposals/tzip-12/tzip-12.md#token-metadata-storage-access
 
-let view_token_metadata (_token_id, _state: fa2_token_id * checker) : fa2_token_id * (string, Ligo.bytes) Ligo.map =
-  failwith "FA2_NOT_IMPLEMENTED"
+   let view_token_metadata (_token_id, _state: fa2_token_id * checker) : fa2_token_id * (string, Ligo.bytes) Ligo.map =
+   failwith "FA2_NOT_IMPLEMENTED"
 *)
