@@ -40,8 +40,13 @@ let slice_list_is_empty (l: slice_list) : bool =
   | None -> true
 
 (* Constructs a burrow slice list for the given burrow id using the provided auction state *)
-let slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) : slice_list =
-  match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
+let[@inline] slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) : slice_list =
+  let {burrow_slices=burrow_slices;
+       avl_storage=_;
+       queued_slices=_;
+       current_auction=_;
+       completed_auctions=_;} = auctions in
+  match Ligo.Big_map.find_opt burrow_id burrow_slices with
   | None -> SliceList {slice_list_burrow=burrow_id; slice_list_bounds=(None:slice_list_bounds option)}
   | Some bs ->
     SliceList {
@@ -76,7 +81,7 @@ let[@inline] slice_list_from_queue_head (auctions: liquidation_auctions) : (slic
   | None -> (None : (slice_list_element * slice_list) option)
 
 (* Updates the burrow slices in the provided auction state using the given burrow slice list *)
-let slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) : liquidation_auctions =
+let[@inline] slice_list_to_auction_state (auctions: liquidation_auctions) (l: slice_list) : liquidation_auctions =
   match l with SliceList meta ->
     let burrow_liquidation_slice = match meta.slice_list_bounds with
       | None -> (None: burrow_liquidation_slices option)
@@ -95,7 +100,7 @@ type queue_end = QueueFront | QueueBack
    You must specify an avl root which this new element will reside under along with the
    end of the avl queue which you would like to place the element at.
 *)
-let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) : (liquidation_auctions * slice_list * slice_list_element) =
+let[@inline] slice_list_append (l:slice_list) (auctions:liquidation_auctions) (root:liquidation_auction_id) (queue_end:queue_end) (slice_contents:liquidation_slice_contents) : (liquidation_auctions * slice_list * slice_list_element) =
   let storage = auctions.avl_storage in
   let meta = match l with SliceList m -> m in
   (* FIXME: Perhaps throw specific error code here? *)
@@ -131,7 +136,7 @@ let slice_list_append (l:slice_list) (auctions:liquidation_auctions) (root:liqui
     {auctions with avl_storage=storage;}, SliceList {meta with slice_list_bounds=Some bounds;}, SliceListElement (ptr, slice)
 
 (* Remove the element from the list, returning its contents *)
-let slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e:slice_list_element) : (liquidation_auctions * slice_list * liquidation_auction_id * liquidation_slice_contents) =
+let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e:slice_list_element) : (liquidation_auctions * slice_list * liquidation_auction_id * liquidation_slice_contents) =
   let storage = auctions.avl_storage in
   let meta = match l with SliceList m -> m in
   let ptr, slice = match e with SliceListElement (ptr, slice) -> ptr, slice in
