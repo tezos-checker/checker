@@ -241,17 +241,17 @@ let suite =
         ~count:property_test_count
         (QCheck.pair arb_kit arb_kit)
       @@ fun (kit_1, kit_2) ->
-        let kit_to_issue = kit_max kit_1 kit_2 in
-        let kit_to_withdraw = kit_min kit_1 kit_2 in
-        (* TODO: Check the other two cases: when they are equal and when kit_to_issue < kit_to_withdraw. *)
+      let kit_to_issue = kit_max kit_1 kit_2 in
+      let kit_to_withdraw = kit_min kit_1 kit_2 in
+      (* TODO: Check the other two cases: when they are equal and when kit_to_issue < kit_to_withdraw. *)
 
-        Ligo.Tezos.reset ();
-        let fa2_state_in = initial_fa2_state in
-        let fa2_state_out_1 =
-          ledger_withdraw_kit (ledger_issue_kit (fa2_state_in, leena_addr, kit_to_issue), leena_addr, kit_to_withdraw) in
-        let fa2_state_out_2 =
-          ledger_issue_then_withdraw_kit (fa2_state_in, leena_addr, kit_to_issue, kit_to_withdraw) in
-        (ask_kit_of fa2_state_out_1 leena_addr = ask_kit_of fa2_state_out_2 leena_addr)
+      Ligo.Tezos.reset ();
+      let fa2_state_in = initial_fa2_state in
+      let fa2_state_out_1 =
+        ledger_withdraw_kit (ledger_issue_kit (fa2_state_in, leena_addr, kit_to_issue), leena_addr, kit_to_withdraw) in
+      let fa2_state_out_2 =
+        ledger_issue_then_withdraw_kit (fa2_state_in, leena_addr, kit_to_issue, kit_to_withdraw) in
+      (ask_kit_of fa2_state_out_1 leena_addr = ask_kit_of fa2_state_out_2 leena_addr)
     );
 
     (* ************************************************************************* *)

@@ -149,8 +149,8 @@ let ensure_valid_fa2_token (n: fa2_token_id): unit =
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
     operators : ( Ligo.address (* operator *)
-                * Ligo.address (* owner *)
-                * fa2_token_id
+                  * Ligo.address (* owner *)
+                  * fa2_token_id
                 , unit
                 ) Ligo.big_map;
   }

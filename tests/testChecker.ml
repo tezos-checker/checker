@@ -776,11 +776,11 @@ let suite =
          let (ops, checker1) = Checker.entrypoint_deactivate_burrow (checker0, (Ligo.nat_from_literal "0n", alice_addr)) in
          assert_operation_list_equal
            ~expected:[
-               LigoOp.Tezos.tez_address_transaction
-                 (tez, alice_addr)
-                 (Ligo.tez_from_literal "0mutez")
-                 (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
-             ]
+             LigoOp.Tezos.tez_address_transaction
+               (tez, alice_addr)
+               (Ligo.tez_from_literal "0mutez")
+               (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
+           ]
            ~real:ops;
          (* deactivation/activation = identity (if conditions are met ofc). *)
          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:tez;
@@ -949,11 +949,11 @@ let suite =
        (* Check that all the requests for burrows to send tez come _before_ the
         * request to the oracle to update the index. *)
        begin match ops with
-       | [
+         | [
            Transaction (TezTransactionValue _, _, _);
            Transaction (NatContractTransactionValue _, _, _);
          ] -> ()
-       | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
+         | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
        end;
 
        (* We don't need to touch the slice on this test case since
@@ -1010,9 +1010,9 @@ let suite =
        let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_no, kit_of_mukit (Ligo.nat_from_literal "476_667n"))) in
 
        (* Let some time pass. Over time the burrows with outstanding kit should
-	* become overburrowed, and eventually liquidatable. Note that this
-	* could be because of the index, but also it can happen because of the
-	* fees alone if the index remains the same. *)
+          	* become overburrowed, and eventually liquidatable. Note that this
+          	* could be because of the index, but also it can happen because of the
+          	* fees alone if the index remains the same. *)
        let blocks_passed = 211 in (* NOTE: I am a little surprised/worried about this being again 211... *)
        Ligo.Tezos.new_transaction ~seconds_passed:(60*blocks_passed) ~blocks_passed:blocks_passed ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ops, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_105_283mutez") in (* sup *)
@@ -1020,8 +1020,8 @@ let suite =
 
        (* Ensure that the burrow is liquidatable. *)
        begin match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | None -> assert_failure "bug"
-       | Some burrow -> assert_bool "burrow needs to be liquidatable for the test to be potent." (Burrow.burrow_is_liquidatable checker.parameters burrow);
+         | None -> assert_failure "bug"
+         | Some burrow -> assert_bool "burrow needs to be liquidatable for the test to be potent." (Burrow.burrow_is_liquidatable checker.parameters burrow);
        end;
 
        (* Let's mark the burrow for liquidation now (first pass: leaves it empty but active). *)
