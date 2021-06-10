@@ -41,12 +41,7 @@ let slice_list_is_empty (l: slice_list) : bool =
 
 (* Constructs a burrow slice list for the given burrow id using the provided auction state *)
 let[@inline] slice_list_from_auction_state (auctions: liquidation_auctions) (burrow_id: burrow_id) : slice_list =
-  let {burrow_slices=burrow_slices;
-       avl_storage=_;
-       queued_slices=_;
-       current_auction=_;
-       completed_auctions=_;} = auctions in
-  match Ligo.Big_map.find_opt burrow_id burrow_slices with
+  match Ligo.Big_map.find_opt burrow_id auctions.burrow_slices with
   | None -> SliceList {slice_list_burrow=burrow_id; slice_list_bounds=(None:slice_list_bounds option)}
   | Some bs ->
     SliceList {
