@@ -75,9 +75,9 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
 
           (* emit a touch operation to checker *)
           let touchOp =
-             match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
-             | Some c -> LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "0mutez") c
-             | None -> (failwith "C1" : LigoOp.operation) in
+            match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
+            | Some c -> LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "0mutez") c
+            | None -> (failwith "C1" : LigoOp.operation) in
 
           (* initialize checker state *)
           let checker = initial_checker external_contracts in

@@ -9,6 +9,7 @@ target_dir="$PWD/generated/ligo"
 rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
+# Note: order here does matter since it affects the order of #includes in main.mligo
 inputs=(
   error
   fa12Interface
@@ -31,6 +32,7 @@ inputs=(
   burrow
   checkerTypes
   cfmm
+  sliceList
   liquidationAuction
   checker
   checkerEntrypoints

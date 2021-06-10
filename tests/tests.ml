@@ -17,6 +17,7 @@ let suite =
     TestAvl.suite;
     TestLiquidationAuction.suite;
     TestAvlModel.suite;
+    TestSliceList.suite;
   ]
 
 let () =

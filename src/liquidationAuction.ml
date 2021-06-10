@@ -77,7 +77,7 @@ open Constants
 open Common
 open LiquidationAuctionTypes
 open Error
-
+open SliceList
 
 (* BEGIN_OCAML *)
 
@@ -94,7 +94,7 @@ let fold_burrow_slices
     ?direction:(direction=FromYoungest)
     (f: ('a -> liquidation_slice_contents -> 'a))
     (acc: 'a)
-    (avl_storage: Mem.mem)
+    (avl_storage: mem)
     (burrow_slices: burrow_liquidation_slices) =
 
   let rec walk_slice f acc leaf =
@@ -187,50 +187,11 @@ let liquidation_auction_send_to_auction
      >= max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
-    let old_burrow_slices = Ligo.Big_map.find_opt contents.burrow auctions.burrow_slices in
-
-    let slice = {
-      contents = contents;
-      older = (
-        match old_burrow_slices with
-        | None -> (None : leaf_ptr option)
-        | Some i -> Some i.youngest_slice
-      );
-      younger = (None: leaf_ptr option);
-    } in
-
-    let (new_storage, ret) =
-      avl_push auctions.avl_storage auctions.queued_slices slice Left in
-
-    (* Fixup the previous youngest pointer since the newly added slice
-     * is even younger.
-    *)
-    let new_storage, new_burrow_slices = (
-      match old_burrow_slices with
-      | None -> (new_storage, { oldest_slice = ret; youngest_slice = ret; })
-      | Some old_slices ->
-        ( mem_update
-            new_storage
-            (ptr_of_leaf_ptr old_slices.youngest_slice)
-            (fun (older: node) ->
-               let older = node_leaf older in
-               Leaf { older with value = { older.value with younger = Some ret; }; }
-            )
-        , { old_slices with youngest_slice = ret }
-        )
-    ) in
-
-    let new_state =
-      { auctions with
-        avl_storage = new_storage;
-        burrow_slices =
-          Ligo.Big_map.add
-            contents.burrow
-            new_burrow_slices
-            auctions.burrow_slices;
-      } in
-    assert_liquidation_auction_invariants new_state;
-    (new_state, ret)
+    let burrow_slices = slice_list_from_auction_state auctions contents.burrow in
+    let auctions, burrow_slices, (SliceListElement (ret, _)) = slice_list_append burrow_slices auctions auctions.queued_slices QueueBack contents in
+    let auctions = slice_list_to_auction_state auctions burrow_slices in
+    assert_liquidation_auction_invariants auctions;
+    (auctions, ret)
 
 (** Split a liquidation slice into two. The first of the two slices is the
   * "older" of the two (i.e. it is the one to be included in the auction we are
@@ -288,128 +249,31 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
   let auctions = { auctions with avl_storage = storage } in
 
   let queued_amount = avl_tez storage new_auction in
-  if queued_amount < split_threshold
-  then
-    (* split next thing *)
-    let (storage, next) = avl_pop_front storage queued_slices in
-    match next with
-    | Some (_slice_ptr, slice) ->
-      (* 1: split the contents *)
-      let (part1_contents, part2_contents) =
-        split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) slice.contents in
-
-      (* 2: create and push the two slices to the AVL, but initially without
-       * pointers to their neighbors. Before adding the slices to the AVL we
-       * cannot have this information. *)
-      let part1 = make_standalone_slice part1_contents in
-      let (storage, part1_leaf_ptr) = avl_push storage new_auction part1 Left in
-
-      let part2 = make_standalone_slice part2_contents in
-      let (storage, part2_leaf_ptr) = avl_push storage queued_slices part2 Right in
-
-      (* 3: fixup the pointers within slice 1 (the older of the two) as follows:
-       * - part1.older = slice.older
-       * - part1.younger = part2
-      *)
-      let storage =
-        avl_update_leaf
-          storage
-          part1_leaf_ptr
-          (fun (node: liquidation_slice) ->
-             { node with
-               younger = Some part2_leaf_ptr;
-               older = slice.older;
-             }
-          ) in
-
-      (* 4: fixup the pointers within slice 2 (the younger of the two) as follows:
-       * - part2.older = part1
-       * - part2.younger = slice.younger
-      *)
-      let storage =
-        avl_update_leaf
-          storage
-          part2_leaf_ptr
-          (fun (node: liquidation_slice) ->
-             { node with
-               younger = slice.younger;
-               older = Some part1_leaf_ptr;
-             }
-          ) in
-
-      (* 5: fixup the "younger" pointer within slice.older so that it now
-       * points to part1 instead of slice. Nothing to be done if slice is the
-       * oldest. *)
-      let storage =
-        match slice.older with
-        | None -> storage (* slice was the oldest, nothing to change. *)
-        | Some older_ptr ->
-          avl_update_leaf
-            storage
-            older_ptr
-            (fun (older: liquidation_slice) ->
-               assert (older.younger = Some _slice_ptr);
-               { older with younger = Some part1_leaf_ptr }
-            ) in
-
-      (* 6: fixup the "older" pointer within slice.younger so that it now
-       * points to part2 instead of slice. Nothing to be done if slice is the
-       * youngest. *)
-      let storage =
-        match slice.younger with
-        | None -> storage (* slice was the youngest, nothing to change. *)
-        | Some younger_ptr ->
-          avl_update_leaf
-            storage
-            younger_ptr
-            (fun (younger: liquidation_slice) ->
-               assert (younger.older = Some _slice_ptr);
-               { younger with older = Some part2_leaf_ptr }
-            ) in
-
-      (* 7: fixup the pointers to the oldest and youngest slices of the burrow.
-       * If slice is not the oldest or the youngest itself these should remain
-       * unaltered. If it's the oldest, then part1 now becomes the oldest, and
-       * if it's the youngest then part2 now becomes the youngest. *)
-      let new_burrow_slices =
-        match Ligo.Big_map.find_opt slice.contents.burrow auctions.burrow_slices with
-        | None -> (failwith "this should be impossible, right?" : burrow_liquidation_slices)
-        | Some old_slices ->
-          { oldest_slice =
-              (match slice.older with
-               | None ->
-                 assert (old_slices.oldest_slice = _slice_ptr);
-                 part1_leaf_ptr (* slice was the oldest, now part1 is. *)
-               | Some _ ->
-                 assert (old_slices.oldest_slice <> _slice_ptr);
-                 old_slices.oldest_slice (* there was another; it remains as it was *)
-              );
-            youngest_slice =
-              (match slice.younger with
-               | None ->
-                 assert (old_slices.youngest_slice = _slice_ptr);
-                 part2_leaf_ptr (* slice was the youngest, now part2 is. *)
-               | Some _ ->
-                 assert (old_slices.youngest_slice <> _slice_ptr);
-                 old_slices.youngest_slice (* there was another; it remains as it was *)
-              );
-          } in
-
-      let auctions =
-        { auctions with
-          avl_storage = storage;
-          burrow_slices =
-            Ligo.Big_map.add
-              slice.contents.burrow
-              new_burrow_slices
-              auctions.burrow_slices;
-        } in
-
-      (auctions, new_auction)
-    | None ->
-      (auctions, new_auction)
-  else
-    (auctions, new_auction)
+  let auctions = if queued_amount < split_threshold
+    then
+      (* split next thing *)
+      let next = slice_list_from_queue_head auctions in
+      match next with
+      (* Case: there is a slice to split *)
+      | Some (element, burrow_slices) ->
+        (* Split the contents *)
+        let (part1_contents, part2_contents) =
+          split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) (slice_list_element_contents element) in
+        (* Remove the element we are splitting *)
+        let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
+        (* Push the first portion of the slice to the back of the new auction *)
+        let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions new_auction QueueBack part1_contents in
+        (* Push the remainder of the slice to the front of the auction queue *)
+        let auctions, burrow_slices, _ = slice_list_append burrow_slices auctions queued_slices QueueFront part2_contents in
+        (* Update auction state *)
+        slice_list_to_auction_state auctions burrow_slices
+      (* Case: no more slices in queue, nothing to split *)
+      | None -> auctions
+    else
+      auctions
+  in
+  assert_liquidation_auction_invariants auctions;
+  (auctions, new_auction)
 
 let start_liquidation_auction_if_possible
     (start_price: ratio) (auctions: liquidation_auctions): liquidation_auctions =
@@ -578,57 +442,13 @@ let liquidation_auction_get_current_auction (auctions: liquidation_auctions) : c
  * returns the contents of the removed slice, the tree root the slice belonged to, and the updated auctions
 *)
 let pop_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr): liquidation_slice_contents * avl_ptr * liquidation_auctions =
-  let avl_storage = auctions.avl_storage in
-
-  (* pop the leaf from the storage *)
-  let leaf = avl_read_leaf avl_storage leaf_ptr in
-  let avl_storage, root_ptr = avl_del avl_storage leaf_ptr in
-
-  (* fixup burrow_slices *)
-  let burrow_slices = match Ligo.Big_map.find_opt leaf.contents.burrow auctions.burrow_slices with
-    | None -> (failwith "invariant violation: got a slice which is not present on burrow_slices": burrow_liquidation_slices)
-    | Some s -> s in
-  let burrow_slices =
-    match (leaf.older, leaf.younger) with
-    | (None, None) -> (* leaf *) (None: burrow_liquidation_slices option)
-    | (None, Some younger) -> (* leaf - younger - ... *) Some { burrow_slices with oldest_slice = younger }
-    | (Some older, None) -> (* .. - older - leaf *) Some { burrow_slices with youngest_slice = older }
-    | (Some _, Some _) -> (* ... - leaf - ... *) Some burrow_slices
-  in
-
-  (* fixup older and younger pointers *)
-  let avl_storage = (
-    match leaf.younger with
-    | None -> avl_storage
-    | Some younger_ptr ->
-      avl_update_leaf
-        avl_storage
-        younger_ptr
-        (fun (younger: liquidation_slice) ->
-           assert (younger.older = Some leaf_ptr);
-           { younger with older = leaf.older }
-        )
-  ) in
-  let avl_storage = (
-    match leaf.older with
-    | None -> avl_storage
-    | Some older_ptr ->
-      avl_update_leaf
-        avl_storage
-        older_ptr
-        (fun (older: liquidation_slice) ->
-           assert (older.younger = Some leaf_ptr);
-           { older with younger = leaf.younger }
-        )
-  ) in
-
-  (* return *)
-  ( leaf.contents
+  let element, burrow_slices = slice_list_from_leaf_ptr auctions leaf_ptr in
+  let auctions, burrow_slices, root_ptr, contents = slice_list_remove burrow_slices auctions element in
+  let auctions = slice_list_to_auction_state auctions burrow_slices in
+  assert_liquidation_auction_invariants auctions;
+  ( contents
   , root_ptr
-  , { auctions with
-      avl_storage = avl_storage;
-      burrow_slices = Ligo.Big_map.update leaf.contents.burrow burrow_slices auctions.burrow_slices;
-    }
+  , auctions
   )
 
 let liquidation_auctions_cancel_slice (auctions: liquidation_auctions) (leaf_ptr: leaf_ptr) : liquidation_slice_contents * liquidation_auctions =

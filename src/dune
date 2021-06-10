@@ -33,6 +33,7 @@
   Burrow
   Cfmm
   CfmmTypes
+  SliceList
   LiquidationAuction
   LiquidationAuctionTypes
   LiquidationAuctionPrimitiveTypes
