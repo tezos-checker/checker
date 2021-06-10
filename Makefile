@@ -1,4 +1,4 @@
-all: install-git-hooks build test
+all: build test
 
 build: build-ocaml build-ligo
 
@@ -31,9 +31,7 @@ clean:
 	$(RM) -r _build generated src/checkerEntrypoints.ml
 
 indent:
-	ocp-indent -i src/*.ml src/*.mli tests/*.ml
-	new_dune=$$(mktemp); dune format-dune-file src/dune > $$new_dune && mv $$new_dune src/dune
-	new_dune=$$(mktemp); dune format-dune-file tests/dune > $$new_dune && mv $$new_dune tests/dune
+	bash ./scripts/format.sh
 
 spec:
 	make -C docs/spec html
@@ -51,7 +49,4 @@ docs: ocaml-src spec
 
 distclean: clean
 
-install-git-hooks:
-	@[ -x .git/hooks/pre-commit ] || (cd .git/hooks && rm -f pre-commit && ln -s ../.pre-commit-hook.sh pre-commit && echo "pre-commit hook installed")
-
-.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent spec docs distclean install-git-hooks watch-spec view-spec
+.PHONY: all build ocaml-src build-ocaml generate-ligo build-ligo tests clean indent spec docs distclean watch-spec view-spec
