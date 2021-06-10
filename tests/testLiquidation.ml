@@ -42,7 +42,7 @@ let arbitrary_burrow (params: parameters) =
     QCheck.map
       (fun (tez, kit) ->
          let tez =
-           let x = div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2")) in
+           let x = div_ratio (ratio_of_tez tez) (make_real_unsafe (Ligo.int_from_literal "20") (Ligo.int_from_literal "8")) in
            fraction_to_tez_floor x.num x.den in
          (tez, kit)
       )
