@@ -26,6 +26,11 @@ type slice_option = liquidation_slice option [@@deriving show]
 (* ========================================================================= *)
 (* Random inputs for QCheck *)
 (* ========================================================================= *)
+
+let addr_gen = QCheck.Gen.(
+    map (fun x -> Ligo.address_of_string x) (string_size (return 36))
+  )
+
 let tez_gen = QCheck.Gen.(
     map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) (0 -- max_int)
   )
@@ -35,10 +40,9 @@ let kit_gen = QCheck.Gen.(
   )
 
 let slice_gen = QCheck.Gen.(
-    map (fun (tez, kit) ->
+    map (fun (addr, tez, kit) ->
         let contents = {
-          (* TODO: Use arbitrary addresses as well? *)
-          burrow=(alice_addr, Ligo.nat_from_literal "0n");
+          burrow=(addr, Ligo.nat_from_literal "0n");
           tez=tez;
           min_kit_for_unwarranted=Some kit;
         } in
@@ -47,7 +51,7 @@ let slice_gen = QCheck.Gen.(
           older=None;
           younger=None;
         }
-      ) (pair tez_gen kit_gen)
+      ) (triple addr_gen tez_gen kit_gen)
   )
 
 let op_gen = QCheck.Gen.(

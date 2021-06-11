@@ -127,9 +127,6 @@ let optimistically_overburrowed_implies_overburrowed =
  * - old_collateral = new_collateral + tez_to_auction + liquidation_reward
  * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
  * - the resulting burrow is active
- * - TODO: If the auctioned tez gets sold with the current expected price, the
- *         burrow would be non-overburrowed, non-liquidatable,
- *         non-optimistically-overburrowed.
 *)
 let assert_properties_of_partial_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
@@ -168,9 +165,6 @@ let assert_properties_of_partial_liquidation params burrow_in details =
  * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
  * - the resulting burrow has no collateral
  * - the resulting burrow is active
- * - TODO: If the auctioned tez gets sold with the current expected price, the
- *         burrow would be overburrowed. Would it be liquidatable and
- *         optimistically-overburrowed though???
 *)
 let assert_properties_of_complete_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
@@ -211,9 +205,6 @@ let assert_properties_of_complete_liquidation params burrow_in details =
  * - the resulting burrow is inactive
  * - old_collateral + creation_deposit = new_collateral + tez_to_auction + liquidation_reward
  * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
- * - TODO: What would happen if the auctioned tez got sold with the current
- *         expected price? Would it be overburrowed?
- *         optimistically-overburrowed? liquidatable?
 *)
 let assert_properties_of_close_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
