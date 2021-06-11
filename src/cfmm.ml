@@ -12,14 +12,14 @@ open Error
  * all the conditions below should be either all true or all false, but the
  * implementation of remove_liquidity currently allows liquidity to reach zero.
  * *)
-let cfmm_assert_initialized (u: cfmm) : cfmm =
+let[@inline] cfmm_assert_initialized (u: cfmm) : cfmm =
   assert (not (u.ctez = ctez_zero));
   assert (not (u.kit = kit_zero));
   assert (not (u.lqt = lqt_zero));
   u
 
 let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
-  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
+  let cfmm = cfmm_assert_initialized cfmm in
   cfmm.kit_in_ctez_in_prev_block
 
 (* Update the kit_in_ctez cached and last_level, if we just entered a new block.
@@ -28,7 +28,7 @@ let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
  * that this is not be the previous block, but the last block in which the
  * cfmm contract was touched. *)
 let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
-  assert (!Ligo.Tezos.level >= cfmm.last_level); (* TODO: can it be later?? *)
+  assert (!Ligo.Tezos.level >= cfmm.last_level);
   if cfmm.last_level = !Ligo.Tezos.level then
     (* do nothing if it's been touched already in this block *)
     cfmm
@@ -46,7 +46,7 @@ let cfmm_view_min_kit_expected_buy_kit
     (ctez_amount: ctez)
   : (kit (* min_kit_expected *) * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
-  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
+  let cfmm = cfmm_assert_initialized cfmm in
   if (ctez_amount = ctez_zero) then
     (Ligo.failwith error_BuyKitNoTezGiven : (kit * cfmm))
   else
@@ -100,7 +100,7 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
     (kit_amount: kit)
   : (ctez * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
-  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
+  let cfmm = cfmm_assert_initialized cfmm in
   if (kit_amount = kit_zero) then
     (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
   else
@@ -224,7 +224,7 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     (lqt_burned: lqt)
   : (ctez * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
-  let cfmm = cfmm_assert_initialized cfmm in (* DON'T DROP! *)
+  let cfmm = cfmm_assert_initialized cfmm in
   if lqt_burned = lqt_zero then
     (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
   else if lqt_burned >= cfmm.lqt then

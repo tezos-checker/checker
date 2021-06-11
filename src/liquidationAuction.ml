@@ -326,10 +326,10 @@ let liquidation_auction_current_auction_minimum_bid (auction: current_liquidatio
     (match auction.state with
      | Descending (start_value, start_time) ->
        let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
-       let decay =
-         match Ligo.is_nat (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time) with
-         | None -> (failwith "TODO: is this possible?" : fixedpoint)
-         | Some secs -> fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) secs in
+       let time_passed = Ligo.sub_timestamp_timestamp !Ligo.Tezos.now start_time in
+       let seconds_passed = Ligo.abs time_passed in
+       assert (Some seconds_passed = Ligo.is_nat time_passed); (* should be non-negative *)
+       let decay = fixedpoint_pow (fixedpoint_sub fixedpoint_one auction_decay_rate) seconds_passed in
        kit_scale start_value decay
      | Ascending (leading_bid, _timestamp, _level) ->
        let bid_improvement_factor = fixedpoint_of_ratio_floor bid_improvement_factor in
