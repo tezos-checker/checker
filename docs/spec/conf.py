@@ -20,8 +20,8 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = "Checker"
-copyright = "2021, Tweag"
-author = "Tweag"
+copyright = "2021, Nomadic Labs / Tweag"
+author = "Nomadic Labs / Tweag"
 version = "0.1alpha"
 release = "0.1alpha"
 

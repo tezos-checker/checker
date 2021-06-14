@@ -8,7 +8,9 @@ What is Checker?
 ================
 
 **Checker** is a generic piece of software for creating *robocoins* on
-the `Tezos blockchain <https://tezos.com/>`_.
+the `Tezos blockchain <https://tezos.com/>`_. It is an open source project
+supported by `Nomadic Labs <https://nomadic-labs.com/>`_,
+`Tweag <https://tweag.io/>`_ and TZ Connect Berlin.
 
 A *robocoin* is a cryptographic token (or "coin") that tracks
 an external measure of value, by using various feedback mechanisms to
