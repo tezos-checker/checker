@@ -112,7 +112,7 @@ rec
         # compile it in CI
         pkgs.lib.optionals (pkgs.stdenv.isLinux) [ ligoBinary ]
         ++ pkgs.lib.optionals (pkgs.stdenv.isLinux) [ tezosClient ]
-	++ pkgs.lib.optionals (!(pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64)) [ pkgs.niv ]
+        ++ pkgs.lib.optionals (!(pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64)) [ pkgs.niv ]
         ++ (with pkgs; [ ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt ])
         ++ spec.buildInputs
         ++ ocamlDeps pkgs
