@@ -22,7 +22,9 @@ jobs:
         with:
           name: tezos-checker
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies and check formatting
+      - name: Build dependencies
+        run: nix-shell --run ':'
+      - name: Check formatting
         run: nix-shell --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
       - name: Build and test
         run: nix-build -A michelson --arg doCheck true
