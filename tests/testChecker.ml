@@ -1190,4 +1190,58 @@ let suite =
          (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
          (fun () -> Checker.entrypoint_set_burrow_delegate (checker, (Ligo.nat_from_literal "0n", None)))
     );
+
+    ("view_burrow_max_mintable_kit - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to view the max mintable kit from the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.view_burrow_max_mintable_kit (burrow_id, checker))
+    );
+
+    ("view_is_burrow_overburrowed - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to view whether the untouched burrow is overburrowed *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.view_is_burrow_overburrowed (burrow_id, checker))
+    );
+
+    ("view_is_burrow_liquidatable - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to view whether the untouched burrow is liquidatable *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.view_is_burrow_liquidatable (burrow_id, checker))
+    );
   ]
