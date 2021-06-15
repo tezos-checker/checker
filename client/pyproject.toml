@@ -9,8 +9,8 @@ checker = 'checker_client.cli:cli'
 
 [tool.poetry.dependencies]
 python = "^3.8"
-# pytezos = "^3.1.0"
-pytezos = { git = "https://github.com/dorranh/pytezos.git" }
+pytezos = "^3.2.2"
+# pytezos = { git = "https://github.com/dorranh/pytezos.git" }
 # docker = "^5.0.0"
 docker = "^4.4.4"
 marshmallow = "^3.12.1"

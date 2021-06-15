@@ -71,7 +71,7 @@ python-versions = "*"
 
 [[package]]
 name = "black"
-version = "21.5b2"
+version = "21.6b0"
 description = "The uncompromising code formatter."
 category = "dev"
 optional = false
@@ -237,7 +237,7 @@ docker = "^4.4.4"
 eth-hash = "*"
 marshmallow = "^3.12.1"
 pytest-runner = "2.6.2"
-pytezos = "branch master"
+pytezos = "^3.2.2"
 
 [package.source]
 type = "directory"
@@ -1019,53 +1019,46 @@ python-versions = "*"
 
 [[package]]
 name = "pytezos"
-version = "3.2.1"
+version = "3.2.2"
 description = "Python toolkit for Tezos"
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = false
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-attrs = "^20.3.0"
-base58 = "^1.0.3"
-bravado = "^11.0.3"
-bson = "^0.5.10"
-cached-property = "^1.5.2"
-cattrs = "^1.3.0"
-cattrs-extras = "^0.1.1"
-click = "^7.1.2"
+attrs = ">=20.3.0,<21.0.0"
+base58 = ">=1.0.3,<2.0.0"
+bravado = ">=11.0.3,<12.0.0"
+bson = ">=0.5.10,<0.6.0"
+cached-property = ">=1.5.2,<2.0.0"
+cattrs = ">=1.3.0,<2.0.0"
+cattrs-extras = ">=0.1.1,<0.2.0"
+click = ">=7.1.2,<8.0.0"
 deprecation = "*"
-docker = "^4.4.4"
+docker = ">=4.4.4,<5.0.0"
 fastecdsa = "1.7.5"
-ipykernel = "^5.5.0"
-jsonschema = "^3.2.0"
-jupyter-client = "^6.1.12"
+ipykernel = ">=5.5.0,<6.0.0"
+jsonschema = ">=3.2.0,<4.0.0"
+jupyter-client = ">=6.1.12,<7.0.0"
 loguru = "*"
 mnemonic = "*"
 netstruct = "*"
-notebook = "^6.3.0"
+notebook = ">=6.3.0,<7.0.0"
 pendulum = "*"
 ply = "*"
 py_ecc = "*"
-pyblake2 = "^1.1.2"
+pyblake2 = ">=1.1.2,<2.0.0"
 pysha3 = "1.0.2"
 pysodium = "0.7.7"
 pyyaml = "*"
-requests = "^2.21.0"
+requests = ">=2.21.0,<3.0.0"
 secp256k1 = "0.13.2"
 simplejson = "*"
 strict_rfc3339 = "0.7"
-tabulate = "^0.7.5"
-testcontainers = "^3.2.0"
+tabulate = ">=0.7.5,<0.8.0"
+testcontainers = ">=3.2.0,<4.0.0"
 tqdm = "*"
-typing-extensions = "^3.7.4"
-
-[package.source]
-type = "git"
-url = "https://github.com/dorranh/pytezos.git"
-reference = "master"
-resolved_reference = "993e33e59d8b5235b4890d07778df989d2133031"
+typing-extensions = ">=3.7.4,<4.0.0"
 
 [[package]]
 name = "python-dateutil"
@@ -1112,7 +1105,7 @@ python-versions = "*"
 
 [[package]]
 name = "pywinpty"
-version = "1.1.1"
+version = "1.1.2"
 description = "Pseudo terminal support for Windows from Python."
 category = "main"
 optional = false
@@ -1241,7 +1234,7 @@ widechars = ["wcwidth"]
 
 [[package]]
 name = "terminado"
-version = "0.10.0"
+version = "0.10.1"
 description = "Tornado websocket backend for the Xterm.js Javascript terminal emulator library."
 category = "main"
 optional = false
@@ -1318,7 +1311,7 @@ python-versions = ">= 3.5"
 
 [[package]]
 name = "tqdm"
-version = "4.61.0"
+version = "4.61.1"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
@@ -1402,7 +1395,7 @@ python-versions = "*"
 
 [[package]]
 name = "websocket-client"
-version = "1.0.1"
+version = "1.1.0"
 description = "WebSocket client for Python with low level API options"
 category = "main"
 optional = false
@@ -1479,8 +1472,8 @@ base58 = [
     {file = "base58-1.0.3.tar.gz", hash = "sha256:9a793c599979c497800eb414c852b80866f28daaed5494703fc129592cc83e60"},
 ]
 black = [
-    {file = "black-21.5b2-py3-none-any.whl", hash = "sha256:e5cf21ebdffc7a9b29d73912b6a6a9a4df4ce70220d523c21647da2eae0751ef"},
-    {file = "black-21.5b2.tar.gz", hash = "sha256:1fc0e0a2c8ae7d269dfcf0c60a89afa299664f3e811395d40b1922dff8f854b5"},
+    {file = "black-21.6b0-py3-none-any.whl", hash = "sha256:dfb8c5a069012b2ab1e972e7b908f5fb42b6bbabcba0a788b86dc05067c7d9c7"},
+    {file = "black-21.6b0.tar.gz", hash = "sha256:dc132348a88d103016726fe360cb9ede02cecf99b76e3660ce6c596be132ce04"},
 ]
 bleach = [
     {file = "bleach-3.3.0-py2.py3-none-any.whl", hash = "sha256:6123ddc1052673e52bab52cdc955bcb57a015264a1c57d37bea2f6b817af0125"},
@@ -1907,7 +1900,10 @@ pysodium = [
 pytest-runner = [
     {file = "pytest-runner-2.6.2.tar.gz", hash = "sha256:e775a40ee4a3a1d45018b199c44cc20bbe7f3df2dc8882f61465bb4141c78cdb"},
 ]
-pytezos = []
+pytezos = [
+    {file = "pytezos-3.2.2-py3-none-any.whl", hash = "sha256:b811818393dfad0f42bab88e026e366e7151fd7b2eb9ad7540a206d93e135d05"},
+    {file = "pytezos-3.2.2.tar.gz", hash = "sha256:fa51563ba422dc526c303f03cfdbe875f07da16c54e80bb52b80d091eefa9da4"},
+]
 python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},
     {file = "python_dateutil-2.8.1-py2.py3-none-any.whl", hash = "sha256:75bb3f31ea686f1197762692a9ee6a7550b59fc6ca3a1f4b5d7e32fb98e2da2a"},
@@ -1939,11 +1935,11 @@ pywin32 = [
     {file = "pywin32-227-cp39-cp39-win_amd64.whl", hash = "sha256:f27cec5e7f588c3d1051651830ecc00294f90728d19c3bf6916e6dba93ea357c"},
 ]
 pywinpty = [
-    {file = "pywinpty-1.1.1-cp36-none-win_amd64.whl", hash = "sha256:fa2a0af28eaaacc59227c6edbc0f1525704d68b2dfa3e5b47ae21c5aa25d6d78"},
-    {file = "pywinpty-1.1.1-cp37-none-win_amd64.whl", hash = "sha256:0fe3f538860c6b06e6fbe63da0ee5dab5194746b0df1be7ed65b4fce5da21d21"},
-    {file = "pywinpty-1.1.1-cp38-none-win_amd64.whl", hash = "sha256:12c89765b3102d2eea3d39d191d1b0baea68fb5e3bd094c67b2575b3c9ebfa12"},
-    {file = "pywinpty-1.1.1-cp39-none-win_amd64.whl", hash = "sha256:50bce6f7d9857ffe9694847af7e8bf989b198d0ebc2bf30e26d54c4622cb5c50"},
-    {file = "pywinpty-1.1.1.tar.gz", hash = "sha256:4a3ffa2444daf15c5f65a76b5b2864447cc915564e41e2876816b9e4fe849070"},
+    {file = "pywinpty-1.1.2-cp36-none-win_amd64.whl", hash = "sha256:7bb1b8380bc71bf04a983e803746b1ea7b8a91765723a82e108df81538b258c1"},
+    {file = "pywinpty-1.1.2-cp37-none-win_amd64.whl", hash = "sha256:951f1b988c2407e9bd0c5c9b199f588673769abf0c8cb4724a01bc0666b97b0a"},
+    {file = "pywinpty-1.1.2-cp38-none-win_amd64.whl", hash = "sha256:b3a38a0afb63b639ca4f78f67f4f8caa78ca470bd71b146480ef37d86cc99823"},
+    {file = "pywinpty-1.1.2-cp39-none-win_amd64.whl", hash = "sha256:eac78a3ff69ce443ad9f67620bc60469f6354b18388570c63af6fc643beae498"},
+    {file = "pywinpty-1.1.2.tar.gz", hash = "sha256:f1718838e1c7c700e5f0b79d5d5e05243ff583313ff88e47bb94318ba303e565"},
 ]
 pyyaml = [
     {file = "PyYAML-5.4.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:3b2b1824fe7112845700f815ff6a489360226a5609b96ec2190a45e62a9fc922"},
@@ -2131,8 +2127,8 @@ tabulate = [
     {file = "tabulate-0.7.7.tar.gz", hash = "sha256:83a0b8e17c09f012090a50e1e97ae897300a72b35e0c86c0b53d3bd2ae86d8c6"},
 ]
 terminado = [
-    {file = "terminado-0.10.0-py3-none-any.whl", hash = "sha256:048ce7b271ad1f94c48130844af1de163e54913b919f8c268c89b36a6d468d7c"},
-    {file = "terminado-0.10.0.tar.gz", hash = "sha256:46fd07c9dc7db7321922270d544a1f18eaa7a02fd6cd4438314f27a687cabbea"},
+    {file = "terminado-0.10.1-py3-none-any.whl", hash = "sha256:c89ace5bffd0e7268bdcf22526830eb787fd146ff9d78691a0528386f92b9ae3"},
+    {file = "terminado-0.10.1.tar.gz", hash = "sha256:89d5dac2f4e2b39758a0ff9a3b643707c95a020a6df36e70583b88297cd59cbe"},
 ]
 testcontainers = [
     {file = "testcontainers-3.4.1-py2.py3-none-any.whl", hash = "sha256:7626f2899f869b929c14b8eb4996b1e70a4b4bd1934de500be193db89b18f7cc"},
@@ -2193,8 +2189,8 @@ tornado = [
     {file = "tornado-6.1.tar.gz", hash = "sha256:33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791"},
 ]
 tqdm = [
-    {file = "tqdm-4.61.0-py2.py3-none-any.whl", hash = "sha256:736524215c690621b06fc89d0310a49822d75e599fcd0feb7cc742b98d692493"},
-    {file = "tqdm-4.61.0.tar.gz", hash = "sha256:cd5791b5d7c3f2f1819efc81d36eb719a38e0906a7380365c556779f585ea042"},
+    {file = "tqdm-4.61.1-py2.py3-none-any.whl", hash = "sha256:aa0c29f03f298951ac6318f7c8ce584e48fa22ec26396e6411e43d038243bdb2"},
+    {file = "tqdm-4.61.1.tar.gz", hash = "sha256:24be966933e942be5f074c29755a95b315c69a91f839a29139bf26ffffe2d3fd"},
 ]
 traitlets = [
     {file = "traitlets-5.0.5-py3-none-any.whl", hash = "sha256:69ff3f9d5351f31a7ad80443c2674b7099df13cc41fc5fa6e2f6d3b0330b0426"},
@@ -2227,8 +2223,8 @@ webencodings = [
     {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
 ]
 websocket-client = [
-    {file = "websocket-client-1.0.1.tar.gz", hash = "sha256:3e2bf58191d4619b161389a95bdce84ce9e0b24eb8107e7e590db682c2d0ca81"},
-    {file = "websocket_client-1.0.1-py2.py3-none-any.whl", hash = "sha256:abf306dc6351dcef07f4d40453037e51cc5d9da2ef60d0fc5d0fe3bcda255372"},
+    {file = "websocket-client-1.1.0.tar.gz", hash = "sha256:b68e4959d704768fa20e35c9d508c8dc2bbc041fd8d267c0d7345cffe2824568"},
+    {file = "websocket_client-1.1.0-py2.py3-none-any.whl", hash = "sha256:e5c333bfa9fa739538b652b6f8c8fc2559f1d364243c8a689d7c0e1d41c2e611"},
 ]
 win32-setctime = [
     {file = "win32_setctime-1.0.3-py3-none-any.whl", hash = "sha256:dc925662de0a6eb987f0b01f599c01a8236cb8c62831c22d9cada09ad958243e"},

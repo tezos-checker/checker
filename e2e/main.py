@@ -17,7 +17,7 @@ class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
         port = portpicker.pick_unused_port()
         client, docker_client, docker_container = start_sandbox(
-            "checker-e2e-container-{}".format(port), port
+            "checker-e2e-container-{}".format(port), port, wait_for_level=2
         )
         self.docker_client = docker_client
         self.docker_container = docker_container
@@ -63,7 +63,6 @@ class E2ETest(SandboxedTestCase):
             checker_dir=os.path.join(PROJECT_ROOT, "generated/michelson"),
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
-            num_blocks_wait=100,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -71,18 +70,17 @@ class E2ETest(SandboxedTestCase):
         gas_costs = {}
 
         def call_endpoint(contract, name, param, amount=0):
-            ret = (
-                getattr(contract, name)(param)
-                .with_amount(amount)
-                .as_transaction()
-                .autofill(ttl=MAX_OPERATIONS_TTL)
-                .sign()
-                .inject(
-                    min_confirmations=1,
-                    num_blocks_wait=100,
-                    max_iterations=WAIT_BLOCK_ATTEMPTS,
-                    delay_sec=WAIT_BLOCK_DELAY,
-                )
+            ret = await_operations(
+                self.client,
+                [
+                    getattr(contract, name)(param)
+                    .with_amount(amount)
+                    .as_transaction()
+                    .autofill(ttl=MAX_OPERATIONS_TTL)
+                    .sign()
+                    .inject()["hash"]
+                ],
+                ttl=MAX_OPERATIONS_TTL,
             )
             return ret
 

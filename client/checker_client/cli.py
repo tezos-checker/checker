@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,13 +20,10 @@ else:
     CONFIG_DIR = Path(CONFIG_DIR)
 CONFIG_FILE = CONFIG_DIR.joinpath(CONFIG_FILE_BASE)
 
-
-# FIXME: This feels wrong. Depending on the answer to the below issue, we might
-# end up needing to update this value.
-# https://github.com/baking-bad/pytezos/issues/229
 SANDBOX_TTL = MAX_OPERATIONS_TTL
 
-# FIXME: This whole function is bit of a hack. See the comment above.
+# TODO: This whole function is bit of a hack. Not sure if there is a better way
+# of doing this though.
 def _patch_operation_ttl(node_address: str) -> int:
     # Checks if the node is running on the local loopback and if so,
     # returns a shorter ttl to allow operations on the sandbox to run
@@ -178,19 +176,12 @@ def deploy(config: Config, address=None, port=None, key=None):
 @click.option("--oracle", type=str, help="Oracle contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
 @click.option(
-    "--wait",
-    type=int,
-    default=100,
-    show_default=True,
-    help="The number of blocks to wait for an operation group to finish",
-)
-@click.option(
     "--token-metadata",
     type=click.Path(exists=True),
     help="optional JSON file containing the TZIP-12 token_metadata.",
 )
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez, wait, token_metadata):
+def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -209,12 +200,12 @@ def checker(config: Config, checker_dir, oracle, ctez, wait, token_metadata):
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
     checker = checker_lib.deploy_checker(
         client,
         checker_dir,
         oracle=config.oracle_address,
         ctez=config.ctez_address,
-        num_blocks_wait=wait,
         ttl=_patch_operation_ttl(config.tezos_address),
         token_metadata_file=token_metadata,
     )
@@ -232,21 +223,15 @@ def checker(config: Config, checker_dir, oracle, ctez, wait, token_metadata):
     default="vendor/ctez",
     show_default=True,
 )
-@click.option(
-    "--wait",
-    type=int,
-    default=100,
-    show_default=True,
-    help="The number of blocks to wait for an operation group to finish",
-)
 @click.pass_obj
-def ctez(config: Config, ctez_dir, wait):
+def ctez(config: Config, ctez_dir):
     """
     Deploy a ctez contract (dev only)
     """
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
     ctez = checker_lib.deploy_ctez(
         client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config.tezos_address)
     )
@@ -264,26 +249,19 @@ def ctez(config: Config, ctez_dir, wait):
     default="util/mock_oracle.tz",
     show_default=True,
 )
-@click.option(
-    "--wait",
-    type=int,
-    default=100,
-    show_default=True,
-    help="The number of blocks to wait for an operation group to finish",
-)
 @click.pass_obj
-def mock_oracle(config: Config, oracle_src, wait):
+def mock_oracle(config: Config, oracle_src):
     """
     Deploy the mock oracle contract (dev only)
     """
     shell = f"{config.tezos_address}:{config.tezos_port}"
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
     oracle = checker_lib.deploy_contract(
         client,
         source_file=oracle_src,
         initial_storage=(client.key.public_key_hash(), 1000000),
-        num_blocks_wait=wait,
         ttl=_patch_operation_ttl(config.tezos_address),
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
