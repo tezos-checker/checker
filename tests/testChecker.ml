@@ -792,6 +792,9 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
        let (_, checker) = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        let burrow_id = (bob_addr, Ligo.nat_from_literal "0n") in
+       let burrow_addr =
+         burrow_address
+           (Option.get (Ligo.Big_map.find_opt (bob_addr, Ligo.nat_from_literal "0n") checker.burrows)) in
 
        (* Mint as much kit as possible *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -858,8 +861,14 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let (ops, checker) = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
+
        assert_operation_list_equal
-         ~expected:[LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "1_009_000mutez") (Option.get (LigoOp.Tezos.get_contract_opt alice_addr))]
+         ~expected:[
+           LigoOp.Tezos.tez_address_transaction
+             (Ligo.tez_from_literal "1_009_000mutez", alice_addr)
+             (Ligo.tez_from_literal "0mutez")
+             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" burrow_addr))
+         ]
          ~real:ops;
 
        let slice =

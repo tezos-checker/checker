@@ -304,9 +304,9 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
-  let op = match (LigoOp.Tezos.get_contract_opt !Ligo.Tezos.sender : unit Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.unit_transaction () liquidation_reward c
-    | None -> (Ligo.failwith error_GetContractOptFailure : LigoOp.operation) in
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
+    | Some c -> LigoOp.Tezos.tez_address_transaction (liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
 
   assert_checker_invariants state;
   ([op], state)
