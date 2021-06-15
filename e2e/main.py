@@ -70,19 +70,14 @@ class E2ETest(SandboxedTestCase):
         gas_costs = {}
 
         def call_endpoint(contract, name, param, amount=0):
-            ret = await_operations(
+            return inject(
                 self.client,
-                [
-                    getattr(contract, name)(param)
-                    .with_amount(amount)
-                    .as_transaction()
-                    .autofill(ttl=MAX_OPERATIONS_TTL)
-                    .sign()
-                    .inject()["hash"]
-                ],
-                ttl=MAX_OPERATIONS_TTL,
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
             )
-            return ret
 
         def call_checker_endpoint(name, param, amount=0):
             print("Calling", name, "with", param)

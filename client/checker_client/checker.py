@@ -8,7 +8,7 @@ import time
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import docker
 import pytezos
@@ -16,6 +16,8 @@ from pytezos.operation import MAX_OPERATIONS_TTL
 from pytezos.rpc.node import RpcError
 import requests
 from pytezos.client import PyTezosClient
+
+from checker_client.operations import inject
 
 # Time between blocks for sandbox container
 # Note: Setting this to 1 causes weird issues. Keep it >= 2s.
@@ -25,7 +27,6 @@ WAIT_OP_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks
 WAIT_OP_DELAY = 5
 
-MAX_BLOCKS = 100
 
 default_token_metadata = {
     "kit": {
@@ -207,53 +208,6 @@ def is_sandbox_container_running(name: str):
         return False
 
 
-def await_operations(tz: PyTezosClient, op_hashes: List[str], ttl: int) -> List[dict]:
-    """Awaits a list of operations to be included in a block
-
-    Args:
-        tz: The pytezos client instance
-        op_hashes: A list of operation hashes to await
-        ttl: Expected mempool TTL for the supplied operations
-            (see `pytezos.rpc.shell.ShellQuery.wait_operations` for additional details)
-
-    Returns:
-        The operation results
-
-    Raises:
-        The underlying exception raised by pytezos
-    """
-    # FIXME: Make this function do the injection too to ensure that the level is correct
-
-    # Get block hash at beginning to avoid retrying from different levels
-    current_block = tz.shell.head()
-    time_between_blocks = tz.shell.blocks[current_block["hash"]].context.constants()[
-        "time_between_blocks"
-    ]
-    current_level = current_block["header"]["level"]
-    start_from_block = current_block["hash"]
-
-    print(start_from_block)
-    for attempt in range(WAIT_OP_ATTEMPTS):
-        try:
-            ret = tz.shell.wait_operations(
-                op_hashes, ttl, min_confirmations=0, current_block_hash=start_from_block
-            )
-        # Note: This will sometimes retry legitimate errors, but here we are favoring stability
-        # for our deployment script over failing as early as possible.
-        except (StopIteration, RpcError, TimeoutError, RuntimeError) as e:
-            if attempt >= (WAIT_OP_ATTEMPTS - 1):
-                raise e
-            # Handle reorgs which are fairly common when running in a sandbox
-            if isinstance(e, RuntimeError):
-                print(f"Encountered RuntimeError. Updating block hash for level {current_level}")
-                # start_from_block = tz.shell.blocks[current_level]()["hash"]
-                start_from_block = tz.shell.head()["hash"]
-            time.sleep(WAIT_OP_DELAY)
-            continue
-
-    return ret
-
-
 def deploy_contract(
     tz: PyTezosClient,
     *,
@@ -266,11 +220,12 @@ def deploy_contract(
         initial_storage=initial_storage
     )
 
-    origination = tz.origination(script, balance=initial_balance).autofill(ttl=ttl).sign().inject()
-    await_operations(tz, [origination["hash"]], ttl)
+    origination = inject(
+        tz, tz.origination(script, balance=initial_balance).autofill(ttl=ttl).sign()
+    )
 
-    opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
-    res = pytezos.operation.result.OperationResult.from_operation_group(opg)
+    # opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
+    res = pytezos.operation.result.OperationResult.from_operation_group(origination)
 
     addr = res[0].originated_contracts[0]
     return tz.contract(addr)
@@ -334,48 +289,18 @@ def deploy_checker(
     ]
     for chunk_no, chunk in enumerate(metadata_chunks, 1):
         print("Deploying TZIP-16 metadata: chunk {} of {}".format(chunk_no, len(metadata_chunks)))
-        await_operations(
-            tz,
-            [
-                checker.deployMetadata(chunk)
-                .as_transaction()
-                .autofill(ttl=ttl)
-                .sign()
-                .inject()["hash"]
-            ],
-            ttl=ttl,
-        )
+        inject(tz, checker.deployMetadata(chunk).as_transaction().autofill(ttl=ttl).sign())
 
     # TODO: implement the batching logic here for speed (see the previous ruby script)
     for fun in functions["lazy_functions"]:
         print("Deploying: {}".format(fun["name"]))
         for chunk_no, chunk in enumerate(fun["chunks"]):
             arg = (int(fun["fn_id"]), "0x" + chunk)
-            await_operations(
-                tz,
-                [
-                    checker.deployFunction(arg)
-                    .as_transaction()
-                    .autofill(ttl=ttl)
-                    .sign()
-                    .inject()["hash"]
-                ],
-                ttl=ttl,
-            )
+            inject(tz, checker.deployFunction(arg).as_transaction().autofill(ttl=ttl).sign())
             print("  deployed: chunk {}.".format(chunk_no))
 
     print("Sealing.")
-    await_operations(
-        tz,
-        [
-            checker.sealContract((oracle, ctez))
-            .as_transaction()
-            .autofill(ttl=ttl)
-            .sign()
-            .inject()["hash"]
-        ],
-        ttl=ttl,
-    )
+    inject(tz, checker.sealContract((oracle, ctez)).as_transaction().autofill(ttl=ttl).sign())
 
     return checker
 
@@ -470,31 +395,20 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
 
         print("Setting liquidity address in CFMM contract...")
 
-        await_operations(
+        inject(
             tz,
-            [
-                cfmm.setLqtAddress(fa12_lqt.context.address)
-                .as_transaction()
-                .autofill(ttl=ttl)
-                .sign()
-                .inject()["hash"]
-            ],
-            ttl=ttl,
+            cfmm.setLqtAddress(fa12_lqt.context.address).as_transaction().autofill(ttl=ttl).sign(),
         )
 
         print("Done.")
 
         print("Setting CFMM amd ctez FA1.2 addresses in ctez contract...")
-        await_operations(
+        inject(
             tz,
-            [
-                ctez.set_addresses((cfmm.context.address, fa12_ctez.context.address))
-                .as_transaction()
-                .autofill(ttl=ttl)
-                .sign()
-                .inject()["hash"]
-            ],
-            ttl=ttl,
+            ctez.set_addresses((cfmm.context.address, fa12_ctez.context.address))
+            .as_transaction()
+            .autofill(ttl=ttl)
+            .sign(),
         )
         print("Done.")
 
