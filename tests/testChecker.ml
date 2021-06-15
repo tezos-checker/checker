@@ -82,7 +82,7 @@ let suite =
          (Option.is_none (Ligo.Big_map.find_opt burrow_id empty_checker.burrows))
     );
 
-    ("create_burrow - collatoral in burrow representation does not include creation deposit" >::
+    ("create_burrow - collateral in burrow representation does not include creation deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
@@ -1044,5 +1044,150 @@ let suite =
        Checker.assert_checker_invariants checker; (* Ensures no empty slices in the queue. *)
 
        ()
+    );
+
+    ("deposit_tez - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to deposit some tez to the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_deposit_tez (checker, Ligo.nat_from_literal "0n"))
+    );
+
+    ("entrypoint_withdraw_tez - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to withdraw some tez from the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_withdraw_tez (checker, (Constants.creation_deposit, Ligo.nat_from_literal "0n")))
+    );
+
+    ("entrypoint_mint_kit - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Create a burrow *)
+       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to mint some kit out of the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))))
+    );
+
+    ("entrypoint_burn_kit - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Mint some kit out of the burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _ops, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to burn some kit into the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))))
+    );
+
+    ("entrypoint_activate_burrow - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Deactivate the burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _ops, checker = Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", !Ligo.Tezos.sender)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to activate the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_activate_burrow (checker, Ligo.nat_from_literal "0n"))
+    );
+
+    ("entrypoint_deactivate_burrow - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to deactivate the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", !Ligo.Tezos.sender)))
+    );
+
+    ("entrypoint_mark_for_liquidation - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to mark the untouched burrow for liquidation *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_mark_for_liquidation (checker, burrow_id))
+    );
+
+    (* TODO: Add test "entrypoint_cancel_liquidation_slice - fails on untouched burrows" *)
+
+    ("entrypoint_set_burrow_delegate - fails on untouched burrows" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let amount = Constants.creation_deposit in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
+       (* Touch checker *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_000_000mutez") in
+       (* Try to set the delegate of the untouched burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () -> Checker.entrypoint_set_burrow_delegate (checker, (Ligo.nat_from_literal "0n", None)))
     );
   ]
