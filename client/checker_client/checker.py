@@ -8,20 +8,18 @@ import time
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional
 
 import docker
 import pytezos
-from pytezos.operation import MAX_OPERATIONS_TTL
-from pytezos.rpc.node import RpcError
 import requests
 from pytezos.client import PyTezosClient
+from pytezos.operation import MAX_OPERATIONS_TTL
 
 from checker_client.operations import inject
 
 # Time between blocks for sandbox container
-# Note: Setting this to 1 causes weird issues. Keep it >= 2s.
-SANDBOX_TIME_BETWEEN_BLOCKS = "2,2"
+SANDBOX_TIME_BETWEEN_BLOCKS = "1,1"
 # Number of retries to use when awaiting new blocks
 WAIT_OP_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks
