@@ -145,7 +145,7 @@ def start(config: Config, port=None):
         checker_lib.start_sandbox(
             config.sandbox_container,
             config.sandbox_port,
-            wait_for_level=(MAX_OPERATIONS_TTL - SANDBOX_TTL),
+            wait_for_level=(MAX_OPERATIONS_TTL - SANDBOX_TTL) + 2,
         )
         click.echo("Sandbox started.")
 
