@@ -2,6 +2,7 @@
 """
 
 import time
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 from pytezos.client import PyTezosClient
@@ -104,11 +105,20 @@ def await_operations(
         if all_confirmed and (confirmations >= min_confirmations):
             break
 
-        # Move on to the next level.
-        # FIXME: this might sleep a bit excessively if the new block is close to completion
-        sleep_for = int(
+        # Compute wait time based on when we expect the next block to appear in *UTC*
+        current_block_timestamp = datetime.strptime(
+            current_header["timestamp"], "%Y-%m-%dT%H:%M:%SZ"
+        )
+        # Note: This is only a *minimum* bound.
+        block_expected_starting_at = current_block_timestamp.timestamp() + int(
             tz.shell.blocks[current_level].context.constants()["time_between_blocks"][0]
         )
+        sleep_for = max(1, block_expected_starting_at - datetime.utcnow().timestamp())
+        if sleep_for > MAX_BLOCK_TIME:
+            print(
+                f"Warning! Estimated arrival time of next block of {sleep_for} is greater than the maximum {MAX_BLOCK_TIME}. "
+                "You might want to check the status of the node you are connected to."
+            )
         current_level += 1
 
     return confirmed_ops == op_hashes, op_levels
