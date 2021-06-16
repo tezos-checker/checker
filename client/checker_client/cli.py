@@ -23,19 +23,6 @@ CONFIG_FILE = CONFIG_DIR.joinpath(CONFIG_FILE_BASE)
 
 SANDBOX_TTL = MAX_OPERATIONS_TTL
 
-# TODO: This whole function is bit of a hack. Not sure if there is a better way
-# of doing this though.
-def _patch_operation_ttl(node_address: str) -> int:
-    # Checks if the node is running on the local loopback and if so,
-    # returns a shorter ttl to allow operations on the sandbox to run
-    # as fast as possible.
-    if any([loopback in node_address for loopback in ("localhost", "127.0.0.1")]):
-        ttl = SANDBOX_TTL
-        print(f"Detected sandbox address. Using operation ttl={ttl}")
-    else:
-        ttl = None
-    return ttl
-
 
 def construct_url(address: str, port: int):
     url = urlparse(address)
@@ -84,6 +71,23 @@ class ConfigSchema(Schema):
     @post_load
     def make(self, data, **kwargs):
         return Config(**data)
+
+
+# TODO: This whole function is bit of a hack. Not sure if there is a better way
+# of doing this though.
+def _patch_operation_ttl(config: Config) -> int:
+    # Checks if the node is running on the local loopback and if so,
+    # returns a shorter ttl to allow operations on the sandbox to run
+    # as fast as possible.
+    if (
+        any([loopback in config.tezos_address for loopback in ("localhost", "127.0.0.1")])
+        and config.tezos_port == config.sandbox_port
+    ):
+        ttl = SANDBOX_TTL
+        print(f"Detected sandbox address. Using operation ttl={ttl}")
+    else:
+        ttl = None
+    return ttl
 
 
 @click.group()
@@ -217,7 +221,7 @@ def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
         checker_dir,
         oracle=config.oracle_address,
         ctez=config.ctez_address,
-        ttl=_patch_operation_ttl(config.tezos_address),
+        ttl=_patch_operation_ttl(config),
         token_metadata_file=token_metadata,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
@@ -243,9 +247,7 @@ def ctez(config: Config, ctez_dir):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
-    ctez = checker_lib.deploy_ctez(
-        client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config.tezos_address)
-    )
+    ctez = checker_lib.deploy_ctez(client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config))
     click.echo(f"ctez contract deployed with address: {ctez['fa12_ctez'].context.address}")
     config.ctez_address = ctez["fa12_ctez"].context.address
     config.dump()
@@ -273,7 +275,7 @@ def mock_oracle(config: Config, oracle_src):
         client,
         source_file=oracle_src,
         initial_storage=(client.key.public_key_hash(), 1000000),
-        ttl=_patch_operation_ttl(config.tezos_address),
+        ttl=_patch_operation_ttl(config),
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
     config.oracle_address = oracle.context.address
