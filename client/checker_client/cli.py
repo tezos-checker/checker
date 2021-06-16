@@ -3,6 +3,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 import click
 import pytezos
@@ -34,6 +35,16 @@ def _patch_operation_ttl(node_address: str) -> int:
     else:
         ttl = None
     return ttl
+
+
+def construct_url(address: str, port: int):
+    url = urlparse(address)
+    if url.port is not None:
+        raise ValueError(
+            "Cannot specify a port in the host url. Explicitly pass a port via --port instead."
+        )
+    url = url._replace(netloc=f"{url.netloc}:{port}")
+    return urlunparse(url)
 
 
 @dataclass
@@ -197,7 +208,7 @@ def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
         config.oracle_address = oracle
     if ctez:
         config.ctez_address = ctez
-    shell = f"{config.tezos_address}:{config.tezos_port}"
+    shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
@@ -228,7 +239,7 @@ def ctez(config: Config, ctez_dir):
     """
     Deploy a ctez contract (dev only)
     """
-    shell = f"{config.tezos_address}:{config.tezos_port}"
+    shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
@@ -254,7 +265,7 @@ def mock_oracle(config: Config, oracle_src):
     """
     Deploy the mock oracle contract (dev only)
     """
-    shell = f"{config.tezos_address}:{config.tezos_port}"
+    shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
