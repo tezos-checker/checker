@@ -1,5 +1,6 @@
 type ptr (* George: perhaps I'd prefer a phantom parameter to not mix up pointers. *)
 
+val nat_of_ptr : ptr -> Ligo.nat
 val ptr_null : ptr
 val ptr_init : ptr
 val ptr_next : ptr -> ptr

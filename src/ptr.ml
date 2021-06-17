@@ -1,11 +1,12 @@
-type ptr = Ligo.int
+type ptr = Ligo.nat
 (* BEGIN_OCAML *) [@@deriving show] (* END_OCAML *)
 
-let[@inline] ptr_null = Ligo.int_from_literal "0"
-let[@inline] ptr_init = Ligo.int_from_literal "1"
-let[@inline] ptr_next (t: ptr) = Ligo.add_int_int t (Ligo.int_from_literal "1")
+let[@inline] nat_of_ptr (t: ptr) = t
+let[@inline] ptr_null = Ligo.nat_from_literal "0n"
+let[@inline] ptr_init = Ligo.nat_from_literal "1n"
+let[@inline] ptr_next (t: ptr) = Ligo.add_nat_nat t (Ligo.nat_from_literal "1n")
 
 (* BEGIN_OCAML *)
-let compare_ptr = Common.compare_int
-let random_ptr () = Ligo.int_from_int64 (Random.int64 Int64.max_int)
+let compare_ptr = Common.compare_nat
+let random_ptr () = Ligo.nat_from_int64 (Random.int64 Int64.max_int)
 (* END_OCAML *)
