@@ -55,6 +55,7 @@ let[@inline] error_NotACompletedSlice                              : Ligo.int = 
 let[@inline] error_InvalidAvlPtr                                   : Ligo.int = Ligo.int_from_literal "88"
 let[@inline] error_InvalidLeafPtr                                  : Ligo.int = Ligo.int_from_literal "89"
 let[@inline] error_BurrowAlreadyExists                             : Ligo.int = Ligo.int_from_literal "90"
+let[@inline] error_InvalidLiquidationAuction                       : Ligo.int = Ligo.int_from_literal "91"
 
 let[@inline] error_GetContractOptFailure                           : Ligo.int = Ligo.int_from_literal "95"
 
