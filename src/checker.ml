@@ -18,6 +18,7 @@ open Error
 open Fa12Interface
 open Fa2Interface
 open Mem
+open Ptr
 
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
@@ -615,12 +616,15 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.ti
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoOp.operation list * checker =
+let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker * (Ligo.nat * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
+  let () = if nat_of_ptr (ptr_of_avl_ptr current_auction.contents) = auction_id
+    then ()
+    else Ligo.failwith error_InvalidLiquidationAuction in
 
   let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
 

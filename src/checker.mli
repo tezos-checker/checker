@@ -205,9 +205,10 @@ val entrypoint_remove_liquidity : checker * (lqt * ctez * kit * Ligo.timestamp) 
     auction, or if the bid is too low.
 
     Parameters:
+    - identifier of the current liquidation auction
     - The amount of kit to be bid
 *)
-val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
+val entrypoint_liquidation_auction_place_bid : checker * (Ligo.nat * kit) -> LigoOp.operation list * checker
 
 (** Claim the rewards of a completed liquidation auction. Fails if the sender
     is not the auction winner, if the auction is still ongoing, or if the
