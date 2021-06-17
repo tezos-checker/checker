@@ -31,16 +31,49 @@ let burrow_for_needs_touch_tests = make_test_burrow
 
 let suite =
   "Burrow tests" >::: [
-    ("burrow_burn_kit - fails for a burrow which needs to be touched" >::
+    ("burrow_is_optimistically_overburrowed - fails for a burrow which needs to be touched" >::
      fun _ ->
        assert_raises
          (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
          (fun () ->
-            Burrow.burrow_burn_kit
+            Burrow.burrow_is_optimistically_overburrowed
               {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              (kit_of_mukit (Ligo.nat_from_literal "1n"))
               burrow_for_needs_touch_tests
          )
+    );
+
+    ("burrow_is_cancellation_warranted - fails for a burrow which needs to be touched" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () ->
+            Burrow.burrow_is_cancellation_warranted
+              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+              burrow_for_needs_touch_tests
+              (Ligo.tez_from_literal "0mutez")
+         )
+    );
+
+    ("compute_min_kit_for_unwarranted - fails for a burrow which needs to be touched" >::
+     fun _ ->
+       assert_raises
+         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
+         (fun () ->
+            Burrow.compute_min_kit_for_unwarranted
+              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+              burrow_for_needs_touch_tests
+              (Ligo.tez_from_literal "0mutez")
+         )
+    );
+
+    ("burrow_burn_kit - does not fail for a burrow which needs to be touched" >::
+     fun _ ->
+       let _ =
+         Burrow.burrow_burn_kit
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_burn_kit - burning exactly outstanding_kit returns burrow with expected excess and outstanding kit" >::
@@ -121,16 +154,14 @@ let suite =
          ~real:(Burrow.burrow_address burrow)
     );
 
-    ("burrow_set_delegate - fails for a burrow which needs to be touched" >::
+    ("burrow_set_delegate - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_set_delegate
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              (Some charles_key_hash)
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_set_delegate
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           (Some charles_key_hash)
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_set_delegate - does not change burrow address" >::
@@ -158,16 +189,14 @@ let suite =
          )
     );
 
-    ("burrow_deposit_tez - fails for a burrow which needs to be touched" >::
+    ("burrow_deposit_tez - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_deposit_tez
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              (Ligo.tez_from_literal "1mutez")
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_deposit_tez
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           (Ligo.tez_from_literal "1mutez")
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_deposit_tez - burrow after successful deposit has expected collateral and excess" >::
@@ -204,16 +233,14 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("burrow_withdraw_tez - fails for a burrow which needs to be touched" >::
+    ("burrow_withdraw_tez - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_withdraw_tez
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              (Ligo.tez_from_literal "1mutez")
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_withdraw_tez
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           (Ligo.tez_from_literal "0mutez")
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_withdraw_tez - burrow after successful withdrawal has expected collateral" >::
@@ -264,16 +291,14 @@ let suite =
          ~real:(Burrow.burrow_outstanding_kit burrow)
     );
 
-    ("burrow_mint_kit - fails for a burrow which needs to be touched" >::
+    ("burrow_mint_kit - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_mint_kit
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              (kit_of_mukit (Ligo.nat_from_literal "1n"))
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_mint_kit
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           (kit_of_mukit (Ligo.nat_from_literal "0n"))
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_mint_kit - does not change burrow address" >::
@@ -321,16 +346,16 @@ let suite =
          )
     );
 
-    ("burrow_activate - fails for a burrow which needs to be touched" >::
+    ("burrow_activate - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_activate
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              Constants.creation_deposit
-              burrow_for_needs_touch_tests
-         )
+       let burrow, _ =
+         Burrow.burrow_deactivate Parameters.initial_parameters burrow_for_needs_touch_tests in
+       let _ =
+         Burrow.burrow_activate
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           Constants.creation_deposit
+           burrow
+       in ()
     );
 
     ("burrow_activate - fails for a burrow which is already active" >::
@@ -393,15 +418,13 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("burrow_deactivate - fails for a burrow which needs to be touched" >::
+    ("burrow_deactivate - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_deactivate
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_deactivate
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     ("burrow_deactivate - fails for a burrow which is already inactive" >::
@@ -508,15 +531,13 @@ let suite =
          )
     );
 
-    ("burrow_request_liquidation - fails for a burrow which needs to be touched" >::
+    ("burrow_request_liquidation - does not fail for a burrow which needs to be touched" >::
      fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int error_OperationOnUntouchedBurrow))
-         (fun () ->
-            Burrow.burrow_request_liquidation
-              {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-              burrow_for_needs_touch_tests
-         )
+       let _ =
+         Burrow.burrow_request_liquidation
+           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+           burrow_for_needs_touch_tests
+       in ()
     );
 
     (* Note: this is a bit overkill but testing anyways since the address field is extremely important *)

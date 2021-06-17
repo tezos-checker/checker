@@ -319,6 +319,7 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let (burrow_owner, _) = cancelled.burrow in
   let burrow = find_burrow state.burrows cancelled.burrow in
+  let burrow = burrow_touch state.parameters burrow in
   let _ =
     if burrow_is_cancellation_warranted state.parameters burrow cancelled.tez
     then ()
@@ -903,15 +904,21 @@ let view_remove_liquidity_min_kit_withdrawn (lqt, state: lqt * checker) : kit =
 
 let view_burrow_max_mintable_kit (burrow_id, state: burrow_id * checker) : kit =
   assert_checker_invariants state;
-  burrow_max_mintable_kit state.parameters (find_burrow state.burrows burrow_id)
+  let burrow = find_burrow state.burrows burrow_id in
+  let burrow = burrow_touch state.parameters burrow in
+  burrow_max_mintable_kit state.parameters burrow
 
 let view_is_burrow_overburrowed (burrow_id, state: burrow_id * checker) : bool =
   assert_checker_invariants state;
-  burrow_is_overburrowed state.parameters (find_burrow state.burrows burrow_id)
+  let burrow = find_burrow state.burrows burrow_id in
+  let burrow = burrow_touch state.parameters burrow in
+  burrow_is_overburrowed state.parameters burrow
 
 let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   assert_checker_invariants state;
-  burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)
+  let burrow = find_burrow state.burrows burrow_id in
+  let burrow = burrow_touch state.parameters burrow in
+  burrow_is_liquidatable state.parameters burrow
 
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
