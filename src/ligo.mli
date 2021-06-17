@@ -173,6 +173,7 @@ val key_hash_from_literal : String.t -> key_hash (* IN LIGO: type-annotate with 
 val bytes_from_literal : String.t -> bytes     (* IN LIGO: replace the double quotes with parens *)
 
 val int_from_int64: Int64.t -> int                      (* NON-LIGO, temporary*)
+val nat_from_int64: Int64.t -> nat                      (* NON-LIGO, temporary*)
 val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO they come from strings, or Tezos.now *)
 
 (* OPERATIONS ON int *)
