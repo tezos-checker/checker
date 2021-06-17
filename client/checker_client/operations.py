@@ -43,8 +43,9 @@ def await_operations(
         op_hashes: A list of operation hashes to await
         start_level: The starting level at which to start searching for operations. This should be a
             level at or before the operations were injected.
+        max_blocks: Maximum number of blocks to wait
         min_confirmations: Minimum number of blocks required to consider operations as having been
-            included on the chain.
+            confirmed (included on the chain).
     Returns:
         A tuple containing a flag indicating whether all operations were confirmed along with
         the corresponding levels of each operation.
@@ -129,13 +130,14 @@ def inject(
 ) -> Dict:
     """A replacement for pytezos's OperationGroup.inject
 
-    Submits the provided operation group and waits until it is confirmed by one block.
+    Submits the provided operation group and waits for the specified number of confirmations.
 
     Args:
         tz: pytezos client instance
         op_group: The operation group to inject
         max_wait_blocks: Maximum number of blocks to wait for a confirmation
-
+        min_confirmations: Minimum number of blocks required to consider operations as having been
+            included on the chain.
     Raises:
         BlockchainReorg: If the confirmation search encountered more than 3 reorgs
         Exception: If the operation group was not confirmed
