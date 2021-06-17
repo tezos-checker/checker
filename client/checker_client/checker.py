@@ -14,14 +14,18 @@ import docker
 import pytezos
 import requests
 from pytezos.client import PyTezosClient
+from pytezos.operation import MAX_OPERATIONS_TTL
+
+from checker_client.operations import inject
 
 # Time between blocks for sandbox container
-# Note: Setting this to 1 causes weird issues. Keep it >= 2s.
-SANDBOX_TIME_BETWEEN_BLOCKS = 2
+SANDBOX_TIME_BETWEEN_BLOCKS = "1,1"
 # Number of retries to use when awaiting new blocks
-WAIT_BLOCK_ATTEMPTS = 10
+WAIT_OP_ATTEMPTS = 10
 # Interval between retries when awaiting new blocks
-WAIT_BLOCK_DELAY = 5
+WAIT_OP_DELAY = 5
+
+
 default_token_metadata = {
     "kit": {
         "name": "kit",
@@ -79,7 +83,7 @@ TokenMetadata = namedtuple("TokenMetadata", ["id", "attrs"])
 
 def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
     from pytezos.michelson.types.core import BytesType, NatType, StringType
-    from pytezos.michelson.types.map import EltLiteral, MapType
+    from pytezos.michelson.types.map import MapType
     from pytezos.michelson.types.pair import PairType
 
     # this map is of type:
@@ -208,27 +212,18 @@ def deploy_contract(
     source_file,
     initial_storage,
     initial_balance=0,
-    num_blocks_wait=100,
-    ttl: Optional[int] = None,
+    ttl=MAX_OPERATIONS_TTL,
 ):
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
     )
 
-    origination = (
-        tz.origination(script, balance=initial_balance)
-        .autofill(ttl=ttl)
-        .sign()
-        .inject(
-            min_confirmations=1,
-            num_blocks_wait=num_blocks_wait,
-            max_iterations=WAIT_BLOCK_ATTEMPTS,
-            delay_sec=WAIT_BLOCK_DELAY,
-        )
+    origination = inject(
+        tz, tz.origination(script, balance=initial_balance).autofill(ttl=ttl).sign()
     )
 
-    opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
-    res = pytezos.operation.result.OperationResult.from_operation_group(opg)
+    # opg = tz.shell.blocks[origination["branch"] :].find_operation(origination["hash"])
+    res = pytezos.operation.result.OperationResult.from_operation_group(origination)
 
     addr = res[0].originated_contracts[0]
     return tz.contract(addr)
@@ -240,7 +235,6 @@ def deploy_checker(
     *,
     oracle,
     ctez,
-    num_blocks_wait=100,
     ttl: Optional[int] = None,
     token_metadata_file=None,
 ):
@@ -250,7 +244,6 @@ def deploy_checker(
         tz,
         source_file=os.path.join(checker_dir, "main.tz"),
         initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
-        num_blocks_wait=num_blocks_wait,
         ttl=ttl,
     )
 
@@ -294,51 +287,18 @@ def deploy_checker(
     ]
     for chunk_no, chunk in enumerate(metadata_chunks, 1):
         print("Deploying TZIP-16 metadata: chunk {} of {}".format(chunk_no, len(metadata_chunks)))
-        (
-            checker.deployMetadata(chunk)
-            .as_transaction()
-            .autofill(ttl=ttl)
-            .sign()
-            .inject(
-                min_confirmations=1,
-                num_blocks_wait=num_blocks_wait,
-                max_iterations=WAIT_BLOCK_ATTEMPTS,
-                delay_sec=WAIT_BLOCK_DELAY,
-            )
-        )
+        inject(tz, checker.deployMetadata(chunk).as_transaction().autofill(ttl=ttl).sign())
 
     # TODO: implement the batching logic here for speed (see the previous ruby script)
     for fun in functions["lazy_functions"]:
         print("Deploying: {}".format(fun["name"]))
         for chunk_no, chunk in enumerate(fun["chunks"]):
             arg = (int(fun["fn_id"]), "0x" + chunk)
-            (
-                checker.deployFunction(arg)
-                .as_transaction()
-                .autofill(ttl=ttl)
-                .sign()
-                .inject(
-                    min_confirmations=1,
-                    num_blocks_wait=num_blocks_wait,
-                    max_iterations=WAIT_BLOCK_ATTEMPTS,
-                    delay_sec=WAIT_BLOCK_DELAY,
-                )
-            )
+            inject(tz, checker.deployFunction(arg).as_transaction().autofill(ttl=ttl).sign())
             print("  deployed: chunk {}.".format(chunk_no))
 
     print("Sealing.")
-    (
-        checker.sealContract((oracle, ctez))
-        .as_transaction()
-        .autofill(ttl=ttl)
-        .sign()
-        .inject(
-            min_confirmations=1,
-            num_blocks_wait=num_blocks_wait,
-            max_iterations=WAIT_BLOCK_ATTEMPTS,
-            delay_sec=WAIT_BLOCK_DELAY,
-        )
-    )
+    inject(tz, checker.sealContract((oracle, ctez)).as_transaction().autofill(ttl=ttl).sign())
 
     return checker
 
@@ -353,7 +313,7 @@ def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
         )
 
 
-def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[int] = None):
+def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
     """Compiles and deploys the ctez contracts.
 
     Should probably eventually be moved to the ctez repo itself...
@@ -432,32 +392,21 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, num_blocks_wait=100, ttl: Optional[
         print("Done.")
 
         print("Setting liquidity address in CFMM contract...")
-        (
-            cfmm.setLqtAddress(fa12_lqt.context.address)
-            .as_transaction()
-            .autofill(ttl=ttl)
-            .sign()
-            .inject(
-                min_confirmations=1,
-                num_blocks_wait=num_blocks_wait,
-                max_iterations=WAIT_BLOCK_ATTEMPTS,
-                delay_sec=WAIT_BLOCK_DELAY,
-            )
+
+        inject(
+            tz,
+            cfmm.setLqtAddress(fa12_lqt.context.address).as_transaction().autofill(ttl=ttl).sign(),
         )
+
         print("Done.")
 
         print("Setting CFMM amd ctez FA1.2 addresses in ctez contract...")
-        (
+        inject(
+            tz,
             ctez.set_addresses((cfmm.context.address, fa12_ctez.context.address))
             .as_transaction()
             .autofill(ttl=ttl)
-            .sign()
-            .inject(
-                min_confirmations=1,
-                num_blocks_wait=num_blocks_wait,
-                max_iterations=WAIT_BLOCK_ATTEMPTS,
-                delay_sec=WAIT_BLOCK_DELAY,
-            )
+            .sign(),
         )
         print("Done.")
 
