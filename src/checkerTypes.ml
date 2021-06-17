@@ -1,3 +1,4 @@
+open Kit
 open Burrow
 open CfmmTypes
 open Parameters
@@ -44,4 +45,9 @@ type wrapper =
   { lazy_functions : lazy_function_map
   ; metadata: (string, Ligo.bytes) Ligo.big_map
   ; deployment_state : deployment_state
+  }
+
+type view_current_liquidation_auction_minimum_bid_result =
+  { auction_id: Ligo.nat
+  ; minimum_bid: kit
   }
