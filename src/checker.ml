@@ -917,6 +917,13 @@ let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   assert_checker_invariants state;
   burrow_is_liquidatable state.parameters (find_burrow state.burrows burrow_id)
 
+let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : view_current_liquidation_auction_minimum_bid_result =
+  assert_checker_invariants state;
+  let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
+  { auction_id = nat_of_ptr (ptr_of_avl_ptr auction.contents)
+  ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
+  }
+
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
 (* ************************************************************************* *)
