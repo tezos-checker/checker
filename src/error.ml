@@ -68,7 +68,5 @@ let[@inline] error_GetEntrypointOptFailureReceivePrice             : Ligo.int = 
 let[@inline] error_GetEntrypointOptFailureOracleEntrypoint         : Ligo.int = Ligo.int_from_literal "113"
 let[@inline] error_GetEntrypointOptFailureFA12Transfer             : Ligo.int = Ligo.int_from_literal "114"
 
-let[@inline] error_OperationOnUntouchedBurrow                      : Ligo.int = Ligo.int_from_literal "120"
-
 let[@inline] error_ContractNotDeployed                             : Ligo.int = Ligo.int_from_literal "134"
 let[@inline] error_ContractAlreadyDeployed                         : Ligo.int = Ligo.int_from_literal "135"
