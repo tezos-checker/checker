@@ -11,11 +11,11 @@ from pytezos.operation import MAX_OPERATIONS_TTL
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 CHECKER_DIR = os.environ.get(
-  "CHECKER_DIR",
-  os.path.join(PROJECT_ROOT, "generated/michelson")
+    "CHECKER_DIR", os.path.join(PROJECT_ROOT, "generated/michelson")
 )
 
 from checker_client.checker import *
+
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
@@ -160,6 +160,7 @@ class E2ETest(SandboxedTestCase):
             gas_costs_sorted[k] = v
         print(json.dumps(gas_costs_sorted, indent=4))
 
+
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         print("Deploying the mock oracle.")
@@ -188,56 +189,77 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         print("Deployment finished.")
 
-
         def call_endpoint(contract, name, param, amount=0):
-            print(
-              "Calling", contract.key.public_key_hash(), "/", name,
-              "with", param
-            )
+            print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
             return inject(
                 self.client,
                 getattr(contract, name)(param)
-                  .with_amount(amount)
-                  .as_transaction()
-                  .autofill(ttl=MAX_OPERATIONS_TTL)
-                  .sign()
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
             )
 
         def call_bulk(bulks, *, chunk_size):
-            chunks = [bulks[i:i+chunk_size] for i in range(0, len(bulks), chunk_size)]
+            chunks = [
+                bulks[i : i + chunk_size] for i in range(0, len(bulks), chunk_size)
+            ]
             for chunk_no, chunk in enumerate(chunks, 1):
-                print("Sending", len(bulks), "operations as bulk:", "Chunk", chunk_no, "of",  len(chunks))
-                inject(self.client, self.client.bulk(*chunk).autofill(ttl=MAX_OPERATIONS_TTL).sign())
+                print(
+                    "Sending",
+                    len(bulks),
+                    "operations as bulk:",
+                    "Chunk",
+                    chunk_no,
+                    "of",
+                    len(chunks),
+                )
+                inject(
+                    self.client,
+                    self.client.bulk(*chunk).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+                )
 
         call_bulk(
-            [ checker.create_burrow((0, None)).with_amount(200_000_000)
-            , checker.mint_kit((0, 80_000_000))
+            [
+                checker.create_burrow((0, None)).with_amount(200_000_000),
+                checker.mint_kit((0, 80_000_000)),
             ],
-            chunk_size=10
+            chunk_size=10,
         )
 
-        call_endpoint(ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000)
+        call_endpoint(
+            ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
+        )
         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
         call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 100_000))
 
-        call_endpoint(checker, "add_liquidity", (100_000, 100_000, 5, int(datetime.now().timestamp()) + 20))
+        call_endpoint(
+            checker,
+            "add_liquidity",
+            (100_000, 100_000, 5, int(datetime.now().timestamp()) + 20),
+        )
 
         burrows = list(range(1, 1001))
 
         call_bulk(
-           [ checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
-             for burrow_id in burrows
-           ],
-           chunk_size=100
+            [
+                checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
+                for burrow_id in burrows
+            ],
+            chunk_size=100,
         )
 
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
-        max_mintable_kit = checker.metadata.burrowMaxMintableKit((self.client.key.public_key_hash(), 1)).storage_view()
+        max_mintable_kit = checker.metadata.burrowMaxMintableKit(
+            (self.client.key.public_key_hash(), 1)
+        ).storage_view()
 
         bulks = []
         for burrow_no in burrows:
-            bulks.append(checker.touch_burrow((self.client.key.public_key_hash(), burrow_no)))
+            bulks.append(
+                checker.touch_burrow((self.client.key.public_key_hash(), burrow_no))
+            )
             bulks.append(checker.mint_kit(burrow_no, max_mintable_kit))
 
         call_bulk(bulks, chunk_size=100)
@@ -281,7 +303,10 @@ class LiquidationsStressTest(SandboxedTestCase):
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.
 
-        call_endpoint(checker, "liquidation_auction_place_bid", (auction_id, minimum_bid))
+        call_endpoint(
+            checker, "liquidation_auction_place_bid", (auction_id, minimum_bid)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
