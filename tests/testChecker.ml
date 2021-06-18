@@ -895,12 +895,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_NoOpenAuction))
-         (fun () ->
-            Checker.entrypoint_liquidation_auction_place_bid
-              ( checker
-              , (kit_of_mukit (Ligo.nat_from_literal "1_000n"))
-              )
-         );
+         (fun () ->Checker.view_current_liquidation_auction_minimum_bid ((), checker));
 
        let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in
@@ -922,11 +917,12 @@ let suite =
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
+       let auction_id = (Checker.view_current_liquidation_auction_minimum_bid ((), checker)).auction_id in
 
        let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
            ( checker
-           , (kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
+           , (auction_id, kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
            ) in
 
        let auction_id =
