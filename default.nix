@@ -1,4 +1,4 @@
-{ doCheck ? false }:
+{ doCheck ? false, e2eTestsHack ? false }:
 
 let
   sources = import ./nix/sources.nix { };
@@ -69,6 +69,11 @@ rec
       name = "checker-michelson";
       buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
       src = checkerSource;
+      patchPhase = pkgs.lib.optional e2eTestsHack ''
+        set -x
+        cat ${./patches/e2e-tests-hack.patch} | patch -p1
+        set +x
+      '';
       buildPhase = ''
         export HOME=$(mktemp -d)
         make build-ligo

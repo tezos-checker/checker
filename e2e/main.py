@@ -10,6 +10,10 @@ from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
+CHECKER_DIR = os.environ.get(
+  "CHECKER_DIR",
+  os.path.join(PROJECT_ROOT, "generated/michelson")
+)
 
 from checker_client.checker import *
 
@@ -60,7 +64,7 @@ class E2ETest(SandboxedTestCase):
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
-            checker_dir=os.path.join(PROJECT_ROOT, "generated/michelson"),
+            checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
@@ -176,7 +180,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
-            checker_dir=os.path.join(PROJECT_ROOT, "generated/michelson"),
+            checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
