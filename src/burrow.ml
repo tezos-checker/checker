@@ -88,11 +88,6 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
   assert (burrow.address = burrow_out.address);
   burrow_out
 
-let[@inline] ensure_uptodate_burrow (p: parameters) (b: burrow) : unit =
-  if p.last_touched = b.last_touched
-  then ()
-  else (Ligo.failwith error_OperationOnUntouchedBurrow : unit)
-
 let[@inline] burrow_address (b: burrow) : Ligo.address =
   assert_burrow_invariants b;
   b.address
@@ -135,8 +130,8 @@ let[@inline] undercollateralization_condition (f: ratio) (price: ratio) (tez: ra
   * account expected kit from pending auctions; for all we know, this could
   * be lost forever.
 *)
-let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
-  let _ = ensure_uptodate_burrow p b in
+let burrow_is_overburrowed (p: parameters) (b: burrow) : bool =
+  assert (p.last_touched = b.last_touched);
   assert_burrow_invariants b;
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
   let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
@@ -144,7 +139,7 @@ let burrow_is_overburrowed (p : parameters) (b : burrow) : bool =
 
 (*  max_kit_outstanding = FLOOR (tez_collateral / (fminting * minting_price)) *)
 let burrow_max_mintable_kit (p: parameters) (b: burrow) : kit =
-  let _ = ensure_uptodate_burrow p b in
+  assert (p.last_touched = b.last_touched);
   assert_burrow_invariants b;
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
@@ -405,7 +400,7 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
   * can be liquidated; inactive ones are dormant, until either all pending
   * auctions finish or if their creation deposit is restored. *)
 let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
-  let _ = ensure_uptodate_burrow p b in
+  assert (p.last_touched = b.last_touched);
   assert_burrow_invariants b;
 
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
@@ -431,7 +426,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   * until either all pending auctions finish or if their creation deposit is
   * restored. *)
 let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Ligo.tez) : bool =
-  let _ = ensure_uptodate_burrow p b in
+  assert (p.last_touched = b.last_touched);
   assert_burrow_invariants b;
   assert (Ligo.geq_tez_tez b.collateral_at_auction slice_tez);
 
@@ -468,7 +463,7 @@ let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Lig
   *     for it so that the function is not partial.
 *)
 let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit option =
-  let _ = ensure_uptodate_burrow p b in
+  assert (p.last_touched = b.last_touched);
 
   if b.collateral = Ligo.tez_from_literal "0mutez" (* NOTE: division by zero. *)
   then
@@ -617,7 +612,7 @@ let make_burrow_for_test
   *   tez_collateral < fminting * (kit_outstanding - expected_kit_from_auctions) * minting_price
 *)
 let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
-  let _ = ensure_uptodate_burrow p b in
+  assert (p.last_touched = b.last_touched); (* Alternatively: touch the burrow here *)
   assert_burrow_invariants b;
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
