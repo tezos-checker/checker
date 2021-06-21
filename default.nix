@@ -69,6 +69,9 @@ rec
       name = "checker-michelson";
       buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
       src = checkerSource;
+      # On E2E tests, we are using a patched version of checker to be able to experiment
+      # with index changes without having to wait for the protected index to catch up.
+      # It's a hack, and shouldn't be used for anything else than the tests.
       patchPhase = pkgs.lib.optional e2eTestsHack ''
         set -x
         cat ${./patches/e2e-tests-hack.patch} | patch -p1
