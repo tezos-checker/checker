@@ -736,6 +736,39 @@ let suite =
          (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
     );
 
+    ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = { empty_checker with last_price = Some (Ligo.nat_from_literal "1_000_000n") } in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_touch (checker, ()) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "200_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
+       let max_kit = Checker.view_burrow_max_mintable_kit ((alice_addr, Ligo.nat_from_literal "0n"), checker) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", max_kit)) in
+       let checker = { checker with last_price = Some (Ligo.nat_from_literal "10_000_000n") } in
+       let _, checker = Checker.entrypoint_touch (checker, ()) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:1_000_000 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_touch (checker, ()) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_touch_burrow (checker, (alice_addr, Ligo.nat_from_literal "0n")) in
+       let _, checker = Checker.entrypoint_mark_for_liquidation (checker, (alice_addr, Ligo.nat_from_literal "0n")) in
+       let _, checker = Checker.entrypoint_touch (checker, ()) in
+
+       let res = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       let other_ptr = match res.auction_id with AVLPtr i -> Ptr.ptr_next i in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_InvalidLiquidationAuction))
+         (fun () -> Checker.entrypoint_liquidation_auction_place_bid (checker, (AVLPtr other_ptr, res.minimum_bid)));
+    );
+
     ("can complete a liquidation auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
