@@ -255,10 +255,9 @@ class LiquidationsStressTest(SandboxedTestCase):
             (self.client.key.public_key_hash(), 1)
         ).storage_view()
 
-
         call_bulk(
-          [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
-          batch_size=100
+            [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
+            batch_size=100,
         )
 
         # Change the index (kits are 100x valuable)
@@ -277,8 +276,13 @@ class LiquidationsStressTest(SandboxedTestCase):
         #
         # This should use the push_back method of the AVL tree.
         call_bulk(
-          [checker.mark_for_liquidation((self.client.key.public_key_hash(), burrow_no)) for burrow_no in burrows],
-          batch_size=40
+            [
+                checker.mark_for_liquidation(
+                    (self.client.key.public_key_hash(), burrow_no)
+                )
+                for burrow_no in burrows
+            ],
+            batch_size=40,
         )
 
         # This touch starts a liquidation auction
