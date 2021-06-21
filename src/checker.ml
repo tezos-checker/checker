@@ -18,7 +18,6 @@ open Error
 open Fa12Interface
 open Fa2Interface
 open Mem
-open Ptr
 
 (* BEGIN_OCAML *)
 let assert_checker_invariants (state: checker) : unit =
@@ -616,13 +615,13 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.ti
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker * (Ligo.nat * kit)) : LigoOp.operation list * checker =
+let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker * (liquidation_auction_id * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
-  let () = if nat_of_ptr (ptr_of_avl_ptr current_auction.contents) = auction_id
+  let () = if current_auction.contents = auction_id
     then ()
     else Ligo.failwith error_InvalidLiquidationAuction in
 
@@ -927,7 +926,7 @@ let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
 let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : view_current_liquidation_auction_minimum_bid_result =
   assert_checker_invariants state;
   let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
-  { auction_id = nat_of_ptr (ptr_of_avl_ptr auction.contents)
+  { auction_id = auction.contents
   ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
   }
 

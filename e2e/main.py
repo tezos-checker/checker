@@ -200,23 +200,23 @@ class LiquidationsStressTest(SandboxedTestCase):
                 .sign(),
             )
 
-        def call_bulk(bulks, *, chunk_size):
-            chunks = [
-                bulks[i : i + chunk_size] for i in range(0, len(bulks), chunk_size)
+        def call_bulk(bulks, *, batch_size):
+            batches = [
+                bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
             ]
-            for chunk_no, chunk in enumerate(chunks, 1):
+            for batch_no, batch in enumerate(batches, 1):
                 print(
                     "Sending",
-                    len(bulks),
+                    len(batches),
                     "operations as bulk:",
-                    "Chunk",
-                    chunk_no,
+                    "Batch",
+                    batch_no,
                     "of",
-                    len(chunks),
+                    len(batches),
                 )
                 inject(
                     self.client,
-                    self.client.bulk(*chunk).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+                    self.client.bulk(*batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
                 )
 
         call_bulk(
@@ -224,7 +224,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 checker.create_burrow((0, None)).with_amount(200_000_000),
                 checker.mint_kit((0, 80_000_000)),
             ],
-            chunk_size=10,
+            batch_size=10,
         )
 
         call_endpoint(
@@ -246,7 +246,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
                 for burrow_id in burrows
             ],
-            chunk_size=100,
+            batch_size=100,
         )
 
         # Mint as much as possible from the burrows. All should be identical, so we just query the
@@ -255,14 +255,11 @@ class LiquidationsStressTest(SandboxedTestCase):
             (self.client.key.public_key_hash(), 1)
         ).storage_view()
 
-        bulks = []
-        for burrow_no in burrows:
-            bulks.append(
-                checker.touch_burrow((self.client.key.public_key_hash(), burrow_no))
-            )
-            bulks.append(checker.mint_kit(burrow_no, max_mintable_kit))
 
-        call_bulk(bulks, chunk_size=100)
+        call_bulk(
+          [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
+          batch_size=100
+        )
 
         # Change the index (kits are 100x valuable)
         #
@@ -279,13 +276,10 @@ class LiquidationsStressTest(SandboxedTestCase):
         # Now burrows should be overburrowed, so we liquidate them all.
         #
         # This should use the push_back method of the AVL tree.
-        bulks = []
-        for burrow_no in burrows:
-            bid = (self.client.key.public_key_hash(), burrow_no)
-            bulks.append(checker.touch_burrow(bid))
-            bulks.append(checker.mark_for_liquidation(bid))
-
-        call_bulk(bulks, chunk_size=40)
+        call_bulk(
+          [checker.mark_for_liquidation((self.client.key.public_key_hash(), burrow_no)) for burrow_no in burrows],
+          batch_size=40
+        )
 
         # This touch starts a liquidation auction
         #

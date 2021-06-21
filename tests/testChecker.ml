@@ -895,7 +895,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_NoOpenAuction))
-         (fun () ->Checker.view_current_liquidation_auction_minimum_bid ((), checker));
+         (fun () -> Checker.view_current_liquidation_auction_minimum_bid ((), checker));
 
        let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.tez_from_literal "1_200_000mutez") in

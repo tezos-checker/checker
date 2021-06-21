@@ -3,6 +3,7 @@ open Burrow
 open CfmmTypes
 open Parameters
 open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Fa2Interface
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
@@ -48,6 +49,6 @@ type wrapper =
   }
 
 type view_current_liquidation_auction_minimum_bid_result =
-  { auction_id: Ligo.nat
+  { auction_id: liquidation_auction_id
   ; minimum_bid: kit
   }
