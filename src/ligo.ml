@@ -142,7 +142,10 @@ let int_from_literal s =
   try parse_int_with_suffix "" s
   with exc -> failwith ("Ligo.int_from_literal: " ^ Printexc.to_string exc)
 
-let int_from_int64 = Z.of_int64
+let nat_from_int64 (t: Int64.t) =
+  let r = Z.of_int64 t in
+  assert (r >= Z.zero);
+  r
 
 let add_int_int = Z.add
 

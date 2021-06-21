@@ -615,12 +615,15 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.ti
 (**                          LIQUIDATION AUCTIONS                            *)
 (* ************************************************************************* *)
 
-let entrypoint_liquidation_auction_place_bid (state, kit: checker * kit) : LigoOp.operation list * checker =
+let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker * (liquidation_auction_id * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
+  let () = if current_auction.contents = auction_id
+    then ()
+    else Ligo.failwith error_InvalidLiquidationAuction in
 
   let (new_current_auction, old_winning_bid) = liquidation_auction_place_bid current_auction bid in
 
@@ -919,6 +922,13 @@ let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   let burrow = find_burrow state.burrows burrow_id in
   let burrow = burrow_touch state.parameters burrow in
   burrow_is_liquidatable state.parameters burrow
+
+let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : view_current_liquidation_auction_minimum_bid_result =
+  assert_checker_invariants state;
+  let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
+  { auction_id = auction.contents
+  ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
+  }
 
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)

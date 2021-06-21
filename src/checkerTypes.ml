@@ -1,7 +1,9 @@
+open Kit
 open Burrow
 open CfmmTypes
 open Parameters
 open LiquidationAuctionTypes
+open LiquidationAuctionPrimitiveTypes
 open Fa2Interface
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
@@ -44,4 +46,9 @@ type wrapper =
   { lazy_functions : lazy_function_map
   ; metadata: (string, Ligo.bytes) Ligo.big_map
   ; deployment_state : deployment_state
+  }
+
+type view_current_liquidation_auction_minimum_bid_result =
+  { auction_id: liquidation_auction_id
+  ; minimum_bid: kit
   }

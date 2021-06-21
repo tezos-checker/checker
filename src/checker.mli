@@ -205,9 +205,10 @@ val entrypoint_remove_liquidity : checker * (lqt * ctez * kit * Ligo.timestamp) 
     auction, or if the bid is too low.
 
     Parameters:
+    - identifier of the current liquidation auction
     - The amount of kit to be bid
 *)
-val entrypoint_liquidation_auction_place_bid : checker * kit -> LigoOp.operation list * checker
+val entrypoint_liquidation_auction_place_bid : checker * (liquidation_auction_id * kit) -> LigoOp.operation list * checker
 
 (** Claim the rewards of a completed liquidation auction. Fails if the sender
     is not the auction winner, if the auction is still ongoing, or if the
@@ -256,6 +257,8 @@ val view_add_liquidity_max_kit_deposited : (ctez * checker) -> kit
 val view_add_liquidity_min_lqt_minted : (ctez * checker) -> lqt
 val view_remove_liquidity_min_ctez_withdrawn : (lqt * checker) -> ctez
 val view_remove_liquidity_min_kit_withdrawn : (lqt * checker) -> kit
+
+val view_current_liquidation_auction_minimum_bid: (unit * checker) -> view_current_liquidation_auction_minimum_bid_result
 
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
