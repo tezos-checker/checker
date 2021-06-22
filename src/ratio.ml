@@ -8,7 +8,7 @@ type ratio = {
 }
 
 (* make and normalize n/d, assuming d > 0 *)
-let[@inline] make_real_unsafe (n: Ligo.int) (d: Ligo.int) : ratio =
+let[@inline] make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
   assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
   { num = n; den = d; }
 
@@ -59,14 +59,6 @@ let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.i
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
-(* make and normalize any fraction *)
-let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
-  if Ligo.eq_int_int d (Ligo.int_from_literal "0") then
-    (failwith "Ratio.make_ratio: division by zero" : ratio)
-  else if Ligo.gt_int_int d (Ligo.int_from_literal "0") then
-    make_real_unsafe n d
-  else
-    make_real_unsafe (neg_int n) (neg_int d)
 
 let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
@@ -83,7 +75,7 @@ let lt_ratio_ratio (x: ratio) (y: ratio) : bool =
 let mul_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real_unsafe
+  make_ratio
     (Ligo.mul_int_int x_num y_num)
     (Ligo.mul_int_int x_den y_den)
 
@@ -109,7 +101,7 @@ let[@inline] neg_ratio (x: ratio) : ratio =
 let add_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real_unsafe
+  make_ratio
     (Ligo.add_int_int
        (Ligo.mul_int_int x_num y_den)
        (Ligo.mul_int_int y_num x_den))
@@ -120,7 +112,7 @@ let add_ratio (x: ratio) (y: ratio) : ratio =
 let sub_ratio (x: ratio) (y: ratio) : ratio =
   let { num = x_num; den = x_den; } = x in
   let { num = y_num; den = y_den; } = y in
-  make_real_unsafe
+  make_ratio
     (Ligo.sub_int_int
        (Ligo.mul_int_int x_num y_den)
        (Ligo.mul_int_int y_num x_den))
@@ -135,10 +127,6 @@ let div_ratio (x: ratio) (y: ratio) : ratio =
     mul_ratio x { num = y_den; den = y_num; }
   else
     mul_ratio x { num = neg_int y_den; den = neg_int y_num; }
-
-let qexp (x: ratio) : ratio =
-  let { num = x_num; den = x_den; } = x in
-  { num = Ligo.add_int_int x_num x_den; den = x_den; }
 
 let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp_ratio f x = Format.pp_print_string f (show_ratio x)

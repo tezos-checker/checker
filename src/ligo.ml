@@ -275,44 +275,12 @@ let leq_tez_tez = Z.leq
 
 let geq_tez_tez = Z.geq
 
-(* tickets *)
-
-type 'a ticket =
-  { issuer : address;
-    content : 'a;
-    amount : nat;
-  }
-[@@deriving show]
-
-
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
   let level = ref (nat_from_literal "0n")
   let self_address = ref "self_address"
   let sender = ref "sender"
   let amount = ref (tez_from_literal "0mutez")
-
-  let create_ticket content amount =
-    { issuer = !self_address;
-      content = content;
-      amount = amount;
-    }
-
-  let read_ticket ticket = ((ticket.issuer, (ticket.content, ticket.amount)), ticket)
-
-  let split_ticket ticket (left, right) =
-    if (add_nat_nat left right) <> ticket.amount
-    then None
-    else
-      (* NOTE: I hope the content has no tickets in it to duplicate! *)
-      let l = {issuer = ticket.issuer; content = ticket.content; amount = left;} in
-      let r = {issuer = ticket.issuer; content = ticket.content; amount = right;} in
-      Some (l, r)
-
-  let join_tickets (t1, t2) =
-    if (t1.content <> t2.content) || (t1.issuer <> t2.issuer)
-    then None
-    else Some {issuer = t1.issuer; content = t1.content; amount = add_nat_nat t1.amount t2.amount;}
 
   let reset () =
     now := timestamp_from_seconds_literal 0;
@@ -329,7 +297,7 @@ module Tezos = struct
     amount := amount_
 
   (* Executes a function within a context with a different self_address. This is useful
-     for testing (e.g. creating tickets with different issuers) but cannot happen in the real-world.
+     for testing but cannot happen in the real-world.
   *)
   let with_self_address address f =
     let current_address = !self_address in

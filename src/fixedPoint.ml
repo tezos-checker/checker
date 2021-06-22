@@ -33,7 +33,7 @@ let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
 [@@@coverage off]
 let fixedpoint_scaling_exponent = 64
 
-let fixedpoint_to_ratio (amnt: fixedpoint) = make_real_unsafe amnt fixedpoint_scaling_factor
+let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor
 
 let fixedpoint_of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in

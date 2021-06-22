@@ -35,7 +35,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
   else
     { cfmm with
       kit_in_ctez_in_prev_block =
-        make_real_unsafe
+        make_ratio
           (Ligo.mul_int_int (ctez_to_muctez_int cfmm.ctez) kit_scaling_factor_int)
           (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (Ligo.int_from_literal "1_000_000"));
       last_level = !Ligo.Tezos.level;
