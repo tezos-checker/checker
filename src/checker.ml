@@ -714,24 +714,26 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * operations computed are independent from each other, this needs not be a
  * problem. *)
 let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * Ligo.int)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * Ligo.nat)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
-  if Ligo.leq_int_int maximum int_zero then
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
-  else
-    match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-    | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
-    | Some leaf ->
-      let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
-        touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
-      touch_oldest
-        ( new_ops,
-          new_state_liquidation_auctions,
-          new_state_burrows,
-          kit_add old_kit_to_repay new_kit_to_repay,
-          kit_add old_kit_to_burn new_kit_to_burn,
-          Ligo.sub_int_int maximum (Ligo.int_from_literal "1")
-        )
+  match Ligo.is_nat (Ligo.sub_nat_nat maximum (Ligo.nat_from_literal "1n")) with
+  | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
+  | Some maximum ->
+    begin
+      match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
+      | None -> (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
+      | Some leaf ->
+        let new_ops, new_state_liquidation_auctions, new_state_burrows, new_kit_to_repay, new_kit_to_burn =
+          touch_liquidation_slice ops state_liquidation_auctions state_burrows leaf in
+        touch_oldest
+          ( new_ops,
+            new_state_liquidation_auctions,
+            new_state_burrows,
+            kit_add old_kit_to_repay new_kit_to_repay,
+            kit_add old_kit_to_burn new_kit_to_burn,
+            maximum
+          )
+    end
 
 (* Note that the list of operations returned is in reverse order (with respect to
  * the order in which the things are expected to happen). However, all inputs
