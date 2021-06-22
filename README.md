@@ -53,6 +53,11 @@ For test coverage report using bisect_ppx, type
 For extracting (haddock-style) documentation from the code using dune, type
 *  `make docs` (docs entrypoint: `./_build/default/_doc/_html/index.html`)
 
+For running the end-to-end tests, type:
+```console
+$ CHECKER_DIR=$(nix-build -A michelson --arg e2eTestsHack true --no-out-link) python e2e/main.py
+```
+
 ## Local Deployment
 
 The contract can be deployed to a local, Docker sandbox run using the provided
