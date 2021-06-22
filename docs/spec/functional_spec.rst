@@ -259,7 +259,7 @@ Cancel pending liquidation slices
 Bid in the current liquidation auction
 --------------------------------------
 
-``liquidation_auction_place_bid: nat``
+``liquidation_auction_place_bid: (pair nat nat)``
 
 Claim the collateral from a winning auction bid
 -----------------------------------------------
@@ -438,6 +438,18 @@ Check whether a burrow can be liquidated
 | id            | nat                   | The caller's ID for the burrow                                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+Minimum bid for the current liquidation auction (if exists)
+-----------------------------------------------------------
+
+``current_liquidation_auction_minimum_bid : unit -> pair nat nat``
+
+Returns a pair of an identifier to the current auction and a `mukit` amount.
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| unit          | unit                  | ()                                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
 
 
 Deployment
