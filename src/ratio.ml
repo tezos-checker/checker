@@ -126,10 +126,6 @@ let div_ratio (x: ratio) (y: ratio) : ratio =
   else
     mul_ratio x { num = neg_int y_den; den = neg_int y_num; }
 
-let qexp (x: ratio) : ratio =
-  let { num = x_num; den = x_den; } = x in
-  { num = Ligo.add_int_int x_num x_den; den = x_den; }
-
 let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
 let pp_ratio f x = Format.pp_print_string f (show_ratio x)
 
