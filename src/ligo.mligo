@@ -25,8 +25,11 @@
 [@inline] let eq_tez_tez (i: tez) (j: tez) : bool = i = j
 
 [@inline] let lt_int_int (i: int) (j: int) : bool = i < j
+[@inline] let lt_nat_nat (i: nat) (j: nat) : bool = i < j
+[@inline] let lt_tez_tez (i: tez) (j: tez) : bool = i < j
 
 [@inline] let gt_int_int (i: int) (j: int) : bool = i > j
+[@inline] let gt_nat_nat (i: nat) (j: nat) : bool = i > j
 [@inline] let gt_tez_tez (i: tez) (j: tez) : bool = i > j
 
 [@inline] let leq_int_int (i: int) (j: int) : bool = i <= j
@@ -36,3 +39,4 @@
 [@inline] let geq_int_int (i: int) (j: int) : bool = i >= j
 [@inline] let geq_nat_nat (i: nat) (j: nat) : bool = i >= j
 [@inline] let geq_tez_tez (i: tez) (j: tez) : bool = i >= j
+[@inline] let geq_timestamp_timestamp (i: timestamp) (j: timestamp) : bool = i >= j

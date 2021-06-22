@@ -183,8 +183,9 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
 let liquidation_auction_send_to_auction
     (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
   : (liquidation_auctions * leaf_ptr) =
-  if avl_height auctions.avl_storage auctions.queued_slices
-     >= max_liquidation_queue_height then
+  if Ligo.geq_int_int
+      (avl_height auctions.avl_storage auctions.queued_slices)
+      max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)
   else
     let burrow_slices = slice_list_from_auction_state auctions contents.burrow in
@@ -208,8 +209,8 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
         tez = contents_tez;
         min_kit_for_unwarranted = contents_min_kit_for_unwarranted;
       } = contents in
-  assert (amnt > Ligo.tez_from_literal "0mutez");
-  assert (amnt < contents_tez);
+  assert (Ligo.gt_tez_tez amnt (Ligo.tez_from_literal "0mutez"));
+  assert (Ligo.lt_tez_tez amnt contents_tez);
   let slice_tez = tez_to_mutez contents_tez in
   (* tez partitioning *)
   let ltez = amnt in
@@ -249,7 +250,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
   let auctions = { auctions with avl_storage = storage } in
 
   let queued_amount = avl_tez storage new_auction in
-  let auctions = if queued_amount < split_threshold
+  let auctions = if Ligo.lt_tez_tez queued_amount split_threshold
     then
       (* split next thing *)
       let next = slice_list_from_queue_head auctions in
@@ -346,8 +347,9 @@ let is_liquidation_auction_complete
   | Descending _ ->
     (None: bid option)
   | Ascending (b, t, h) ->
-    if Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t
-       > max_bid_interval_in_seconds
+    if Ligo.gt_int_int
+        (Ligo.sub_timestamp_timestamp !Ligo.Tezos.now t)
+        max_bid_interval_in_seconds
     && Ligo.gt_int_int
          (Ligo.sub_nat_nat !Ligo.Tezos.level h)
          (Ligo.int max_bid_interval_in_blocks)
@@ -418,7 +420,7 @@ let complete_liquidation_auction_if_possible
   * bid placement is successful return the old winning bid, so that we can
   * credit their kit back to their account. *)
 let liquidation_auction_place_bid (auction: current_liquidation_auction) (bid: bid) : (current_liquidation_auction * (bid option)) =
-  if bid.kit >= liquidation_auction_current_auction_minimum_bid auction
+  if geq_kit_kit bid.kit (liquidation_auction_current_auction_minimum_bid auction)
   then
     begin
       let updated_auction = { auction with state = Ascending (bid, !Ligo.Tezos.now, !Ligo.Tezos.level); } in

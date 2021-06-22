@@ -168,7 +168,7 @@ let burrow_return_slice_from_auction
   : burrow =
   assert_burrow_invariants burrow;
   assert burrow.active;
-  assert (burrow.collateral_at_auction >= slice.tez);
+  assert (Ligo.geq_tez_tez burrow.collateral_at_auction slice.tez);
   let burrow_out =
     { burrow with
       collateral = Ligo.add_tez_tez burrow.collateral slice.tez;
@@ -182,7 +182,7 @@ let burrow_return_kit_from_auction
     (kit: kit)
     (burrow: burrow) : burrow =
   assert_burrow_invariants burrow;
-  assert (burrow.collateral_at_auction >= slice.tez);
+  assert (Ligo.geq_tez_tez burrow.collateral_at_auction slice.tez);
   let burrow_out =
     rebalance_kit
       { burrow with
@@ -194,7 +194,7 @@ let burrow_return_kit_from_auction
   burrow_out
 
 let burrow_create (p: parameters) (addr: Ligo.address) (tez: Ligo.tez) (delegate_opt: Ligo.key_hash option) : burrow =
-  if tez < creation_deposit
+  if Ligo.lt_tez_tez tez creation_deposit
   then (Ligo.failwith error_InsufficientFunds : burrow)
   else
     { active = true;
@@ -259,7 +259,7 @@ let burrow_activate (p: parameters) (tez: Ligo.tez) (b: burrow) : burrow =
   let b = burrow_touch p b in
   assert_burrow_invariants b;
   let burrow_out =
-    if tez < creation_deposit then
+    if Ligo.lt_tez_tez tez creation_deposit then
       (Ligo.failwith error_InsufficientFunds : burrow)
     else if b.active then
       (Ligo.failwith error_BurrowIsAlreadyActive : burrow)
@@ -283,9 +283,9 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * Ligo.tez) =
       (Ligo.failwith error_DeactivatingAnOverburrowedBurrow : (burrow * Ligo.tez))
     else if (not b.active) then
       (Ligo.failwith error_DeactivatingAnInactiveBurrow : (burrow * Ligo.tez))
-    else if (b.outstanding_kit > kit_zero) then
+    else if gt_kit_kit b.outstanding_kit kit_zero then
       (Ligo.failwith error_DeactivatingWithOutstandingKit : (burrow * Ligo.tez))
-    else if (b.collateral_at_auction > Ligo.tez_from_literal "0mutez") then
+    else if Ligo.gt_tez_tez b.collateral_at_auction (Ligo.tez_from_literal "0mutez") then
       (Ligo.failwith error_DeactivatingWithCollateralAtAuctions : (burrow * Ligo.tez))
     else
       let return = Ligo.add_tez_tez b.collateral creation_deposit in
@@ -509,7 +509,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
     (None : liquidation_result)
   else
     let liquidation_reward = Ligo.add_tez_tez creation_deposit partial_reward in
-    if Ligo.sub_tez_tez b.collateral partial_reward < creation_deposit then
+    if Ligo.lt_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) creation_deposit then
       (* Case 2a: Cannot even refill the creation deposit; liquidate the whole
        * thing (after paying the liquidation reward of course). *)
       let tez_to_auction = Ligo.sub_tez_tez b.collateral partial_reward in

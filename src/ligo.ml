@@ -144,7 +144,7 @@ let int_from_literal s =
 
 let nat_from_int64 (t: Int64.t) =
   let r = Z.of_int64 t in
-  assert (r >= Z.zero);
+  assert (Z.geq r Z.zero);
   r
 
 let add_int_int = Z.add
@@ -230,6 +230,8 @@ let timestamp_from_seconds_literal s =
     failwith "Ligo.timestamp_from_seconds_literal: negative"
   else
     Z.of_int s
+
+let geq_timestamp_timestamp = Z.geq
 
 (* tez *)
 

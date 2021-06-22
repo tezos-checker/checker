@@ -30,7 +30,7 @@ let assert_checker_invariants (state: checker) : unit =
    * phantom kit token in the cfmm) is at least as much as the total kit in the
    * cfmm. Of course there can be more, e.g., from pending bids, or because of
    * imperfect liquidations. *)
-  assert (kit_add (kit_of_mukit (fa2_get_balance (state.fa2_state, !Ligo.Tezos.self_address, kit_token_id))) (kit_of_mukit (Ligo.nat_from_literal "1n")) >= state.cfmm.kit);
+  assert (geq_kit_kit (kit_add (kit_of_mukit (fa2_get_balance (state.fa2_state, !Ligo.Tezos.self_address, kit_token_id))) (kit_of_mukit (Ligo.nat_from_literal "1n"))) state.cfmm.kit);
   (* Check that the total number of liquidity tokens tracked on the fa2 ledger
    * is consistent with (i.e., 1 token less than - because of the phantom lqt
    * token in the cfmm) the total number of liquidity tokens in the cfmm. *)
@@ -221,7 +221,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
    * subtraction), or [ledger_withdraw_kit] below will fail first (attempt to
    * move kit that is not owned by the sender). Either way I (George) think
    * that this assertion is only useful for our unit tests. *)
-  assert (state.parameters.circulating_kit >= kit);
+  assert (geq_kit_kit state.parameters.circulating_kit kit);
   let state =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
@@ -374,7 +374,7 @@ let touch_liquidation_slice
       let liquidation_was_warranted =
         match slice.min_kit_for_unwarranted with
         | None -> true
-        | Some min_kit_for_unwarranted -> corresponding_kit < min_kit_for_unwarranted in
+        | Some min_kit_for_unwarranted -> lt_kit_kit corresponding_kit min_kit_for_unwarranted in
       if liquidation_was_warranted then
         kit_of_fraction_ceil
           (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
@@ -714,9 +714,9 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * operations computed are independent from each other, this needs not be a
  * problem. *)
 let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * int)
+    (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn, maximum: LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit * Ligo.int)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * kit * kit) =
-  if maximum <= 0 then
+  if Ligo.leq_int_int maximum int_zero then
     (ops, state_liquidation_auctions, state_burrows, old_kit_to_repay, old_kit_to_burn)
   else
     match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
@@ -730,7 +730,7 @@ let rec touch_oldest
           new_state_burrows,
           kit_add old_kit_to_repay new_kit_to_repay,
           kit_add old_kit_to_burn new_kit_to_burn,
-          maximum - 1
+          Ligo.sub_int_int maximum (Ligo.int_from_literal "1")
         )
 
 (* Note that the list of operations returned is in reverse order (with respect to
@@ -750,7 +750,7 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
-  assert (state.parameters.last_touched <= !Ligo.Tezos.now);
+  assert (Ligo.geq_timestamp_timestamp !Ligo.Tezos.now state.parameters.last_touched);
   let _ = ensure_no_tez_given () in
   if state_parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)

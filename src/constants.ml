@@ -109,7 +109,7 @@ let[@inline] touch_high_reward : ratio = make_ratio (Ligo.int_from_literal "1") 
 
 (** The number of liquidation slices to process every time the checker
     contract is touched. *)
-let[@inline] number_of_slices_to_process : int = 5
+let[@inline] number_of_slices_to_process : Ligo.int = Ligo.int_from_literal "5" (* FIXME: perhaps use a nat? *)
 
 (** Maximum height of the tree used as liquidation queue.
     The maximum number of elements will be between [2**(n-1)] and [2**(n-2)].

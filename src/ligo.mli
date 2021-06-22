@@ -204,6 +204,8 @@ val ediv_nat_nat : nat -> nat -> (nat * nat) option (* IN LIGO: ediv *)
 val add_timestamp_int : timestamp -> int -> timestamp       (* IN LIGO: ( + ) *)
 val sub_timestamp_timestamp : timestamp -> timestamp -> int (* IN LIGO: ( - ) *)
 
+val geq_timestamp_timestamp : timestamp -> timestamp -> bool (* IN LIGO: ( >= ) *)
+
 (* OPERATIONS ON tez *)
 val add_tez_tez : tez -> tez -> tez (* IN LIGO: ( + ) *)
 val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( - ) *)

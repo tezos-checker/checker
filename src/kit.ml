@@ -42,6 +42,11 @@ let[@inline] kit_scale (amnt: kit) (fp: fixedpoint) =
     (Ligo.mul_int_int (fixedpoint_to_raw fp) (Ligo.int amnt))
     (Ligo.mul_int_int fixedpoint_scaling_factor kit_scaling_factor_int)
 
+let[@inline] geq_kit_kit = Ligo.geq_nat_nat
+
+let[@inline] lt_kit_kit = Ligo.lt_nat_nat
+let[@inline] gt_kit_kit = Ligo.gt_nat_nat
+
 (* BEGIN_OCAML *)
 open Ratio
 let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) kit_scaling_factor_int

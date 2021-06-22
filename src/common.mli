@@ -2,6 +2,8 @@
 val oracle_entrypoint : string
 
 (* OPERATIONS ON int *)
+val int_zero : Ligo.int
+
 val min_int : Ligo.int -> Ligo.int -> Ligo.int
 val max_int : Ligo.int -> Ligo.int -> Ligo.int
 

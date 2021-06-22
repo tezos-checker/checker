@@ -19,6 +19,10 @@ val lqt_to_denomination_nat : lqt -> Ligo.nat
 val lqt_of_fraction_ceil : Ligo.int -> Ligo.int -> lqt
 val lqt_of_fraction_floor : Ligo.int -> Ligo.int -> lqt
 
+val geq_lqt_lqt : lqt -> lqt -> bool
+
+val lt_lqt_lqt : lqt -> lqt -> bool
+
 (* BEGIN_OCAML *)
 val lqt_compare : lqt -> lqt -> int
 

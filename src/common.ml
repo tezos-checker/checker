@@ -2,6 +2,8 @@
 let oracle_entrypoint : string = "%getPrice"
 
 (* OPERATIONS ON int *)
+let[@inline] int_zero = Ligo.int_from_literal "0"
+
 let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
 let max_int (x: Ligo.int) (y: Ligo.int) = if Ligo.geq_int_int x y then x else y
 

@@ -24,6 +24,11 @@ val kit_to_mukit_nat : kit -> Ligo.nat
 val kit_of_fraction_ceil : Ligo.int -> Ligo.int -> kit
 val kit_of_fraction_floor : Ligo.int -> Ligo.int -> kit
 
+val geq_kit_kit : kit -> kit -> bool
+
+val lt_kit_kit : kit -> kit -> bool
+val gt_kit_kit : kit -> kit -> bool
+
 (* BEGIN_OCAML *)
 val kit_compare : kit -> kit -> int
 

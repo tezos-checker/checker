@@ -33,11 +33,15 @@ let lqt_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : lqt =
   then (failwith "Lqt.lqt_of_fraction_floor: negative" : lqt)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num lqt_scaling_factor_int) x_den)
 
+let[@inline] geq_lqt_lqt = Ligo.geq_nat_nat
+
+let[@inline] lt_lqt_lqt = Ligo.lt_nat_nat
+
 (* BEGIN_OCAML *)
 open Ratio
 let[@inline] lqt_to_ratio (amnt: lqt) : ratio = make_ratio (Ligo.int amnt) lqt_scaling_factor_int
 
-let lqt_compare x y = compare_nat x y
+let lqt_compare = compare_nat
 
 let show_lqt amnt =
   let zfill s width = match Stdlib.(width - (String.length s)) with

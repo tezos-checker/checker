@@ -54,6 +54,7 @@
 open Mem
 open Ptr
 open LiquidationAuctionPrimitiveTypes
+open Common
 
 let[@inline] ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 let[@inline] ptr_of_leaf_ptr (ptr: leaf_ptr) = match ptr with LeafPtr l -> l
@@ -68,7 +69,7 @@ let node_height (n: node) : Ligo.int =
   match n with
   | Leaf _ -> Ligo.int_from_literal "1"
   | Branch branch ->
-    let max = if branch.left_height > branch.right_height
+    let max = if Ligo.gt_int_int branch.left_height branch.right_height
       then branch.left_height else branch.right_height in
     Ligo.add_int_int max (Ligo.int_from_literal "1")
   | Root _ -> (failwith "node_height found Root" : Ligo.int)
@@ -267,7 +268,7 @@ let ref_rotate_right (mem: mem) (curr_ptr: ptr) : mem * ptr =
 let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
   match mem_get mem curr_ptr with
   | Branch branch ->
-    if Ligo.int (Ligo.abs (Ligo.sub_int_int branch.left_height branch.right_height)) > Ligo.int_from_literal "1" then (
+    if Ligo.gt_int_int (Ligo.int (Ligo.abs (Ligo.sub_int_int branch.left_height branch.right_height))) (Ligo.int_from_literal "1") then (
       let diff = Ligo.sub_int_int branch.right_height branch.left_height in
       assert (Ligo.int (Ligo.abs diff) = Ligo.int_from_literal "2");
 
@@ -279,19 +280,18 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
       let heavy_child_balance =
         Ligo.sub_int_int heavy_child.right_height heavy_child.left_height in
 
-      let zero = Ligo.int_from_literal "0" in
-      let (mem, ptr) = if Ligo.lt_int_int diff zero && Ligo.leq_int_int heavy_child_balance zero then
+      let (mem, ptr) = if Ligo.lt_int_int diff int_zero && Ligo.leq_int_int heavy_child_balance int_zero then
           (* Left, Left *)
           ref_rotate_right mem curr_ptr
-        else if Ligo.lt_int_int diff zero && heavy_child_balance > zero then
+        else if Ligo.lt_int_int diff int_zero && Ligo.gt_int_int heavy_child_balance int_zero then
           (* Left, Right *)
           let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
           let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
           ref_rotate_right mem curr_ptr
-        else if Ligo.geq_int_int diff zero && heavy_child_balance >= zero then
+        else if Ligo.geq_int_int diff int_zero && Ligo.geq_int_int heavy_child_balance int_zero then
           (* Right, Right*)
           ref_rotate_left mem curr_ptr
-        else if Ligo.geq_int_int diff zero && heavy_child_balance < zero then
+        else if Ligo.geq_int_int diff int_zero && Ligo.lt_int_int heavy_child_balance int_zero then
           (* Right, Left *)
           let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
           let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
@@ -383,7 +383,7 @@ let rec ref_join_rec
     let new_join_direction, left_p, right_p, (ptr, to_fix) =
       (* If the left is heavier, we can make left the parent and append the
        * original right to left.right . *)
-      if node_height left > node_height right then
+      if Ligo.gt_int_int (node_height left) (node_height right) then
         let left_p = node_right left in
         (Left, left_p, right_ptr, (left_ptr, left_p))
         (* Or vice versa. *)
@@ -612,7 +612,7 @@ let rec ref_split_rec
   match mem_get mem curr_ptr with
   | Root _ -> (failwith "ref_split found Root" : mem * ptr option * ptr option)
   | Leaf leaf ->
-    if leaf.value.contents.tez <= limit
+    if Ligo.leq_tez_tez leaf.value.contents.tez limit
     then
       (* Case 1a. Single leaf with not too much tez in it. Include it. *)
       let mem = mem_update mem curr_ptr (node_set_parent ptr_null) in
@@ -621,7 +621,7 @@ let rec ref_split_rec
       (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
       left_fold_ref_split_data ((mem, (None: ptr option), Some curr_ptr), stack)
   | Branch branch ->
-    if Ligo.add_tez_tez branch.left_tez branch.right_tez <= limit
+    if Ligo.leq_tez_tez (Ligo.add_tez_tez branch.left_tez branch.right_tez) limit
     then (* total_tez <= limit *)
       (* Case 2. The whole tree has not too much tez in it. Include it. *)
       let mem = mem_update mem curr_ptr (node_set_parent ptr_null) in
@@ -642,7 +642,7 @@ let rec ref_split_rec
         left_fold_ref_split_data ((mem, Some branch.left, Some branch.right), stack)
       else
         let rec_direction, tree_to_recurse_into, limit_to_use =
-          if limit < branch.left_tez
+          if Ligo.lt_tez_tez limit branch.left_tez
           then (* Case 3b. limit < left_tez < total_tez (we have to recurse into and split the left tree) *)
             (Left, branch.left, limit)
           else (* Case 3c. left_tez < limit < total_tez (we have to recurse into and split the right tree) *)
