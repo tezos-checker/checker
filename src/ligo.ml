@@ -1,3 +1,4 @@
+[@@@coverage exclude_file]
 (* This file mimics the various Ligo libraries, and will not be
    included in the Ligo output.
 
@@ -282,6 +283,7 @@ type 'a ticket =
     amount : nat;
   }
 [@@deriving show]
+
 
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
