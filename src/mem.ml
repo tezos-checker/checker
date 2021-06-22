@@ -19,16 +19,22 @@ type mem = {
 }
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 type ops = { reads: int; writes: int }
 [@@deriving show]
 let ops: ops ref = ref { reads=0; writes=0 }
 let reset_ops () = ops := { reads=0; writes=0 }
+
+[@@@coverage on]
 (* END_OCAML *)
 
 let mem_empty = {last_ptr = ptr_null; mem = (Ligo.Big_map.empty: (ptr, node) Ligo.big_map); }
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let mem_bindings (mem: mem) = Ligo.Big_map.bindings mem.mem
+[@@@coverage on]
 (* END_OCAML *)
 
 let[@inline] mem_set (m: mem) (k: ptr) (v: node) : mem =

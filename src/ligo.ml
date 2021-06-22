@@ -1,3 +1,4 @@
+[@@@coverage exclude_file]
 (* This file mimics the various Ligo libraries, and will not be
    included in the Ligo output.
 

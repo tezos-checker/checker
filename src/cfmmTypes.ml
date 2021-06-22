@@ -3,6 +3,8 @@ open Kit
 open Lqt
 open Ratio
 
+[@@@coverage off]
+
 type cfmm =
   { ctez: ctez;
     kit: kit;
@@ -11,6 +13,8 @@ type cfmm =
     last_level: Ligo.nat;
   }
 [@@deriving show]
+
+[@@@coverage on]
 
 (** The initial state of the cfmm contract. We always start with 1mukit,
     1muctez, and 1lqt token (effectively setting the starting price to 1

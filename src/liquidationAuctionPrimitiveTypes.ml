@@ -1,6 +1,8 @@
 open Ptr
 open Kit
 
+[@@@coverage off]
+
 type avl_ptr = AVLPtr of ptr
 [@@deriving show]
 
@@ -64,3 +66,5 @@ type node =
 
 type liquidation_auction_bid = { auction_id: liquidation_auction_id; bid: bid; }
 [@@deriving show]
+
+[@@@coverage on]

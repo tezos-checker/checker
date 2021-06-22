@@ -3,6 +3,8 @@ open LiquidationAuctionPrimitiveTypes
 open Mem
 open Avl
 
+[@@@coverage off]
+
 type burrow_id = Ligo.address * Ligo.nat
 [@@deriving show]
 
@@ -38,6 +40,8 @@ type liquidation_auctions = {
 
   burrow_slices: (burrow_id, burrow_liquidation_slices) Ligo.big_map;
 }
+
+[@@@coverage on]
 
 let liquidation_auction_empty : liquidation_auctions =
   let avl_storage = mem_empty in

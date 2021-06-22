@@ -80,6 +80,7 @@ open Error
 open SliceList
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 
 let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : Ligo.tez option =
   match auctions.current_auction with
@@ -174,6 +175,7 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
 
   ()
 
+[@@@coverage on]
 (* END_OCAML *)
 
 (* When burrows send a liquidation_slice, they get a pointer into a tree leaf.

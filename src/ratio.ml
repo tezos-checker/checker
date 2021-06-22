@@ -58,6 +58,8 @@ let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
 (* NOTE: this implementation relies on the fact that the denominator is always positive. *)
@@ -165,4 +167,5 @@ let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
     (Ligo.mul_int_int x_num y_den)
     (Ligo.mul_int_int y_num x_den)
 
+[@@@coverage on]
 (* END_OCAML *)

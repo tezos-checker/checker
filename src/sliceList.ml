@@ -8,12 +8,11 @@ open Avl
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 
+[@@@coverage off]
+
 type slice_list_element = SliceListElement of (leaf_ptr * liquidation_slice)
 [@@deriving show]
 
-let slice_list_element_contents (e: slice_list_element) : liquidation_slice_contents =
-  match e with
-  | SliceListElement (_, contents) -> contents.contents
 
 type slice_list_bounds = {
   slice_list_youngest_ptr : leaf_ptr;
@@ -30,6 +29,12 @@ type slice_list_meta = {
 (* Question: Is it worth storing one of the end elements within the SliceList?  *)
 type slice_list = SliceList of slice_list_meta
 [@@deriving show]
+
+[@@@coverage on]
+
+let slice_list_element_contents (e: slice_list_element) : liquidation_slice_contents =
+  match e with
+  | SliceListElement (_, contents) -> contents.contents
 
 let slice_list_empty (burrow: burrow_id) : slice_list = SliceList {slice_list_burrow=burrow; slice_list_bounds=(None:slice_list_bounds option);}
 
@@ -181,6 +186,8 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
     {auctions with avl_storage=storage;}, SliceList {meta with slice_list_bounds=bounds;}, root_ptr, slice.contents
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 (* Extra functionality we want for testing, etc. can go here.
       e.g. folds, length, map
 *)
@@ -199,4 +206,6 @@ let slice_list_oldest (l: slice_list) (auctions: liquidation_auctions) : slice_l
   match meta.slice_list_bounds with
   | Some bounds -> Some (SliceListElement (bounds.slice_list_oldest_ptr, avl_read_leaf storage bounds.slice_list_oldest_ptr))
   | None -> None
+
+[@@@coverage on]
 (* END_OCAML *)

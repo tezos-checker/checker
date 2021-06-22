@@ -48,6 +48,7 @@ let[@inline] lt_kit_kit = Ligo.lt_nat_nat
 let[@inline] gt_kit_kit = Ligo.gt_nat_nat
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 open Ratio
 let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) kit_scaling_factor_int
 
@@ -55,4 +56,6 @@ let kit_compare x y = compare_nat x y
 
 let show_kit amnt = Ligo.string_of_nat amnt ^ "mukit"
 let pp_kit ppf amnt = Format.fprintf ppf "%s" (show_kit amnt)
+
+[@@@coverage on]
 (* END_OCAML *)

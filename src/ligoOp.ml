@@ -1,3 +1,5 @@
+[@@@coverage exclude_file]
+
 open Ligo
 open BurrowTypes
 

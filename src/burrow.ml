@@ -7,6 +7,8 @@ open Constants
 open Error
 open Common
 
+[@@@coverage off]
+
 type burrow =
   { (* Whether the creation deposit for the burrow has been paid. If the
      * creation deposit has been paid, the burrow is considered "active" and
@@ -54,6 +56,8 @@ type liquidation_type =
 
 type liquidation_result = (liquidation_type * liquidation_details) option
 [@@deriving show]
+
+[@@@coverage on]
 
 let[@inline] assert_burrow_invariants (_b: burrow) : unit =
   assert (_b.outstanding_kit = kit_zero || _b.excess_kit = kit_zero);
@@ -575,6 +579,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
           )
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral
@@ -645,4 +650,5 @@ let burrow_outstanding_kit (b: burrow) : kit = b.outstanding_kit
 
 let burrow_excess_kit (b: burrow) : kit = b.excess_kit
 
+[@@@coverage on]
 (* END_OCAML *)

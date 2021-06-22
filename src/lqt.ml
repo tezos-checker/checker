@@ -38,6 +38,8 @@ let[@inline] geq_lqt_lqt = Ligo.geq_nat_nat
 let[@inline] lt_lqt_lqt = Ligo.lt_nat_nat
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 open Ratio
 let[@inline] lqt_to_ratio (amnt: lqt) : ratio = make_ratio (Ligo.int amnt) lqt_scaling_factor_int
 
@@ -58,4 +60,6 @@ let show_lqt amnt =
   in as_string ^ "lqt"
 
 let pp_lqt ppf amnt = Format.fprintf ppf "%s" (show_lqt amnt)
+
+[@@@coverage on]
 (* END_OCAML *)

@@ -1,4 +1,5 @@
 open LiquidationAuctionTypes
+[@@@coverage off]
 
 type burrow_storage =
   { checker_address: Ligo.address;
@@ -12,3 +13,5 @@ type burrow_parameter =
   | BurrowSendTezTo of (Ligo.tez * Ligo.address)
   | BurrowSendSliceToChecker of Ligo.tez
 [@@deriving show]
+
+[@@@coverage on]

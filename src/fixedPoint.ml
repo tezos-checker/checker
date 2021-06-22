@@ -30,6 +30,7 @@ let[@inline] fixedpoint_of_raw (amnt: Ligo.int) : fixedpoint = amnt
 let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let fixedpoint_scaling_exponent = 64
 
 let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor
@@ -59,4 +60,6 @@ let show_fixedpoint amnt =
     (zfill (Ligo.format_int "%X" lower) (fixedpoint_scaling_exponent / 4))
 
 let pp_fixedpoint ppf amnt = Format.fprintf ppf "%s" (show_fixedpoint amnt)
+
+[@@@coverage on]
 (* END_OCAML *)
