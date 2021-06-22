@@ -1,6 +1,6 @@
 [@@@coverage off]
 type ptr = Ligo.nat
-(* BEGIN_OCAML *) [@@deriving show] (* END_OCAML *)
+[@@deriving show]
 [@@@coverage on]
 
 let[@inline] ptr_null = Ligo.nat_from_literal "0n"
