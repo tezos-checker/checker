@@ -65,14 +65,14 @@ let node_tez (n: node) : Ligo.tez =
   | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
   | Root _ -> (failwith "node_tez found Root" : Ligo.tez)
 
-let node_height (n: node) : Ligo.int =
+let node_height (n: node) : Ligo.nat =
   match n with
-  | Leaf _ -> Ligo.int_from_literal "1"
+  | Leaf _ -> Ligo.nat_from_literal "1n"
   | Branch branch ->
-    let max = if Ligo.gt_int_int branch.left_height branch.right_height
+    let max = if Ligo.gt_nat_nat branch.left_height branch.right_height
       then branch.left_height else branch.right_height in
-    Ligo.add_int_int max (Ligo.int_from_literal "1")
-  | Root _ -> (failwith "node_height found Root" : Ligo.int)
+    Ligo.add_nat_nat max (Ligo.nat_from_literal "1n")
+  | Root _ -> (failwith "node_height found Root" : Ligo.nat)
 
 let[@inline] node_parent (n: node) : ptr =
   match n with
@@ -268,9 +268,9 @@ let ref_rotate_right (mem: mem) (curr_ptr: ptr) : mem * ptr =
 let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
   match mem_get mem curr_ptr with
   | Branch branch ->
-    if Ligo.gt_int_int (Ligo.int (Ligo.abs (Ligo.sub_int_int branch.left_height branch.right_height))) (Ligo.int_from_literal "1") then (
-      let diff = Ligo.sub_int_int branch.right_height branch.left_height in
-      assert (Ligo.int (Ligo.abs diff) = Ligo.int_from_literal "2");
+    if Ligo.gt_nat_nat (Ligo.abs (Ligo.sub_nat_nat branch.left_height branch.right_height)) (Ligo.nat_from_literal "1n") then (
+      let diff = Ligo.sub_nat_nat branch.right_height branch.left_height in
+      assert (Ligo.eq_nat_nat (Ligo.abs diff) (Ligo.nat_from_literal "2n"));
 
       let heavy_child_ptr =
         if Ligo.lt_int_int diff (Ligo.int_from_literal "0") then branch.left else branch.right in
@@ -278,7 +278,7 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
         | Branch b -> b
         | _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
       let heavy_child_balance =
-        Ligo.sub_int_int heavy_child.right_height heavy_child.left_height in
+        Ligo.sub_nat_nat heavy_child.right_height heavy_child.left_height in
 
       let (mem, ptr) = if Ligo.lt_int_int diff int_zero && Ligo.leq_int_int heavy_child_balance int_zero then
           (* Left, Left *)
@@ -360,9 +360,9 @@ let rec ref_join_rec
 
   (* If the left and right is of similar height, simply combining them
    * as a branch gives a valid AVL. *)
-  if Ligo.lt_int_int
-      (Ligo.int (Ligo.abs (Ligo.sub_int_int (node_height left) (node_height right))))
-      (Ligo.int_from_literal "2") then
+  if Ligo.lt_nat_nat
+      (Ligo.abs (Ligo.sub_nat_nat (node_height left) (node_height right)))
+      (Ligo.nat_from_literal "2n") then
     let new_branch = Branch {
         left = left_ptr;
         left_height = node_height left;
@@ -383,7 +383,7 @@ let rec ref_join_rec
     let new_join_direction, left_p, right_p, (ptr, to_fix) =
       (* If the left is heavier, we can make left the parent and append the
        * original right to left.right . *)
-      if Ligo.gt_int_int (node_height left) (node_height right) then
+      if Ligo.gt_nat_nat (node_height left) (node_height right) then
         let left_p = node_right left in
         (Left, left_p, right_ptr, (left_ptr, left_p))
         (* Or vice versa. *)
@@ -696,11 +696,11 @@ let[@inline] avl_tez (mem: mem) (ptr: avl_ptr) : Ligo.tez =
   | Some ptr -> node_tez (mem_get mem ptr)
   | None -> Ligo.tez_from_literal "0mutez"
 
-let[@inline] avl_height (mem: mem) (ptr: avl_ptr): Ligo.int =
+let[@inline] avl_height (mem: mem) (ptr: avl_ptr): Ligo.nat =
   let (r, _) = deref_avl_ptr mem ptr in
   match r with
   | Some ptr -> node_height (mem_get mem ptr)
-  | None -> Ligo.int_from_literal "0"
+  | None -> Ligo.nat_from_literal "0n"
 
 let[@inline] avl_root_data (mem: mem) (ptr: avl_ptr) : auction_outcome option =
   let (_, d) = deref_avl_ptr mem ptr in d
@@ -755,7 +755,7 @@ let assert_avl_invariants (mem: mem) (AVLPtr root) : unit =
       assert (branch.left_tez = node_tez left);
       assert (branch.right_height = node_height right);
       assert (branch.right_tez = node_tez right);
-      assert (Ligo.lt_int_int (Ligo.int (Ligo.abs (Ligo.sub_int_int branch.left_height branch.right_height))) (Ligo.int_from_literal "2"));
+      assert (Ligo.lt_nat_nat (Ligo.abs (Ligo.sub_nat_nat branch.left_height branch.right_height)) (Ligo.nat_from_literal "2n"));
       go curr branch.left;
       go curr branch.right
   in match mem_get mem root with

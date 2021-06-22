@@ -47,10 +47,10 @@ type leaf = {
  * might work better in that case. *)
 type branch = {
   left: ptr;
-  left_height: Ligo.int;
+  left_height: Ligo.nat;
   left_tez: Ligo.tez;
   right_tez: Ligo.tez;
-  right_height: Ligo.int;
+  right_height: Ligo.nat;
   right: ptr;
   parent: ptr;
 }

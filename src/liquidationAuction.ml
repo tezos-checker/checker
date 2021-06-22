@@ -183,7 +183,7 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
 let liquidation_auction_send_to_auction
     (auctions: liquidation_auctions) (contents: liquidation_slice_contents)
   : (liquidation_auctions * leaf_ptr) =
-  if Ligo.geq_int_int
+  if Ligo.geq_nat_nat
       (avl_height auctions.avl_storage auctions.queued_slices)
       max_liquidation_queue_height then
     (Ligo.failwith error_LiquidationQueueTooLong : liquidation_auctions * leaf_ptr)

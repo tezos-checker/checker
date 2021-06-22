@@ -114,4 +114,4 @@ let[@inline] number_of_slices_to_process : Ligo.nat = Ligo.nat_from_literal "5n"
 (** Maximum height of the tree used as liquidation queue.
     The maximum number of elements will be between [2**(n-1)] and [2**(n-2)].
 *)
-let[@inline] max_liquidation_queue_height: Ligo.int = Ligo.int_from_literal "12"
+let[@inline] max_liquidation_queue_height: Ligo.nat = Ligo.nat_from_literal "12n"
