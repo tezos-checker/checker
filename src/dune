@@ -46,9 +46,11 @@
   Fa2Interface
   Error
   Common)
- (libraries str zarith)
+ (libraries str zarith ppx_show.runtime)
  (wrapped false)
- (instrumentation
-  (backend bisect_ppx))
+ ;  (instrumentation
+ ;   (backend bisect_ppx))
  (preprocess
-  (pps ppx_deriving.std)))
+  (pps bisect_ppx ppx_show)))
+
+;  pps   ppx_deriving.std

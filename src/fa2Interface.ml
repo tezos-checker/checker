@@ -14,6 +14,8 @@ Currently we only implement the absolute requirements of the interface. We also:
   * TODO should implement the contract metadata functionality
 *)
 
+[@@@coverage off]
+
 type fa2_token_id = Ligo.nat
 [@@deriving show]
 
@@ -137,6 +139,8 @@ type fa2_token_sender =
 Reference:
 https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/proposals/tzip-12/tzip-12.md
 *)
+
+[@@@coverage on]
 
 let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
 let[@inline] lqt_token_id = Ligo.nat_from_literal "1n"

@@ -4,6 +4,8 @@ open FixedPoint
 open Common
 open Constants
 
+[@@@coverage off]
+
 type parameters =
   { q : fixedpoint; (* 1/kit, really *)
     index: Ligo.tez;
@@ -18,6 +20,8 @@ type parameters =
     last_touched: Ligo.timestamp;
   }
 [@@deriving show]
+
+[@@@coverage on]
 
 (** Initial state of the parameters. *)
 let initial_parameters : parameters =
