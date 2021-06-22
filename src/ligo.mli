@@ -145,19 +145,12 @@ val failwith : int -> 'a
 
 (* val ediv_tez_tez : tez -> tez -> (nat * tez) option *)
 
-type 'a ticket
-
 module Tezos : sig
   val now: timestamp ref
   val level: nat ref
   val self_address: address ref
   val sender: address ref
   val amount: tez ref
-
-  val create_ticket : 'a -> nat -> 'a ticket
-  val read_ticket : 'a ticket -> (address * ('a * nat)) * 'a ticket
-  val split_ticket : 'a ticket -> (nat * nat) -> ('a ticket * 'a ticket) option
-  val join_tickets : 'a ticket * 'a ticket -> ('a ticket) option
 
   val reset: unit -> unit
   val new_transaction: seconds_passed:Int.t -> blocks_passed:Int.t -> sender:address -> amount:tez -> unit (* OCAML ONLY *)
@@ -255,9 +248,6 @@ val pp_int : Format.formatter -> int -> unit
 val pp_nat : Format.formatter -> nat -> unit
 val pp_tez : Format.formatter -> tez -> unit
 val pp_timestamp : Format.formatter -> timestamp -> unit
-
-val show_ticket : (Format.formatter -> 'a -> unit) -> 'a ticket -> String.t
-val pp_ticket : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ticket -> unit
 
 val format_int : String.t -> int -> String.t
 val div_rem_int_int : int -> int -> (int * int)
