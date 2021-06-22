@@ -8,19 +8,16 @@ open Avl
 type burrow_id = Ligo.address * Ligo.nat
 [@@deriving show]
 
-
 type burrow_liquidation_slices =
   { oldest_slice: leaf_ptr;
     youngest_slice: leaf_ptr
   }
 [@@deriving show]
 
-
 type liquidation_auction_state =
   | Descending of (kit * Ligo.timestamp)
   | Ascending of (bid * Ligo.timestamp * Ligo.nat)
 [@@deriving show]
-
 
 type current_liquidation_auction = {
   contents: avl_ptr;
@@ -28,13 +25,11 @@ type current_liquidation_auction = {
 }
 [@@deriving show]
 
-
 type completed_liquidation_auctions =
   { youngest: avl_ptr
   ; oldest: avl_ptr
   }
 [@@deriving show]
-
 
 type liquidation_auctions = {
   avl_storage: mem;
