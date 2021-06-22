@@ -42,13 +42,13 @@ let[@inline] tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.prote
 
 (** Current minting price (in tez/kit). *)
 let minting_price (p: parameters) : ratio =
-  make_real_unsafe
+  make_ratio
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_minting p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Current liquidation price (in tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
-  make_real_unsafe
+  make_ratio
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_liquidation p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
@@ -85,17 +85,17 @@ let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
   if circulating = Ligo.int_from_literal "0" && outstanding = Ligo.int_from_literal "0" then
     zero_ratio
   else if circulating = Ligo.int_from_literal "0" && outstanding <> Ligo.int_from_literal "0" then
-    make_real_unsafe (neg_int num_il) den_il
+    make_ratio (neg_int num_il) den_il
   else
     let { num = num_isf; den = den_isf; } = imbalance_scaling_factor in
     let denominator = Ligo.mul_int_int den_isf circulating in
 
     if Ligo.geq_int_int circulating outstanding then
-      make_real_unsafe
+      make_ratio
         (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int circulating outstanding)) den_il) (Ligo.mul_int_int num_il denominator))
         (Ligo.mul_int_int den_il denominator)
     else (* circulating < outstanding *)
-      make_real_unsafe
+      make_ratio
         (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
         (Ligo.mul_int_int den_il denominator)
 

@@ -32,7 +32,7 @@ let ctez_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
 
 (* BEGIN_OCAML *)
 open Ratio
-let ctez_to_ratio (amnt: ctez) : ratio = make_real_unsafe (Ligo.int amnt) ctez_scaling_factor_int
+let ctez_to_ratio (amnt: ctez) : ratio = make_ratio (Ligo.int amnt) ctez_scaling_factor_int
 let ratio_of_ctez (x: ctez) : ratio = { num = ctez_to_muctez_int x; den = ctez_scaling_factor_int; }
 
 let ctez_from_tez (tez: Ligo.tez) : ctez = Ligo.abs (tez_to_mutez tez)

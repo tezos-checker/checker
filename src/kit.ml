@@ -44,7 +44,7 @@ let[@inline] kit_scale (amnt: kit) (fp: fixedpoint) =
 
 (* BEGIN_OCAML *)
 open Ratio
-let[@inline] kit_to_ratio (amnt: kit) : ratio = make_real_unsafe (Ligo.int amnt) kit_scaling_factor_int
+let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) kit_scaling_factor_int
 
 let kit_compare x y = compare_nat x y
 

@@ -4,7 +4,6 @@ type ratio = {
 }
 
 (* Construction/deconstruction. *)
-val make_real_unsafe: Ligo.int -> Ligo.int -> ratio
 val make_ratio: Ligo.int -> Ligo.int -> ratio
 
 (* Predefined values *)
