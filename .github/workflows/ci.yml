@@ -18,6 +18,8 @@ jobs:
     steps:
       - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - uses: cachix/cachix-action@v10
         with:
           name: tezos-checker
@@ -28,3 +30,7 @@ jobs:
         run: nix-shell --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
       - name: Build and test
         run: nix-build -A michelson --arg doCheck true
+      - name: Build checker with e2eTestsHack
+        run: nix-build -A michelson --arg doCheck false --arg e2eTestsHack true --out-link ./checker-e2eTestsHack
+      - name: Run e2e tests
+        run: nix-shell --run "CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
