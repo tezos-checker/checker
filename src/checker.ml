@@ -20,6 +20,7 @@ open Fa2Interface
 open Mem
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let assert_checker_invariants (state: checker) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
   assert_liquidation_auction_invariants state.liquidation_auctions;
@@ -66,6 +67,8 @@ let assert_checker_invariants (state: checker) : unit =
          assert (burrow_collateral_at_auction burrow = actual_collateral)
     )
     (Ligo.Big_map.bindings state.burrows)
+
+[@@@coverage on]
 (* END_OCAML *)
 
 (* ************************************************************************* *)

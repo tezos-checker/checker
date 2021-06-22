@@ -509,6 +509,7 @@ let avl_is_empty (mem: mem) (ptr: avl_ptr) : bool =
   (match r with | None -> true | Some _ -> false)
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let rec ref_delete_tree (mem: mem) (ptrs: ptr list): mem =
   match ptrs with
   | [] -> mem
@@ -523,6 +524,8 @@ let rec ref_delete_tree (mem: mem) (ptrs: ptr list): mem =
 
 let avl_delete_tree (mem: mem) (AVLPtr ptr): mem =
   ref_delete_tree mem [ptr]
+
+[@@@coverage on]
 (* END_OCAML *)
 
 let avl_delete_empty_tree (mem: mem) (ptr: avl_ptr): mem =
@@ -712,7 +715,7 @@ let[@inline] avl_modify_root_data (mem: mem) (ptr: avl_ptr) (f: auction_outcome 
 
 
 (* BEGIN_OCAML *)
-
+[@@@coverage off]
 (* This is not going to be used in the final implementation, but it allows
  * testing some useful properties (mainly about `join` function).
 *)
@@ -767,4 +770,5 @@ let avl_assert_dangling_pointers (mem: mem) (roots: avl_ptr list) : unit =
   let mem = List.fold_left avl_delete_tree mem roots in
   assert (List.length (Ligo.Big_map.bindings mem.mem) = 0)
 
+[@@@coverage on]
 (* END_OCAML *)

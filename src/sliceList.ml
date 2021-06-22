@@ -186,6 +186,8 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
     {auctions with avl_storage=storage;}, SliceList {meta with slice_list_bounds=bounds;}, root_ptr, slice.contents
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 (* Extra functionality we want for testing, etc. can go here.
       e.g. folds, length, map
 *)
@@ -204,4 +206,6 @@ let slice_list_oldest (l: slice_list) (auctions: liquidation_auctions) : slice_l
   match meta.slice_list_bounds with
   | Some bounds -> Some (SliceListElement (bounds.slice_list_oldest_ptr, avl_read_leaf storage bounds.slice_list_oldest_ptr))
   | None -> None
+
+[@@@coverage on]
 (* END_OCAML *)

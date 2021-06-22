@@ -31,6 +31,7 @@ let ctez_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num ctez_scaling_factor_int) x_den)
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 open Ratio
 let ctez_to_ratio (amnt: ctez) : ratio = make_real_unsafe (Ligo.int amnt) ctez_scaling_factor_int
 let ratio_of_ctez (x: ctez) : ratio = { num = ctez_to_muctez_int x; den = ctez_scaling_factor_int; }
@@ -41,4 +42,6 @@ let ctez_compare x y = compare_nat x y
 
 let show_ctez amnt = Ligo.string_of_nat amnt ^ "muctez"
 let pp_ctez ppf amnt = Format.fprintf ppf "%s" (show_ctez amnt)
+
+[@@@coverage on]
 (* END_OCAML *)

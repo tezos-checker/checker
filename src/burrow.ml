@@ -579,6 +579,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
           )
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 let burrow_collateral (b: burrow) : Ligo.tez =
   assert_burrow_invariants b;
   b.collateral
@@ -649,4 +650,5 @@ let burrow_outstanding_kit (b: burrow) : kit = b.outstanding_kit
 
 let burrow_excess_kit (b: burrow) : kit = b.excess_kit
 
+[@@@coverage on]
 (* END_OCAML *)

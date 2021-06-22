@@ -58,6 +58,7 @@ let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
 (* make and normalize any fraction *)
 let make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
   if Ligo.eq_int_int d (Ligo.int_from_literal "0") then
@@ -178,4 +179,5 @@ let eq_ratio_ratio (x: ratio) (y: ratio) : bool =
     (Ligo.mul_int_int x_num y_den)
     (Ligo.mul_int_int y_num x_den)
 
+[@@@coverage on]
 (* END_OCAML *)

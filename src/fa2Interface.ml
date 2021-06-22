@@ -338,6 +338,8 @@ let[@inline] ledger_withdraw_lqt
   ledger_withdraw (st, lqt_token_id, addr, lqt_to_denomination_nat amnt)
 
 (* BEGIN_OCAML *)
+[@@@coverage off]
+
 type fa2_balance_of_response_list = fa2_balance_of_response list
 [@@deriving show]
 
@@ -349,4 +351,6 @@ let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
 
 let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_mukit (fa2_get_token_balance st kit_token_id)
 let fa2_get_total_lqt_balance (st: fa2_state) : lqt = lqt_of_denomination (fa2_get_token_balance st lqt_token_id)
+
+[@@@coverage on]
 (* END_OCAML *)
