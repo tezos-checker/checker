@@ -134,8 +134,8 @@ last time the parameters were touched, effectively limiting how fast
 
 ::
 
-   low  = exp ( epsilon * (now - last_touched))
-   high = exp (-epsilon * (now - last_touched))
+   low  = exp (-epsilon * (now - last_touched))
+   high = exp (+epsilon * (now - last_touched))
 
 **NOTE**: ``exp (x) = 1 + x`` here; we expect the contract to be touched
 rather frequently, which keeps the exponent rather small, which makes
@@ -158,9 +158,6 @@ calculate as follows:
       0.0001 / (secs_in_a_day ^ 2) , if exp ( low_bracket)  <= target <  exp ( high_bracket)
       0.0005 / (secs_in_a_day ^ 2) , if exp ( high_bracket) <= target
 
-TODO: Eventually we should pre-calculate all constant things
-(e.g. ``exp (-low_bracket)``).
-
 ``drift``
 ~~~~~~~~~
 
@@ -171,7 +168,10 @@ formula:
 
    new_drift = old_drift + (1/2) * (old_drift_derivative + new_drift_derivative) * (now - last_touched)
 
-### ``q`` For the calculation of the current quantity, we use use the
+``q``
+~~~~~
+
+For the calculation of the current quantity ``q``, we use the
 following formula:
 
 ::
@@ -235,11 +235,13 @@ or, equivalently:
      max (imbalance_scaling_factor * (circulating - outstanding) / circulating, -imbalance_limit), if circulating < outstanding
 
 And in the edge cases the ``imbalance_rate`` is calculated as follows:
-\* if ``old_circulating_kit = 0`` and ``old_outstanding_kit = 0`` then
-``imbalance_rate = 0``. \* if ``old_circulating_kit = 0`` and
-``old_outstanding_kit > 0`` then ``imbalance_rate = -imbalance_limit``.
-(the outstanding kit is *infinitely* greater than the circulating kit,
-so the rate is saturated).
+
+* if ``old_circulating_kit = 0`` and ``old_outstanding_kit = 0`` then
+  ``imbalance_rate = 0``.
+
+* if ``old_circulating_kit = 0`` and ``old_outstanding_kit > 0`` then
+  ``imbalance_rate = -imbalance_limit``. (the outstanding kit is *infinitely*
+  greater than the circulating kit, so the rate is saturated).
 
 Intermediate ``outstanding_kit``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
