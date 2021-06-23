@@ -959,12 +959,3 @@ let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
 let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * checker): bool =
   assert_checker_invariants state;
   fa2_is_operator (state.fa2_state, operator, owner, token_id)
-
-(* TODO
-   This corresponds to the "Custom" method specified in TZIP-12 [1]. We should either implement this one or the "Basic" method.
-
-   [1]: https://gitlab.com/tzip/tzip/-/blob/4b3c67/proposals/tzip-12/tzip-12.md#token-metadata-storage-access
-
-   let view_token_metadata (_token_id, _state: fa2_token_id * checker) : fa2_token_id * (string, Ligo.bytes) Ligo.map =
-   failwith "FA2_NOT_IMPLEMENTED"
-*)

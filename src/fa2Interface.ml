@@ -11,7 +11,6 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 
 Currently we only implement the absolute requirements of the interface. We also:
   * TODO should consider implementing permission policies
-  * TODO should implement the contract metadata functionality
 *)
 
 [@@@coverage off]
