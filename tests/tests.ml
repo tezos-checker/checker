@@ -13,6 +13,8 @@ let suite =
     TestCfmm.suite;
     TestFa2Interface.suite;
     TestLiquidation.suite;
+    TestCheckerMain.suite;
+    TestCheckerEntrypoints.suite;
     (* slow *)
     TestAvl.suite;
     TestLiquidationAuction.suite;
