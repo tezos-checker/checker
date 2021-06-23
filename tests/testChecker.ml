@@ -763,9 +763,7 @@ let suite =
              )
            ) in
 
-       (* initialize alice, bob and tom accounts *)
-       let tom_addr = Ligo.address_of_string "TOM_ADDR" in
-
+       (* initialize alice, bob and leena accounts *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:initial_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.strict_entrypoint_transfer (checker, [
            { from_ = initial_addr;
@@ -784,17 +782,17 @@ let suite =
        assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
        assert_nat_equal ~real:(balance checker bob_addr   lqt_token_id) ~expected:(Ligo.nat_from_literal "5n");
 
-       assert_nat_equal ~real:(balance checker tom_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
-       assert_nat_equal ~real:(balance checker tom_addr   lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker leena_addr kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker leena_addr lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
 
-       (* make tom an operator of bob for kit *)
+       (* make leena an operator of bob for kit *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_update_operators (checker, [
-           (Add_operator { owner = bob_addr; operator = tom_addr; token_id = kit_token_id })]) in
+           (Add_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
 
-       assert_equal true (Checker.view_is_operator ((bob_addr, (tom_addr, kit_token_id)), checker));
-       assert_equal false (Checker.view_is_operator ((bob_addr, (tom_addr, lqt_token_id)), checker));
-       assert_equal false (Checker.view_is_operator ((tom_addr, (bob_addr, kit_token_id)), checker));
+       assert_equal true (Checker.view_is_operator ((bob_addr, (leena_addr, kit_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((bob_addr, (leena_addr, lqt_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((leena_addr, (bob_addr, kit_token_id)), checker));
 
        (* alice can transfer some kit to bob *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -810,19 +808,19 @@ let suite =
          (fun () -> Checker.strict_entrypoint_transfer (checker, [
               { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "10n"}]}]));
 
-       (* and tom can send some of that kit back to alice *)
-       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:tom_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       (* and leena can send some of that kit back to alice *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.strict_entrypoint_transfer (checker, [
            { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]) in
 
        assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "4n");
        assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "1n");
 
-       (* but tom can not send rest of bob's kit back to alice when he's not an operator anymore *)
+       (* but leena can not even send a single kit from bob's account when he's not an operator anymore *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_update_operators (checker, [
-           (Remove_operator { owner = bob_addr; operator = tom_addr; token_id = kit_token_id })]) in
-       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:tom_addr ~amount:(Ligo.tez_from_literal "0mutez");
+           (Remove_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        assert_raises
          (Failure "FA2_NOT_OPERATOR")
