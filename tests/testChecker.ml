@@ -736,6 +736,102 @@ let suite =
          (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
     );
 
+    ("fa2 scenario" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+
+       let initial_addr = Ligo.address_of_string "INIT_ADDR" in
+
+       (* mint some kit *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:initial_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
+       let max_kit = Checker.view_burrow_max_mintable_kit ((initial_addr, Ligo.nat_from_literal "0n"), checker) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:initial_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", max_kit)) in
+
+       (* get some liquidity *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:initial_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker =
+         Checker.entrypoint_add_liquidity
+           ( checker,
+             ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
+             , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+             , lqt_of_denomination (Ligo.nat_from_literal "5n")
+             , Ligo.timestamp_from_seconds_literal 999
+             )
+           ) in
+
+       (* initialize alice, bob and leena accounts *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:initial_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.strict_entrypoint_transfer (checker, [
+           { from_ = initial_addr;
+             txs = [
+               { to_ = alice_addr; token_id = kit_token_id; amount = Ligo.nat_from_literal "5n" };
+               { to_ = bob_addr; token_id = lqt_token_id; amount = Ligo.nat_from_literal "5n" }
+             ];
+           }]) in
+
+       let balance chk addr tok = Checker.view_get_balance ((addr, tok), chk) in
+
+       (* you can see the initial balances here for reference *)
+       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "5n");
+       assert_nat_equal ~real:(balance checker alice_addr lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
+
+       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker bob_addr   lqt_token_id) ~expected:(Ligo.nat_from_literal "5n");
+
+       assert_nat_equal ~real:(balance checker leena_addr kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker leena_addr lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
+
+       (* make leena an operator of bob for kit *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_update_operators (checker, [
+           (Add_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
+
+       assert_equal true (Checker.view_is_operator ((bob_addr, (leena_addr, kit_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((bob_addr, (leena_addr, lqt_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((leena_addr, (bob_addr, kit_token_id)), checker));
+
+       (* alice can transfer some kit to bob *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.strict_entrypoint_transfer (checker, [
+           { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id;amount=Ligo.nat_from_literal "2n"}]}]) in
+
+       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "3n");
+       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "2n");
+
+       (* but she can not transfer more than she has *)
+       assert_raises
+         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (fun () -> Checker.strict_entrypoint_transfer (checker, [
+              { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "10n"}]}]));
+
+       (* and leena can send some of that kit back to alice *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.strict_entrypoint_transfer (checker, [
+           { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]) in
+
+       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "4n");
+       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "1n");
+
+       (* but leena can not even send a single kit from bob's account when he's not an operator anymore *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_update_operators (checker, [
+           (Remove_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+       assert_raises
+         (Failure "FA2_NOT_OPERATOR")
+         (fun () -> Checker.strict_entrypoint_transfer (checker, [
+              { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]));
+       ()
+    );
+
+    (* ************************************************************************* *)
+    (**                      LiquidationAuctions                                 *)
+    (* ************************************************************************* *)
     ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
