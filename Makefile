@@ -22,13 +22,13 @@ test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh
 	dune runtest .
 
-test-coverage:
+test-coverage: ocaml-src
 	dune runtest --instrument-with bisect_ppx --force .
 	bisect-ppx-report html
 	bisect-ppx-report summary
 
 clean:
-	$(RM) -r _build generated src/checkerEntrypoints.ml
+	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml
 
 indent:
 	bash ./scripts/format.sh
