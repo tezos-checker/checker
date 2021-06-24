@@ -29,7 +29,7 @@ let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
  * cfmm contract was touched. *)
 let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
   assert (Ligo.geq_nat_nat !Ligo.Tezos.level cfmm.last_level);
-  if cfmm.last_level = !Ligo.Tezos.level then
+  if Ligo.leq_nat_nat !Ligo.Tezos.level cfmm.last_level then
     (* do nothing if it's been touched already in this block *)
     cfmm
   else
