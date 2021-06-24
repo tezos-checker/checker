@@ -4,15 +4,17 @@ Liquidation Auctions
 State
 -----
 
--  ``queued_slices``: a queue of liquidation slices awaiting an auction.
+-  ``avl_storage``: data structure containing all auctions and their corresponding liquidation slices.
+   Items can be retrieved from this back-end using their respective pointers.
+-  ``queued_slices``: a pointer to the queue of liquidation slices awaiting an auction.
 -  ``current_auction``: information about the current auction if there
    is an active auction.
 
-   -  ``contents``: set of slices in the current auction.
+   -  ``contents``: a pointer to the set of slices in the current auction.
    -  ``auction_state``: whether the auction is in the descending or
       ascending phase, and data used to calculate the current price.
 
--  ``completed_auctions``: a queue of completed auctions, each auction
+-  ``completed_auctions``: a linked list of completed auctions, each auction
    containing:
 
    -  a set of untouched slices
@@ -40,7 +42,7 @@ When liquidation of a burrow is triggered, the amount of tez to be
 liquidated form a ``liquidation_slice``. \* For details about this
 process, see <./burrow-state-liquidations.md>.
 
-The new slice is added to the back of the ``queued_slices``.
+The new slice is added to the back of the ``queued_slices`` queue.
 
 -  NOTE: This operation also updates the per-burrow linked list.
 
@@ -63,7 +65,7 @@ At any time checker is touched, when there is no auction running and
 there is at least one queued slice, we start an auction.
 
 Our aim is to take a prefix of the ``queued_slices`` queue which
-contains exactly below amount of tez:
+contains exactly the below amount of tez:
 
 ::
 
@@ -75,8 +77,8 @@ contains exactly below amount of tez:
 
 However, it is likely that in this process the slices will not add up to
 the exact amount. In this case, we take the liquidation_slice causing
-the overload, split it into two, and push the halves to end of the
-prefix and in front of the ``queued_slices``.
+the overload, split it into two, and push the halves to the end of the
+new auction and in front of the ``queued_slices``.
 
 -  NOTE: This splitting process has to be efficient, since a single
    auction likely consists of many small slices. So it needs to be done
@@ -87,13 +89,9 @@ prefix and in front of the ``queued_slices``.
 Then we start an auction. An auction has minimum_bid value that is a
 function of current time and the latest bid.
 
-Every bid should be at least of ``minimum_bid`` amount of kit. Bidding
-process returns a bid token that can be sent back to claim either the
-bid itself when beaten, or the result of an auction (details will follow
-for this case).
-
-The latest bid always becomes ``leading_bid``. If a bid is not a leading
-bid of any current or past auction, they can be claimed back.
+Every bid should be of at least ``minimum_bid`` amount of kit. The bidding
+process debits the bid's kit from the contract's kit ledger and credits back
+the kit of the previously winning bid if one exists.
 
 The auction is initially a **descending** auction, with the minimum bid
 calculated as:
@@ -132,8 +130,8 @@ Claiming a winning bid
 ----------------------
 
 If a bid is the winning bid of a completed auction where all the
-liquidation_slices are touched (in other words, contents are empty), the
-winner can claim the winning bid. This process is the final step of an
+liquidation_slices are touched (in other words, its contents are empty), the
+bidder can claim the auction's winnings. This process is the final step of an
 auction, and after that the auction itself is cleaned up.
 
 Maintenance
