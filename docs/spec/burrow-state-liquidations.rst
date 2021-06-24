@@ -6,26 +6,28 @@ An operational interpretation of the burrow state and operations on it.
 State
 -----
 
+- ``active``: whether the burrow is supported by a creation deposit. If not,
+  it’s considered “inactive”.
+- ``address``: the address of the contract holding the burrow's collateral and
+  creation deposit.
+- ``delegate``: the delegate for the amount of tez (collateral + creation
+  deposit) the burrow holds.
+-  ``collateral``: the amount of tez stored in the burrow. Collateral
+   that has been sent to auctions **does not** count towards this
+   amount; for all we know, it’s gone forever.
 -  ``outstanding_kit``: the amount of kit that is outstanding from the
    burrow. This **does not** take into account kit we expect to receive
    (to burn) from pending auctions. However, ``outstanding_kit`` does
    increase over time, since the burrowing fee and the adjustment fee
    are added to it. So, effectively, before doing anything else with a
    burrow, we update its state (“touch” it, see below).
--  ``excess_kit``: additional kit stored in the burrow.
--  ``collateral``: the amount of tez stored in the burrow. Collateral
-   that has been sent to auctions **does not** count towards this
-   amount; for all we know, it’s gone forever.
+-  ``excess_kit``: additional kit stored in the burrow, when
+   ``outstanding_kit`` is zero.
 -  ``collateral_at_auction``: the total amount of tez that has been sent
    to auctions from this burrow, to be sold for kit.
--  ``liquidation_slices``: a pointer to liquidation slices that have
-   been sent off to auctions.
-
-Additional fields:
-
 - ``last_touched``: the last time the burrow was touched.
-- ``adjustment_index``: the last observed adjustment index (at time ``last_touched``).
-- ``active``: whether the burrow is supported by a creation deposit. If not, it’s considered “inactive”.
+- ``adjustment_index``: the last observed adjustment index (at time
+  ``last_touched``).
 
 Touching
 --------
@@ -34,7 +36,12 @@ First thing to do before considering any of the things below is to
 update the state of the burrow, by touching it. The effect of this is to
 
 - Update the timestamp in the burrow to reflect the last time it was
-  touched ``new_last_touched    = now()``
+  touched
+
+::
+
+   new_last_touched = now
+
 - Re-balance
   ``outstanding_kit`` and ``excess_kit``: either ``outstanding_kit`` or
   ``excess_kit`` is zero
@@ -45,13 +52,16 @@ update the state of the burrow, by touching it. The effect of this is to
    new_excess_kit      = old_excess_kit      - min old_outstanding_kit old_excess_kit
 
 - To add accrued burrow and adjustment fee to its outstanding kit
-  ``new_outstanding     = old_outstanding * (new_adjustment_index / old_adjustment_index)``
 
-Note that if the current timestamp is identical to that stored in the
-burrow, we do not perform any of the above.
+::
 
-So, for the remainder, let’s assume that the burrow has been touched,
-and its current state is up-to-date.
+   new_outstanding = old_outstanding * (new_adjustment_index / old_adjustment_index)``
+
+Note that if the current timestamp is identical to that stored in the burrow,
+we do not perform any of the above.
+
+Each of the following operations implicitly touch the burrow (i.e., perform the
+above updates) before doing anything else.
 
 Is a burrow collateralized (i.e. not overburrowed)?
 ---------------------------------------------------
@@ -175,8 +185,8 @@ collateral and without a creation deposit:
 
 ::
 
-   active               = false
-   collateral           = collateral - (collateral * liquidation_reward_percentage)
+   active     = false
+   collateral = collateral - (collateral * liquidation_reward_percentage)
 
 Now, depending on how much collateral remains, we have the following
 cases:
@@ -185,22 +195,14 @@ Case 2A: ``collateral < creation_deposit``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We cannot replenish the creation deposit.
--  We send all the remaining collateral to be auctioned off for kit
--  We deactivate the burrow:
+
+-  We send all the remaining collateral to be auctioned off for kit.
+-  The burrow remains deactivated.
 
 ::
 
-   active                = false
    collateral            = 0
    collateral_at_auction = collateral_at_auction + tez_to_auction
-
-**NOTE**: Though we deactivate the burrow, we do not reset everything.
-It is still possible for owners to deposit more tez (which would go
-first into refilling the creation deposit), or claim slices that have
-been sent off to auctions. If the burrow reaches a state where it is
-deactivated **and** there is no more collateral left in auctions, then
-(when the last slice is collected) we simply reset ``outstanding_kit``
-to zero.
 
 Case 2B: ``collateral >= creation_deposit``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
