@@ -209,7 +209,7 @@ liquidity tokens.
 +===============+=======================+=========================================================================+
 | ctez          | nat                   | The amount of ctez to supply as liquidity, in muctez                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| kit           | nat                   | The amount of kit to supply as liquidity, in mukit                      |
+| kit           | nat                   | The maximum amount of kit to supply as liquidity, in mukit              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought, in mulqt  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
