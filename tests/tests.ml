@@ -4,6 +4,7 @@ let suite =
   "CheckerTests" >::: [
     (* fast *)
     TestChecker.suite;
+    TestCommon.suite;
     TestFixedPoint.suite;
     TestTez.suite;
     TestCtez.suite;

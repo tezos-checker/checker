@@ -5,6 +5,7 @@
   TestAvl
   TestAvlModel
   TestBurrow
+  TestCommon
   TestCtez
   TestFixedPoint
   TestTez
