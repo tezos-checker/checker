@@ -16,8 +16,6 @@ let suite =
        assert_ctez_equal
          ~expected:(ctez_of_muctez (Ligo.nat_from_literal "2_000_000n"))
          ~real:(ctez_sub (ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")) (ctez_of_muctez (Ligo.nat_from_literal "3_000_000n")));
-
-       (* subtract *)
        assert_raises
          (Failure "Ctez.ctez_sub: negative")
          (fun _ ->
