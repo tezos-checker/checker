@@ -14,7 +14,7 @@ State
    -  ``auction_state``: whether the auction is in the descending or
       ascending phase, and data used to calculate the current price.
 
--  ``completed_auctions``: a linked list of completed auctions, each auction
+-  ``completed_auctions``: a queue (represented as a doubly-linked list) of completed auctions, each auction
    containing:
 
    -  a set of untouched slices
