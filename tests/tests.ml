@@ -10,6 +10,7 @@ let suite =
     TestCtez.suite;
     TestKit.suite;
     TestLqt.suite;
+    TestRatio.suite;
     TestBurrow.suite;
     TestMem.suite;
     TestParameters.suite;

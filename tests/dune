@@ -8,6 +8,7 @@
   TestCommon
   TestCtez
   TestFixedPoint
+  TestRatio
   TestTez
   TestKit
   TestLqt
