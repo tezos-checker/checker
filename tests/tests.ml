@@ -11,6 +11,7 @@ let suite =
     TestKit.suite;
     TestLqt.suite;
     TestBurrow.suite;
+    TestMem.suite;
     TestParameters.suite;
     TestCfmm.suite;
     TestFa2Interface.suite;

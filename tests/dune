@@ -11,6 +11,7 @@
   TestTez
   TestKit
   TestLqt
+  TestMem
   TestParameters
   TestLiquidation
   TestCfmm
