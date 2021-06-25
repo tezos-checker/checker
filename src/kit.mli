@@ -29,6 +29,8 @@ val geq_kit_kit : kit -> kit -> bool
 val lt_kit_kit : kit -> kit -> bool
 val gt_kit_kit : kit -> kit -> bool
 
+val eq_kit_kit : kit -> kit -> bool
+
 (* BEGIN_OCAML *)
 val kit_compare : kit -> kit -> int
 

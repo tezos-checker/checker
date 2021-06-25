@@ -47,6 +47,8 @@ let[@inline] geq_kit_kit = Ligo.geq_nat_nat
 let[@inline] lt_kit_kit = Ligo.lt_nat_nat
 let[@inline] gt_kit_kit = Ligo.gt_nat_nat
 
+let[@inline] eq_kit_kit = Ligo.eq_nat_nat
+
 (* BEGIN_OCAML *)
 [@@@coverage off]
 open Ratio
