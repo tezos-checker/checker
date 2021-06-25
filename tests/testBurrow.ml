@@ -228,6 +228,25 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
+    ("burrow_withdraw_tez - fails if withdrawal would overburrow the burrow" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "10mutez") in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_WithdrawTezFailure))
+         (fun () ->
+            let _ =
+              Burrow.burrow_withdraw_tez
+                {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+                (Ligo.tez_from_literal "2mutez")
+                burrow0
+            in ()
+         )
+    );
+
     ("burrow_mint_kit - burrow after successful minting has expected collateral" >::
      fun _ ->
        let burrow0 = make_test_burrow
