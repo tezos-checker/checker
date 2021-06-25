@@ -569,6 +569,62 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "0mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some kit_zero)
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "0mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:None
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "1mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some kit_zero)
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "1mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "2n")))
+         ~real:min_kit_for_unwarranted
+    );
+
     (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction
        won't throw an exception if the constants are ever reconfigured in this way.*)
     ("compute_tez_to_auction - constants obey assumption in implementation" >::
