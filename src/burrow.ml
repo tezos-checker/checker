@@ -565,7 +565,8 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         let tez_to_auction = match Ligo.is_nat tez_to_auction with
           | Some mutez -> Ligo.mul_nat_tez mutez (Ligo.tez_from_literal "1mutez")
           (* Note: disabling coverage for this line since it really should be impossible to reach this line *)
-          | None -> (failwith "tez_to_auction was negative, which should be impossible in this branch" : Ligo.tez) [@coverage off]
+          | None -> (failwith "tez_to_auction was negative, which should be impossible in this branch" : Ligo.tez)
+                    [@coverage off]
         in
         let final_burrow =
           { b with

@@ -23,7 +23,8 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
     let d = Ligo.abs x_den in
     (match Ligo.ediv_tez_nat n d with
      (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (failwith "Ratio.fraction_to_tez_floor: zero denominator" : Ligo.tez) [@coverage off]
+     | None -> (failwith "Ratio.fraction_to_tez_floor: zero denominator" : Ligo.tez)
+               [@coverage off]
      | Some quot_and_rem ->
        let (quot, _) = quot_and_rem in
        quot (* ignore the remainder; we floor towards zero here *)

@@ -64,6 +64,8 @@ for name in "${inputs[@]}"; do
     sed -E 's/([[]@@deriving .*])/(* \1 *)/g' |
 
     # Remove coverage directives
+    sed -E 's/([[]@coverage .*])/(* \1 *)/g' |
+    sed -E 's/([[]@@coverage .*])/(* \1 *)/g' |
     sed -E 's/([[]@@@coverage .*])/(* \1 *)/g' |
 
     # Remove printer directives
