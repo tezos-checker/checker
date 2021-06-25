@@ -4,8 +4,7 @@ Liquidation Auctions
 State
 -----
 
--  ``avl_storage``: data structure containing all auctions and their corresponding liquidation slices.
-   Items can be retrieved from this back-end using their respective pointers.
+-  ``avl_storage``: data structure containing a mapping from pointers to auctions and liquidation slices, serving as a memory.
 -  ``queued_slices``: a pointer to the queue of liquidation slices awaiting inclusion in an auction.
 -  ``current_auction``: information about the current auction if there
    is an active auction.
