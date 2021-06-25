@@ -65,7 +65,7 @@ At any time checker is touched, when there is no auction running and
 there is at least one queued slice, we start an auction.
 
 Our aim is to take a prefix of the ``queued_slices`` queue which
-contains exactly the below amount of tez:
+contains exactly this amount of tez:
 
 ::
 
