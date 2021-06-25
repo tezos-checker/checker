@@ -2,7 +2,7 @@ open OUnit2
 open Ratio
 open FixedPoint
 open Kit
-open TestCommon
+open TestLib
 
 let suite =
   "KitTests" >::: [

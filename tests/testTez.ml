@@ -1,5 +1,5 @@
 open OUnit2
-open TestCommon
+open TestLib
 
 let suite =
   "TezTests" >::: [

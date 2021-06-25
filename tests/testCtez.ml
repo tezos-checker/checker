@@ -1,6 +1,6 @@
 open OUnit2
 open Ctez
-open TestCommon
+open TestLib
 
 let suite =
   "CtezTests" >::: [

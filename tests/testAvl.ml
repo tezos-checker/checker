@@ -5,7 +5,7 @@ open Kit
 open OUnit2
 open Format
 open Ptr
-open TestCommon
+open TestLib
 
 type auction_outcome_option = auction_outcome option [@@deriving show]
 

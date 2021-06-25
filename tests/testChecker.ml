@@ -3,7 +3,7 @@ open Kit
 open Lqt
 open Burrow
 open OUnit2
-open TestCommon
+open TestLib
 open CheckerTypes
 open Fa2Interface
 open Error

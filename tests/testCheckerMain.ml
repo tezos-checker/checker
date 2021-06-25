@@ -1,5 +1,5 @@
 open OUnit2
-open TestCommon
+open TestLib
 open CheckerMain
 
 let property_test_count = 100

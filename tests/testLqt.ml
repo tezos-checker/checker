@@ -1,6 +1,6 @@
 open OUnit2
 open Lqt
-open TestCommon
+open TestLib
 
 let suite =
   "LqtTests" >::: [
