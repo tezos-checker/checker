@@ -19,7 +19,8 @@ let rec pow_rec (y, x, n: Ligo.int * Ligo.int * Ligo.nat) : Ligo.int =
     Ligo.mul_int_int x y
   else
     match Ligo.ediv_nat_nat n (Ligo.nat_from_literal "2n") with
-    | None -> (failwith "impossible" : Ligo.int)
+    (* Note: Ignoring coverage for this line because it is unreachable *)
+    | None -> (failwith "impossible" : Ligo.int) [@coverage off]
     | Some quot_rem ->
       let (quot, rem) = quot_rem in
       if Ligo.eq_nat_nat rem (Ligo.nat_from_literal "0n") then
