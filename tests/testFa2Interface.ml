@@ -1,5 +1,5 @@
 open OUnit2
-open TestCommon
+open TestLib
 open TestArbitrary
 open Fa2Interface
 open Kit
@@ -54,6 +54,23 @@ let suite =
     (* ************************************************************************* *)
     (**                    fa2_run_update_operators tests                        *)
     (* ************************************************************************* *)
+    ("ensure_valid_fa2_token - passes when a known token is submitted" >::
+     fun _ ->
+       (* kit *)
+       ensure_valid_fa2_token (Ligo.nat_from_literal "0n");
+       (* lqt *)
+       ensure_valid_fa2_token (Ligo.nat_from_literal "1n");
+    );
+
+    ("ensure_valid_fa2_token - fails when an unknown token is submitted" >::
+     fun _ ->
+       assert_raises
+         (Failure "FA2_TOKEN_UNDEFINED")
+         (fun _ ->
+            ensure_valid_fa2_token (Ligo.nat_from_literal "3n")
+         )
+    );
+
     ("fa2_run_update_operators - Add_operator - succeeds from owner" >::
      fun _ ->
        Ligo.Tezos.reset ();

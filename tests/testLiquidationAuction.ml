@@ -1,6 +1,6 @@
 open Kit
 open OUnit2
-open TestCommon
+open TestLib
 open LiquidationAuction
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes

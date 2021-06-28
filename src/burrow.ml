@@ -471,7 +471,7 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
 
   if b.collateral = Ligo.tez_from_literal "0mutez" (* NOTE: division by zero. *)
   then
-    if b.outstanding_kit <> kit_of_mukit (Ligo.nat_from_literal "0n")
+    if not (eq_kit_kit b.outstanding_kit (kit_of_mukit (Ligo.nat_from_literal "0n")))
     then (None: kit option) (* (a): infinity, basically *)
     else (Some kit_zero) (* (b): zero *)
   else
@@ -564,7 +564,9 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
          * shall be returned. *)
         let tez_to_auction = match Ligo.is_nat tez_to_auction with
           | Some mutez -> Ligo.mul_nat_tez mutez (Ligo.tez_from_literal "1mutez")
+          (* Note: disabling coverage for this line since it really should be impossible to reach this line *)
           | None -> (failwith "tez_to_auction was negative, which should be impossible in this branch" : Ligo.tez)
+                    [@coverage off]
         in
         let final_burrow =
           { b with

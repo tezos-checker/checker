@@ -2,7 +2,7 @@ open OUnit2
 open Ratio
 open FixedPoint
 open Kit
-open TestCommon
+open TestLib
 
 let suite =
   "KitTests" >::: [
@@ -27,11 +27,24 @@ let suite =
        assert_kit_equal
          ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
          ~real:(kit_sub (kit_of_mukit (Ligo.nat_from_literal "5_000_000n")) (kit_of_mukit (Ligo.nat_from_literal "3_000_000n")));
+       assert_raises
+         (Failure "Kit.kit_sub: negative")
+         (fun _ ->
+            (kit_sub (kit_of_mukit (Ligo.nat_from_literal "1n")) (kit_of_mukit (Ligo.nat_from_literal "2n")));
+         );
 
        (* scale *)
        assert_kit_equal
          ~expected:(kit_of_mukit (Ligo.nat_from_literal "15_370_401n"))
          ~real:(kit_scale (kit_of_mukit (Ligo.nat_from_literal "5_123_467n")) (fixedpoint_of_ratio_floor (ratio_of_int (Ligo.int_from_literal "3"))));
+
+       (* fractions *)
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "333_334n"))
+         ~real:(kit_of_fraction_ceil (Ligo.int_from_literal "1") (Ligo.int_from_literal "3"));
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "333_333n"))
+         ~real:(kit_of_fraction_floor (Ligo.int_from_literal "1") (Ligo.int_from_literal "3"));
 
        (* compare *)
        assert_kit_equal

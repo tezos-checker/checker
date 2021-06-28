@@ -1,5 +1,5 @@
 open OUnit2
-open TestCommon
+open TestLib
 open Ratio
 open FixedPoint
 open Kit

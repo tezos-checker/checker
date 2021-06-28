@@ -4,7 +4,7 @@ open Ratio
 open OUnit2
 open FixedPoint
 open Parameters
-open TestCommon
+open TestLib
 
 let property_test_count = 1000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t

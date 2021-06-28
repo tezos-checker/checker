@@ -1,7 +1,7 @@
 open OUnit2
 open Ratio
 open FixedPoint
-open TestCommon
+open TestLib
 
 let suite =
   "FixedPoint tests" >::: [

@@ -2,7 +2,7 @@ open Error
 open FixedPoint
 open Kit
 open OUnit2
-open TestCommon
+open TestLib
 
 let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -226,6 +226,25 @@ let suite =
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
          ~real:(Burrow.burrow_address  burrow)
+    );
+
+    ("burrow_withdraw_tez - fails if withdrawal would overburrow the burrow" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "10mutez") in
+
+       assert_raises
+         (Failure (Ligo.string_of_int error_WithdrawTezFailure))
+         (fun () ->
+            let _ =
+              Burrow.burrow_withdraw_tez
+                {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
+                (Ligo.tez_from_literal "2mutez")
+                burrow0
+            in ()
+         )
     );
 
     ("burrow_mint_kit - burrow after successful minting has expected collateral" >::
@@ -548,6 +567,62 @@ let suite =
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
          ~real:(Burrow.burrow_address  burrow)
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "0mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some kit_zero)
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "0mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:None
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:kit_zero
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "1mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some kit_zero)
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive kit" >::
+     fun _ ->
+       let burrow0 = make_test_burrow
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~collateral:(Ligo.tez_from_literal "1mutez") in
+       let tez_to_auction = Ligo.tez_from_literal "1mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "2n")))
+         ~real:min_kit_for_unwarranted
     );
 
     (* This is a bit of an odd test but it ensures that the math in compute_tez_to_auction

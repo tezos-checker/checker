@@ -4,11 +4,15 @@ let suite =
   "CheckerTests" >::: [
     (* fast *)
     TestChecker.suite;
+    TestCommon.suite;
     TestFixedPoint.suite;
     TestTez.suite;
+    TestCtez.suite;
     TestKit.suite;
     TestLqt.suite;
+    TestRatio.suite;
     TestBurrow.suite;
+    TestMem.suite;
     TestParameters.suite;
     TestCfmm.suite;
     TestFa2Interface.suite;

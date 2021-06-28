@@ -1,6 +1,6 @@
 open OUnit2
 open Lqt
-open TestCommon
+open TestLib
 
 let suite =
   "LqtTests" >::: [
@@ -25,6 +25,19 @@ let suite =
        assert_lqt_equal
          ~expected:(lqt_of_denomination (Ligo.nat_from_literal "2_000_000n"))
          ~real:(lqt_sub (lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")) (lqt_of_denomination (Ligo.nat_from_literal "3_000_000n")));
+       assert_raises
+         (Failure "Lqt.lqt_sub: negative")
+         (fun _ ->
+            (lqt_sub (lqt_of_denomination (Ligo.nat_from_literal "1n")) (lqt_of_denomination (Ligo.nat_from_literal "2n")));
+         );
+
+       (* fractions *)
+       assert_lqt_equal
+         ~expected:(lqt_of_denomination (Ligo.nat_from_literal "333_334n"))
+         ~real:(lqt_of_fraction_ceil (Ligo.int_from_literal "1") (Ligo.int_from_literal "3"));
+       assert_lqt_equal
+         ~expected:(lqt_of_denomination (Ligo.nat_from_literal "333_333n"))
+         ~real:(lqt_of_fraction_floor (Ligo.int_from_literal "1") (Ligo.int_from_literal "3"));
 
        (* compare *)
        assert_lqt_equal
