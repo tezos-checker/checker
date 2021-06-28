@@ -82,19 +82,27 @@ def mutate(
 
 
 def restore(src: str):
-    subprocess.run(["git", "restore", src], check=True)
+    result = subprocess.run(f"git restore {src}", shell=True, capture_output=True)
+    if result.returncode != 0:
+        raise Exception(
+            f"Failed to git restore {src} with error: "
+            + result.stdout.decode()
+            + result.stderr.decode()
+        )
 
 
 def test_mutated_src():
     print("Checking validity of modified src code...")
-    result = subprocess.run(["dune", "build"], capture_output=True)
+    result = subprocess.run(["dune build"], capture_output=True, shell=True)
     if result.returncode != 0:
         raise Exception(
-            "Failed to build mutated src with error: " + result.stderr.decode()
+            "Failed to build mutated src with error: "
+            + result.stdout.decode()
+            + result.stderr.decode()
         )
 
     print("Running tests...")
-    result = subprocess.run(["make", "test"], capture_output=True)
+    result = subprocess.run(["make test"], capture_output=True, shell=True)
     tests_fail = True
     if result.returncode == 0:
         tests_fail = False
@@ -137,7 +145,7 @@ def do_mutation():
 
 
 if __name__ == "__main__":
-    n_mutations = 1000
+    n_mutations = 500
     report = {}
     for i in range(n_mutations):
         # Using a context manager here as a quick and dirty way to ensure that mutations are removed
@@ -146,7 +154,7 @@ if __name__ == "__main__":
             (src, mutation_from, mutation_to, line), tests_failed = mutation_result
         if src not in report:
             report[src] = {}
-            report[src][(mutation_from, mutation_to, line)] = tests_failed
+        report[src][(mutation_from, mutation_to, line)] = tests_failed
         srcs = list(report.keys())
         srcs.sort()
 
