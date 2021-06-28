@@ -62,8 +62,6 @@ def mutate(
 ) -> Tuple[bool, Optional[int]]:
     with open(src) as f:
         lines = [l.rstrip("\n") for l in f.readlines()]
-    # TODO: Matching is sort of precise with regex, but replacement is not.
-    foo: re.Match = None
     matching_lines = []
     for i, l in enumerate(lines):
         match = before_regex.match(l)
@@ -139,7 +137,7 @@ def do_mutation():
 
 
 if __name__ == "__main__":
-    n_mutations = 100
+    n_mutations = 1000
     report = {}
     for i in range(n_mutations):
         # Using a context manager here as a quick and dirty way to ensure that mutations are removed
