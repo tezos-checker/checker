@@ -829,6 +829,29 @@ let suite =
        ()
     );
 
+    ("view_total_supply (FA2) - initial kit supply" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let total_mukit_amount = Checker.view_total_supply (Fa2Interface.kit_token_id, empty_checker) in
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_mukit_amount;
+       ()
+    );
+
+    ("view_total_supply (FA2) - initial lqt supply" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let total_mulqt_amount = Checker.view_total_supply (Fa2Interface.lqt_token_id, empty_checker) in
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_mulqt_amount;
+       ()
+    );
+
+    ("view_total_supply (FA2) - undefined token id" >::
+     fun _ ->
+       assert_raises
+         (Failure "FA2_TOKEN_UNDEFINED")
+         (fun () -> Checker.view_total_supply (Ligo.nat_from_literal "3n", empty_checker))
+    );
+
     (* ************************************************************************* *)
     (**                      LiquidationAuctions                                 *)
     (* ************************************************************************* *)
