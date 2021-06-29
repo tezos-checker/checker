@@ -28,7 +28,7 @@ test-coverage: ocaml-src
 	bisect-ppx-report summary
 
 clean:
-	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml
+	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build
 
 indent:
 	bash ./scripts/format.sh
