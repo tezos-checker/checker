@@ -26,8 +26,8 @@ MUTATION_GROUPS = [
     {"mul_nat_int", "sub_nat_int", "add_nat_int", "div_nat_int"},
     {"eq_nat_int", "lt_nat_int", "gt_nat_int", "leq_nat_int", "geq_nat_int"},
     # TEZ
-    {"mul_tez_int", "sub_tez_int", "add_tez_int", "div_tez_int"},
-    {"eq_tez_int", "lt_tez_int", "gt_tez_int", "leq_tez_int", "geq_tez_int"},
+    {"sub_tez_tez", "add_tez_tez"},
+    {"eq_tez_tez", "lt_tez_tez", "gt_tez_tez", "leq_tez_tez", "geq_tez_tez"},
     # FIXED POINT
     {"fixedpoint_add", "fixedpoint_sub"},
     {"fixedpoint_of_ratio_ceil", "fixedpoint_of_ratio_floor"},
