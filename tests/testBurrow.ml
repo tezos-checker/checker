@@ -722,7 +722,25 @@ let suite =
             ~real:burrow_out
         ));
 
+    (
+      "burrow_is_cancellation_warranted - warranted cancellation" >::
+      fun _ -> (
+          let burrow = Burrow.make_burrow_for_test
+              ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_657_142n"))
+              ~excess_kit:kit_zero
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "5_000_000mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+          let cancelled_slice_tez = Ligo.tez_from_literal "1_000_000mutez" in
 
+          assert_bool
+            "burrow_is_cancellation_warranted returned false, but the cancellation is expected to be warranted"
+            (Burrow.burrow_is_cancellation_warranted Parameters.initial_parameters burrow cancelled_slice_tez))
+    );
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
     (* =========================================================================================== *)
