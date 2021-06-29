@@ -1,8 +1,22 @@
-from contextlib import contextmanager
+"""
+Rudimentary mutation tests for a pre-defined set of OCaml source modules
+and mutations.
+
+This script is currently meant to be used in a more interactive fashion.
+Edit the mutations defined in MODULES and MUTATION_GROUPS as needed. You
+can also adjust the total number of mutations, n_mutations, in the __main__
+block.
+
+WARNING: This script edits the src files in-place and attempts to restore changes
+using git. If the script exits ungracefully you might need to clean up your
+working tree.
+"""
+
 import os
 import random
 import re
 import subprocess
+from contextlib import contextmanager
 from pprint import pprint
 from typing import Optional, Tuple
 
