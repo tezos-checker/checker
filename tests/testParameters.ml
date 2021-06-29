@@ -470,6 +470,56 @@ let test_liquidation_index_low_unbounded =
 (*                                  touch                                    *)
 (* ************************************************************************* *)
 
+(* Just a simple unit test, where the parameters are touched again without any
+ * time passing. In fact, in checker.ml we make sure to update nothing at all,
+ * if no time has passed (cf. touch_with_index). *)
+let test_touch_0 =
+  "test_touch_0" >:: fun _ ->
+    Ligo.Tezos.reset ();
+    let in_params =
+      Parameters.{
+        q = fixedpoint_one;
+        index = Ligo.tez_from_literal "1_000_000mutez";
+        protected_index = Ligo.tez_from_literal "1_000_000mutez";
+        target = fixedpoint_one;
+        drift = fixedpoint_zero;
+        drift_derivative = fixedpoint_zero;
+        burrow_fee_index = fixedpoint_one;
+        imbalance_index = fixedpoint_one;
+        outstanding_kit = kit_zero;
+        circulating_kit = kit_zero;
+        last_touched = !Ligo.Tezos.now;
+      } in
+    let expected_out_params =
+      Parameters.{
+        q = fixedpoint_one;
+        index = Ligo.tez_from_literal "500_000mutez";
+        protected_index = Ligo.tez_from_literal "1_000_000mutez";
+        target = fixedpoint_of_hex_string "0.2AAAAAAAAAAAAAAA";
+        drift_derivative = fixedpoint_zero;
+        drift = fixedpoint_zero;
+        burrow_fee_index = fixedpoint_one;
+        imbalance_index = fixedpoint_one;
+        outstanding_kit = kit_zero;
+        circulating_kit = kit_zero;
+        last_touched = !Ligo.Tezos.now;
+      } in
+
+    (* Non-trivial values for the arguments. *)
+    let kit_in_tez = make_ratio (Ligo.int_from_literal "3") (Ligo.int_from_literal "1") in
+    let index = Ligo.tez_from_literal "500_000mutez" in
+    (* Touch in the same block. I wonder if we wish to allow this for a local function such as parameters_touch. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+    let total_accrual_to_cfmm, out_params = parameters_touch index kit_in_tez in_params in
+
+    assert_kit_equal
+      ~expected:kit_zero
+      ~real:total_accrual_to_cfmm;
+    assert_parameters_equal
+      ~expected:expected_out_params
+      ~real:out_params;
+    ()
+
 (* Just a simple unit test, testing nothing specific, really. *)
 let test_touch_1 =
   "test_touch_1" >:: fun _ ->
@@ -593,6 +643,7 @@ let suite =
     test_liquidation_index_low_unbounded;
 
     (* touch *)
+    test_touch_0;
     test_touch_1;
     test_touch_2;
   ]
