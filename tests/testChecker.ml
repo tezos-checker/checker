@@ -1311,6 +1311,71 @@ let suite =
        ()
     );
 
+    (* In order to (meaningfully) test the cfmm views, we need the cfmm to be
+     * populated. The following test reuses the same setup for testing all the
+     * cfmm views (otherwise we'd have to replicate this part per test). *)
+    ("cfmm views" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       let burrow_id = Ligo.nat_from_literal "42n" in
+       (* Create a burrow *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
+       let _ops, checker = Checker.entrypoint_create_burrow (checker, (burrow_id, None)) in
+       (* Mint some kit *)
+       Ligo.Tezos.new_transaction ~seconds_passed:62 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _ops, checker = Checker.entrypoint_mint_kit (checker, (burrow_id, kit_one)) in
+       (* Add some liquidity *)
+       Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ctez_to_give = Ctez.ctez_of_muctez (Ligo.nat_from_literal "400_000n") in
+       let kit_to_give = Kit.kit_of_mukit (Ligo.nat_from_literal "400_000n") in
+       let min_lqt_to_mint = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
+       let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
+       let _ops, checker = Checker.entrypoint_add_liquidity (checker, (ctez_to_give, kit_to_give, min_lqt_to_mint, deadline)) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:59 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+
+       (* view_buy_kit_min_kit_expected *)
+       let _ =
+         let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
+         let min_kit_to_buy = Checker.view_buy_kit_min_kit_expected (ctez_to_sell, checker) in
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
+         (* must succeed, otherwise view_buy_kit_min_kit_expected overapproximated *)
+         Checker.entrypoint_buy_kit (checker, (ctez_to_sell, min_kit_to_buy, deadline)) in
+
+       (* view_sell_kit_min_ctez_expected *)
+       let _ =
+         let kit_to_sell = Kit.kit_of_mukit (Ligo.nat_from_literal "100_000n") in
+         let min_ctez_to_buy = Checker.view_sell_kit_min_ctez_expected (kit_to_sell, checker) in
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
+         (* must succeed, otherwise view_sell_kit_min_ctez_expected overapproximated *)
+         Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_to_buy, deadline)) in
+
+       (* view_add_liquidity_max_kit_deposited / view_add_liquidity_min_lqt_minted *)
+       let _ =
+         let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
+         let max_kit_to_sell = Checker.view_add_liquidity_max_kit_deposited (ctez_to_sell, checker) in
+         let min_lqt_to_buy = Checker.view_add_liquidity_min_lqt_minted (ctez_to_sell, checker) in
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
+         (* must succeed, otherwise
+          * view_add_liquidity_max_kit_deposited underapproximated or
+          * view_add_liquidity_min_lqt_minted overapproximated (or both of them did) *)
+         Checker.entrypoint_add_liquidity (checker, (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)) in
+
+       (* view_remove_liquidity_min_ctez_withdrawn / view_remove_liquidity_min_kit_withdrawn *)
+       let _ =
+         let lqt_to_sell = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
+         let min_ctez_to_buy = Checker.view_remove_liquidity_min_ctez_withdrawn (lqt_to_sell, checker) in
+         let min_kit_to_buy = Checker.view_remove_liquidity_min_kit_withdrawn (lqt_to_sell, checker) in
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
+         (* must succeed, otherwise
+          * view_remove_liquidity_min_ctez_withdrawn overapproximated or
+          * view_remove_liquidity_min_kit_withdrawn overapproximated (or both of them did) *)
+         Checker.entrypoint_remove_liquidity (checker, (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)) in
+
+       ()
+    );
+
     ("view_burrow_max_mintable_kit - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
