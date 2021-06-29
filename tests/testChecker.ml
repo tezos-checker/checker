@@ -852,6 +852,16 @@ let suite =
          (fun () -> Checker.view_total_supply (Ligo.nat_from_literal "3n", empty_checker))
     );
 
+    ("view_all_tokens (FA2)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let all_tokens = Checker.view_all_tokens ((), empty_checker) in
+       assert_nat_list_equal
+         ~expected:[ Fa2Interface.kit_token_id; Fa2Interface.lqt_token_id ]
+         ~real:all_tokens;
+       ()
+    );
+
     (* ************************************************************************* *)
     (**                      LiquidationAuctions                                 *)
     (* ************************************************************************* *)
