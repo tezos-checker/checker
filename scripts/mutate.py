@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from contextlib import contextmanager
 import os
 import random
