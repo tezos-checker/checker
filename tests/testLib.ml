@@ -41,6 +41,9 @@ let assert_operation_list_equal ~expected ~real = OUnit2.assert_equal ~printer:s
 type slice_option = LiquidationAuctionPrimitiveTypes.liquidation_slice option [@@deriving show]
 let assert_slice_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_slice_option expected real
 
+type nat_list = Ligo.nat list [@@deriving show]
+let assert_nat_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_nat_list expected real
+
 let eq_cfmm (u1: CfmmTypes.cfmm) (u2: CfmmTypes.cfmm) : bool =
   Ctez.ctez_compare u1.ctez u2.ctez = 0
   && Kit.kit_compare u1.kit u2.kit = 0
