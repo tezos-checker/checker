@@ -74,6 +74,8 @@ MUTATION_GROUPS = [
         "gt_ratio_ratio",
         "eq_ratio_ratio",
     },
+    # BOOL
+    {"true", "false"},
 ]
 
 MUTATION_MAPPINGS = []
