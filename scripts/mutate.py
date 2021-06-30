@@ -43,6 +43,7 @@ MODULES = ["burrow.ml", "checker.ml", "parameters.ml", "cfmm.ml"]  #
 MUTATION_GROUPS = [
     ## MATH
     # KIT
+    {"kit_zero", "kit_one"},
     {"kit_add", "kit_sub", "kit_min", "kit_max"},
     {"gt_kit_kit", "geq_kit_kit", "eq_kit_kit", "lt_kit_kit"},
     # INT
