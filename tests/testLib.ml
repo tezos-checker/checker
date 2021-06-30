@@ -28,6 +28,7 @@ let assert_kit_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_
 type tez_option = Ligo.tez option [@@deriving show]
 let assert_tez_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_tez_option expected real
 
+let assert_burrow_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_burrow expected real
 type slice_content_list = LiquidationAuctionPrimitiveTypes.liquidation_slice_contents list [@@deriving show]
 let assert_slice_content_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_slice_content_list expected real
 

@@ -644,6 +644,103 @@ let suite =
             (Ligo.mul_int_int lp_den f_den))
     );
 
+    (
+      "burrow_return_kit_from_auction - expected value for burrow with outstanding kit" >::
+      fun _ -> (
+          let burrow = Burrow.make_burrow_for_test
+              ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10n"))
+              ~excess_kit:kit_zero
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+          let slice = let open LiquidationAuctionPrimitiveTypes in
+            {
+              burrow=(alice_addr, Ligo.nat_from_literal "0n");
+              tez=(Ligo.tez_from_literal "2mutez");
+              min_kit_for_unwarranted=None;
+            }
+          in
+
+          let burrow_out = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "9n")) burrow in
+          let burrow_expected = Burrow.make_burrow_for_test
+              ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+              ~excess_kit:kit_zero
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+          assert_burrow_equal
+            ~expected:burrow_expected
+            ~real:burrow_out
+        ));
+
+    (
+      "burrow_return_kit_from_auction - expected value for burrow with excess kit" >::
+      fun _ -> (
+          let burrow = Burrow.make_burrow_for_test
+              ~outstanding_kit:kit_zero
+              ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "10n"))
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+          let slice = let open LiquidationAuctionPrimitiveTypes in
+            {
+              burrow=(alice_addr, Ligo.nat_from_literal "0n");
+              tez=(Ligo.tez_from_literal "2mutez");
+              min_kit_for_unwarranted=None;
+            }
+          in
+
+          let burrow_out = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "9n")) burrow in
+          let burrow_expected = Burrow.make_burrow_for_test
+              ~outstanding_kit:kit_zero
+              ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "19n"))
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "0mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+          assert_burrow_equal
+            ~expected:burrow_expected
+            ~real:burrow_out
+        ));
+
+    (
+      "burrow_is_cancellation_warranted - warranted cancellation" >::
+      fun _ -> (
+          let burrow = Burrow.make_burrow_for_test
+              ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_657_142n"))
+              ~excess_kit:kit_zero
+              ~active:true
+              ~address:alice_addr
+              ~delegate:None
+              ~collateral:(Ligo.tez_from_literal "5_000_000mutez")
+              ~adjustment_index:fixedpoint_one
+              ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+          let cancelled_slice_tez = Ligo.tez_from_literal "1_000_000mutez" in
+
+          assert_bool
+            "burrow_is_cancellation_warranted returned false, but the cancellation is expected to be warranted"
+            (Burrow.burrow_is_cancellation_warranted Parameters.initial_parameters burrow cancelled_slice_tez))
+    );
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
     (* =========================================================================================== *)
