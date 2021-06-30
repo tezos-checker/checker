@@ -120,60 +120,60 @@ let suite =
     ("If checker is sealed, users should be able to call CheckerEntrypoint/StrictParams/Transfer" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-         let op = CheckerMain.(CheckerEntrypoint (StrictParams (Transfer []))) in
-         (* This call should succeed *)
-         Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in
-         ()
-      )
+          let op = CheckerMain.(CheckerEntrypoint (StrictParams (Transfer []))) in
+          (* This call should succeed *)
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in
+          ()
+       )
     );
 
     ("If checker is sealed, users should be able to call CheckerEntrypoint/LazyParams" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-         let op = CheckerMain.(CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "756n")))) in
-         (* This call should succeed *)
-         Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:oracle_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in
-         (* But if the call does not come from the oracle it should fail. *)
-         assert_raises
-           (Failure (Ligo.string_of_int error_UnauthorisedCaller))
-           (fun () ->
-             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-             CheckerMain.main (op, sealed_wrapper)
-           )
-      )
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "756n")))) in
+          (* This call should succeed *)
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:oracle_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in
+          (* But if the call does not come from the oracle it should fail. *)
+          assert_raises
+            (Failure (Ligo.string_of_int error_UnauthorisedCaller))
+            (fun () ->
+               Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+               CheckerMain.main (op, sealed_wrapper)
+            )
+       )
     );
 
     (* Failing cases when checker is already sealed *)
     ("DeployFunction - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-         let fn_id, fn_bytes = CheckerEntrypoints.lazyParamsToLazyFunctionId (CheckerEntrypoints.Touch ()) in
-         let op = CheckerMain.DeployFunction (fn_id, fn_bytes) in
-         assert_raises
-           (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
-           (fun () -> CheckerMain.main (op, sealed_wrapper))
+          let fn_id, fn_bytes = CheckerEntrypoints.lazyParamsToLazyFunctionId (CheckerEntrypoints.Touch ()) in
+          let op = CheckerMain.DeployFunction (fn_id, fn_bytes) in
+          assert_raises
+            (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
+            (fun () -> CheckerMain.main (op, sealed_wrapper))
        )
     );
 
     ("SealContract - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-         let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
-         assert_raises
-           (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
-           (fun () -> CheckerMain.main (op, sealed_wrapper))
+          let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
+          assert_raises
+            (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
+            (fun () -> CheckerMain.main (op, sealed_wrapper))
        )
     );
 
     ("DeployMetadata - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-         let op = CheckerMain.DeployMetadata (Ligo.bytes_from_literal "0x0123456789ABCDEF") in
-         assert_raises
-           (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
-           (fun () -> CheckerMain.main (op, sealed_wrapper))
+          let op = CheckerMain.DeployMetadata (Ligo.bytes_from_literal "0x0123456789ABCDEF") in
+          assert_raises
+            (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
+            (fun () -> CheckerMain.main (op, sealed_wrapper))
        )
     );
 

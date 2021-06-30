@@ -52,46 +52,46 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
   let ops, lazy_functions, metadata, deployment_state = match deployment_state with
     | Unsealed deployer ->
       begin match !Ligo.Tezos.sender = deployer with
-      | true ->
-        begin match op with
-        | DeployFunction p ->
-          let lfi, bs = p in
-          let lazy_functions =
-            match Ligo.Big_map.find_opt lfi lazy_functions with
-            | None -> Ligo.Big_map.add lfi bs lazy_functions
-            | Some prev -> Ligo.Big_map.add lfi (Ligo.Bytes.concat prev bs) lazy_functions in
-          (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
-        | DeployMetadata bs ->
-          let metadata =
-            match Ligo.Big_map.find_opt "m" metadata with
-            | None -> Ligo.Big_map.add "m" bs metadata
-            | Some prev -> Ligo.Big_map.add "m" (Ligo.Bytes.concat prev bs) metadata in
-          (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
-        | SealContract (oracle_addr, ctez_addr) ->
-          let external_contracts = { oracle = oracle_addr; ctez = ctez_addr; } in
+        | true ->
+          begin match op with
+            | DeployFunction p ->
+              let lfi, bs = p in
+              let lazy_functions =
+                match Ligo.Big_map.find_opt lfi lazy_functions with
+                | None -> Ligo.Big_map.add lfi bs lazy_functions
+                | Some prev -> Ligo.Big_map.add lfi (Ligo.Bytes.concat prev bs) lazy_functions in
+              (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
+            | DeployMetadata bs ->
+              let metadata =
+                match Ligo.Big_map.find_opt "m" metadata with
+                | None -> Ligo.Big_map.add "m" bs metadata
+                | Some prev -> Ligo.Big_map.add "m" (Ligo.Bytes.concat prev bs) metadata in
+              (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
+            | SealContract (oracle_addr, ctez_addr) ->
+              let external_contracts = { oracle = oracle_addr; ctez = ctez_addr; } in
 
-          (* check if the given oracle and ctez contracts have the entrypoints we need *)
-          let _ = get_transfer_ctez_entrypoint external_contracts in
-          let _ = get_oracle_entrypoint external_contracts in
+              (* check if the given oracle and ctez contracts have the entrypoints we need *)
+              let _ = get_transfer_ctez_entrypoint external_contracts in
+              let _ = get_oracle_entrypoint external_contracts in
 
-          (* emit a touch operation to checker *)
-          let touchOp =
-            match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
-            | Some c -> LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "0mutez") c
-            | None -> (failwith "C1" : LigoOp.operation) in
+              (* emit a touch operation to checker *)
+              let touchOp =
+                match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
+                | Some c -> LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "0mutez") c
+                | None -> (failwith "C1" : LigoOp.operation) in
 
-          (* initialize checker state *)
-          let checker = initial_checker external_contracts in
+              (* initialize checker state *)
+              let checker = initial_checker external_contracts in
 
-          (* add the metadata boilerplate *)
-          (* Python: b"tezos-storage:m".hex() *)
-          let metadata_url = Ligo.bytes_from_literal "0x74657a6f732d73746f726167653a6d" in
-          let metadata = Ligo.Big_map.add "" metadata_url metadata in
+              (* add the metadata boilerplate *)
+              (* Python: b"tezos-storage:m".hex() *)
+              let metadata_url = Ligo.bytes_from_literal "0x74657a6f732d73746f726167653a6d" in
+              let metadata = Ligo.Big_map.add "" metadata_url metadata in
 
-          ([touchOp], lazy_functions, metadata, Sealed checker)
-        | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
-        end
-      | false -> (Ligo.failwith error_UnauthorisedCaller: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+              ([touchOp], lazy_functions, metadata, Sealed checker)
+            | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+          end
+        | false -> (Ligo.failwith error_UnauthorisedCaller: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
       end
     | Sealed checker ->
       let ops, checker =
