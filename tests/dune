@@ -19,6 +19,7 @@
   TestLiquidationAuction
   TestChecker
   TestCheckerMain
+  TestCheckerEntrypoints
   TestSliceList
   TestArbitrary
   TestFa2Interface
