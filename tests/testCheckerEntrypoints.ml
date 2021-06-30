@@ -101,42 +101,42 @@ let suite =
     );
 
     (* Test views on sealed checker *)
-(* FIXME
-    ("wrapper_view_buy_kit_min_kit_expected - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctez.ctez_zero, init_wrapper));
-    );
+    (* FIXME
+        ("wrapper_view_buy_kit_min_kit_expected - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctez.ctez_zero, init_wrapper));
+        );
 
-    ("wrapper_view_sell_kit_min_ctez_expected - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (Kit.kit_zero, init_wrapper));
-    );
+        ("wrapper_view_sell_kit_min_ctez_expected - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (Kit.kit_zero, init_wrapper));
+        );
 
-    ("wrapper_view_add_liquidity_max_kit_deposited - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, init_wrapper));
-    );
+        ("wrapper_view_add_liquidity_max_kit_deposited - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, init_wrapper));
+        );
 
-    ("wrapper_view_add_liquidity_min_lqt_minted - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, init_wrapper));
-    );
+        ("wrapper_view_add_liquidity_min_lqt_minted - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, init_wrapper));
+        );
 
-    ("wrapper_view_remove_liquidity_min_ctez_withdrawn - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, init_wrapper));
-    );
+        ("wrapper_view_remove_liquidity_min_ctez_withdrawn - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, init_wrapper));
+        );
 
-    ("wrapper_view_remove_liquidity_min_kit_withdrawn - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, init_wrapper));
-    );
+        ("wrapper_view_remove_liquidity_min_kit_withdrawn - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, init_wrapper));
+        );
 
-    ("wrapper_view_current_liquidation_auction_minimum_bid - sealed" >::
-     assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), init_wrapper));
-    );
-*)
+        ("wrapper_view_current_liquidation_auction_minimum_bid - sealed" >::
+         assert_unsealed_contract_raises_not_deployed_error
+           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), init_wrapper));
+        );
+    *)
 
     ("wrapper_view_burrow_max_mintable_kit - sealed" >::
      with_sealed_wrapper
@@ -179,8 +179,8 @@ let suite =
      with_sealed_wrapper
        (fun sealed_wrapper ->
           assert_nat_equal
-          ~expected:(Ligo.nat_from_literal "0n")
-          ~real:(CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), sealed_wrapper))
+            ~expected:(Ligo.nat_from_literal "0n")
+            ~real:(CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), sealed_wrapper))
        )
     );
 
