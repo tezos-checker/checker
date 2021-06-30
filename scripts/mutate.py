@@ -156,6 +156,12 @@ def mutate(
         lines = [l.rstrip("\n") for l in f.readlines()]
     matching_lines = []
     for i, l in enumerate(lines):
+        stripped = l.lstrip()
+        # Note: this is not super precise and could skip lines with
+        # actual code which start with the * operator. This doesn't
+        # seem to happen in the checker codebase though...
+        if stripped.startswith("(*") or stripped.startswith("*"):
+            continue
         match = before_regex.match(l)
         if match:
             assert len(match.regs) == 2
