@@ -51,8 +51,9 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
 
   let ops, lazy_functions, metadata, deployment_state = match deployment_state with
     | Unsealed deployer ->
-      if !Ligo.Tezos.sender = deployer
-      then match op with
+      begin match !Ligo.Tezos.sender = deployer with
+      | true ->
+        begin match op with
         | DeployFunction p ->
           let lfi, bs = p in
           let lazy_functions =
@@ -88,9 +89,10 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
           let metadata = Ligo.Big_map.add "" metadata_url metadata in
 
           ([touchOp], lazy_functions, metadata, Sealed checker)
-        | CheckerEntrypoint _ ->
-          (Ligo.failwith error_ContractNotDeployed: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
-      else (Ligo.failwith error_UnauthorisedCaller: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+        | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+        end
+      | false -> (Ligo.failwith error_UnauthorisedCaller: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+      end
     | Sealed checker ->
       let ops, checker =
         match op with
