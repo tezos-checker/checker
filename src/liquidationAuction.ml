@@ -238,13 +238,6 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
   )
 
-(** Create a slice given the contents and set older and younger to None. *)
-let[@inline] make_standalone_slice (contents: liquidation_slice_contents) =
-  { contents = contents;
-    older = (None: leaf_ptr option);
-    younger = (None: leaf_ptr option);
-  }
-
 let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) : liquidation_auctions * avl_ptr (* liquidation_auction_id *) =
   let queued_slices = auctions.queued_slices in
 
