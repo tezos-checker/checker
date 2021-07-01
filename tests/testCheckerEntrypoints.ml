@@ -116,12 +116,16 @@ let suite =
          assert_unsealed_contract_raises_not_deployed_error
            (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, init_wrapper));
         );
-
-        ("wrapper_view_current_liquidation_auction_minimum_bid - sealed" >::
-         assert_unsealed_contract_raises_not_deployed_error
-           (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), init_wrapper));
-        );
     *)
+
+    ("wrapper_view_current_liquidation_auction_minimum_bid - sealed" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          assert_raises
+            (Failure (Ligo.string_of_int error_NoOpenAuction))
+            (fun () -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper))
+       )
+    );
 
     ("wrapper_view_burrow_max_mintable_kit - sealed" >::
      with_sealed_wrapper
