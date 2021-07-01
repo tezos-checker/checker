@@ -3,6 +3,9 @@ let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"
 let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
+let ctez_addr = Ligo.address_of_string "ctez_addr"
+let oracle_addr = Ligo.address_of_string "oracle_addr"
+
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
@@ -52,6 +55,18 @@ let eq_cfmm (u1: CfmmTypes.cfmm) (u2: CfmmTypes.cfmm) : bool =
   && Ligo.eq_nat_nat u1.last_level u2.last_level
 
 let assert_cfmm_equal ~expected ~real = OUnit2.assert_equal ~printer:CfmmTypes.show_cfmm ~cmp:eq_cfmm expected real
+
+let with_sealed_wrapper f =
+  fun _ ->
+
+  let checker_deployer = leena_addr in
+  Ligo.Tezos.reset ();
+  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
+
+  let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
+  let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
+  let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
+  f wrapper
 
 let cfmm_make_for_test ~ctez ~kit ~lqt ~kit_in_ctez_in_prev_block ~last_level =
   { CfmmTypes.ctez = ctez;
