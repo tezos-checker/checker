@@ -627,7 +627,7 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -641,7 +641,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -655,7 +655,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -669,7 +669,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -680,6 +680,26 @@ let suite =
 
        assert_kit_option_equal
          ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "2n")))
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and collateral at auction and positive outstanding kit" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "5n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "2mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let tez_to_auction = Ligo.tez_from_literal "2mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "7n")))
          ~real:min_kit_for_unwarranted
     );
 
