@@ -11,21 +11,6 @@ open Error
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
-let ctez_addr = Ligo.address_of_string "ctez_addr"
-let oracle_addr = Ligo.address_of_string "oracle_addr"
-
-let with_sealed_wrapper f =
-  fun _ ->
-
-  let checker_deployer = leena_addr in
-  Ligo.Tezos.reset ();
-  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
-
-  let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
-  let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
-  f wrapper
-
 let suite =
   "CheckerMainTests" >::: [
     (* initial_wrapper *)
