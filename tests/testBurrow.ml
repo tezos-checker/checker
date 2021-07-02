@@ -567,6 +567,41 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
+    ("burrow_return_slice_from_auction - expected value" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "2mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let slice = let open LiquidationAuctionPrimitiveTypes in {
+           burrow=(burrow_addr, Ligo.nat_from_literal "0n");
+           tez=Ligo.tez_from_literal "1mutez";
+           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
+         } in
+
+       let expected_burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let burrow = Burrow.burrow_return_slice_from_auction slice burrow0 in
+
+       assert_burrow_equal
+         ~expected:expected_burrow
+         ~real:burrow
+    );
+
     ("burrow_return_slice_from_auction - does not change burrow address" >::
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
