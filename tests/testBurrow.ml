@@ -41,6 +41,29 @@ let suite =
        in ()
     );
 
+    ("burrow_burn_kit - expected value for burrow with excess kit" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:kit_zero
+           ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "0mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+       in
+
+       let burrow = Burrow.burrow_burn_kit
+           Parameters.initial_parameters
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           burrow0 in
+
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "2n")) ~real:(Burrow.burrow_excess_kit burrow)
+    );
+
     ("burrow_burn_kit - burning exactly outstanding_kit returns burrow with expected excess and outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
