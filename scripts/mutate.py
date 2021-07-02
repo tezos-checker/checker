@@ -292,7 +292,7 @@ if __name__ == "__main__":
             mutation_type, mutation_from, mutation_to, line_number = mutation_details
             if not tests_failed:
                 print_lines.append(
-                    f"{src:<20} {mutation_type.name:<20} {mutation_from:<15} -> {mutation_to:15} L{line_number:<5}"
+                    f"{src:<20} {mutation_type.name:<20} {mutation_from:<15} -> {mutation_to:15} L{(line_number+1):<5}"
                 )
     for l in print_lines:
         print(l)
