@@ -814,6 +814,32 @@ let test_remove_liquidity_failures =
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in
+         let liq = cfmm.lqt in (* too much (equal) *)
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in
+         let liq = Lqt.lqt_add cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in (* too much (unequal) *)
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
       )
 
 let suite =
