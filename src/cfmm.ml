@@ -174,6 +174,10 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
       kit_of_fraction_ceil
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_int ctez_amount))
         (Ligo.mul_int_int kit_scaling_factor_int cfmm_ctez) in
+    (* Since (a) ctez_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
+     * computing kit_deposited, it should be impossible to trigger the
+     * following assertion. *)
+    assert (gt_kit_kit kit_deposited kit_zero);
     ( lqt_minted,
       kit_deposited,
       { cfmm with
@@ -215,8 +219,6 @@ let cfmm_add_liquidity
       (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (lqt * kit * cfmm))
     else if lt_kit_kit max_kit_deposited kit_deposited then
       (Ligo.failwith error_AddLiquidityTooMuchKitRequired : (lqt * kit * cfmm))
-    else if kit_deposited = kit_zero then
-      (Ligo.failwith error_AddLiquidityZeroKitDeposited : (lqt * kit * cfmm))
     else
       let kit_to_return = kit_sub max_kit_deposited kit_deposited in
       (* EXPECTED PROPERTY: kit_to_return + final_cfmm_kit = max_kit_deposited + initial_cfmm_kit

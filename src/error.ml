@@ -13,7 +13,6 @@ let[@inline] error_AddLiquidityNoKitGiven                          : Ligo.int = 
 let[@inline] error_AddLiquidityNoLiquidityToBeAdded                : Ligo.int = Ligo.int_from_literal "32"
 let[@inline] error_AddLiquidityTooLowLiquidityMinted               : Ligo.int = Ligo.int_from_literal "33"
 let[@inline] error_AddLiquidityTooMuchKitRequired                  : Ligo.int = Ligo.int_from_literal "34"
-let[@inline] error_AddLiquidityZeroKitDeposited                    : Ligo.int = Ligo.int_from_literal "35"
 
 let[@inline] error_RemoveLiquidityNoLiquidityBurned                : Ligo.int = Ligo.int_from_literal "41"
 let[@inline] error_RemoveLiquidityNoTezWithdrawnExpected           : Ligo.int = Ligo.int_from_literal "42"
