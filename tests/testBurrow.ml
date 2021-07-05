@@ -722,6 +722,46 @@ let suite =
             (Ligo.mul_int_int lp_den f_den))
     );
 
+    (* TODO: Property "compute_tez_to_auction - <= 0 for underburrowed burrows" *)
+    (* TODO: Property "compute_tez_to_auction - > 0 for overburrowed burrows" *)
+
+    ("compute_tez_to_auction - expected value for an overburrowed burrow" >::
+     fun _ ->
+       let burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:alice_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       (* Note: cranking up the index to make test more sensitive to small changes potentially obscured by rounding *)
+       let parameters = Parameters.({initial_parameters with index=(Ligo.tez_from_literal "100_000_000_000mutez");}) in
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "707856")
+         ~real:(Burrow.compute_tez_to_auction parameters burrow)
+    );
+
+    ("compute_tez_to_auction - expected value for an underburrowed burrow" >::
+     fun _ ->
+       let burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:alice_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "-2")
+         ~real:(Burrow.compute_tez_to_auction Parameters.initial_parameters burrow)
+    );
+
     (
       "burrow_return_kit_from_auction - expected value for burrow with outstanding kit" >::
       fun _ -> (
