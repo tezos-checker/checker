@@ -6,7 +6,6 @@ let[@inline] error_BuyKitNoTezGiven                                : Ligo.int = 
 
 let[@inline] error_SellKitTooLowExpectedTez                        : Ligo.int = Ligo.int_from_literal "21"
 let[@inline] error_SellKitPriceFailure                             : Ligo.int = Ligo.int_from_literal "22"
-let[@inline] error_SellKitTooMuchTezBought                         : Ligo.int = Ligo.int_from_literal "23"
 let[@inline] error_SellKitNoKitGiven                               : Ligo.int = Ligo.int_from_literal "24"
 
 let[@inline] error_AddLiquidityNoTezGiven                          : Ligo.int = Ligo.int_from_literal "30"
