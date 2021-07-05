@@ -1397,6 +1397,20 @@ let suite =
              * view_add_liquidity_min_lqt_minted overapproximated (or both of them did) *)
             Checker.entrypoint_add_liquidity (checker, (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)));
 
+       "view_add_liquidity_max_kit_deposited - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (fun () -> Checker.view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, checker))
+         );
+
+       "view_add_liquidity_min_lqt_minted - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (fun () -> Checker.view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, checker))
+         );
+
        "view_remove_liquidity_min_ctez_withdrawn / view_remove_liquidity_min_kit_withdrawn" >:: with_cfmm_setup
          (fun checker ->
             let lqt_to_sell = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
