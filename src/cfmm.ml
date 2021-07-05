@@ -66,15 +66,18 @@ let cfmm_view_min_kit_expected_buy_kit
         kit_scaling_factor_int
         (Ligo.mul_int_int (ctez_to_muctez_int new_cfmm_ctez) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
-    if gt_kit_kit bought_kit cfmm.kit then
-      (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * cfmm))
-    else
-      ( bought_kit,
-        { cfmm with
-          kit = kit_sub cfmm.kit bought_kit;
-          ctez = new_cfmm_ctez;
-        }
-      )
+    (* Due to (a) the constant-factor calculation (which means that to deplete
+     * the one amount the other would in effect have to become infinite), (b)
+     * the fact that checker owns 1mu of each token, and (c) the fact that we
+     * always floor in our calculations, it should be impossible to trigger the
+     * following assertion. *)
+    assert (lt_kit_kit bought_kit cfmm.kit);
+    ( bought_kit,
+      { cfmm with
+        kit = kit_sub cfmm.kit bought_kit;
+        ctez = new_cfmm_ctez;
+      }
+    )
 
 let cfmm_buy_kit
     (cfmm: cfmm)

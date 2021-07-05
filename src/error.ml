@@ -2,7 +2,6 @@ let[@inline] error_CfmmTooLate                                  : Ligo.int = Lig
 
 let[@inline] error_BuyKitTooLowExpectedKit                         : Ligo.int = Ligo.int_from_literal "10"
 let[@inline] error_BuyKitPriceFailure                              : Ligo.int = Ligo.int_from_literal "11"
-let[@inline] error_BuyKitTooMuchKitBought                          : Ligo.int = Ligo.int_from_literal "12"
 let[@inline] error_BuyKitNoTezGiven                                : Ligo.int = Ligo.int_from_literal "13"
 
 let[@inline] error_SellKitTooLowExpectedTez                        : Ligo.int = Ligo.int_from_literal "21"
