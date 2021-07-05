@@ -1369,7 +1369,6 @@ let suite =
          let _ = f checker in ()
      in
      [
-
        "view_buy_kit_min_kit_expected" >:: with_cfmm_setup
          (fun checker ->
             let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
@@ -1378,6 +1377,13 @@ let suite =
             (* must succeed, otherwise view_buy_kit_min_kit_expected overapproximated *)
             Checker.entrypoint_buy_kit (checker, (ctez_to_sell, min_kit_to_buy, deadline)));
 
+       "view_buy_kit_min_kit_expected - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
+              (fun () -> Checker.view_buy_kit_min_kit_expected (Ctez.ctez_zero, checker))
+         );
+
        "view_sell_kit_min_ctez_expected" >:: with_cfmm_setup
          (fun checker ->
             let kit_to_sell = Kit.kit_of_mukit (Ligo.nat_from_literal "100_000n") in
@@ -1385,6 +1391,13 @@ let suite =
             let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
             (* must succeed, otherwise view_sell_kit_min_ctez_expected overapproximated *)
             Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_to_buy, deadline)));
+
+       "view_sell_kit_min_ctez_expected - fail if no kit is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
+              (fun () -> Checker.view_sell_kit_min_ctez_expected (Kit.kit_zero, checker))
+         );
 
        "view_add_liquidity_max_kit_deposited / view_add_liquidity_min_lqt_minted" >:: with_cfmm_setup
          (fun checker ->
