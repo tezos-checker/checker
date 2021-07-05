@@ -1429,11 +1429,43 @@ let suite =
               (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, checker))
          );
 
+       "view_remove_liquidity_min_ctez_withdrawn - too much lqt withdrawn (equal)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = checker.cfmm.lqt in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (lqt_to_withdraw, checker))
+         );
+
+       "view_remove_liquidity_min_ctez_withdrawn - too much lqt withdrawn (more than)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = Lqt.lqt_add checker.cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (lqt_to_withdraw, checker))
+         );
+
        "view_remove_liquidity_min_kit_withdrawn - fail if no liquidity is given" >:: with_cfmm_setup
          (fun checker ->
             assert_raises
               (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
               (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - too much lqt withdrawn (equal)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = checker.cfmm.lqt in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (lqt_to_withdraw, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - too much lqt withdrawn (more than)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = Lqt.lqt_add checker.cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (lqt_to_withdraw, checker))
          );
      ]
     );
