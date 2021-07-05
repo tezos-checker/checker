@@ -1421,6 +1421,20 @@ let suite =
              * view_remove_liquidity_min_ctez_withdrawn overapproximated or
              * view_remove_liquidity_min_kit_withdrawn overapproximated (or both of them did) *)
             Checker.entrypoint_remove_liquidity (checker, (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)));
+
+       "view_remove_liquidity_min_ctez_withdrawn - fail if no liquidity is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - fail if no liquidity is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, checker))
+         );
      ]
     );
 
