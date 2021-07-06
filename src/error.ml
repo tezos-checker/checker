@@ -2,12 +2,10 @@ let[@inline] error_CfmmTooLate                                  : Ligo.int = Lig
 
 let[@inline] error_BuyKitTooLowExpectedKit                         : Ligo.int = Ligo.int_from_literal "10"
 let[@inline] error_BuyKitPriceFailure                              : Ligo.int = Ligo.int_from_literal "11"
-let[@inline] error_BuyKitTooMuchKitBought                          : Ligo.int = Ligo.int_from_literal "12"
 let[@inline] error_BuyKitNoTezGiven                                : Ligo.int = Ligo.int_from_literal "13"
 
 let[@inline] error_SellKitTooLowExpectedTez                        : Ligo.int = Ligo.int_from_literal "21"
 let[@inline] error_SellKitPriceFailure                             : Ligo.int = Ligo.int_from_literal "22"
-let[@inline] error_SellKitTooMuchTezBought                         : Ligo.int = Ligo.int_from_literal "23"
 let[@inline] error_SellKitNoKitGiven                               : Ligo.int = Ligo.int_from_literal "24"
 
 let[@inline] error_AddLiquidityNoTezGiven                          : Ligo.int = Ligo.int_from_literal "30"
@@ -15,15 +13,12 @@ let[@inline] error_AddLiquidityNoKitGiven                          : Ligo.int = 
 let[@inline] error_AddLiquidityNoLiquidityToBeAdded                : Ligo.int = Ligo.int_from_literal "32"
 let[@inline] error_AddLiquidityTooLowLiquidityMinted               : Ligo.int = Ligo.int_from_literal "33"
 let[@inline] error_AddLiquidityTooMuchKitRequired                  : Ligo.int = Ligo.int_from_literal "34"
-let[@inline] error_AddLiquidityZeroKitDeposited                    : Ligo.int = Ligo.int_from_literal "35"
 
 let[@inline] error_RemoveLiquidityNoLiquidityBurned                : Ligo.int = Ligo.int_from_literal "41"
 let[@inline] error_RemoveLiquidityNoTezWithdrawnExpected           : Ligo.int = Ligo.int_from_literal "42"
 let[@inline] error_RemoveLiquidityNoKitWithdrawnExpected           : Ligo.int = Ligo.int_from_literal "43"
 let[@inline] error_RemoveLiquidityCantWithdrawEnoughTez            : Ligo.int = Ligo.int_from_literal "44"
-let[@inline] error_RemoveLiquidityTooMuchTezWithdrawn              : Ligo.int = Ligo.int_from_literal "45"
 let[@inline] error_RemoveLiquidityCantWithdrawEnoughKit            : Ligo.int = Ligo.int_from_literal "46"
-let[@inline] error_RemoveLiquidityTooMuchKitWithdrawn              : Ligo.int = Ligo.int_from_literal "47"
 let[@inline] error_RemoveLiquidityTooMuchLiquidityWithdrawn        : Ligo.int = Ligo.int_from_literal "48"
 
 let[@inline] error_LiquidationQueueTooLong                         : Ligo.int = Ligo.int_from_literal "50"

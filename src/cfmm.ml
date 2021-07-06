@@ -66,15 +66,18 @@ let cfmm_view_min_kit_expected_buy_kit
         kit_scaling_factor_int
         (Ligo.mul_int_int (ctez_to_muctez_int new_cfmm_ctez) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
-    if gt_kit_kit bought_kit cfmm.kit then
-      (Ligo.failwith error_BuyKitTooMuchKitBought : (kit * cfmm))
-    else
-      ( bought_kit,
-        { cfmm with
-          kit = kit_sub cfmm.kit bought_kit;
-          ctez = new_cfmm_ctez;
-        }
-      )
+    (* Due to (a) the constant-factor calculation (which means that to deplete
+     * the one amount the other would in effect have to become infinite), (b)
+     * the fact that checker owns 1mu of each token, and (c) the fact that we
+     * always floor in our calculations, it should be impossible to trigger the
+     * following assertion. *)
+    assert (lt_kit_kit bought_kit cfmm.kit);
+    ( bought_kit,
+      { cfmm with
+        kit = kit_sub cfmm.kit bought_kit;
+        ctez = new_cfmm_ctez;
+      }
+    )
 
 let cfmm_buy_kit
     (cfmm: cfmm)
@@ -120,15 +123,19 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
         (Ligo.int_from_literal "1_000_000")
         (Ligo.mul_int_int (kit_to_mukit_int new_cfmm_kit) den_uf) in
     let bought_ctez = ctez_of_fraction_floor numerator denominator in
-    if gt_ctez_ctez bought_ctez cfmm.ctez then
-      (Ligo.failwith error_SellKitTooMuchTezBought : (ctez * cfmm))
-    else
-      ( bought_ctez,
-        { cfmm with
-          kit = new_cfmm_kit;
-          ctez = ctez_sub cfmm.ctez bought_ctez;
-        }
-      )
+
+    (* Due to (a) the constant-factor calculation (which means that to deplete
+     * the one amount the other would in effect have to become infinite), (b)
+     * the fact that checker owns 1mu of each token, and (c) the fact that we
+     * always floor in our calculations, it should be impossible to trigger the
+     * following assertion. *)
+    assert (lt_ctez_ctez bought_ctez cfmm.ctez);
+    ( bought_ctez,
+      { cfmm with
+        kit = new_cfmm_kit;
+        ctez = ctez_sub cfmm.ctez bought_ctez;
+      }
+    )
 
 let cfmm_sell_kit
     (cfmm: cfmm)
@@ -167,6 +174,10 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
       kit_of_fraction_ceil
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_int ctez_amount))
         (Ligo.mul_int_int kit_scaling_factor_int cfmm_ctez) in
+    (* Since (a) ctez_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
+     * computing kit_deposited, it should be impossible to trigger the
+     * following assertion. *)
+    assert (gt_kit_kit kit_deposited kit_zero);
     ( lqt_minted,
       kit_deposited,
       { cfmm with
@@ -208,8 +219,6 @@ let cfmm_add_liquidity
       (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (lqt * kit * cfmm))
     else if lt_kit_kit max_kit_deposited kit_deposited then
       (Ligo.failwith error_AddLiquidityTooMuchKitRequired : (lqt * kit * cfmm))
-    else if kit_deposited = kit_zero then
-      (Ligo.failwith error_AddLiquidityZeroKitDeposited : (lqt * kit * cfmm))
     else
       let kit_to_return = kit_sub max_kit_deposited kit_deposited in
       (* EXPECTED PROPERTY: kit_to_return + final_cfmm_kit = max_kit_deposited + initial_cfmm_kit
@@ -240,19 +249,20 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
         (Ligo.mul_int_int (kit_to_mukit_int cfmm.kit) (lqt_to_denomination_int lqt_burned))
         (Ligo.mul_int_int kit_scaling_factor_int (lqt_to_denomination_int cfmm.lqt))
     in
-    if gt_ctez_ctez ctez_withdrawn cfmm.ctez then
-      (Ligo.failwith error_RemoveLiquidityTooMuchTezWithdrawn : (ctez * kit * cfmm))
-    else if gt_kit_kit kit_withdrawn cfmm.kit then
-      (Ligo.failwith error_RemoveLiquidityTooMuchKitWithdrawn : (ctez * kit * cfmm))
-    else
-      let remaining_ctez = ctez_sub cfmm.ctez ctez_withdrawn in
-      let remaining_lqt = lqt_sub cfmm.lqt lqt_burned in
-      let remaining_kit = kit_sub cfmm.kit kit_withdrawn in
-      let updated = { cfmm with
-                      ctez = remaining_ctez;
-                      kit = remaining_kit;
-                      lqt = remaining_lqt } in
-      (ctez_withdrawn, kit_withdrawn, updated)
+    (* Since (a) 0 < lqt_burned < cfmm.lqt, and (b) we floor for both the kit
+     * and the ctez withdrawn, it should be impossible to trigger the following
+     * assertions. *)
+    assert (lt_ctez_ctez ctez_withdrawn cfmm.ctez);
+    assert (lt_kit_kit kit_withdrawn cfmm.kit);
+
+    let remaining_ctez = ctez_sub cfmm.ctez ctez_withdrawn in
+    let remaining_lqt = lqt_sub cfmm.lqt lqt_burned in
+    let remaining_kit = kit_sub cfmm.kit kit_withdrawn in
+    let updated = { cfmm with
+                    ctez = remaining_ctez;
+                    kit = remaining_kit;
+                    lqt = remaining_lqt } in
+    (ctez_withdrawn, kit_withdrawn, updated)
 
 (* Selling liquidity always succeeds, but might leave the contract
  * without ctez and kit if everybody sells their liquidity. I think

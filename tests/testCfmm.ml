@@ -629,6 +629,31 @@ let test_add_liquidity_failures =
            (kit_of_mukit (Ligo.nat_from_literal "1n"))
            lqt_zero
            (Ligo.timestamp_from_seconds_literal 1)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "0") in (* No time passed; failure (tests equality) *)
+         cfmm_add_liquidity
+           cfmm
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           lqt_zero
+           deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* One second passed; failure (tests inequality) *)
+         Ligo.Tezos.new_transaction ~seconds_passed:2 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+         cfmm_add_liquidity
+           cfmm
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           lqt_zero
+           deadline
       )
 
 (* ************************************************************************* *)
@@ -764,6 +789,57 @@ let test_remove_liquidity_failures =
            (ctez_of_muctez (Ligo.nat_from_literal "1n"))
            (kit_of_mukit (Ligo.nat_from_literal "0n"))
            (Ligo.timestamp_from_seconds_literal 100)
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "0") in (* No time passed; failure (tests equality) *)
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_CfmmTooLate))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* One second passed; failure (tests inequality) *)
+         Ligo.Tezos.new_transaction ~seconds_passed:2 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in
+         let liq = cfmm.lqt in (* too much (equal) *)
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
+      );
+    assert_raises
+      (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+      (fun () ->
+         Ligo.Tezos.reset ();
+         let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in
+         let liq = Lqt.lqt_add cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in (* too much (unequal) *)
+         cfmm_remove_liquidity
+           cfmm
+           liq
+           (ctez_of_muctez (Ligo.nat_from_literal "1n"))
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           deadline
       )
 
 let suite =

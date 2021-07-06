@@ -1369,7 +1369,6 @@ let suite =
          let _ = f checker in ()
      in
      [
-
        "view_buy_kit_min_kit_expected" >:: with_cfmm_setup
          (fun checker ->
             let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
@@ -1378,6 +1377,13 @@ let suite =
             (* must succeed, otherwise view_buy_kit_min_kit_expected overapproximated *)
             Checker.entrypoint_buy_kit (checker, (ctez_to_sell, min_kit_to_buy, deadline)));
 
+       "view_buy_kit_min_kit_expected - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
+              (fun () -> Checker.view_buy_kit_min_kit_expected (Ctez.ctez_zero, checker))
+         );
+
        "view_sell_kit_min_ctez_expected" >:: with_cfmm_setup
          (fun checker ->
             let kit_to_sell = Kit.kit_of_mukit (Ligo.nat_from_literal "100_000n") in
@@ -1385,6 +1391,13 @@ let suite =
             let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
             (* must succeed, otherwise view_sell_kit_min_ctez_expected overapproximated *)
             Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_to_buy, deadline)));
+
+       "view_sell_kit_min_ctez_expected - fail if no kit is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_SellKitNoKitGiven))
+              (fun () -> Checker.view_sell_kit_min_ctez_expected (Kit.kit_zero, checker))
+         );
 
        "view_add_liquidity_max_kit_deposited / view_add_liquidity_min_lqt_minted" >:: with_cfmm_setup
          (fun checker ->
@@ -1397,6 +1410,20 @@ let suite =
              * view_add_liquidity_min_lqt_minted overapproximated (or both of them did) *)
             Checker.entrypoint_add_liquidity (checker, (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)));
 
+       "view_add_liquidity_max_kit_deposited - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (fun () -> Checker.view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, checker))
+         );
+
+       "view_add_liquidity_min_lqt_minted - fail if no ctez is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (fun () -> Checker.view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, checker))
+         );
+
        "view_remove_liquidity_min_ctez_withdrawn / view_remove_liquidity_min_kit_withdrawn" >:: with_cfmm_setup
          (fun checker ->
             let lqt_to_sell = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
@@ -1407,6 +1434,52 @@ let suite =
              * view_remove_liquidity_min_ctez_withdrawn overapproximated or
              * view_remove_liquidity_min_kit_withdrawn overapproximated (or both of them did) *)
             Checker.entrypoint_remove_liquidity (checker, (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)));
+
+       "view_remove_liquidity_min_ctez_withdrawn - fail if no liquidity is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, checker))
+         );
+
+       "view_remove_liquidity_min_ctez_withdrawn - too much lqt withdrawn (equal)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = checker.cfmm.lqt in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (lqt_to_withdraw, checker))
+         );
+
+       "view_remove_liquidity_min_ctez_withdrawn - too much lqt withdrawn (more than)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = Lqt.lqt_add checker.cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_ctez_withdrawn (lqt_to_withdraw, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - fail if no liquidity is given" >:: with_cfmm_setup
+         (fun checker ->
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityNoLiquidityBurned))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - too much lqt withdrawn (equal)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = checker.cfmm.lqt in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (lqt_to_withdraw, checker))
+         );
+
+       "view_remove_liquidity_min_kit_withdrawn - too much lqt withdrawn (more than)" >:: with_cfmm_setup
+         (fun checker ->
+            let lqt_to_withdraw = Lqt.lqt_add checker.cfmm.lqt (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in
+            assert_raises
+              (Failure (Ligo.string_of_int error_RemoveLiquidityTooMuchLiquidityWithdrawn))
+              (fun () -> Checker.view_remove_liquidity_min_kit_withdrawn (lqt_to_withdraw, checker))
+         );
      ]
     );
 
