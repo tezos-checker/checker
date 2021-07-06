@@ -30,6 +30,17 @@ jobs:
         run: nix-shell --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
       - name: Build and test
         run: nix-build -A michelson --arg doCheck true
+
+      - name: Export lazy entrypoint sizes
+        run: |
+          cat result/functions.json \
+            | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
+            > entrypoint-sizes.json
+      - uses: actions/upload-artifact@v2.2.4
+        with:
+          name: stats
+          path: entrypoint-sizes.json
+          if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -46,4 +57,9 @@ jobs:
       - name: Build checker with e2eTestsHack
         run: nix-build -A michelson --arg doCheck false --arg e2eTestsHack true --out-link ./checker-e2eTestsHack
       - name: Run e2e tests
-        run: nix-shell --run "CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
+        run: nix-shell --run "WRITE_GAS_COSTS=$PWD/gas-costs.json CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
+      - uses: actions/upload-artifact@v2.2.4
+        with:
+          name: stats
+          path: gas-costs.json
+          if-no-files-found: error
