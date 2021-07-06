@@ -35,6 +35,7 @@ let lqt_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : lqt =
 
 let[@inline] geq_lqt_lqt = Ligo.geq_nat_nat
 
+let[@inline] eq_lqt_lqt = Ligo.eq_nat_nat
 let[@inline] lt_lqt_lqt = Ligo.lt_nat_nat
 
 (* BEGIN_OCAML *)

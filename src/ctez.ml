@@ -30,6 +30,7 @@ let ctez_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
   then (failwith "Ctez.ctez_of_fraction_floor: negative" : ctez)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num ctez_scaling_factor_int) x_den)
 
+let[@inline] eq_ctez_ctez = Ligo.eq_nat_nat
 let[@inline] lt_ctez_ctez = Ligo.lt_nat_nat
 let[@inline] gt_ctez_ctez = Ligo.gt_nat_nat
 

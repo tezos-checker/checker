@@ -21,6 +21,7 @@ val lqt_of_fraction_floor : Ligo.int -> Ligo.int -> lqt
 
 val geq_lqt_lqt : lqt -> lqt -> bool
 
+val eq_lqt_lqt : lqt -> lqt -> bool
 val lt_lqt_lqt : lqt -> lqt -> bool
 
 (* BEGIN_OCAML *)
