@@ -842,6 +842,45 @@ let test_remove_liquidity_failures =
            deadline
       )
 
+let cfmm_tests_from_mutations =
+  "Cfmm tests from mutations" >::: [
+    (* This test catches the following mutation:
+     *   cfmm.ml:245 (1_000_000 => 999_999)
+     *
+     * ctez_withdrawn is calculated as follows:
+     *   ctez_withdrawn = FLOOR ((cfmm.ctez * lqt_burned) / (tez_sf * cfmm.lqt))
+     *
+     * so we can catch the mutation by using the following values:
+     *   lqt_burned = 1
+     *   cfmm.ctez = 1_000_000 * 999_999
+     *   cfmm.lqt = 999_999
+     * which give
+     *   ctez_withdrawn = FLOOR (999_999_000_000 / (tez_sf * 999_999))
+     * and thus
+     *  tez_sf = 1_000_000 => ctez_withdrawn = 1_000_000
+     *  tez_sf =   999_999 => ctez_withdrawn = 1_000_001
+    *)
+    ("cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (1_000_000 => 999_999)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let cfmm =
+         cfmm_make_for_test
+           ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "999_999_000_000n"))
+           ~kit:(kit_of_mukit (Ligo.nat_from_literal "999_999_000_000n"))
+           ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "999_999n"))
+           ~kit_in_ctez_in_prev_block:one_ratio
+           ~last_level:(Ligo.nat_from_literal "0n") in
+       let lqt_burned = Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n") in
+       let (ctez_withdrawn, _kit_withdrawn, _cfmm) =
+         cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
+           cfmm
+           lqt_burned in
+       assert_ctez_equal
+         ~expected:(Ctez.ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"))
+         ~real:ctez_withdrawn
+    );
+  ]
+
 let suite =
   "Cfmm tests" >::: [
     (* buy_kit *)
@@ -881,4 +920,7 @@ let suite =
     test_remove_liquidity_respects_min_kit_withdrawn;
     test_remove_liquidity_respects_ctez_limit;
     test_remove_liquidity_respects_kit_limit;
+
+    (* Unit tests that arose from mutation testing *)
+    cfmm_tests_from_mutations;
   ]
