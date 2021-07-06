@@ -931,6 +931,29 @@ let cfmm_tests_from_mutations =
          ~real:updated_cfmm.lqt;
        ()
     );
+
+    (* This test catches the following mutation:
+     *   cfmm.ml:300 (kit_add => kit_max)
+    *)
+    ("cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (kit_sub => kit_min)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let total_ctez = ctez_of_muctez (Ligo.nat_from_literal "123_456_789n") in
+       let total_kit = kit_of_mukit (Ligo.nat_from_literal "37_194_834n") in
+       let total_lqt = lqt_of_denomination (Ligo.nat_from_literal "999_999n") in
+       let cfmm =
+         cfmm_make_for_test
+           ~ctez:total_ctez
+           ~kit:total_kit
+           ~lqt:total_lqt
+           ~kit_in_ctez_in_prev_block:one_ratio
+           ~last_level:!Ligo.Tezos.level in
+       let accrual = kit_of_mukit (Ligo.nat_from_literal "8_367n") in
+       let updated_cfmm = cfmm_add_accrued_kit cfmm accrual in
+       assert_kit_equal
+         ~expected:(kit_add cfmm.kit accrual)
+         ~real:updated_cfmm.kit
+    );
   ]
 
 let suite =
