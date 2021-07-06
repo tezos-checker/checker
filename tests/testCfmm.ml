@@ -268,7 +268,7 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
+      (Failure (Ligo.string_of_int error_BuyKitNoCtezGiven))
       (fun () ->
          cfmm_buy_kit
            cfmm
@@ -461,7 +461,7 @@ let sell_kit_unit_test =
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
     assert_raises
-      (Failure (Ligo.string_of_int error_SellKitTooLowExpectedTez))
+      (Failure (Ligo.string_of_int error_SellKitTooLowExpectedCtez))
       (fun () ->
          cfmm_sell_kit
            cfmm
@@ -601,7 +601,7 @@ let test_add_liquidity_failures =
         ~kit_in_ctez_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
     assert_raises
-      (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+      (Failure (Ligo.string_of_int error_AddLiquidityNoCtezGiven))
       (fun () ->
          cfmm_add_liquidity
            cfmm
@@ -771,7 +771,7 @@ let test_remove_liquidity_failures =
            (Ligo.timestamp_from_seconds_literal 100)
       );
     assert_raises
-      (Failure (Ligo.string_of_int error_RemoveLiquidityNoTezWithdrawnExpected))
+      (Failure (Ligo.string_of_int error_RemoveLiquidityNoCtezWithdrawnExpected))
       (fun () ->
          cfmm_remove_liquidity
            cfmm

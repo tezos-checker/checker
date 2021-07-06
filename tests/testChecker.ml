@@ -1380,7 +1380,7 @@ let suite =
        "view_buy_kit_min_kit_expected - fail if no ctez is given" >:: with_cfmm_setup
          (fun checker ->
             assert_raises
-              (Failure (Ligo.string_of_int error_BuyKitNoTezGiven))
+              (Failure (Ligo.string_of_int error_BuyKitNoCtezGiven))
               (fun () -> Checker.view_buy_kit_min_kit_expected (Ctez.ctez_zero, checker))
          );
 
@@ -1413,14 +1413,14 @@ let suite =
        "view_add_liquidity_max_kit_deposited - fail if no ctez is given" >:: with_cfmm_setup
          (fun checker ->
             assert_raises
-              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (Failure (Ligo.string_of_int error_AddLiquidityNoCtezGiven))
               (fun () -> Checker.view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, checker))
          );
 
        "view_add_liquidity_min_lqt_minted - fail if no ctez is given" >:: with_cfmm_setup
          (fun checker ->
             assert_raises
-              (Failure (Ligo.string_of_int error_AddLiquidityNoTezGiven))
+              (Failure (Ligo.string_of_int error_AddLiquidityNoCtezGiven))
               (fun () -> Checker.view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, checker))
          );
 

@@ -205,7 +205,7 @@ let suite =
             () in
           (* must fail, otherwise wrapper_view_remove_liquidity_min_ctez_withdrawn underapproximated *)
           assert_raises
-            (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughTez))
+            (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughCtez))
             (fun () ->
                let min_ctez_to_buy = Ctez.ctez_add min_ctez_to_buy (Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n")) in
                let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)))) in
