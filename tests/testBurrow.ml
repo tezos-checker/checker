@@ -524,6 +524,36 @@ let suite =
 
     );
 
+    (
+      "burrow_create - created burrow has zero collateral at auction" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "0mutez")
+          ~real:(Burrow.burrow_collateral_at_auction burrow)
+    );
+
+    (
+      "burrow_create - created burrow has zero outstanding kit" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_kit_equal
+          ~expected:kit_zero
+          ~real:(Burrow.burrow_outstanding_kit burrow)
+    );
+
+    (
+      "burrow_create - created burrow has zero excess kit" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_kit_equal
+          ~expected:kit_zero
+          ~real:(Burrow.burrow_excess_kit burrow)
+    );
+
     ("burrow_touch - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
