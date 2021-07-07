@@ -947,6 +947,44 @@ let suite =
           "burrow_is_liquidatable returned true, but the burrow is expected to be non-liquidatable"
           (not (Burrow.burrow_is_liquidatable Parameters.initial_parameters burrow))
     );
+
+    (
+      "burrow_total_associated_tez - active burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "6_000_000mutez")
+          ~real:(Burrow.burrow_total_associated_tez burrow)
+    );
+
+    (
+      "burrow_total_associated_tez - inactive burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:false
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "5_000_000mutez")
+          ~real:(Burrow.burrow_total_associated_tez burrow)
+    );
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
     (* =========================================================================================== *)
