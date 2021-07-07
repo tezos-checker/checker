@@ -22,6 +22,10 @@ test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh
 	dune runtest .
 
+fast-test: ocaml-src
+	sh ./scripts/ensure-unique-errors.sh
+	dune build @run-fast-tests
+
 test-coverage: ocaml-src
 	dune runtest --instrument-with bisect_ppx --force .
 	bisect-ppx-report html
