@@ -909,6 +909,44 @@ let suite =
           "burrow_is_cancellation_warranted returned true, but the cancellation is expected to be unwarranted"
           (not (Burrow.burrow_is_cancellation_warranted Parameters.initial_parameters burrow cancelled_slice_tez))
     );
+
+    (
+      "burrow_is_liquidatable - liquidatable burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_469_999mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_bool
+          "burrow_is_liquidatable returned false, but the burrow is expected to be liquidatable"
+          (Burrow.burrow_is_liquidatable Parameters.initial_parameters burrow)
+    );
+
+    (
+      "burrow_is_liquidatable - non-liquidatable burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_470_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_bool
+          "burrow_is_liquidatable returned true, but the burrow is expected to be non-liquidatable"
+          (not (Burrow.burrow_is_liquidatable Parameters.initial_parameters burrow))
+    );
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
     (* =========================================================================================== *)
