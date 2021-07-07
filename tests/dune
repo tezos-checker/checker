@@ -1,29 +1,29 @@
-(test
- (name tests)
- (modules
-  Tests
-  TestAvl
-  TestAvlModel
-  TestBurrow
-  TestCommon
-  TestCtez
-  TestFixedPoint
-  TestRatio
-  TestTez
-  TestKit
-  TestLqt
-  TestMem
-  TestParameters
-  TestLiquidation
-  TestCfmm
-  TestLiquidationAuction
-  TestChecker
-  TestCheckerMain
-  TestCheckerEntrypoints
-  TestSliceList
-  TestArbitrary
-  TestFa2Interface
-  TestLib)
- (libraries src core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
+(tests
+ (names
+   ;; FAST
+   testBurrow
+   testCommon
+   testCtez
+   testFixedPoint
+   testRatio
+   testTez
+   testKit
+   testLqt
+   testMem
+   testParameters
+   testLiquidation
+   testCfmm
+   testChecker
+   testCheckerMain
+   testCheckerEntrypoints
+   testFa2Interface
+
+   ;; SLOW
+   testAvl
+   testAvlModel
+   testLiquidationAuction
+   testSliceList
+ )
+ (libraries checker core_kernel ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))

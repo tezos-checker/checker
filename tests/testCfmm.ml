@@ -882,3 +882,7 @@ let suite =
     test_remove_liquidity_respects_ctez_limit;
     test_remove_liquidity_respects_kit_limit;
   ]
+
+let () =
+  run_test_tt_main
+    suite

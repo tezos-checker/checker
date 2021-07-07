@@ -50,3 +50,7 @@ let suite =
          ~real:(show_lqt (lqt_of_denomination (Ligo.nat_from_literal "50_309_951n")));
     )
   ]
+
+let () =
+  run_test_tt_main
+    suite

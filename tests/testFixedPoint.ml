@@ -28,3 +28,7 @@ let suite =
          ~real:(fixedpoint_pow fp5 (Ligo.nat_from_literal "0n"));
     );
   ]
+
+let () =
+  run_test_tt_main
+    suite

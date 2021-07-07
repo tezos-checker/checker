@@ -16,36 +16,6 @@
 
 (library
  (name checker)
- (public_name src)
- (modules
-  Checker
-  CheckerEntrypoints
-  CheckerTypes
-  Constants
-  CheckerMain
-  Mem
-  Avl
-  Ctez
-  Kit
-  Lqt
-  FixedPoint
-  Parameters
-  Burrow
-  Cfmm
-  CfmmTypes
-  SliceList
-  LiquidationAuction
-  LiquidationAuctionTypes
-  LiquidationAuctionPrimitiveTypes
-  Ptr
-  Ratio
-  BurrowTypes
-  Ligo
-  LigoOp
-  Fa12Interface
-  Fa2Interface
-  Error
-  Common)
  (libraries str zarith)
  (wrapped false)
  (instrumentation

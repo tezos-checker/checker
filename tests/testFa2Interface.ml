@@ -618,3 +618,7 @@ let suite =
      * valid tokens. Perhaps with an external script, like we do to check that
      * there are no duplicate error codes? *)
   ]
+
+let () =
+  run_test_tt_main
+    suite

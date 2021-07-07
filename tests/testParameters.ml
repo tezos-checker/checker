@@ -647,3 +647,7 @@ let suite =
     test_touch_1;
     test_touch_2;
   ]
+
+let () =
+  run_test_tt_main
+    suite

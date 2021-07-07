@@ -80,3 +80,7 @@ let suite =
          ~real:(clamp_int (Ligo.int_from_literal "8") (Ligo.int_from_literal "-5") (Ligo.int_from_literal "7"));
     );
   ]
+
+let () =
+  run_test_tt_main
+    suite

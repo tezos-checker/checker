@@ -57,3 +57,7 @@ let suite =
          ~real:(show_kit (kit_of_mukit (Ligo.nat_from_literal "50_309_951n")));
     )
   ]
+
+let () =
+  run_test_tt_main
+    suite
