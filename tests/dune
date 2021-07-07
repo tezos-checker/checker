@@ -31,6 +31,7 @@
 (rule (alias run-avl-tests) (action (run %{exe:testAvlModel.exe})))
 
 (rule (alias run-fast-tests) (action (run %{exe:testBurrow.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCommon.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCtez.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testFixedPoint.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testRatio.exe})))
