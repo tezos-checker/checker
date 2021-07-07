@@ -1,6 +1,5 @@
 (tests
  (names
-   ;; FAST
    testBurrow
    testCommon
    testCtez
@@ -17,8 +16,6 @@
    testCheckerMain
    testCheckerEntrypoints
    testFa2Interface
-
-   ;; SLOW
    testAvl
    testAvlModel
    testLiquidationAuction
@@ -27,3 +24,24 @@
  (libraries checker core_kernel ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))
+
+;; Custom Aliases
+
+(rule (alias run-avl-tests) (action (run %{exe:testAvl.exe})))
+(rule (alias run-avl-tests) (action (run %{exe:testAvlModel.exe})))
+
+(rule (alias run-fast-tests) (action (run %{exe:testBurrow.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCtez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testFixedPoint.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testRatio.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testTez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testKit.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testLqt.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testMem.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testParameters.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testLiquidation.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCfmm.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testChecker.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCheckerMain.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testFa2Interface.exe})))
