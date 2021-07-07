@@ -11,4 +11,3 @@ $FD -e '.nix' -x nixpkgs-fmt
 $FD -e '.py' -x black
 
 new_dune="$(mktemp)"; dune format-dune-file src/dune > "$new_dune" && mv "$new_dune" src/dune
-new_dune="$(mktemp)"; dune format-dune-file tests/dune > "$new_dune" && mv "$new_dune" tests/dune
