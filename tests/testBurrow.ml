@@ -41,6 +41,29 @@ let suite =
        in ()
     );
 
+    ("burrow_burn_kit - expected value for burrow with excess kit" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:kit_zero
+           ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "0mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+       in
+
+       let burrow = Burrow.burrow_burn_kit
+           Parameters.initial_parameters
+           (kit_of_mukit (Ligo.nat_from_literal "1n"))
+           burrow0 in
+
+       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "2n")) ~real:(Burrow.burrow_excess_kit burrow)
+    );
+
     ("burrow_burn_kit - burning exactly outstanding_kit returns burrow with expected excess and outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
@@ -501,6 +524,36 @@ let suite =
 
     );
 
+    (
+      "burrow_create - created burrow has zero collateral at auction" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "0mutez")
+          ~real:(Burrow.burrow_collateral_at_auction burrow)
+    );
+
+    (
+      "burrow_create - created burrow has zero outstanding kit" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_kit_equal
+          ~expected:kit_zero
+          ~real:(Burrow.burrow_outstanding_kit burrow)
+    );
+
+    (
+      "burrow_create - created burrow has zero excess kit" >::
+      fun _ ->
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
+
+        assert_kit_equal
+          ~expected:kit_zero
+          ~real:(Burrow.burrow_excess_kit burrow)
+    );
+
     ("burrow_touch - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
@@ -544,6 +597,41 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
+    ("burrow_return_slice_from_auction - expected value" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "2mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let slice = let open LiquidationAuctionPrimitiveTypes in {
+           burrow=(burrow_addr, Ligo.nat_from_literal "0n");
+           tez=Ligo.tez_from_literal "1mutez";
+           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
+         } in
+
+       let expected_burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let burrow = Burrow.burrow_return_slice_from_auction slice burrow0 in
+
+       assert_burrow_equal
+         ~expected:expected_burrow
+         ~real:burrow
+    );
+
     ("burrow_return_slice_from_auction - does not change burrow address" >::
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
@@ -569,7 +657,7 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and zero outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -583,7 +671,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with zero collateral and positive outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -597,7 +685,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and zero outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
@@ -611,7 +699,7 @@ let suite =
          ~real:min_kit_for_unwarranted
     );
 
-    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive kit" >::
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and positive outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -622,6 +710,26 @@ let suite =
 
        assert_kit_option_equal
          ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "2n")))
+         ~real:min_kit_for_unwarranted
+    );
+
+    ("compute_min_kit_for_unwarranted - burrow with positive collateral and collateral at auction and positive outstanding kit" >::
+     fun _ ->
+       let burrow0 = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "5n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:burrow_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "2mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       let tez_to_auction = Ligo.tez_from_literal "2mutez" in
+       let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
+
+       assert_kit_option_equal
+         ~expected:(Some (kit_of_mukit (Ligo.nat_from_literal "7n")))
          ~real:min_kit_for_unwarranted
     );
 
@@ -642,6 +750,46 @@ let suite =
                f_num
                (Ligo.sub_int_int lp_den lp_num))
             (Ligo.mul_int_int lp_den f_den))
+    );
+
+    ("compute_tez_to_auction - expected value for an overburrowed burrow" >::
+     fun _ ->
+       let burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:alice_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+       (* Note: cranking up the index to make test more sensitive to small changes
+        *  potentially obscured by rounding. This high of a difference between the
+        *  index and protected index is unlikely to occur in real-world scenarios.
+       *)
+       let parameters = Parameters.({initial_parameters with index=(Ligo.tez_from_literal "100_000_000_000mutez");}) in
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "707856")
+         ~real:(Burrow.compute_tez_to_auction parameters burrow)
+    );
+
+    ("compute_tez_to_auction - expected value for an underburrowed burrow" >::
+     fun _ ->
+       let burrow = Burrow.make_burrow_for_test
+           ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
+           ~excess_kit:kit_zero
+           ~active:true
+           ~address:alice_addr
+           ~delegate:None
+           ~collateral:(Ligo.tez_from_literal "3mutez")
+           ~adjustment_index:fixedpoint_one
+           ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
+           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+       assert_int_equal
+         ~expected:(Ligo.int_from_literal "-2")
+         ~real:(Burrow.compute_tez_to_auction Parameters.initial_parameters burrow)
     );
 
     (
@@ -740,6 +888,102 @@ let suite =
           assert_bool
             "burrow_is_cancellation_warranted returned false, but the cancellation is expected to be warranted"
             (Burrow.burrow_is_cancellation_warranted Parameters.initial_parameters burrow cancelled_slice_tez))
+    );
+
+    (
+      "burrow_is_cancellation_warranted - unwarranted cancellation" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_657_143n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "5_000_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+        let cancelled_slice_tez = Ligo.tez_from_literal "1_000_000mutez" in
+
+        assert_bool
+          "burrow_is_cancellation_warranted returned true, but the cancellation is expected to be unwarranted"
+          (not (Burrow.burrow_is_cancellation_warranted Parameters.initial_parameters burrow cancelled_slice_tez))
+    );
+
+    (
+      "burrow_is_liquidatable - liquidatable burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_469_999mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_bool
+          "burrow_is_liquidatable returned false, but the burrow is expected to be liquidatable"
+          (Burrow.burrow_is_liquidatable Parameters.initial_parameters burrow)
+    );
+
+    (
+      "burrow_is_liquidatable - non-liquidatable burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_470_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_bool
+          "burrow_is_liquidatable returned true, but the burrow is expected to be non-liquidatable"
+          (not (Burrow.burrow_is_liquidatable Parameters.initial_parameters burrow))
+    );
+
+    (
+      "burrow_total_associated_tez - active burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:true
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "6_000_000mutez")
+          ~real:(Burrow.burrow_total_associated_tez burrow)
+    );
+
+    (
+      "burrow_total_associated_tez - inactive burrow" >::
+      fun _ ->
+        let burrow = Burrow.make_burrow_for_test
+            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
+            ~excess_kit:kit_zero
+            ~active:false
+            ~address:alice_addr
+            ~delegate:None
+            ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
+            ~adjustment_index:fixedpoint_one
+            ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
+            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+
+        assert_tez_equal
+          ~expected:(Ligo.tez_from_literal "5_000_000mutez")
+          ~real:(Burrow.burrow_total_associated_tez burrow)
     );
     (* =========================================================================================== *)
     (* Property tests for ensuring methods don't allow a burrow to become overburrowed *)
