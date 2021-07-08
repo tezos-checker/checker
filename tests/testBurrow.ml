@@ -764,7 +764,10 @@ let suite =
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-       (* Note: cranking up the index to make test more sensitive to small changes potentially obscured by rounding *)
+       (* Note: cranking up the index to make test more sensitive to small changes
+        *  potentially obscured by rounding. This high of a difference between the
+        *  index and protected index is unlikely to occur in real-world scenarios.
+       *)
        let parameters = Parameters.({initial_parameters with index=(Ligo.tez_from_literal "100_000_000_000mutez");}) in
        assert_int_equal
          ~expected:(Ligo.int_from_literal "707856")
