@@ -36,7 +36,7 @@ class MutationType(Enum):
     INTEGER_LITERAL = auto()
 
 
-MODULES = ["burrow.ml", "checker.ml", "parameters.ml", "cfmm.ml"]  #
+MODULES = ["burrow.ml"]  #
 
 # Each group contains functions with the same type signature which can be swapped
 # and still allow the program to compile.
@@ -162,6 +162,11 @@ def mutate(
         # seem to happen in the checker codebase though...
         if stripped.startswith("(*") or stripped.startswith("*"):
             continue
+        # Super basic logic for ignoring assertions. This might be overly
+        # aggressive (e.g. in cases with an inline comment talking about assertions), but
+        # this doesn't seem to be a common case.
+        if "assert" in stripped:
+            continue
         match = before_regex.match(l)
         if match:
             assert len(match.regs) == 2
@@ -259,7 +264,7 @@ def do_mutation():
 
 
 if __name__ == "__main__":
-    n_mutations = 25
+    n_mutations = 500
     report = {}
     for i in range(n_mutations):
         # Using a context manager here as a quick and dirty way to ensure that mutations are removed
