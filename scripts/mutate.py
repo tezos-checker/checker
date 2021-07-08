@@ -36,7 +36,7 @@ class MutationType(Enum):
     INTEGER_LITERAL = auto()
 
 
-MODULES = ["burrow.ml"]  #
+MODULES = ["burrow.ml", "checker.ml", "parameters.ml", "cfmm.ml"]
 
 # Each group contains functions with the same type signature which can be swapped
 # and still allow the program to compile.
@@ -265,7 +265,7 @@ def do_mutation():
 
 
 if __name__ == "__main__":
-    n_mutations = 500
+    n_mutations = 25
     report = {}
     for i in range(n_mutations):
         # Using a context manager here as a quick and dirty way to ensure that mutations are removed
