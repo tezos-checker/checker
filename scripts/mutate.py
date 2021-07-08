@@ -131,10 +131,11 @@ def mutate_integer_literal(value_src: str) -> str:
         if value == 0:
             mutated_value = 1
         else:
-            mutated_value = random.choice([0, 1, value + 1, value - 1])
+            choices = [c for c in [0, 1, value + 1, value - 1] if c != value]
+            mutated_value = random.choice(choices)
     else:
-        mutated_value = random.choice([-1, 0, 1, value + 1, value - 1])
-
+        choices = [c for c in [-1, 0, 1, value + 1, value - 1] if c != value]
+        mutated_value = random.choice(choices)
     return f"{mutated_value:_}{suffix}"
 
 
