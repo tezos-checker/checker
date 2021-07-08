@@ -752,9 +752,6 @@ let suite =
             (Ligo.mul_int_int lp_den f_den))
     );
 
-    (* TODO: Property "compute_tez_to_auction - <= 0 for underburrowed burrows" *)
-    (* TODO: Property "compute_tez_to_auction - > 0 for overburrowed burrows" *)
-
     ("compute_tez_to_auction - expected value for an overburrowed burrow" >::
      fun _ ->
        let burrow = Burrow.make_burrow_for_test
