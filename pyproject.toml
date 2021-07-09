@@ -8,6 +8,7 @@ authors = [""]
 python = "^3.8"
 checker-client = { develop=true, path = "./client" }
 checker-e2e = { develop=true, path = "./e2e" }
+jupyterlab = "^3.0.16"
 
 
 [tool.poetry.dev-dependencies]
