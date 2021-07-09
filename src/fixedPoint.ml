@@ -61,5 +61,6 @@ let show_fixedpoint amnt =
 
 let pp_fixedpoint ppf amnt = Format.fprintf ppf "%s" (show_fixedpoint amnt)
 
+let show_fixedpoint_raw amnt = Ligo.string_of_int (fixedpoint_to_raw amnt)
 [@@@coverage on]
 (* END_OCAML *)
