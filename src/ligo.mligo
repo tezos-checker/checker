@@ -20,6 +20,8 @@
 [@inline] let ediv_int_int (i: int) (j: int) : (int * nat) option = ediv i j
 [@inline] let ediv_nat_nat (i: nat) (j: nat) : (nat * nat) option = ediv i j
 
+[@inline] let ne_int_int (i: int) (j: int) : bool = i <> j
+
 [@inline] let eq_int_int (i: int) (j: int) : bool = i = j
 [@inline] let eq_nat_nat (i: nat) (j: nat) : bool = i = j
 [@inline] let eq_tez_tez (i: tez) (j: tez) : bool = i = j

@@ -86,9 +86,11 @@ let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
   let circulating = kit_to_mukit_int circulating in
   let { num = num_il; den = den_il; } = imbalance_limit in
 
-  if circulating = Ligo.int_from_literal "0" && outstanding = Ligo.int_from_literal "0" then
+  if (Ligo.eq_int_int circulating (Ligo.int_from_literal "0"))
+  && (Ligo.eq_int_int outstanding (Ligo.int_from_literal "0")) then
     zero_ratio
-  else if circulating = Ligo.int_from_literal "0" && outstanding <> Ligo.int_from_literal "0" then
+  else if (Ligo.eq_int_int circulating (Ligo.int_from_literal "0"))
+       && (Ligo.ne_int_int outstanding (Ligo.int_from_literal "0")) then
     make_ratio (neg_int num_il) den_il
   else
     let { num = num_isf; den = den_isf; } = imbalance_scaling_factor in
@@ -99,9 +101,12 @@ let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
         (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int circulating outstanding)) den_il) (Ligo.mul_int_int num_il denominator))
         (Ligo.mul_int_int den_il denominator)
     else (* circulating < outstanding *)
-      make_ratio
-        (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
-        (Ligo.mul_int_int den_il denominator)
+      begin
+        assert (Ligo.lt_int_int circulating outstanding);
+        make_ratio
+          (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
+          (Ligo.mul_int_int den_il denominator)
+      end
 
 (** Compute the current adjustment index. Basically this is the product of
     the burrow fee index and the imbalance adjustment index.
@@ -169,18 +174,22 @@ let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   let mul_sub_den_thb_num_thb_sf = Ligo.mul_int_int (Ligo.sub_int_int den_thb num_thb) fixedpoint_scaling_factor in
   let mul_add_den_thb_num_thb_sf = Ligo.mul_int_int (Ligo.add_int_int den_thb num_thb) fixedpoint_scaling_factor in
 
-  if Ligo.lt_int_int mul_sub_den_tlb_num_tlb_sf mul_target_tlb && Ligo.lt_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf then
+  if (Ligo.lt_int_int mul_sub_den_tlb_num_tlb_sf mul_target_tlb)
+  && (Ligo.lt_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf) then
     fixedpoint_zero (* no acceleration (0) *)
-  else if Ligo.lt_int_int mul_sub_den_thb_num_thb_sf mul_target_thb && Ligo.leq_int_int mul_target_tlb mul_sub_den_tlb_num_tlb_sf then
+  else if (Ligo.lt_int_int mul_sub_den_thb_num_thb_sf mul_target_thb)
+       && (Ligo.leq_int_int mul_target_tlb mul_sub_den_tlb_num_tlb_sf) then
     low_negative_acceleration
-  else if Ligo.gt_int_int mul_add_den_thb_num_thb_sf mul_target_thb && Ligo.geq_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf then
+  else if (Ligo.gt_int_int mul_add_den_thb_num_thb_sf mul_target_thb)
+       && (Ligo.geq_int_int mul_target_tlb mul_add_den_tlb_num_tlb_sf) then
     low_positive_acceleration
   else if Ligo.leq_int_int mul_target_thb mul_sub_den_thb_num_thb_sf then
     high_negative_acceleration
-  else if Ligo.geq_int_int mul_target_thb mul_add_den_thb_num_thb_sf then
-    high_positive_acceleration
   else
-    (failwith "impossible" : fixedpoint)
+    begin
+      assert (Ligo.geq_int_int mul_target_thb mul_add_den_thb_num_thb_sf);
+      high_positive_acceleration
+    end
 
 (** Calculate the current burrow fee index based on the last index and the
     number of seconds that have elapsed.
