@@ -1,8 +1,44 @@
+diff --git a/patches/e2e-tests-hack.patch b/patches/e2e-tests-hack.patch
+index 73948d9..e69de29 100644
+--- a/patches/e2e-tests-hack.patch
++++ b/patches/e2e-tests-hack.patch
+@@ -1,12 +0,0 @@
+-diff --git a/src/parameters.ml b/src/parameters.ml
+-index 395ecd1..4907c90 100644
+---- a/src/parameters.ml
+-+++ b/src/parameters.ml
+-@@ -211,6 +211,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
+- *)
+- let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
+-   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
+-+  let duration_in_seconds = Ligo.mul_int_int duration_in_seconds (Ligo.int_from_literal "1000") in
+-   let last_protected_index = tez_to_mutez last_protected_index in
+-   fraction_to_tez_floor
+-     (clamp_int
+diff --git a/src/constants.ml b/src/constants.ml
+index bfb1665..3d52c5b 100644
+--- a/src/constants.ml
++++ b/src/constants.ml
+@@ -84,12 +84,12 @@ let[@inline] auction_decay_rate : ratio = make_ratio (Ligo.int_from_literal "1")
+ (** The maximum number of seconds that can pass between two (ascending) bids
+     during an auction. The auction should expire if more than this many seconds
+     pass between two bids. Currently set to 20min ([20min * 60sec/min = 1200s]). *)
+-let[@inline] max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1200"
++let[@inline] max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1"
+ 
+ (** The maximum number of blocks that can pass between two (ascending) bids
+     during an auction. The auction should expire if more blocks than this
+     number pass between two bids. Currently set to 20. *)
+-let[@inline] max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "20n"
++let[@inline] max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "1n"
+ 
+ (** Every bid in an ascending auction needs to improve over the previous bid by
+     at least 0.33 cNp. *)
 diff --git a/src/parameters.ml b/src/parameters.ml
-index 395ecd1..4907c90 100644
+index 71f34c9..e060ef6 100644
 --- a/src/parameters.ml
 +++ b/src/parameters.ml
-@@ -211,6 +211,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
+@@ -215,6 +215,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
  *)
  let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
    assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
