@@ -8,8 +8,8 @@ open Constants
 
 type parameters =
   { q : fixedpoint; (* 1/kit, really *)
-    index: Ligo.tez;
-    protected_index: Ligo.tez;
+    index: Ligo.nat;
+    protected_index: Ligo.nat;
     target: fixedpoint;
     drift_derivative: fixedpoint;
     drift: fixedpoint;
@@ -26,8 +26,8 @@ type parameters =
 (** Initial state of the parameters. *)
 let initial_parameters : parameters =
   { q = fixedpoint_one;
-    index = Ligo.tez_from_literal "1_000_000mutez";
-    protected_index = Ligo.tez_from_literal "1_000_000mutez";
+    index = Ligo.nat_from_literal "1_000_000n";
+    protected_index = Ligo.nat_from_literal "1_000_000n";
     target = fixedpoint_one;
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -39,21 +39,21 @@ let initial_parameters : parameters =
   }
 
 (** Compute the current minting index (in tez). To get tez/kit must multiply with q. *)
-let[@inline] tz_minting (p: parameters) : Ligo.tez = max_tez p.index p.protected_index
+let[@inline] tz_minting (p: parameters) : Ligo.nat = max_nat p.index p.protected_index
 
 (** Compute the current liquidation index (in tez). To get tez/kit must multiply with q. *)
-let[@inline] tz_liquidation (p: parameters) : Ligo.tez = min_tez p.index p.protected_index
+let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.protected_index
 
 (** Current minting price (in tez/kit). *)
 let minting_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_minting p)))
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_minting p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Current liquidation price (in tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (tez_to_mutez (tz_liquidation p)))
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_liquidation p)))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
@@ -222,13 +222,13 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
       )
     ]}
 *)
-let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
-  assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
-  let last_protected_index = tez_to_mutez last_protected_index in
-  fraction_to_tez_floor
+let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
+  assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
+  let last_protected_index = Ligo.int last_protected_index in
+  fraction_to_nat_floor
     (clamp_int
        (Ligo.mul_int_int
-          (tez_to_mutez current_index)
+          (Ligo.int current_index)
           protected_index_inverse_epsilon
        )
        (Ligo.mul_int_int
@@ -246,10 +246,7 @@ let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (c
           )
        )
     )
-    (Ligo.mul_int_int
-       protected_index_inverse_epsilon
-       (Ligo.int_from_literal "1_000_000")
-    )
+    protected_index_inverse_epsilon
 
 (** Calculate the current drift based on the last drift, the last drift
     derivative, the current drift derivative, and the number of seconds that
@@ -321,7 +318,7 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
       target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
     ]}
 *)
-let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.tez) (current_kit_in_tez: ratio) : fixedpoint =
+let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.nat) (current_kit_in_tez: ratio) : fixedpoint =
   let { num = num; den = den; } = current_kit_in_tez in
   fixedpoint_of_raw
     (fdiv_int_int
@@ -329,7 +326,7 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
           den
           (Ligo.mul_int_int
              (fixedpoint_to_raw current_q)
-             (tez_to_mutez current_index)
+             (Ligo.int current_index)
           )
        )
        (Ligo.mul_int_int
@@ -405,7 +402,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
     and (c) the current price of kit in tez, as given by the cfmm
     sub-contract. *)
 let parameters_touch
-    (current_index: Ligo.tez)
+    (current_index: Ligo.nat)
     (current_kit_in_tez: ratio)
     (parameters: parameters)
   : kit * parameters =
