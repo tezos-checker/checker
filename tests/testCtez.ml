@@ -43,3 +43,7 @@ let suite =
          ~real:(show_ctez (ctez_of_muctez (Ligo.nat_from_literal "50_309_951n")));
     )
   ]
+
+let () =
+  run_test_tt_main
+    suite

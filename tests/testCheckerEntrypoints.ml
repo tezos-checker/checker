@@ -306,3 +306,7 @@ let suite =
 
     (* Add tests here *)
   ]
+
+let () =
+  run_test_tt_main
+    suite

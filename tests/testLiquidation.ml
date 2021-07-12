@@ -1100,3 +1100,7 @@ let suite =
     regression_test_72;
     regression_test_93;
   ]
+
+let () =
+  run_test_tt_main
+    suite

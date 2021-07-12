@@ -1,29 +1,48 @@
-(test
- (name tests)
- (modules
-  Tests
-  TestAvl
-  TestAvlModel
-  TestBurrow
-  TestCommon
-  TestCtez
-  TestFixedPoint
-  TestRatio
-  TestTez
-  TestKit
-  TestLqt
-  TestMem
-  TestParameters
-  TestLiquidation
-  TestCfmm
-  TestLiquidationAuction
-  TestChecker
-  TestCheckerMain
-  TestCheckerEntrypoints
-  TestSliceList
-  TestArbitrary
-  TestFa2Interface
-  TestLib)
- (libraries src core_kernel ounit2 qcheck) ;; gotta reference the public_name here.
+(tests
+ (names
+   testBurrow
+   testCommon
+   testCtez
+   testFixedPoint
+   testRatio
+   testTez
+   testKit
+   testLqt
+   testMem
+   testParameters
+   testLiquidation
+   testCfmm
+   testChecker
+   testCheckerMain
+   testCheckerEntrypoints
+   testFa2Interface
+   testAvl
+   testAvlModel
+   testLiquidationAuction
+   testSliceList
+ )
+ (libraries checker core_kernel ounit2 qcheck)
  (preprocess
   (pps ppx_deriving.std)))
+
+;; Custom Aliases
+
+(rule (alias run-avl-tests) (action (run %{exe:testAvl.exe})))
+(rule (alias run-avl-tests) (action (run %{exe:testAvlModel.exe})))
+
+(rule (alias run-fast-tests) (action (run %{exe:testBurrow.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCommon.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCtez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testFixedPoint.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testRatio.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testTez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testKit.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testLqt.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testMem.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testParameters.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testLiquidation.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCfmm.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testChecker.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCheckerMain.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testFa2Interface.exe})))

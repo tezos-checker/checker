@@ -974,3 +974,7 @@ let suite =
     (* compute_current_drift *)
     test_compute_current_drift;
   ]
+
+let () =
+  run_test_tt_main
+    suite

@@ -45,6 +45,7 @@ fetch all dependencies), type
 * `make build-ligo` to generate the michelson code (in `./generated/michelson`).
 * `make build` to do all of the above.
 * `make test` to run all the (OCaml) tests ([./src/tests.ml](./src/tests.ml)). Note that this takes several minutes.
+* `make fast-test` to run the fast (OCaml) tests
 * `make` to do all the above.
 
 For test coverage report using bisect_ppx, type

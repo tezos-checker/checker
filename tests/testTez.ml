@@ -19,3 +19,7 @@ let suite =
          ~real:(Ligo.string_of_tez (Ligo.tez_from_literal "50_309_951mutez"));
     )
   ]
+
+let () =
+  run_test_tt_main
+    suite
