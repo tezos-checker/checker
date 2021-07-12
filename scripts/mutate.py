@@ -130,10 +130,11 @@ def mutate_integer_literal(value_src: str) -> str:
         if value == 0:
             mutated_value = 1
         else:
-            mutated_value = random.choice([0, 1, value + 1, value - 1])
+            choices = [c for c in [0, 1, value + 1, value - 1] if c != value]
+            mutated_value = random.choice(choices)
     else:
-        mutated_value = random.choice([-1, 0, 1, value + 1, value - 1])
-
+        choices = [c for c in [-1, 0, 1, value + 1, value - 1] if c != value]
+        mutated_value = random.choice(choices)
     return f"{mutated_value:_}{suffix}"
 
 
@@ -160,6 +161,11 @@ def mutate(
         # actual code which start with the * operator. This doesn't
         # seem to happen in the checker codebase though...
         if stripped.startswith("(*") or stripped.startswith("*"):
+            continue
+        # Super basic logic for ignoring assertions. This might be overly
+        # aggressive (e.g. in cases with an inline comment talking about assertions), but
+        # this doesn't seem to be a common case.
+        if "assert" in stripped:
             continue
         match = before_regex.match(l)
         if match:

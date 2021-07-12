@@ -842,6 +842,120 @@ let test_remove_liquidity_failures =
            deadline
       )
 
+let cfmm_tests_from_mutations =
+  "Cfmm tests from mutations" >::: [
+    (* This test catches the following mutation:
+     *   cfmm.ml:245 (1_000_000 => 999_999)
+     *
+     * ctez_withdrawn is calculated as follows:
+     *   ctez_withdrawn = FLOOR ((cfmm.ctez * lqt_burned) / (tez_sf * cfmm.lqt))
+     *
+     * so we can catch the mutation by using the following values:
+     *   lqt_burned = 1
+     *   cfmm.ctez = 1_000_000 * 999_999
+     *   cfmm.lqt = 999_999
+     * which give
+     *   ctez_withdrawn = FLOOR (999_999_000_000 / (tez_sf * 999_999))
+     * and thus
+     *  tez_sf = 1_000_000 => ctez_withdrawn = 1_000_000
+     *  tez_sf =   999_999 => ctez_withdrawn = 1_000_001
+    *)
+    ("cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (1_000_000 => 999_999)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let cfmm =
+         cfmm_make_for_test
+           ~ctez:(ctez_of_muctez (Ligo.nat_from_literal "999_999_000_000n"))
+           ~kit:(kit_of_mukit (Ligo.nat_from_literal "999_999_000_000n"))
+           ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "999_999n"))
+           ~kit_in_ctez_in_prev_block:one_ratio
+           ~last_level:!Ligo.Tezos.level in
+       let lqt_burned = Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n") in
+       let (ctez_withdrawn, _kit_withdrawn, _cfmm) =
+         cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
+           cfmm
+           lqt_burned in
+       assert_ctez_equal
+         ~expected:(Ctez.ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"))
+         ~real:ctez_withdrawn
+    );
+
+    (* This test catches the following mutation:
+     *   cfmm.ml:260 (kit_sub => kit_min)
+    *)
+    ("cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (kit_sub => kit_min)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let total_ctez = ctez_of_muctez (Ligo.nat_from_literal "123_456_789n") in
+       let total_kit = kit_of_mukit (Ligo.nat_from_literal "37_194_834n") in
+       let total_lqt = lqt_of_denomination (Ligo.nat_from_literal "999_999n") in
+       let cfmm =
+         cfmm_make_for_test
+           ~ctez:total_ctez
+           ~kit:total_kit
+           ~lqt:total_lqt
+           ~kit_in_ctez_in_prev_block:one_ratio
+           ~last_level:!Ligo.Tezos.level in
+
+       let lqt_burned = Lqt.lqt_of_denomination (Ligo.nat_from_literal "312_465n") in
+       let (ctez_withdrawn, kit_withdrawn, updated_cfmm) =
+         cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
+           cfmm
+           lqt_burned in
+       (* zero sum properties *)
+       assert_ctez_equal
+         ~expected:cfmm.ctez
+         ~real:(Ctez.ctez_add ctez_withdrawn updated_cfmm.ctez);
+       assert_kit_equal
+         ~expected:cfmm.kit
+         ~real:(Kit.kit_add kit_withdrawn updated_cfmm.kit);
+       assert_lqt_equal
+         ~expected:cfmm.lqt
+         ~real:(Lqt.lqt_add lqt_burned updated_cfmm.lqt);
+       (* To give *)
+       assert_ctez_equal
+         ~expected:(Ctez.ctez_of_muctez (Ligo.nat_from_literal "38_575_964n"))
+         ~real:ctez_withdrawn;
+       assert_kit_equal
+         ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "11_622_095n"))
+         ~real:kit_withdrawn;
+       (* Updated cfmm *)
+       assert_ctez_equal
+         ~expected:(Ctez.ctez_of_muctez (Ligo.nat_from_literal "84_880_825n"))
+         ~real:updated_cfmm.ctez;
+       assert_kit_equal
+         ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "25_572_739n"))
+         ~real:updated_cfmm.kit;
+       assert_lqt_equal
+         ~expected:(Lqt.lqt_of_denomination (Ligo.nat_from_literal "687_534n"))
+         ~real:updated_cfmm.lqt;
+       ()
+    );
+
+    (* This test catches the following mutation:
+     *   cfmm.ml:300 (kit_add => kit_max)
+    *)
+    ("cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (kit_sub => kit_min)" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let total_ctez = ctez_of_muctez (Ligo.nat_from_literal "123_456_789n") in
+       let total_kit = kit_of_mukit (Ligo.nat_from_literal "37_194_834n") in
+       let total_lqt = lqt_of_denomination (Ligo.nat_from_literal "999_999n") in
+       let cfmm =
+         cfmm_make_for_test
+           ~ctez:total_ctez
+           ~kit:total_kit
+           ~lqt:total_lqt
+           ~kit_in_ctez_in_prev_block:one_ratio
+           ~last_level:!Ligo.Tezos.level in
+       let accrual = kit_of_mukit (Ligo.nat_from_literal "8_367n") in
+       let updated_cfmm = cfmm_add_accrued_kit cfmm accrual in
+       assert_kit_equal
+         ~expected:(kit_add cfmm.kit accrual)
+         ~real:updated_cfmm.kit
+    );
+  ]
+
 let suite =
   "Cfmm tests" >::: [
     (* buy_kit *)
@@ -881,6 +995,9 @@ let suite =
     test_remove_liquidity_respects_min_kit_withdrawn;
     test_remove_liquidity_respects_ctez_limit;
     test_remove_liquidity_respects_kit_limit;
+
+    (* Unit tests that arose from mutation testing *)
+    cfmm_tests_from_mutations;
   ]
 
 let () =
