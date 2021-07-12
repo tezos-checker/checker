@@ -283,9 +283,7 @@ parser.add_argument(
     "--num-mutations", type=int, help="Number of mutations to test", default=25
 )
 
-parser.add_argument(
-    "--seed", type=int, help="Random seed", default=42
-)
+parser.add_argument("--seed", type=int, help="Random seed", default=42)
 
 if __name__ == "__main__":
     args = parser.parse_args()
