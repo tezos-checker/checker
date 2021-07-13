@@ -1,12 +1,12 @@
-import os
 import json
-import time
-from collections import OrderedDict
-from typing import Dict, Generator, Tuple
+import os
 import unittest
+from collections import OrderedDict
 from datetime import datetime
+from typing import Dict, Generator, Tuple
 
 import portpicker
+from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 
@@ -15,8 +15,6 @@ CHECKER_DIR = os.getenv(
     "CHECKER_DIR", default=os.path.join(PROJECT_ROOT, "generated/michelson")
 )
 WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
-
-from checker_client.checker import *
 
 
 class SandboxedTestCase(unittest.TestCase):
@@ -85,6 +83,9 @@ class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         account = self.client.key.public_key_hash()
+        # Read kit token id for fa2 tests
+        with open(os.path.join(CHECKER_DIR, "functions.json")) as f:
+            kit_token_id = json.load(f)["token_info"]["kit_token_id"]
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -115,9 +116,9 @@ class E2ETest(SandboxedTestCase):
         print("Deployment finished.")
         gas_costs = {}
 
-        def call_endpoint(contract, name, param, amount=0):
+        def call_endpoint(contract, name, param, amount=0, client=self.client):
             return inject(
-                self.client,
+                client,
                 getattr(contract, name)(param)
                 .with_amount(amount)
                 .as_transaction()
@@ -125,9 +126,11 @@ class E2ETest(SandboxedTestCase):
                 .sign(),
             )
 
-        def call_checker_endpoint(name, param, amount=0):
+        def call_checker_endpoint(
+            name, param, amount=0, contract=checker, client=self.client
+        ):
             print("Calling", name, "with", param)
-            ret = call_endpoint(checker, name, param, amount)
+            ret = call_endpoint(contract, name, param, amount, client=client)
             gas_costs[name] = ret["contents"][0]["gas_limit"]
             return ret
 
@@ -142,6 +145,10 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("mint_kit", (1, 1_000_000))
         assert_kit_balance(checker, account, 1_000_000)
 
+        # Burn some kit
+        call_checker_endpoint("burn_kit", (1, 10))
+        assert_kit_balance(checker, account, 999_990)
+
         # Deposit tez
         call_checker_endpoint("deposit_tez", 1, amount=2_000_000)
 
@@ -155,11 +162,74 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
         call_checker_endpoint("deactivate_burrow", (2, account))
 
+        # Re-activate a burrow
+        call_checker_endpoint("activate_burrow", 2, amount=1_000_000)
+
         # Touch checker
         call_checker_endpoint("touch", None)
 
         # Touch burrow
         call_checker_endpoint("touch_burrow", (account, 1))
+
+        # ===============================================================================
+        # FA2 interface
+        # ===============================================================================
+        # Note: using alice's account which is assumed to be already initialized in the sandbox
+        checker_alice = pytezos.pytezos.using(
+            shell=checker.shell,
+            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+        ).contract(checker.address)
+
+        # Transfer from the main test account to alice's account
+        fa2_transfer = {
+            "from_": account,
+            "txs": [
+                {
+                    "to_": checker_alice.key.public_key_hash(),
+                    "token_id": kit_token_id,
+                    "amount": 90,
+                },
+            ],
+        }
+        call_checker_endpoint("transfer", [fa2_transfer])
+        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
+
+        # Add the main account as an operator on alice's account
+        # Note: using a client instance with alice's key for this since she is the
+        # account owner.
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": checker_alice.key.public_key_hash(),
+                    "operator": account,
+                    "token_id": kit_token_id,
+                }
+            },
+        ]
+        call_checker_endpoint(
+            "update_operators",
+            update_operators,
+            client=checker_alice,
+            contract=checker_alice,
+        )
+
+        # Send some kit back to the main test account
+        fa2_transfer = {
+            "from_": checker_alice.key.public_key_hash(),
+            "txs": [
+                {
+                    "to_": account,
+                    "token_id": kit_token_id,
+                    "amount": 80,
+                },
+            ],
+        }
+        call_checker_endpoint("transfer", [fa2_transfer])
+        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
+
+        # TODO: Not calling `balance_of` entrypoint in these tests at the moment since it
+        # would require a separate contract. If this is determined to be important we
+        # can add a simple contract for receiving balances and use it in these tests.
 
         # ===============================================================================
         # CFMM
