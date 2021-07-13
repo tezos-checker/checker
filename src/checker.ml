@@ -744,7 +744,7 @@ let rec touch_oldest
  * exceptions (1. setting the delegate, and 2. call/callback to the oract), all
  * of the operations are outwards calls, to other contracts (no callbacks). It
  * should be safe to leave the order of the transaction reversed. *)
-let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operation list * checker) =
+let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let
     { burrows = state_burrows;
@@ -834,7 +834,7 @@ let[@inline] touch_with_index (state: checker) (index:Ligo.tez) : (LigoOp.operat
 let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * checker) =
   let index = match state.last_price with
     | None -> state.parameters.index (* use the old one *)
-    | Some i -> Ligo.mul_nat_tez i (Ligo.tez_from_literal "1mutez") in (* FIXME: Is the nat supposed to represent tez? *)
+    | Some i -> i in (* FIXME: Is the nat supposed to represent tez? *)
   touch_with_index state index
 
 (* ************************************************************************* *)

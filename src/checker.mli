@@ -19,7 +19,7 @@ val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 (**/**)
 (* ONLY EXPOSED FOR TESTING REASONS. *)
 val assert_checker_invariants : checker -> unit
-val touch_with_index : checker -> Ligo.tez -> (LigoOp.operation list * checker)
+val touch_with_index : checker -> Ligo.nat -> (LigoOp.operation list * checker)
 val calculate_touch_reward : Ligo.timestamp -> kit
 (**/**)
 
