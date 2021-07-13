@@ -2,6 +2,7 @@ import os
 import json
 import time
 from collections import OrderedDict
+from typing import Dict, Generator, Tuple
 import unittest
 from datetime import datetime
 
@@ -40,14 +41,22 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
     assert expected_kit == kit_balance
 
 
-def avl_storage(checker, ptr: int):
+def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
     """Reads an item from checker's AVL backend using its pointer"""
     return checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
         "avl_storage"
     ]["mem"][ptr]()
 
 
-def auction_avl_leaves(checker, avl_ptr: int) -> List:
+AvlPtr = int
+AvlNode = Dict
+AvlLeaves = Generator[Tuple[AvlPtr, AvlNode], None, List]
+
+
+def auction_avl_leaves(
+    checker: ContractInterface,
+    avl_ptr: int,
+) -> AvlLeaves:
     """Retrieves a list of all leaves in the specified AVL tree"""
     node = avl_storage(checker, avl_ptr)
     node_type = list(node.keys())[0]
@@ -369,7 +378,6 @@ class LiquidationsStressTest(SandboxedTestCase):
         call_endpoint(
             checker, "liquidation_auction_place_bid", (auction_id, minimum_bid)
         )
-        level_after_bid = self.client.shell.head.level()
 
         # Once max(max_bid_interval_in_blocks, max_bid_interval_in_seconds) has elapsed, the liquidation auction we
         # bid on should be complete. Here we go off of level since the patched version of Checker we expect to use
