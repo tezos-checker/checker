@@ -283,7 +283,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   let
     { liquidation_reward = liquidation_reward;
       tez_to_auction = tez_to_auction;
-      burrow_state = updated_burrow;
+      burrow_state = burrow;
     } = match burrow_request_liquidation state.parameters burrow with
     | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
     | Some type_and_details -> let _, details = type_and_details in details
@@ -292,7 +292,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   let state =
     if Ligo.eq_tez_tez tez_to_auction (Ligo.tez_from_literal "0mutez") then
       (* If the slice would be empty, don't create it. *)
-      { state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows; }
+      { state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows; }
     else
       (* Otherwise do. *)
       let contents =
@@ -303,7 +303,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
       let (updated_liquidation_auctions, _leaf_ptr) =
         liquidation_auction_send_to_auction state.liquidation_auctions contents in
       { state with
-        burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+        burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
         liquidation_auctions = updated_liquidation_auctions;
       } in
 
