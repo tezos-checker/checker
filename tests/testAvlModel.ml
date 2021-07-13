@@ -32,7 +32,7 @@ let addr_gen = QCheck.Gen.(
   )
 
 let tez_gen = QCheck.Gen.(
-    map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) (0 -- 1_000_000_000)
+    map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) (0 -- 10_000_000_000)
   )
 
 let kit_gen = QCheck.Gen.(

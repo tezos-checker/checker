@@ -22,7 +22,7 @@ let gen_liquidation_slice_contents_single_burrow_id =
             ; min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal ((string_of_int kit) ^ "n")))
             })
       )
-      (pair (int_range 0 max_int) (int_range 0 max_int))
+      (pair (int_range 0 10_000_000_000) (int_range 0 max_int))
   )
 
 let gen_liquidation_slice_contents_list max_length =

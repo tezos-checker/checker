@@ -13,7 +13,7 @@ let arb_address = QCheck.map Ligo.address_of_string QCheck.(string_of_size (Gen.
 let arb_small_tez =
   QCheck.map
     (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez"))
-    QCheck.(1 -- 2_401_976)
+    QCheck.(1 -- 10_000_000_000)
 
 let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(0 -- max_int)
 let arb_positive_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
@@ -26,7 +26,7 @@ let arb_nat = QCheck.map (fun x -> Ligo.nat_from_literal ((string_of_int x) ^ "n
 let arb_small_nat =
   QCheck.map
     (fun x -> Ligo.nat_from_literal ((string_of_int x) ^ "n"))
-    QCheck.(1 -- 2_401_976)
+    QCheck.(1 -- 10_000_000_000)
 
 let arb_liquidation_slice_contents =
   QCheck.map
