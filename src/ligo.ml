@@ -156,6 +156,8 @@ let mul_int_int = Z.mul
 
 let eq_int_int = Z.equal
 
+let ne_int_int x y = not (eq_int_int x y)
+
 let lt_int_int = Z.lt
 
 let gt_int_int = Z.gt
@@ -186,6 +188,8 @@ let add_nat_nat = Z.add
 let sub_nat_nat = Z.sub
 
 let mul_nat_nat = Z.mul
+
+let mul_int_nat = Z.mul
 
 let div_nat_nat = Z.div
 

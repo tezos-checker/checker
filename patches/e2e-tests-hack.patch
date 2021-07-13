@@ -8,24 +8,24 @@ index bfb1665..3d52c5b 100644
      pass between two bids. Currently set to 20min ([20min * 60sec/min = 1200s]). *)
 -let[@inline] max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1200"
 +let[@inline] max_bid_interval_in_seconds : Ligo.int = Ligo.int_from_literal "1"
- 
+
  (** The maximum number of blocks that can pass between two (ascending) bids
      during an auction. The auction should expire if more blocks than this
      number pass between two bids. Currently set to 20. *)
 -let[@inline] max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "20n"
 +let[@inline] max_bid_interval_in_blocks : Ligo.nat = Ligo.nat_from_literal "1n"
- 
+
  (** Every bid in an ascending auction needs to improve over the previous bid by
      at least 0.33 cNp. *)
 diff --git a/src/parameters.ml b/src/parameters.ml
-index 71f34c9..e060ef6 100644
+index 440a3a3..fc34af5 100644
 --- a/src/parameters.ml
 +++ b/src/parameters.ml
-@@ -215,6 +215,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
+@@ -224,6 +224,7 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
  *)
- let[@inline] compute_current_protected_index (last_protected_index: Ligo.tez) (current_index: Ligo.tez) (duration_in_seconds: Ligo.int) : Ligo.tez =
-   assert (Ligo.gt_tez_tez last_protected_index (Ligo.tez_from_literal "0mutez"));
+ let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
+   assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
 +  let duration_in_seconds = Ligo.mul_int_int duration_in_seconds (Ligo.int_from_literal "1000") in
-   let last_protected_index = tez_to_mutez last_protected_index in
-   fraction_to_tez_floor
+   let last_protected_index = Ligo.int last_protected_index in
+   fraction_to_nat_floor
      (clamp_int

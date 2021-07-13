@@ -999,3 +999,7 @@ let suite =
     (* Unit tests that arose from mutation testing *)
     cfmm_tests_from_mutations;
   ]
+
+let () =
+  run_test_tt_main
+    suite

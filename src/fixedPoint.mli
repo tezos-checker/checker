@@ -20,6 +20,8 @@ val fixedpoint_to_raw : fixedpoint -> Ligo.int
 (* BEGIN_OCAML *)
 val fixedpoint_to_ratio : fixedpoint  -> Ratio.ratio
 val fixedpoint_of_hex_string : string -> fixedpoint
-val show_fixedpoint : fixedpoint  -> string
+val show_fixedpoint : fixedpoint -> string
 val pp_fixedpoint : Format.formatter -> fixedpoint  -> unit
+
+val show_fixedpoint_raw : fixedpoint -> string
 (* END_OCAML *)

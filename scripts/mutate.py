@@ -3,10 +3,12 @@
 Rudimentary mutation tests for a pre-defined set of OCaml source modules
 and mutations.
 
-This script is currently meant to be used in a more interactive fashion.
-Edit the mutations defined in MODULES and MUTATION_GROUPS as needed. You
-can also adjust the total number of mutations, n_mutations, in the __main__
-block.
+See '--help' for usage, an example:
+
+./scripts/mutate.py --test 'dune build @run-fast-tests' --num-mutations 2 parameters.ml
+
+This script is currently meant to be used in a more interactive fashion. Edit the
+mutations MUTATION_GROUPS as needed.
 
 WARNING: This script edits the src files in-place and attempts to restore changes
 using git. If the script exits ungracefully you might need to clean up your
@@ -17,13 +19,12 @@ import os
 import random
 import re
 import subprocess
+import argparse
 from enum import Enum, auto
 from contextlib import contextmanager
 from pprint import pprint
 from typing import Optional, Tuple
 from typing import Callable
-
-random.seed(42)
 
 # Custom type aliases can go here
 MutationFormatter = Callable[[str], str]
@@ -35,8 +36,6 @@ class MutationType(Enum):
     # Update an integer literal value
     INTEGER_LITERAL = auto()
 
-
-MODULES = ["burrow.ml", "checker.ml", "parameters.ml", "cfmm.ml"]
 
 # Each group contains functions with the same type signature which can be swapped
 # and still allow the program to compile.
@@ -198,7 +197,7 @@ def restore(src: str):
         )
 
 
-def test_mutated_src():
+def test_mutated_src(test_cmd):
     print("Checking validity of modified src code...")
     result = subprocess.run(["dune build"], capture_output=True, shell=True)
     if result.returncode != 0:
@@ -209,7 +208,7 @@ def test_mutated_src():
         )
 
     print("Running tests...")
-    result = subprocess.run(["make test"], capture_output=True, shell=True)
+    result = subprocess.run([test_cmd], capture_output=True, shell=True)
     tests_fail = True
     if result.returncode == 0:
         tests_fail = False
@@ -219,10 +218,9 @@ def test_mutated_src():
 
 
 @contextmanager
-def do_mutation():
-    print(f"Running mutation {i+1} / {n_mutations}...")
+def do_mutation(args):
     # Randomly pick a module
-    modules = [m for m in MODULES]
+    modules = list(args.modules)
     random.shuffle(modules)
     for module in modules:
         src = os.path.join("src", module)
@@ -259,18 +257,44 @@ def do_mutation():
         raise Exception(
             "Tried all possible combinations of modules and mutations and could not find a matching name"
         )
-    tests_failed = test_mutated_src()
+    tests_failed = test_mutated_src(args.test)
     yield (src, mutation_type, before, after, line), tests_failed
     restore(src)
 
 
+# Command line interface
+parser = argparse.ArgumentParser(description="Mutates Checker source code.")
+parser.add_argument(
+    "modules",
+    metavar="MODULE",
+    type=str,
+    nargs="+",
+    help="Module to mutate (eg. 'burrow.ml')",
+)
+
+parser.add_argument(
+    "--test",
+    metavar="COMMAND",
+    type=str,
+    help="Command to execute for testing the change",
+)
+
+parser.add_argument(
+    "--num-mutations", type=int, help="Number of mutations to test", default=25
+)
+
+parser.add_argument("--seed", type=int, help="Random seed", default=42)
+
 if __name__ == "__main__":
-    n_mutations = 25
+    args = parser.parse_args()
+    random.seed(args.seed)
+
     report = {}
-    for i in range(n_mutations):
+    for i in range(args.num_mutations):
+        print(f"Running mutation {i+1} / {args.num_mutations}...")
         # Using a context manager here as a quick and dirty way to ensure that mutations are removed
         # when the script exits.
-        with do_mutation() as mutation_result:
+        with do_mutation(args) as mutation_result:
             (
                 src,
                 mutation_type,

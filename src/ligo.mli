@@ -176,6 +176,7 @@ val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)
 val mod_int_int : int -> int -> nat  (* IN LIGO: mod, infix *)
 
 val eq_int_int : int -> int -> bool  (* IN LIGO: ( = ) *)
+val ne_int_int : int -> int -> bool  (* IN LIGO: ( <> ) *)
 val lt_int_int : int -> int -> bool  (* IN LIGO: ( < ) *)
 val gt_int_int : int -> int -> bool  (* IN LIGO: ( > ) *)
 val leq_int_int : int -> int -> bool (* IN LIGO: ( <= ) *)
@@ -187,6 +188,7 @@ val ediv_int_int : int -> int -> (int * nat) option
 val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
 val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
 val mul_nat_nat : nat -> nat -> nat (* IN LIGO: ( * ) *)
+val mul_int_nat : int -> nat -> int (* IN LIGO: ( * ) *)
 
 val eq_nat_nat : nat -> nat -> bool  (* IN LIGO: ( = ) *)
 val lt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( < ) *)

@@ -78,8 +78,8 @@ Other properties
 
 let params : parameters =
   { q = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
-    index = Ligo.tez_from_literal "320_000mutez";
-    protected_index = Ligo.tez_from_literal "360_000mutez";
+    index = Ligo.nat_from_literal "320_000n";
+    protected_index = Ligo.nat_from_literal "360_000n";
     target = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -1100,3 +1100,7 @@ let suite =
     regression_test_72;
     regression_test_93;
   ]
+
+let () =
+  run_test_tt_main
+    suite

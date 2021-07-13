@@ -768,7 +768,7 @@ let suite =
         *  potentially obscured by rounding. This high of a difference between the
         *  index and protected index is unlikely to occur in real-world scenarios.
        *)
-       let parameters = Parameters.({initial_parameters with index=(Ligo.tez_from_literal "100_000_000_000mutez");}) in
+       let parameters = Parameters.({initial_parameters with index=(Ligo.nat_from_literal "100_000_000_000n");}) in
        assert_int_equal
          ~expected:(Ligo.int_from_literal "707856")
          ~real:(Burrow.compute_tez_to_auction parameters burrow)
@@ -1240,3 +1240,7 @@ let suite =
     );
 
   ]
+
+let () =
+  run_test_tt_main
+    suite

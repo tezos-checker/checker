@@ -10,3 +10,7 @@ let suite =
          (fun _ -> mem_get mem_empty (Ptr.ptr_init))
     )
   ]
+
+let () =
+  run_test_tt_main
+    suite
