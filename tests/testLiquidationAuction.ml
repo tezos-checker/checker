@@ -28,7 +28,7 @@ let gen_liquidation_slice_contents =
             })
       )
       (* Note: The char range here controls how many possible burrow addresses this will generate *)
-      (pair (int_range 0 max_int) (string_size ~gen:(char_range 'a' 'd') (return 1)))
+      (pair (int_range 0 10_000_000_000) (string_size ~gen:(char_range 'a' 'd') (return 1)))
   )
 
 let gen_liquidation_slice_contents_list max_length=
