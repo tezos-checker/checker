@@ -19,15 +19,15 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
   match Ligo.is_nat x_num with
   | None -> (failwith "Ratio.fraction_to_tez_floor: negative" : Ligo.tez)
   | Some n ->
-    let n = Ligo.mul_nat_tez n (Ligo.tez_from_literal "1_000_000mutez") in
+    let n = Ligo.mul_nat_nat n (Ligo.nat_from_literal "1_000_000n") in
     let d = Ligo.abs x_den in
-    (match Ligo.ediv_tez_nat n d with
+    (match Ligo.ediv_nat_nat n d with
      (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
      | None -> (failwith "Ratio.fraction_to_tez_floor: zero denominator" : Ligo.tez)
                [@coverage off]
      | Some quot_and_rem ->
        let (quot, _) = quot_and_rem in
-       quot (* ignore the remainder; we floor towards zero here *)
+       Ligo.mul_nat_tez quot (Ligo.tez_from_literal "1mutez") (* ignore the remainder; we floor towards zero here *)
     )
 
 let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =

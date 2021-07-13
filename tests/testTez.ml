@@ -1,6 +1,10 @@
 open OUnit2
 open TestLib
 
+(* TODO: Would be nice to have randomized tests, and even check the bounds
+ * tightly. Perhaps we should consider doing something similar for the other
+ * types (Lqt, Kit, Ctez). *)
+
 let suite =
   "TezTests" >::: [
     "tez arithmetic" >::

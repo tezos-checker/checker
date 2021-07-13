@@ -240,46 +240,94 @@ let geq_timestamp_timestamp = Z.geq
 
 (* tez *)
 
-type tez = Z.t
+type tez = Int64.t
 
 let tez_from_literal s =
   try
     let n = parse_int_with_suffix "mutez" s in
     if Z.lt n Z.zero then
-      failwith "Ligo.tez_from_literal: negative"
-    else n
+      failwith "Ligo.tez_from_literal: underflow"
+    else if Z.gt n (Z.of_int64 Int64.max_int) then
+      failwith "Ligo.tez_from_literal: overflow"
+    else
+      Z.to_int64 n
   with exc ->
     failwith ("Ligo.tez_from_literal: " ^ Printexc.to_string exc)
 
-let add_tez_tez = Z.add
+let add_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  if x > Int64.sub Int64.max_int y then
+    failwith "Ligo.add_tez_tez: overflow"
+  else
+    Int64.add x y
 
 let sub_tez_tez x y =
-  if Z.lt x y then
-    failwith "Ligo.sub_tez_tez: negative"
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  if x < y then
+    failwith "Ligo.sub_tez_tez: underflow"
   else
-    Z.sub x y
+    Int64.sub x y
 
-let mul_nat_tez = Z.mul
+let mul_nat_tez x y =
+  assert (x >= Z.zero);
+  assert (y >= Int64.zero);
+  if y = Int64.zero then
+    Int64.zero
+  else if x > Z.of_int64 (Int64.div Int64.max_int y) then
+    failwith "Ligo.mul_nat_tez: overflow"
+  else
+    Int64.mul (Z.to_int64 x) y
 
-let mul_tez_nat = Z.mul
+let mul_tez_nat x y =
+  assert (x >= Int64.zero);
+  assert (y >= Z.zero);
+  if x = Int64.zero then
+    Int64.zero
+  else if y > Z.of_int64 (Int64.div Int64.max_int x) then
+    failwith "Ligo.mul_tez_nat: overflow"
+  else
+    Int64.mul x (Z.to_int64 y)
 
 let div_tez_tez x y =
-  try Z.div x y
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  try Z.of_int64 (Int64.div x y)
   with Division_by_zero -> failwith "Ligo.div_tez_tez: zero denominator"
 
 let ediv_tez_nat n d =
-  try Some (Z.ediv_rem n d)
+  assert (n >= Int64.zero);
+  assert (d >= Z.zero);
+  try
+    let q, r = Z.ediv_rem (Z.of_int64 n) d in
+    Some (Z.to_int64 q, Z.to_int64 r)
   with Division_by_zero -> None
 
-let eq_tez_tez = Z.equal
+let eq_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  x = y
 
-let lt_tez_tez = Z.lt
+let lt_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  x < y
 
-let gt_tez_tez = Z.gt
+let gt_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  x > y
 
-let leq_tez_tez = Z.leq
+let leq_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  x <= y
 
-let geq_tez_tez = Z.geq
+let geq_tez_tez x y =
+  assert (x >= Int64.zero);
+  assert (y >= Int64.zero);
+  x >= y
 
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
@@ -314,7 +362,7 @@ module Tezos = struct
 end
 
 let string_of_int = Z.to_string
-let string_of_tez x = Z.to_string x ^ "mutez"
+let string_of_tez x = Int64.to_string x ^ "mutez"
 let string_of_timestamp = Z.to_string
 
 let pp_int fmt z = Format.pp_print_string fmt (string_of_int z)
