@@ -162,8 +162,8 @@ let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.ope
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
-  let updated_burrow = burrow_touch state.parameters burrow in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+  let burrow = burrow_touch state.parameters burrow in
+  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
@@ -172,11 +172,11 @@ let entrypoint_deposit_tez (state, burrow_no: checker * Ligo.nat) : (LigoOp.oper
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let updated_burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
+  let burrow = burrow_deposit_tez state.parameters !Ligo.Tezos.amount burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" (burrow_address burrow) : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   ([op], state)
 
@@ -216,7 +216,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let updated_burrow = burrow_burn_kit state.parameters kit burrow in
+  let burrow = burrow_burn_kit state.parameters kit burrow in
   (* Note: there should be no way to remove more kit from circulation than what
    * is already in circulation. If anyone tries to do so, it means that they
    * try to remove kit they do not own. So, either
@@ -227,7 +227,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   assert (geq_kit_kit state.parameters.circulating_kit kit);
   let state =
     {state with
-     burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows;
+     burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
      parameters = remove_outstanding_and_circulating_kit state.parameters kit;
      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, kit);
     } in
@@ -239,11 +239,11 @@ let entrypoint_activate_burrow (state, burrow_no: checker * Ligo.nat) : LigoOp.o
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let updated_burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
+  let burrow = burrow_activate state.parameters !Ligo.Tezos.amount burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" (burrow_address burrow) : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   ([op], state)
 
@@ -253,8 +253,8 @@ let entrypoint_deactivate_burrow (state, (burrow_no, receiver): checker * (Ligo.
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let (updated_burrow, returned_tez) = burrow_deactivate state.parameters burrow in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+  let (burrow, returned_tez) = burrow_deactivate state.parameters burrow in
+  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (returned_tez, receiver) (Ligo.tez_from_literal "0mutez") c (* NOTE: returned_tez inlcudes creation deposit! *)
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
@@ -267,11 +267,11 @@ let entrypoint_set_burrow_delegate (state, (burrow_no, delegate_opt): checker * 
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let updated_burrow = burrow_set_delegate state.parameters delegate_opt burrow in
+  let burrow = burrow_set_delegate state.parameters delegate_opt burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" (burrow_address burrow) : Ligo.key_hash option Ligo.contract option) with
     | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSetDelegate : LigoOp.operation) in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some updated_burrow) state.burrows} in
+  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   ([op], state)
 
