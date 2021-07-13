@@ -324,9 +324,9 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
     (fdiv_int_int
        (Ligo.mul_int_int
           den
-          (Ligo.mul_int_int
+          (Ligo.mul_int_nat
              (fixedpoint_to_raw current_q)
-             (Ligo.int current_index)
+             current_index
           )
        )
        (Ligo.mul_int_int
