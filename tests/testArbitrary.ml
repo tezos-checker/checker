@@ -24,7 +24,6 @@ let arb_positive_lqt = QCheck.map (fun x -> lqt_of_denomination (Ligo.nat_from_l
 let arb_nat = QCheck.map (fun x -> Ligo.nat_from_literal ((string_of_int x) ^ "n")) QCheck.(0 -- max_int)
 
 let arb_small_nat =
-  print_string ("\n" ^ string_of_int max_int ^ "\n");
   QCheck.map
     (fun x -> Ligo.nat_from_literal ((string_of_int x) ^ "n"))
     QCheck.(1 -- 2_401_976)
