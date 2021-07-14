@@ -128,7 +128,8 @@ let test_checker_int64_regression_test =
     (* Oracle updates lag one touch on checker, but we can circumvent this by
      * calling touch_with_index directly. *)
     Ligo.Tezos.new_transaction ~seconds_passed:(1000 * 60) ~blocks_passed:1000 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-    let index = Ligo.tez_from_literal "100_000_000mutez" in
+    (* let index = Ligo.tez_from_literal "100_000_000mutez" in *)
+    let index = Ligo.tez_from_literal (Int64.to_string Int64.max_int ^ "mutez") in
     let _ops, checker = Checker.touch_with_index checker index in
 
     (* Now all the burrows should be overburrowed (liquidatable, even). We liquidate them all. *)
@@ -154,6 +155,9 @@ let test_checker_int64_regression_test =
 
     (* TODO: TOUCH HERE. *)
     (* make distclean && make build-ocaml && dune exec tests/testChecker.exe *)
+
+    Ligo.Tezos.new_transaction ~seconds_passed:(100000 * 60) ~blocks_passed:100000 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let _ops, checker = Checker.touch_with_index checker index in
 
     (* Just to avoid the "unused variable" warning. *)
     assert_equal checker checker;
