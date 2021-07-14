@@ -54,6 +54,111 @@ let get_balance_of (checker: checker) (addr: Ligo.address) (tok: fa2_token_id): 
   | [ Transaction (FA2BalanceOfResponseTransactionValue [ { request = _; balance = kit } ], _, _) ] -> kit
   | _ -> failwith ("Unexpected fa2 response, got: " ^ show_operation_list ops)
 
+
+let test_checker_int64_regression_test =
+  "test_checker_int64_regression_test" >::
+  fun _ ->
+    let sender = bob_addr in
+    Ligo.Tezos.reset ();
+    (* Let's assume that the mock oracle is deployed. Initial index value set to 1_000_000. *)
+(*
+    let index = Ligo.tez_from_literal "1_000_000mutez" in
+*)
+    (* Let's assume that ctez is deployed. Initial state empty. *)
+    (* Let's assume that checker is deployed. Initial state empty. *)
+    let checker = empty_checker in
+
+    (* Create a burrow. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "200_000_000mutez");
+    let _ops, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
+
+    (* Mint some kit out of the burrow. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let _ops, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "80_000_000n"))) in
+
+    (* Let's assume that the following calls are successful. *)
+    (* call_endpoint(ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000) *)
+    (* call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))                         *)
+    (* call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 100_000))   *)
+
+    (* Add some liquidity. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let _ops, checker =
+      Checker.entrypoint_add_liquidity
+        ( checker,
+          ( ctez_of_muctez (Ligo.nat_from_literal "100_000n")
+          , kit_of_mukit (Ligo.nat_from_literal "100_000n")
+          , lqt_of_denomination (Ligo.nat_from_literal "5n")
+          , Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20")
+          )
+        ) in
+
+    let number_of_burrows = 1000 in
+
+    (* Create a gazillion burrows. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let checker =
+      let tmp = ref checker in
+      for i = 1 to number_of_burrows do
+        let b_id = Ligo.nat_from_literal (string_of_int i ^ "n") in
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "100_000_000mutez");
+        let _ops, checker = Checker.entrypoint_create_burrow (!tmp, (b_id, None)) in
+        tmp := checker;
+      done;
+      !tmp in
+
+    (* Mint as much kit as possible from the burrows. *)
+    (* All should be identical, so we just query the first burrow and mint that
+     * much kit from all of them. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let max_mintable_kit = Checker.view_burrow_max_mintable_kit ((sender, Ligo.nat_from_literal "1n"), checker) in
+    let checker =
+      let tmp = ref checker in
+      for i = 1 to number_of_burrows do
+        let b_id = Ligo.nat_from_literal (string_of_int i ^ "n") in
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+        let _ops, checker = Checker.entrypoint_mint_kit (!tmp, (b_id, max_mintable_kit)) in
+        tmp := checker;
+      done;
+      !tmp in
+
+    (* Let's assume that the index now in the mock oracle has risen to
+     * 100_000_000 (kit is 100x valuable compared to tez). *)
+
+    (* Oracle updates lag one touch on checker, but we can circumvent this by
+     * calling touch_with_index directly. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:(1000 * 60) ~blocks_passed:1000 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let index = Ligo.nat_from_literal "100_000_000n" in
+    let _ops, checker = Checker.touch_with_index checker index in
+
+    (* Now all the burrows should be overburrowed (liquidatable, even). We liquidate them all. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let checker =
+      let tmp = ref checker in
+      for i = 1 to number_of_burrows do
+        let b_id = Ligo.nat_from_literal (string_of_int i ^ "n") in
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+        let _ops, checker = Checker.entrypoint_mark_for_liquidation (!tmp, (sender, b_id)) in
+        tmp := checker;
+      done;
+      !tmp in
+
+    (* This touch should start a liquidation auction. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let _ops, checker = Checker.touch_with_index checker index in
+
+    (* And now we can place a bid. *)
+    Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+    let r = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+    let _ops, checker = Checker.entrypoint_liquidation_auction_place_bid (checker, (r.auction_id, r.minimum_bid)) in
+
+    (* TODO: TOUCH HERE. *)
+    (* make distclean && make build-ocaml && dune exec tests/testChecker.exe *)
+
+    (* Just to avoid the "unused variable" warning. *)
+    assert_equal checker checker;
+    ()
+
 let suite =
   "Checker tests" >::: [
     ("initial touch (noop)" >::
@@ -1533,6 +1638,7 @@ let suite =
        let _ = Checker.view_is_burrow_liquidatable (burrow_id, checker) in
        ()
     );
+    test_checker_int64_regression_test;
   ]
 
 let () =
