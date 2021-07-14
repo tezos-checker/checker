@@ -246,9 +246,9 @@ let tez_from_literal s =
   try
     let n = parse_int_with_suffix "mutez" s in
     if Z.lt n Z.zero then
-      failwith "Ligo.tez_from_literal: underflow"
+      failwith "Ligo.tez_from_literal: out of range (negative)"
     else if Z.gt n (Z.of_int64 Int64.max_int) then
-      failwith "Ligo.tez_from_literal: overflow"
+      failwith "Ligo.tez_from_literal: out of range (positive)"
     else
       Z.to_int64 n
   with exc ->
