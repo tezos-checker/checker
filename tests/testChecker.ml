@@ -519,7 +519,7 @@ let suite =
       *)
       let max_buyable_kit = 997 in
       let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
-      let arb_tez = TestArbitrary.arb_small_tez in
+      let arb_tez = TestArbitrary.arb_small_positive_tez in
 
       qcheck_to_ounit
       @@ QCheck.Test.make

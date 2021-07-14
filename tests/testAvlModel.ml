@@ -31,7 +31,10 @@ let addr_gen = QCheck.Gen.(
     map (fun x -> Ligo.address_of_string x) (string_size (return 36))
   )
 
-let tez_gen = QCheck.Gen.(
+(** Generate a random tez amount that does not exceed 10Ktez. This size should
+  * be sufficient to capture realistic tez amounts, and is far enough from
+  * [Int64.max_int] to be safe from overflows. *)
+let tez_gen : Ligo.tez QCheck.Gen.t = QCheck.Gen.(
     map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) (0 -- 10_000_000_000)
   )
 
