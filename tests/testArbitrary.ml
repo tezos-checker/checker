@@ -34,6 +34,12 @@ let arb_positive_ctez = QCheck.map (fun x -> ctez_of_muctez (Ligo.nat_from_liter
 
 let arb_address = QCheck.map Ligo.address_of_string QCheck.(string_of_size (Gen.return 36))
 
+(* somewhere between 0 and 3 tez *)
+let arb_small_tez =
+  QCheck.map
+    (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez"))
+    QCheck.(1 -- ((max_int / 479_988_656_967) / 4))
+
 let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(0 -- max_int)
 let arb_positive_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
 

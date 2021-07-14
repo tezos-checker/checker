@@ -189,8 +189,6 @@ let sub_nat_nat = Z.sub
 
 let mul_nat_nat = Z.mul
 
-let mul_int_nat = Z.mul
-
 let div_nat_nat = Z.div
 
 let eq_nat_nat = Z.equal

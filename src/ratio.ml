@@ -30,20 +30,6 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
        Ligo.mul_nat_tez quot (Ligo.tez_from_literal "1mutez") (* ignore the remainder; we floor towards zero here *)
     )
 
-let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
-  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
-  match Ligo.is_nat x_num with
-  | None -> (failwith "Ratio.fraction_to_nat_floor: negative" : Ligo.nat)
-  | Some n ->
-    (match Ligo.ediv_nat_nat n (Ligo.abs x_den) with
-     (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (failwith "Ratio.fraction_to_nat_floor: zero denominator" : Ligo.nat)
-               [@coverage off]
-     | Some quot_and_rem ->
-       let (quot, _) = quot_and_rem in
-       quot (* ignore the remainder; we floor towards zero here *)
-    )
-
 (* Predefined values *)
 let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }

@@ -18,12 +18,9 @@ val fdiv_int_int : Ligo.int -> Ligo.int -> Ligo.int
 val clamp_int : Ligo.int -> Ligo.int -> Ligo.int -> Ligo.int
 
 (* OPERATIONS ON tez *)
+val min_tez : Ligo.tez -> Ligo.tez -> Ligo.tez
 val max_tez : Ligo.tez -> Ligo.tez -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
-
-(* OPERATIONS ON nat *)
-val min_nat : Ligo.nat -> Ligo.nat -> Ligo.nat
-val max_nat : Ligo.nat -> Ligo.nat -> Ligo.nat
 
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t
