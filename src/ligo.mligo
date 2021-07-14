@@ -10,6 +10,7 @@
 [@inline] let mul_int_int (i: int) (j: int) : int = i * j
 [@inline] let mul_nat_tez (i: nat) (j: tez) : tez = i * j
 [@inline] let mul_int_nat (i: int) (j: nat) : int = i * j
+[@inline] let mul_nat_nat (i: nat) (j: nat) : nat = i * j
 
 [@inline] let div_int_int (i: int) (j: int) : int = i / j
 [@inline] let div_nat_nat (i: nat) (j: nat) : nat = i / j

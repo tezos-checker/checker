@@ -298,7 +298,7 @@ let test_protected_index_follows_index =
   @@ QCheck.Test.make
     ~name:"test_protected_index_follows_index"
     ~count:property_test_count
-    (QCheck.pair TestArbitrary.arb_small_nat QCheck.small_nat)
+    (QCheck.pair TestArbitrary.arb_small_positive_nat QCheck.small_nat)
   @@ fun (index, lvl) ->
   Ligo.Tezos.reset();
 

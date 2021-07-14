@@ -1049,10 +1049,16 @@ let suite =
         ~count:property_test_count
         (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
       @@ fun (burrow_kit, arbitrary_int) ->
+      (* scale it down, since we will need to multiply it by 10 to compute a tez amount *)
+      let burrow_kit =
+        kit_of_fraction_floor
+          (kit_to_mukit_int burrow_kit)
+          (Ligo.mul_int_int Kit.kit_scaling_factor_int (Ligo.int_from_literal "10")) in
 
       let kit_to_mint = kit_of_mukit (Ligo.nat_from_literal "10n") in
       (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
-      let outstanding, excess, collateral = if (arbitrary_int mod 2) = 0 then
+      let outstanding, excess, collateral =
+        if (arbitrary_int mod 2) = 0 then
           (burrow_kit, kit_zero, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat burrow_kit))
         else
           (kit_zero, burrow_kit, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat kit_to_mint))
