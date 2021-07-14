@@ -227,9 +227,22 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("transfer", [fa2_transfer])
         assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
 
-        # TODO: Not calling `balance_of` entrypoint in these tests at the moment since it
-        # would require a separate contract. If this is determined to be important we
-        # can add a simple contract for receiving balances and use it in these tests.
+        # `balance_of` requires a contract callback when executing on-chain. To make tests
+        # more light-weight and avoid needing an additional mock contract, we call it as a view.
+        # This comes with a downside, however, since using a view means that we don't get an
+        # estimate of the gas cost.
+        fa2_balance_of = {
+            "requests": [
+                {"owner": checker_alice.key.public_key_hash(), "token_id": kit_token_id}
+            ],
+            "callback": None,
+        }
+        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+        balance = checker.balance_of(**fa2_balance_of).callback_view()
+        # Check that this balance agrees with the kit balance view
+        assert_kit_balance(
+            checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
+        )
 
         # ===============================================================================
         # CFMM
