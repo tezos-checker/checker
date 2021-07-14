@@ -355,7 +355,7 @@ let suite =
     );
     "test_all_permutations" >::
     (fun _ ->
-       range 0 10
+       range 0 9
        |> permutations
        |> Stream.iter (fun xs ->
            let xs = List.map mk_liquidation_slice xs in
