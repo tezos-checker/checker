@@ -77,8 +77,8 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
       { burrow with
         outstanding_kit =
           kit_of_fraction_floor
-            (Ligo.mul_int_int
-               (kit_to_mukit_int burrow.outstanding_kit)
+            (Ligo.mul_nat_int
+               (kit_to_mukit_nat burrow.outstanding_kit)
                (fixedpoint_to_raw current_adjustment_index)
             )
             (Ligo.mul_int_int
@@ -342,9 +342,9 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
             den_lp
             (Ligo.mul_int_int
                num_fm
-               (Ligo.mul_int_int
+               (Ligo.mul_int_nat
                   num_mp
-                  (kit_to_mukit_int b.outstanding_kit)
+                  (kit_to_mukit_nat b.outstanding_kit)
                )
             )
          )
@@ -412,7 +412,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
     let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
     { num =
         Ligo.sub_int_int
-          (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+          (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
           (Ligo.mul_int_int kit_scaling_factor_int num_ek);
       den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
     } in
@@ -443,7 +443,7 @@ let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Lig
       compute_expected_kit p (Ligo.sub_tez_tez b.collateral_at_auction slice_tez) in
     { num =
         Ligo.sub_int_int
-          (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+          (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
           (Ligo.mul_int_int kit_scaling_factor_int num_ek);
       den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
     } in
@@ -484,7 +484,7 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
         Ligo.mul_int_int
           (Ligo.mul_int_int (tez_to_mutez tez_to_auction) num_fl)
           (Ligo.sub_int_int
-             (Ligo.mul_int_int den_ek (kit_to_mukit_int b.outstanding_kit))
+             (Ligo.mul_int_nat den_ek (kit_to_mukit_nat b.outstanding_kit))
              (Ligo.mul_int_int kit_scaling_factor_int num_ek)
           ) in
       max_int (Ligo.int_from_literal "0") numerator in
@@ -640,7 +640,7 @@ let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
       num_fm
       (Ligo.mul_int_int
          (Ligo.sub_int_int
-            (Ligo.mul_int_int (kit_to_mukit_int b.outstanding_kit) den_ek)
+            (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
             (Ligo.mul_int_int kit_scaling_factor_int num_ek)
          )
          (Ligo.mul_int_int num_mp (Ligo.int_from_literal "1_000_000"))
