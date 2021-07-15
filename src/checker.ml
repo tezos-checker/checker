@@ -369,7 +369,7 @@ let touch_liquidation_slice
   let kit_to_repay, kit_to_burn =
     let corresponding_kit =
       kit_of_fraction_floor
-        (Ligo.mul_int_int (tez_to_mutez slice.tez) (kit_to_mukit_int outcome.winning_bid.kit))
+        (Ligo.mul_int_nat (tez_to_mutez slice.tez) (kit_to_mukit_nat outcome.winning_bid.kit))
         (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
     in
     let penalty =
@@ -380,7 +380,7 @@ let touch_liquidation_slice
         | Some min_kit_for_unwarranted -> lt_kit_kit corresponding_kit min_kit_for_unwarranted in
       if liquidation_was_warranted then
         kit_of_fraction_ceil
-          (Ligo.mul_int_int (kit_to_mukit_int corresponding_kit) num_lp)
+          (Ligo.mul_nat_int (kit_to_mukit_nat corresponding_kit) num_lp)
           (Ligo.mul_int_int kit_scaling_factor_int den_lp)
       else
         kit_zero

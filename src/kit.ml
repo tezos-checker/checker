@@ -39,7 +39,7 @@ let kit_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : kit =
 
 let[@inline] kit_scale (amnt: kit) (fp: fixedpoint) =
   kit_of_fraction_floor
-    (Ligo.mul_int_int (fixedpoint_to_raw fp) (Ligo.int amnt))
+    (Ligo.mul_int_nat (fixedpoint_to_raw fp) amnt)
     (Ligo.mul_int_int fixedpoint_scaling_factor kit_scaling_factor_int)
 
 let[@inline] geq_kit_kit = Ligo.geq_nat_nat

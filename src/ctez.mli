@@ -11,7 +11,6 @@ val ctez_scaling_factor_int : Ligo.int
 
 (* Conversions to/from other types. *)
 val ctez_of_muctez : Ligo.nat -> ctez
-val ctez_to_muctez_int : ctez -> Ligo.int
 val ctez_to_muctez_nat : ctez -> Ligo.nat
 
 val ctez_of_fraction_ceil : Ligo.int -> Ligo.int -> ctez
@@ -22,6 +21,7 @@ val lt_ctez_ctez : ctez -> ctez -> bool
 val gt_ctez_ctez : ctez -> ctez -> bool
 
 (* BEGIN_OCAML *)
+val ctez_to_muctez_int : ctez -> Ligo.int
 val ctez_to_ratio : ctez -> Ratio.ratio
 val ratio_of_ctez: ctez -> ratio
 val ctez_from_tez : Ligo.tez -> ctez
