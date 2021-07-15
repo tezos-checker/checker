@@ -47,13 +47,13 @@ let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.prote
 (** Current minting price (in tez/kit). *)
 let minting_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_minting p)))
+    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_minting p))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Current liquidation price (in tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_liquidation p)))
+    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_liquidation p))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
