@@ -189,6 +189,7 @@ val add_nat_nat : nat -> nat -> nat (* IN LIGO: ( + ) *)
 val sub_nat_nat : nat -> nat -> int (* IN LIGO: ( - ) *)
 val mul_nat_nat : nat -> nat -> nat (* IN LIGO: ( * ) *)
 val mul_int_nat : int -> nat -> int (* IN LIGO: ( * ) *)
+val mul_nat_int : nat -> int -> int (* IN LIGO: ( * ) *)
 
 val eq_nat_nat : nat -> nat -> bool  (* IN LIGO: ( = ) *)
 val lt_nat_nat : nat -> nat -> bool  (* IN LIGO: ( < ) *)

@@ -224,21 +224,20 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
 *)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
   assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
-  let last_protected_index = Ligo.int last_protected_index in
   fraction_to_nat_floor
     (clamp_int
-       (Ligo.mul_int_int
-          (Ligo.int current_index)
+       (Ligo.mul_nat_int
+          current_index
           protected_index_inverse_epsilon
        )
-       (Ligo.mul_int_int
+       (Ligo.mul_nat_int
           last_protected_index
           (Ligo.sub_int_int
              protected_index_inverse_epsilon
              duration_in_seconds
           )
        )
-       (Ligo.mul_int_int
+       (Ligo.mul_nat_int
           last_protected_index
           (Ligo.add_int_int
              protected_index_inverse_epsilon

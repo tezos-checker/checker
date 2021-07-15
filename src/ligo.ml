@@ -191,6 +191,8 @@ let mul_nat_nat = Z.mul
 
 let mul_int_nat = Z.mul
 
+let mul_nat_int = Z.mul
+
 let div_nat_nat = Z.div
 
 let eq_nat_nat = Z.equal
