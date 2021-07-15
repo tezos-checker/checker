@@ -51,7 +51,7 @@ let show_fixedpoint amnt =
     else (String.make to_fill '0') ^ s in
 
   let sign = if amnt < Ligo.int_from_literal "0" then "-" else "" in
-  let (upper, lower) = Ligo.div_rem_int_int (abs_int amnt) fixedpoint_scaling_factor in
+  let (upper, lower) = Ligo.div_rem_int_int (Ligo.int (Ligo.abs amnt)) fixedpoint_scaling_factor in
 
   (* in hex, otherwise it's massive *)
   Format.sprintf "%s%s.%s"

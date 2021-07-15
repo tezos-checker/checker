@@ -8,7 +8,6 @@ let min_int (x: Ligo.int) (y: Ligo.int) = if Ligo.leq_int_int x y then x else y
 let max_int (x: Ligo.int) (y: Ligo.int) = if Ligo.geq_int_int x y then x else y
 
 let neg_int (x: Ligo.int) = Ligo.sub_int_int (Ligo.int_from_literal "0") x
-let abs_int (x: Ligo.int) = Ligo.int (Ligo.abs x)
 
 (* Note that ligo is not happy with nested lets. Take out when ready, but
  * keep internal for now. *)

@@ -8,7 +8,6 @@ val min_int : Ligo.int -> Ligo.int -> Ligo.int
 val max_int : Ligo.int -> Ligo.int -> Ligo.int
 
 val neg_int : Ligo.int -> Ligo.int
-val abs_int : Ligo.int -> Ligo.int
 
 val pow_int_nat : Ligo.int -> Ligo.nat -> Ligo.int
 
