@@ -19,7 +19,7 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
   else
     Ligo.div_int_int
       (pow_int_nat x y)
-      (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_int_int (Ligo.int y) (Ligo.int_from_literal "1"))))
+      (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_nat_nat y (Ligo.nat_from_literal "1n"))))
 
 (* Conversions to/from other types. *)
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
