@@ -1,5 +1,6 @@
 import json
 import os
+from random import shuffle
 import unittest
 from collections import OrderedDict
 from datetime import datetime
@@ -79,205 +80,205 @@ def auction_avl_leaves(
             yield ptr, leaf_node
 
 
-class E2ETest(SandboxedTestCase):
-    def test_e2e(self):
-        gas_costs = {}
-        account = self.client.key.public_key_hash()
-        # Read kit token id for fa2 tests
-        with open(os.path.join(CHECKER_DIR, "functions.json")) as f:
-            kit_token_id = json.load(f)["token_info"]["kit_token_id"]
-        # ===============================================================================
-        # Deploy contracts
-        # ===============================================================================
-        print("Deploying the mock oracle.")
-        oracle = deploy_contract(
-            self.client,
-            source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
-            initial_storage=(self.client.key.public_key_hash(), 1000000),
-            ttl=MAX_OPERATIONS_TTL,
-        )
+# class E2ETest(SandboxedTestCase):
+#     def test_e2e(self):
+#         gas_costs = {}
+#         account = self.client.key.public_key_hash()
+#         # Read kit token id for fa2 tests
+#         with open(os.path.join(CHECKER_DIR, "functions.json")) as f:
+#             kit_token_id = json.load(f)["token_info"]["kit_token_id"]
+#         # ===============================================================================
+#         # Deploy contracts
+#         # ===============================================================================
+#         print("Deploying the mock oracle.")
+#         oracle = deploy_contract(
+#             self.client,
+#             source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
+#             initial_storage=(self.client.key.public_key_hash(), 1000000),
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
 
-        print("Deploying ctez contract.")
-        ctez = deploy_ctez(
-            self.client,
-            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
-            ttl=MAX_OPERATIONS_TTL,
-        )
+#         print("Deploying ctez contract.")
+#         ctez = deploy_ctez(
+#             self.client,
+#             ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
 
-        print("Deploying Checker.")
-        checker = deploy_checker(
-            self.client,
-            checker_dir=CHECKER_DIR,
-            oracle=oracle.context.address,
-            ctez=ctez["fa12_ctez"].context.address,
-            ttl=MAX_OPERATIONS_TTL,
-        )
+#         print("Deploying Checker.")
+#         checker = deploy_checker(
+#             self.client,
+#             checker_dir=CHECKER_DIR,
+#             oracle=oracle.context.address,
+#             ctez=ctez["fa12_ctez"].context.address,
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
 
-        print("Deployment finished.")
-        gas_costs = {}
+#         print("Deployment finished.")
+#         gas_costs = {}
 
-        def call_endpoint(contract, name, param, amount=0, client=self.client):
-            return inject(
-                client,
-                getattr(contract, name)(param)
-                .with_amount(amount)
-                .as_transaction()
-                .autofill(ttl=MAX_OPERATIONS_TTL)
-                .sign(),
-            )
+#         def call_endpoint(contract, name, param, amount=0, client=self.client):
+#             return inject(
+#                 client,
+#                 getattr(contract, name)(param)
+#                 .with_amount(amount)
+#                 .as_transaction()
+#                 .autofill(ttl=MAX_OPERATIONS_TTL)
+#                 .sign(),
+#             )
 
-        def call_checker_endpoint(
-            name, param, amount=0, contract=checker, client=self.client
-        ):
-            print("Calling", name, "with", param)
-            ret = call_endpoint(contract, name, param, amount, client=client)
-            gas_costs[name] = ret["contents"][0]["gas_limit"]
-            return ret
+#         def call_checker_endpoint(
+#             name, param, amount=0, contract=checker, client=self.client
+#         ):
+#             print("Calling", name, "with", param)
+#             ret = call_endpoint(contract, name, param, amount, client=client)
+#             gas_costs[name] = ret["contents"][0]["gas_limit"]
+#             return ret
 
-        # ===============================================================================
-        # Burrows
-        # ===============================================================================
-        # Create a burrow
-        call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
-        assert_kit_balance(checker, account, 0)
+#         # ===============================================================================
+#         # Burrows
+#         # ===============================================================================
+#         # Create a burrow
+#         call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
+#         assert_kit_balance(checker, account, 0)
 
-        # Get some kit
-        call_checker_endpoint("mint_kit", (1, 1_000_000))
-        assert_kit_balance(checker, account, 1_000_000)
+#         # Get some kit
+#         call_checker_endpoint("mint_kit", (1, 1_000_000))
+#         assert_kit_balance(checker, account, 1_000_000)
 
-        # Burn some kit
-        call_checker_endpoint("burn_kit", (1, 10))
-        assert_kit_balance(checker, account, 999_990)
+#         # Burn some kit
+#         call_checker_endpoint("burn_kit", (1, 10))
+#         assert_kit_balance(checker, account, 999_990)
 
-        # Deposit tez
-        call_checker_endpoint("deposit_tez", 1, amount=2_000_000)
+#         # Deposit tez
+#         call_checker_endpoint("deposit_tez", 1, amount=2_000_000)
 
-        # Withdraw tez
-        call_checker_endpoint("withdraw_tez", (2_000_000, 1))
+#         # Withdraw tez
+#         call_checker_endpoint("withdraw_tez", (2_000_000, 1))
 
-        # Set delegate
-        call_checker_endpoint("set_burrow_delegate", (1, account))
+#         # Set delegate
+#         call_checker_endpoint("set_burrow_delegate", (1, account))
 
-        # Deactivate a burrow
-        call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
-        call_checker_endpoint("deactivate_burrow", (2, account))
+#         # Deactivate a burrow
+#         call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
+#         call_checker_endpoint("deactivate_burrow", (2, account))
 
-        # Re-activate a burrow
-        call_checker_endpoint("activate_burrow", 2, amount=1_000_000)
+#         # Re-activate a burrow
+#         call_checker_endpoint("activate_burrow", 2, amount=1_000_000)
 
-        # Touch checker
-        call_checker_endpoint("touch", None)
+#         # Touch checker
+#         call_checker_endpoint("touch", None)
 
-        # Touch burrow
-        call_checker_endpoint("touch_burrow", (account, 1))
+#         # Touch burrow
+#         call_checker_endpoint("touch_burrow", (account, 1))
 
-        # ===============================================================================
-        # FA2 interface
-        # ===============================================================================
-        # Note: using alice's account which is assumed to be already initialized in the sandbox
-        checker_alice = pytezos.pytezos.using(
-            shell=checker.shell,
-            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
-        ).contract(checker.address)
+#         # ===============================================================================
+#         # FA2 interface
+#         # ===============================================================================
+#         # Note: using alice's account which is assumed to be already initialized in the sandbox
+#         checker_alice = pytezos.pytezos.using(
+#             shell=checker.shell,
+#             key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+#         ).contract(checker.address)
 
-        # Transfer from the main test account to alice's account
-        fa2_transfer = {
-            "from_": account,
-            "txs": [
-                {
-                    "to_": checker_alice.key.public_key_hash(),
-                    "token_id": kit_token_id,
-                    "amount": 90,
-                },
-            ],
-        }
-        call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
+#         # Transfer from the main test account to alice's account
+#         fa2_transfer = {
+#             "from_": account,
+#             "txs": [
+#                 {
+#                     "to_": checker_alice.key.public_key_hash(),
+#                     "token_id": kit_token_id,
+#                     "amount": 90,
+#                 },
+#             ],
+#         }
+#         call_checker_endpoint("transfer", [fa2_transfer])
+#         assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
 
-        # Add the main account as an operator on alice's account
-        # Note: using a client instance with alice's key for this since she is the
-        # account owner.
-        update_operators = [
-            {
-                "add_operator": {
-                    "owner": checker_alice.key.public_key_hash(),
-                    "operator": account,
-                    "token_id": kit_token_id,
-                }
-            },
-        ]
-        call_checker_endpoint(
-            "update_operators",
-            update_operators,
-            client=checker_alice,
-            contract=checker_alice,
-        )
+#         # Add the main account as an operator on alice's account
+#         # Note: using a client instance with alice's key for this since she is the
+#         # account owner.
+#         update_operators = [
+#             {
+#                 "add_operator": {
+#                     "owner": checker_alice.key.public_key_hash(),
+#                     "operator": account,
+#                     "token_id": kit_token_id,
+#                 }
+#             },
+#         ]
+#         call_checker_endpoint(
+#             "update_operators",
+#             update_operators,
+#             client=checker_alice,
+#             contract=checker_alice,
+#         )
 
-        # Send some kit back to the main test account
-        fa2_transfer = {
-            "from_": checker_alice.key.public_key_hash(),
-            "txs": [
-                {
-                    "to_": account,
-                    "token_id": kit_token_id,
-                    "amount": 80,
-                },
-            ],
-        }
-        call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
+#         # Send some kit back to the main test account
+#         fa2_transfer = {
+#             "from_": checker_alice.key.public_key_hash(),
+#             "txs": [
+#                 {
+#                     "to_": account,
+#                     "token_id": kit_token_id,
+#                     "amount": 80,
+#                 },
+#             ],
+#         }
+#         call_checker_endpoint("transfer", [fa2_transfer])
+#         assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
 
-        # `balance_of` requires a contract callback when executing on-chain. To make tests
-        # more light-weight and avoid needing an additional mock contract, we call it as a view.
-        # This comes with a downside, however, since using a view means that we don't get an
-        # estimate of the gas cost.
-        fa2_balance_of = {
-            "requests": [
-                {"owner": checker_alice.key.public_key_hash(), "token_id": kit_token_id}
-            ],
-            "callback": None,
-        }
-        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
-        balance = checker.balance_of(**fa2_balance_of).callback_view()
-        # Check that this balance agrees with the kit balance view
-        assert_kit_balance(
-            checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
-        )
+#         # `balance_of` requires a contract callback when executing on-chain. To make tests
+#         # more light-weight and avoid needing an additional mock contract, we call it as a view.
+#         # This comes with a downside, however, since using a view means that we don't get an
+#         # estimate of the gas cost.
+#         fa2_balance_of = {
+#             "requests": [
+#                 {"owner": checker_alice.key.public_key_hash(), "token_id": kit_token_id}
+#             ],
+#             "callback": None,
+#         }
+#         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+#         balance = checker.balance_of(**fa2_balance_of).callback_view()
+#         # Check that this balance agrees with the kit balance view
+#         assert_kit_balance(
+#             checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
+#         )
 
-        # ===============================================================================
-        # CFMM
-        # ===============================================================================
-        # Get some ctez
-        call_endpoint(
-            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
-        )
-        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
-        # Approve checker to spend the ctez
-        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
+#         # ===============================================================================
+#         # CFMM
+#         # ===============================================================================
+#         # Get some ctez
+#         call_endpoint(
+#             ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
+#         )
+#         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+#         # Approve checker to spend the ctez
+#         call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
 
-        call_checker_endpoint(
-            "add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20)
-        )
-        # Note: not adding FA2 balance assertions here since the amount of kit depends on the price
-        # and adding an assertion might make the test flaky
-        call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
-        call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
+#         call_checker_endpoint(
+#             "add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20)
+#         )
+#         # Note: not adding FA2 balance assertions here since the amount of kit depends on the price
+#         # and adding an assertion might make the test flaky
+#         call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
+#         call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
 
-        call_checker_endpoint(
-            "remove_liquidity", (5, 1, 1, int(datetime.now().timestamp()) + 20)
-        )
+#         call_checker_endpoint(
+#             "remove_liquidity", (5, 1, 1, int(datetime.now().timestamp()) + 20)
+#         )
 
-        print("Gas costs:")
-        gas_costs_sorted = OrderedDict()
-        for k, v in sorted(
-            gas_costs.items(), key=lambda tup: int(tup[1]), reverse=True
-        ):
-            gas_costs_sorted[k] = v
+#         print("Gas costs:")
+#         gas_costs_sorted = OrderedDict()
+#         for k, v in sorted(
+#             gas_costs.items(), key=lambda tup: int(tup[1]), reverse=True
+#         ):
+#             gas_costs_sorted[k] = v
 
-        print(json.dumps(gas_costs_sorted, indent=4))
-        if WRITE_GAS_COSTS:
-            with open(WRITE_GAS_COSTS, "w") as f:
-                json.dump(gas_costs_sorted, f, indent=4)
+#         print(json.dumps(gas_costs_sorted, indent=4))
+#         if WRITE_GAS_COSTS:
+#             with open(WRITE_GAS_COSTS, "w") as f:
+#                 json.dump(gas_costs_sorted, f, indent=4)
 
 
 class LiquidationsStressTest(SandboxedTestCase):
@@ -308,9 +309,12 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         print("Deployment finished.")
 
+        # Global for keeping track of gas costs when calling entrypoints
+        gas_profiles = {}
+
         def call_endpoint(contract, name, param, amount=0):
             print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
-            return inject(
+            ret = inject(
                 self.client,
                 getattr(contract, name)(param)
                 .with_amount(amount)
@@ -318,6 +322,10 @@ class LiquidationsStressTest(SandboxedTestCase):
                 .autofill(ttl=MAX_OPERATIONS_TTL)
                 .sign(),
             )
+            if name not in gas_profiles:
+                gas_profiles[name] = []
+            gas_profiles[name].append(ret["contents"][0]["gas_limit"])
+            return ret
 
         def call_bulk(bulks, *, batch_size):
             # FIXME: Add execution time metrics for batches to help detect degenerating efficiency
@@ -334,10 +342,16 @@ class LiquidationsStressTest(SandboxedTestCase):
                     "of",
                     len(batches),
                 )
-                inject(
+                ret = inject(
                     self.client,
                     self.client.bulk(*batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
                 )
+                for op in ret["contents"]:
+                    name = op["parameters"]["entrypoint"]
+                    gas = op["gas_limit"]
+                    if name not in gas_profiles:
+                        gas_profiles[name] = []
+                    gas_profiles[name].append(gas)
 
         call_bulk(
             [
@@ -429,22 +443,35 @@ class LiquidationsStressTest(SandboxedTestCase):
         # and be confident that we can cancel it before it gets added to another auction.
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
-        for queued_leaf_ptr, leaf in auction_avl_leaves(
-            checker,
-            checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                "queued_slices"
-            ](),
+        cancel_ops = []
+        for i, (queued_leaf_ptr, leaf) in enumerate(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
         ):
-            # Only retrieve the first queued slice ptr for efficiency
-            break
-        # Deposit a ton of tez to this burrow to ensure that it is no longer liquidatable
-        call_endpoint(
-            checker,
-            "deposit_tez",
-            leaf["leaf"]["value"]["contents"]["burrow"][1],
-            amount=100_000_000_000,
+            cancel_ops.append(
+                (
+                    checker.deposit_tez(
+                        leaf["leaf"]["value"]["contents"]["burrow"][1]
+                    ).with_amount(10_000_000_000),
+                    checker.cancel_liquidation_slice(queued_leaf_ptr),
+                )
+            )
+            if len(cancel_ops) >= 50:
+                break
+        # Shuffle so we aren't only cancelling the oldest slice
+        shuffle(cancel_ops)
+        flattened_cancel_ops = []
+        for op1, op2 in cancel_ops:
+            flattened_cancel_ops += [op1, op2]
+
+        call_bulk(
+            flattened_cancel_ops,
+            batch_size=10,
         )
-        call_endpoint(checker, "cancel_liquidation_slice", queued_leaf_ptr)
 
         # And we place a bid:
 
@@ -475,6 +502,11 @@ class LiquidationsStressTest(SandboxedTestCase):
             ]()
             is not None
         )
+        # Extra calls for profiling purposes
+        call_bulk(
+            [checker.touch(None) for _ in range(5)],
+            batch_size=2,
+        )
 
         # Before we can claim our winning bid, all of the slices in the completed auction must be touched
         auctioned_slices = []
@@ -483,14 +515,24 @@ class LiquidationsStressTest(SandboxedTestCase):
             assert "leaf" in leaf
             auctioned_slices.append(leaf_ptr)
 
-        # Note: batching here based on empirical estimates of how many slices we can
-        # touch in one go before hitting the gas limit.
-        for i in range(0, len(auctioned_slices), 10):
-            slices_to_cancel = auctioned_slices[i : i + 10]
+        # Note: using smaller batches here to increase the number of samples for profiling.
+        for i in range(0, len(auctioned_slices), 5):
+            slices_to_cancel = auctioned_slices[i : i + 5]
             call_endpoint(checker, "touch_liquidation_slices", slices_to_cancel)
 
         # With all of the slices touched, we should now be able to claim our hard-earned winnings
         call_endpoint(checker, "liquidation_auction_claim_win", current_auctions_ptr)
+
+        # Extra calls for profiling purposes
+        call_bulk(
+            [checker.touch(None) for _ in range(5)],
+            batch_size=2,
+        )
+
+        # TODO: Do stuff with the gas profiles
+        print(json.dumps(gas_profiles, indent=4))
+        with open("liquidation_gas_profiles.json", "w") as f:
+            json.dump(gas_profiles, f, indent=4)
 
 
 if __name__ == "__main__":
