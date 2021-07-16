@@ -1,21 +1,27 @@
+from copy import deepcopy
 import json
 import os
 from random import shuffle
 import unittest
 from collections import OrderedDict
 from datetime import datetime
-from typing import Dict, Generator, Tuple
+from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
 from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
+from pytezos.operation.group import OperationGroup
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 CHECKER_DIR = os.getenv(
     "CHECKER_DIR", default=os.path.join(PROJECT_ROOT, "generated/michelson")
 )
+# Optional file at which to output gas costs in end to end tests
 WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
+# Optional file at which to output profiles of gas costs from liquidation auction stress
+# tests
+WRITE_GAS_PROFILE = os.getenv("WRITE_GAS_PROFILES")
 
 
 class SandboxedTestCase(unittest.TestCase):
@@ -27,10 +33,15 @@ class SandboxedTestCase(unittest.TestCase):
         self.docker_client = docker_client
         self.docker_container = docker_container
         self.client = client
+        self.gas_profiles = {}
 
     def tearDown(self):
         self.docker_container.kill()
         self.docker_client.close()
+        # TODO: Write out gas profiles here
+        # print(json.dumps(gas_profiles, indent=4))
+        # with open("liquidation_gas_profiles.json", "w") as f:
+        #     json.dump(gas_profiles, f, indent=4)
 
 
 def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
@@ -50,6 +61,7 @@ def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
 AvlPtr = int
 AvlNode = Dict
 AvlLeaves = Generator[Tuple[AvlPtr, AvlNode], None, List]
+Operation = Dict
 
 
 def auction_avl_leaves(
@@ -280,6 +292,78 @@ def auction_avl_leaves(
 #             with open(WRITE_GAS_COSTS, "w") as f:
 #                 json.dump(gas_costs_sorted, f, indent=4)
 
+# TODO: Need a way to accurately compute n for profiling gas costs
+
+# call_bulk( [...] , profiler=request_liqidation_profiler)
+
+Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
+
+
+def general_gas_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+    profile = {}
+    for op in ret["contents"]:
+        name = op["parameters"]["entrypoint"]
+        if name not in profile:
+            profile[name] = {"gas": []}
+        profile[name]["gas"].append(op["gas_limit"])
+    return profile
+
+
+def mark_for_liquidation_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    n = 0
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "mark_for_liquidation": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        assert op["parameters"]["entrypoint"] == "mark_for_liquidation"
+        profile["mark_for_liquidation"]["gas"].append(op["gas_limit"])
+        profile["mark_for_liquidation"]["queue_size"].append(n)
+        # Assuming that each request_liquidation operation adds a single slice to the queue
+        # to avoid having to re-query the storage each time (which can take a long time).
+        n += 1
+    return profile
+
+
+def merge_gas_profiles(profile1: Dict, profile2: Dict):
+    merged = deepcopy(profile1)
+    for name, data2 in profile2.items():
+        data2: dict
+        if name in profile1:
+            data1 = profile1[name]
+            for k in data2.keys():
+                if k not in data1:
+                    raise ValueError("Profiles had mismatching keys")
+                merged[name][k] += data2[k]
+        else:
+            merged[name] = data2
+    return merged
+
 
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
@@ -309,26 +393,26 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         print("Deployment finished.")
 
-        # Global for keeping track of gas costs when calling entrypoints
-        gas_profiles = {}
-
-        def call_endpoint(contract, name, param, amount=0):
+        def call_endpoint(
+            contract, name, param, amount=0, profiler=general_gas_profiler
+        ):
+            # Helper for calling contract endpoints with profiling
             print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
-            ret = inject(
+            profile = profiler(
                 self.client,
-                getattr(contract, name)(param)
-                .with_amount(amount)
-                .as_transaction()
-                .autofill(ttl=MAX_OPERATIONS_TTL)
-                .sign(),
+                contract,
+                [
+                    getattr(contract, name)(param)
+                    .with_amount(amount)
+                    .as_transaction()
+                    .autofill(ttl=MAX_OPERATIONS_TTL)
+                    .sign()
+                ],
             )
-            if name not in gas_profiles:
-                gas_profiles[name] = []
-            gas_profiles[name].append(ret["contents"][0]["gas_limit"])
-            return ret
+            self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
-        def call_bulk(bulks, *, batch_size):
-            # FIXME: Add execution time metrics for batches to help detect degenerating efficiency
+        def call_bulk(bulks, *, batch_size, profiler=general_gas_profiler):
+            # Helper for calling operations in batches
             batches = [
                 bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
             ]
@@ -342,16 +426,8 @@ class LiquidationsStressTest(SandboxedTestCase):
                     "of",
                     len(batches),
                 )
-                ret = inject(
-                    self.client,
-                    self.client.bulk(*batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
-                )
-                for op in ret["contents"]:
-                    name = op["parameters"]["entrypoint"]
-                    gas = op["gas_limit"]
-                    if name not in gas_profiles:
-                        gas_profiles[name] = []
-                    gas_profiles[name].append(gas)
+                profile = profiler(self.client, checker, batch)
+                self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
         call_bulk(
             [
@@ -417,6 +493,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 for burrow_no in burrows
             ],
             batch_size=40,
+            profiler=mark_for_liquidation_profiler,
         )
 
         # This touch starts a liquidation auction
@@ -528,11 +605,6 @@ class LiquidationsStressTest(SandboxedTestCase):
             [checker.touch(None) for _ in range(5)],
             batch_size=2,
         )
-
-        # TODO: Do stuff with the gas profiles
-        print(json.dumps(gas_profiles, indent=4))
-        with open("liquidation_gas_profiles.json", "w") as f:
-            json.dump(gas_profiles, f, indent=4)
 
 
 if __name__ == "__main__":
