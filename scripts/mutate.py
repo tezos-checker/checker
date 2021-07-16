@@ -49,8 +49,8 @@ MUTATION_GROUPS = [
     {"mul_int_int", "sub_int_int", "add_int_int", "div_int_int"},
     {"eq_int_int", "lt_int_int", "gt_int_int", "leq_int_int", "geq_int_int"},
     # NAT
-    {"mul_nat_int", "sub_nat_int", "add_nat_int", "div_nat_int"},
-    {"eq_nat_int", "lt_nat_int", "gt_nat_int", "leq_nat_int", "geq_nat_int"},
+    # {"mul_nat_int"}, # note: there is no sub_nat_int add_nat_int", "div_nat_int"
+    # {"eq_nat_int", "lt_nat_int", "gt_nat_int", "leq_nat_int", "geq_nat_int"},
     # TEZ
     {"sub_tez_tez", "add_tez_tez"},
     {"eq_tez_tez", "lt_tez_tez", "gt_tez_tez", "leq_tez_tez", "geq_tez_tez"},
@@ -71,7 +71,7 @@ MUTATION_GROUPS = [
         "leq_ratio_ratio",
         "geq_ratio_ratio",
         "gt_ratio_ratio",
-        "eq_ratio_ratio",
+        # there is no eq_ratio_ratio
     },
     # BOOL
     {"true", "false"},
@@ -223,8 +223,7 @@ def do_mutation(args):
     modules = list(args.modules)
     random.shuffle(modules)
     for module in modules:
-        src = os.path.join("src", module)
-        print(f"Attempting to mutate {src}...")
+        print(f"Attempting to mutate {module}...")
         possible_mutations = [m for m in MUTATION_MAPPINGS]
         random.shuffle(possible_mutations)
         for mutation_type, mutation_meta in possible_mutations:
@@ -241,7 +240,7 @@ def do_mutation(args):
 
             print(f"  Trying mutation: {mutation_from} -> {mutation_to}")
             found_site_to_mutate, line, before, after = mutate(
-                src, mutation_from_regex, formatter
+                module, mutation_from_regex, formatter
             )
             if found_site_to_mutate:
                 "Successfully mutated source."
@@ -258,7 +257,7 @@ def do_mutation(args):
             "Tried all possible combinations of modules and mutations and could not find a matching name"
         )
     tests_failed = test_mutated_src(args.test)
-    yield (src, mutation_type, before, after, line), tests_failed
+    yield (module, mutation_type, before, after, line), tests_failed
     restore(src)
 
 
