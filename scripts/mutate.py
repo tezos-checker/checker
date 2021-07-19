@@ -71,7 +71,7 @@ MUTATION_GROUPS = [
         "leq_ratio_ratio",
         "geq_ratio_ratio",
         "gt_ratio_ratio",
-        # there is no eq_ratio_ratio
+        "eq_ratio_ratio",
     },
     # BOOL
     {"true", "false"},
