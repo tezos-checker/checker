@@ -72,6 +72,8 @@ MUTATION_GROUPS = [
         "geq_ratio_ratio",
         "gt_ratio_ratio",
         "eq_ratio_ratio",
+        # most (all?) of these only appear on tests, but they are here for
+        # completeness' sake.
     },
     # BOOL
     {"true", "false"},
