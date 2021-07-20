@@ -1,0 +1,28 @@
+name: Mutate
+
+on:
+  schedule:
+    - cron:  '0 0,12 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  mutate:
+    strategy:
+      matrix:
+        args:
+          - "--test 'make fast-test' --num-mutations 500 src/{burrow,cfmm,checker,checkerMain,common,constants}.ml"
+          - "--test 'make fast-test' --num-mutations 500 src/{fa2Interface,lqt,parameters}.ml"
+          - "--test 'make test'      --num-mutations 50  src/{liquidationAuction,sliceList,mem,ptr}.ml"
+          - "--test 'make test'      --num-mutations 50  src/avl.ml"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v13
+      - uses: actions/checkout@v2
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build shell dependencies
+        run: nix-shell --run ':'
+      - name: Run mutation tests
+        run: nix-shell --run "make src/checkerEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
