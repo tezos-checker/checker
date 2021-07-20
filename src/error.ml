@@ -89,7 +89,7 @@ let[@inline] internalError_BalanceBottomUpFoundLeaf                     : Ligo.i
 let[@inline] internalError_RefDelParentIsLeaf                           : Ligo.int = Ligo.int_from_literal "214"
 let[@inline] internalError_AvlDeleteEmptyTreeNonEmptyTree               : Ligo.int = Ligo.int_from_literal "215"
 let[@inline] internalError_RefPeekFrontFoundRoot                        : Ligo.int = Ligo.int_from_literal "216"
-let[@inline] internalError_RefSplitPostProcessingInvariantFailed        : Ligo.int = Ligo.int_from_literal "217" (* FIXME: clarify this one *)
+let[@inline] internalError_RefSplitPostProcessingInvariantFailed        : Ligo.int = Ligo.int_from_literal "217"
 let[@inline] internalError_RefSplitRecFoundRoot                         : Ligo.int = Ligo.int_from_literal "218"
 
 let[@inline] internalError_ComputeTezToAuctionNegativeResult            : Ligo.int = Ligo.int_from_literal "230"
