@@ -21,7 +21,7 @@ CHECKER_DIR = os.getenv(
 WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # Optional file at which to output profiles of gas costs from liquidation auction stress
 # tests
-WRITE_GAS_PROFILE = os.getenv("WRITE_GAS_PROFILES")
+WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
 
 class SandboxedTestCase(unittest.TestCase):
@@ -38,10 +38,6 @@ class SandboxedTestCase(unittest.TestCase):
     def tearDown(self):
         self.docker_container.kill()
         self.docker_client.close()
-        # TODO: Write out gas profiles here
-        # print(json.dumps(gas_profiles, indent=4))
-        # with open("liquidation_gas_profiles.json", "w") as f:
-        #     json.dump(gas_profiles, f, indent=4)
 
 
 def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
@@ -518,57 +514,42 @@ class LiquidationsStressTest(SandboxedTestCase):
         # and be confident that we can cancel it before it gets added to another auction.
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
-        # cancel_ops = []
-        # for i, (queued_leaf_ptr, leaf) in enumerate(
-        #     auction_avl_leaves(
-        #         checker,
-        #         checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-        #             "queued_slices"
-        #         ](),
-        #     )
-        # ):
-        #     cancel_ops.append(
-        #         (
-        #             checker.deposit_tez(
-        #                 leaf["leaf"]["value"]["contents"]["burrow"][1]
-        #             ).with_amount(10_000_000_000),
-        #             checker.cancel_liquidation_slice(queued_leaf_ptr),
-        #         )
-        #     )
-        #     if len(cancel_ops) >= 10:
-        #         break
-        # # Shuffle so we aren't only cancelling the oldest slice
-        # shuffle(cancel_ops)
-        # flattened_cancel_ops = []
-        # for op1, op2 in cancel_ops:
-        #     flattened_cancel_ops += [op1, op2]
+        cancel_ops = []
+        for i, (queued_leaf_ptr, leaf) in enumerate(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        ):
+            cancel_ops.append(
+                (
+                    checker.deposit_tez(
+                        leaf["leaf"]["value"]["contents"]["burrow"][1]
+                    ).with_amount(10_000_000_000),
+                    checker.cancel_liquidation_slice(queued_leaf_ptr),
+                )
+            )
+            if len(cancel_ops) >= 10:
+                break
+        # Shuffle so we aren't only cancelling the oldest slice
+        shuffle(cancel_ops)
+        flattened_cancel_ops = []
+        for op1, op2 in cancel_ops:
+            flattened_cancel_ops += [op1, op2]
+        call_bulk(
+            flattened_cancel_ops,
+            batch_size=10,
+        )
 
-        # call_bulk(
-        #     flattened_cancel_ops,
-        #     batch_size=10,
-        # )
-
-        # # # Change the index (kits are 0.5x valuable)
-        # call_endpoint(oracle, "update", 500_000)
-        # call_endpoint(checker, "touch", None)
-        # call_endpoint(checker, "touch", None)
-        # time.sleep(20)
-        # call_endpoint(checker, "touch", None)
-
-        # And we place a bid:
-        # call_endpoint(checker, "touch", None)
-        print("Sleeping to let auction decay. zzzz")
-        print(checker.storage())
-        time.sleep(1)
-        print(checker.storage())
-
+        # And we place a bid for the auction we started earlier:
         ret = checker.metadata.currentLiquidationAuctionMinimumBid().storage_view()
         auction_id, minimum_bid = ret["contents"], ret["nat_1"]
-        # The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
+        # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.
 
-        # FIXME: Getting insufficient balance errors here
         # Note the auction ptr for later operations
         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
             "liquidation_auctions"
@@ -590,11 +571,6 @@ class LiquidationsStressTest(SandboxedTestCase):
             ]()
             is not None
         )
-        # # Extra calls for profiling purposes
-        # call_bulk(
-        #     [checker.touch(None) for _ in range(5)],
-        #     batch_size=2,
-        # )
 
         # Before we can claim our winning bid, all of the slices in the completed auction must be touched
         auctioned_slices = []
@@ -616,6 +592,11 @@ class LiquidationsStressTest(SandboxedTestCase):
             [checker.touch(None) for _ in range(5)],
             batch_size=2,
         )
+
+        # Optionally write out gas profile json
+        if WRITE_GAS_PROFILES:
+            with open(WRITE_GAS_PROFILES, "w") as f:
+                json.dump(self.gas_profiles, f, indent=4)
 
 
 if __name__ == "__main__":
