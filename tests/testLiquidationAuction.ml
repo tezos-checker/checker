@@ -291,6 +291,24 @@ let suite =
       )
     );
 
+    ("test initial auction minimum bid has expected value" >::
+     fun _ ->
+       Ligo.Tezos.reset();
+       let auctions = liquidation_auction_empty in
+       let (auctions, _) =
+         liquidation_auction_send_to_auction auctions {
+           burrow = burrow_id_1;
+           tez = Ligo.tez_from_literal "2_000_000mutez";
+           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "4_000_000n")); (* note: randomly chosen *)
+         } in
+       let start_price = {num=(Ligo.int_from_literal "3"); den=(Ligo.int_from_literal "7")} in
+       let auctions = liquidation_auction_touch auctions start_price in
+       let current = Option.get auctions.current_auction in
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "4_666_667n"))
+         ~real:(liquidation_auction_current_auction_minimum_bid current);
+    );
+
     ("test starts descending auction" >::
      fun _ ->
        Ligo.Tezos.reset();
