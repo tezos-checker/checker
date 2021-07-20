@@ -65,7 +65,7 @@ let suite =
     ("ensure_valid_fa2_token - fails when an unknown token is submitted" >::
      fun _ ->
        assert_raises
-         (Failure "FA2_TOKEN_UNDEFINED")
+         (Failure error_FA2_TOKEN_UNDEFINED)
          (fun _ ->
             ensure_valid_fa2_token (Ligo.nat_from_literal "3n")
          )
@@ -90,7 +90,7 @@ let suite =
        let fa2_state = initial_fa2_state in
        let update_op = add_kit_operator ~owner:bob_addr ~operator:leena_addr in
        assert_raises
-         (Failure "FA2_NOT_OWNER")
+         (Failure error_FA2_NOT_OWNER)
          (fun () -> fa2_run_update_operators (fa2_state, [update_op]))
     );
 
@@ -115,7 +115,7 @@ let suite =
        let update_op = remove_kit_operator ~owner:bob_addr ~operator:leena_addr in
 
        assert_raises
-         (Failure "FA2_NOT_OWNER")
+         (Failure error_FA2_NOT_OWNER)
          (fun () -> fa2_run_update_operators (fa2_state, [update_op]))
     );
 
@@ -201,7 +201,7 @@ let suite =
        (* Withdrawing a non-empty amount from an empty account should fail. *)
        let fa2_state_in = fa2_state_out in
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () ->
             let kit_amount = kit_of_mukit (Ligo.nat_from_literal "1n") in
             ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount)
@@ -226,7 +226,7 @@ let suite =
        (* Withdrawing more than the entire amount should fail. *)
        let fa2_state_in = fa2_state_out in
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () ->
             let kit_amount = kit_add (ask_kit_of fa2_state_in leena_addr) (kit_of_mukit (Ligo.nat_from_literal "1n")) in
             ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount)
@@ -283,10 +283,10 @@ let suite =
       Ligo.Tezos.reset ();
       let fa2_state_in = initial_fa2_state in
       assert_raises
-        (Failure "FA2_INSUFFICIENT_BALANCE")
+        (Failure error_FA2_INSUFFICIENT_BALANCE)
         (fun () -> ledger_withdraw_kit (ledger_issue_kit (fa2_state_in, leena_addr, kit_to_issue), leena_addr, kit_to_withdraw));
       assert_raises
-        (Failure "FA2_INSUFFICIENT_BALANCE")
+        (Failure error_FA2_INSUFFICIENT_BALANCE)
         (fun () -> ledger_issue_then_withdraw_kit (fa2_state_in, leena_addr, kit_to_issue, kit_to_withdraw));
       true
     );
@@ -333,7 +333,7 @@ let suite =
        (* Withdrawing a non-empty amount from an empty account should fail. *)
        let fa2_state_in = fa2_state_out in
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () ->
             let lqt_amount = lqt_of_denomination (Ligo.nat_from_literal "1n") in
             ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount)
@@ -358,7 +358,7 @@ let suite =
        (* Withdrawing more than the entire amount should fail. *)
        let fa2_state_in = fa2_state_out in
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () ->
             let lqt_amount = lqt_add (ask_lqt_of fa2_state_in leena_addr) (lqt_of_denomination (Ligo.nat_from_literal "1n")) in
             ledger_withdraw_lqt (fa2_state_in, leena_addr, lqt_amount)
@@ -406,7 +406,7 @@ let suite =
        let fa2_state = initial_fa2_state in
        let tx = mk_kit_tx ~from_:alice_addr ~to_:bob_addr ~amount:kit_zero in
        assert_raises
-         (Failure "FA2_NOT_OPERATOR")
+         (Failure error_FA2_NOT_OPERATOR)
          (fun () -> fa2_run_transfer (fa2_state, [tx]))
     );
 
@@ -497,7 +497,7 @@ let suite =
 
        (* The numbers are too high for the operations to be executed in the wrong order. *)
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () -> fa2_run_transfer (fa2_state_in, [tx2; tx1]));
 
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx1; tx2]) in
@@ -589,7 +589,7 @@ let suite =
 
        (* The numbers are too high for the operations to be executed in the wrong order. *)
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () -> fa2_run_transfer (fa2_state_in, [tx2; tx1]));
 
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx1; tx2]) in

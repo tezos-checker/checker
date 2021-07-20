@@ -804,7 +804,7 @@ let suite =
 
        (* but she can not transfer more than she has *)
        assert_raises
-         (Failure "FA2_INSUFFICIENT_BALANCE")
+         (Failure error_FA2_INSUFFICIENT_BALANCE)
          (fun () -> Checker.strict_entrypoint_transfer (checker, [
               { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "10n"}]}]));
 
@@ -823,7 +823,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        assert_raises
-         (Failure "FA2_NOT_OPERATOR")
+         (Failure error_FA2_NOT_OPERATOR)
          (fun () -> Checker.strict_entrypoint_transfer (checker, [
               { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]));
        ()
@@ -848,7 +848,7 @@ let suite =
     ("view_total_supply (FA2) - undefined token id" >::
      fun _ ->
        assert_raises
-         (Failure "FA2_TOKEN_UNDEFINED")
+         (Failure error_FA2_TOKEN_UNDEFINED)
          (fun () -> Checker.view_total_supply (Ligo.nat_from_literal "3n", empty_checker))
     );
 
