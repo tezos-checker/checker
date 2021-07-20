@@ -280,24 +280,39 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
       let heavy_child_balance =
         Ligo.sub_nat_nat heavy_child.right_height heavy_child.left_height in
 
-      let (mem, ptr) = if Ligo.lt_int_int diff int_zero && Ligo.leq_int_int heavy_child_balance int_zero then
-          (* Left, Left *)
-          ref_rotate_right mem curr_ptr
-        else if Ligo.lt_int_int diff int_zero && Ligo.gt_int_int heavy_child_balance int_zero then
-          (* Left, Right *)
-          let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
-          let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-          ref_rotate_right mem curr_ptr
-        else if Ligo.geq_int_int diff int_zero && Ligo.geq_int_int heavy_child_balance int_zero then
-          (* Right, Right*)
-          ref_rotate_left mem curr_ptr
-        else if Ligo.geq_int_int diff int_zero && Ligo.lt_int_int heavy_child_balance int_zero then
-          (* Right, Left *)
-          let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
-          let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
-          ref_rotate_left mem curr_ptr
-        else
-          (Ligo.failwith internalError_RebalancePartialityOfIfThenElse : mem * ptr) in (* FIXME: turn into assertion and eliminate else-branch. *)
+      let (mem, ptr) =
+        if Ligo.lt_int_int diff int_zero then (
+          (* (diff < 0) *)
+          if Ligo.leq_int_int heavy_child_balance int_zero then
+            (* (hcb <= 0) *)
+            (* Left, Left *)
+            ref_rotate_right mem curr_ptr
+          else (
+            (* (hcb > 0) *)
+            (* Left, Right *)
+            assert (Ligo.gt_int_int heavy_child_balance int_zero);
+            let (mem, new_) = ref_rotate_left mem heavy_child_ptr in
+            let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+            ref_rotate_right mem curr_ptr
+          )
+        )
+        else (
+          (* (diff >= 0) *)
+          assert (Ligo.geq_int_int diff int_zero);
+          if Ligo.geq_int_int heavy_child_balance int_zero then
+            (* (hcb >= 0) *)
+            (* Right, Right *)
+            ref_rotate_left mem curr_ptr
+          else (
+            (* (hcb < 0) *)
+            (* Right, Left *)
+            assert (Ligo.lt_int_int heavy_child_balance int_zero);
+            let (mem, new_) = ref_rotate_right mem heavy_child_ptr in
+            let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
+            ref_rotate_left mem curr_ptr
+          )
+        )
+      in
       assert (branch.parent = node_parent (mem_get mem ptr));
       (mem, ptr)
     ) else (mem, curr_ptr)

@@ -85,7 +85,6 @@ let[@inline] internalError_RefRotateLeftRightPtrNotBranch               : Ligo.i
 let[@inline] internalError_RefRotateRightCurrentPtrNotBranch            : Ligo.int = Ligo.int_from_literal "210"
 let[@inline] internalError_RefRotateRightLeftPtrNotBranch               : Ligo.int = Ligo.int_from_literal "211"
 let[@inline] internalError_RebalanceHeavyChildNonBranchch               : Ligo.int = Ligo.int_from_literal "212"
-let[@inline] internalError_RebalancePartialityOfIfThenElse              : Ligo.int = Ligo.int_from_literal "1000" (* FIXME: turn into assertion and eliminate else-branch. *)
 let[@inline] internalError_BalanceBottomUpFoundLeaf                     : Ligo.int = Ligo.int_from_literal "213"
 let[@inline] internalError_RefDelParentIsLeaf                           : Ligo.int = Ligo.int_from_literal "214"
 let[@inline] internalError_AvlDeleteEmptyTreeNonEmptyTree               : Ligo.int = Ligo.int_from_literal "215"
