@@ -304,12 +304,6 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
   | Leaf _ -> (mem, curr_ptr)
   | Root _ -> (mem, curr_ptr)
 
-(* FIXME: remove this leftovers comment. *)
-(* (match mem_get mem ptr with
-   | Branch b -> assert (abs (b.left_height - b.right_height) <= 1); ()
-   | Root _ -> ()
-   | Leaf _ -> failwith "impossible"); *)
-
 type direction =
   | Left
   | Right
