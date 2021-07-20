@@ -1,4 +1,5 @@
 open Common
+open Error
 
 type ctez = Ligo.nat
 
@@ -9,7 +10,7 @@ let[@inline] ctez_add (x: ctez) (y: ctez) = Ligo.add_nat_nat x y
 let ctez_sub (x: ctez) (y: ctez) =
   match Ligo.is_nat (Ligo.sub_nat_nat x y) with
   | Some n -> n
-  | None -> (failwith "Ctez.ctez_sub: negative" : ctez)
+  | None -> (Ligo.failwith internalError_CtezSubNegative : ctez)
 
 let[@inline] ctez_zero = Ligo.nat_from_literal "0n"
 
@@ -20,13 +21,13 @@ let[@inline] ctez_to_muctez_nat (amnt: ctez) : Ligo.nat = amnt
 let ctez_of_fraction_ceil (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Ctez.ctez_of_fraction_ceil: negative" : ctez)
+  then (Ligo.failwith internalError_CtezOfFractionCeilNegative : ctez)
   else Ligo.abs (cdiv_int_int (Ligo.mul_int_int x_num ctez_scaling_factor_int) x_den)
 
 let ctez_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : ctez =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Ctez.ctez_of_fraction_floor: negative" : ctez)
+  then (Ligo.failwith internalError_CtezOfFractionFloorNegative : ctez)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num ctez_scaling_factor_int) x_den)
 
 let[@inline] eq_ctez_ctez = Ligo.eq_nat_nat

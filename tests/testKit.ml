@@ -3,6 +3,7 @@ open Ratio
 open FixedPoint
 open Kit
 open TestLib
+open Error
 
 let suite =
   "KitTests" >::: [
@@ -28,7 +29,7 @@ let suite =
          ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_000_000n"))
          ~real:(kit_sub (kit_of_mukit (Ligo.nat_from_literal "5_000_000n")) (kit_of_mukit (Ligo.nat_from_literal "3_000_000n")));
        assert_raises
-         (Failure "Kit.kit_sub: negative")
+         (Failure (Ligo.string_of_int internalError_KitSubNegative))
          (fun _ ->
             (kit_sub (kit_of_mukit (Ligo.nat_from_literal "1n")) (kit_of_mukit (Ligo.nat_from_literal "2n")));
          );

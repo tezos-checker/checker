@@ -55,6 +55,7 @@ open Mem
 open Ptr
 open LiquidationAuctionPrimitiveTypes
 open Common
+open Error
 
 let[@inline] ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 
@@ -62,7 +63,7 @@ let node_tez (n: node) : Ligo.tez =
   match n with
   | Leaf leaf -> leaf.value.contents.tez
   | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
-  | Root _ -> (failwith "node_tez found Root" : Ligo.tez)
+  | Root _ -> (Ligo.failwith internalError_NodeTezFoundRoot : Ligo.tez)
 
 let node_height (n: node) : Ligo.nat =
   match n with
@@ -71,29 +72,29 @@ let node_height (n: node) : Ligo.nat =
     let max = if Ligo.gt_nat_nat branch.left_height branch.right_height
       then branch.left_height else branch.right_height in
     Ligo.add_nat_nat max (Ligo.nat_from_literal "1n")
-  | Root _ -> (failwith "node_height found Root" : Ligo.nat)
+  | Root _ -> (Ligo.failwith internalError_NodeHeightFoundRoot : Ligo.nat)
 
 let[@inline] node_parent (n: node) : ptr =
   match n with
   | Leaf leaf -> leaf.parent
   | Branch branch -> branch.parent
-  | Root _ -> (failwith "node_parent found Root" : ptr)
+  | Root _ -> (Ligo.failwith internalError_NodeParentFoundRoot : ptr)
 
 let[@inline] node_branch (n: node) : branch =
   match n with
   | Branch branch -> branch
-  | _ -> (failwith "node_branch found unexpected node" : branch)
+  | _ -> (Ligo.failwith internalError_NodeBranchFoundNonBranch : branch)
 
 let[@inline] node_leaf (n: node) : leaf =
   match n with
   | Leaf leaf -> leaf
-  | _ -> (failwith "node_leaf found unexpected_node" : leaf)
+  | _ -> (Ligo.failwith internalError_NodeLeafFoundNonLeaf : leaf)
 
 let deref_avl_ptr (mem: mem) (p: avl_ptr): ptr option * auction_outcome option =
   let p = match p with AVLPtr p -> p in
   match mem_get mem p with
   | Root p -> p
-  | _ -> (failwith "deref_avl_ptr found unexpected_node" : ptr option * auction_outcome option)
+  | _ -> (Ligo.failwith internalError_DerefAvlPtrFoundNonRoot : ptr option * auction_outcome option)
 
 let[@inline] deref_leaf_ptr (mem: mem) (p: leaf_ptr): leaf =
   match p with LeafPtr p -> node_leaf (mem_get mem p)
@@ -108,7 +109,7 @@ let[@inline] node_set_parent (p: ptr) (n: node) : node =
   match n with
   | Leaf leaf -> Leaf { leaf with parent = p; }
   | Branch branch -> Branch { branch with parent = p; }
-  | Root _ -> (failwith "node_set_parent found Root" : node)
+  | Root _ -> (Ligo.failwith internalError_NodeSetParentFoundRoot : node)
 
 let update_matching_child
     (mem: mem) (ptr: ptr) (from_ptr: ptr) (to_ptr: ptr) : mem =
@@ -117,7 +118,7 @@ let update_matching_child
     assert (_b = Some from_ptr);
     mem_set mem ptr (Root ((Some to_ptr), r))
   | Leaf _ ->
-    (failwith "update_matching_child: got a leaf" : mem)
+    (Ligo.failwith internalError_UpdateMatchingChildFoundLeaf : mem)
   | Branch old_branch ->
     let to_ = mem_get mem to_ptr in
     let new_branch =
@@ -184,13 +185,13 @@ let ref_rotate_left (mem: mem) (curr_ptr: ptr) : mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
     | Branch curr -> curr
-    | _ -> (failwith "rotate_left: curr_ptr is not a branch" : branch) in
+    | _ -> (Ligo.failwith internalError_RefRotateLeftCurrentPtrNotBranch : branch) in
 
   let right_ptr = curr.right in
   let right =
     match mem_get mem right_ptr with
     | Branch right -> right
-    | _ -> (failwith "rotate_left: right_ptr is not a branch" : branch) in
+    | _ -> (Ligo.failwith internalError_RefRotateLeftRightPtrNotBranch : branch) in
 
   let right_left_ptr = right.left in
 
@@ -229,13 +230,13 @@ let ref_rotate_right (mem: mem) (curr_ptr: ptr) : mem * ptr =
   let curr =
     match mem_get mem curr_ptr with
     | Branch curr -> curr
-    | _ -> (failwith "rotate_right: curr_ptr is not a branch" : branch) in
+    | _ -> (Ligo.failwith internalError_RefRotateRightCurrentPtrNotBranch : branch) in
 
   let left_ptr = curr.left in
   let left =
     match mem_get mem left_ptr with
     | Branch left -> left
-    | _ -> (failwith "rotate_right: left_ptr is not a branch" : branch) in
+    | _ -> (Ligo.failwith internalError_RefRotateRightLeftPtrNotBranch : branch) in
 
   let left_right_ptr = left.right in
 
@@ -275,7 +276,7 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
         if Ligo.lt_int_int diff (Ligo.int_from_literal "0") then branch.left else branch.right in
       let heavy_child = match mem_get mem heavy_child_ptr with
         | Branch b -> b
-        | _ -> (failwith "invariant violation: heavy_child should be a branch" : branch) in
+        | _ -> (Ligo.failwith internalError_RebalanceHeavyChildNonBranchch : branch) in
       let heavy_child_balance =
         Ligo.sub_nat_nat heavy_child.right_height heavy_child.left_height in
 
@@ -296,13 +297,14 @@ let rebalance (mem: mem) (curr_ptr: ptr) : mem * ptr =
           let mem = update_matching_child mem curr_ptr heavy_child_ptr new_ in
           ref_rotate_left mem curr_ptr
         else
-          (failwith "invariant violation: balance predicates partial" : mem * ptr) in
+          (Ligo.failwith internalError_RebalancePartialityOfIfThenElse : mem * ptr) in (* FIXME: turn into assertion and eliminate else-branch. *)
       assert (branch.parent = node_parent (mem_get mem ptr));
       (mem, ptr)
     ) else (mem, curr_ptr)
   | Leaf _ -> (mem, curr_ptr)
   | Root _ -> (mem, curr_ptr)
 
+(* FIXME: remove this leftovers comment. *)
 (* (match mem_get mem ptr with
    | Branch b -> assert (abs (b.left_height - b.right_height) <= 1); ()
    | Root _ -> ()
@@ -452,7 +454,7 @@ let rec balance_bottom_up ((mem, curr_ptr): mem * ptr): mem * avl_ptr =
   let curr = mem_get mem curr_ptr in
   match curr with
   | Root _ -> (mem, AVLPtr curr_ptr)
-  | Leaf _ -> (failwith "impossible" : mem * avl_ptr)
+  | Leaf _ -> (Ligo.failwith internalError_BalanceBottomUpFoundLeaf : mem * avl_ptr)
   | Branch b ->
     (* TODO we can stop recursing up when node height does not change. *)
     let (mem, new_curr) = rebalance mem curr_ptr in
@@ -467,7 +469,7 @@ let ref_del (mem: mem) (ptr: ptr): mem * avl_ptr =
   let parent_ptr = node_parent self in
   let mem = mem_del mem ptr in
   match mem_get mem parent_ptr with
-  | Leaf _ -> (failwith "del: parent is a leaf" : mem * avl_ptr)
+  | Leaf _ -> (Ligo.failwith internalError_RefDelParentIsLeaf : mem * avl_ptr)
   (* when deleting the sole element, we return an empty tree *)
   | Root r ->
     let (_, m) = r in
@@ -530,7 +532,7 @@ let avl_delete_tree (mem: mem) (AVLPtr ptr): mem =
 let avl_delete_empty_tree (mem: mem) (ptr: avl_ptr): mem =
   let (r, _) = deref_avl_ptr mem ptr in
   match r with
-  | Some _ -> (failwith "tree not empty": mem)
+  | Some _ -> (Ligo.failwith internalError_AvlDeleteEmptyTreeNonEmptyTree : mem)
   | None -> mem_del mem (ptr_of_avl_ptr ptr)
 
 let avl_find_root (mem: mem) (leaf: leaf_ptr) : avl_ptr =
@@ -547,7 +549,7 @@ let rec ref_peek_front (mem, ptr: mem * ptr) : leaf_ptr * leaf =
   match self with
   | Leaf l -> (LeafPtr ptr, l)
   | Branch b -> ref_peek_front (mem, b.left)
-  | Root _ -> (failwith "node is not leaf or branch" : leaf_ptr * leaf)
+  | Root _ -> (Ligo.failwith internalError_RefPeekFrontFoundRoot : leaf_ptr * leaf)
 
 let avl_peek_front (mem: mem) (ptr: avl_ptr) : (leaf_ptr * leaf) option =
   let (p, _) = deref_avl_ptr mem ptr in
@@ -580,7 +582,7 @@ let ref_split_post_processing
   match rec_direction with
   | Left -> (
       match maybe_right with
-      | None -> (failwith "impossible" : mem * ptr option * ptr option)
+      | None -> (Ligo.failwith internalError_RefSplitPostProcessingInvariantFailed : mem * ptr option * ptr option)
       | Some right ->
         let (mem, joined) = ref_join mem (Right) right branch.right in
         (mem, maybe_left, Some joined)
@@ -612,7 +614,7 @@ let rec ref_split_rec
     (mem, curr_ptr, limit, stack: mem * ptr * Ligo.tez * ref_split_data list)
   : mem * ptr option * ptr option =
   match mem_get mem curr_ptr with
-  | Root _ -> (failwith "ref_split found Root" : mem * ptr option * ptr option)
+  | Root _ -> (Ligo.failwith internalError_RefSplitRecFoundRoot : mem * ptr option * ptr option)
   | Leaf leaf ->
     if Ligo.leq_tez_tez leaf.value.contents.tez limit
     then

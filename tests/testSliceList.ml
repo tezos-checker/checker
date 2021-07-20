@@ -3,6 +3,7 @@ open Kit
 open LiquidationAuctionTypes
 open SliceList
 open LiquidationAuctionPrimitiveTypes
+open Error
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let property_test_count = 100
@@ -139,7 +140,9 @@ let suite =
         let removed_ptr = match to_remove with SliceListElement (ptr, _) -> ptr in
         let auctions, _, _, _  = slice_list_remove burrow_slices auctions to_remove in
         (* Retrieving the slice from the AVL backend should now fail *)
-        assert_raises (Failure "mem_get: not found") (fun () -> Avl.avl_read_leaf auctions.avl_storage removed_ptr);
+        assert_raises
+          (Failure (Ligo.string_of_int internalError_MemGetElementNotFound))
+          (fun () -> Avl.avl_read_leaf auctions.avl_storage removed_ptr);
         true
       )
     );

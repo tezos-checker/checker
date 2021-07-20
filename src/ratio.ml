@@ -1,4 +1,5 @@
 open Common
+open Error
 
 (** A rational is represented as a pair numerator/denominator, reduced to have
   * a positive denominator. This form is canonical. *)
@@ -17,13 +18,13 @@ let[@inline] make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
 let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
-  | None -> (failwith "Ratio.fraction_to_tez_floor: negative" : Ligo.tez)
+  | None -> (Ligo.failwith internalError_FractionToTezFloorNegative : Ligo.tez)
   | Some n ->
     let n = Ligo.mul_nat_nat n (Ligo.nat_from_literal "1_000_000n") in
     let d = Ligo.abs x_den in
     (match Ligo.ediv_nat_nat n d with
      (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (failwith "Ratio.fraction_to_tez_floor: zero denominator" : Ligo.tez)
+     | None -> (Ligo.failwith internalError_FractionToTezFloorZeroDenominator : Ligo.tez)
                [@coverage off]
      | Some quot_and_rem ->
        let (quot, _) = quot_and_rem in
@@ -33,11 +34,11 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
 let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
-  | None -> (failwith "Ratio.fraction_to_nat_floor: negative" : Ligo.nat)
+  | None -> (Ligo.failwith internalError_FractionToNatFloorNegative : Ligo.nat)
   | Some n ->
     (match Ligo.ediv_nat_nat n (Ligo.abs x_den) with
      (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (failwith "Ratio.fraction_to_nat_floor: zero denominator" : Ligo.nat)
+     | None -> (Ligo.failwith internalError_FractionToNatFloorZeroDenominator : Ligo.nat)
                [@coverage off]
      | Some quot_and_rem ->
        let (quot, _) = quot_and_rem in

@@ -1,5 +1,6 @@
 open Ptr
 open LiquidationAuctionPrimitiveTypes
+open Error
 
 (*
  * BigMap
@@ -52,7 +53,7 @@ let[@inline] mem_get (m: mem) (k: ptr) : node =
   (* BEGIN_OCAML *) ops := { !ops with reads = !ops.reads + 1; }; (* END_OCAML *)
   match Ligo.Big_map.find_opt k m.mem with
   | Some v -> v
-  | None -> (failwith "mem_get: not found": node)
+  | None -> (Ligo.failwith internalError_MemGetElementNotFound : node)
 
 let[@inline] mem_get_opt (m: mem) (k: ptr) : node option =
   (* BEGIN_OCAML *) ops := { !ops with reads = !ops.reads + 1; }; (* END_OCAML *)

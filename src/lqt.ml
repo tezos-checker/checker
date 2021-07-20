@@ -1,4 +1,5 @@
 open Common
+open Error
 
 type lqt = Ligo.nat
 
@@ -11,7 +12,7 @@ let[@inline] lqt_add (x: lqt) (y: lqt) = Ligo.add_nat_nat x y
 let lqt_sub (x: lqt) (y: lqt) =
   match Ligo.is_nat (Ligo.sub_nat_nat x y) with
   | Some n -> n
-  | None -> (failwith "Lqt.lqt_sub: negative" : lqt)
+  | None -> (Ligo.failwith internalError_LqtSubNegative : lqt)
 
 let[@inline] lqt_zero = Ligo.nat_from_literal "0n"
 let[@inline] lqt_one = lqt_scaling_factor_nat
@@ -24,13 +25,13 @@ let[@inline] lqt_to_denomination_nat (amnt: lqt) : Ligo.nat = amnt
 let lqt_of_fraction_ceil (x_num: Ligo.int) (x_den: Ligo.int) : lqt =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Lqt.lqt_of_fraction_ceil: negative" : lqt)
+  then (Ligo.failwith internalError_LqtOfFractionCeilNegative : lqt)
   else Ligo.abs (cdiv_int_int (Ligo.mul_int_int x_num lqt_scaling_factor_int) x_den)
 
 let lqt_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : lqt =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Lqt.lqt_of_fraction_floor: negative" : lqt)
+  then (Ligo.failwith internalError_LqtOfFractionFloorNegative : lqt)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num lqt_scaling_factor_int) x_den)
 
 let[@inline] geq_lqt_lqt = Ligo.geq_nat_nat

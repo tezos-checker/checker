@@ -130,7 +130,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
     LigoOp.Tezos.create_contract
       (fun (p, storage : burrow_parameter * burrow_storage) ->
          if !Ligo.Tezos.sender <> storage.checker_address then
-           (failwith "B1" : LigoOp.operation list * burrow_storage)
+           (Ligo.failwith (Ligo.int_from_literal "-1") : LigoOp.operation list * burrow_storage)
          else
            match p with
            | BurrowSetDelegate kho ->
@@ -141,12 +141,12 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
              let (tez, addr) = p in
              let op = match (LigoOp.Tezos.get_contract_opt addr : unit Ligo.contract option) with
                | Some c -> LigoOp.Tezos.unit_transaction () tez c
-               | None -> (failwith "B2" : LigoOp.operation) in
+               | None -> (Ligo.failwith (Ligo.int_from_literal "-2") : LigoOp.operation) in
              ([op], storage)
            | BurrowSendSliceToChecker tz ->
              let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_slice_from_burrow" !Ligo.Tezos.sender : burrow_id Ligo.contract option) with
                | Some c -> LigoOp.Tezos.address_nat_transaction storage.burrow_id tz c
-               | None -> (failwith "B3" : LigoOp.operation) in
+               | None -> (Ligo.failwith (Ligo.int_from_literal "-3") : LigoOp.operation) in
              ([op], storage)
       )
       delegate_opt
