@@ -292,9 +292,6 @@ def auction_avl_leaves(
 #             with open(WRITE_GAS_COSTS, "w") as f:
 #                 json.dump(gas_costs_sorted, f, indent=4)
 
-# TODO: Need a way to accurately compute n for profiling gas costs
-
-# call_bulk( [...] , profiler=request_liqidation_profiler)
 
 Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
 
@@ -328,7 +325,6 @@ def mark_for_liquidation_profiler(
             )
         )
     )
-    n = 0
     ret = inject(
         client,
         client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
@@ -429,6 +425,8 @@ class LiquidationsStressTest(SandboxedTestCase):
                 profile = profiler(self.client, checker, batch)
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
+        # Note: the amount of kit minted here and the kit in all other burrows for this account
+        # must be enough to bid on the liquidation auction later in the test.
         call_bulk(
             [
                 checker.create_burrow((0, None)).with_amount(200_000_000),
@@ -474,7 +472,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         #
         # Keep in mind that we're using a patched checker on tests where the protected index
         # is much faster to update.
-        call_endpoint(oracle, "update", 100_000_000)
+        call_endpoint(oracle, "update", 10_000_000)
 
         # Oracle updates lag one touch on checker
         call_endpoint(checker, "touch", None)
@@ -513,44 +511,56 @@ class LiquidationsStressTest(SandboxedTestCase):
         assert (
             queued_tez > 10_000_000_000
         ), "queued tez in liquidation auction was not greater than Constants.max_lot_size which is required for this test"
-
+        print(f"Auction queue currently has {queued_tez} mutez")
         call_endpoint(checker, "touch", None)
 
         # Now that there is an auction started in a descending state, we can select a queued slice
         # and be confident that we can cancel it before it gets added to another auction.
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
-        cancel_ops = []
-        for i, (queued_leaf_ptr, leaf) in enumerate(
-            auction_avl_leaves(
-                checker,
-                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                    "queued_slices"
-                ](),
-            )
-        ):
-            cancel_ops.append(
-                (
-                    checker.deposit_tez(
-                        leaf["leaf"]["value"]["contents"]["burrow"][1]
-                    ).with_amount(10_000_000_000),
-                    checker.cancel_liquidation_slice(queued_leaf_ptr),
-                )
-            )
-            if len(cancel_ops) >= 50:
-                break
-        # Shuffle so we aren't only cancelling the oldest slice
-        shuffle(cancel_ops)
-        flattened_cancel_ops = []
-        for op1, op2 in cancel_ops:
-            flattened_cancel_ops += [op1, op2]
+        # cancel_ops = []
+        # for i, (queued_leaf_ptr, leaf) in enumerate(
+        #     auction_avl_leaves(
+        #         checker,
+        #         checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+        #             "queued_slices"
+        #         ](),
+        #     )
+        # ):
+        #     cancel_ops.append(
+        #         (
+        #             checker.deposit_tez(
+        #                 leaf["leaf"]["value"]["contents"]["burrow"][1]
+        #             ).with_amount(10_000_000_000),
+        #             checker.cancel_liquidation_slice(queued_leaf_ptr),
+        #         )
+        #     )
+        #     if len(cancel_ops) >= 10:
+        #         break
+        # # Shuffle so we aren't only cancelling the oldest slice
+        # shuffle(cancel_ops)
+        # flattened_cancel_ops = []
+        # for op1, op2 in cancel_ops:
+        #     flattened_cancel_ops += [op1, op2]
 
-        call_bulk(
-            flattened_cancel_ops,
-            batch_size=10,
-        )
+        # call_bulk(
+        #     flattened_cancel_ops,
+        #     batch_size=10,
+        # )
+
+        # # # Change the index (kits are 0.5x valuable)
+        # call_endpoint(oracle, "update", 500_000)
+        # call_endpoint(checker, "touch", None)
+        # call_endpoint(checker, "touch", None)
+        # time.sleep(20)
+        # call_endpoint(checker, "touch", None)
 
         # And we place a bid:
+        # call_endpoint(checker, "touch", None)
+        print("Sleeping to let auction decay. zzzz")
+        print(checker.storage())
+        time.sleep(1)
+        print(checker.storage())
 
         ret = checker.metadata.currentLiquidationAuctionMinimumBid().storage_view()
         auction_id, minimum_bid = ret["contents"], ret["nat_1"]
@@ -558,6 +568,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.
 
+        # FIXME: Getting insufficient balance errors here
         # Note the auction ptr for later operations
         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
             "liquidation_auctions"
@@ -579,11 +590,11 @@ class LiquidationsStressTest(SandboxedTestCase):
             ]()
             is not None
         )
-        # Extra calls for profiling purposes
-        call_bulk(
-            [checker.touch(None) for _ in range(5)],
-            batch_size=2,
-        )
+        # # Extra calls for profiling purposes
+        # call_bulk(
+        #     [checker.touch(None) for _ in range(5)],
+        #     batch_size=2,
+        # )
 
         # Before we can claim our winning bid, all of the slices in the completed auction must be touched
         auctioned_slices = []
