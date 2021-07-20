@@ -950,7 +950,7 @@ let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
   else if token_id = lqt_token_id then
     lqt_to_denomination_nat (lqt_sub state.cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")))
   else
-    failwith error_FA2_TOKEN_UNDEFINED
+    failwith "FA2_TOKEN_UNDEFINED"
 
 let view_all_tokens ((), _state: unit * checker) : fa2_token_id list =
   assert_checker_invariants _state;

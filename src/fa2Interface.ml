@@ -13,15 +13,6 @@ Currently we only implement the absolute requirements of the interface. We also:
   * TODO should consider implementing permission policies
 *)
 
-(* These messages are specified by TZIP-12 so they should not be replaced by
- * error codes. Since they are a few bytes long though and appear multiple
- * times in the codebase we should not duplicate them; that's why the following
- * definitions are not accompanied by inline pragmas. *)
-let error_FA2_TOKEN_UNDEFINED : string = "FA2_TOKEN_UNDEFINED"
-let error_FA2_INSUFFICIENT_BALANCE : string = "FA2_INSUFFICIENT_BALANCE"
-let error_FA2_NOT_OWNER : string = "FA2_NOT_OWNER"
-let error_FA2_NOT_OPERATOR : string = "FA2_NOT_OPERATOR"
-
 [@@@coverage off]
 
 type fa2_token_id = Ligo.nat
@@ -156,7 +147,7 @@ let[@inline] lqt_token_id = Ligo.nat_from_literal "1n"
 let ensure_valid_fa2_token (n: fa2_token_id): unit =
   if n = kit_token_id || n = lqt_token_id
   then ()
-  else failwith error_FA2_TOKEN_UNDEFINED
+  else failwith "FA2_TOKEN_UNDEFINED"
 
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
@@ -205,7 +196,7 @@ let ledger_withdraw
   let prev_balance = get_fa2_ledger_value ledger key in
   let new_balance =
     match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amnt) with
-    | None -> (failwith error_FA2_INSUFFICIENT_BALANCE : fa2_token_id)
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
     | Some b -> b in
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
@@ -220,7 +211,7 @@ let[@inline] ledger_issue_then_withdraw
   (* WITHDRAW *)
   let balance_ =
     match Ligo.is_nat (Ligo.sub_nat_nat balance_ amnt_to_withdraw) with
-    | None -> (failwith error_FA2_INSUFFICIENT_BALANCE : fa2_token_id)
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
     | Some b -> b in
   (* UPDATE STATE *)
   let ledger = set_fa2_ledger_value ledger key balance_ in
@@ -274,7 +265,7 @@ let[@inline] fa2_run_update_operators
          (* The standard does not specify who is permitted to update operators. We restrict
             it only to the owner. *)
          if owner <> !Ligo.Tezos.sender
-         then (failwith error_FA2_NOT_OWNER : fa2_state)
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
          else
            { st  with
              operators =
@@ -289,7 +280,7 @@ let[@inline] fa2_run_update_operators
                token_id = token_id;
              } = op in
          if owner <> !Ligo.Tezos.sender
-         then (failwith error_FA2_NOT_OWNER : fa2_state)
+         then (failwith "FA2_NOT_OWNER" : fa2_state)
          else
            { st  with
              operators =
@@ -317,7 +308,7 @@ let[@inline] fa2_run_transfer
               let st = ledger_issue (st, token_id, to_, amnt) in
               st
             else
-              (failwith error_FA2_NOT_OPERATOR : fa2_state)
+              (failwith "FA2_NOT_OPERATOR" : fa2_state)
          )
          st
          txs
