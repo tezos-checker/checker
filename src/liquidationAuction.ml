@@ -302,8 +302,8 @@ let start_liquidation_auction_if_possible
       let start_value =
         let { num = num_sp; den = den_sp; } = start_price in
         kit_of_fraction_ceil
-          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
-          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
+          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) den_sp)
+          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") num_sp)
       in
       let current_auction =
         Some
