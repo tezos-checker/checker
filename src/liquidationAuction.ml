@@ -222,15 +222,15 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     match contents_min_kit_for_unwarranted with
     | None -> ((None: kit option), (None: kit option))
     | Some contents_min_kit_for_unwarranted ->
-      let min_kit_for_unwarranted = kit_to_mukit_int contents_min_kit_for_unwarranted in
+      let min_kit_for_unwarranted = kit_to_mukit_nat contents_min_kit_for_unwarranted in
       let lkit =
         kit_of_fraction_ceil
-          (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez ltez))
+          (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez ltez))
           (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       in
       let rkit =
         kit_of_fraction_ceil
-          (Ligo.mul_int_int min_kit_for_unwarranted (tez_to_mutez rtez))
+          (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez rtez))
           (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
       in
       (Some lkit, Some rkit) in
@@ -302,8 +302,8 @@ let start_liquidation_auction_if_possible
       let start_value =
         let { num = num_sp; den = den_sp; } = start_price in
         kit_of_fraction_ceil
-          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) num_sp)
-          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_sp)
+          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) den_sp)
+          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") num_sp)
       in
       let current_auction =
         Some

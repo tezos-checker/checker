@@ -47,13 +47,13 @@ let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.prote
 (** Current minting price (in tez/kit). *)
 let minting_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_minting p)))
+    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_minting p))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Current liquidation price (in tez/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (Ligo.int (tz_liquidation p)))
+    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_liquidation p))
     (Ligo.mul_int_int (fixedpoint_to_raw fixedpoint_one) (Ligo.int_from_literal "1_000_000"))
 
 (** Given the amount of kit necessary to close all existing burrows
@@ -82,29 +82,29 @@ let liquidation_price (p: parameters) : ratio =
         saturate the imbalance to -imbalance_limit.
 *)
 let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
-  let outstanding = kit_to_mukit_int outstanding in
-  let circulating = kit_to_mukit_int circulating in
+  let outstanding = kit_to_mukit_nat outstanding in
+  let circulating = kit_to_mukit_nat circulating in
   let { num = num_il; den = den_il; } = imbalance_limit in
 
-  if (Ligo.eq_int_int circulating (Ligo.int_from_literal "0"))
-  && (Ligo.eq_int_int outstanding (Ligo.int_from_literal "0")) then
+  if (Ligo.eq_nat_nat circulating (Ligo.nat_from_literal "0n"))
+  && (Ligo.eq_nat_nat outstanding (Ligo.nat_from_literal "0n")) then
     zero_ratio
-  else if (Ligo.eq_int_int circulating (Ligo.int_from_literal "0"))
-       && (Ligo.ne_int_int outstanding (Ligo.int_from_literal "0")) then
+  else if (Ligo.eq_nat_nat circulating (Ligo.nat_from_literal "0n"))
+       && (Ligo.ne_nat_nat outstanding (Ligo.nat_from_literal "0n")) then
     make_ratio (neg_int num_il) den_il
   else
     let { num = num_isf; den = den_isf; } = imbalance_scaling_factor in
-    let denominator = Ligo.mul_int_int den_isf circulating in
+    let denominator = Ligo.mul_int_nat den_isf circulating in
 
-    if Ligo.geq_int_int circulating outstanding then
+    if Ligo.geq_nat_nat circulating outstanding then
       make_ratio
-        (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int circulating outstanding)) den_il) (Ligo.mul_int_int num_il denominator))
+        (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_nat_nat circulating outstanding)) den_il) (Ligo.mul_int_int num_il denominator))
         (Ligo.mul_int_int den_il denominator)
     else (* circulating < outstanding *)
       begin
-        assert (Ligo.lt_int_int circulating outstanding);
+        assert (Ligo.lt_nat_nat circulating outstanding);
         make_ratio
-          (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_int_int outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
+          (neg_int (min_int (Ligo.mul_int_int (Ligo.mul_int_int num_isf (Ligo.sub_nat_nat outstanding circulating)) den_il) (Ligo.mul_int_int num_il denominator)))
           (Ligo.mul_int_int den_il denominator)
       end
 
@@ -224,21 +224,20 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
 *)
 let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
   assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
-  let last_protected_index = Ligo.int last_protected_index in
   fraction_to_nat_floor
     (clamp_int
-       (Ligo.mul_int_int
-          (Ligo.int current_index)
+       (Ligo.mul_nat_int
+          current_index
           protected_index_inverse_epsilon
        )
-       (Ligo.mul_int_int
+       (Ligo.mul_nat_int
           last_protected_index
           (Ligo.sub_int_int
              protected_index_inverse_epsilon
              duration_in_seconds
           )
        )
-       (Ligo.mul_int_int
+       (Ligo.mul_nat_int
           last_protected_index
           (Ligo.add_int_int
              protected_index_inverse_epsilon
@@ -381,7 +380,7 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
 *)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
   kit_of_fraction_floor
-    (Ligo.mul_int_int (kit_to_mukit_int last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
+    (Ligo.mul_nat_int (kit_to_mukit_nat last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
 
 (** Compute current outstanding kit, given that the burrow fees have already
@@ -394,7 +393,7 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
 *)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
   kit_of_fraction_floor
-    (Ligo.mul_int_int (kit_to_mukit_int current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
+    (Ligo.mul_nat_int (kit_to_mukit_nat current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
 
 (** Update the checker's parameters, given (a) the current timestamp

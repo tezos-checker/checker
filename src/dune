@@ -16,6 +16,7 @@
 
 (library
  (name checker)
+ (public_name checker) ;; This must be present for `dune build @install` to work, and in turn it requires the presence of checker.opam.
  (libraries str zarith)
  (wrapped false)
  (instrumentation
