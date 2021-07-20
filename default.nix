@@ -4,7 +4,7 @@ let
   sources = import ./nix/sources.nix { };
 
   overlay = se: su: {
-    poetry2nix = se.callPackage sources.poetry2nix {};
+    poetry2nix = se.callPackage sources.poetry2nix { };
   };
 
   pkgsHost = import sources.nixpkgs { overlays = [ overlay ]; };
