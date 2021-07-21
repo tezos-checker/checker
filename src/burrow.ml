@@ -535,7 +535,12 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
       let b_without_reward = { b with collateral = Ligo.sub_tez_tez (Ligo.sub_tez_tez b.collateral partial_reward) creation_deposit } in
       let tez_to_auction = compute_tez_to_auction p b_without_reward in
 
-      if (Ligo.lt_int_int tez_to_auction (Ligo.int_from_literal "0")) || (Ligo.gt_int_int tez_to_auction (tez_to_mutez b_without_reward.collateral)) then
+      (* FIXME: The property checked by the following assertion is quite
+       * intricate to prove. We probably should include the proof somewhere
+       * in the codebase. *)
+      assert (Ligo.gt_int_int tez_to_auction (Ligo.int_from_literal "0"));
+
+      if Ligo.gt_int_int tez_to_auction (tez_to_mutez b_without_reward.collateral) then
         (* Case 2b.1: With the current price it's impossible to make the burrow
          * not undercollateralized; pay the liquidation reward, stash away the
          * creation deposit, and liquidate all the remaining collateral, even if
