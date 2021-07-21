@@ -89,16 +89,32 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
               let metadata = Ligo.Big_map.add "" metadata_url metadata in
 
               ([touchOp], lazy_functions, metadata, Sealed checker)
-            | CheckerEntrypoint _ -> (Ligo.failwith error_ContractNotDeployed: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+            | CheckerEntrypoint _ ->
+              (* Note: disabling coverage for the unreported but accessed right-hand side;
+               * accessibility is sufficiently marked on the pattern itself. *)
+              ((Ligo.failwith error_ContractNotDeployed [@coverage off]): LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
           end
-        | false -> (Ligo.failwith error_UnauthorisedCaller: LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
+        | false ->
+          (* Note: disabling coverage for the unreported but accessed right-hand side;
+           * accessibility is sufficiently marked on the pattern itself. *)
+          ((Ligo.failwith error_UnauthorisedCaller [@coverage off]): LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
       end
     | Sealed checker ->
       let ops, checker =
         match op with
-        | DeployFunction _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-        | SealContract _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
-        | DeployMetadata _ -> (Ligo.failwith error_ContractAlreadyDeployed: LigoOp.operation list * checker)
+        | DeployFunction _ ->
+          (* Note: disabling coverage for the unreported but accessed right-hand side;
+           * accessibility is sufficiently marked on the pattern itself. *)
+          ((Ligo.failwith error_ContractAlreadyDeployed [@coverage off]): LigoOp.operation list * checker)
+        | SealContract _ ->
+          (* Note: disabling coverage for the unreported but accessed right-hand side;
+           * accessibility is sufficiently marked on the pattern itself. *)
+          ((Ligo.failwith error_ContractAlreadyDeployed [@coverage off]): LigoOp.operation list * checker)
+        | DeployMetadata _ ->
+          (* Note: disabling coverage for the unreported but accessed right-hand side;
+           * accessibility is sufficiently marked on the pattern itself. *)
+          ((Ligo.failwith error_ContractAlreadyDeployed [@coverage off]): LigoOp.operation list * checker)
+          [@coverage off]
         | CheckerEntrypoint op -> begin
             match op with
             | StrictParams op -> begin
