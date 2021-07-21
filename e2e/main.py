@@ -342,6 +342,42 @@ def mark_for_liquidation_profiler(
     return profile
 
 
+def cancel_liquidation_slice_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "cancel_liquidation_slice": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        # Ignore other operations (e.g. deposit_tez)
+        if op["parameters"]["entrypoint"] != "cancel_liquidation_slice":
+            continue
+        profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
+        profile["cancel_liquidation_slice"]["queue_size"].append(n)
+        # Assuming that each request_liquidation cancel_liquidation_slice removes a single slice from
+        # the queue to avoid having to re-query the storage each time (which can take a long time).
+        n -= 1
+    return profile
+
+
 def merge_gas_profiles(profile1: Dict, profile2: Dict):
     merged = deepcopy(profile1)
     for name, data2 in profile2.items():
@@ -464,7 +500,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             batch_size=100,
         )
 
-        # Change the index (kits are 100x valuable)
+        # Change the index (kits are 10x valuable)
         #
         # Keep in mind that we're using a patched checker on tests where the protected index
         # is much faster to update.
@@ -527,11 +563,11 @@ class LiquidationsStressTest(SandboxedTestCase):
                 (
                     checker.deposit_tez(
                         leaf["leaf"]["value"]["contents"]["burrow"][1]
-                    ).with_amount(10_000_000_000),
+                    ).with_amount(1_000_000_000),
                     checker.cancel_liquidation_slice(queued_leaf_ptr),
                 )
             )
-            if len(cancel_ops) >= 10:
+            if len(cancel_ops) >= 850:
                 break
         # Shuffle so we aren't only cancelling the oldest slice
         shuffle(cancel_ops)
@@ -540,7 +576,8 @@ class LiquidationsStressTest(SandboxedTestCase):
             flattened_cancel_ops += [op1, op2]
         call_bulk(
             flattened_cancel_ops,
-            batch_size=10,
+            batch_size=40,
+            profiler=cancel_liquidation_slice_profiler,
         )
 
         # And we place a bid for the auction we started earlier:

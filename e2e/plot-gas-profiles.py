@@ -5,8 +5,7 @@ import click
 
 from matplotlib import pyplot as plt
 
-# TODO: Add cancel_liquidation_slice
-METHODS_TO_PLOT = ["mark_for_liquidation"]
+METHODS_TO_PLOT = ["mark_for_liquidation", "cancel_liquidation_slice"]
 
 
 @click.command()
@@ -27,7 +26,7 @@ def plot(input: str, output: str):
     mark_for_liquidation, cancel_liquidation_slice.
     """
     with open(input) as f:
-        gas = json.load(f)
+        gas_profiles = json.load(f)
 
     fig, axs = plt.subplots(len(METHODS_TO_PLOT), 1)
     # In cases where there is only one plot:
@@ -35,13 +34,14 @@ def plot(input: str, output: str):
         axs = [axs]
 
     for i, method in enumerate(METHODS_TO_PLOT):
-        queue_size = list(map(int, gas[method]["queue_size"]))
-        gas = list(map(int, gas[method]["gas"]))
+        queue_size = list(map(int, gas_profiles[method]["queue_size"]))
+        gas = list(map(int, gas_profiles[method]["gas"]))
         axs[i].scatter(queue_size, gas)
         axs[i].set_title(method)
         axs[i].set_xlabel("queue_size")
         axs[i].set_ylabel("gas_cost")
 
+    fig.tight_layout()
     fig.savefig(output)
 
 
