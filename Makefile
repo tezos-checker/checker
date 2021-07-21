@@ -4,7 +4,7 @@ build: build-ocaml build-ligo
 
 src/checkerEntrypoints.ml: src/checker.mli scripts/generate-entrypoints
 	ruby scripts/generate-entrypoints src/checker.mli > $@
-	ocp-indent -i $@
+	ocamlformat --inplace --ocp-indent-compat $@
 
 ocaml-src: src/checkerEntrypoints.ml
 
@@ -35,6 +35,8 @@ clean:
 	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build
 
 indent:
+	# dune build --ocp-indent-compat @fmt
+	# dune promote
 	bash ./scripts/format.sh
 
 spec:

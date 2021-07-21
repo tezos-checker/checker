@@ -5,8 +5,8 @@ set -o errexit
 
 FD="fd -E vendor/"
 
-$FD -e '.ml' -x ocp-indent --inplace
-$FD -e '.mli' -x ocp-indent --inplace
+$FD -e '.ml' -x ocamlformat --inplace --ocp-indent-compat
+$FD -e '.mli' -x ocamlformat --inplace --ocp-indent-compat
 $FD -e '.nix' -x nixpkgs-fmt
 $FD -e '.py' -x black
 
