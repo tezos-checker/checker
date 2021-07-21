@@ -16,7 +16,14 @@ let
       });
       matplotlib = super.matplotlib.overridePythonAttrs (
       old: {
-        propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ self.certifi ];
+        propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ self.certifi];
+        postPatch = ''
+              cat > setup.cfg <<EOF
+              [libs]
+              system_freetype = True
+              system_qhull = False
+              EOF
+            '';
       });
       # TODO: Upstream these overrides where possible.
     });
