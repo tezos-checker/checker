@@ -1,10 +1,8 @@
 open LiquidationAuctionTypes
+
 [@@@coverage off]
 
-type burrow_storage =
-  { checker_address: Ligo.address;
-    burrow_id: burrow_id
-  }
+type burrow_storage = { checker_address : Ligo.address; burrow_id : burrow_id }
 [@@deriving show]
 
 type burrow_parameter =

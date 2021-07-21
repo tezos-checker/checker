@@ -1,4 +1,5 @@
 [@@@coverage exclude_file]
+
 (* This file mimics the various Ligo libraries, and will not be
    included in the Ligo output.
 
@@ -12,71 +13,74 @@
    the underlying storage, and the collisions are handled by storing a list.
    Please do refactor if you find a nice solution.
 *)
-module IntMap = Map.Make(Int)
+module IntMap = Map.Make (Int)
 
 type ('key, 'value) big_map = ('key * 'value) list IntMap.t
 
 module Big_map = struct
   let empty = IntMap.empty
 
-  let find_opt (k: 'key) (m: ('key, 'value) big_map) : 'value option =
+  let find_opt (k : 'key) (m : ('key, 'value) big_map) : 'value option =
     let hash = Hashtbl.seeded_hash 42 k in
-    Option.bind
-      (IntMap.find_opt hash m)
+    Option.bind (IntMap.find_opt hash m)
       (List.find_map (fun (k', v') -> if k' = k then Some v' else None))
 
-  let update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+  let update (k : 'key) (v : 'value option) (m : ('key, 'value) big_map)
+      : ('key, 'value) big_map
+    =
     let hash = Hashtbl.seeded_hash 42 k in
-    IntMap.update
-      hash
-      (fun slot -> match slot with
-         | None -> Option.map (fun v -> [(k, v)]) v
-         | Some slot ->
-           let rec go xs =
-             match xs with
-             | [] -> (match v with | Some v -> [(k, v)] | None -> [])
-             | ((k', v')::rest) ->
-               if k' = k
-               then match v with
-                 | Some v -> (k, v) :: rest
-                 | None -> rest
-               else (k', v') :: go rest in
-           match go slot with
-           | [] -> None
-           | xs -> Some xs
-      )
+    IntMap.update hash
+      (fun slot ->
+        match slot with
+        | None -> Option.map (fun v -> [ (k, v) ]) v
+        | Some slot -> (
+            let rec go xs =
+              match xs with
+              | [] -> ( match v with Some v -> [ (k, v) ] | None -> [] )
+              | (k', v') :: rest ->
+                  if k' = k then
+                    match v with Some v -> (k, v) :: rest | None -> rest
+                  else (k', v') :: go rest
+            in
+            match go slot with [] -> None | xs -> Some xs ))
       m
 
-  let get_and_update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map): 'value option * ('key, 'value) big_map =
+  let get_and_update (k : 'key) (v : 'value option) (m : ('key, 'value) big_map)
+      : 'value option * ('key, 'value) big_map
+    =
     let prev = find_opt k m in
     let m_ = update k v m in
     (prev, m_)
 
-  let add (k: 'key) (v: 'value) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+  let add (k : 'key) (v : 'value) (m : ('key, 'value) big_map)
+      : ('key, 'value) big_map
+    =
     update k (Some v) m
 
-  let remove (k: 'key) (m: ('key, 'value) big_map) : ('key, 'value) big_map =
+  let remove (k : 'key) (m : ('key, 'value) big_map) : ('key, 'value) big_map =
     update k None m
 
-  let bindings i =
-    IntMap.bindings i |> List.concat_map snd
+  let bindings i = IntMap.bindings i |> List.concat_map snd
 
-  let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
+  let mem (k : 'key) (m : ('key, 'value) big_map) =
+    Option.is_some (find_opt k m)
 end
 
 type ('k, 'v) map = ('k, 'v) big_map
+
 module Map = Big_map
 
 (* LIST *)
 
 module List = struct
   let length xs = Z.of_int (List.length xs)
+
   let fold_left f acc xs = List.fold_left (fun a b -> f (a, b)) acc xs
 end
 
 (* UTILITY FUNCTIONS *)
 
-let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
+let parse_int_with_suffix (expected_suffix : string) (s : string) : Z.t =
   let total_len = String.length s in
   let suffix_len = String.length expected_suffix in
   let prefix_len = total_len - suffix_len in
@@ -85,35 +89,44 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
 
   let suffix = String.sub s prefix_len suffix_len in
 
-  let prefix = prefix
-               |> String.to_seq
-               |> Stdlib.Seq.filter (fun c -> c <> '_')
-               |> String.of_seq in
+  let prefix =
+    prefix |> String.to_seq
+    |> Stdlib.Seq.filter (fun c -> c <> '_')
+    |> String.of_seq
+  in
   try
     if not (String.equal suffix expected_suffix) then
-      raise (Invalid_argument ("Expected suffix: " ^ expected_suffix ^ ", real suffix: " ^ suffix))
-    else
-      Z.of_string prefix
-  with exc -> raise (Invalid_argument ("parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix ^ ", input = " ^ s ^ ") " ^ Printexc.to_string exc))
+      raise
+        (Invalid_argument
+           ("Expected suffix: " ^ expected_suffix ^ ", real suffix: " ^ suffix))
+    else Z.of_string prefix
+  with exc ->
+    raise
+      (Invalid_argument
+         ( "parse_int_with_suffix: bad inputs (suffix = " ^ expected_suffix
+         ^ ", input = " ^ s ^ ") " ^ Printexc.to_string exc ))
 
 (* key_hash *)
 
 type key_hash = string
+
 let pp_key_hash = Format.pp_print_string
+
 let key_hash_from_literal s = s
 
 (* bytes *)
 
 type bytes = string
+
 module Bytes = struct
-  let concat (prev: bytes) (next: bytes) = prev ^ next
-  let pack (_: 'a) = ""
+  let concat (prev : bytes) (next : bytes) = prev ^ next
+
+  let pack (_ : 'a) = ""
 end
 
 let bytes_from_literal s =
   let prefix = String.sub s 0 2 in
-  if prefix = "0x"
-  then s
+  if prefix = "0x" then s
   else failwith ("Ligo.bytes_from_literal: invalid bytes literal: " ^ s)
 
 (* address *)
@@ -121,7 +134,9 @@ let bytes_from_literal s =
 type address = string
 
 let string_of_address s = s
+
 let address_of_string s = s
+
 let pp_address = Format.pp_print_string
 
 let address_from_literal s = s
@@ -131,8 +146,12 @@ type 'parameter contract = Contract of address
 
 (* BEGIN_OCAML *)
 let contract_of_address addr = Contract addr
+
 let show_contract (Contract address) = "Contract " ^ string_of_address address
-let pp_contract fmt contract = Format.pp_print_string fmt (show_contract contract)
+
+let pp_contract fmt contract =
+  Format.pp_print_string fmt (show_contract contract)
+
 (* END_OCAML *)
 
 (* int *)
@@ -143,7 +162,7 @@ let int_from_literal s =
   try parse_int_with_suffix "" s
   with exc -> failwith ("Ligo.int_from_literal: " ^ Printexc.to_string exc)
 
-let nat_from_int64 (t: Int64.t) =
+let nat_from_int64 (t : Int64.t) =
   let r = Z.of_int64 t in
   assert (Z.geq r Z.zero);
   r
@@ -168,9 +187,7 @@ let div_int_int = Z.div
 
 let mod_int_int = Z.rem
 
-let ediv_int_int n d =
-  try Some (Z.ediv_rem n d)
-  with Division_by_zero -> None
+let ediv_int_int n d = try Some (Z.ediv_rem n d) with Division_by_zero -> None
 
 let of_string_base_int = Z.of_string_base
 
@@ -179,6 +196,7 @@ let of_string_base_int = Z.of_string_base
 type nat = Z.t
 
 let string_of_nat = Z.to_string
+
 let pp_nat fmt z = Format.pp_print_string fmt (string_of_nat z)
 
 let add_nat_nat = Z.add
@@ -214,15 +232,10 @@ let is_nat x = if Z.lt x Z.zero then None else Some x
 let nat_from_literal s =
   try
     let n = parse_int_with_suffix "n" s in
-    if Z.lt n Z.zero then
-      failwith "Ligo.nat_from_literal: negative"
-    else n
-  with exc ->
-    failwith ("Ligo.nat_from_literal: " ^ Printexc.to_string exc)
+    if Z.lt n Z.zero then failwith "Ligo.nat_from_literal: negative" else n
+  with exc -> failwith ("Ligo.nat_from_literal: " ^ Printexc.to_string exc)
 
-let ediv_nat_nat n d =
-  try Some (Z.ediv_rem n d)
-  with Division_by_zero -> None
+let ediv_nat_nat n d = try Some (Z.ediv_rem n d) with Division_by_zero -> None
 
 (* timestamp *)
 
@@ -233,10 +246,8 @@ let add_timestamp_int = Z.add
 let sub_timestamp_timestamp = Z.sub
 
 let timestamp_from_seconds_literal s =
-  if s < 0 then
-    failwith "Ligo.timestamp_from_seconds_literal: negative"
-  else
-    Z.of_int s
+  if s < 0 then failwith "Ligo.timestamp_from_seconds_literal: negative"
+  else Z.of_int s
 
 let geq_timestamp_timestamp = Z.geq
 
@@ -251,46 +262,35 @@ let tez_from_literal s =
       failwith "Ligo.tez_from_literal: out of range (negative)"
     else if Z.gt n (Z.of_int64 Int64.max_int) then
       failwith "Ligo.tez_from_literal: out of range (positive)"
-    else
-      Z.to_int64 n
-  with exc ->
-    failwith ("Ligo.tez_from_literal: " ^ Printexc.to_string exc)
+    else Z.to_int64 n
+  with exc -> failwith ("Ligo.tez_from_literal: " ^ Printexc.to_string exc)
 
 let add_tez_tez x y =
   assert (x >= Int64.zero);
   assert (y >= Int64.zero);
-  if x > Int64.sub Int64.max_int y then
-    failwith "Ligo.add_tez_tez: overflow"
-  else
-    Int64.add x y
+  if x > Int64.sub Int64.max_int y then failwith "Ligo.add_tez_tez: overflow"
+  else Int64.add x y
 
 let sub_tez_tez x y =
   assert (x >= Int64.zero);
   assert (y >= Int64.zero);
-  if x < y then
-    failwith "Ligo.sub_tez_tez: underflow"
-  else
-    Int64.sub x y
+  if x < y then failwith "Ligo.sub_tez_tez: underflow" else Int64.sub x y
 
 let mul_nat_tez x y =
   assert (x >= Z.zero);
   assert (y >= Int64.zero);
-  if y = Int64.zero then
-    Int64.zero
+  if y = Int64.zero then Int64.zero
   else if x > Z.of_int64 (Int64.div Int64.max_int y) then
     failwith "Ligo.mul_nat_tez: overflow"
-  else
-    Int64.mul (Z.to_int64 x) y
+  else Int64.mul (Z.to_int64 x) y
 
 let mul_tez_nat x y =
   assert (x >= Int64.zero);
   assert (y >= Z.zero);
-  if x = Int64.zero then
-    Int64.zero
+  if x = Int64.zero then Int64.zero
   else if y > Z.of_int64 (Int64.div Int64.max_int x) then
     failwith "Ligo.mul_tez_nat: overflow"
-  else
-    Int64.mul x (Z.to_int64 y)
+  else Int64.mul x (Z.to_int64 y)
 
 let div_tez_tez x y =
   assert (x >= Int64.zero);
@@ -333,9 +333,13 @@ let geq_tez_tez x y =
 
 module Tezos = struct
   let now = ref (timestamp_from_seconds_literal 0)
+
   let level = ref (nat_from_literal "0n")
+
   let self_address = ref "self_address"
+
   let sender = ref "sender"
+
   let amount = ref (tez_from_literal "0mutez")
 
   let reset () =
@@ -343,12 +347,15 @@ module Tezos = struct
     level := nat_from_literal "0n";
     amount := tez_from_literal "0mutez"
 
-  let new_transaction ~seconds_passed ~blocks_passed ~sender:address_ ~amount:amount_ =
+  let new_transaction ~seconds_passed ~blocks_passed ~sender:address_
+      ~amount:amount_
+    =
     (* You can not increase blocks_passed without seconds_passed, or vice versa. *)
-    assert ((seconds_passed = 0 && blocks_passed = 0)
-            || (seconds_passed > 0) && (blocks_passed > 0));
-    now := Z.(!now + Z.of_int seconds_passed);
-    level := Z.(!level + Z.of_int blocks_passed);
+    assert (
+      (seconds_passed = 0 && blocks_passed = 0)
+      || (seconds_passed > 0 && blocks_passed > 0) );
+    (now := Z.(!now + Z.of_int seconds_passed));
+    (level := Z.(!level + Z.of_int blocks_passed));
     sender := address_;
     amount := amount_
 
@@ -364,14 +371,19 @@ module Tezos = struct
 end
 
 let string_of_int = Z.to_string
+
 let string_of_tez x = Int64.to_string x ^ "mutez"
+
 let string_of_timestamp = Z.to_string
 
 let pp_int fmt z = Format.pp_print_string fmt (string_of_int z)
+
 let pp_tez fmt z = Format.pp_print_string fmt (string_of_tez z)
+
 let pp_timestamp fmt z = Format.pp_print_string fmt (string_of_timestamp z)
 
 let format_int = Z.format
+
 let div_rem_int_int = Z.div_rem
 
 let failwith i = Stdlib.failwith (string_of_int i)

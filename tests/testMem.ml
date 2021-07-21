@@ -3,15 +3,12 @@ open Error
 open Mem
 
 let suite =
-  "MemTests" >::: [
-    "mem_get - fails for missing ptr" >::
-    (fun _ ->
-       assert_raises
-         (Failure (Ligo.string_of_int internalError_MemGetElementNotFound))
-         (fun _ -> mem_get mem_empty (Ptr.ptr_init))
-    )
-  ]
+  "MemTests"
+  >::: [
+         ( "mem_get - fails for missing ptr" >:: fun _ ->
+           assert_raises
+             (Failure (Ligo.string_of_int internalError_MemGetElementNotFound))
+             (fun _ -> mem_get mem_empty Ptr.ptr_init) );
+       ]
 
-let () =
-  run_test_tt_main
-    suite
+let () = run_test_tt_main suite
