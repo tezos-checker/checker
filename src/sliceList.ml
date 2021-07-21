@@ -144,9 +144,8 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
   let ptr, slice = match e with SliceListElement (ptr, slice) -> ptr, slice in
   assert (meta.slice_list_burrow = slice.contents.burrow);
   match meta.slice_list_bounds with
-  (* FIXME: Perhaps throw specific error code here? *)
-  (* FIXME: George: It is specific now, but I still think this is internal, right? *)
-  | None -> (Ligo.failwith internalError_SliceListRemoveEmptyList : liquidation_auctions*slice_list*avl_ptr*liquidation_slice_contents)
+  (* FIXME: Ensure the error here is indeed internal and can never be user-facing. *)
+  | None -> (Ligo.failwith internalError_SliceListRemoveEmptyList : liquidation_auctions * slice_list * avl_ptr * liquidation_slice_contents)
   | Some bounds ->
     (* Update the list metadata: *)
     (* Case 1: We are removing the youngest slice *)
