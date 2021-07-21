@@ -25,9 +25,9 @@ let arbitrary_burrow (params: parameters) =
                (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
                (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
            in
-           fraction_to_tez_floor x.num x.den in
+           Common.fraction_to_tez_floor x.num x.den in
          let kit =
-           let { num = x_num; den = x_den; } =
+           let Common.{ num = x_num; den = x_den; } =
              (div_ratio
                 (ratio_of_int (Ligo.int_from_literal (string_of_int k)))
                 (ratio_of_int (Ligo.int_from_literal (string_of_int factor)))
@@ -43,7 +43,7 @@ let arbitrary_burrow (params: parameters) =
       (fun (tez, kit) ->
          let tez =
            let x = div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2")) in
-           fraction_to_tez_floor x.num x.den in
+           Common.fraction_to_tez_floor x.num x.den in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
@@ -77,10 +77,10 @@ Other properties
 *)
 
 let params : parameters =
-  { q = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
+  { q = fixedpoint_of_ratio_floor (Common.make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
     index = Ligo.nat_from_literal "320_000n";
     protected_index = Ligo.nat_from_literal "360_000n";
-    target = fixedpoint_of_ratio_floor (make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
+    target = fixedpoint_of_ratio_floor (Common.make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
     burrow_fee_index = fixedpoint_one;
@@ -397,9 +397,9 @@ let barely_liquidatable_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "467912067393300348926951424";
-        den = Ligo.int_from_literal "67404402845334701604000000";
-      } in
+      Common.{ num = Ligo.int_from_literal "467912067393300348926951424";
+               den = Ligo.int_from_literal "67404402845334701604000000";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -463,9 +463,9 @@ let barely_non_complete_liquidatable_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "67404402845334701604864";
-        den = Ligo.int_from_literal "6740440284533470160400";
-      } in
+      Common.{ num = Ligo.int_from_literal "67404402845334701604864";
+               den = Ligo.int_from_literal "6740440284533470160400";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -527,9 +527,9 @@ let barely_complete_liquidatable_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "674043862432650352662675456";
-        den = Ligo.int_from_literal "67404402845334701604000000";
-      } in
+      Common.{ num = Ligo.int_from_literal "674043862432650352662675456";
+               den = Ligo.int_from_literal "67404402845334701604000000";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -590,7 +590,7 @@ let barely_non_close_liquidatable_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
-    let expected_expected_kit = zero_ratio in
+    let expected_expected_kit = Common.zero_ratio in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -652,9 +652,9 @@ let barely_close_liquidatable_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "166020530642689301158035456";
-        den = Ligo.int_from_literal "67404402845334701604000000";
-      } in
+      Common.{ num = Ligo.int_from_literal "166020530642689301158035456";
+               den = Ligo.int_from_literal "67404402845334701604000000";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -724,9 +724,9 @@ let partial_liquidation_unit_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "1185798177338727676948512768";
-        den = Ligo.int_from_literal "67404402845334701604000000";
-      } in
+      Common.{ num = Ligo.int_from_literal "1185798177338727676948512768";
+               den = Ligo.int_from_literal "67404402845334701604000000";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -786,9 +786,9 @@ let complete_liquidation_unit_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "149252606300383982125056";
-        den = Ligo.int_from_literal "6740440284533470160400";
-      } in
+      Common.{ num = Ligo.int_from_literal "149252606300383982125056";
+               den = Ligo.int_from_literal "6740440284533470160400";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal
@@ -850,9 +850,9 @@ let complete_and_close_liquidation_test =
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
 
     let expected_expected_kit =
-      { num = Ligo.int_from_literal "165854675966722578579456";
-        den = Ligo.int_from_literal "67404402845334701604000";
-      } in
+      Common.{ num = Ligo.int_from_literal "165854675966722578579456";
+               den = Ligo.int_from_literal "67404402845334701604000";
+             } in
     let expected_kit = compute_expected_kit params details.tez_to_auction in
 
     assert_ratio_equal

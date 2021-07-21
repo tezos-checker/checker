@@ -69,7 +69,6 @@ Utku: Lifecycle of liquidation slices.
 
 open LiquidationAuctionPrimitiveTypes
 open Mem
-open Ratio
 open FixedPoint
 open Kit
 open Avl

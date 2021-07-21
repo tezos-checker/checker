@@ -16,7 +16,7 @@ let assert_nat_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_
 let assert_int_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_int expected real
 let assert_kit_equal ~expected ~real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
 let assert_lqt_equal ~expected ~real = OUnit2.assert_equal ~printer:Lqt.show_lqt expected real
-let assert_ratio_equal ~expected ~real = OUnit2.assert_equal ~printer:Ratio.show_ratio ~cmp:Ratio.eq_ratio_ratio expected real
+let assert_ratio_equal ~expected ~real = OUnit2.assert_equal ~printer:Common.show_ratio ~cmp:Ratio.eq_ratio_ratio expected real
 let assert_address_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_address expected real
 let assert_fixedpoint_equal ~expected ~real = OUnit2.assert_equal ~printer:FixedPoint.show_fixedpoint_raw expected real
 let assert_liquidation_result_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_liquidation_result expected real
@@ -77,7 +77,7 @@ let cfmm_make_for_test ~ctez ~kit ~lqt ~kit_in_ctez_in_prev_block ~last_level =
   }
 
 (* Create an arbitrary state for the cfmm contract (NB: some values are fixed). *)
-let arbitrary_non_empty_cfmm (kit_in_ctez_in_prev_block: Ratio.ratio) (last_level: Ligo.nat) =
+let arbitrary_non_empty_cfmm (kit_in_ctez_in_prev_block: Common.ratio) (last_level: Ligo.nat) =
   QCheck.map
     (fun (ctez, kit, lqt) ->
        (ctez, kit, lqt, cfmm_make_for_test ~ctez ~kit ~lqt ~kit_in_ctez_in_prev_block ~last_level)
@@ -92,14 +92,14 @@ let make_inputs_for_buy_kit_to_succeed =
     (* NOTE: this could still give us tough numbers I think. Due to _kit being ignored. *)
     (fun (ctez, _kit, _lqt, cfmm) ->
        let amount =
-         let { Ratio.num = x_num; Ratio.den = x_den; } =
-           Ratio.div_ratio (Ratio.mul_ratio (Ctez.ratio_of_ctez ctez) (Ratio.sub_ratio Ratio.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
+         let { Common.num = x_num; Common.den = x_den; } =
+           Ratio.div_ratio (Ratio.mul_ratio (Ctez.ratio_of_ctez ctez) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
          Ctez.ctez_of_fraction_ceil x_num x_den in
        let min_kit_expected = Kit.kit_of_mukit (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (cfmm, amount, min_kit_expected, deadline)
     )
-    (arbitrary_non_empty_cfmm Ratio.one_ratio !Ligo.Tezos.level)
+    (arbitrary_non_empty_cfmm Common.one_ratio !Ligo.Tezos.level)
 
 (* kit >= cfmm_kit * (1 - fee) / fee *)
 (* 1mutez <= min_ctez_expected < FLOOR{kit * (cfmm_tez / (cfmm_kit + kit)) * FACTOR} *)
@@ -109,12 +109,12 @@ let make_inputs_for_sell_kit_to_succeed =
     (* NOTE: this could still give us tough numbers I think. Due to _tez being ignored. *)
     (fun (_tez, kit, _lqt, cfmm) ->
        let token =
-         let { Ratio.num = x_num; Ratio.den = x_den; } =
-           Ratio.div_ratio (Ratio.mul_ratio (Kit.kit_to_ratio kit) (Ratio.sub_ratio Ratio.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
+         let { Common.num = x_num; Common.den = x_den; } =
+           Ratio.div_ratio (Ratio.mul_ratio (Kit.kit_to_ratio kit) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
          Kit.kit_of_fraction_ceil x_num x_den
        in
        let min_ctez_expected = Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (cfmm, token, min_ctez_expected, deadline)
     )
-    (arbitrary_non_empty_cfmm Ratio.one_ratio !Ligo.Tezos.level)
+    (arbitrary_non_empty_cfmm Common.one_ratio !Ligo.Tezos.level)

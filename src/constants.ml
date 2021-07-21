@@ -1,4 +1,4 @@
-open Ratio
+open Common
 open FixedPoint
 
 (** Dimensionless. Factor used for setting the minting limit. *)

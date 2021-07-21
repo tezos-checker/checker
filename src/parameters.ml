@@ -1,5 +1,4 @@
 open Kit
-open Ratio
 open FixedPoint
 open Common
 open Constants

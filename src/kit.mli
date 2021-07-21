@@ -34,7 +34,7 @@ val eq_kit_kit : kit -> kit -> bool
 (* BEGIN_OCAML *)
 val kit_compare : kit -> kit -> int
 
-val kit_to_ratio : kit -> Ratio.ratio
+val kit_to_ratio : kit -> Common.ratio
 
 val pp_kit : Format.formatter -> kit -> unit
 val show_kit : kit -> string

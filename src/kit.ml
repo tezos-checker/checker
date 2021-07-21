@@ -52,7 +52,6 @@ let[@inline] eq_kit_kit = Ligo.eq_nat_nat
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
-open Ratio
 let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) kit_scaling_factor_int
 
 let kit_compare x y = compare_nat x y

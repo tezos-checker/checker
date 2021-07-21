@@ -29,7 +29,7 @@ open CfmmTypes
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date
     kit_in_ctez, because it is a little harder to manipulate. *)
-val cfmm_kit_in_ctez_in_prev_block : cfmm -> Ratio.ratio
+val cfmm_kit_in_ctez_in_prev_block : cfmm -> Common.ratio
 
 (** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
 val cfmm_view_min_kit_expected_buy_kit : cfmm -> ctez -> (kit * cfmm)
