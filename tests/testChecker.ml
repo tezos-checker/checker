@@ -702,7 +702,7 @@ let suite =
     );
 
     (* ************************************************************************* *)
-    (**                               FA2                                        *)
+    (*                                FA2                                        *)
     (* ************************************************************************* *)
     ("strict_entrypoint_transfer (FA2) - transaction with value > 0 fails" >::
      fun _ ->
@@ -863,7 +863,7 @@ let suite =
     );
 
     (* ************************************************************************* *)
-    (**                      LiquidationAuctions                                 *)
+    (*                       LiquidationAuctions                                 *)
     (* ************************************************************************* *)
     ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
      fun _ ->

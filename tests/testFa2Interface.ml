@@ -52,7 +52,7 @@ let remove_kit_operator ~owner ~operator =
 let suite =
   "Fa2Interface tests" >::: [
     (* ************************************************************************* *)
-    (**                    fa2_run_update_operators tests                        *)
+    (*                     fa2_run_update_operators tests                        *)
     (* ************************************************************************* *)
     ("ensure_valid_fa2_token - passes when a known token is submitted" >::
      fun _ ->
@@ -178,7 +178,7 @@ let suite =
     );
 
     (* ************************************************************************* *)
-    (**                              ledger_*_kit tests                              *)
+    (*                               ledger_*_kit tests                              *)
     (* ************************************************************************* *)
 
     ("ledger_issue_kit/ledger_withdraw_kit issues/withdraws expected kit" >::
@@ -310,7 +310,7 @@ let suite =
     );
 
     (* ************************************************************************* *)
-    (**                        ledger_*_liquidity tests                          *)
+    (*                         ledger_*_liquidity tests                          *)
     (* ************************************************************************* *)
 
     ("ledger_issue_lqt/ledger_withdraw_lqt issues/withdraws expected liquidity" >::
@@ -384,7 +384,7 @@ let suite =
     );
 
     (* ************************************************************************* *)
-    (**                         fa2_run_transfer tests                           *)
+    (*                          fa2_run_transfer tests                           *)
     (* ************************************************************************* *)
 
     ("fa2_run_transfer - succeeds from owner" >::
