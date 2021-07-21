@@ -8,6 +8,14 @@ let
 
   gitignoreNix = import sources."gitignore.nix" { lib = pkgsHost.lib; };
 
+  # Version: 0.14.0
+  ocamlformat_0_14_0 = (import
+    (pkgsLinux.fetchzip {
+      url = "https://github.com/nixos/nixpkgs/archive/7138a338b58713e0dea22ddab6a6785abec7376a.zip";
+      sha256 = "1asgl1hxj2bgrxdixp3yigp7xn25m37azwkf3ppb248vcfc5kil3";
+    })
+    { }).ocamlformat_0_14_0;
+
   ligoBinary =
     # This is a precompiled file, which is the ligo revision `1d1cc2cae` compiled
     # with the patch ./patches/ligo_michelson_maximum_type_size.patch.
@@ -67,7 +75,7 @@ rec
     in
     pkgs.stdenv.mkDerivation {
       name = "checker-michelson";
-      buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
+      buildInputs = [ ligoBinary ocamlformat_0_14_0 ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
       src = checkerSource;
       # On E2E tests, we are using a patched version of checker to be able to experiment
       # with index changes without having to wait for the protected index to catch up.
@@ -119,6 +127,7 @@ rec
         # ligo does not compile on macos, also we don't want to
         # compile it in CI
         pkgs.lib.optionals (pkgs.stdenv.isLinux) [ ligoBinary ]
+        ++ pkgs.lib.optionals (pkgs.stdenv.isLinux) [ ocamlformat_0_14_0 ]
         ++ pkgs.lib.optionals (pkgs.stdenv.isLinux) [ tezosClient ]
         ++ pkgs.lib.optionals (!(pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64)) [ pkgs.niv ]
         ++ (with pkgs; [ ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt ])
