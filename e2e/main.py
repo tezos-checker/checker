@@ -567,7 +567,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                     checker.cancel_liquidation_slice(queued_leaf_ptr),
                 )
             )
-            if len(cancel_ops) >= 850:
+            if len(cancel_ops) >= 895:
                 break
         # Shuffle so we aren't only cancelling the oldest slice
         shuffle(cancel_ops)
@@ -576,7 +576,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             flattened_cancel_ops += [op1, op2]
         call_bulk(
             flattened_cancel_ops,
-            batch_size=40,
+            batch_size=100,
             profiler=cancel_liquidation_slice_profiler,
         )
 
