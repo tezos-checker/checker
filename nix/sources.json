@@ -30,16 +30,16 @@
         "url": "https://github.com/NixOS/nixpkgs/archive/860f9f218b1cbdd719225441cd368027a3c340d6.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "tezos-packaging": {
+    "poetry2nix": {
         "branch": "master",
-        "description": "Various forms of Tezos software distribution for Linux.",
+        "description": "Convert poetry projects to nix automagically [maintainer=@adisbladis] ",
         "homepage": "",
-        "owner": "serokell",
-        "repo": "tezos-packaging",
-        "rev": "b509c8908646fda0315900939e68807ea6ac207e",
-        "sha256": "1kvnqrvinl08mlb32flzz7v3aak6mbxds93zjv4pkdgfb5im4frh",
+        "owner": "nix-community",
+        "repo": "poetry2nix",
+        "rev": "4cd43299027516efa732a3868a6807892160b25a",
+        "sha256": "1jawqfwbl77g4fwb93h9h1cxqngn68jh734hi30cjygqja0n0f8q",
         "type": "tarball",
-        "url": "https://github.com/serokell/tezos-packaging/archive/b509c8908646fda0315900939e68807ea6ac207e.tar.gz",
+        "url": "https://github.com/nix-community/poetry2nix/archive/4cd43299027516efa732a3868a6807892160b25a.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

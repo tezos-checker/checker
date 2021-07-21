@@ -3,8 +3,12 @@
 let
   sources = import ./nix/sources.nix { };
 
-  pkgsHost = import sources.nixpkgs { };
-  pkgsLinux = import sources.nixpkgs { system = "x86_64-linux"; };
+  overlay = se: su: {
+    poetry2nix = se.callPackage sources.poetry2nix { };
+  };
+
+  pkgsHost = import sources.nixpkgs { overlays = [ overlay ]; };
+  pkgsLinux = import sources.nixpkgs { system = "x86_64-linux"; overlays = [ overlay ]; };
 
   gitignoreNix = import sources."gitignore.nix" { lib = pkgsHost.lib; };
 
@@ -39,15 +43,6 @@ let
     odoc
     core_kernel
   ];
-
-  # We wrap the upstream tezos-client derivation since it also brings some ocaml
-  # packages which are incompatible with ours.
-  tezosClient =
-    let orig = (import "${sources.tezos-packaging}/nix" { }).binaries.tezos-client;
-    in
-    pkgsLinux.runCommand "tezos-client" { } ''
-      mkdir -p $out/bin; ln -s ${orig}/bin/tezos-client $out/bin/tezos-client
-    '';
 
   checkerSource =
     let filter =
@@ -119,7 +114,6 @@ rec
         # ligo does not compile on macos, also we don't want to
         # compile it in CI
         pkgs.lib.optionals (pkgs.stdenv.isLinux) [ ligoBinary ]
-        ++ pkgs.lib.optionals (pkgs.stdenv.isLinux) [ tezosClient ]
         ++ pkgs.lib.optionals (!(pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64)) [ pkgs.niv ]
         ++ (with pkgs; [ ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt ])
         ++ spec.buildInputs
