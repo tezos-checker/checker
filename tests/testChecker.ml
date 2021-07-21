@@ -1079,8 +1079,20 @@ let suite =
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
-       let auction_id = (Checker.view_current_liquidation_auction_minimum_bid ((), checker)).auction_id in
+       let min_bid = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
 
+       let auction_id =
+         min_bid.auction_id in
+       assert_kit_equal
+         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_709_185n"))
+         ~real:min_bid.minimum_bid;
+
+       (* Bid the minimum first *)
+       let (ops, checker) =
+         Checker.entrypoint_liquidation_auction_place_bid (checker, (auction_id, min_bid.minimum_bid)) in
+       assert_operation_list_equal ~expected:[] ~real:ops;
+
+       (* Same person increases the bid *)
        let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
            ( checker

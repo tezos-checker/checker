@@ -52,3 +52,4 @@ type view_current_liquidation_auction_minimum_bid_result =
   { auction_id: liquidation_auction_id
   ; minimum_bid: kit
   }
+[@@deriving show]
