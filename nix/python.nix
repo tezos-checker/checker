@@ -14,6 +14,10 @@ let
       pytezos = super.pytezos.override (old: {
         buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.libsodium ];
       });
+      matplotlib = super.matplotlib.overridePythonAttrs (
+      old: {
+        propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ self.certifi ];
+      });
       # TODO: Upstream these overrides where possible.
     });
   };
