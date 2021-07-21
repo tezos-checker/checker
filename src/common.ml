@@ -1,3 +1,5 @@
+open Error
+
 (* Oracle data *)
 let oracle_entrypoint : string = "%getPrice"
 
@@ -19,7 +21,7 @@ let rec pow_rec (y, x, n: Ligo.int * Ligo.int * Ligo.nat) : Ligo.int =
   else
     match Ligo.ediv_nat_nat n (Ligo.nat_from_literal "2n") with
     (* Note: Ignoring coverage for this line because it is unreachable *)
-    | None -> (failwith "impossible" : Ligo.int)
+    | None -> (Ligo.failwith internalError_PowRecImpossible : Ligo.int)
               [@coverage off]
     | Some quot_rem ->
       let (quot, rem) = quot_rem in
@@ -32,7 +34,7 @@ let pow_int_nat (x: Ligo.int) (n: Ligo.nat) = pow_rec (Ligo.int_from_literal "1"
 
 let cdiv_int_int (x: Ligo.int) (y: Ligo.int) =
   match Ligo.ediv_int_int x y with
-  | None -> (failwith "Ligo.cdiv_int_int: zero denominator" : Ligo.int)
+  | None -> (Ligo.failwith internalError_CdivIntIntZeroDenominator : Ligo.int)
   | Some quot_rem ->
     let (quot, rem) = quot_rem in
     if Ligo.eq_nat_nat rem (Ligo.nat_from_literal "0n") then
@@ -44,7 +46,7 @@ let cdiv_int_int (x: Ligo.int) (y: Ligo.int) =
 
 let fdiv_int_int (x: Ligo.int) (y: Ligo.int) =
   match Ligo.ediv_int_int x y with
-  | None -> (failwith "Ligo.fdiv_int_int: zero denominator" : Ligo.int)
+  | None -> (Ligo.failwith internalError_FdivIntIntZeroDenominator : Ligo.int)
   | Some quot_rem ->
     let (quot, rem) = quot_rem in
     if Ligo.eq_nat_nat rem (Ligo.nat_from_literal "0n") then

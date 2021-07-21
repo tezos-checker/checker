@@ -1,6 +1,7 @@
 open OUnit2
 open Ctez
 open TestLib
+open Error
 
 let suite =
   "CtezTests" >::: [
@@ -17,7 +18,7 @@ let suite =
          ~expected:(ctez_of_muctez (Ligo.nat_from_literal "2_000_000n"))
          ~real:(ctez_sub (ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")) (ctez_of_muctez (Ligo.nat_from_literal "3_000_000n")));
        assert_raises
-         (Failure "Ctez.ctez_sub: negative")
+         (Failure (Ligo.string_of_int internalError_CtezSubNegative))
          (fun _ ->
             (ctez_sub (ctez_of_muctez (Ligo.nat_from_literal "1n")) (ctez_of_muctez (Ligo.nat_from_literal "2n")));
          );

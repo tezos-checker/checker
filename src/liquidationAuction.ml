@@ -396,7 +396,7 @@ let complete_liquidation_auction_if_possible
                   youngest
                   (fun (prev: auction_outcome option) ->
                      match prev with
-                     | None -> (failwith "completed auction without outcome" : auction_outcome option)
+                     | None -> (Ligo.failwith internalError_CompletedAuctionWithoutOutcome : auction_outcome option)
                      | Some xs -> Some ({xs with younger_auction=Some curr.contents})
                   ) in
               (storage, {youngest=curr.contents; oldest=oldest; }) in
@@ -473,10 +473,10 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
   let storage = auctions.avl_storage in
 
   let outcome = match avl_root_data storage tree with
-    | None -> (failwith "auction is not completed" : auction_outcome)
+    | None -> (Ligo.failwith internalError_PopCompletedAuctionAuctionNotCompleted : auction_outcome)
     | Some r -> r in
   let completed_auctions = match auctions.completed_auctions with
-    | None -> (failwith "invariant violation" : completed_liquidation_auctions)
+    | None -> (Ligo.failwith internalError_PopCompletedAuctionNoCompletedAuction : completed_liquidation_auctions)
     | Some r -> r in
 
   (* First, fixup the completed auctions if we're dropping the
@@ -513,7 +513,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
     | Some younger ->
       avl_modify_root_data storage younger (fun (i: auction_outcome option) ->
           let i = match i with
-            | None -> (failwith "invariant violation: completed auction does not have outcome": auction_outcome)
+            | None -> (Ligo.failwith internalError_PopCompletedAuctionCompletedAuctionNoOutcome : auction_outcome)
             | Some i -> i in
           assert (i.older_auction = Some tree);
           Some {i with older_auction=outcome.older_auction}) in
@@ -523,7 +523,7 @@ let liquidation_auction_pop_completed_auction (auctions: liquidation_auctions) (
     | Some older ->
       avl_modify_root_data storage older (fun (i: auction_outcome option) ->
           let i = match i with
-            | None -> (failwith "invariant violation: completed auction does not have outcome": auction_outcome)
+            | None -> (Ligo.failwith internalError_PopCompletedAuctionCompletedAuctionNoOutcome : auction_outcome)
             | Some i -> i in
           assert (i.younger_auction = Some tree);
           Some {i with younger_auction=outcome.younger_auction}) in
@@ -598,7 +598,7 @@ let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidatio
   | None -> (None: leaf_ptr option)
   | Some completed_auctions -> begin
       match avl_peek_front auctions.avl_storage completed_auctions.youngest with
-      | None -> (failwith "invariant violation: empty auction in completed_auctions" : leaf_ptr option)
+      | None -> (Ligo.failwith internalError_OldestCompletedSliceEmptyCompletedAuction : leaf_ptr option)
       | Some p ->
         let (leaf_ptr, _) = p in
         Some leaf_ptr

@@ -1,5 +1,6 @@
 open Common
 open FixedPoint
+open Error
 
 type kit = Ligo.nat
 
@@ -12,7 +13,7 @@ let[@inline] kit_add (x: kit) (y: kit) = Ligo.add_nat_nat x y
 let kit_sub (x: kit) (y: kit) =
   match Ligo.is_nat (Ligo.sub_nat_nat x y) with
   | Some n -> n
-  | None -> (failwith "Kit.kit_sub: negative" : kit)
+  | None -> (Ligo.failwith internalError_KitSubNegative : kit)
 
 let[@inline] kit_min (x: kit) (y: kit) = if Ligo.leq_nat_nat x y then x else y
 let[@inline] kit_max (x: kit) (y: kit) = if Ligo.geq_nat_nat x y then x else y
@@ -28,13 +29,13 @@ let[@inline] kit_to_mukit_nat (amnt: kit) : Ligo.nat = amnt
 let kit_of_fraction_ceil (x_num: Ligo.int) (x_den: Ligo.int) : kit =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Kit.kit_of_fraction_ceil: negative" : kit)
+  then (Ligo.failwith internalError_KitOfFractionCeilNegative : kit)
   else Ligo.abs (cdiv_int_int (Ligo.mul_int_int x_num kit_scaling_factor_int) x_den)
 
 let kit_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : kit =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   if Ligo.lt_int_int x_num (Ligo.int_from_literal "0")
-  then (failwith "Kit.kit_of_fraction_floor: negative" : kit)
+  then (Ligo.failwith internalError_KitOfFractionFloorNegative : kit)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num kit_scaling_factor_int) x_den)
 
 let[@inline] kit_scale (amnt: kit) (fp: fixedpoint) =

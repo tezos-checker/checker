@@ -1,6 +1,7 @@
 open OUnit2
 open Lqt
 open TestLib
+open Error
 
 let suite =
   "LqtTests" >::: [
@@ -26,7 +27,7 @@ let suite =
          ~expected:(lqt_of_denomination (Ligo.nat_from_literal "2_000_000n"))
          ~real:(lqt_sub (lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")) (lqt_of_denomination (Ligo.nat_from_literal "3_000_000n")));
        assert_raises
-         (Failure "Lqt.lqt_sub: negative")
+         (Failure (Ligo.string_of_int internalError_LqtSubNegative))
          (fun _ ->
             (lqt_sub (lqt_of_denomination (Ligo.nat_from_literal "1n")) (lqt_of_denomination (Ligo.nat_from_literal "2n")));
          );

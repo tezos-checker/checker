@@ -7,6 +7,7 @@
 open Avl
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
+open Error
 
 [@@@coverage off]
 
@@ -62,8 +63,9 @@ let[@inline] slice_list_from_leaf_ptr (auctions: liquidation_auctions) (ptr: lea
   let slice = avl_read_leaf auctions.avl_storage ptr in
   let element = SliceListElement (ptr, slice) in
   let list = slice_list_from_auction_state auctions slice.contents.burrow in
-  let _ = if slice_list_is_empty list then
-      failwith "invariant violation: corresponding list for slice was empty"
+  let _ =
+    if slice_list_is_empty list then
+      Ligo.failwith internalError_SliceListFromLeafPtrEmptySliceList
     else ()
   in
   (* FIXME: Add assertion here that checks if the element exists in the list *)
@@ -142,8 +144,8 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
   let ptr, slice = match e with SliceListElement (ptr, slice) -> ptr, slice in
   assert (meta.slice_list_burrow = slice.contents.burrow);
   match meta.slice_list_bounds with
-  (* FIXME: Perhaps throw specific error code here? *)
-  | None -> (failwith "Attempting to remove an element from an empty list" : liquidation_auctions*slice_list*avl_ptr*liquidation_slice_contents)
+  (* FIXME: Ensure the error here is indeed internal and can never be user-facing. *)
+  | None -> (Ligo.failwith internalError_SliceListRemoveEmptyList : liquidation_auctions * slice_list * avl_ptr * liquidation_slice_contents)
   | Some bounds ->
     (* Update the list metadata: *)
     (* Case 1: We are removing the youngest slice *)

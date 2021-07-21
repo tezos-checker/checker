@@ -1,7 +1,8 @@
 open OUnit2
 open TestLib
-
+open Error
 open Ratio
+
 let suite =
   "RatioTests" >::: [
     "fraction_to_tez_floor" >::
@@ -13,7 +14,7 @@ let suite =
     "fraction_to_tez_floor - fails for negative numerators" >::
     (fun _ ->
        assert_raises
-         (Failure "Ratio.fraction_to_tez_floor: negative")
+         (Failure (Ligo.string_of_int internalError_FractionToTezFloorNegative))
          (fun _ -> fraction_to_tez_floor (Ligo.int_from_literal "-1") (Ligo.int_from_literal "2")
          )
     );

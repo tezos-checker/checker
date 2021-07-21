@@ -41,9 +41,9 @@ let initial_wrapper (addr: Ligo.address) =
    | Some bytes -> begin
       match (Ligo.Bytes.unpack bytes : lazy_function option) with
       | Some f -> f
-      | None -> (failwith "lazy function unpack failure" : lazy_function)
+      | None -> (failwith error_GetLazyFunctionUnpackFailure : lazy_function)
     end
-   | None -> (failwith "lazy function missing" : lazy_function)
+   | None -> (failwith error_GetLazyFunctionMissingFunction : lazy_function)
    END_LIGO *)
 
 let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
@@ -78,7 +78,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
               let touchOp =
                 match (LigoOp.Tezos.get_entrypoint_opt "%touch" !Ligo.Tezos.self_address: unit Ligo.contract option) with
                 | Some c -> LigoOp.Tezos.unit_transaction () (Ligo.tez_from_literal "0mutez") c
-                | None -> (failwith "C1" : LigoOp.operation) in
+                | None -> (Ligo.failwith (Ligo.int_from_literal "-4") : LigoOp.operation) in
 
               (* initialize checker state *)
               let checker = initial_checker external_contracts in

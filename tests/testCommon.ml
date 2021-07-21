@@ -1,6 +1,6 @@
 open OUnit2
 open TestLib
-
+open Error
 open Common
 
 let suite =
@@ -21,7 +21,7 @@ let suite =
     "cdiv_int_int - fails when denominator is zero" >::
     (fun _ ->
        assert_raises
-         (Failure "Ligo.cdiv_int_int: zero denominator")
+         (Failure (Ligo.string_of_int internalError_CdivIntIntZeroDenominator))
          (fun _ -> cdiv_int_int (Ligo.int_from_literal "5") (Ligo.int_from_literal "0"))
     );
 
@@ -44,7 +44,7 @@ let suite =
     "fdiv_int_int - fails when denominator is zero" >::
     (fun _ ->
        assert_raises
-         (Failure "Ligo.fdiv_int_int: zero denominator")
+         (Failure (Ligo.string_of_int internalError_FdivIntIntZeroDenominator))
          (fun _ -> fdiv_int_int (Ligo.int_from_literal "5") (Ligo.int_from_literal "0"))
     );
 
