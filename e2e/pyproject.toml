@@ -13,7 +13,7 @@ checker-client = { path = "../client" }
 click = "^7.1.2"
 docker = "^4.4.4"
 portpicker = "^1.3.9"
-matplotlib = "^3.4.2"
+matplotlib = "=3.3.4"
 
 [tool.poetry.dev-dependencies]
 
