@@ -88,6 +88,126 @@ def auction_avl_leaves(
             yield ptr, leaf_node
 
 
+# A Profiler is a helper function for wrapping a call to a contract with logic
+# for extracting gas cost and other related information.
+Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
+
+
+def general_gas_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """Calls inject for a list of entrypoint calls, recording the gas cost of each call."""
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+    profile = {}
+    for op in ret["contents"]:
+        name = op["parameters"]["entrypoint"]
+        if name not in profile:
+            profile[name] = {"gas": []}
+        profile[name]["gas"].append(op["gas_limit"])
+    return profile
+
+
+def mark_for_liquidation_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """
+    Calls inject for a list of `mark_for_liquidation` calls, recording
+    the gas cost and current liquidation queue size for each call.
+    """
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "mark_for_liquidation": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        assert op["parameters"]["entrypoint"] == "mark_for_liquidation"
+        profile["mark_for_liquidation"]["gas"].append(op["gas_limit"])
+        profile["mark_for_liquidation"]["queue_size"].append(n)
+        # Assuming that each request_liquidation operation adds a single slice to the queue
+        # to avoid having to re-query the storage each time (which can take a long time).
+        n += 1
+    return profile
+
+
+def cancel_liquidation_slice_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """
+    Calls inject for a list of `cancel_liquidation_slice` calls, recording
+    the gas cost and current liquidation queue size for each call.
+    """
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "cancel_liquidation_slice": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        # Ignore other operations (e.g. deposit_tez)
+        if op["parameters"]["entrypoint"] != "cancel_liquidation_slice":
+            continue
+        profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
+        profile["cancel_liquidation_slice"]["queue_size"].append(n)
+        # Assuming that each request_liquidation cancel_liquidation_slice removes a single slice from
+        # the queue to avoid having to re-query the storage each time (which can take a long time).
+        n -= 1
+    return profile
+
+
+def merge_gas_profiles(profile1: Dict, profile2: Dict) -> Dict:
+    """Merges two gas profile dictionaries
+
+    In case of conflicting keys, entries from profile2 will be appended to
+    entries under the same key in profile1.
+    """
+    merged = deepcopy(profile1)
+    for name, data2 in profile2.items():
+        data2: dict
+        if name in profile1:
+            data1 = profile1[name]
+            for k in data2.keys():
+                if k not in data1:
+                    raise ValueError("Profiles had mismatching keys")
+                merged[name][k] += data2[k]
+        else:
+            merged[name] = data2
+    return merged
+
+
 class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
@@ -287,110 +407,6 @@ class E2ETest(SandboxedTestCase):
         if WRITE_GAS_COSTS:
             with open(WRITE_GAS_COSTS, "w") as f:
                 json.dump(gas_costs_sorted, f, indent=4)
-
-
-Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
-
-
-def general_gas_profiler(
-    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
-) -> Dict:
-    ret = inject(
-        client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
-    )
-    profile = {}
-    for op in ret["contents"]:
-        name = op["parameters"]["entrypoint"]
-        if name not in profile:
-            profile[name] = {"gas": []}
-        profile[name]["gas"].append(op["gas_limit"])
-    return profile
-
-
-def mark_for_liquidation_profiler(
-    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
-) -> Dict:
-    n = len(
-        list(
-            auction_avl_leaves(
-                checker,
-                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                    "queued_slices"
-                ](),
-            )
-        )
-    )
-    ret = inject(
-        client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
-    )
-
-    profile = {
-        "mark_for_liquidation": {
-            "gas": [],
-            "queue_size": [],
-        }
-    }
-    for op in ret["contents"]:
-        assert op["parameters"]["entrypoint"] == "mark_for_liquidation"
-        profile["mark_for_liquidation"]["gas"].append(op["gas_limit"])
-        profile["mark_for_liquidation"]["queue_size"].append(n)
-        # Assuming that each request_liquidation operation adds a single slice to the queue
-        # to avoid having to re-query the storage each time (which can take a long time).
-        n += 1
-    return profile
-
-
-def cancel_liquidation_slice_profiler(
-    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
-) -> Dict:
-    n = len(
-        list(
-            auction_avl_leaves(
-                checker,
-                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                    "queued_slices"
-                ](),
-            )
-        )
-    )
-    ret = inject(
-        client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
-    )
-
-    profile = {
-        "cancel_liquidation_slice": {
-            "gas": [],
-            "queue_size": [],
-        }
-    }
-    for op in ret["contents"]:
-        # Ignore other operations (e.g. deposit_tez)
-        if op["parameters"]["entrypoint"] != "cancel_liquidation_slice":
-            continue
-        profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
-        profile["cancel_liquidation_slice"]["queue_size"].append(n)
-        # Assuming that each request_liquidation cancel_liquidation_slice removes a single slice from
-        # the queue to avoid having to re-query the storage each time (which can take a long time).
-        n -= 1
-    return profile
-
-
-def merge_gas_profiles(profile1: Dict, profile2: Dict):
-    merged = deepcopy(profile1)
-    for name, data2 in profile2.items():
-        data2: dict
-        if name in profile1:
-            data1 = profile1[name]
-            for k in data2.keys():
-                if k not in data1:
-                    raise ValueError("Profiles had mismatching keys")
-                merged[name][k] += data2[k]
-        else:
-            merged[name] = data2
-    return merged
 
 
 class LiquidationsStressTest(SandboxedTestCase):
