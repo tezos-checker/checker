@@ -77,17 +77,20 @@ type ratio = {
   den: Ligo.int; (** Denominator, > 0 *)
 }
 
-(* make and normalize n/d, assuming d > 0 *)
+(* The denominator must be positive. *)
 let[@inline] make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
   assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
   { num = n; den = d; }
 
-(* Predefined values *)
+(* zero: 0/1 *)
 let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
+
+(* one: 1/1 *)
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
-(* Conversions to/from other types. *)
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
+(* Floor a fraction to an amount of tez. NOTE: this function deals in tez, not
+ * in mutez. So, for example, fraction_to_tez_floor (1/1) = 1tez and
+ * fraction_to_tez_floor (1/3) = 333_333mutez. *)
 let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
@@ -104,6 +107,7 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
        Ligo.mul_nat_tez quot (Ligo.tez_from_literal "1mutez") (* ignore the remainder; we floor towards zero here *)
     )
 
+(* Floor a fraction to a natural number. *)
 let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
   match Ligo.is_nat x_num with
