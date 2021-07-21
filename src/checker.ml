@@ -284,7 +284,10 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
       tez_to_auction = tez_to_auction;
       burrow_state = burrow;
     } = match burrow_request_liquidation state.parameters burrow with
-    | None -> (Ligo.failwith error_NotLiquidationCandidate : liquidation_details)
+    | None ->
+      (* Note: disabling coverage for the unreported but accessed right-hand side;
+       * accessibility is sufficiently marked on the pattern itself. *)
+      ((Ligo.failwith error_NotLiquidationCandidate [@coverage off]): liquidation_details)
     | Some type_and_details -> let _, details = type_and_details in details
   in
 
