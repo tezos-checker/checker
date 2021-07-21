@@ -1,4 +1,3 @@
-open Ratio
 open Ctez
 open Kit
 open Lqt

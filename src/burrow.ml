@@ -1,5 +1,4 @@
 open FixedPoint
-open Ratio
 open Kit
 open Parameters
 open LiquidationAuctionPrimitiveTypes

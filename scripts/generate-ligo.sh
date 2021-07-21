@@ -15,7 +15,6 @@ inputs=(
   fa12Interface
   ptr
   common
-  ratio
   fixedPoint
   ctez
   kit

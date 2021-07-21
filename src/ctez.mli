@@ -1,4 +1,4 @@
-open Ratio
+open Common
 
 type ctez
 
@@ -22,7 +22,7 @@ val gt_ctez_ctez : ctez -> ctez -> bool
 
 (* BEGIN_OCAML *)
 val ctez_to_muctez_int : ctez -> Ligo.int
-val ctez_to_ratio : ctez -> Ratio.ratio
+val ctez_to_ratio : ctez -> Common.ratio
 val ratio_of_ctez: ctez -> ratio
 val ctez_from_tez : Ligo.tez -> ctez
 val ctez_compare : ctez -> ctez -> int

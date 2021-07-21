@@ -1,4 +1,3 @@
-open Ratio
 open Common
 
 type fixedpoint = Ligo.int

@@ -10,7 +10,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let rec call_touch_times
     (index: Ligo.nat)
-    (kit_in_tez: ratio)
+    (kit_in_tez: Common.ratio)
     (n: int)
     (params: parameters)
   : parameters =
@@ -116,7 +116,7 @@ let test_compute_imbalance_all_zero =
     let outstanding = kit_zero in
     let circulating = kit_zero in
     assert_ratio_equal
-      ~expected:zero_ratio
+      ~expected:Common.zero_ratio
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_zero_outstanding =
@@ -124,7 +124,7 @@ let test_compute_imbalance_zero_outstanding =
     let outstanding = kit_zero in
     let circulating = kit_one in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_zero_circulating =
@@ -132,7 +132,7 @@ let test_compute_imbalance_zero_circulating =
     let outstanding = kit_one in
     let circulating = kit_zero in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_equal =
@@ -140,7 +140,7 @@ let test_compute_imbalance_equal =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
-      ~expected:zero_ratio
+      ~expected:Common.zero_ratio
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_small =
@@ -148,7 +148,7 @@ let test_compute_imbalance_negative_small =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_001n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_big =
@@ -156,7 +156,7 @@ let test_compute_imbalance_negative_big =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_000n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_capped =
@@ -164,7 +164,7 @@ let test_compute_imbalance_negative_capped =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_small =
@@ -172,7 +172,7 @@ let test_compute_imbalance_positive_small =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_334n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_big =
@@ -180,7 +180,7 @@ let test_compute_imbalance_positive_big =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_333n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_capped =
@@ -188,7 +188,7 @@ let test_compute_imbalance_positive_capped =
     let outstanding = kit_of_mukit (Ligo.nat_from_literal             "1n") in
     let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
-      ~expected:(make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
+      ~expected:(Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
       ~real:(compute_imbalance outstanding circulating)
 
 (* ************************************************************************* *)
@@ -205,7 +205,7 @@ let test_imbalance_upper_bound =
   @@ fun (burrowed, circulating) ->
   leq_ratio_ratio
     (compute_imbalance burrowed circulating)
-    (make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
+    (Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100"))
 
 (* Imbalance can never go below -5% *)
 let test_imbalance_lower_bound =
@@ -217,7 +217,7 @@ let test_imbalance_lower_bound =
   @@ fun (burrowed, circulating) ->
   geq_ratio_ratio
     (compute_imbalance burrowed circulating)
-    (make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
+    (Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100"))
 
 (* The sign of imbalance is the same as of (circulating - burrowed).
  * If circulating > burrowed then imbalance > 0
@@ -243,7 +243,7 @@ let test_imbalance_is_zero_when_equal =
   @@ fun kit ->
   eq_ratio_ratio
     (compute_imbalance kit (* burrowed *) kit (* circulating *))
-    zero_ratio
+    Common.zero_ratio
 
 (* For a fixed amount of kit in circulation, increasing the burrowed kit
  * decreases the imbalance. *)
@@ -292,7 +292,7 @@ let test_protected_index_follows_index =
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = one_ratio in
+  let kit_in_tez = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -323,7 +323,7 @@ let test_protected_index_pace =
     let params = initial_parameters in
 
     (* Neutral kit_in_tez (same as initial) *)
-    let kit_in_tez = one_ratio in
+    let kit_in_tez = Common.one_ratio in
 
     (* UPWARD MOVES *)
     let very_high_index = Ligo.abs (Ligo.mul_int_int (Ligo.int_from_literal "1000") (Ligo.int params.index)) in
@@ -342,7 +342,7 @@ let test_protected_index_pace =
 
     (* DOWNWARD MOVES *)
     let very_low_index =
-      fraction_to_nat_floor
+      Common.fraction_to_nat_floor
         (Ligo.int params.index)
         (Ligo.int_from_literal "1_000") in
     (* One hour, downward move, touched in every block *)
@@ -378,7 +378,7 @@ let test_minting_index_low_bounded =
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = one_ratio in
+  let kit_in_tez = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -403,7 +403,7 @@ let test_minting_index_high_unbounded =
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = one_ratio in
+  let kit_in_tez = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -429,7 +429,7 @@ let test_liquidation_index_high_bounded =
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = one_ratio in
+  let kit_in_tez = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -455,7 +455,7 @@ let test_liquidation_index_low_unbounded =
   let params = initial_parameters in
 
   (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = one_ratio in
+  let kit_in_tez = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -512,7 +512,7 @@ let test_touch_0 =
       } in
 
     (* Non-trivial values for the arguments. *)
-    let kit_in_tez = make_ratio (Ligo.int_from_literal "3") (Ligo.int_from_literal "1") in
+    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "3") (Ligo.int_from_literal "1") in
     let index = Ligo.nat_from_literal "500_000n" in
     (* Touch in the same block. I wonder if we wish to allow this for a local function such as parameters_touch. *)
     Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -546,7 +546,7 @@ let test_touch_1 =
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.nat_from_literal "340_000n" in
-    let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
     assert_parameters_equal
       ~expected:{
@@ -585,7 +585,7 @@ let test_touch_2 =
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.nat_from_literal "340_000n" in
-    let kit_in_tez = make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
     let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
     assert_parameters_equal
       ~expected:{

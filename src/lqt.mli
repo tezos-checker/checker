@@ -27,7 +27,7 @@ val lt_lqt_lqt : lqt -> lqt -> bool
 (* BEGIN_OCAML *)
 val lqt_compare : lqt -> lqt -> int
 
-val lqt_to_ratio : lqt -> Ratio.ratio
+val lqt_to_ratio : lqt -> Common.ratio
 
 val pp_lqt : Format.formatter -> lqt -> unit
 val show_lqt : lqt -> string

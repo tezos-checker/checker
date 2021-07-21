@@ -737,7 +737,7 @@ let suite =
        won't throw an exception if the constants are ever reconfigured in this way.*)
     ("compute_tez_to_auction - constants obey assumption in implementation" >::
      fun _ ->
-       let open Ratio in
+       let open Common in
        let {num=f_num; den=f_den} = Constants.fminting in
        let {num=lp_num; den=lp_den} = Constants.liquidation_penalty in
 

@@ -7,6 +7,7 @@ open Lqt
 open Cfmm
 open CfmmTypes
 open Error
+open Common
 
 let property_test_count = 100
 

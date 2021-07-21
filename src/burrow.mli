@@ -1,7 +1,7 @@
 open Kit
 open FixedPoint
 open Parameters
-open Ratio
+open Common
 
 (** Representation of a burrow contract. *)
 type burrow

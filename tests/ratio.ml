@@ -1,53 +1,4 @@
 open Common
-open Error
-
-(** A rational is represented as a pair numerator/denominator, reduced to have
-  * a positive denominator. This form is canonical. *)
-type ratio = {
-  num: Ligo.int; (** Numerator. *)
-  den: Ligo.int; (** Denominator, > 0 *)
-}
-
-(* make and normalize n/d, assuming d > 0 *)
-let[@inline] make_ratio (n: Ligo.int) (d: Ligo.int) : ratio =
-  assert (Ligo.gt_int_int d (Ligo.int_from_literal "0"));
-  { num = n; den = d; }
-
-(* Conversions to/from other types. *)
-(* NOTE: this implementation relies on the fact that the denominator is always positive. *)
-let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
-  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
-  match Ligo.is_nat x_num with
-  | None -> (Ligo.failwith internalError_FractionToTezFloorNegative : Ligo.tez)
-  | Some n ->
-    let n = Ligo.mul_nat_nat n (Ligo.nat_from_literal "1_000_000n") in
-    let d = Ligo.abs x_den in
-    (match Ligo.ediv_nat_nat n d with
-     (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (Ligo.failwith internalError_FractionToTezFloorZeroDenominator : Ligo.tez)
-               [@coverage off]
-     | Some quot_and_rem ->
-       let (quot, _) = quot_and_rem in
-       Ligo.mul_nat_tez quot (Ligo.tez_from_literal "1mutez") (* ignore the remainder; we floor towards zero here *)
-    )
-
-let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
-  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
-  match Ligo.is_nat x_num with
-  | None -> (Ligo.failwith internalError_FractionToNatFloorNegative : Ligo.nat)
-  | Some n ->
-    (match Ligo.ediv_nat_nat n (Ligo.abs x_den) with
-     (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (Ligo.failwith internalError_FractionToNatFloorZeroDenominator : Ligo.nat)
-               [@coverage off]
-     | Some quot_and_rem ->
-       let (quot, _) = quot_and_rem in
-       quot (* ignore the remainder; we floor towards zero here *)
-    )
-
-(* Predefined values *)
-let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.int_from_literal "1"; }
-let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
@@ -119,9 +70,6 @@ let div_ratio (x: ratio) (y: ratio) : ratio =
     mul_ratio x { num = y_den; den = y_num; }
   else
     mul_ratio x { num = neg_int y_den; den = neg_int y_num; }
-
-let show_ratio n = (Ligo.string_of_int n.num) ^ "/" ^ (Ligo.string_of_int n.den)
-let pp_ratio f x = Format.pp_print_string f (show_ratio x)
 
 (* NOTE: this implementation relies on the fact that the rationals are normalized. *)
 let sign_ratio x =

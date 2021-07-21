@@ -36,7 +36,6 @@ let[@inline] gt_ctez_ctez = Ligo.gt_nat_nat
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
-open Ratio
 let[@inline] ctez_to_muctez_int (amnt: ctez) : Ligo.int = Ligo.int amnt
 let ctez_to_ratio (amnt: ctez) : ratio = make_ratio (Ligo.int amnt) ctez_scaling_factor_int
 let ratio_of_ctez (x: ctez) : ratio = { num = ctez_to_muctez_int x; den = ctez_scaling_factor_int; }

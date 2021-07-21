@@ -1,10 +1,10 @@
-open Ratio
 open Ctez
 open Kit
 open Lqt
 open Constants
 open CfmmTypes
 open Error
+open Common
 
 (* When the cfmm is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow

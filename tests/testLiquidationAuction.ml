@@ -4,9 +4,8 @@ open TestLib
 open LiquidationAuction
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
-
 open Error
-open Ratio
+
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let property_test_count = 100
 
@@ -301,7 +300,7 @@ let suite =
            tez = Ligo.tez_from_literal "2_000_000mutez";
            min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "4_000_000n")); (* note: randomly chosen *)
          } in
-       let start_price = {num=(Ligo.int_from_literal "3"); den=(Ligo.int_from_literal "7")} in
+       let start_price = Common.{num=(Ligo.int_from_literal "3"); den=(Ligo.int_from_literal "7")} in
        let auctions = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
        assert_kit_equal
@@ -319,7 +318,7 @@ let suite =
            tez = Ligo.tez_from_literal "2_000_000mutez";
            min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "4_000_000n")); (* note: randomly chosen *)
          } in
-       let start_price = one_ratio in
+       let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
        assert_tez_option_equal
@@ -372,7 +371,7 @@ let suite =
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "5_000_000_000mutez";
              min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "9_000_003n")); (* note: randomly chosen *)
            } in
-       let start_price = one_ratio in
+       let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_tez_option_equal
          ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
@@ -401,7 +400,7 @@ let suite =
            { burrow = burrow_id_3; tez = Ligo.tez_from_literal "3_000_000_000mutez";
              min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "9_000_006n")); (* note: randomly chosen *)
            } in
-       let start_price = one_ratio in
+       let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        assert_tez_option_equal
          ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
@@ -418,7 +417,7 @@ let suite =
            { burrow = burrow_id_1; tez = Ligo.tez_from_literal "2_000_000mutez";
              min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "4_000_007n")); (* note: randomly chosen *)
            } in
-       let start_price = one_ratio in
+       let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        let bidder = Ligo.address_from_literal "23456" in
        let current = Option.get auctions.current_auction in
@@ -465,7 +464,7 @@ let suite =
         { burrow = burrow_id_1; tez = Ligo.tez_from_literal "1_000_000mutez";
           min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n")); (* note: randomly chosen *)
         } in
-    let start_price = one_ratio in
+    let start_price = Common.one_ratio in
     let auctions = liquidation_auction_touch auctions start_price in
     let current = Option.get auctions.current_auction in
 

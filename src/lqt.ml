@@ -42,7 +42,6 @@ let[@inline] lt_lqt_lqt = Ligo.lt_nat_nat
 (* BEGIN_OCAML *)
 [@@@coverage off]
 
-open Ratio
 let[@inline] lqt_to_ratio (amnt: lqt) : ratio = make_ratio (Ligo.int amnt) lqt_scaling_factor_int
 
 let lqt_compare = compare_nat
