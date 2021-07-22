@@ -265,6 +265,23 @@ let suite =
        )
     );
 
+    ("If checker is sealed, users should be able to call CheckerEntrypoint/StrictParams/Balance_of" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          let requests = [] in
+          let callback =
+            Option.get
+              (LigoOp.Tezos.get_entrypoint_opt "%some_entrypoint_name_here" alice_addr
+               : (Fa2Interface.fa2_balance_of_response list) Ligo.contract option) in
+          let fa2_balance_of_param = Fa2Interface.{requests; callback;} in
+          let op = CheckerMain.(CheckerEntrypoint (StrictParams (Balance_of fa2_balance_of_param))) in
+          (* This call should succeed *)
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in
+          ()
+       )
+    );
+
     ("If checker is sealed, users should be able to call CheckerEntrypoint/LazyParams" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
