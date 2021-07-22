@@ -57,9 +57,16 @@ jobs:
       - name: Build checker with e2eTestsHack
         run: nix-build -A michelson --arg doCheck false --arg e2eTestsHack true --out-link ./checker-e2eTestsHack
       - name: Run e2e tests
-        run: nix-shell --run "WRITE_GAS_COSTS=$PWD/gas-costs.json CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
+        run: nix-shell --run "WRITE_GAS_PROFILES=$PWD/gas_profiles.json WRITE_GAS_COSTS=$PWD/gas-costs.json CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
+      - name: Generate profile plots
+        run: nix-shell --run "python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png"
       - uses: actions/upload-artifact@v2.2.4
         with:
           name: stats
           path: gas-costs.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v2.2.4
+        with:
+          name: gas-profile-plots
+          path: auction-gas-profiles.png
           if-no-files-found: error

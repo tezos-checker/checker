@@ -1,20 +1,27 @@
+from copy import deepcopy
 import json
 import os
+from random import shuffle
 import unittest
 from collections import OrderedDict
 from datetime import datetime
-from typing import Dict, Generator, Tuple
+from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
 from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
+from pytezos.operation.group import OperationGroup
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 CHECKER_DIR = os.getenv(
     "CHECKER_DIR", default=os.path.join(PROJECT_ROOT, "generated/michelson")
 )
+# Optional file at which to output gas costs in end to end tests
 WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
+# Optional file at which to output profiles of gas costs from liquidation auction stress
+# tests
+WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
 
 class SandboxedTestCase(unittest.TestCase):
@@ -26,6 +33,7 @@ class SandboxedTestCase(unittest.TestCase):
         self.docker_client = docker_client
         self.docker_container = docker_container
         self.client = client
+        self.gas_profiles = {}
 
     def tearDown(self):
         self.docker_container.kill()
@@ -49,6 +57,7 @@ def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
 AvlPtr = int
 AvlNode = Dict
 AvlLeaves = Generator[Tuple[AvlPtr, AvlNode], None, List]
+Operation = Dict
 
 
 def auction_avl_leaves(
@@ -77,6 +86,129 @@ def auction_avl_leaves(
         # Then the right side
         for ptr, leaf_node in auction_avl_leaves(checker, node["branch"]["right"]):
             yield ptr, leaf_node
+
+
+# A Profiler is a helper function for wrapping a call to a contract with logic
+# for extracting gas cost and other related information.
+Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
+
+
+def general_gas_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """Calls inject for a list of entrypoint calls, recording the gas cost of each call."""
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+    profile = {}
+    for op in ret["contents"]:
+        name = op["parameters"]["entrypoint"]
+        if name not in profile:
+            profile[name] = {"gas": []}
+        profile[name]["gas"].append(op["gas_limit"])
+    return profile
+
+
+def mark_for_liquidation_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """
+    Calls inject for a list of `mark_for_liquidation` calls, recording
+    the gas cost and current liquidation queue size for each call.
+    """
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "mark_for_liquidation": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        assert op["parameters"]["entrypoint"] == "mark_for_liquidation"
+        profile["mark_for_liquidation"]["gas"].append(op["gas_limit"])
+        profile["mark_for_liquidation"]["queue_size"].append(n)
+        # Assuming that each request_liquidation operation adds a single slice to the queue
+        # to avoid having to re-query the storage each time (which can take a long time).
+        n += 1
+    return profile
+
+
+def cancel_liquidation_slice_profiler(
+    client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
+) -> Dict:
+    """
+    Calls inject for a list of `cancel_liquidation_slice` calls, recording
+    the gas cost and current liquidation queue size for each call.
+    """
+    n = len(
+        list(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
+        )
+    )
+    ret = inject(
+        client,
+        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+    )
+
+    profile = {
+        "cancel_liquidation_slice": {
+            "gas": [],
+            "queue_size": [],
+        }
+    }
+    for op in ret["contents"]:
+        # Ignore other operations (e.g. deposit_tez)
+        if op["parameters"]["entrypoint"] != "cancel_liquidation_slice":
+            continue
+        profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
+        profile["cancel_liquidation_slice"]["queue_size"].append(n)
+        # Assuming that each cancel_liquidation_slice removes a single slice from
+        # the queue to avoid having to re-query the storage each time (which can take a long time).
+        # NOTE: This assumption does not always hold (e.g. for Complete liquidations). If we
+        # want to use this profiler in more general places we will need to update the queue_size
+        # estimation logic here.
+        n -= 1
+    return profile
+
+
+def merge_gas_profiles(profile1: Dict, profile2: Dict) -> Dict:
+    """Merges two gas profile dictionaries
+
+    In case of conflicting keys, entries from profile2 will be appended to
+    entries under the same key in profile1.
+    """
+    merged = deepcopy(profile1)
+    for name, data2 in profile2.items():
+        data2: dict
+        if name in profile1:
+            data1 = profile1[name]
+            for k in data2.keys():
+                if k not in data1:
+                    raise ValueError("Profiles had mismatching keys")
+                merged[name][k] += data2[k]
+        else:
+            merged[name] = data2
+    return merged
 
 
 class E2ETest(SandboxedTestCase):
@@ -308,19 +440,26 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         print("Deployment finished.")
 
-        def call_endpoint(contract, name, param, amount=0):
+        def call_endpoint(
+            contract, name, param, amount=0, profiler=general_gas_profiler
+        ):
+            # Helper for calling contract endpoints with profiling
             print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
-            return inject(
+            profile = profiler(
                 self.client,
-                getattr(contract, name)(param)
-                .with_amount(amount)
-                .as_transaction()
-                .autofill(ttl=MAX_OPERATIONS_TTL)
-                .sign(),
+                contract,
+                [
+                    getattr(contract, name)(param)
+                    .with_amount(amount)
+                    .as_transaction()
+                    .autofill(ttl=MAX_OPERATIONS_TTL)
+                    .sign()
+                ],
             )
+            self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
-        def call_bulk(bulks, *, batch_size):
-            # FIXME: Add execution time metrics for batches to help detect degenerating efficiency
+        def call_bulk(bulks, *, batch_size, profiler=general_gas_profiler):
+            # Helper for calling operations in batches
             batches = [
                 bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
             ]
@@ -334,11 +473,11 @@ class LiquidationsStressTest(SandboxedTestCase):
                     "of",
                     len(batches),
                 )
-                inject(
-                    self.client,
-                    self.client.bulk(*batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
-                )
+                profile = profiler(self.client, checker, batch)
+                self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
+        # Note: the amount of kit minted here and the kit in all other burrows for this account
+        # must be enough to bid on the liquidation auction later in the test.
         call_bulk(
             [
                 checker.create_burrow((0, None)).with_amount(200_000_000),
@@ -380,11 +519,11 @@ class LiquidationsStressTest(SandboxedTestCase):
             batch_size=100,
         )
 
-        # Change the index (kits are 100x valuable)
+        # Change the index (kits are 10x valuable)
         #
         # Keep in mind that we're using a patched checker on tests where the protected index
         # is much faster to update.
-        call_endpoint(oracle, "update", 100_000_000)
+        call_endpoint(oracle, "update", 10_000_000)
 
         # Oracle updates lag one touch on checker
         call_endpoint(checker, "touch", None)
@@ -403,6 +542,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 for burrow_no in burrows
             ],
             batch_size=40,
+            profiler=mark_for_liquidation_profiler,
         )
 
         # This touch starts a liquidation auction
@@ -422,35 +562,50 @@ class LiquidationsStressTest(SandboxedTestCase):
         assert (
             queued_tez > 10_000_000_000
         ), "queued tez in liquidation auction was not greater than Constants.max_lot_size which is required for this test"
-
+        print(f"Auction queue currently has {queued_tez} mutez")
         call_endpoint(checker, "touch", None)
 
         # Now that there is an auction started in a descending state, we can select a queued slice
         # and be confident that we can cancel it before it gets added to another auction.
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
-        for queued_leaf_ptr, leaf in auction_avl_leaves(
-            checker,
-            checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                "queued_slices"
-            ](),
+        cancel_ops = []
+        for i, (queued_leaf_ptr, leaf) in enumerate(
+            auction_avl_leaves(
+                checker,
+                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+                    "queued_slices"
+                ](),
+            )
         ):
-            # Only retrieve the first queued slice ptr for efficiency
-            break
-        # Deposit a ton of tez to this burrow to ensure that it is no longer liquidatable
-        call_endpoint(
-            checker,
-            "deposit_tez",
-            leaf["leaf"]["value"]["contents"]["burrow"][1],
-            amount=100_000_000_000,
+            cancel_ops.append(
+                (
+                    checker.deposit_tez(
+                        leaf["leaf"]["value"]["contents"]["burrow"][1]
+                    ).with_amount(1_000_000_000),
+                    checker.cancel_liquidation_slice(queued_leaf_ptr),
+                )
+            )
+            # Note: picking 895 here since it is close to the queue_size
+            # at this point in the test. This number can be tweaked up
+            # or down as desired.
+            if len(cancel_ops) >= 895:
+                break
+        # Shuffle so we aren't only cancelling the oldest slice
+        shuffle(cancel_ops)
+        flattened_cancel_ops = []
+        for op1, op2 in cancel_ops:
+            flattened_cancel_ops += [op1, op2]
+        call_bulk(
+            flattened_cancel_ops,
+            batch_size=100,
+            profiler=cancel_liquidation_slice_profiler,
         )
-        call_endpoint(checker, "cancel_liquidation_slice", queued_leaf_ptr)
 
-        # And we place a bid:
-
+        # And we place a bid for the auction we started earlier:
         ret = checker.metadata.currentLiquidationAuctionMinimumBid().storage_view()
         auction_id, minimum_bid = ret["contents"], ret["nat_1"]
-        # The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
+        # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.
 
@@ -483,14 +638,24 @@ class LiquidationsStressTest(SandboxedTestCase):
             assert "leaf" in leaf
             auctioned_slices.append(leaf_ptr)
 
-        # Note: batching here based on empirical estimates of how many slices we can
-        # touch in one go before hitting the gas limit.
-        for i in range(0, len(auctioned_slices), 10):
-            slices_to_cancel = auctioned_slices[i : i + 10]
+        # Note: using smaller batches here to increase the number of samples for profiling.
+        for i in range(0, len(auctioned_slices), 5):
+            slices_to_cancel = auctioned_slices[i : i + 5]
             call_endpoint(checker, "touch_liquidation_slices", slices_to_cancel)
 
         # With all of the slices touched, we should now be able to claim our hard-earned winnings
         call_endpoint(checker, "liquidation_auction_claim_win", current_auctions_ptr)
+
+        # Extra calls for profiling purposes
+        call_bulk(
+            [checker.touch(None) for _ in range(5)],
+            batch_size=2,
+        )
+
+        # Optionally write out gas profile json
+        if WRITE_GAS_PROFILES:
+            with open(WRITE_GAS_PROFILES, "w") as f:
+                json.dump(self.gas_profiles, f, indent=4)
 
 
 if __name__ == "__main__":
