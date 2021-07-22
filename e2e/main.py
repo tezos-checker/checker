@@ -182,8 +182,11 @@ def cancel_liquidation_slice_profiler(
             continue
         profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
         profile["cancel_liquidation_slice"]["queue_size"].append(n)
-        # Assuming that each request_liquidation cancel_liquidation_slice removes a single slice from
+        # Assuming that each cancel_liquidation_slice removes a single slice from
         # the queue to avoid having to re-query the storage each time (which can take a long time).
+        # NOTE: This assumption does not always hold (e.g. for Complete liquidations). If we
+        # want to use this profiler in more general places we will need to update the queue_size
+        # estimation logic here.
         n -= 1
     return profile
 
@@ -583,6 +586,9 @@ class LiquidationsStressTest(SandboxedTestCase):
                     checker.cancel_liquidation_slice(queued_leaf_ptr),
                 )
             )
+            # Note: picking 895 here since it is close to the queue_size
+            # at this point in the test. This number can be tweaked up
+            # or down as desired.
             if len(cancel_ops) >= 895:
                 break
         # Shuffle so we aren't only cancelling the oldest slice
