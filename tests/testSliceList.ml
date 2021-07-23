@@ -42,6 +42,52 @@ let suite =
        assert_equal (slice_list_empty burrow_id_1) burrow_slices ~printer:show_slice_list
     );
 
+    ("slice_list_from_leaf_ptr - fails for ptr with no corresponding list in auction state" >::
+     fun _ ->
+       let auction_state = liquidation_auction_empty in
+       let orphan_slice = {
+         contents={
+           burrow=burrow_id_1;
+           tez=Ligo.tez_from_literal "1mutez";
+           min_kit_for_unwarranted=None;
+         };
+         older=None;
+         younger=None;
+       } in
+       let mem,  orphan_slice_ptr = Avl.avl_push_front auction_state.avl_storage auction_state.queued_slices orphan_slice in
+       let auction_state = {auction_state with avl_storage=mem} in
+
+       assert_raises
+         (Failure (Ligo.string_of_int internalError_SliceListFromLeafPtrEmptySliceList))
+         (fun _ ->
+            slice_list_from_leaf_ptr auction_state orphan_slice_ptr
+         )
+    );
+
+    ("slice_list_remove - fails when attempting to remove an element from an empty list" >::
+     fun _ ->
+       (* An arbitrary ptr and slice which are not associated with the slice list. Required
+        * for calling slice_list_remove.
+       *)
+       let slice_ptr = LiquidationAuctionPrimitiveTypes.LeafPtr (Ptr.random_ptr ()) in
+       let slice = {
+         contents={
+           burrow=burrow_id_1;
+           tez=Ligo.tez_from_literal "1mutez";
+           min_kit_for_unwarranted=None;
+         };
+         older=None;
+         younger=None;
+       } in
+       let empty_list = SliceList {slice_list_burrow=burrow_id_1;slice_list_bounds=None} in
+
+       assert_raises
+         (Failure (Ligo.string_of_int internalError_SliceListRemoveEmptyList))
+         (fun _ ->
+            slice_list_remove empty_list liquidation_auction_empty (SliceListElement (slice_ptr, slice))
+         )
+    );
+
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
