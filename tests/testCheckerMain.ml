@@ -54,6 +54,8 @@ let debug_print_all_kit_in_sealed_state msg wrapper =
       print_string "\n";
       print_string ("outstanding = " ^ Kit.show_kit state.parameters.outstanding_kit);
       print_string "\n";
+      print_string ("cfmm.kit    = " ^ Kit.show_kit state.cfmm.kit);
+      print_string "\n";
       print_string "kit_on_ledger =\n";
       List.iter
         (fun (addr, amnt) ->
@@ -416,7 +418,7 @@ let suite =
           debug_print_all_kit_in_sealed_state "after setup:Mint_kit" sealed_wrapper;
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
+          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
 
           debug_print_all_kit_in_sealed_state "after setup:set_last_price" sealed_wrapper;
 
