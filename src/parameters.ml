@@ -442,7 +442,9 @@ let parameters_touch
   let current_outstanding_with_fees =
     compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
   let accrual_to_cfmm =
-    kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
+    if parameters_outstanding_kit > current_outstanding_with_fees
+    then (failwith "so, it can happen, then (a)" : kit)
+    else kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
   let current_outstanding_kit =
     compute_current_outstanding_kit current_outstanding_with_fees parameters_imbalance_index current_imbalance_index in
   let current_circulating_kit =
@@ -472,7 +474,10 @@ let[@inline] add_circulating_kit (parameters: parameters) (kit: kit) : parameter
 (** Remove some kit from the total amount of kit in circulation. *)
 let[@inline] remove_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (geq_kit_kit parameters.circulating_kit kit);
-  { parameters with circulating_kit = kit_sub parameters.circulating_kit kit; }
+  { parameters with circulating_kit =
+                      if kit > parameters.circulating_kit
+                      then (failwith "so, it can happen, then (d)" : kit)
+                      else kit_sub parameters.circulating_kit kit; }
 
 (** Add some kit to the total amount of kit required to close all burrows and
     the kit in circulation. This is the case when a burrow owner mints kit. *)
@@ -487,6 +492,12 @@ let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: 
 let[@inline] remove_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (geq_kit_kit parameters.outstanding_kit kit);
   { parameters with
-    outstanding_kit = kit_sub parameters.outstanding_kit kit;
-    circulating_kit = kit_sub parameters.circulating_kit kit;
+    outstanding_kit =
+      if kit > parameters.outstanding_kit
+      then (failwith "so, it can happen, then (c)" : kit)
+      else kit_sub parameters.outstanding_kit kit;
+    circulating_kit =
+      if kit > parameters.circulating_kit
+      then (failwith "so, it can happen, then (b)" : kit)
+      else kit_sub parameters.circulating_kit kit;
   }

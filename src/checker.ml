@@ -809,8 +809,18 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
       touch_oldest ([op], state_liquidation_auctions, state_burrows, kit_zero, kit_zero, number_of_slices_to_process) in
     let state_parameters =
       { state_parameters with
-        outstanding_kit = kit_sub state_parameters.outstanding_kit kit_to_repay;
-        circulating_kit = kit_sub state_parameters.circulating_kit (kit_add kit_to_repay kit_to_burn);
+        outstanding_kit =
+          if kit_to_repay > state_parameters.outstanding_kit
+          then (failwith ("so, it can happen, then (f):"
+                          ^ "(outstanding = " ^ Kit.show_kit state_parameters.outstanding_kit ^ ")"
+                          ^ "(kit_to_repay = " ^ Kit.show_kit kit_to_repay ^ ")"
+                         )
+                : kit) (* (Ligo.failwith (kit_to_mukit_int state_parameters.outstanding_kit) : kit) *)
+          else kit_sub state_parameters.outstanding_kit kit_to_repay;
+        circulating_kit =
+          if (kit_add kit_to_repay kit_to_burn) > state_parameters.circulating_kit
+          then (failwith "so, it can happen, then (e)" : kit)
+          else kit_sub state_parameters.circulating_kit (kit_add kit_to_repay kit_to_burn);
       } in
 
     (* Do all the ledger stuff at the end, in one go *)
