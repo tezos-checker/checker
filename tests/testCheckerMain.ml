@@ -12,6 +12,11 @@ open LiquidationAuctionPrimitiveTypes
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
+(* This function lets us test all different branches of
+ * CheckerEntrypoints.lazyParamsToLazyFunctionId. This is the reason we pass
+ * the lazy parameters here, instead of the function id and the bytes
+ * separately, so that we can call lazyParamsToLazyFunctionId on each possible
+ * argument and increase test coverage. *)
 let test_deploy_function_with_lazy_params_succeeds lazy_params =
   Ligo.Tezos.reset ();
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
