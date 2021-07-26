@@ -167,11 +167,11 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
          * a single element have slice_list_oldest_ptr = slice_list_youngest_ptr != None. This
          * means that any single-element lists will go down the single element if- branch above
          * (case 1.1), but we still need to perform pattern patching here since slice_list_bounds
-         * is of type option. Disabling coverage for this branch since it is unreachable.
+         * is of type option.
         *)
-        | None -> (
-            assert (ptr = bounds.slice_list_youngest_ptr);
-            (None: slice_list_bounds option)) [@coverage off]
+        | None ->
+          assert (ptr = bounds.slice_list_youngest_ptr);
+          (None: slice_list_bounds option)
         (* Case 2.2 there is another element. This one is now the oldest *)
         | Some younger_ptr -> Some {bounds with slice_list_oldest_ptr=younger_ptr;}
         (* Case 3: we are removing an element assumed to be in the interior of the list.
