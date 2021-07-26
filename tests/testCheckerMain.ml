@@ -489,13 +489,14 @@ let suite =
 
           debug_print_all_kit_in_sealed_state "after Liquidation_auction_place_bid" sealed_wrapper;
 
-          (* FIXME *)
           (* setup: make enough time pass so that the auction finishes *)
           let seconds_passed = int_of_string (Ligo.string_of_int (Ligo.add_int_int Constants.max_bid_interval_in_seconds (Ligo.int_from_literal "1"))) in
           let blocks_passed = int_of_string (Ligo.string_of_nat (Ligo.add_nat_nat Constants.max_bid_interval_in_blocks (Ligo.nat_from_literal "1n"))) in
           Ligo.Tezos.new_transaction ~seconds_passed:seconds_passed ~blocks_passed:blocks_passed ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          debug_print_all_kit_in_sealed_state "after Touch" sealed_wrapper;
 
           (* Note: to avoid the unused variable warning. *)
           assert_equal sealed_wrapper sealed_wrapper
