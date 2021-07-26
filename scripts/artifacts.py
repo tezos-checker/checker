@@ -219,7 +219,7 @@ def diff_change(diff):
     if diff.previous is None:
         return diff.next
     elif diff.next is None:
-        return diff.previous
+        return -diff.previous
     else:
         return diff.next - diff.previous
 
