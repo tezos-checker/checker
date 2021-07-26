@@ -62,6 +62,8 @@ jobs:
       - name: Generate profile plots
         run: nix-shell --run "python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png"
       - uses: actions/upload-artifact@v2.2.4
+        # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
+        # per commit.
         if: github.event_name == 'push'
         with:
           name: stats
