@@ -548,7 +548,7 @@ let burrow_request_liquidation (p: parameters) (b: burrow) : liquidation_result 
         let tez_to_auction = b_without_reward.collateral in (* OVERRIDE *)
         let final_burrow =
           { b with
-            collateral = Ligo.tez_from_literal "0mutez"; (* SKIP_MUTATION *)
+            collateral = Ligo.tez_from_literal "0mutez";
             collateral_at_auction = Ligo.add_tez_tez b.collateral_at_auction tez_to_auction;
           } in
         Some
