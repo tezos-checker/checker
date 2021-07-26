@@ -161,8 +161,14 @@ let[@inline] slice_list_remove (l:slice_list) (auctions:liquidation_auctions) (e
       else
         (* Case 2: We are removing the oldest slice *)
       if ptr = bounds.slice_list_oldest_ptr then
-        (* Case 2.1 it is the only element (i.e. also the youngest slice). The list is now empty *)
         match slice.younger with
+        (* Case 2.1 it is the only element (i.e. also the youngest slice). The list is now empty *)
+        (* NOTE: This branch is unreachable in the current implementation since slice lists of
+         * a single element have slice_list_oldest_ptr = slice_list_youngest_ptr != None. This
+         * means that any single-element lists will go down the single element if- branch above
+         * (case 1.1), but we still need to perform pattern patching here since slice_list_bounds
+         * is of type option.
+        *)
         | None ->
           assert (ptr = bounds.slice_list_youngest_ptr);
           (None: slice_list_bounds option)
