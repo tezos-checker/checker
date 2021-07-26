@@ -10,6 +10,9 @@ See '--help' for usage, an example:
 This script is currently meant to be used in a more interactive fashion. Edit the
 mutations MUTATION_GROUPS as needed.
 
+You can use the (* SKIP_MUTATION *) in-line comment to have this script ignore
+certain lines in the source modules.
+
 WARNING: This script edits the src files in-place and attempts to restore changes
 using git. If the script exits ungracefully you might need to clean up your
 working tree.
@@ -168,6 +171,9 @@ def mutate(
         # aggressive (e.g. in cases with an inline comment talking about assertions), but
         # this doesn't seem to be a common case.
         if "assert" in stripped:
+            continue
+        # Similar logic for lines which are manually flagged as needing to be ignored
+        if "SKIP_MUTATION" in stripped:
             continue
         match = before_regex.match(l)
         if match:
