@@ -251,5 +251,3 @@ def print_diffs(diffs, *, title, header_previous, header_next):
 
 if __name__ == "__main__":
     cli()
-
-# import code; code.interact(local=locals())
