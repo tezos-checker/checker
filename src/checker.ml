@@ -25,14 +25,6 @@ let assert_checker_invariants (state: checker) : unit =
   assert_liquidation_auction_invariants state.liquidation_auctions;
   (* Check that the total kit tracked on the fa2 ledger is consistent with
    * (i.e., equal to) the circulating kit as stored in the state parameters. *)
-  ( if fa2_get_total_kit_balance state.fa2_state = state.parameters.circulating_kit
-    then ()
-    else failwith (
-        "\n" ^ "TOTAL KIT_BALANCE : " ^ Kit.show_kit (fa2_get_total_kit_balance state.fa2_state) ^
-        "\n" ^ "CIRCULATING_KIT   : " ^ Kit.show_kit state.parameters.circulating_kit ^
-        "\n"
-      )
-  );
   assert (fa2_get_total_kit_balance state.fa2_state = state.parameters.circulating_kit);
   (* Check that the total kit that checker owns (plus one - because of the
    * phantom kit token in the cfmm) is at least as much as the total kit in the
@@ -405,17 +397,37 @@ let touch_liquidation_slice
   let burrow, repaid_kit, excess_kit = burrow_return_kit_from_auction slice kit_to_repay burrow in
   let state_burrows = Ligo.Big_map.update slice.burrow (Some burrow) state_burrows in
 
+  (* So, there are a few amounts of kit here:
+   * - kit_to_repay: this is the part of the bid to be repaid to the burrow. It
+   *   can be seen as consisting of two parts:
+   *   + repaid_kit: this is the part of the bid that is repaid to the burrow.
+   *     It is subtracted from the burrow's outstanding kit (and, consequently,
+   *     from the total outstanding kit), and the circulating kit.
+   *   + excess_kit: if all the outstanding kit for the burrow has been
+   *     completely repaid via the repaid_kit, this part of the bid is simply
+   *     returned to the burrow owner.
+   * - kit_to_burn: this is the part of the bid to be destroyed. This means
+   *   that we have to remove it from circulation, but not from the burrow's
+   *   (and, consequently, the total) outstanding kit. This is zero if the
+   *   liquidation is deemed unwarranted. *)
+  assert (eq_kit_kit (kit_add repaid_kit excess_kit) kit_to_repay);
+
   let state_parameters =
-    let state_parameters = remove_outstanding_and_circulating_kit state_parameters repaid_kit in (* NOTE: MIGHT FAIL DUE TO #209. *)
+    let state_parameters = remove_outstanding_and_circulating_kit state_parameters repaid_kit in
     let state_parameters = remove_circulating_kit state_parameters kit_to_burn in (* the excess kit remains in circulation *)
     state_parameters in
 
-  let state_fa2_state =
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, repaid_kit) in  (* this is repaid to the burrow (burned) : -CIRCU | -OUTST *) (* NOTE: MIGHT FAIL DUE TO #209. *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_burn) in (* this has to be burned, for everyone   : -CIRCU |        *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, excess_kit) in  (* gotta give this to the burrow owner   :        |        *)
+  let new_state_fa2_state =
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, repaid_kit) in  (* this is repaid to the burrow (burned) *)
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_burn) in (* this has to be burned, for everyone   *)
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, excess_kit) in  (* gotta give this to the burrow owner   *)
     let state_fa2_state = ledger_issue_kit (state_fa2_state, burrow_owner, excess_kit) in
     state_fa2_state in
+
+  assert (fa2_get_total_lqt_balance state_fa2_state = fa2_get_total_lqt_balance new_state_fa2_state); (* preservation of lqt *)
+  assert (kit_add (fa2_get_total_kit_balance new_state_fa2_state) (kit_add repaid_kit kit_to_burn) = fa2_get_total_kit_balance state_fa2_state);
+
+  let state_fa2_state = new_state_fa2_state in
 
   (* Signal the burrow to send the tez to checker. *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" (burrow_address burrow): Ligo.tez Ligo.contract option) with
@@ -436,13 +448,7 @@ let rec touch_liquidation_slices_rec
     let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
       touch_liquidation_slice ops state_liquidation_auctions state_burrows state_parameters state_fa2_state x in
     touch_liquidation_slices_rec
-      ( ops,
-        state_liquidation_auctions,
-        state_burrows,
-        state_parameters,
-        state_fa2_state,
-        xs
-      )
+      (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, xs)
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
