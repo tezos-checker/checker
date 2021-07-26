@@ -13,7 +13,6 @@ let burrow_addr = Ligo.address_of_string "BURROW_ADDR"
  * an active flag. The rest of the parameters are fixed. *)
 let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_for_test
     ~outstanding_kit:outstanding_kit
-    ~excess_kit:kit_zero
     ~active:active
     ~address:burrow_addr
     ~delegate:None
@@ -41,91 +40,60 @@ let suite =
        in ()
     );
 
-    ("burrow_burn_kit - expected value for burrow with excess kit" >::
-     fun _ ->
-       let burrow0 = Burrow.make_burrow_for_test
-           ~outstanding_kit:kit_zero
-           ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
-           ~active:true
-           ~address:burrow_addr
-           ~delegate:None
-           ~collateral:(Ligo.tez_from_literal "0mutez")
-           ~adjustment_index:fixedpoint_one
-           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
-       in
-
-       let burrow = Burrow.burrow_burn_kit
-           Parameters.initial_parameters
-           (kit_of_mukit (Ligo.nat_from_literal "1n"))
-           burrow0 in
-
-       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
-       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "2n")) ~real:(Burrow.burrow_excess_kit burrow)
-    );
-
-    ("burrow_burn_kit - burning exactly outstanding_kit returns burrow with expected excess and outstanding kit" >::
+    ("burrow_burn_kit - burning exactly outstanding_kit returns burrow with expected outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
            ~active:true
            ~collateral:(Ligo.tez_from_literal "0mutez") in
 
-       let burrow = Burrow.burrow_burn_kit
-           Parameters.initial_parameters
-           (kit_of_mukit (Ligo.nat_from_literal "1n"))
-           burrow0 in
+       let kit_to_burn = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let burrow, actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
 
        assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
-       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:kit_to_burn ~real:actual_burned
     );
 
-    ("burrow_burn_kit - burning greater than outstanding_kit returns burrow with expected excess and outstanding kit" >::
+    ("burrow_burn_kit - burning greater than outstanding_kit returns burrow with expected outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
            ~active:true
            ~collateral:(Ligo.tez_from_literal "0mutez") in
 
-       let burrow = Burrow.burrow_burn_kit
-           Parameters.initial_parameters
-           (kit_of_mukit (Ligo.nat_from_literal "2n"))
-           burrow0 in
+       let kit_to_burn = kit_of_mukit (Ligo.nat_from_literal "2n") in
+       let burrow, actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
 
        assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_outstanding_kit burrow);
-       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:actual_burned
     );
 
-    ("burrow_burn_kit - burning less than outstanding_kit returns burrow with expected excess and outstanding kit" >::
+    ("burrow_burn_kit - burning less than outstanding_kit returns burrow with expected outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
            ~active:true
            ~collateral:(Ligo.tez_from_literal "0mutez") in
 
-       let burrow = Burrow.burrow_burn_kit
-           Parameters.initial_parameters
-           (kit_of_mukit (Ligo.nat_from_literal "1n"))
-           burrow0 in
+       let kit_to_burn = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let burrow, actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
 
        assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_outstanding_kit burrow);
-       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:kit_to_burn ~real:actual_burned
     );
 
-    ("burrow_burn_kit - burning zero kit returns burrow with expected excess and outstanding kit" >::
+    ("burrow_burn_kit - burning zero kit returns burrow with expected outstanding kit" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
            ~active:true
            ~collateral:(Ligo.tez_from_literal "0mutez") in
 
-       let burrow = Burrow.burrow_burn_kit
-           Parameters.initial_parameters
-           kit_zero
-           burrow0 in
+       let kit_to_burn = kit_zero in
+       let burrow, actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
 
        assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n")) ~real:(Burrow.burrow_outstanding_kit burrow);
-       assert_kit_equal ~expected:kit_zero ~real:(Burrow.burrow_excess_kit burrow)
+       assert_kit_equal ~expected:kit_to_burn ~real:actual_burned
     );
 
     ("burrow_burn_kit - does not change burrow address" >::
@@ -135,7 +103,7 @@ let suite =
            ~active:true
            ~collateral:(Ligo.tez_from_literal "0mutez") in
 
-       let burrow = Burrow.burrow_burn_kit Parameters.initial_parameters (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
+       let burrow, _actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
 
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
@@ -176,7 +144,7 @@ let suite =
        in ()
     );
 
-    ("burrow_deposit_tez - burrow after successful deposit has expected collateral and excess" >::
+    ("burrow_deposit_tez - burrow after successful deposit has expected collateral" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
@@ -190,10 +158,7 @@ let suite =
 
        assert_tez_equal
          ~expected:(Ligo.tez_from_literal "101mutez")
-         ~real:(Burrow.burrow_collateral burrow);
-       assert_kit_equal
-         ~expected:kit_zero
-         ~real:(Burrow.burrow_excess_kit burrow)
+         ~real:(Burrow.burrow_collateral burrow)
     );
 
     ("burrow_deposit_tez - does not change burrow address" >::
@@ -478,7 +443,6 @@ let suite =
               (
                 Burrow.make_burrow_for_test
                   ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "0n"))
-                  ~excess_kit:kit_zero
                   ~active:true
                   ~address:burrow_addr
                   ~delegate:None
@@ -544,16 +508,6 @@ let suite =
           ~real:(Burrow.burrow_outstanding_kit burrow)
     );
 
-    (
-      "burrow_create - created burrow has zero excess kit" >::
-      fun _ ->
-        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr (Ligo.tez_from_literal "1_000_000mutez") None in
-
-        assert_kit_equal
-          ~expected:kit_zero
-          ~real:(Burrow.burrow_excess_kit burrow)
-    );
-
     ("burrow_touch - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
@@ -576,7 +530,6 @@ let suite =
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:burrow_addr
            ~delegate:None
@@ -590,7 +543,7 @@ let suite =
            min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal "1n"));
          } in
 
-       let burrow = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
+       let burrow, _returned_kit, _excess_kit = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "1n")) burrow0 in
 
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
@@ -601,7 +554,6 @@ let suite =
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:burrow_addr
            ~delegate:None
@@ -617,7 +569,6 @@ let suite =
 
        let expected_burrow = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "2n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:burrow_addr
            ~delegate:None
@@ -636,7 +587,6 @@ let suite =
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:burrow_addr
            ~delegate:None
@@ -717,7 +667,6 @@ let suite =
      fun _ ->
        let burrow0 = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "5n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:burrow_addr
            ~delegate:None
@@ -756,7 +705,6 @@ let suite =
      fun _ ->
        let burrow = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:alice_addr
            ~delegate:None
@@ -778,7 +726,6 @@ let suite =
      fun _ ->
        let burrow = Burrow.make_burrow_for_test
            ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3n"))
-           ~excess_kit:kit_zero
            ~active:true
            ~address:alice_addr
            ~delegate:None
@@ -797,7 +744,6 @@ let suite =
       fun _ -> (
           let burrow = Burrow.make_burrow_for_test
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10n"))
-              ~excess_kit:kit_zero
               ~active:true
               ~address:alice_addr
               ~delegate:None
@@ -814,49 +760,9 @@ let suite =
             }
           in
 
-          let burrow_out = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "9n")) burrow in
+          let burrow_out, _returned_kit, _excess_kit = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "9n")) burrow in
           let burrow_expected = Burrow.make_burrow_for_test
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1n"))
-              ~excess_kit:kit_zero
-              ~active:true
-              ~address:alice_addr
-              ~delegate:None
-              ~collateral:(Ligo.tez_from_literal "0mutez")
-              ~adjustment_index:fixedpoint_one
-              ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
-              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-          assert_burrow_equal
-            ~expected:burrow_expected
-            ~real:burrow_out
-        ));
-
-    (
-      "burrow_return_kit_from_auction - expected value for burrow with excess kit" >::
-      fun _ -> (
-          let burrow = Burrow.make_burrow_for_test
-              ~outstanding_kit:kit_zero
-              ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "10n"))
-              ~active:true
-              ~address:alice_addr
-              ~delegate:None
-              ~collateral:(Ligo.tez_from_literal "0mutez")
-              ~adjustment_index:fixedpoint_one
-              ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
-              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-          let slice = let open LiquidationAuctionPrimitiveTypes in
-            {
-              burrow=(alice_addr, Ligo.nat_from_literal "0n");
-              tez=(Ligo.tez_from_literal "2mutez");
-              min_kit_for_unwarranted=None;
-            }
-          in
-
-          let burrow_out = Burrow.burrow_return_kit_from_auction slice (kit_of_mukit (Ligo.nat_from_literal "9n")) burrow in
-          let burrow_expected = Burrow.make_burrow_for_test
-              ~outstanding_kit:kit_zero
-              ~excess_kit:(kit_of_mukit (Ligo.nat_from_literal "19n"))
               ~active:true
               ~address:alice_addr
               ~delegate:None
@@ -875,7 +781,6 @@ let suite =
       fun _ -> (
           let burrow = Burrow.make_burrow_for_test
               ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_657_142n"))
-              ~excess_kit:kit_zero
               ~active:true
               ~address:alice_addr
               ~delegate:None
@@ -895,7 +800,6 @@ let suite =
       fun _ ->
         let burrow = Burrow.make_burrow_for_test
             ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_657_143n"))
-            ~excess_kit:kit_zero
             ~active:true
             ~address:alice_addr
             ~delegate:None
@@ -915,7 +819,6 @@ let suite =
       fun _ ->
         let burrow = Burrow.make_burrow_for_test
             ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
-            ~excess_kit:kit_zero
             ~active:true
             ~address:alice_addr
             ~delegate:None
@@ -934,7 +837,6 @@ let suite =
       fun _ ->
         let burrow = Burrow.make_burrow_for_test
             ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "4_000_000n"))
-            ~excess_kit:kit_zero
             ~active:true
             ~address:alice_addr
             ~delegate:None
@@ -953,7 +855,6 @@ let suite =
       fun _ ->
         let burrow = Burrow.make_burrow_for_test
             ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
-            ~excess_kit:kit_zero
             ~active:true
             ~address:alice_addr
             ~delegate:None
@@ -972,7 +873,6 @@ let suite =
       fun _ ->
         let burrow = Burrow.make_burrow_for_test
             ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))
-            ~excess_kit:kit_zero
             ~active:false
             ~address:alice_addr
             ~delegate:None
@@ -1047,8 +947,8 @@ let suite =
       @@ QCheck.Test.make
         ~name:"burrow_mint_kit - returned burrow obeys burrow invariants"
         ~count:property_test_count
-        (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
-      @@ fun (burrow_kit, arbitrary_int) ->
+        TestArbitrary.arb_kit
+      @@ fun (burrow_kit) ->
       (* scale it down, since we will need to multiply it by 10 to compute a tez amount *)
       let burrow_kit =
         kit_of_fraction_floor
@@ -1057,15 +957,11 @@ let suite =
 
       let kit_to_mint = kit_of_mukit (Ligo.nat_from_literal "10n") in
       (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
-      let outstanding, excess, collateral =
-        if (arbitrary_int mod 2) = 0 then
-          (burrow_kit, kit_zero, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat burrow_kit))
-        else
-          (kit_zero, burrow_kit, Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat kit_to_mint))
-      in
+      let outstanding = burrow_kit in
+      let collateral = Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat burrow_kit) in
+
       let burrow0 = Burrow.make_burrow_for_test
           ~outstanding_kit:outstanding
-          ~excess_kit:excess
           ~active:true
           ~address:burrow_addr
           ~delegate:None
@@ -1083,18 +979,13 @@ let suite =
       @@ QCheck.Test.make
         ~name:"burrow_burn_kit - returned burrow obeys burrow invariants"
         ~count:property_test_count
-        (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit QCheck.(0 -- max_int))
-      @@ fun (burrow_kit, kit_to_burn, arbitrary_int) ->
+        (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
+      @@ fun (burrow_kit, kit_to_burn) ->
 
       (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
-      let outstanding, excess = if (arbitrary_int mod 2) = 0 then
-          (burrow_kit, kit_zero)
-        else
-          (kit_zero, burrow_kit)
-      in
+      let outstanding = burrow_kit in
       let burrow0 = Burrow.make_burrow_for_test
           ~outstanding_kit:outstanding
-          ~excess_kit:excess
           ~active:true
           ~address:burrow_addr
           ~delegate:None
@@ -1103,7 +994,8 @@ let suite =
           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
 
-      let _ = Burrow.assert_burrow_invariants (Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0) in
+      let burrow, _actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
+      let _ = Burrow.assert_burrow_invariants burrow in
       true
     );
 
@@ -1188,21 +1080,14 @@ let suite =
       @@ QCheck.Test.make
         ~name:"burrow_touch - net kit associated with burrow does not change when no adjustment is required"
         ~count:property_test_count
-        (QCheck.pair TestArbitrary.arb_kit QCheck.(0 -- max_int))
-      @@ fun (kit, arbitrary_int) ->
+        (TestArbitrary.arb_kit)
+      @@ fun (kit) ->
 
       (* Random kit balances which obey the burrow invariants *)
-      let outstanding, excess = if (arbitrary_int mod 2) = 0 then
-          (kit, kit_zero)
-        else
-          (kit_zero, kit)
-      in
-      (* Helper for computing the net kit balance of the burrow *)
-      let net_kit_int b = (Ligo.sub_int_int (kit_to_mukit_int (Burrow.burrow_excess_kit b)) (kit_to_mukit_int (Burrow.burrow_outstanding_kit b))) in
+      let outstanding = kit in
       (* Note: this combination of burrow and parameters cause the adjustment to be just the identity *)
       let burrow0 = Burrow.make_burrow_for_test
           ~outstanding_kit:outstanding
-          ~excess_kit:excess
           ~active:true
           ~address:burrow_addr
           ~delegate:None
@@ -1215,7 +1100,7 @@ let suite =
       let burrow = Burrow.burrow_touch parameters burrow0 in
       assert_bool
         "Net kit changed during touch operation even though no adjustment should have been performed."
-        (net_kit_int burrow = net_kit_int burrow0);
+        (Kit.eq_kit_kit (Burrow.burrow_outstanding_kit burrow) (Burrow.burrow_outstanding_kit burrow0));
       true
     );
 
@@ -1231,7 +1116,6 @@ let suite =
 
       let burrow0 = Burrow.make_burrow_for_test
           ~outstanding_kit:outstanding_kit
-          ~excess_kit:kit_zero
           ~active:true
           ~address:burrow_addr
           ~delegate:None

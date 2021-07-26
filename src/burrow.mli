@@ -60,16 +60,13 @@ val burrow_is_cancellation_warranted : parameters -> burrow -> Ligo.tez -> bool
   * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
   * - Update the last observed adjustment index
   * - Update the last observed timestamp.
-  * - NOTE: Are there any other tasks to put in this list?
 *)
 val burrow_touch : parameters -> burrow -> burrow
 
-(** Deposit the kit earnings from the liquidation of a slice into the burrow.
-  * That is, (a) update the outstanding kit, and (b) adjust the burrow's
-  * pointers to the liquidation queue accordingly (which is a no-op if we are
-  * not deleting the youngest or the oldest liquidation slice). *)
-(* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
-val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> kit -> burrow -> burrow
+(** Deposit the kit earnings from the liquidation of a slice into the burrow
+  * (i.e., update the outstanding kit and the collateral at auction). Return
+  * the amount of kit repaied, and the amount of excess kit. *)
+val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> kit -> burrow -> burrow * kit * kit
 
 (** Cancel the liquidation of a slice. That is, (a) return the tez that is part
   * of a liquidation slice back to the burrow and (b) adjust the burrow's
@@ -94,9 +91,9 @@ val burrow_withdraw_tez : parameters -> Ligo.tez -> burrow -> burrow
   * not overburrow it *)
 val burrow_mint_kit : parameters -> kit -> burrow -> burrow
 
-(** Deposit/burn a non-negative amount of kit to the burrow. If there is
-  * excess kit, simply store it into the burrow. *)
-val burrow_burn_kit : parameters -> kit -> burrow -> burrow
+(** Deposit/burn a non-negative amount of kit to the burrow. Return the amount
+  * of kit burned. *)
+val burrow_burn_kit : parameters -> kit -> burrow -> burrow * kit
 
 (** Activate a currently inactive burrow. This operation will fail if either
   * the burrow is already active, or if the amount of tez given is less than
@@ -162,7 +159,6 @@ val make_burrow_for_test :
   delegate:(Ligo.key_hash option) ->
   collateral:Ligo.tez ->
   outstanding_kit:kit ->
-  excess_kit:kit ->
   adjustment_index:fixedpoint ->
   collateral_at_auction:Ligo.tez ->
   last_touched:Ligo.timestamp ->
@@ -178,7 +174,4 @@ val burrow_is_optimistically_overburrowed : parameters -> burrow -> bool
 
 (* Additional record accessor for testing purposes only *)
 val burrow_outstanding_kit : burrow -> kit
-
-(* Additional record accessor for testing purposes only *)
-val burrow_excess_kit : burrow -> kit
 (* END_OCAML *)
