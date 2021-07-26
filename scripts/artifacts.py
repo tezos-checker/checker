@@ -215,14 +215,6 @@ def get_first_line(s):
     return ls[0] if ls else ""
 
 
-def short_rev(rev):
-    return rev[:8]
-
-
-def list_getdefault(l, ix, d):
-    return l[ix] if ix < len(l) else d
-
-
 def diff_change(diff):
     if diff.previous is None:
         return diff.next
