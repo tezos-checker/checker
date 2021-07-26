@@ -351,8 +351,7 @@ let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
 let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_mukit (fa2_get_token_balance st kit_token_id)
 let fa2_get_total_lqt_balance (st: fa2_state) : lqt = lqt_of_denomination (fa2_get_token_balance st lqt_token_id)
 
-
-let get_credits_from_fa2_state (st: fa2_state) : ((Ligo.address * Ligo.nat) list) =
+let get_kit_credits_from_fa2_state (st: fa2_state) : ((Ligo.address * Ligo.nat) list) =
   (* Note: for now let's just focus on the kit on the ledger. *)
   let kit_map =
     Ligo.Big_map.bindings st.ledger
