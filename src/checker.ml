@@ -28,10 +28,10 @@ let assert_checker_invariants (state: checker) : unit =
   ( if fa2_get_total_kit_balance state.fa2_state = state.parameters.circulating_kit
     then ()
     else failwith (
-      "\n" ^ "TOTAL KIT_BALANCE : " ^ Kit.show_kit (fa2_get_total_kit_balance state.fa2_state) ^
-      "\n" ^ "CIRCULATING_KIT   : " ^ Kit.show_kit state.parameters.circulating_kit ^
-      "\n"
-    )
+        "\n" ^ "TOTAL KIT_BALANCE : " ^ Kit.show_kit (fa2_get_total_kit_balance state.fa2_state) ^
+        "\n" ^ "CIRCULATING_KIT   : " ^ Kit.show_kit state.parameters.circulating_kit ^
+        "\n"
+      )
   );
   assert (fa2_get_total_kit_balance state.fa2_state = state.parameters.circulating_kit);
   (* Check that the total kit that checker owns (plus one - because of the
@@ -428,7 +428,7 @@ let touch_liquidation_slice
  * computed are independent from each other, this needs not be a problem. *)
 let rec touch_liquidation_slices_rec
     (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, slices
-     : LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state * leaf_ptr list)
+                                                                                        : LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state * leaf_ptr list)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state) =
   match slices with
   | [] -> (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state)
@@ -732,7 +732,7 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * problem. *)
 let rec touch_oldest
     (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, maximum
-     : LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state * Ligo.nat)
+                                                                                        : LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state * Ligo.nat)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state) =
   match Ligo.is_nat (Ligo.sub_nat_nat maximum (Ligo.nat_from_literal "1n")) with
   | None -> (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state)
