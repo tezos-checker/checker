@@ -42,6 +42,29 @@ jobs:
           name: stats
           path: entrypoint-sizes.json
           if-no-files-found: error
+  test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v13
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build dependencies
+        run: nix-shell --run ':'
+      - name: Export the test coverage report
+        # TODO: turn it into .json file
+        # TODO: pity that we have to rebuild the dependencies
+        run: nix-shell --run 'make ocaml-src && dune runtest --instrument-with bisect_ppx --force . && bisect-ppx-report summary --per-file | tee test-coverage-report.txt'
+      - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
+        with:
+          name: stats
+          path: test-coverage-report.txt
+          if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
     steps:
