@@ -416,9 +416,8 @@ let touch_liquidation_slice
     state_parameters in
 
   let new_state_fa2_state =
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, repaid_kit) in  (* this is repaid to the burrow (burned) *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, kit_to_burn) in (* this has to be burned, for everyone   *)
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, excess_kit) in  (* gotta give this to the burrow owner   *)
+    let checkers_kit_to_remove = kit_add (kit_add repaid_kit kit_to_burn) excess_kit in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, checkers_kit_to_remove) in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, burrow_owner, excess_kit) in
     state_fa2_state in
 
