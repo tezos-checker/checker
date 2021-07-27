@@ -44,28 +44,19 @@ let set_last_price_in_wrapper wrapper price_option =
   )
 
 let debug_print_all_kit_in_sealed_state msg wrapper =
-  CheckerTypes.(
-    match wrapper.deployment_state with
-    | Unsealed _ -> ()
-    | Sealed state ->
-      print_string "\n";
-      print_string ("===== " ^ msg ^ " =====\n");
-      print_string ("circulating = " ^ Kit.show_kit state.parameters.circulating_kit);
-      print_string "\n";
-      print_string ("outstanding = " ^ Kit.show_kit state.parameters.outstanding_kit);
-      print_string "\n";
-      print_string ("cfmm.kit    = " ^ Kit.show_kit state.cfmm.kit);
-      print_string "\n";
-      print_string "kit_on_ledger =\n";
-      List.iter
-        (fun (addr, amnt) ->
-           print_string ("  " ^ Ligo.string_of_address addr ^ " : " ^ Ligo.string_of_nat amnt);
-           print_string "\n";
-           ()
-        )
-        (Fa2Interface.get_kit_credits_from_fa2_state state.fa2_state);
-      ()
-  )
+  let open CheckerTypes in
+  match wrapper.deployment_state with
+  | Unsealed _ ->
+    print_string "\nUnsealed state; no kit to show\n"
+  | Sealed state ->
+    print_string ("\n===== " ^ msg ^ " =====");
+    print_string ("\ncirculating = " ^ Kit.show_kit state.parameters.circulating_kit);
+    print_string ("\noutstanding = " ^ Kit.show_kit state.parameters.outstanding_kit);
+    print_string ("\ncfmm.kit    = " ^ Kit.show_kit state.cfmm.kit);
+    print_string "\nkit_on_ledger :\n";
+    List.iter
+      (fun (addr, amnt) -> print_string ("  " ^ Ligo.string_of_address addr ^ " : " ^ Ligo.string_of_nat amnt ^ "\n"))
+      (Fa2Interface.get_kit_credits_from_fa2_state state.fa2_state)
 
 let suite =
   "CheckerMainTests" >::: [
@@ -437,14 +428,10 @@ let suite =
           let burrow_id = Ligo.nat_from_literal "199n" in
           let user_addr = alice_addr in
 
-          debug_print_all_kit_in_sealed_state "initially" sealed_wrapper;
-
           (* Create_burrow *)
           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
-
-          debug_print_all_kit_in_sealed_state "after Create_burrow" sealed_wrapper;
 
           (* setup: mint as much kit as possible *)
           Ligo.Tezos.new_transaction ~seconds_passed:1181 ~blocks_passed:18 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -452,12 +439,8 @@ let suite =
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, max_mintable_kit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
-          debug_print_all_kit_in_sealed_state "after setup:Mint_kit" sealed_wrapper;
-
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
           let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
-
-          debug_print_all_kit_in_sealed_state "after setup:set_last_price" sealed_wrapper;
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -465,21 +448,15 @@ let suite =
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
-          debug_print_all_kit_in_sealed_state "after setup:Touch" sealed_wrapper;
-
           (* Mark_for_liquidation *)
           Ligo.Tezos.new_transaction ~seconds_passed:342 ~blocks_passed:5 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez"); (* the user themselves can mark it *)
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mark_for_liquidation (user_addr, burrow_id)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
-          debug_print_all_kit_in_sealed_state "after Mark_for_liquidation" sealed_wrapper;
-
           (* setup: touch to start the auction *)
           Ligo.Tezos.new_transaction ~seconds_passed:63 ~blocks_passed:1 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
-
-          debug_print_all_kit_in_sealed_state "after setup:Touch" sealed_wrapper;
 
           (* Liquidation_auction_place_bid *)
           let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
@@ -487,16 +464,12 @@ let suite =
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (min_bid.auction_id, min_bid.minimum_bid)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
-          debug_print_all_kit_in_sealed_state "after Liquidation_auction_place_bid" sealed_wrapper;
-
           (* setup: make enough time pass so that the auction finishes *)
           let seconds_passed = int_of_string (Ligo.string_of_int (Ligo.add_int_int Constants.max_bid_interval_in_seconds (Ligo.int_from_literal "1"))) in
           let blocks_passed = int_of_string (Ligo.string_of_nat (Ligo.add_nat_nat Constants.max_bid_interval_in_blocks (Ligo.nat_from_literal "1n"))) in
           Ligo.Tezos.new_transaction ~seconds_passed:seconds_passed ~blocks_passed:blocks_passed ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
-
-          debug_print_all_kit_in_sealed_state "after Touch" sealed_wrapper;
 
           (* Note: to avoid the unused variable warning. *)
           assert_equal sealed_wrapper sealed_wrapper
