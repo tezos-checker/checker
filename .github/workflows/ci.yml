@@ -35,8 +35,9 @@ jobs:
         run: |
           cat result/functions.json \
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
-            > entrypoint-sizes.json
+            | tee entrypoint-sizes.json
       - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
         with:
           name: stats
           path: entrypoint-sizes.json
@@ -61,12 +62,44 @@ jobs:
       - name: Generate profile plots
         run: nix-shell --run "python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png"
       - uses: actions/upload-artifact@v2.2.4
+        # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
+        # per commit.
+        if: github.event_name == 'push'
         with:
           name: stats
           path: gas-costs.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
         with:
           name: gas-profile-plots
           path: auction-gas-profiles.png
           if-no-files-found: error
+  comment:
+    needs: [ build, e2e ]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v13
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - uses: actions/checkout@v2
+      - name: Build dependencies
+        run: nix-shell --run ':'
+      - name: Calculate the diff
+        run: nix-shell --run './scripts/artifacts.py compare-stats --previous ${{ github.event.pull_request.base.sha }} --next ${{ github.event.pull_request.head.sha }} | tee msg.md'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/github-script@v4.0.2
+        with:
+          script: |
+            const { promises: fs } = require("fs");
+            const msg = await fs.readFile("msg.md", { "encoding": "utf-8" });
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: msg
+            })
