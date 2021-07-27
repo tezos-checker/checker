@@ -263,7 +263,7 @@ class E2ETest(SandboxedTestCase):
         ):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
-            gas_costs[name] = ret["contents"][0]["gas_limit"]
+            gas_costs[name] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         # ===============================================================================
