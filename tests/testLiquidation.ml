@@ -875,7 +875,6 @@ let test_burrow_request_liquidation_invariant_close =
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Close was expected" (Burrow.show_liquidation_type liquidation_type))
   in
 
-  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
   assert_properties_of_close_liquidation initial_parameters burrow0 liquidation_details;
   true
 
@@ -917,7 +916,6 @@ let test_burrow_request_liquidation_invariant_complete =
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Complete was expected" (Burrow.show_liquidation_type liquidation_type))
   in
-  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
   assert_properties_of_complete_liquidation initial_parameters burrow0 liquidation_details;
   true
 
@@ -953,7 +951,6 @@ let test_burrow_request_liquidation_invariant_partial =
     | None -> failwith "liquidation_result returned by burrow_request_liquidation was None but the test expects a value."
     | Some (liquidation_type, _) -> failwith (Format.sprintf "liquidation_type returned by burrow_request_liquidation was %s but Partial was expected" (Burrow.show_liquidation_type liquidation_type))
   in
-  Burrow.assert_burrow_invariants liquidation_details.burrow_state;
   assert_properties_of_partial_liquidation initial_parameters burrow0 liquidation_details;
   true
 

@@ -940,66 +940,6 @@ let suite =
     );
 
     (* =========================================================================================== *)
-    (* Property tests for ensuring burrow invariants are obeyed *)
-    (* =========================================================================================== *)
-    (
-      qcheck_to_ounit
-      @@ QCheck.Test.make
-        ~name:"burrow_mint_kit - returned burrow obeys burrow invariants"
-        ~count:property_test_count
-        TestArbitrary.arb_kit
-      @@ fun (burrow_kit) ->
-      (* scale it down, since we will need to multiply it by 10 to compute a tez amount *)
-      let burrow_kit =
-        kit_of_fraction_floor
-          (kit_to_mukit_int burrow_kit)
-          (Ligo.mul_int_int Kit.kit_scaling_factor_int (Ligo.int_from_literal "10")) in
-
-      let kit_to_mint = kit_of_mukit (Ligo.nat_from_literal "10n") in
-      (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
-      let outstanding = burrow_kit in
-      let collateral = Ligo.mul_tez_nat (Ligo.tez_from_literal "10mutez") (kit_to_mukit_nat burrow_kit) in
-
-      let burrow0 = Burrow.make_burrow_for_test
-          ~outstanding_kit:outstanding
-          ~active:true
-          ~address:burrow_addr
-          ~delegate:None
-          ~collateral:collateral
-          ~adjustment_index:fixedpoint_one
-          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-      let _ = Burrow.assert_burrow_invariants (Burrow.burrow_mint_kit Parameters.initial_parameters kit_to_mint burrow0) in
-      true
-    );
-
-    (
-      qcheck_to_ounit
-      @@ QCheck.Test.make
-        ~name:"burrow_burn_kit - returned burrow obeys burrow invariants"
-        ~count:property_test_count
-        (QCheck.pair TestArbitrary.arb_kit TestArbitrary.arb_kit)
-      @@ fun (burrow_kit, kit_to_burn) ->
-
-      (* Random kit balances which obey the burrow invariants and allow minting kit_to_mint without overburrowing *)
-      let outstanding = burrow_kit in
-      let burrow0 = Burrow.make_burrow_for_test
-          ~outstanding_kit:outstanding
-          ~active:true
-          ~address:burrow_addr
-          ~delegate:None
-          ~collateral:(Ligo.tez_from_literal "1mutez")
-          ~adjustment_index:fixedpoint_one
-          ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
-
-      let burrow, _actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters kit_to_burn burrow0 in
-      let _ = Burrow.assert_burrow_invariants burrow in
-      true
-    );
-
-    (* =========================================================================================== *)
     (* Other property tests *)
     (* =========================================================================================== *)
     (

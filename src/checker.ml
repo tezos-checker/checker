@@ -38,8 +38,6 @@ let assert_checker_invariants (state: checker) : unit =
   (* Per-burrow assertions *)
   List.iter
     (fun (burrow_address, burrow) ->
-       assert_burrow_invariants burrow;
-
        match Ligo.Big_map.find_opt burrow_address state.liquidation_auctions.burrow_slices with
        | None ->
          assert (burrow_collateral_at_auction burrow = Ligo.tez_from_literal "0mutez");

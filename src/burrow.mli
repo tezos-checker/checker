@@ -147,8 +147,6 @@ val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 
 val burrow_request_liquidation : parameters -> burrow -> liquidation_result
 
-val assert_burrow_invariants : burrow -> unit
-
 (* BEGIN_OCAML *)
 val burrow_collateral : burrow -> Ligo.tez
 val burrow_active : burrow -> bool

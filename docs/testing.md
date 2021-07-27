@@ -104,7 +104,6 @@ lots sent to auction, etc. We use several functions for checking that a valid
 state is maintained:
 
   1. `Checker.assert_checker_invariants`
-  1. `Burrow.assert_burrow_invariants`
   1. `LiquidationAuction.assert_liquidation_auction_invariants`
   1. `Avl.assert_avl_invariants`
 
