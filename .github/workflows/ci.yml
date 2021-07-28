@@ -57,12 +57,12 @@ jobs:
         run: nix-shell --run ':'
       - name: Export the test coverage report
         # TODO: pity that we have to rebuild the dependencies
-        run: nix-shell --run 'make ocaml-src && dune runtest --instrument-with bisect_ppx --force . && bisect-ppx-report summary --per-file | python scripts/coverage-to-json.py | tee test-coverage-report.json'
+        run: nix-shell --run 'make ocaml-src && dune runtest --instrument-with bisect_ppx --force . && bisect-ppx-report summary --per-file | python scripts/coverage-to-json.py | tee test-coverage.json'
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
           name: stats
-          path: test-coverage-report.json
+          path: test-coverage.json
           if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest

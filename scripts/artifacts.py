@@ -186,7 +186,7 @@ def mk_commit_stats(info):
     entrypoint_sizes = stats.get("entrypoint-sizes", [{}])[0]
 
     # NOTE: These are floats, but hopefully the existing infrastructure will still work OK
-    test_coverage = stats.get("test-coverage-report", [{}])[0]
+    test_coverage = stats.get("test-coverage", [{}])[0]
 
     return CommitStats(
         info=info,
