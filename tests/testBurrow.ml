@@ -19,7 +19,7 @@ let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_f
     ~collateral:collateral
     ~adjustment_index:fixedpoint_one
     ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-    ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+    ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
 
 (* A burrow with fixed parameters which was last touched at 0s. Use for tests which check
  * that functions requiring a burrow to be recently touched fail as expected. *)
@@ -449,7 +449,7 @@ let suite =
                   ~collateral:(Ligo.tez_from_literal "10mutez")
                   ~adjustment_index:fixedpoint_one
                   ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
-                  ~last_touched:(Ligo.timestamp_from_seconds_literal 0)
+                  ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
               )
          )
     );
@@ -536,7 +536,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "0mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        let slice = LiquidationAuctionPrimitiveTypes.{
            burrow=(Ligo.address_from_literal "12345", Ligo.nat_from_literal "0n");
            tez=Ligo.tez_from_literal "1mutez";
@@ -560,7 +560,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "2mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        let slice = let open LiquidationAuctionPrimitiveTypes in {
            burrow=(burrow_addr, Ligo.nat_from_literal "0n");
            tez=Ligo.tez_from_literal "1mutez";
@@ -575,7 +575,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "3mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        let burrow = Burrow.burrow_return_slice_from_auction slice burrow0 in
 
        assert_burrow_equal
@@ -593,7 +593,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "0mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        let slice = let open LiquidationAuctionPrimitiveTypes in {
            burrow=(Ligo.address_from_literal "12345", Ligo.nat_from_literal "0n");
            tez=Ligo.tez_from_literal "1mutez";
@@ -673,7 +673,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "2mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "2mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        let tez_to_auction = Ligo.tez_from_literal "2mutez" in
        let min_kit_for_unwarranted = Burrow.compute_min_kit_for_unwarranted Parameters.initial_parameters burrow0 tez_to_auction in
 
@@ -711,7 +711,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "3mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
        (* Note: cranking up the index to make test more sensitive to small changes
         *  potentially obscured by rounding. This high of a difference between the
         *  index and protected index is unlikely to occur in real-world scenarios.
@@ -732,7 +732,7 @@ let suite =
            ~collateral:(Ligo.tez_from_literal "3mutez")
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
-           ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+           ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
        assert_int_equal
          ~expected:(Ligo.int_from_literal "-2")
@@ -750,7 +750,7 @@ let suite =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "3mutez")
-              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+              ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
           let slice = let open LiquidationAuctionPrimitiveTypes in
             {
@@ -769,7 +769,7 @@ let suite =
               ~collateral:(Ligo.tez_from_literal "0mutez")
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "1mutez")
-              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+              ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
           assert_burrow_equal
             ~expected:burrow_expected
@@ -787,7 +787,7 @@ let suite =
               ~collateral:(Ligo.tez_from_literal "5_000_000mutez")
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-              ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+              ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
           let cancelled_slice_tez = Ligo.tez_from_literal "1_000_000mutez" in
 
           assert_bool
@@ -806,7 +806,7 @@ let suite =
             ~collateral:(Ligo.tez_from_literal "5_000_000mutez")
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+            ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
         let cancelled_slice_tez = Ligo.tez_from_literal "1_000_000mutez" in
 
         assert_bool
@@ -825,7 +825,7 @@ let suite =
             ~collateral:(Ligo.tez_from_literal "2_469_999mutez")
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+            ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
         assert_bool
           "burrow_is_liquidatable returned false, but the burrow is expected to be liquidatable"
@@ -843,7 +843,7 @@ let suite =
             ~collateral:(Ligo.tez_from_literal "2_470_000mutez")
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+            ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
         assert_bool
           "burrow_is_liquidatable returned true, but the burrow is expected to be non-liquidatable"
@@ -861,7 +861,7 @@ let suite =
             ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+            ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
         assert_tez_equal
           ~expected:(Ligo.tez_from_literal "6_000_000mutez")
@@ -879,7 +879,7 @@ let suite =
             ~collateral:(Ligo.tez_from_literal "2_000_000mutez")
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(Ligo.tez_from_literal "3_000_000mutez")
-            ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+            ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
         assert_tez_equal
           ~expected:(Ligo.tez_from_literal "5_000_000mutez")
@@ -1034,7 +1034,7 @@ let suite =
           ~collateral:(Ligo.tez_from_literal "1mutez")
           ~adjustment_index:fixedpoint_one
           ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
-          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+          ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
       let parameters = {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)} in
 
       let burrow = Burrow.burrow_touch parameters burrow0 in
@@ -1062,7 +1062,7 @@ let suite =
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one
           ~collateral_at_auction:collateral_at_auction
-          ~last_touched:(Ligo.timestamp_from_seconds_literal 0) in
+          ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
       let _ = Burrow.compute_tez_to_auction Parameters.initial_parameters burrow0 in
       true
