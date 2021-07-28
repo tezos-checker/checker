@@ -7,6 +7,9 @@ let ctez_addr = Ligo.address_of_string "ctez_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
+let show_key_hash_option (key_hash: Ligo.key_hash option) = match key_hash with
+  | None -> "None"
+  | Some kh -> "Some " ^ (Ligo.string_of_key_hash kh)
 
 let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
 let assert_string_equal ~expected ~real = OUnit2.assert_equal ~printer:(fun x -> x) expected real
@@ -17,6 +20,7 @@ let assert_int_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_
 let assert_kit_equal ~expected ~real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
 let assert_lqt_equal ~expected ~real = OUnit2.assert_equal ~printer:Lqt.show_lqt expected real
 let assert_ratio_equal ~expected ~real = OUnit2.assert_equal ~printer:Common.show_ratio ~cmp:Ratio.eq_ratio_ratio expected real
+let assert_key_hash_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_key_hash_option expected real
 let assert_address_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_address expected real
 let assert_fixedpoint_equal ~expected ~real = OUnit2.assert_equal ~printer:FixedPoint.show_fixedpoint_raw expected real
 let assert_liquidation_result_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_liquidation_result expected real
