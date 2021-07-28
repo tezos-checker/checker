@@ -8,6 +8,7 @@ if __name__ == "__main__":
     for line in fileinput.input():
         line = line.split()
         percentage, filename = line[0], line[3]
+        percentage = float(percentage)
         prefix = "src/"
         if filename.startswith(prefix):
             filename = filename[len(prefix) :]

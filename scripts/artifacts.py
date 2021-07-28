@@ -19,7 +19,9 @@ ENDPOINT_GRAPHQL = f"https://api.github.com/graphql"
 ENDPOINT_REST = f"https://api.github.com"
 
 CommitInfo = namedtuple("CommitInfo", ["message", "ref", "rev", "workflow_ids"])
-CommitStats = namedtuple("CommitStats", ["info", "gas_costs", "entrypoint_sizes"])
+CommitStats = namedtuple(
+    "CommitStats", ["info", "gas_costs", "entrypoint_sizes", "test_coverage"]
+)
 Diff = namedtuple("Diff", ["key", "previous", "next"])
 
 accessToken = os.getenv("GITHUB_TOKEN")
@@ -94,6 +96,13 @@ def compare_stats(previous, next):
     print_diffs(
         mk_diffs(previous_stats.entrypoint_sizes, next_stats.entrypoint_sizes),
         title="Entrypoint sizes",
+        header_previous=previous_stats.info.ref,
+        header_next=next_stats.info.ref,
+    )
+
+    print_diffs(
+        mk_diffs(previous_stats.test_coverage, next_stats.test_coverage),
+        title="Test coverage",
         header_previous=previous_stats.info.ref,
         header_next=next_stats.info.ref,
     )
@@ -176,8 +185,14 @@ def mk_commit_stats(info):
 
     entrypoint_sizes = stats.get("entrypoint-sizes", [{}])[0]
 
+    # NOTE: These are floats, but hopefully the existing infrastructure will still work OK
+    test_coverage = stats.get("test-coverage-report", [{}])[0]
+
     return CommitStats(
-        info=info, gas_costs=gas_costs, entrypoint_sizes=entrypoint_sizes
+        info=info,
+        gas_costs=gas_costs,
+        entrypoint_sizes=entrypoint_sizes,
+        test_coverage=test_coverage,
     )
 
 
