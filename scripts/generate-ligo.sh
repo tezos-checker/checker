@@ -75,7 +75,6 @@ for name in "${inputs[@]}"; do
 
     # delete assertions
     sed 's/^ *assert .*//g' |
-    sed 's/^ *assert_burrow_invariants .*//g' |
     sed 's/^ *assert_checker_invariants .*//g' |
     sed 's/^ *assert_liquidation_auction_invariants .*//g' |
     sed 's/^ *assert_burrow_slices_invariants .*//g' |

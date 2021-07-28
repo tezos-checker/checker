@@ -80,9 +80,9 @@ there is not enough collateral, or if the sender is not the burrow owner.
 Burn kit
 --------
 
-Deposit/burn a non-negative amount of kit to a burrow. If there is excess
-kit, simply store it into the burrow. Fail if the burrow does not exist, or
-if the sender is not the burrow owner.
+Deposit/burn a non-negative amount of kit to a burrow. If there is excess kit,
+simply credit it back to the burrow owner. Fail if the burrow does not exist,
+or if the sender is not the burrow owner.
 
 ``burn_kit: (pair nat nat)``
 

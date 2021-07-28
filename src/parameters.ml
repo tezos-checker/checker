@@ -441,8 +441,7 @@ let parameters_touch
     compute_current_target current_q current_index current_kit_in_tez in
   let current_outstanding_with_fees =
     compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
-  let accrual_to_cfmm =
-    kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
+  let accrual_to_cfmm = kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)
   let current_outstanding_kit =
     compute_current_outstanding_kit current_outstanding_with_fees parameters_imbalance_index current_imbalance_index in
   let current_circulating_kit =
@@ -486,6 +485,7 @@ let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: 
     and the kit in circulation. This is the case when a burrow owner burns kit. *)
 let[@inline] remove_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
   assert (geq_kit_kit parameters.outstanding_kit kit);
+  assert (geq_kit_kit parameters.circulating_kit kit);
   { parameters with
     outstanding_kit = kit_sub parameters.outstanding_kit kit;
     circulating_kit = kit_sub parameters.circulating_kit kit;

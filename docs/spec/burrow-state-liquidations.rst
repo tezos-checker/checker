@@ -21,8 +21,6 @@ State
    increase over time, since the burrowing fee and the adjustment fee
    are added to it. So, effectively, before doing anything else with a
    burrow, we update its state (“touch” it, see below).
--  ``excess_kit``: additional kit stored in the burrow, when
-   ``outstanding_kit`` is zero.
 -  ``collateral_at_auction``: the total amount of tez that has been sent
    to auctions from this burrow, to be sold for kit.
 - ``last_touched``: the last time the burrow was touched.
@@ -41,15 +39,6 @@ update the state of the burrow, by touching it. The effect of this is to
 ::
 
    new_last_touched = now
-
-- Re-balance
-  ``outstanding_kit`` and ``excess_kit``: either ``outstanding_kit`` or
-  ``excess_kit`` is zero
-
-::
-
-   new_outstanding_kit = old_outstanding_kit - min old_outstanding_kit old_excess_kit
-   new_excess_kit      = old_excess_kit      - min old_outstanding_kit old_excess_kit
 
 - To add accrued burrow and adjustment fee to its outstanding kit
 
