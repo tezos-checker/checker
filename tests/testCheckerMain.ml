@@ -43,21 +43,6 @@ let set_last_price_in_wrapper wrapper price_option =
       {wrapper with deployment_state = Sealed {state with last_price = price_option}}
   )
 
-let debug_print_all_kit_in_sealed_state msg wrapper =
-  let open CheckerTypes in
-  match wrapper.deployment_state with
-  | Unsealed _ ->
-    print_string "\nUnsealed state; no kit to show\n"
-  | Sealed state ->
-    print_string ("\n===== " ^ msg ^ " =====");
-    print_string ("\ncirculating = " ^ Kit.show_kit state.parameters.circulating_kit);
-    print_string ("\noutstanding = " ^ Kit.show_kit state.parameters.outstanding_kit);
-    print_string ("\ncfmm.kit    = " ^ Kit.show_kit state.cfmm.kit);
-    print_string "\nkit_on_ledger :\n";
-    List.iter
-      (fun (addr, amnt) -> print_string ("  " ^ Ligo.string_of_address addr ^ " : " ^ Ligo.string_of_nat amnt ^ "\n"))
-      (Fa2Interface.get_kit_credits_from_fa2_state state.fa2_state)
-
 let suite =
   "CheckerMainTests" >::: [
     (* initial_wrapper *)
