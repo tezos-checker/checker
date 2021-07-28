@@ -65,7 +65,7 @@ val burrow_touch : parameters -> burrow -> burrow
 
 (** Deposit the kit earnings from the liquidation of a slice into the burrow
   * (i.e., update the outstanding kit and the collateral at auction). Return
-  * the amount of kit repaied, and the amount of excess kit. *)
+  * the amount of kit repaid, and the amount of excess kit. *)
 val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> kit -> burrow -> burrow * kit * kit
 
 (** Cancel the liquidation of a slice. That is, (a) return the tez that is part
