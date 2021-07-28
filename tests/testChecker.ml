@@ -197,6 +197,113 @@ let suite =
          (fun () -> Checker.entrypoint_withdraw_tez (checker, (withdrawal, Ligo.nat_from_literal "0n")))
     );
 
+    ("add_liquidity - emits expected operations" >::
+     fun _ ->
+       let checker = empty_checker in
+       Ligo.Tezos.reset ();
+       (* Create a burrow and mint some kit *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_add_liquidity
+           (checker,
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
+            , Ligo.timestamp_from_seconds_literal 999
+            )
+           ) in
+
+       let expected_ops = [
+         (LigoOp.Tezos.fa12_transfer_transaction
+            Fa12Interface.(
+              {address_to=checker_address;
+               address_from=alice_addr;
+               value=(Ligo.nat_from_literal "5_000_000n")}
+            )
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("remove_liquidity - emits expected operations" >::
+     fun _ ->
+       let checker = empty_checker in
+       Ligo.Tezos.reset ();
+       (* Create a burrow and mint some kit *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       (* Add some liquidity to the contract *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_add_liquidity
+           (checker,
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
+            , Ligo.timestamp_from_seconds_literal 999
+            )
+           ) in
+       (* Now remove the liquidity *)
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_remove_liquidity
+           (checker,
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            ( lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
+            , ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , Ligo.timestamp_from_seconds_literal 999
+            )
+           ) in
+
+       let expected_ops = [
+         (LigoOp.Tezos.fa12_transfer_transaction
+            Fa12Interface.(
+              {address_to=alice_addr;
+               address_from=checker_address;
+               value=(Ligo.nat_from_literal "5_000_000n")}
+            )
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("touch - emits expected operations when checker needs to be touched" >::
+     fun _ ->
+       let checker = empty_checker in
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_touch (checker, ()) in
+
+       let expected_ops = [
+         (LigoOp.Tezos.nat_contract_transaction
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address))
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%getPrice" checker.external_contracts.oracle))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("touch - emits expected operations when checker has already been touched" >::
+     fun _ ->
+       let checker = empty_checker in
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_touch (checker, ()) in
+       assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
     ("calculate_touch_reward - expected result for last_touched 2s ago" >::
      fun _ ->
        (* The division in this case should return a remainder < 1/2 *)
@@ -589,11 +696,22 @@ let suite =
            } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
-
+       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
        let kit = get_balance_of checker alice_addr kit_token_id in
+
+       let expected_ops = [
+         (LigoOp.Tezos.fa12_transfer_transaction
+            Fa12Interface.(
+              {address_to=checker_address;
+               address_from=alice_addr;
+               value=(Ligo.nat_from_literal "1_000_000n")}
+            )
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+         );
+       ] in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
-       ()
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
     ("sell_kit - returns expected tez" >::
@@ -620,12 +738,19 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1)) in
-       let muctez = match ops with
-         | [Transaction (FA12TransferTransactionValue transfer, _, _)] -> transfer.value
-         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
-       in
 
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:muctez
+       let expected_ops = [
+         (LigoOp.Tezos.fa12_transfer_transaction
+            Fa12Interface.(
+              {address_to=alice_addr;
+               address_from=checker_address;
+               value=(Ligo.nat_from_literal "1n")}
+            )
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
     ("sell_kit - transaction with value > 0 fails" >::
