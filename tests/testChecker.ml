@@ -204,10 +204,10 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let (_, burrow_no), checker = newly_created_burrow empty_checker "0n" in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", alice_addr)) in
+       let _, checker = Checker.entrypoint_deactivate_burrow (checker, (burrow_no, alice_addr)) in
        (* Then activate it *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
-       let ops, _ = Checker.entrypoint_activate_burrow (checker, (Ligo.nat_from_literal "0n")) in
+       let ops, _ = Checker.entrypoint_activate_burrow (checker, burrow_no) in
        let burrow = Option.get (Ligo.Big_map.find_opt (alice_addr, burrow_no) checker.burrows) in
        let expected_ops = [
          (LigoOp.Tezos.unit_transaction
@@ -232,7 +232,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_add_liquidity
            (checker,
-            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
             , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
@@ -280,7 +280,7 @@ let suite =
         * function which defines the contract's logic.
        *)
        | [(CreateContract (_, delegate, tez, storage))] ->
-         assert_equal None delegate;
+         assert_key_hash_option_equal ~expected:None ~real:delegate;
          assert_tez_equal ~expected:(Ligo.tez_from_literal "100_000_000mutez") ~real:tez;
          assert_equal BurrowTypes.({checker_address=checker_address; burrow_id=(alice_addr, (Ligo.nat_from_literal "0n"))}) storage
        | _ -> failwith ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops)
@@ -293,7 +293,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let (_, burrow_no), checker = newly_created_burrow empty_checker "0n" in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, checker = Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", alice_addr)) in
+       let ops, checker = Checker.entrypoint_deactivate_burrow (checker, (burrow_no, alice_addr)) in
        let burrow = Option.get (Ligo.Big_map.find_opt (alice_addr, burrow_no) checker.burrows) in
        let expected_ops = [
          (LigoOp.Tezos.tez_address_transaction
@@ -350,7 +350,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_add_liquidity
            (checker,
-            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
             , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
@@ -361,7 +361,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_remove_liquidity
            (checker,
-            (* Note: all values here were arbitrarily chosen based on the amount of kit we mint above *)
+            (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
             , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
@@ -394,7 +394,7 @@ let suite =
          (LigoOp.Tezos.nat_contract_transaction
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address))
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%getPrice" checker.external_contracts.oracle))
+            (Checker.get_oracle_entrypoint checker.external_contracts)
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
