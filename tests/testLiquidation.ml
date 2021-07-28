@@ -1,11 +1,16 @@
+(*
 open Kit
 open Burrow
 open Ratio
+*)
 open OUnit2
+(*
 open FixedPoint
 open Parameters
 open TestLib
+*)
 
+(*
 let property_test_count = 1000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
@@ -1035,9 +1040,11 @@ let regression_test_93 =
     (* The following line must succeed. *)
     let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
     ()
+*)
 
 let suite =
   "LiquidationTests" >::: [
+(*
     partial_liquidation_unit_test;
     unwarranted_liquidation_unit_test;
     complete_liquidation_unit_test;
@@ -1070,6 +1077,7 @@ let suite =
     (* Regression tests *)
     regression_test_72;
     regression_test_93;
+*)
   ]
 
 let () =
