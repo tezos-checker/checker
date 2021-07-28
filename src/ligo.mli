@@ -245,6 +245,7 @@ val string_of_nat : nat -> String.t
 val string_of_tez : tez -> String.t
 val string_of_timestamp : timestamp -> String.t
 val string_of_address : address -> String.t
+val string_of_key_hash : key_hash -> String.t
 val address_of_string : String.t -> address
 
 val pp_address : Format.formatter -> address -> unit

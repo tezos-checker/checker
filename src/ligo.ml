@@ -100,6 +100,7 @@ let parse_int_with_suffix (expected_suffix: string) (s: string) : Z.t =
 
 type key_hash = string
 let pp_key_hash = Format.pp_print_string
+let string_of_key_hash k = k
 let key_hash_from_literal s = s
 
 (* bytes *)
