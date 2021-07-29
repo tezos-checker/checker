@@ -30,8 +30,8 @@ type burrow =
      * purposes, this collateral can be considered gone, but depending on the
      * outcome of the auctions we expect some kit in return. *)
     collateral_at_auction : Ligo.tez;
-    (* The last time the burrow was touched. *)
-    last_touched : Ligo.timestamp;
+    (* The timestamp checker had the last time the burrow was touched. *)
+    last_checker_timestamp : Ligo.timestamp;
   }
 [@@deriving show]
 
@@ -58,7 +58,7 @@ type liquidation_result = (liquidation_type * liquidation_details) option
 
 (** Update the outstanding kit, update the adjustment index, and the timestamp. *)
 let burrow_touch (p: parameters) (burrow: burrow) : burrow =
-  let burrow_out = if p.last_touched = burrow.last_touched
+  let burrow_out = if p.last_touched = burrow.last_checker_timestamp
     then
       burrow
     else
@@ -75,7 +75,7 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
                (fixedpoint_to_raw burrow.adjustment_index)
             );
         adjustment_index = current_adjustment_index;
-        last_touched = p.last_touched;
+        last_checker_timestamp = p.last_touched;
       }
   in
   assert (burrow.address = burrow_out.address);
@@ -122,14 +122,14 @@ let[@inline] undercollateralization_condition (f: ratio) (price: ratio) (tez: ra
   * be lost forever.
 *)
 let burrow_is_overburrowed (p: parameters) (b: burrow) : bool =
-  assert (p.last_touched = b.last_touched);
+  assert (p.last_touched = b.last_checker_timestamp);
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
   let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
   undercollateralization_condition fminting (minting_price p) tez kit
 
 (*  max_kit_outstanding = FLOOR (tez_collateral / (fminting * minting_price)) *)
 let burrow_max_mintable_kit (p: parameters) (b: burrow) : kit =
-  assert (p.last_touched = b.last_touched);
+  assert (p.last_touched = b.last_checker_timestamp);
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
   let numerator =
@@ -186,7 +186,7 @@ let burrow_create (p: parameters) (addr: Ligo.address) (tez: Ligo.tez) (delegate
       outstanding_kit = kit_zero;
       adjustment_index = compute_adjustment_index p;
       collateral_at_auction = Ligo.tez_from_literal "0mutez";
-      last_touched = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
+      last_checker_timestamp = p.last_touched; (* NOTE: If checker is up-to-date, the timestamp should be _now_. *)
     }
 
 (** Add non-negative collateral to a burrow. *)
@@ -374,7 +374,7 @@ let compute_expected_kit (p: parameters) (tez_to_auction: Ligo.tez) : ratio =
   * can be liquidated; inactive ones are dormant, until either all pending
   * auctions finish or if their creation deposit is restored. *)
 let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
-  assert (p.last_touched = b.last_touched);
+  assert (p.last_touched = b.last_checker_timestamp);
 
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
   let kit = (* kit = kit_outstanding - expected_kit_from_auctions *)
@@ -399,7 +399,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
   * until either all pending auctions finish or if their creation deposit is
   * restored. *)
 let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Ligo.tez) : bool =
-  assert (p.last_touched = b.last_touched);
+  assert (p.last_touched = b.last_checker_timestamp);
   assert (Ligo.geq_tez_tez b.collateral_at_auction slice_tez);
 
   let tez = (* tez = collateral + slice *)
@@ -435,7 +435,7 @@ let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Lig
   *     for it so that the function is not partial.
 *)
 let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to_auction: Ligo.tez) : kit option =
-  assert (p.last_touched = b.last_touched);
+  assert (p.last_touched = b.last_checker_timestamp);
 
   if b.collateral = Ligo.tez_from_literal "0mutez" (* NOTE: division by zero. *)
   then
@@ -568,7 +568,7 @@ let make_burrow_for_test
     ~outstanding_kit
     ~adjustment_index
     ~collateral_at_auction
-    ~last_touched =
+    ~last_checker_timestamp =
   { delegate = delegate;
     address = address;
     active = active;
@@ -576,7 +576,7 @@ let make_burrow_for_test
     outstanding_kit = outstanding_kit;
     adjustment_index = adjustment_index;
     collateral_at_auction = collateral_at_auction;
-    last_touched = last_touched;
+    last_checker_timestamp = last_checker_timestamp;
   }
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
@@ -587,7 +587,7 @@ let make_burrow_for_test
   *   tez_collateral < fminting * (kit_outstanding - expected_kit_from_auctions) * minting_price
 *)
 let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
-  assert (p.last_touched = b.last_touched); (* Alternatively: touch the burrow here *)
+  assert (p.last_touched = b.last_checker_timestamp); (* Alternatively: touch the burrow here *)
   let { num = num_fm; den = den_fm; } = fminting in
   let { num = num_mp; den = den_mp; } = minting_price p in
   let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in

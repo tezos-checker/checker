@@ -159,7 +159,7 @@ val make_burrow_for_test :
   outstanding_kit:kit ->
   adjustment_index:fixedpoint ->
   collateral_at_auction:Ligo.tez ->
-  last_touched:Ligo.timestamp ->
+  last_checker_timestamp:Ligo.timestamp ->
   burrow
 
 val compute_tez_to_auction : parameters -> burrow -> Ligo.int
