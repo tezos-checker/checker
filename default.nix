@@ -62,7 +62,7 @@ rec
     in
     pkgs.stdenv.mkDerivation {
       name = "checker-michelson";
-      buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby ]) ++ ocamlDeps pkgs;
+      buildInputs = [ ligoBinary ] ++ (with pkgs; [ ruby jq ]) ++ ocamlDeps pkgs;
       src = checkerSource;
       # On E2E tests, we are using a patched version of checker to be able to experiment
       # with index changes without having to wait for the protected index to catch up.
@@ -115,7 +115,7 @@ rec
         # compile it in CI
         pkgs.lib.optionals (pkgs.stdenv.isLinux) [ ligoBinary ]
         ++ pkgs.lib.optionals (!(pkgs.stdenv.isDarwin && pkgs.stdenv.isAarch64)) [ pkgs.niv ]
-        ++ (with pkgs; [ ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt ])
+        ++ (with pkgs; [ ruby bc sphinx poetry entr nodePackages.live-server fd python3Packages.black nixpkgs-fmt jq ])
         ++ spec.buildInputs
         ++ ocamlDeps pkgs
         ++ pythonDeps.buildInputs;

@@ -34,7 +34,7 @@ test-coverage: build-test-coverage
 	bisect-ppx-report summary
 
 test-coverage.json: build-test-coverage
-	bisect-ppx-report summary --per-file | python scripts/coverage-to-json.py | tee test-coverage.json
+	bisect-ppx-report summary --per-file | bash scripts/coverage-to-json.sh | tee test-coverage.json
 
 clean:
 	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build test-coverage.json
