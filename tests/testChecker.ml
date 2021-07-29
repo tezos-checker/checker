@@ -337,6 +337,35 @@ let suite =
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
+    ("entrypoint_set_burrow_delegate - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Create the burrow with no delegate *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
+       let (_, burrow_no), checker = newly_created_burrow empty_checker "0n" in
+       (* Then set the burrow's delegate *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, checker = Checker.entrypoint_set_burrow_delegate (checker, (burrow_no, Some charles_key_hash)) in
+       let burrow = Option.get (Ligo.Big_map.find_opt (alice_addr, burrow_no) checker.burrows) in
+       let expected_ops = [
+         (LigoOp.Tezos.opt_key_hash_transaction
+            (Some charles_key_hash)
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" (burrow_address burrow)))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("entrypoint_receive_price - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:(checker.external_contracts.oracle) ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_receive_price (checker, Ligo.nat_from_literal "42n") in
+       assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
     ("entrypoint_remove_liquidity - emits expected operations" >::
      fun _ ->
        Ligo.Tezos.reset ();
