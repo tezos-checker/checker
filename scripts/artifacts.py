@@ -269,7 +269,7 @@ def print_diffs(diffs, *, title, header_previous, header_next, total_key=None):
                 total_entry = diff
         if total_entry is not None:
             print(
-                f"| **{total_entry.key.ljust(title_len)}** | {str(total_entry.previous): <10} | {str(total_entry.next): <10} | {diff_change(total_entry): <10} |"
+                f"| {total_entry.key.ljust(title_len)} | {str(total_entry.previous): <10} | {str(total_entry.next): <10} | {diff_change(total_entry): <10} |"
             )
         print()
 
