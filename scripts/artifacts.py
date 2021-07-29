@@ -105,6 +105,7 @@ def compare_stats(previous, next):
         title="Test coverage",
         header_previous=previous_stats.info.ref,
         header_next=next_stats.info.ref,
+        total_key="TOTAL",
     )
 
 
@@ -247,20 +248,28 @@ def mk_diffs(prevs, nexts):
     return diffs
 
 
-def print_diffs(diffs, *, title, header_previous, header_next):
+def print_diffs(diffs, *, title, header_previous, header_next, total_key=None):
     diffs = [i for i in diffs if diff_change(i) != 0]
     if not diffs:
         print(f"{title}: No change.")
     else:
         title_len = max(len(title), *[len(i.key) for i in diffs])
+        total_entry = None
 
         print(
             f"| {title.ljust(title_len)} | {header_previous: <10} | {header_next: <10} | {'Diff': <10} |"
         )
         print(f"| {'-'*title_len} | {'-'*10} | {'-'*10} | {'-'*10} |")
         for diff in diffs:
+            if (total_key is None) or (diff.key != total_key):
+                print(
+                    f"| {diff.key.ljust(title_len)} | {str(diff.previous): <10} | {str(diff.next): <10} | {diff_change(diff): <10} |"
+                )
+            else:
+                total_entry = diff
+        if total_entry is not None:
             print(
-                f"| {diff.key.ljust(title_len)} | {str(diff.previous): <10} | {str(diff.next): <10} | {diff_change(diff): <10} |"
+                f"| **{total_entry.key.ljust(title_len)}** | {str(total_entry.previous): <10} | {str(total_entry.next): <10} | {diff_change(total_entry): <10} |"
             )
         print()
 
