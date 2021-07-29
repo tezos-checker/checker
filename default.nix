@@ -80,7 +80,7 @@ rec
       inherit doCheck;
       checkPhase = ''
         make build-ocaml
-        make test
+        make test-coverage.json
       '';
       installPhase = ''
         mkdir -p $out
