@@ -26,13 +26,25 @@ fast-test: ocaml-src
 	sh ./scripts/ensure-unique-errors.sh
 	dune build @run-fast-tests
 
-test-coverage: ocaml-src
+build-test-coverage: ocaml-src
 	dune runtest --instrument-with bisect_ppx --force .
+
+test-coverage: build-test-coverage
 	bisect-ppx-report html
 	bisect-ppx-report summary
 
+test-coverage.json: build-test-coverage
+	bisect-ppx-report summary --per-file \
+	  | awk '{ match($$0, "^ *([0-9.]+) *% *[^ ]* *(.*)$$", res); print res[1] "|" res[2] }'  \
+	  | jq -R "split(\"|\") | { \
+	      \"value\": .[0] | tonumber, \
+	      \"key\": (.[1] | if . == \"Project coverage\" then \"TOTAL\" else ltrimstr(\"src/\") end) \
+	    }" \
+	  | jq --sort-keys -s 'from_entries' \
+	  | tee test-coverage.json
+
 clean:
-	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build
+	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build test-coverage.json
 
 indent:
 	bash ./scripts/format.sh

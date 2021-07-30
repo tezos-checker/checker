@@ -42,6 +42,14 @@ jobs:
           name: stats
           path: entrypoint-sizes.json
           if-no-files-found: error
+      - name: Export the test coverage report
+        run: nix-shell --run 'make test-coverage.json'
+      - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
+        with:
+          name: stats
+          path: test-coverage.json
+          if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
     steps:
