@@ -500,12 +500,12 @@ let[@inline] remove_outstanding_and_circulating_kit
    * kit outstanding. If anything, by doing so the gap between the real value
    * and the approximation decreases (however, this catch-all could hide other
    * bugs). *)
-  (* (* BEGIN_OCAML *)
+  (*
      let _ =
        if gt_kit_kit outstanding_to_remove parameters.outstanding_kit
        then Printf.eprintf "\nunderapproximation of total outstanding"
        else () in
-     (* END OCAML *) *)
+  *)
   let outstanding_to_remove =
     kit_min parameters.outstanding_kit outstanding_to_remove in
   { parameters with
