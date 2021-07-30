@@ -43,8 +43,9 @@ let empty_checker_with_cfmm (cfmm: CfmmTypes.cfmm) =
   Checker.assert_checker_invariants checker;
   checker
 
-(* TODO: Test fixtures for checker with different auction states *)
-
+(* Produces a checker state with liquidatable burrows.
+ * Returns a list of the liquidatable burrow ids, underburrowed burrow ids, and the contract state
+*)
 let checker_with_liquidatable_burrows () =
   let checker = empty_checker in
   (* Create some burrows and mint some kit *)
@@ -116,6 +117,10 @@ let checker_with_liquidatable_burrows () =
   let underburrowed_burrow_ids = [(alice_addr, alice_burrow_1)] in
   liquidatable_burrow_ids, underburrowed_burrow_ids, checker
 
+(* Produces a checker state with liquidation slices in the queue but no current auction.
+ * Returns a list of details for queued slices related to a Close liquidation,
+ * a list of details for all other slices in the queue, and the contract state.
+*)
 let checker_with_queued_liquidation_slices () =
   let liquidatable_burrow_ids, _, checker = checker_with_liquidatable_burrows () in
   (* Mark the liquidatable burrows for liquidation. This will add slices to the queue. *)
@@ -145,17 +150,16 @@ let checker_with_queued_liquidation_slices () =
   assert (List.length other_slice_details > 0);
   close_slice_details, other_slice_details, checker
 
+(* Produces a checker state with an active liquidation auction *)
 let checker_with_active_auction () =
-  let _ = Format.printf "<Tezos_time=%s>" (Ligo.string_of_timestamp (!Ligo.Tezos.now)) in
   let _, _, checker = checker_with_queued_liquidation_slices () in
-  let _ = Format.printf "<Tezos_time=%s>" (Ligo.string_of_timestamp (!Ligo.Tezos.now)) in
   (* Touch checker to start an auction *)
   Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
   let _, checker = Checker.entrypoint_touch (checker, ()) in
   assert_bool "a current liquidation auction should have been started but was not" (Option.is_some checker.liquidation_auctions.current_auction);
-  let _ = Format.printf "<Tezos_time=%s>" (Ligo.string_of_timestamp (!Ligo.Tezos.now)) in
   checker
 
+(* Produces a checker state with a completed liquidation auction *)
 let checker_with_completed_auction () =
   let checker = checker_with_active_auction () in
   (* Get the current auction minimum bid *)
@@ -410,7 +414,6 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let ops, _ = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
-
        match ops with
        (* Note: it's not really possible to check the first parameter of the contract here which is the
         * function which defines the contract's logic.
