@@ -177,7 +177,7 @@ let checker_with_completed_auction () =
   assert_bool
     "there was not a completed liquidation auction but one should exist"
     (Option.is_some checker.liquidation_auctions.completed_auctions);
-  checker
+  bidder, checker
 
 (* Helper for creating new burrows and extracting their ID from the corresponding Ligo Ops *)
 let newly_created_burrow (checker: checker) (burrow_no: string) : burrow_id * checker =
@@ -524,6 +524,30 @@ let suite =
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
+    ("entrypoint_liquidation_auction_claim_win - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let winning_bidder, checker = checker_with_completed_auction () in
+       let auction_ptr = (Option.get checker.liquidation_auctions.completed_auctions).oldest in
+       let sold_tez = (Option.get (Avl.avl_root_data checker.liquidation_auctions.avl_storage auction_ptr)).sold_tez in
+       let slice_ptrs = avl_leaves_to_list checker.liquidation_auctions.avl_storage auction_ptr in
+
+       (* Touch the remaining slices so the bid can be claimed. *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_touch_liquidation_slices (checker, slice_ptrs) in
+
+       (* Claim the winning bid *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:winning_bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_ptr) in
+       let expected_ops = [
+         LigoOp.Tezos.unit_transaction
+           ()
+           sold_tez
+           (Option.get (LigoOp.Tezos.get_contract_opt winning_bidder))
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
     ("entrypoint_mint_kit - emits expected operations" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -640,7 +664,7 @@ let suite =
     ("entrypoint_touch_liquidation_slices - emits expected operations" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = checker_with_completed_auction () in
+       let _, checker = checker_with_completed_auction () in
        let auction_ptr = (Option.get checker.liquidation_auctions.completed_auctions).oldest in
        let slice_ptrs = avl_leaves_to_list checker.liquidation_auctions.avl_storage auction_ptr in
        let slices = List.map (fun ptr -> Avl.avl_read_leaf checker.liquidation_auctions.avl_storage ptr) slice_ptrs in
