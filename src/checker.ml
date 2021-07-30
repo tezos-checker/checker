@@ -216,17 +216,23 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   let burrow, actual_burned = burrow_burn_kit state.parameters kit burrow in
   (* Note: there should be no way to remove more kit from circulation than what
    * is already in circulation. If anyone tries to do so, it means that they
-   * try to remove kit they do not own. So, either
-   * [remove_outstanding_and_circulating_kit] below will fail first (illegal
-   * subtraction), or [ledger_withdraw_kit] below will fail first (attempt to
-   * move kit that is not owned by the sender). Either way I (George) think
-   * that this assertion is only useful for our unit tests. *)
+   * try to remove kit they do not own. So, either the subtraction below will
+   * fail, or [ledger_withdraw_kit] below will fail first (attempt to move kit
+   * that is not owned by the sender). Either way I (George) think that this
+   * assertion is only useful for our unit tests. *)
+
+  let outstanding_to_remove = actual_burned in
+  let circulating_to_remove = actual_burned in
+
+  assert (geq_kit_kit kit actual_burned);
+  assert (geq_kit_kit actual_burned outstanding_to_remove);
   assert (geq_kit_kit state.parameters.circulating_kit kit);
+
   let state =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
-     parameters = remove_outstanding_and_circulating_kit state.parameters actual_burned;
-     fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, actual_burned); (* the burrow owner keeps the rest *)
+     parameters = remove_outstanding_and_circulating_kit state.parameters outstanding_to_remove circulating_to_remove;
+     fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, circulating_to_remove); (* the burrow owner keeps the rest *)
     } in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
@@ -368,7 +374,7 @@ let touch_liquidation_slice
    *     zero                                                    , otherwise
    *   kit_to_repay = kit_corresponding_to_slice - penalty
   *)
-  let kit_to_repay, kit_to_burn =
+  let slice_kit, kit_to_repay, kit_to_burn =
     let corresponding_kit =
       kit_of_fraction_floor
         (Ligo.mul_int_nat (tez_to_mutez slice.tez) (kit_to_mukit_nat outcome.winning_bid.kit))
@@ -387,7 +393,7 @@ let touch_liquidation_slice
       else
         kit_zero
     in
-    (kit_sub corresponding_kit penalty, penalty)
+    (corresponding_kit, kit_sub corresponding_kit penalty, penalty)
   in
 
   let burrow_owner, _burrow_id = slice.burrow in
@@ -409,20 +415,24 @@ let touch_liquidation_slice
    *   (and, consequently, the total) outstanding kit. This is zero if the
    *   liquidation is deemed unwarranted. *)
   assert (eq_kit_kit (kit_add repaid_kit excess_kit) kit_to_repay);
+  assert (eq_kit_kit (kit_add kit_to_repay kit_to_burn) slice_kit);
+
+  let outstanding_to_remove = repaid_kit in (* excess_kit is returned to the owner and kit_to_burn is not included *)
+  let circulating_to_remove = kit_add repaid_kit kit_to_burn in (* excess_kit remains in circulation *)
 
   let state_parameters =
-    let state_parameters = remove_outstanding_and_circulating_kit state_parameters repaid_kit in
-    let state_parameters = remove_circulating_kit state_parameters kit_to_burn in (* the excess kit remains in circulation *)
-    state_parameters in
+    remove_outstanding_and_circulating_kit
+      state_parameters
+      outstanding_to_remove
+      circulating_to_remove in
 
   let new_state_fa2_state =
-    let checkers_kit_to_remove = kit_add (kit_add repaid_kit kit_to_burn) excess_kit in
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, checkers_kit_to_remove) in
+    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, slice_kit) in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, burrow_owner, excess_kit) in
     state_fa2_state in
 
   assert (fa2_get_total_lqt_balance state_fa2_state = fa2_get_total_lqt_balance new_state_fa2_state); (* preservation of lqt *)
-  assert (kit_add (fa2_get_total_kit_balance new_state_fa2_state) (kit_add repaid_kit kit_to_burn) = fa2_get_total_kit_balance state_fa2_state);
+  assert (kit_add (fa2_get_total_kit_balance new_state_fa2_state) circulating_to_remove = fa2_get_total_kit_balance state_fa2_state);
 
   let state_fa2_state = new_state_fa2_state in
 
