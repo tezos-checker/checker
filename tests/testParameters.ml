@@ -820,9 +820,24 @@ let test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow =
       outstanding_kit = outstanding;
       circulating_kit = circulating;
     } in
-  assert_raises
-    (Failure "remove_outstanding_and_circulating_kit: outstanding underflow")
-    (fun () -> remove_outstanding_and_circulating_kit params1 outstanding_to_remove circulating_to_remove);
+  let params2 = remove_outstanding_and_circulating_kit params1 outstanding_to_remove circulating_to_remove in
+
+  (* remove_outstanding_and_circulating_kit should bring the outstanding kit to zero *)
+  assert_kit_equal
+    ~expected:Kit.kit_zero
+    ~real:params2.outstanding_kit;
+  (* remove_outstanding_and_circulating_kit should decrease the circulating kit *)
+  assert_kit_equal
+    ~expected:(Kit.kit_add params2.circulating_kit circulating_to_remove)
+    ~real:params1.circulating_kit;
+  (* remove_outstanding_and_circulating_kit should not affect other fields *)
+  assert_parameters_equal
+    ~expected:params1
+    ~real:{
+      params2 with
+      outstanding_kit = params1.outstanding_kit;
+      circulating_kit = params1.circulating_kit;
+    };
   true
 
 (* Just a simple unit test, more tightly testing the changes when updating the

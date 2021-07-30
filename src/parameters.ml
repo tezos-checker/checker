@@ -489,13 +489,18 @@ let[@inline] remove_outstanding_and_circulating_kit
     (circulating_to_remove: kit)
   : parameters =
   (* BEGIN_OCAML *)
-  if geq_kit_kit parameters.outstanding_kit outstanding_to_remove
-  then ()
-  else failwith "remove_outstanding_and_circulating_kit: outstanding underflow";
   if geq_kit_kit parameters.circulating_kit circulating_to_remove
   then ()
   else failwith "remove_outstanding_and_circulating_kit: circulating underflow";
   (* END_OCAML *)
+  let outstanding_to_remove =
+    (* BEGIN_OCAML *)
+    let _ =
+      if gt_kit_kit outstanding_to_remove parameters.outstanding_kit
+      then Printf.eprintf "\nunderapproximation of total outstanding"
+      else () in
+    (* END OCAML *)
+    kit_min parameters.outstanding_kit outstanding_to_remove in
   { parameters with
     outstanding_kit = kit_sub parameters.outstanding_kit outstanding_to_remove;
     circulating_kit = kit_sub parameters.circulating_kit circulating_to_remove;
