@@ -34,7 +34,14 @@ test-coverage: build-test-coverage
 	bisect-ppx-report summary
 
 test-coverage.json: build-test-coverage
-	bisect-ppx-report summary --per-file | bash scripts/coverage-to-json.sh | tee test-coverage.json
+	bisect-ppx-report summary --per-file \
+	  | awk '{ match($$0, "^ *([0-9.]+) *% *[^ ]* *(.*)$$", res); print res[1] "|" res[2] }'  \
+	  | jq -R "split(\"|\") | { \
+	      \"value\": .[0] | tonumber, \
+	      \"key\": (.[1] | if . == \"Project coverage\" then \"TOTAL\" else ltrimstr(\"src/\") end) \
+	    }" \
+	  | jq --sort-keys -s 'from_entries' \
+	  | tee test-coverage.json
 
 clean:
 	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build test-coverage.json
