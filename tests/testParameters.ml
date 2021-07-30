@@ -777,31 +777,6 @@ let test_remove_outstanding_and_circulating_kit_effect_no_underflows =
   true
 
 (* remove_outstanding_and_circulating_kit has the expected effect when the
- * circulating kit underflows (should fail) *)
-let test_remove_outstanding_and_circulating_kit_effect_circulating_underflow =
-  qcheck_to_ounit
-  @@ QCheck.Test.make
-    ~name:"test_remove_outstanding_and_circulating_kit_effect_circulating_underflow"
-    ~count:property_test_count
-    (QCheck.quad TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
-  @@ fun (kit1, kit2, kit3, kit4) ->
-
-  (* successful cases (no underflows) *)
-  let outstanding_to_remove, outstanding = kit_min kit1 kit2, kit_max kit1 kit2 in                (* to avoid underflows *)
-  let circulating_to_remove, circulating =
-    kit_add (kit_max kit3 kit4) (kit_of_mukit (Ligo.nat_from_literal "1n")), kit_min kit3 kit4 in (* to induce underflow *)
-
-  let params1 =
-    { initial_parameters with
-      outstanding_kit = outstanding;
-      circulating_kit = circulating;
-    } in
-  assert_raises
-    (Failure "remove_outstanding_and_circulating_kit: circulating underflow")
-    (fun () -> remove_outstanding_and_circulating_kit params1 outstanding_to_remove circulating_to_remove);
-  true
-
-(* remove_outstanding_and_circulating_kit has the expected effect when the
  * outstanding kit underflows (should succeed) *)
 let test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow =
   qcheck_to_ounit
@@ -1028,7 +1003,6 @@ let suite =
     test_add_outstanding_and_circulating_kit_effect;
     test_remove_circulating_kit_effect;
     test_remove_outstanding_and_circulating_kit_effect_no_underflows;
-    test_remove_outstanding_and_circulating_kit_effect_circulating_underflow;
     test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow;
 
     (* add/remove circulating_kit/outstanding_kit (unit tests) *)

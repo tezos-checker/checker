@@ -488,11 +488,7 @@ let[@inline] remove_outstanding_and_circulating_kit
     (outstanding_to_remove: kit)
     (circulating_to_remove: kit)
   : parameters =
-  (* BEGIN_OCAML *)
-  if geq_kit_kit parameters.circulating_kit circulating_to_remove
-  then ()
-  else failwith "remove_outstanding_and_circulating_kit: circulating underflow";
-  (* END_OCAML *)
+  assert (geq_kit_kit parameters.circulating_kit circulating_to_remove);
   let outstanding_to_remove =
     (* BEGIN_OCAML *)
     let _ =
