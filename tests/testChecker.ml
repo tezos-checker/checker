@@ -681,7 +681,6 @@ let suite =
          List.rev (List.map (
              fun slice ->
                let burrow = Option.get (Ligo.Big_map.find_opt slice.contents.burrow checker.burrows) in
-               (* TODO: Construct operations here *)
                LigoOp.Tezos.tez_transaction
                  slice.contents.tez
                  (Ligo.tez_from_literal "0mutez")
