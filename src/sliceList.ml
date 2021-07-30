@@ -215,5 +215,7 @@ let slice_list_oldest (l: slice_list) (auctions: liquidation_auctions) : slice_l
   | Some bounds -> Some (SliceListElement (bounds.slice_list_oldest_ptr, avl_read_leaf storage bounds.slice_list_oldest_ptr))
   | None -> None
 
+let slice_list_element_ptr (SliceListElement (ptr, _): slice_list_element) : leaf_ptr = ptr
+
 [@@@coverage on]
 (* END_OCAML *)
