@@ -221,14 +221,7 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
    * that is not owned by the sender). Either way I (George) think that this
    * assertion is only useful for our unit tests. *)
 
-  let outstanding_to_remove =
-    (* BEGIN_OCAML *)
-    let _ =
-      if gt_kit_kit actual_burned state.parameters.outstanding_kit
-      then Printf.eprintf "\nunderapproximation of total outstanding (1)!"
-      else () in
-    (* END OCAML *)
-    kit_min state.parameters.outstanding_kit actual_burned in
+  let outstanding_to_remove = actual_burned in
   let circulating_to_remove = actual_burned in
 
   assert (geq_kit_kit kit actual_burned);
@@ -424,15 +417,7 @@ let touch_liquidation_slice
   assert (eq_kit_kit (kit_add repaid_kit excess_kit) kit_to_repay);
   assert (eq_kit_kit (kit_add kit_to_repay kit_to_burn) slice_kit);
 
-  let outstanding_to_remove = (* only repaied_kit: excess_kit is returned to the owner and kit_to_burn is not included *)
-    (* BEGIN_OCAML *)
-    let _ =
-      if gt_kit_kit repaid_kit state_parameters.outstanding_kit
-      then Printf.eprintf "\nunderapproximation of total outstanding (2)!"
-      else () in
-    (* END OCAML *)
-    kit_min state_parameters.outstanding_kit repaid_kit in
-
+  let outstanding_to_remove = repaid_kit in (* excess_kit is returned to the owner and kit_to_burn is not included *)
   let circulating_to_remove = kit_add repaid_kit kit_to_burn in (* excess_kit remains in circulation *)
 
   let state_parameters =
