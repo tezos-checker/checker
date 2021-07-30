@@ -1,3 +1,5 @@
+open LiquidationAuctionPrimitiveTypes
+
 let alice_addr = Ligo.address_from_literal "alice_addr"
 let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"
@@ -134,3 +136,15 @@ let debug_print_all_kit_in_sealed_state msg wrapper =
     List.iter
       (fun (addr, amnt) -> print_string ("  " ^ Ligo.string_of_address addr ^ " : " ^ Ligo.string_of_nat amnt ^ "\n"))
       (Fa2Interface.get_kit_credits_from_fa2_state state.fa2_state)
+
+(* Extracts the pointers to all of a given AVL tree's leaves *)
+let avl_leaves_to_list (mem: Mem.mem) (AVLPtr ptr) : leaf_ptr list =
+  let rec go ptr: leaf_ptr list =
+    match Mem.mem_get mem ptr with
+    | Root (None, _) -> []
+    | Root (Some ptr, _) -> go ptr
+    | Leaf _ ->
+      [LeafPtr ptr]
+    | Branch branch ->
+      List.append (go branch.left) (go branch.right) in
+  go ptr
