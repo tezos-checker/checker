@@ -488,8 +488,14 @@ let[@inline] remove_outstanding_and_circulating_kit
     (outstanding_to_remove: kit)
     (circulating_to_remove: kit)
   : parameters =
-  assert (geq_kit_kit parameters.outstanding_kit outstanding_to_remove);
-  assert (geq_kit_kit parameters.circulating_kit circulating_to_remove);
+  (* BEGIN_OCAML *)
+  if geq_kit_kit parameters.outstanding_kit outstanding_to_remove
+  then ()
+  else failwith "remove_outstanding_and_circulating_kit: outstanding underflow";
+  if geq_kit_kit parameters.circulating_kit circulating_to_remove
+  then ()
+  else failwith "remove_outstanding_and_circulating_kit: circulating underflow";
+  (* END_OCAML *)
   { parameters with
     outstanding_kit = kit_sub parameters.outstanding_kit outstanding_to_remove;
     circulating_kit = kit_sub parameters.circulating_kit circulating_to_remove;
