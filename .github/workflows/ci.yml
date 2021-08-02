@@ -85,7 +85,7 @@ jobs:
           if-no-files-found: error
   comment:
     needs: [ build, e2e ]
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: cachix/install-nix-action@v13
@@ -96,18 +96,31 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build dependencies
         run: nix-shell --run ':'
-      - name: Calculate the diff
-        run: nix-shell --run './scripts/artifacts.py compare-stats --previous ${{ github.event.pull_request.base.sha }} --next ${{ github.event.pull_request.head.sha }} | tee msg.md'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/github-script@v4.0.2
         with:
           script: |
-            const { promises: fs } = require("fs");
-            const msg = await fs.readFile("msg.md", { "encoding": "utf-8" });
-            github.issues.createComment({
-              issue_number: context.issue.number,
+            const util = require('util');
+            const execFile = util.promisify(require('child_process').execFile);
+
+            const prs = github.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: msg
-            })
+              state: "open"
+            });
+            prs.forEach(pr => {
+              if(pr.head.sha === context.github.sha) {
+                const ret = await execFile(
+                  "nix-shell",
+                  [ "--run"
+                  , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
+                  ]
+                );
+                console.log(ret);
+                github.issues.createComment({
+                  issue_number: pr.id,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: ret.stdout
+                })
+              }
+            });
