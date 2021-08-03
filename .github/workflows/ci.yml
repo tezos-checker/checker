@@ -113,7 +113,7 @@ jobs:
               state: "open"
             });
 
-            const botUser = (await github.request('GET /user')).name;
+            const botUser = (await (github.request('GET /user'))).name;
 
             async function testsPassed(ref) {
               const res = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
@@ -141,7 +141,7 @@ jobs:
               const head = pr.head.sha
 
               // skip if the tests are pending or failed
-              if(!(await testsPassed(base)) || !(await testsPassed(head)))
+              if(!(await (testsPassed(base))) || !(await (testsPassed(head))))
                 return
 
               // we append a hidden marker to the body, so the bot can recognize
@@ -149,13 +149,13 @@ jobs:
               const marker = "bot:" + base + ":" + head
 
               // only run the job if there is no existing comment
-              if(!(await commentExists(pr.id, marker))) {
-                const ret = await execFile(
+              if(!(await (commentExists(pr.id, marker)))) {
+                const ret = await (execFile(
                   "nix-shell",
                   [ "--run"
                   , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
                   ]
-                );
+                ));
                 console.log(ret);
 
                 github.issues.createComment({
@@ -163,5 +163,6 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   body: ret.stdout + "\n\n[hiddencomment]: " + marker
-                }
+                });
+              }
             });
