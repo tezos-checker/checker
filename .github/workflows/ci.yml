@@ -97,7 +97,7 @@ jobs:
       - name: Build dependencies
         run: nix-shell --pure --run ':'
       - name: Calculate the diff
-        run: nix-shell --pure --run './scripts/artifacts.py compare-stats --previous ${{ github.event.pull_request.base.sha }} --next ${{ github.event.pull_request.head.sha }} | tee msg.md'
+        run: nix-shell --pure --keep GITHUB_TOKEN --run './scripts/artifacts.py compare-stats --previous ${{ github.event.pull_request.base.sha }} --next ${{ github.event.pull_request.head.sha }} | tee msg.md'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/github-script@v4.0.2
