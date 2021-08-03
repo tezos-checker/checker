@@ -85,8 +85,11 @@ jobs:
           if-no-files-found: error
   comment:
     needs: [ build, e2e ]
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+
+    # only run one instance at a time
+    concurrency: bot-mutex
+
     steps:
       - uses: cachix/install-nix-action@v13
       - uses: cachix/cachix-action@v10
@@ -94,8 +97,10 @@ jobs:
           name: tezos-checker
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - uses: actions/checkout@v2
-      - name: Build dependencies
-        run: nix-shell --run ':'
+      # we don't have a "Build dependencies" step because we don't want this to
+      # take time when there's nothing to compare.
+      # - name: Build dependencies
+      #   run: nix-shell --run ':'
       - uses: actions/github-script@v4.0.2
         with:
           script: |
@@ -107,8 +112,44 @@ jobs:
               repo: context.repo.repo,
               state: "open"
             });
+
+            const botUser = (await github.request('GET /user')).name;
+
+            async function testsPassed(ref) {
+              const res = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: ref
+              });
+              return res.state === "success";
+            }
+
+            async function commentExists(issue_number, marker) {
+              const cs = await github.issues.listComments({
+                owner,
+                repo,
+                issue_number,
+              })
+
+              return cs.find(comment =>
+                comment.user.login == botUser && comment.body.includes(marker)
+              );
+            }
+
             prs.forEach(pr => {
-              if(pr.head.sha === context.github.sha) {
+              const base = pr.base.sha
+              const head = pr.head.sha
+
+              // skip if the tests are pending or failed
+              if(!(await testsPassed(base)) || !(await testsPassed(head)))
+                return
+
+              // we append a hidden marker to the body, so the bot can recognize
+              // if it already have posted a message
+              const marker = "bot:" + base + ":" + head
+
+              // only run the job if there is no existing comment
+              if(!(await commentExists(pr.id, marker))) {
                 const ret = await execFile(
                   "nix-shell",
                   [ "--run"
@@ -116,11 +157,11 @@ jobs:
                   ]
                 );
                 console.log(ret);
+
                 github.issues.createComment({
                   issue_number: pr.id,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  body: ret.stdout
-                })
-              }
+                  body: ret.stdout + "\n\n[hiddencomment]: " + marker
+                }
             });
