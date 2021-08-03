@@ -113,6 +113,8 @@ jobs:
               state: "open"
             });
 
+            console.log(prs);
+
             async function testsPassed(ref) {
               const res = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
                 owner: context.repo.owner,
