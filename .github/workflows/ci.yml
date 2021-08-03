@@ -113,8 +113,6 @@ jobs:
               state: "open"
             });
 
-            const botUser = (await (github.request('GET /user'))).name;
-
             async function testsPassed(ref) {
               const res = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
                 owner: context.repo.owner,
@@ -132,7 +130,7 @@ jobs:
               })
 
               return cs.find(comment =>
-                comment.user.login == botUser && comment.body.includes(marker)
+                comment.body.includes(marker)
               );
             }
 
