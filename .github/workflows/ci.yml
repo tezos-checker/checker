@@ -135,19 +135,25 @@ jobs:
             }
 
             for (const pr in prs) {
-              const base = pr.base.sha
-              const head = pr.head.sha
+              console.log("Processing PR", pr.id);
+
+              const base = pr.base.sha;
+              const head = pr.head.sha;
 
               // skip if the tests are pending or failed
-              if(!(await (testsPassed(base))) || !(await (testsPassed(head))))
-                return
+              if(!(await (testsPassed(base))) || !(await (testsPassed(head)))) {
+                console.log("Tests not successful, skipping.");
+                return;
+              }
 
               // we append a hidden marker to the body, so the bot can recognize
               // if it already has posted a message.
-              const marker = "bot:" + base + ":" + head
+              const marker = "bot:" + base + ":" + head;
 
               // only run the job if there is no existing comment
-              if(!(await (commentExists(pr.id, marker)))) {
+              if(await (commentExists(pr.id, marker))) {
+                console.log("Comment exists, skipping.");
+              } else {
                 const ret = await (execFile(
                   "nix-shell",
                   [ "--run"
