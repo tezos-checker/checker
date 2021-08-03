@@ -134,7 +134,7 @@ jobs:
               );
             }
 
-            prs.forEach(pr => {
+            for (const pr in prs) {
               const base = pr.base.sha
               const head = pr.head.sha
 
@@ -143,7 +143,7 @@ jobs:
                 return
 
               // we append a hidden marker to the body, so the bot can recognize
-              // if it already have posted a message
+              // if it already has posted a message.
               const marker = "bot:" + base + ":" + head
 
               // only run the job if there is no existing comment
@@ -163,4 +163,4 @@ jobs:
                   body: ret.stdout + "\n\n[hiddencomment]: " + marker
                 });
               }
-            });
+            }
