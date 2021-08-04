@@ -23,6 +23,6 @@ jobs:
           name: tezos-checker
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build shell dependencies
-        run: nix-shell --run ':'
+        run: nix-shell --pure --run ':'
       - name: Run mutation tests
-        run: nix-shell --run "make src/checkerEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
+        run: nix-shell --pure --run "make src/checkerEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
