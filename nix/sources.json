@@ -12,10 +12,10 @@
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "ligo-artifacts": {
-        "rev": "8dd8a5e662a02b13e3d3248bc618448cd9ea9fcd",
-        "sha256": "1l0kgk3v4hn0m0mgh9bf7xy3wszh1nb0syvn30iwifnskarwvibj",
+        "rev": "ec88b4d6b430338a1a44a04dca1642fdef15641f",
+        "sha256": "1bw8wi7jnpcwxpf0z1dzzgg4hvazwbgjm0mmf5j3lh2p5fpsrkvr",
         "type": "file",
-        "url": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/8dd8a5e662a02b13e3d3248bc618448cd9ea9fcd/download?job=docker_extract",
+        "url": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/ec88b4d6b430338a1a44a04dca1642fdef15641f/download?job=docker_extract",
         "url_template": "https://gitlab.com/ligolang/ligo/-/jobs/artifacts/<rev>/download?job=docker_extract"
     },
     "nixpkgs": {

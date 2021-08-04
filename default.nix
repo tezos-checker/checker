@@ -13,18 +13,12 @@ let
   gitignoreNix = import sources."gitignore.nix" { lib = pkgsHost.lib; };
 
   ligoBinary =
-    # This is a precompiled file, which is the ligo revision `1d1cc2cae` compiled
-    # with the patch ./patches/ligo_michelson_maximum_type_size.patch.
-    pkgsLinux.runCommand "ligo-binary" { buildInputs = [ pkgsLinux.unzip ]; } ''
-      mkdir -p $out/bin
-      ln -s ${./bin/ligo} $out/bin/ligo
-    '';
   # Run 'niv update ligo-artifacts -r <git_rev>' to update
-  # pkgsLinux.runCommand "ligo-binary" { buildInputs = [ pkgs.unzip ]; } ''
-  #   mkdir -p $out/bin
-  #   unzip ${sources.ligo-artifacts} ligo -d $out/bin
-  #   chmod +x $out/bin/ligo
-  # '';
+  pkgsLinux.runCommand "ligo-binary" { buildInputs = [ pkgsLinux.unzip ]; } ''
+    mkdir -p $out/bin
+    unzip ${sources.ligo-artifacts} ligo -d $out/bin
+    chmod +x $out/bin/ligo
+  '';
 
   ocamlDeps = pkgs: with pkgs.ocamlPackages; [
     ocaml
