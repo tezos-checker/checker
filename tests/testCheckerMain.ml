@@ -107,7 +107,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Withdraw_tez" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Withdraw_tez (Ligo.tez_from_literal "4_231_643mutez", Ligo.nat_from_literal "32n")) (* note: values randomly chosen *)
+         (Withdraw_tez (Ligo.nat_from_literal "32n", Ligo.tez_from_literal "4_231_643mutez")) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Mint_kit" >::
@@ -341,7 +341,7 @@ let suite =
 
           (* Withdraw_tez *)
           Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Withdraw_tez (Ligo.tez_from_literal "1_000_000mutez", burrow_id)))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Withdraw_tez (burrow_id, Ligo.tez_from_literal "1_000_000mutez")))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Mint_kit *)
