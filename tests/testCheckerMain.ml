@@ -13,7 +13,7 @@ let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 (* This function lets us test all different branches of
- * CheckerEntrypoints.lazyParamsToLazyFunctionId. This is the reason we pass
+ * CheckerLazyEntrypoints.lazyParamsToLazyFunctionId. This is the reason we pass
  * the lazy parameters here, instead of the function id and the bytes
  * separately, so that we can call lazyParamsToLazyFunctionId on each possible
  * argument and increase test coverage. *)
@@ -23,7 +23,7 @@ let test_deploy_function_with_lazy_params_succeeds lazy_params =
 
   let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
-  let fn_id, fn_bytes = CheckerEntrypoints.(lazyParamsToLazyFunctionId lazy_params) in
+  let fn_id, fn_bytes = CheckerLazyEntrypoints.(lazyParamsToLazyFunctionId lazy_params) in
   let op = CheckerMain.DeployFunction (fn_id, fn_bytes) in
 
   (* This call should succeed (first time, no previous entry). *)
@@ -380,7 +380,7 @@ let suite =
 
           (* setup: mint as much kit as possible *)
           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let max_mintable_kit = CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((user_addr, burrow_id), sealed_wrapper) in
+          let max_mintable_kit = CheckerLazyEntrypoints.wrapper_view_burrow_max_mintable_kit ((user_addr, burrow_id), sealed_wrapper) in
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, max_mintable_kit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
@@ -409,7 +409,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Liquidation_auction_place_bid *)
-          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
+          let min_bid = CheckerLazyEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
           Ligo.Tezos.new_transaction ~seconds_passed:394 ~blocks_passed:6 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (min_bid.auction_id, min_bid.minimum_bid)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
@@ -433,7 +433,7 @@ let suite =
 
           (* setup: mint as much kit as possible *)
           Ligo.Tezos.new_transaction ~seconds_passed:1181 ~blocks_passed:18 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let max_mintable_kit = CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((user_addr, burrow_id), sealed_wrapper) in
+          let max_mintable_kit = CheckerLazyEntrypoints.wrapper_view_burrow_max_mintable_kit ((user_addr, burrow_id), sealed_wrapper) in
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, max_mintable_kit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
@@ -457,7 +457,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Liquidation_auction_place_bid *)
-          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
+          let min_bid = CheckerLazyEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
           Ligo.Tezos.new_transaction ~seconds_passed:394 ~blocks_passed:6 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (min_bid.auction_id, min_bid.minimum_bid)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
@@ -613,7 +613,7 @@ let suite =
     ("DeployFunction - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let fn_id, fn_bytes = CheckerEntrypoints.lazyParamsToLazyFunctionId (CheckerEntrypoints.Touch ()) in
+          let fn_id, fn_bytes = CheckerLazyEntrypoints.lazyParamsToLazyFunctionId (CheckerLazyEntrypoints.Touch ()) in
           let op = CheckerMain.DeployFunction (fn_id, fn_bytes) in
           assert_raises
             (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))

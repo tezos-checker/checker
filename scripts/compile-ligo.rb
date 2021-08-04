@@ -38,7 +38,7 @@ end
 puts "Compiling the views."
 ###########################
 
-views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+views = File.read("#{LIGO_DIR}/checkerLazyEntrypoints.mligo")
   .scan(/let wrapper_view_(\S+) *\([^:]*: *(.*) \* wrapper\): *([^=]*)/)
   .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
 
@@ -89,7 +89,7 @@ threads.each(&:join)
 puts "Compiling the entrypoints."
 #################################
 
-entrypoints = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+entrypoints = File.read("#{LIGO_DIR}/checkerLazyEntrypoints.mligo")
   .scan(/let lazy_id_(\S+) *= \(*(\d*)\)/)
   .map { |g| { name: g[0], fn_id: g[1] }}
 

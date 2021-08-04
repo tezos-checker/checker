@@ -14,7 +14,7 @@
    testCfmm
    testChecker
    testCheckerMain
-   testCheckerEntrypoints
+   testCheckerLazyEntrypoints
    testFa2Interface
    testAvl
    testAvlModel
@@ -43,5 +43,5 @@
 (rule (alias run-fast-tests) (action (run %{exe:testCfmm.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testChecker.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerMain.exe})))
-(rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCheckerLazyEntrypoints.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testFa2Interface.exe})))

@@ -34,7 +34,7 @@ inputs=(
   sliceList
   liquidationAuction
   checker
-  checkerEntrypoints
+  checkerLazyEntrypoints
   checkerMain
 )
 

@@ -25,4 +25,4 @@ jobs:
       - name: Build shell dependencies
         run: nix-shell --pure --run ':'
       - name: Run mutation tests
-        run: nix-shell --pure --run "make src/checkerEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
+        run: nix-shell --pure --run "make src/checkerLazyEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
