@@ -5,7 +5,7 @@
 
 Checker is an in-development "robocoin" system for the Tezos blockchain,
 and is a project supported by [Nomadic Labs](https://nomadic-labs.com/),
-[Tweag](https://tweag.io/) and TZ Connect Berlin.
+[Tweag](https://tweag.io/), and [TZ Connect](https://www.tzconnect.com/en/).
 
 **The code here is currently unverified and unaudited, and is made
 publicly available only for exploration and discussion purposes.
@@ -49,7 +49,8 @@ fetch all dependencies), type
 * `make` to do all the above.
 
 For test coverage report using bisect_ppx, type
-*  `make test-coverage` (report in `./_coverage/index.html`)
+*  `make test-coverage` (report in `./_coverage/index.html`), or
+*  `make test-coverage.json` (report of per-file summary in `./test-coverage.json`).
 
 For extracting (haddock-style) documentation from the code using dune, type
 *  `make docs` (docs entrypoint: `./_build/default/_doc/_html/index.html`)
