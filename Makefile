@@ -2,8 +2,8 @@ all: build test
 
 build: build-ocaml build-ligo
 
-src/checkerEntrypoints.ml: src/checker.mli scripts/generate-entrypoints
-	ruby scripts/generate-entrypoints src/checker.mli > $@
+src/checkerEntrypoints.ml: src/checker.mli scripts/generate-entrypoints.rb
+	ruby scripts/generate-entrypoints.rb src/checker.mli > $@
 	ocp-indent -i $@
 
 ocaml-src: src/checkerEntrypoints.ml
