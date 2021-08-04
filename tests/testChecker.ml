@@ -479,11 +479,11 @@ let suite =
 
        (* Place a bid *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, _checker = Checker.entrypoint_liquidation_auction_place_bid
+       let ops, _checker = Checker.entrypoint_liquidation_auction_place_bid
            (checker,
             ((Option.get checker.liquidation_auctions.current_auction).contents, auction_details.minimum_bid))
        in
-       ()
+       assert_operation_list_equal ~expected:[] ~real:ops
     );
 
     ("entrypoint_mark_for_liquidation - emits expected operations" >::
