@@ -107,12 +107,11 @@ jobs:
             const util = require('util');
             const execFile = util.promisify(require('child_process').execFile);
 
-            const prs = await github.pulls.list({
+            const prs = (await github.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: "open"
-            });
-            const prs = prs.data;
+            })).data;
             console.log(prs);
 
             async function testsPassed(ref) {
