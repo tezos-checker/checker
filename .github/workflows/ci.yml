@@ -112,7 +112,7 @@ jobs:
               repo: context.repo.repo,
               state: "open"
             });
-
+            const prs = prs.data;
             console.log(prs);
 
             async function testsPassed(ref) {
