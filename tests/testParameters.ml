@@ -137,56 +137,56 @@ let test_compute_imbalance_zero_circulating =
 
 let test_compute_imbalance_equal =
   "test_compute_imbalance_equal" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
       ~expected:Common.zero_ratio
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_small =
   "test_compute_imbalance_negative_small" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_001n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal   "937_500_001n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "-187499997") (Ligo.int_from_literal "3750000004")) (* JUST BELOW SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_big =
   "test_compute_imbalance_negative_big" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal   "937_500_000n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal   "937_500_000n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_negative_capped =
   "test_compute_imbalance_negative_capped" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal             "1n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal             "1n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "-5") (Ligo.int_from_literal "100")) (* SATURATED *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_small =
   "test_compute_imbalance_positive_small" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_334n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal   "933_333_334n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "199999998") (Ligo.int_from_literal "4000000000")) (* JUST BELOW SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_big =
   "test_compute_imbalance_positive_big" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal   "933_333_333n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal   "933_333_333n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* JUST ABOVE SATURATION *)
       ~real:(compute_imbalance outstanding circulating)
 
 let test_compute_imbalance_positive_capped =
   "test_compute_imbalance_positive_capped" >:: fun _ ->
-    let outstanding = kit_of_mukit (Ligo.nat_from_literal             "1n") in
-    let circulating = kit_of_mukit (Ligo.nat_from_literal "1_000_000_000n") in
+    let outstanding = kit_of_denomination (Ligo.nat_from_literal             "1n") in
+    let circulating = kit_of_denomination (Ligo.nat_from_literal "1_000_000_000n") in
     assert_ratio_equal
       ~expected:(Common.make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100")) (* SATURATED *)
       ~real:(compute_imbalance outstanding circulating)
@@ -558,8 +558,8 @@ let test_touch_1 =
         drift  = fixedpoint_of_hex_string "0.00000000848F8818"; (* 0.00000000012056322737 *)
         burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29"; (* 1.00000057039729312258 *)
         imbalance_index = fixedpoint_of_hex_string "0.FFFFA04D9F700662";
-        outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "999_994n");
-        circulating_kit = kit_of_mukit (Ligo.nat_from_literal "0_000_000n"); (* NOTE that it ends up being identical to the one we started with *)
+        outstanding_kit = kit_of_denomination (Ligo.nat_from_literal "999_994n");
+        circulating_kit = kit_of_denomination (Ligo.nat_from_literal "0_000_000n"); (* NOTE that it ends up being identical to the one we started with *)
         last_touched = !Ligo.Tezos.now;
       }
       ~real:new_parameters;
@@ -577,8 +577,8 @@ let test_touch_2 =
         drift_derivative = fixedpoint_zero;
         burrow_fee_index = fixedpoint_one;
         imbalance_index = fixedpoint_one;
-        outstanding_kit = (kit_of_mukit (Ligo.nat_from_literal "1_753_165n")); (* 1_753_164n should leave as is *)
-        circulating_kit = (kit_of_mukit (Ligo.nat_from_literal "1_000_000n"));
+        outstanding_kit = (kit_of_denomination (Ligo.nat_from_literal "1_753_165n")); (* 1_753_164n should leave as is *)
+        circulating_kit = (kit_of_denomination (Ligo.nat_from_literal "1_000_000n"));
         last_touched = Ligo.timestamp_from_seconds_literal 0;
       } in
     Ligo.Tezos.reset ();
@@ -597,13 +597,13 @@ let test_touch_2 =
         drift = fixedpoint_of_hex_string "0.00000000848F8818";
         burrow_fee_index = fixedpoint_of_hex_string "1.00000991D674CC29";
         imbalance_index = fixedpoint_of_hex_string "0.FFFFA04D9F700662";
-        outstanding_kit = kit_of_mukit (Ligo.nat_from_literal "1_753_155n");
-        circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1_000_001n");
+        outstanding_kit = kit_of_denomination (Ligo.nat_from_literal "1_753_155n");
+        circulating_kit = kit_of_denomination (Ligo.nat_from_literal "1_000_001n");
         last_touched = !Ligo.Tezos.now;
       }
       ~real:new_parameters;
     assert_kit_equal
-      ~expected:(kit_of_mukit (Ligo.nat_from_literal "1n"))
+      ~expected:(kit_of_denomination (Ligo.nat_from_literal "1n"))
       ~real:total_accrual_to_cfmm
 
 (* ************************************************************************* *)
@@ -829,44 +829,44 @@ let test_add_remove_outstanding_circulating_kit_unit =
       ~expected:kit_zero
       ~real:params.outstanding_kit;
     (* add some circulating kit only *)
-    let kit_to_add_to_circulating = Kit.kit_of_mukit (Ligo.nat_from_literal "172_635_932_647n") in
+    let kit_to_add_to_circulating = Kit.kit_of_denomination (Ligo.nat_from_literal "172_635_932_647n") in
     let params = add_circulating_kit params kit_to_add_to_circulating in
     (* the circulating should have increased, but not the outstanding *)
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "172_635_932_647n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "172_635_932_647n"))
       ~real:params.circulating_kit;
     assert_kit_equal
       ~expected:kit_zero
       ~real:params.outstanding_kit;
     (* add some to both the outstanding and the circulating kit *)
-    let kit_to_add_to_both = Kit.kit_of_mukit (Ligo.nat_from_literal "5_473_635_298_465n") in
+    let kit_to_add_to_both = Kit.kit_of_denomination (Ligo.nat_from_literal "5_473_635_298_465n") in
     let params = add_outstanding_and_circulating_kit params kit_to_add_to_both in
     (* both should have increased *)
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_646_271_231_112n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "5_646_271_231_112n"))
       ~real:params.circulating_kit;
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_473_635_298_465n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "5_473_635_298_465n"))
       ~real:params.outstanding_kit;
     (* remove some from both the outstanding and the circulating kit *)
-    let kit_to_remove_from_both = Kit.kit_of_mukit (Ligo.nat_from_literal "765_601_721n") in
+    let kit_to_remove_from_both = Kit.kit_of_denomination (Ligo.nat_from_literal "765_601_721n") in
     let params = remove_outstanding_and_circulating_kit params kit_to_remove_from_both kit_to_remove_from_both in
     (* both should have decreased *)
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_645_505_629_391n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "5_645_505_629_391n"))
       ~real:params.circulating_kit;
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_472_869_696_744n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "5_472_869_696_744n"))
       ~real:params.outstanding_kit;
     (* remove some from the circulating kit only *)
-    let kit_to_remove_from_circulating = Kit.kit_of_mukit (Ligo.nat_from_literal "4_123_827_936_001n") in
+    let kit_to_remove_from_circulating = Kit.kit_of_denomination (Ligo.nat_from_literal "4_123_827_936_001n") in
     let params = remove_circulating_kit params kit_to_remove_from_circulating in
     (*the circulating should have decreased, not not the outstanding *)
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "1_521_677_693_390n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "1_521_677_693_390n"))
       ~real:params.circulating_kit;
     assert_kit_equal
-      ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_472_869_696_744n"))
+      ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "5_472_869_696_744n"))
       ~real:params.outstanding_kit;
     ()
 

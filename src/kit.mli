@@ -17,7 +17,7 @@ val kit_scaling_factor_int : Ligo.int
 val kit_scaling_factor_nat : Ligo.nat
 
 (* Conversions to/from other types. *)
-val kit_of_mukit : Ligo.nat -> kit
+val kit_of_denomination : Ligo.nat -> kit
 val kit_to_mukit_int : kit -> Ligo.int
 val kit_to_mukit_nat : kit -> Ligo.nat
 

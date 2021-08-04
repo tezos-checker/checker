@@ -348,7 +348,7 @@ let fa2_get_token_balance (st: fa2_state) (token_id: fa2_token_id): Ligo.nat =
   |> List.map (fun ((_id, _owner), amnt) -> amnt)
   |> List.fold_left (fun x y -> Ligo.add_nat_nat x y) (Ligo.nat_from_literal "0n")
 
-let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_mukit (fa2_get_token_balance st kit_token_id)
+let fa2_get_total_kit_balance (st: fa2_state) : kit = kit_of_denomination (fa2_get_token_balance st kit_token_id)
 let fa2_get_total_lqt_balance (st: fa2_state) : lqt = lqt_of_denomination (fa2_get_token_balance st lqt_token_id)
 
 let get_kit_credits_from_fa2_state (st: fa2_state) : ((Ligo.address * Ligo.nat) list) =
