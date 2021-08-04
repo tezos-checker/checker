@@ -43,6 +43,146 @@ let empty_checker_with_cfmm (cfmm: CfmmTypes.cfmm) =
   Checker.assert_checker_invariants checker;
   checker
 
+(* Produces a checker state with liquidatable burrows.
+ * Returns a list of the liquidatable burrow ids, underburrowed burrow ids, and the contract state
+*)
+let checker_with_liquidatable_burrows () =
+  let checker = empty_checker in
+  (* Create some burrows and mint some kit *)
+  let alice_burrow_1 = Ligo.nat_from_literal "0n" in
+  let alice_burrow_nos = List.init 20 (fun i -> Ligo.nat_from_int64 (Int64.of_int (i+1))) in
+  let bob_burrow_1 = Ligo.nat_from_literal "0n" in
+  (* Alice burrow 1. Will NOT be liquidatable *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "2_000_000mutez");
+  let _, checker = Checker.entrypoint_create_burrow (checker, (alice_burrow_1, None)) in
+  (* Alice burrow 2:N. Will be liquidatable *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:3 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_mint_kit (checker, (alice_burrow_1, (kit_of_mukit (Ligo.nat_from_literal "100n")))) in
+  let checker = List.fold_left (
+      fun checker alice_burrow_no ->
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "2_000_000mutez");
+        let _, checker = Checker.entrypoint_create_burrow (checker, (alice_burrow_no, None)) in
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+        let _, checker =
+          let max_kit = (Checker.view_burrow_max_mintable_kit ((alice_addr, alice_burrow_no), checker)) in
+          Checker.entrypoint_mint_kit (checker, (alice_burrow_no, max_kit)) in
+        checker
+    )
+      checker
+      alice_burrow_nos
+  in
+  (* Bob burrow 1. Will be liquidatable. *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "20_000_000mutez");
+  let _, checker = Checker.entrypoint_create_burrow (checker, (bob_burrow_1, None)) in
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker =
+    let max_kit = (Checker.view_burrow_max_mintable_kit ((bob_addr, bob_burrow_1), checker)) in
+    Checker.entrypoint_mint_kit (checker, (bob_burrow_1, max_kit)) in
+
+  (* Increase value of kit to make some of the burrows liquidatable by touching checker *)
+  (* Note: setting the transaction to far in the future to ensure that the protected_index will become adequately high
+   * for the burrows to be liquidatable.
+  *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10_000_000 ~blocks_passed:100_000 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_100_000n") in
+  (* Touch burrows *)
+  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_touch_burrow (checker, (alice_addr, alice_burrow_1)) in
+  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_touch_burrow (checker, (bob_addr, bob_burrow_1)) in
+  let checker = List.fold_left (
+      fun checker alice_burrow_no ->
+        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
+        let _, checker = Checker.entrypoint_touch_burrow (checker, (alice_addr, alice_burrow_no)) in
+        checker
+    )
+      checker
+      alice_burrow_nos
+  in
+
+  (* Check the expected properties of this test fixture *)
+  assert_bool "alice_burrow_1 was liquidatable but it is expected to not be"
+    (not (Burrow.burrow_is_liquidatable checker.parameters (Option.get (Ligo.Big_map.find_opt (alice_addr, alice_burrow_1) checker.burrows))));
+  assert_bool "bob_burrow_1 was not liquidatable but it is expected to be"
+    (Burrow.burrow_is_liquidatable checker.parameters (Option.get (Ligo.Big_map.find_opt (bob_addr, bob_burrow_1) checker.burrows)));
+  List.fold_left (
+    fun _ alice_burrow_no ->
+      assert_bool ("alice_burrow_" ^ (Ligo.string_of_nat alice_burrow_no) ^ " was not liquidatable but it is expected to be")
+        (Burrow.burrow_is_liquidatable checker.parameters (Option.get (Ligo.Big_map.find_opt (alice_addr, alice_burrow_no) checker.burrows))))
+    ()
+    alice_burrow_nos;
+  Checker.assert_checker_invariants checker;
+
+  let liquidatable_burrow_ids = List.append (List.map (fun x -> (alice_addr, x)) alice_burrow_nos) [(bob_addr, bob_burrow_1)] in
+  let underburrowed_burrow_ids = [(alice_addr, alice_burrow_1)] in
+  liquidatable_burrow_ids, underburrowed_burrow_ids, checker
+
+(* Produces a checker state with liquidation slices in the queue but no current auction.
+ * Returns a list of details for queued slices related to a Close liquidation,
+ * a list of details for all other slices in the queue, and the contract state.
+*)
+let checker_with_queued_liquidation_slices () =
+  let liquidatable_burrow_ids, _, checker = checker_with_liquidatable_burrows () in
+  (* Mark the liquidatable burrows for liquidation. This will add slices to the queue. *)
+  let checker, close_slice_details, other_slice_details = List.fold_left
+      (fun (checker, close_liquidation_slices, other_liquidation_slices) burrow_id ->
+         Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+         let _, checker = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
+         let new_slice = Option.get (SliceList.slice_list_youngest (SliceList.slice_list_from_auction_state checker.liquidation_auctions burrow_id) checker.liquidation_auctions) in
+         let slice_ptr = SliceList.slice_list_element_ptr new_slice in
+         let slize_tez = (SliceList.slice_list_element_contents new_slice).tez in
+         let is_burrow_now_closed = not (burrow_active (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))) in
+         let close_liquidation_slices, other_liquidation_slices =
+           if is_burrow_now_closed then
+             (List.append close_liquidation_slices [(burrow_id, slice_ptr, slize_tez)]), other_liquidation_slices
+           else
+             close_liquidation_slices, (List.append other_liquidation_slices [(burrow_id, slice_ptr, slize_tez)])
+         in
+         checker, close_liquidation_slices, other_liquidation_slices
+      )
+      (checker, [], [])
+      liquidatable_burrow_ids
+  in
+  assert_bool
+    "liquidation auction queue was empty, but it was expected to have some slices"
+    (Option.is_some (Avl.avl_peek_front checker.liquidation_auctions.avl_storage checker.liquidation_auctions.queued_slices));
+  assert (List.length close_slice_details > 0);
+  assert (List.length other_slice_details > 0);
+  close_slice_details, other_slice_details, checker
+
+(* Produces a checker state with an active liquidation auction *)
+let checker_with_active_auction () =
+  let _, _, checker = checker_with_queued_liquidation_slices () in
+  (* Touch checker to start an auction *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_touch (checker, ()) in
+  assert_bool "a current liquidation auction should have been started but was not" (Option.is_some checker.liquidation_auctions.current_auction);
+  checker
+
+(* Produces a checker state with a completed liquidation auction *)
+let checker_with_completed_auction () =
+  let checker = checker_with_active_auction () in
+  (* Get the current auction minimum bid *)
+  let auction_details = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+  (* Mint enough kit to bid *)
+  let bidder = alice_addr in
+  let new_burrow_no = Ligo.nat_from_literal "100n" in
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "1_000_000_000mutez");
+  let _, checker = Checker.entrypoint_create_burrow (checker, (new_burrow_no, None)) in
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_mint_kit (checker, (new_burrow_no, auction_details.minimum_bid)) in
+  (* Place a bid *)
+  Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_liquidation_auction_place_bid (checker, ((Option.get checker.liquidation_auctions.current_auction).contents, auction_details.minimum_bid)) in
+  (* Wait until enough time has passed for the auction to be completable then touch checker *)
+  (* Touch checker to start an auction *)
+  Ligo.Tezos.new_transaction ~seconds_passed:1202 ~blocks_passed:22 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+  let _, checker = Checker.entrypoint_touch (checker, ()) in
+  assert_bool
+    "there was not a completed liquidation auction but one should exist"
+    (Option.is_some checker.liquidation_auctions.completed_auctions);
+  bidder, checker
+
 (* Helper for creating new burrows and extracting their ID from the corresponding Ligo Ops *)
 let newly_created_burrow (checker: checker) (burrow_no: string) : burrow_id * checker =
   let _ops, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
@@ -274,7 +414,6 @@ let suite =
        Ligo.Tezos.reset ();
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let ops, _ = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
-
        match ops with
        (* Note: it's not really possible to check the first parameter of the contract here which is the
         * function which defines the contract's logic.
@@ -325,6 +464,93 @@ let suite =
        assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
+    ("entrypoint_liquidation_auction_place_bid - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       (* Lookup the current minimum bid *)
+       let auction_details = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       (* Mint some kit to be able to bid *)
+       let new_burrow_no = Ligo.nat_from_literal "100n" in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (new_burrow_no, None)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (new_burrow_no, auction_details.minimum_bid)) in
+
+       (* Place a bid *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _checker = Checker.entrypoint_liquidation_auction_place_bid
+           (checker,
+            ((Option.get checker.liquidation_auctions.current_auction).contents, auction_details.minimum_bid))
+       in
+       assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
+    ("entrypoint_mark_for_liquidation - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Use a checker state already containing some liquidatable burrows *)
+       let liquidatable_burrow_ids, _, checker = checker_with_liquidatable_burrows () in
+       let burrow_id = List.nth liquidatable_burrow_ids 0 in
+       let sender = bob_addr in
+
+       (* Mark one of the liquidatable burrows for liquidation *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
+
+       let burrow = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
+       let expected_ops = [
+         (LigoOp.Tezos.tez_address_transaction
+            ((Ligo.tez_from_literal "1_001_000mutez"), sender)
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow)))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("entrypoint_cancel_liquidation_slice - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Use a checker state already containing some liquidatable burrows *)
+       (* Note: using a non-closed burrow for this test so we don't have to also re-activate the burrow *)
+       let _, slice_details, checker = checker_with_queued_liquidation_slices () in
+       let ((burrow_owner, burrow_no), slice_ptr, _) = List.nth slice_details 0 in
+
+       (* Deposit some extra collateral to one of the burrows with slices in the auction queue *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:burrow_owner ~amount:(Ligo.tez_from_literal "4_000_000mutez");
+       let _, checker = Checker.entrypoint_deposit_tez (checker, burrow_no) in
+
+       (* Now cancel one of the burrow's liquidation slices *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:burrow_owner ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_cancel_liquidation_slice (checker, slice_ptr) in
+       assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
+    ("entrypoint_liquidation_auction_claim_win - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let winning_bidder, checker = checker_with_completed_auction () in
+       let auction_ptr = (Option.get checker.liquidation_auctions.completed_auctions).oldest in
+       let sold_tez = (Option.get (Avl.avl_root_data checker.liquidation_auctions.avl_storage auction_ptr)).sold_tez in
+       let slice_ptrs = avl_leaves_to_list checker.liquidation_auctions.avl_storage auction_ptr in
+
+       (* Touch the remaining slices so the bid can be claimed. *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_touch_liquidation_slices (checker, slice_ptrs) in
+
+       (* Claim the winning bid *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:winning_bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_liquidation_auction_claim_win (checker, auction_ptr) in
+       let expected_ops = [
+         LigoOp.Tezos.unit_transaction
+           ()
+           sold_tez
+           (Option.get (LigoOp.Tezos.get_contract_opt winning_bidder))
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
     ("entrypoint_mint_kit - emits expected operations" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -334,6 +560,35 @@ let suite =
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
+    ("entrypoint_set_burrow_delegate - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       (* Create the burrow with no delegate *)
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
+       let (_, burrow_no), checker = newly_created_burrow empty_checker "0n" in
+       (* Then set the burrow's delegate *)
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, checker = Checker.entrypoint_set_burrow_delegate (checker, (burrow_no, Some charles_key_hash)) in
+       let burrow = Option.get (Ligo.Big_map.find_opt (alice_addr, burrow_no) checker.burrows) in
+       let expected_ops = [
+         (LigoOp.Tezos.opt_key_hash_transaction
+            (Some charles_key_hash)
+            (Ligo.tez_from_literal "0mutez")
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" (burrow_address burrow)))
+         );
+       ] in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
+    );
+
+    ("entrypoint_receive_price - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:(checker.external_contracts.oracle) ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_receive_price (checker, Ligo.nat_from_literal "42n") in
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
@@ -407,6 +662,32 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_touch (checker, ()) in
        assert_operation_list_equal ~expected:[] ~real:ops
+    );
+
+    ("entrypoint_touch_liquidation_slices - emits expected operations" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let _, checker = checker_with_completed_auction () in
+       let auction_ptr = (Option.get checker.liquidation_auctions.completed_auctions).oldest in
+       let slice_ptrs = avl_leaves_to_list checker.liquidation_auctions.avl_storage auction_ptr in
+       let slices = List.map (fun ptr -> Avl.avl_read_leaf checker.liquidation_auctions.avl_storage ptr) slice_ptrs in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let ops, _ = Checker.entrypoint_touch_liquidation_slices (checker, slice_ptrs) in
+       (* Note: opening LiquidationAuctionPrimitiveTypes locally here since we have overloaded
+        * the "contents" record accessor in LiquidationAuctionTypes
+       *)
+       let expected_ops = let open LiquidationAuctionPrimitiveTypes in
+         List.rev (List.map (
+             fun slice ->
+               let burrow = Option.get (Ligo.Big_map.find_opt slice.contents.burrow checker.burrows) in
+               LigoOp.Tezos.tez_transaction
+                 slice.contents.tez
+                 (Ligo.tez_from_literal "0mutez")
+                 (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" (burrow_address burrow))
+                 )
+           ) slices) in
+       assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
     ("entrypoint_touch_burrow - emits expected operations" >::
