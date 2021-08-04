@@ -787,7 +787,7 @@ let test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow =
   @@ fun (kit1, kit2, kit3, kit4) ->
 
   let outstanding_to_remove, outstanding =
-    kit_add (kit_max kit1 kit2) (kit_of_mukit (Ligo.nat_from_literal "1n")), kit_min kit1 kit2 in (* to induce underflow *)
+    kit_add (kit_max kit1 kit2) (kit_of_denomination (Ligo.nat_from_literal "1n")), kit_min kit1 kit2 in (* to induce underflow *)
   let circulating_to_remove, circulating = kit_min kit3 kit4, kit_max kit3 kit4 in                (* to avoid underflows *)
 
   let params1 =
