@@ -483,10 +483,26 @@ let[@inline] add_outstanding_and_circulating_kit (parameters: parameters) (kit: 
 
 (** Remove some kit from the total amount of kit required to close all burrows
     and the kit in circulation. This is the case when a burrow owner burns kit. *)
-let[@inline] remove_outstanding_and_circulating_kit (parameters: parameters) (kit: kit) : parameters =
-  assert (geq_kit_kit parameters.outstanding_kit kit);
-  assert (geq_kit_kit parameters.circulating_kit kit);
+let[@inline] remove_outstanding_and_circulating_kit
+    (parameters: parameters)
+    (outstanding_to_remove: kit)
+    (circulating_to_remove: kit)
+  : parameters =
+  assert (geq_kit_kit parameters.circulating_kit circulating_to_remove);
+
+  (* It is currently unclear whether the way we approximate the total
+   * outstanding kit is an over- or an under- approximation of the real total
+   * outstanding kit (i.e., the sum of b.outstanding_kit for every burrow b).
+   * As illustrated in #209 (whose source was another issue, but still), if we
+   * are not careful when reducing our approximation of the total outstanding
+   * kit checker could potentially get stuck and become untouchable. To avoid
+   * that, we use zero as an absorbing bound for the approximation of the total
+   * kit outstanding. If anything, by doing so the gap between the real value
+   * and the approximation decreases (however, this catch-all could hide other
+   * bugs). *)
+  let outstanding_to_remove =
+    kit_min parameters.outstanding_kit outstanding_to_remove in
   { parameters with
-    outstanding_kit = kit_sub parameters.outstanding_kit kit;
-    circulating_kit = kit_sub parameters.circulating_kit kit;
+    outstanding_kit = kit_sub parameters.outstanding_kit outstanding_to_remove;
+    circulating_kit = kit_sub parameters.circulating_kit circulating_to_remove;
   }

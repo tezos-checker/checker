@@ -646,7 +646,7 @@ let test_add_remove_outstanding_and_circulating_kit_inverses =
       circulating_kit = circulating;
     } in
   let params2 = add_outstanding_and_circulating_kit params1 kit in
-  let params3 = remove_outstanding_and_circulating_kit params2 kit in
+  let params3 = remove_outstanding_and_circulating_kit params2 kit kit in
   (* the parameters should stay as they are *)
   assert_parameters_equal ~expected:params1 ~real:params3;
   true
@@ -739,31 +739,71 @@ let test_remove_circulating_kit_effect =
     ~real:{ params2 with circulating_kit = params1.circulating_kit };
   true
 
-(* remove_outstanding_and_circulating_kit has the expected effect *)
-let test_remove_outstanding_and_circulating_kit_effect =
+(* remove_outstanding_and_circulating_kit has the expected effect when there are no underflows *)
+let test_remove_outstanding_and_circulating_kit_effect_no_underflows =
   qcheck_to_ounit
   @@ QCheck.Test.make
-    ~name:"remove_outstanding_and_circulating_kit"
+    ~name:"test_remove_outstanding_and_circulating_kit_effect_no_underflows"
     ~count:property_test_count
-    (QCheck.triple TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
-  @@ fun (kit1, kit2, kit3) ->
+    (QCheck.quad TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (kit1, kit2, kit3, kit4) ->
 
-  let kit_to_remove = kit_min (kit_min kit1 kit2) kit3 in (* to avoid underflows *)
+  let outstanding_to_remove, outstanding = kit_min kit1 kit2, kit_max kit1 kit2 in (* to avoid underflows *)
+  let circulating_to_remove, circulating = kit_min kit3 kit4, kit_max kit3 kit4 in (* to avoid underflows *)
 
   let params1 =
     { initial_parameters with
-      outstanding_kit = kit1;
-      circulating_kit = kit2;
+      outstanding_kit = outstanding;
+      circulating_kit = circulating;
     } in
-  let params2 = remove_outstanding_and_circulating_kit params1 kit_to_remove in
+  let params2 = remove_outstanding_and_circulating_kit params1 outstanding_to_remove circulating_to_remove in
 
   (* remove_outstanding_and_circulating_kit should decrease the outstanding kit *)
   assert_kit_equal
-    ~expected:(Kit.kit_add params2.outstanding_kit kit_to_remove)
+    ~expected:(Kit.kit_add params2.outstanding_kit outstanding_to_remove)
     ~real:params1.outstanding_kit;
   (* remove_outstanding_and_circulating_kit should decrease the circulating kit *)
   assert_kit_equal
-    ~expected:(Kit.kit_add params2.circulating_kit kit_to_remove)
+    ~expected:(Kit.kit_add params2.circulating_kit circulating_to_remove)
+    ~real:params1.circulating_kit;
+  (* remove_outstanding_and_circulating_kit should not affect other fields *)
+  assert_parameters_equal
+    ~expected:params1
+    ~real:{
+      params2 with
+      outstanding_kit = params1.outstanding_kit;
+      circulating_kit = params1.circulating_kit;
+    };
+  true
+
+(* remove_outstanding_and_circulating_kit has the expected effect when the
+ * outstanding kit underflows (should succeed) *)
+let test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow"
+    ~count:property_test_count
+    (QCheck.quad TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit TestArbitrary.arb_kit)
+  @@ fun (kit1, kit2, kit3, kit4) ->
+
+  let outstanding_to_remove, outstanding =
+    kit_add (kit_max kit1 kit2) (kit_of_mukit (Ligo.nat_from_literal "1n")), kit_min kit1 kit2 in (* to induce underflow *)
+  let circulating_to_remove, circulating = kit_min kit3 kit4, kit_max kit3 kit4 in                (* to avoid underflows *)
+
+  let params1 =
+    { initial_parameters with
+      outstanding_kit = outstanding;
+      circulating_kit = circulating;
+    } in
+  let params2 = remove_outstanding_and_circulating_kit params1 outstanding_to_remove circulating_to_remove in
+
+  (* remove_outstanding_and_circulating_kit should bring the outstanding kit to zero *)
+  assert_kit_equal
+    ~expected:Kit.kit_zero
+    ~real:params2.outstanding_kit;
+  (* remove_outstanding_and_circulating_kit should decrease the circulating kit *)
+  assert_kit_equal
+    ~expected:(Kit.kit_add params2.circulating_kit circulating_to_remove)
     ~real:params1.circulating_kit;
   (* remove_outstanding_and_circulating_kit should not affect other fields *)
   assert_parameters_equal
@@ -810,7 +850,7 @@ let test_add_remove_outstanding_circulating_kit_unit =
       ~real:params.outstanding_kit;
     (* remove some from both the outstanding and the circulating kit *)
     let kit_to_remove_from_both = Kit.kit_of_mukit (Ligo.nat_from_literal "765_601_721n") in
-    let params = remove_outstanding_and_circulating_kit params kit_to_remove_from_both in
+    let params = remove_outstanding_and_circulating_kit params kit_to_remove_from_both kit_to_remove_from_both in
     (* both should have decreased *)
     assert_kit_equal
       ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "5_645_505_629_391n"))
@@ -962,7 +1002,8 @@ let suite =
     test_add_circulating_kit_effect;
     test_add_outstanding_and_circulating_kit_effect;
     test_remove_circulating_kit_effect;
-    test_remove_outstanding_and_circulating_kit_effect;
+    test_remove_outstanding_and_circulating_kit_effect_no_underflows;
+    test_remove_outstanding_and_circulating_kit_effect_outstanding_underflow;
 
     (* add/remove circulating_kit/outstanding_kit (unit tests) *)
     test_add_remove_outstanding_circulating_kit_unit;
