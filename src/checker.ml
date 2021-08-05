@@ -20,7 +20,34 @@ open Mem
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
+
+let compute_outstanding_dissonance (state: checker) : kit (* "real" *) * kit (* approximation *) =
+  let approximation = state.parameters.outstanding_kit in
+  let real =
+    Ligo.Big_map.fold
+      (fun sum (_, b) ->
+         kit_add sum (burrow_outstanding_kit (burrow_touch state.parameters b))
+      )
+      kit_zero
+      state.burrows in
+  (* we should probably calculate this as relative difference
+   * (percentage), with the "real" as the base. For now just
+   * return the two values. *)
+  real, approximation
+
 let assert_checker_invariants (state: checker) : unit =
+  let _ =
+    let r, a = compute_outstanding_dissonance state in
+    let vals = "(" ^ show_kit r ^ "," ^ show_kit a ^ ")" in
+
+    if gt_kit_kit a r then
+      Printf.eprintf "\noverapproximation, good! %s" vals
+    else if eq_kit_kit a r then
+      Printf.eprintf "\nequal, perfection! %s" vals
+    else
+      Printf.eprintf "\noh, no, underapproximation! %s" vals
+  in
+
   (* Check if the auction pointerfest kind of make sense. *)
   assert_liquidation_auction_invariants state.liquidation_auctions;
   (* Check that the total kit tracked on the fa2 ledger is consistent with
