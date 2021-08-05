@@ -135,7 +135,8 @@ jobs:
               );
             }
 
-            for (const pr in prs) {
+            for (let i=0; i < prs.length; i++) {
+              const pr = prs[i];
               console.log("Processing PR", pr.id);
 
               const base = pr.base.sha;
