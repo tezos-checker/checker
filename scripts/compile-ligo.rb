@@ -100,9 +100,9 @@ entrypoints.each_slice([entrypoints.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |entrypoint|
       stdout, stderr, exit_status = Open3.capture3(
-        "ligo", "compile-expression", "cameligo",
+        "ligo", "compile-expression", "--michelson-format=hex", "cameligo",
         "--init-file", MAIN_FILE,
-        "Bytes.pack lazy_fun_#{entrypoint[:name]}"
+        "lazy_fun_#{entrypoint[:name]}"
       )
       exit_status.success? or raise "compiling entrypoint #{entrypoint[:name]} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
       packed_entrypoints << {
