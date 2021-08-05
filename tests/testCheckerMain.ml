@@ -43,6 +43,13 @@ let set_last_price_in_wrapper wrapper price_option =
       {wrapper with deployment_state = Sealed {state with last_price = price_option}}
   )
 
+let find_burrow_in_sealed_wrapper sealed_wrapper burrow_id =
+  CheckerTypes.(
+    match sealed_wrapper.deployment_state with
+    | Unsealed _ -> failwith "find_burrow_in_sealed_wrapper: unsealed"
+    | Sealed state -> Checker.find_burrow state.burrows burrow_id
+  )
+
 let suite =
   "CheckerMainTests" >::: [
     (* initial_wrapper *)
@@ -406,7 +413,7 @@ let suite =
        )
     );
 
-    ("Regression test for #209" >::
+    ("Regression test for #209 (1)" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
           Ligo.Tezos.reset ();
@@ -454,6 +461,49 @@ let suite =
           let blocks_passed = int_of_string (Ligo.string_of_nat (Ligo.add_nat_nat Constants.max_bid_interval_in_blocks (Ligo.nat_from_literal "1n"))) in
           Ligo.Tezos.new_transaction ~seconds_passed:seconds_passed ~blocks_passed:blocks_passed ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
+          let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          (* Note: to avoid the unused variable warning. *)
+          assert_equal sealed_wrapper sealed_wrapper
+       )
+    );
+
+    ("Regression test for #209 (2)" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          Ligo.Tezos.reset ();
+          let burrow_id = Ligo.nat_from_literal "199n" in
+          let user_addr = alice_addr in
+
+          (* Create_burrow *)
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
+          let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          (* setup: mint as much kit as possible *)
+          Ligo.Tezos.new_transaction ~seconds_passed:1181 ~blocks_passed:18 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let max_mintable_kit = CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((user_addr, burrow_id), sealed_wrapper) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, max_mintable_kit)))) in
+          let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          (* setup: increase the index significantly (emulate the effects of Receive_price) *)
+          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+
+          (* setup: let enough time pass so that the burrow becomes liquidatable *)
+          let blocks_passed = 191 in
+          Ligo.Tezos.new_transaction ~seconds_passed:(60 * blocks_passed) ~blocks_passed:blocks_passed ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Touch ()))) in
+          let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          (* Mark_for_liquidation *)
+          Ligo.Tezos.new_transaction ~seconds_passed:342 ~blocks_passed:5 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez"); (* the user themselves can mark it *)
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mark_for_liquidation (user_addr, burrow_id)))) in
+          let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          (* setup: try to pay back all the outstanding kit (underapproximation should be triggered) *)
+          let total_real_outstanding_kit = Burrow.burrow_outstanding_kit (find_burrow_in_sealed_wrapper sealed_wrapper (user_addr, burrow_id)) in
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Burn_kit (burrow_id, total_real_outstanding_kit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Note: to avoid the unused variable warning. *)
