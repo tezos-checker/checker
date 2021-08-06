@@ -124,7 +124,7 @@ let[@inline] undercollateralization_condition (f: ratio) (price: ratio) (tez: ra
 let burrow_is_overburrowed (p: parameters) (b: burrow) : bool =
   assert (p.last_touched = b.last_checker_timestamp);
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
-  let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
+  let kit = { num = kit_to_denomination_int b.outstanding_kit; den = kit_scaling_factor_int; } in
   undercollateralization_condition fminting (minting_price p) tez kit
 
 (*  max_kit_outstanding = FLOOR (tez_collateral / (fminting * minting_price)) *)

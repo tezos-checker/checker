@@ -732,7 +732,7 @@ let suite =
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
        Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+       let actual_reward = kit_to_denomination_int (Checker.calculate_touch_reward last_touched) in
 
        assert_int_equal ~expected:expected_reward ~real:actual_reward;
     );
@@ -747,7 +747,7 @@ let suite =
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
        Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+       let actual_reward = kit_to_denomination_int (Checker.calculate_touch_reward last_touched) in
 
        assert_int_equal ~expected:expected_reward ~real:actual_reward;
     );
@@ -762,7 +762,7 @@ let suite =
        let last_touched = Ligo.timestamp_from_seconds_literal 0 in
        Ligo.Tezos.new_transaction ~seconds_passed:time_delta ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let actual_reward = kit_to_mukit_int (Checker.calculate_touch_reward last_touched) in
+       let actual_reward = kit_to_denomination_int (Checker.calculate_touch_reward last_touched) in
 
        assert_int_equal ~expected:expected_reward ~real:actual_reward;
 
