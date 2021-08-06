@@ -16,7 +16,7 @@ let mk_kit_tx ~from_ ~to_ ~amount =
     txs =
       [ { to_ = to_;
           token_id = kit_token_id;
-          amount = kit_to_mukit_nat amount;
+          amount = kit_to_denomination_nat amount;
         }
       ];
   }

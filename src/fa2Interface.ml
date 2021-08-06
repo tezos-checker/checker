@@ -318,15 +318,15 @@ let[@inline] fa2_run_transfer
 
 let[@inline] ledger_issue_kit
     (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
-  ledger_issue (st, kit_token_id, addr, kit_to_mukit_nat amnt)
+  ledger_issue (st, kit_token_id, addr, kit_to_denomination_nat amnt)
 
 let[@inline] ledger_withdraw_kit
     (st, addr, amnt: fa2_state * Ligo.address * kit) : fa2_state =
-  ledger_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt)
+  ledger_withdraw (st, kit_token_id, addr, kit_to_denomination_nat amnt)
 
 let[@inline] ledger_issue_then_withdraw_kit
     (st, addr, amnt_to_issue, amnt_to_withdraw: fa2_state * Ligo.address * kit * kit) : fa2_state =
-  ledger_issue_then_withdraw (st, kit_token_id, addr, kit_to_mukit_nat amnt_to_issue, kit_to_mukit_nat amnt_to_withdraw)
+  ledger_issue_then_withdraw (st, kit_token_id, addr, kit_to_denomination_nat amnt_to_issue, kit_to_denomination_nat amnt_to_withdraw)
 
 let[@inline] ledger_issue_lqt
     (st, addr, amnt: fa2_state * Ligo.address * lqt) : fa2_state =

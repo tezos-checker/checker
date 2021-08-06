@@ -391,7 +391,7 @@ let touch_liquidation_slice
   let slice_kit, kit_to_repay, kit_to_burn =
     let corresponding_kit =
       kit_of_fraction_floor
-        (Ligo.mul_int_nat (tez_to_mutez slice.tez) (kit_to_mukit_nat outcome.winning_bid.kit))
+        (Ligo.mul_int_nat (tez_to_mutez slice.tez) (kit_to_denomination_nat outcome.winning_bid.kit))
         (Ligo.mul_int_int (tez_to_mutez outcome.sold_tez) kit_scaling_factor_int)
     in
     let penalty =
@@ -402,7 +402,7 @@ let touch_liquidation_slice
         | Some min_kit_for_unwarranted -> lt_kit_kit corresponding_kit min_kit_for_unwarranted in
       if liquidation_was_warranted then
         kit_of_fraction_ceil
-          (Ligo.mul_nat_int (kit_to_mukit_nat corresponding_kit) num_lp)
+          (Ligo.mul_nat_int (kit_to_denomination_nat corresponding_kit) num_lp)
           (Ligo.mul_int_int kit_scaling_factor_int den_lp)
       else
         kit_zero
@@ -979,7 +979,7 @@ let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * 
 let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
   assert_checker_invariants state;
   if token_id = kit_token_id then
-    kit_to_mukit_nat state.parameters.circulating_kit
+    kit_to_denomination_nat state.parameters.circulating_kit
   else if token_id = lqt_token_id then
     lqt_to_denomination_nat (lqt_sub state.cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")))
   else

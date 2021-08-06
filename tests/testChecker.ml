@@ -875,7 +875,7 @@ let suite =
 
       Ligo.geq_nat_nat
         senders_new_mukit
-        (Ligo.add_nat_nat senders_old_mukit (kit_to_mukit_nat min_kit_expected))
+        (Ligo.add_nat_nat senders_old_mukit (kit_to_denomination_nat min_kit_expected))
     );
 
     (
@@ -891,13 +891,13 @@ let suite =
       let checker = empty_checker_with_cfmm cfmm in
       let sender = alice_addr in
 
-      let checker_cfmm_old_mukit = kit_to_mukit_nat checker.cfmm.kit in
+      let checker_cfmm_old_mukit = kit_to_denomination_nat checker.cfmm.kit in
       let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
-      let checker_cfmm_new_mukit = kit_to_mukit_nat checker.cfmm.kit in
+      let checker_cfmm_new_mukit = kit_to_denomination_nat checker.cfmm.kit in
       let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
       begin match ops with
@@ -1070,7 +1070,7 @@ let suite =
           (ratio_of_nat cfmm_kit)
           (
             sub_ratio
-              (div_ratio (ratio_of_nat (Ligo.nat_from_literal "998n")) (ratio_of_nat (kit_to_mukit_nat min_expected_kit)))
+              (div_ratio (ratio_of_nat (Ligo.nat_from_literal "998n")) (ratio_of_nat (kit_to_denomination_nat min_expected_kit)))
               (ratio_of_nat (Ligo.nat_from_literal "1n"))
           ) in
       let minimum_tez = Ligo.mul_nat_tez (Ligo.abs (Common.cdiv_int_int ratio_minimum_tez.num ratio_minimum_tez.den)) (Ligo.tez_from_literal "1mutez") in
@@ -1096,7 +1096,7 @@ let suite =
 
       Ligo.geq_nat_nat
         senders_new_mukit
-        (Ligo.add_nat_nat senders_old_mukit (kit_to_mukit_nat min_expected_kit))
+        (Ligo.add_nat_nat senders_old_mukit (kit_to_denomination_nat min_expected_kit))
         (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
          * number of QCheck samples may improve this.
         *)

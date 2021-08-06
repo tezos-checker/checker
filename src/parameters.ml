@@ -81,8 +81,8 @@ let liquidation_price (p: parameters) : ratio =
         saturate the imbalance to -imbalance_limit.
 *)
 let[@inline] compute_imbalance (outstanding: kit) (circulating: kit) : ratio =
-  let outstanding = kit_to_mukit_nat outstanding in
-  let circulating = kit_to_mukit_nat circulating in
+  let outstanding = kit_to_denomination_nat outstanding in
+  let circulating = kit_to_denomination_nat circulating in
   let { num = num_il; den = den_il; } = imbalance_limit in
 
   if (Ligo.eq_nat_nat circulating (Ligo.nat_from_literal "0n"))
@@ -379,7 +379,7 @@ let[@inline] compute_current_imbalance_index (last_outstanding_kit: kit) (last_c
 *)
 let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (last_burrow_fee_index: fixedpoint) (current_burrow_fee_index: fixedpoint) : kit =
   kit_of_fraction_floor
-    (Ligo.mul_nat_int (kit_to_mukit_nat last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
+    (Ligo.mul_nat_int (kit_to_denomination_nat last_outstanding_kit) (fixedpoint_to_raw current_burrow_fee_index))
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_burrow_fee_index))
 
 (** Compute current outstanding kit, given that the burrow fees have already
@@ -392,7 +392,7 @@ let[@inline] compute_current_outstanding_with_fees (last_outstanding_kit: kit) (
 *)
 let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit) (last_imbalance_index: fixedpoint) (current_imbalance_index: fixedpoint) : kit =
   kit_of_fraction_floor
-    (Ligo.mul_nat_int (kit_to_mukit_nat current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
+    (Ligo.mul_nat_int (kit_to_denomination_nat current_outstanding_with_fees) (fixedpoint_to_raw current_imbalance_index))
     (Ligo.mul_int_int kit_scaling_factor_int (fixedpoint_to_raw last_imbalance_index))
 
 (** Update the checker's parameters, given (a) the current timestamp
