@@ -29,9 +29,9 @@ let compute_outstanding_dissonance (state: checker) : kit (* "real" *) * kit (* 
       )
       kit_zero
       state.burrows in
-  (* we should probably calculate this as relative difference
-   * (percentage), with the "real" as the base. For now just
-   * return the two values. *)
+  (* we should probably calculate this as relative difference with the "real"
+   * as the base. For now just return the two values and leave usage up to the
+   * caller. *)
   real, approximation
 
 let assert_checker_invariants (state: checker) : unit =
