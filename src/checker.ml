@@ -207,7 +207,7 @@ let entrypoint_mint_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
-let entrypoint_withdraw_tez (state, (tez, burrow_no): checker * (Ligo.tez * Ligo.nat)) : LigoOp.operation list * checker =
+let entrypoint_withdraw_tez (state, (burrow_no, tez): checker * (Ligo.nat * Ligo.tez)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let _ = ensure_no_tez_given () in

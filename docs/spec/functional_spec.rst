@@ -49,14 +49,14 @@ Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
 does not exist, if this action would overburrow it, or if the sender is not
 the burrow owner.
 
-``withdraw_tez: (pair mutez nat)``
+``withdraw_tez: (pair nat mutez)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| amount        | mutez                 | The amount of collateral to withdraw                                    |
-+---------------+-----------------------+-------------------------------------------------------------------------+
 | id            | nat                   | The caller's ID for the burrow from which to withdraw the tez           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| amount        | mutez                 | The amount of collateral to withdraw                                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
