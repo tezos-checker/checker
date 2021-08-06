@@ -35,6 +35,14 @@ let test_deploy_function_with_lazy_params_succeeds lazy_params =
   let _ops, _wrapper = CheckerMain.main (op, wrapper) in
   ()
 
+let lift_to_sealed_wrapper (f: CheckerTypes.checker -> 'a) : CheckerTypes.wrapper -> 'a =
+  fun sealed_wrapper ->
+  CheckerTypes.(
+    match sealed_wrapper.deployment_state with
+    | Unsealed _ -> failwith "lift_to_sealed_wrapper: Unsealed"
+    | Sealed state -> f state
+  )
+
 let set_last_price_in_wrapper wrapper price_option =
   CheckerTypes.(
     match wrapper.deployment_state with
@@ -44,11 +52,9 @@ let set_last_price_in_wrapper wrapper price_option =
   )
 
 let find_burrow_in_sealed_wrapper sealed_wrapper burrow_id =
-  CheckerTypes.(
-    match sealed_wrapper.deployment_state with
-    | Unsealed _ -> failwith "find_burrow_in_sealed_wrapper: unsealed"
-    | Sealed state -> Checker.find_burrow state.burrows burrow_id
-  )
+  lift_to_sealed_wrapper
+    (fun state -> Checker.find_burrow state.burrows burrow_id)
+    sealed_wrapper
 
 let suite =
   "CheckerMainTests" >::: [
@@ -499,6 +505,12 @@ let suite =
           Ligo.Tezos.new_transaction ~seconds_passed:342 ~blocks_passed:5 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez"); (* the user themselves can mark it *)
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mark_for_liquidation (user_addr, burrow_id)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
+
+          let real_outstanding_kit, approx_outstanding_kit =
+            lift_to_sealed_wrapper Checker.compute_outstanding_dissonance sealed_wrapper in
+          assert_bool
+            "Regression test for #209 (2) efficacy"
+            (Kit.lt_kit_kit approx_outstanding_kit real_outstanding_kit);
 
           (* setup: try to pay back all the outstanding kit (underapproximation should be triggered) *)
           let total_real_outstanding_kit = Burrow.burrow_outstanding_kit (find_burrow_in_sealed_wrapper sealed_wrapper (user_addr, burrow_id)) in
