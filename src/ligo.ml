@@ -47,6 +47,8 @@ module Big_map = struct
       )
       m
 
+  let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
+
   let get_and_update (k: 'key) (v: 'value option) (m: ('key, 'value) big_map): 'value option * ('key, 'value) big_map =
     let prev = find_opt k m in
     let m_ = update k v m in
@@ -61,7 +63,7 @@ module Big_map = struct
   let bindings i =
     IntMap.bindings i |> List.concat_map snd
 
-  let mem (k: 'key) (m: ('key, 'value) big_map) = Option.is_some (find_opt k m)
+  let fold f z m = List.fold_left f z (bindings m)
 end
 
 type ('k, 'v) map = ('k, 'v) big_map

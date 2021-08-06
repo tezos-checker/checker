@@ -21,6 +21,8 @@ val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 val assert_checker_invariants : checker -> unit
 val touch_with_index : checker -> Ligo.nat -> (LigoOp.operation list * checker)
 val calculate_touch_reward : Ligo.timestamp -> kit
+val find_burrow : burrow_map -> burrow_id -> Burrow.burrow
+val compute_outstanding_dissonance : checker -> kit (* "real" *) * kit (* approximation *)
 (**/**)
 
 (*****************************************************************************)

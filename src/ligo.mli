@@ -16,6 +16,7 @@ module Big_map : sig
 
   (* NON-LIGO *)
   val bindings : ('key, 'value) big_map -> ('key * 'value) list
+  val fold : ('acc -> ('key * 'value) -> 'acc) -> 'acc -> ('key, 'value) big_map -> 'acc
 end
 
 type ('key, 'value) map
@@ -24,11 +25,12 @@ module Map: sig
   val find_opt : 'key -> ('key, 'value) map -> 'value option
   val update : 'key -> 'value option -> ('key, 'value) map -> ('key, 'value) map
   val mem : 'key -> ('key, 'value) map -> bool
-  val add: 'key -> 'value -> ('key, 'value) big_map -> ('key, 'value) big_map
-  val remove: 'key -> ('key, 'value) big_map -> ('key, 'value) big_map
+  val add: 'key -> 'value -> ('key, 'value) map -> ('key, 'value) map
+  val remove: 'key -> ('key, 'value) map -> ('key, 'value) map
 
   (* NON-LIGO *)
   val bindings : ('key, 'value) map -> ('key * 'value) list
+  val fold : ('acc -> ('key * 'value) -> 'acc) -> 'acc -> ('key, 'value) map -> 'acc
 end
 (**
     The type of a map from values of type key to values of type value is map (key, value).

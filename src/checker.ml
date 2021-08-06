@@ -20,6 +20,20 @@ open Mem
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
+let compute_outstanding_dissonance (state: checker) : kit (* "real" *) * kit (* approximation *) =
+  let approximation = state.parameters.outstanding_kit in
+  let real =
+    Ligo.Big_map.fold
+      (fun sum (_, b) ->
+         kit_add sum (burrow_outstanding_kit (burrow_touch state.parameters b))
+      )
+      kit_zero
+      state.burrows in
+  (* we should probably calculate this as relative difference with the "real"
+   * as the base. For now just return the two values and leave usage up to the
+   * caller. *)
+  real, approximation
+
 let assert_checker_invariants (state: checker) : unit =
   (* Check if the auction pointerfest kind of make sense. *)
   assert_liquidation_auction_invariants state.liquidation_auctions;
@@ -228,19 +242,10 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   assert (geq_kit_kit actual_burned outstanding_to_remove);
   assert (geq_kit_kit state.parameters.circulating_kit kit);
 
-  let state_parameters = remove_outstanding_and_circulating_kit state.parameters outstanding_to_remove circulating_to_remove in
-
-  (* BEGIN_OCAML *)
-  let _ =
-    if gt_kit_kit (kit_add state_parameters.outstanding_kit outstanding_to_remove) state.parameters.outstanding_kit
-    then Printf.eprintf "\nUNDERAPPROXIMATION OF TOTAL OUTSTANDING DETECTED (entrypoint_burn_kit)"
-    else () in
-  (* END_OCAML *)
-
   let state =
     {state with
      burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
-     parameters = state_parameters;
+     parameters = remove_outstanding_and_circulating_kit state.parameters outstanding_to_remove circulating_to_remove;
      fa2_state = ledger_withdraw_kit (state.fa2_state, !Ligo.Tezos.sender, circulating_to_remove); (* the burrow owner keeps the rest *)
     } in
   assert_checker_invariants state;
@@ -429,20 +434,11 @@ let touch_liquidation_slice
   let outstanding_to_remove = repaid_kit in (* excess_kit is returned to the owner and kit_to_burn is not included *)
   let circulating_to_remove = kit_add repaid_kit kit_to_burn in (* excess_kit remains in circulation *)
 
-  let new_state_parameters =
+  let state_parameters =
     remove_outstanding_and_circulating_kit
       state_parameters
       outstanding_to_remove
       circulating_to_remove in
-
-  (* BEGIN_OCAML *)
-  let _ =
-    if gt_kit_kit (kit_add new_state_parameters.outstanding_kit outstanding_to_remove) state_parameters.outstanding_kit
-    then Printf.eprintf "\nUNDERAPPROXIMATION OF TOTAL OUTSTANDING DETECTED (touch_liquidation_slice)"
-    else () in
-  (* END_OCAML *)
-
-  let state_parameters = new_state_parameters in
 
   let new_state_fa2_state =
     let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, slice_kit) in
