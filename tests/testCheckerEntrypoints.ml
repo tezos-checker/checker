@@ -39,76 +39,76 @@ let with_sealed_state_and_cfmm_setup f =
     )
 
 let suite =
-  "CheckerLazyEntrypointsTests" >::: [
+  "CheckerEntrypointsTests" >::: [
     (* Test views on unsealed checker *)
     ("wrapper_view_buy_kit_min_kit_expected - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctez.ctez_zero, init_wrapper));
     );
 
     ("wrapper_view_sell_kit_min_ctez_expected - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_sell_kit_min_ctez_expected (Kit.kit_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (Kit.kit_zero, init_wrapper));
     );
 
     ("wrapper_view_add_liquidity_max_kit_deposited - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, init_wrapper));
     );
 
     ("wrapper_view_add_liquidity_min_lqt_minted - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, init_wrapper));
     );
 
     ("wrapper_view_remove_liquidity_min_ctez_withdrawn - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, init_wrapper));
     );
 
     ("wrapper_view_remove_liquidity_min_kit_withdrawn - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (Lqt.lqt_zero, init_wrapper));
     );
 
     ("wrapper_view_current_liquidation_auction_minimum_bid - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), init_wrapper));
     );
 
     ("wrapper_view_burrow_max_mintable_kit - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_burrow_max_mintable_kit ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
     );
 
     ("wrapper_view_is_burrow_overburrowed - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_is_burrow_overburrowed ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_is_burrow_overburrowed ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
     );
 
     ("wrapper_view_is_burrow_liquidatable - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_is_burrow_liquidatable ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_is_burrow_liquidatable ((bob_addr, Ligo.nat_from_literal "0n"), init_wrapper));
     );
 
     ("wrapper_view_get_balance - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), init_wrapper));
     );
 
     ("wrapper_view_total_supply - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_total_supply (Fa2Interface.kit_token_id, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_total_supply (Fa2Interface.kit_token_id, init_wrapper));
     );
 
     ("wrapper_view_all_tokens - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_all_tokens ((), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_all_tokens ((), init_wrapper));
     );
 
     ("wrapper_view_is_operator - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerLazyEntrypoints.wrapper_view_is_operator ((bob_addr, (alice_addr, Fa2Interface.kit_token_id)), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (alice_addr, Fa2Interface.kit_token_id)), init_wrapper));
     );
 
     (* Test views on sealed checker *)
@@ -116,7 +116,7 @@ let suite =
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
-          let min_kit_to_buy = CheckerLazyEntrypoints.wrapper_view_buy_kit_min_kit_expected (ctez_to_sell, sealed_wrapper) in
+          let min_kit_to_buy = CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (ctez_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise wrapper_view_buy_kit_min_kit_expected overapproximated *)
           let _ =
@@ -138,7 +138,7 @@ let suite =
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let kit_to_sell = Kit.kit_of_denomination (Ligo.nat_from_literal "100_000n") in
-          let min_ctez_to_buy = CheckerLazyEntrypoints.wrapper_view_sell_kit_min_ctez_expected (kit_to_sell, sealed_wrapper) in
+          let min_ctez_to_buy = CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (kit_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise wrapper_view_sell_kit_min_ctez_expected overapproximated *)
           let _ =
@@ -160,8 +160,8 @@ let suite =
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
-          let max_kit_to_sell = CheckerLazyEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (ctez_to_sell, sealed_wrapper) in
-          let min_lqt_to_buy = CheckerLazyEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (ctez_to_sell, sealed_wrapper) in
+          let max_kit_to_sell = CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (ctez_to_sell, sealed_wrapper) in
+          let min_lqt_to_buy = CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (ctez_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise
            * wrapper_view_add_liquidity_max_kit_deposited underapproximated or
@@ -193,8 +193,8 @@ let suite =
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let lqt_to_sell = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
-          let min_ctez_to_buy = CheckerLazyEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (lqt_to_sell, sealed_wrapper) in
-          let min_kit_to_buy = CheckerLazyEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (lqt_to_sell, sealed_wrapper) in
+          let min_ctez_to_buy = CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (lqt_to_sell, sealed_wrapper) in
+          let min_kit_to_buy = CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (lqt_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise
            * wrapper_view_remove_liquidity_min_ctez_withdrawn overapproximated or
@@ -227,7 +227,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_raises
             (Failure (Ligo.string_of_int error_NoOpenAuction))
-            (fun () -> CheckerLazyEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper))
+            (fun () -> CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper))
        )
     );
 
@@ -240,7 +240,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_kit_equal
             ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "476_190n"))
-            ~real:(CheckerLazyEntrypoints.wrapper_view_burrow_max_mintable_kit ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper))
        )
     );
 
@@ -252,7 +252,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool
             "burrow cannot be overburrowed already"
-            (not (CheckerLazyEntrypoints.wrapper_view_is_burrow_overburrowed ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper)))
+            (not (CheckerEntrypoints.wrapper_view_is_burrow_overburrowed ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper)))
        )
     );
 
@@ -264,7 +264,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool
             "burrow cannot be liquidatable already"
-            (not (CheckerLazyEntrypoints.wrapper_view_is_burrow_liquidatable ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper)))
+            (not (CheckerEntrypoints.wrapper_view_is_burrow_liquidatable ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper)))
        )
     );
 
@@ -273,7 +273,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_nat_equal
             ~expected:(Ligo.nat_from_literal "0n")
-            ~real:(CheckerLazyEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Fa2Interface.lqt_token_id), sealed_wrapper))
        )
     );
 
@@ -282,7 +282,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_nat_equal
             ~expected:(Ligo.nat_from_literal "0n")
-            ~real:(CheckerLazyEntrypoints.wrapper_view_total_supply (Fa2Interface.kit_token_id, sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_total_supply (Fa2Interface.kit_token_id, sealed_wrapper))
        )
     );
 
@@ -291,7 +291,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_nat_list_equal
             ~expected:Fa2Interface.[kit_token_id; lqt_token_id]
-            ~real:(CheckerLazyEntrypoints.wrapper_view_all_tokens ((), sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_all_tokens ((), sealed_wrapper))
        )
     );
 
@@ -300,7 +300,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_bool
             "no operators had been set"
-            (not (CheckerLazyEntrypoints.wrapper_view_is_operator ((bob_addr, (leena_addr, Fa2Interface.kit_token_id)), sealed_wrapper)))
+            (not (CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (leena_addr, Fa2Interface.kit_token_id)), sealed_wrapper)))
        )
     );
 

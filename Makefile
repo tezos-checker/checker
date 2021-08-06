@@ -2,11 +2,11 @@ all: build test
 
 build: build-ocaml build-ligo
 
-src/checkerLazyEntrypoints.ml: src/checker.mli scripts/generate-entrypoints.rb
+src/checkerEntrypoints.ml: src/checker.mli scripts/generate-entrypoints.rb
 	ruby scripts/generate-entrypoints.rb src/checker.mli > $@
 	ocp-indent -i $@
 
-ocaml-src: src/checkerLazyEntrypoints.ml
+ocaml-src: src/checkerEntrypoints.ml
 
 build-ocaml: ocaml-src
 	dune build @install
@@ -44,7 +44,7 @@ test-coverage.json: build-test-coverage
 	  | tee test-coverage.json
 
 clean:
-	$(RM) -r _build _coverage generated src/checkerLazyEntrypoints.ml docs/spec/_build test-coverage.json
+	$(RM) -r _build _coverage generated src/checkerEntrypoints.ml docs/spec/_build test-coverage.json
 
 indent:
 	bash ./scripts/format.sh

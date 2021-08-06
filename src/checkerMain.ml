@@ -1,4 +1,4 @@
-open CheckerLazyEntrypoints
+open CheckerEntrypoints
 open CheckerTypes
 open Checker
 open Fa2Interface

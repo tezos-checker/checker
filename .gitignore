@@ -1,4 +1,4 @@
-src/checkerLazyEntrypoints.ml
+src/checkerEntrypoints.ml
 
 generated/michelson/main.tz
 generated/michelson/functions.json
