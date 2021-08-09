@@ -172,7 +172,7 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
         (Ligo.mul_int_nat lqt_scaling_factor_int cfmm_ctez) in
     let kit_deposited =
       kit_of_fraction_ceil
-        (Ligo.mul_int_nat (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_nat ctez_amount))
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctez_to_muctez_nat ctez_amount))
         (Ligo.mul_int_nat kit_scaling_factor_int cfmm_ctez) in
     (* Since (a) ctez_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
      * computing kit_deposited, it should be impossible to trigger the
@@ -246,7 +246,7 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     in
     let kit_withdrawn =
       kit_of_fraction_floor
-        (Ligo.mul_int_nat (kit_to_mukit_int cfmm.kit) (lqt_to_denomination_nat lqt_burned))
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (lqt_to_denomination_nat lqt_burned))
         (Ligo.mul_int_nat kit_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     (* Since (a) 0 < lqt_burned < cfmm.lqt, and (b) we floor for both the kit
