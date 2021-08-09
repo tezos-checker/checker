@@ -1383,8 +1383,8 @@ let suite =
     ("view_total_supply (FA2) - initial lqt supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_mulqt_amount = Checker.view_total_supply (Fa2Interface.lqt_token_id, empty_checker) in
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_mulqt_amount;
+       let total_lqt_amount = Checker.view_total_supply (Fa2Interface.lqt_token_id, empty_checker) in
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_lqt_amount;
        ()
     );
 
