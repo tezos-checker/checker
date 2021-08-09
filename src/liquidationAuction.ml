@@ -18,10 +18,10 @@ Utku: Lifecycle of liquidation slices.
    as 'current_auction' alongside with the current timestamp. This
    process is efficient because of the AVL tree.
 
-   When the prefix returned does not have as much tez as we
+   When the prefix returned does not have as much collateral as we
    want, this means that the next liquidation_slice in 'queued_slices'
    needs to be split. We can do this by popping the first item if exists,
-   which as an invariant has more tez than we need, and splitting
+   which as an invariant has more collateral than we need, and splitting
    it into two slices, appending the first slice to the end of
    'current_auction', and the second one to back to the front of
    'queued_slices'. If there is no more slices, we still start the
@@ -71,6 +71,7 @@ open LiquidationAuctionPrimitiveTypes
 open Mem
 open FixedPoint
 open Kit
+open Tok
 open Avl
 open Constants
 open Common
@@ -81,10 +82,10 @@ open SliceList
 (* BEGIN_OCAML *)
 [@@@coverage off]
 
-let liquidation_auction_current_auction_tez (auctions: liquidation_auctions) : Ligo.tez option =
+let liquidation_auction_current_auction_tok (auctions: liquidation_auctions) : tok option =
   match auctions.current_auction with
-  | None -> (None: Ligo.tez option)
-  | Some auction -> Some (avl_tez auctions.avl_storage auction.contents)
+  | None -> (None: tok option)
+  | Some auction -> Some (avl_tok auctions.avl_storage auction.contents)
 
 (* Linked lists are parameterized by pointers in the "younger" and "older" directions*)
 type walk_direction = FromYoungest | FromOldest
@@ -161,7 +162,7 @@ let assert_liquidation_auction_invariants (auctions: liquidation_auctions) : uni
   let mem = auctions.avl_storage in
   let nodes = Ligo.Big_map.bindings mem.mem
               |> List.filter_map (fun (_, n) -> match n with | LiquidationAuctionPrimitiveTypes.Leaf l -> Some l; | _ -> None) in
-  let _ = List.iter (fun leaf -> assert (leaf.value.contents.tez <> Ligo.tez_from_literal "0mutez")) nodes in
+  let _ = List.iter (fun leaf -> assert (leaf.value.contents.tok <> tok_zero)) nodes in
 
   (* Burrow slice list invariants are obeyed for all burrow slice lists*)
   let _ = List.map (
@@ -205,17 +206,17 @@ let liquidation_auction_send_to_auction
   * slices.  Alternatively, we can calculate min_kit_for_unwarranted_1 and then
   * calculate min_kit_for_unwarranted_2 = min_kit_for_unwarranted -
   * min_kit_for_unwarranted_1. *)
-let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_slice_contents) : (liquidation_slice_contents * liquidation_slice_contents) =
+let split_liquidation_slice_contents (amnt: tok) (contents: liquidation_slice_contents) : (liquidation_slice_contents * liquidation_slice_contents) =
   let { burrow = contents_burrow;
-        tez = contents_tez;
+        tok = contents_tok;
         min_kit_for_unwarranted = contents_min_kit_for_unwarranted;
       } = contents in
-  assert (Ligo.gt_tez_tez amnt (Ligo.tez_from_literal "0mutez"));
-  assert (Ligo.lt_tez_tez amnt contents_tez);
-  let slice_tez = tez_to_mutez contents_tez in
-  (* tez partitioning *)
-  let ltez = amnt in
-  let rtez = Ligo.sub_tez_tez contents_tez amnt in
+  assert (gt_tok_tok amnt tok_zero);
+  assert (lt_tok_tok amnt contents_tok);
+  let slice_tok = tok_to_denomination_int contents_tok in
+  (* tok partitioning *)
+  let ltok = amnt in
+  let rtok = tok_sub contents_tok amnt in
   (* kit partitioning *)
   let (lkit, rkit) =
     match contents_min_kit_for_unwarranted with
@@ -224,27 +225,27 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
       let min_kit_for_unwarranted = kit_to_denomination_nat contents_min_kit_for_unwarranted in
       let lkit =
         kit_of_fraction_ceil
-          (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez ltez))
-          (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
+          (Ligo.mul_nat_int min_kit_for_unwarranted (tok_to_denomination_int ltok))
+          (Ligo.mul_int_int kit_scaling_factor_int slice_tok)
       in
       let rkit =
         kit_of_fraction_ceil
-          (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez rtez))
-          (Ligo.mul_int_int kit_scaling_factor_int slice_tez)
+          (Ligo.mul_nat_int min_kit_for_unwarranted (tok_to_denomination_int rtok))
+          (Ligo.mul_int_int kit_scaling_factor_int slice_tok)
       in
       (Some lkit, Some rkit) in
-  ( { burrow = contents_burrow; tez = ltez; min_kit_for_unwarranted = lkit; },
-    { burrow = contents_burrow; tez = rtez; min_kit_for_unwarranted = rkit; }
+  ( { burrow = contents_burrow; tok = ltok; min_kit_for_unwarranted = lkit; },
+    { burrow = contents_burrow; tok = rtok; min_kit_for_unwarranted = rkit; }
   )
 
-let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.tez) : liquidation_auctions * avl_ptr (* liquidation_auction_id *) =
+let take_with_splitting (auctions: liquidation_auctions) (split_threshold: tok) : liquidation_auctions * avl_ptr (* liquidation_auction_id *) =
   let queued_slices = auctions.queued_slices in
 
   let (storage, new_auction) = avl_take auctions.avl_storage queued_slices split_threshold (None: auction_outcome option) in
   let auctions = { auctions with avl_storage = storage } in
 
-  let queued_amount = avl_tez storage new_auction in
-  let auctions = if Ligo.lt_tez_tez queued_amount split_threshold
+  let queued_amount = avl_tok storage new_auction in
+  let auctions = if lt_tok_tok queued_amount split_threshold
     then
       (* split next thing *)
       let next = slice_list_from_queue_head auctions in
@@ -253,7 +254,7 @@ let take_with_splitting (auctions: liquidation_auctions) (split_threshold: Ligo.
       | Some (element, burrow_slices) ->
         (* Split the contents *)
         let (part1_contents, part2_contents) =
-          split_liquidation_slice_contents (Ligo.sub_tez_tez split_threshold queued_amount) (slice_list_element_contents element) in
+          split_liquidation_slice_contents (tok_sub split_threshold queued_amount) (slice_list_element_contents element) in
         (* Remove the element we are splitting *)
         let auctions, burrow_slices, _, _ = slice_list_remove burrow_slices auctions element in
         (* Push the first portion of the slice to the back of the new auction *)
@@ -275,15 +276,15 @@ let start_liquidation_auction_if_possible
   match auctions.current_auction with
   | Some _ -> auctions
   | None ->
-    let queued_amount = avl_tez auctions.avl_storage auctions.queued_slices in
+    let queued_amount = avl_tok auctions.avl_storage auctions.queued_slices in
     let split_threshold =
       (* split_threshold = max (max_lot_size, FLOOR(queued_amount * min_lot_auction_queue_fraction)) *)
       let { num = num_qf; den = den_qf; } = min_lot_auction_queue_fraction in
-      max_tez
+      max_tok
         max_lot_size
-        (fraction_to_tez_floor
-           (Ligo.mul_int_int (tez_to_mutez queued_amount) num_qf)
-           (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") den_qf)
+        (tok_of_fraction_floor
+           (Ligo.mul_nat_int (tok_to_denomination_nat queued_amount) num_qf)
+           (Ligo.mul_int_int tok_scaling_factor_int den_qf)
         ) in
     let (auctions, new_auction) = take_with_splitting auctions split_threshold in
     if avl_is_empty auctions.avl_storage new_auction
@@ -301,8 +302,8 @@ let start_liquidation_auction_if_possible
       let start_value =
         let { num = num_sp; den = den_sp; } = start_price in
         kit_of_fraction_ceil
-          (Ligo.mul_int_int (tez_to_mutez (avl_tez auctions.avl_storage new_auction)) den_sp)
-          (Ligo.mul_int_int (Ligo.int_from_literal "1_000_000") num_sp)
+          (Ligo.mul_nat_int (tok_to_denomination_nat (avl_tok auctions.avl_storage new_auction)) den_sp)
+          (Ligo.mul_int_int tok_scaling_factor_int num_sp)
       in
       let current_auction =
         Some
@@ -362,7 +363,7 @@ let complete_liquidation_auction_if_possible
             | None ->
               let outcome =
                 { winning_bid = winning_bid;
-                  sold_tez=avl_tez auctions.avl_storage curr.contents;
+                  sold_tok=avl_tok auctions.avl_storage curr.contents;
                   younger_auction=(None: liquidation_auction_id option);
                   older_auction=(None: liquidation_auction_id option);
                 } in
@@ -378,7 +379,7 @@ let complete_liquidation_auction_if_possible
               let {youngest=youngest; oldest=oldest} = params in
               let outcome =
                 { winning_bid = winning_bid;
-                  sold_tez=avl_tez auctions.avl_storage curr.contents;
+                  sold_tok=avl_tok auctions.avl_storage curr.contents;
                   younger_auction=Some youngest;
                   older_auction=(None: liquidation_auction_id option);
                 } in
@@ -558,14 +559,14 @@ let liquidation_auctions_pop_completed_slice (auctions: liquidation_auctions) (l
   assert_liquidation_auction_invariants auctions;
   (contents, outcome, auctions)
 
-let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (Ligo.tez * liquidation_auctions) =
+let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auction_id: liquidation_auction_id) : (tok * liquidation_auctions) =
   assert_liquidation_auction_invariants auctions;
-  let sold_tez, auctions = match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
+  let sold_tok, auctions = match completed_liquidation_auction_won_by_sender auctions.avl_storage auction_id with
     | Some outcome ->
       (* A winning bid can only be claimed when all the liquidation slices
        * for that lot is cleaned. *)
       if not (avl_is_empty auctions.avl_storage auction_id)
-      then (Ligo.failwith error_NotAllSlicesClaimed : Ligo.tez * liquidation_auctions)
+      then (Ligo.failwith error_NotAllSlicesClaimed : tok * liquidation_auctions)
       else (
         (* When the winner reclaims their bid, we finally remove every reference
            to the auction. This saves storage and forbids double-claiming the
@@ -575,12 +576,12 @@ let[@inline] liquidation_auction_claim_win (auctions: liquidation_auctions) (auc
         let auctions =
           { auctions with
             avl_storage = avl_delete_empty_tree auctions.avl_storage auction_id } in
-        (outcome.sold_tez, auctions)
+        (outcome.sold_tok, auctions)
       )
-    | None -> (Ligo.failwith error_NotAWinningBid : Ligo.tez * liquidation_auctions)
+    | None -> (Ligo.failwith error_NotAWinningBid : tok * liquidation_auctions)
   in
   assert_liquidation_auction_invariants auctions;
-  sold_tez, auctions
+  sold_tok, auctions
 
 let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : liquidation_auctions =
   assert_liquidation_auction_invariants auctions;

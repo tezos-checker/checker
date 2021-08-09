@@ -125,3 +125,7 @@ let[@inline] internalError_SliceListFromLeafPtrEmptySliceList           : Ligo.i
 let[@inline] internalError_SliceListRemoveEmptyList                     : Ligo.int = Ligo.int_from_literal "301"
 
 let[@inline] internalError_MemGetElementNotFound                        : Ligo.int = Ligo.int_from_literal "310"
+
+let[@inline] internalError_TokSubNegative                               : Ligo.int = Ligo.int_from_literal "320"
+let[@inline] internalError_TokOfFractionCeilNegative                    : Ligo.int = Ligo.int_from_literal "321"
+let[@inline] internalError_TokOfFractionFloorNegative                   : Ligo.int = Ligo.int_from_literal "322"

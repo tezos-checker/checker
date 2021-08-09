@@ -1,5 +1,6 @@
 open Ctez
 open Kit
+open Tok
 open Lqt
 open Burrow
 open OUnit2
@@ -130,7 +131,7 @@ let checker_with_queued_liquidation_slices () =
          let _, checker = Checker.entrypoint_mark_for_liquidation (checker, burrow_id) in
          let new_slice = Option.get (SliceList.slice_list_youngest (SliceList.slice_list_from_auction_state checker.liquidation_auctions burrow_id) checker.liquidation_auctions) in
          let slice_ptr = SliceList.slice_list_element_ptr new_slice in
-         let slize_tez = (SliceList.slice_list_element_contents new_slice).tez in
+         let slize_tez = (SliceList.slice_list_element_contents new_slice).tok in
          let is_burrow_now_closed = not (burrow_active (Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows))) in
          let close_liquidation_slices, other_liquidation_slices =
            if is_burrow_now_closed then
@@ -225,21 +226,21 @@ let suite =
     ("create_burrow - collateral in burrow representation does not include creation deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok Constants.creation_deposit);
 
        let burrow_id, checker = newly_created_burrow empty_checker "0n" in
 
-       let expected_collateral = Ligo.tez_from_literal "0mutez" in
+       let expected_collateral = tok_zero in
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
+       | Some burrow -> assert_tok_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
     ("create_burrow - fails when transaction amount is one mutez below creation deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Ligo.sub_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "1mutez") in
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
+       let amount = tok_sub Constants.creation_deposit (tok_of_denomination (Ligo.nat_from_literal "1n")) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok amount);
 
        assert_raises
          (Failure (Ligo.string_of_int error_InsufficientFunds))
@@ -249,31 +250,31 @@ let suite =
     ("create_burrow - passes when transaction amount is exactly the creation deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Constants.creation_deposit;
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok Constants.creation_deposit);
        let burrow_id, checker = newly_created_burrow empty_checker "0n" in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
        | Some burrow ->
-         assert_tez_equal ~expected:(Ligo.tez_from_literal "0mutez") ~real:(burrow_collateral burrow)
+         assert_tok_equal ~expected:tok_zero ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
     ("deposit_tez - owner can deposit" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
-       let deposit = Ligo.tez_from_literal "3_000_000mutez" in
-       let expected_collateral = Ligo.add_tez_tez deposit (Ligo.sub_tez_tez  initial_deposit Constants.creation_deposit) in
+       let initial_deposit = tok_of_denomination (Ligo.nat_from_literal "3_000_000n") in
+       let deposit = tok_of_denomination (Ligo.nat_from_literal "3_000_000n") in
+       let expected_collateral = tok_add deposit (tok_sub initial_deposit Constants.creation_deposit) in
 
        (* Create the burrow *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:initial_deposit;
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok initial_deposit);
        let (_, burrow_no) as burrow_id, checker = newly_created_burrow empty_checker "0n" in
        (* Make a deposit *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:deposit;
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok deposit);
        let _, checker = Checker.entrypoint_deposit_tez (checker, burrow_no) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
+       | Some burrow -> assert_tok_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -293,18 +294,18 @@ let suite =
     ("withdraw_tez - owner can withdraw" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let initial_deposit = Ligo.tez_from_literal "3_000_000mutez" in
-       let withdrawal = Ligo.tez_from_literal "1_000_000mutez" in
-       let expected_collateral = Ligo.sub_tez_tez initial_deposit (Ligo.add_tez_tez Constants.creation_deposit withdrawal) in
+       let initial_deposit = tok_of_denomination (Ligo.nat_from_literal "3_000_000n") in
+       let withdrawal = tok_of_denomination (Ligo.nat_from_literal "1_000_000n") in
+       let expected_collateral = tok_sub initial_deposit (tok_add Constants.creation_deposit withdrawal) in
 
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "3_000_000mutez");
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(tez_of_tok initial_deposit);
        let burrow_id, checker = newly_created_burrow empty_checker "0n" in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_withdraw_tez (checker, (Ligo.nat_from_literal "0n", withdrawal)) in
+       let _, checker = Checker.entrypoint_withdraw_tez (checker, (Ligo.nat_from_literal "0n", tez_of_tok withdrawal)) in
 
        match Ligo.Big_map.find_opt burrow_id checker.burrows with
-       | Some burrow -> assert_tez_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
+       | Some burrow -> assert_tok_equal ~expected:expected_collateral ~real:(burrow_collateral burrow)
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
@@ -532,7 +533,7 @@ let suite =
        Ligo.Tezos.reset ();
        let winning_bidder, checker = checker_with_completed_auction () in
        let auction_ptr = (Option.get checker.liquidation_auctions.completed_auctions).oldest in
-       let sold_tez = (Option.get (Avl.avl_root_data checker.liquidation_auctions.avl_storage auction_ptr)).sold_tez in
+       let sold_tok = (Option.get (Avl.avl_root_data checker.liquidation_auctions.avl_storage auction_ptr)).sold_tok in
        let slice_ptrs = avl_leaves_to_list checker.liquidation_auctions.avl_storage auction_ptr in
 
        (* Touch the remaining slices so the bid can be claimed. *)
@@ -545,7 +546,7 @@ let suite =
        let expected_ops = [
          LigoOp.Tezos.unit_transaction
            ()
-           sold_tez
+           (tez_of_tok sold_tok)
            (Option.get (LigoOp.Tezos.get_contract_opt winning_bidder))
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -682,7 +683,7 @@ let suite =
              fun slice ->
                let burrow = Option.get (Ligo.Big_map.find_opt slice.contents.burrow checker.burrows) in
                LigoOp.Tezos.tez_transaction
-                 slice.contents.tez
+                 (tez_of_tok slice.contents.tok)
                  (Ligo.tez_from_literal "0mutez")
                  (Option.get (LigoOp.Tezos.get_entrypoint_opt "%burrowSendSliceToChecker" (burrow_address burrow))
                  )
@@ -1689,8 +1690,8 @@ let suite =
          (Ligo.Big_map.find_opt burrow_id checker.liquidation_auctions.burrow_slices= None);
 
        let result = Option.get (Ligo.Big_map.find_opt burrow_id checker.burrows) in
-       assert_tez_equal
-         ~expected:(Ligo.tez_from_literal "0mutez")
+       assert_tok_equal
+         ~expected:tok_zero
          ~real:(burrow_collateral_at_auction result);
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -1762,7 +1763,7 @@ let suite =
     ("deposit_tez - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1778,7 +1779,7 @@ let suite =
     ("entrypoint_withdraw_tez - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       let amount = tez_of_tok (tok_add Constants.creation_deposit Constants.creation_deposit) in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1787,7 +1788,7 @@ let suite =
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
        (* Try to withdraw some tez from the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ = Checker.entrypoint_withdraw_tez (checker, (Ligo.nat_from_literal "0n", Constants.creation_deposit)) in
+       let _ = Checker.entrypoint_withdraw_tez (checker, (Ligo.nat_from_literal "0n", tez_of_tok Constants.creation_deposit)) in
        ()
     );
 
@@ -1795,7 +1796,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
        (* Create a burrow *)
-       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       let amount = tez_of_tok (tok_add Constants.creation_deposit Constants.creation_deposit) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
        (* Touch checker *)
@@ -1810,7 +1811,7 @@ let suite =
     ("entrypoint_burn_kit - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+       let amount = tez_of_tok (tok_add Constants.creation_deposit Constants.creation_deposit) in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1829,7 +1830,7 @@ let suite =
     ("entrypoint_activate_burrow - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1848,7 +1849,7 @@ let suite =
     ("entrypoint_deactivate_burrow - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1864,7 +1865,7 @@ let suite =
     ("entrypoint_mark_for_liquidation - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -1886,7 +1887,7 @@ let suite =
     ("entrypoint_set_burrow_delegate - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -2041,7 +2042,7 @@ let suite =
     ("view_burrow_max_mintable_kit - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -2058,7 +2059,7 @@ let suite =
     ("view_is_burrow_overburrowed - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
@@ -2075,7 +2076,7 @@ let suite =
     ("view_is_burrow_liquidatable - does not fail on untouched burrows" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let amount = Constants.creation_deposit in
+       let amount = tez_of_tok Constants.creation_deposit in
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:amount;
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in

@@ -19,6 +19,7 @@ inputs=(
   ctez
   kit
   lqt
+  tok
   cfmmTypes
   fa2Interface
   liquidationAuctionPrimitiveTypes

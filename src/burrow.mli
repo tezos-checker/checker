@@ -1,4 +1,5 @@
 open Kit
+open Tok
 open FixedPoint
 open Parameters
 open Common
@@ -11,18 +12,18 @@ val pp_burrow : Format.formatter -> burrow -> unit
 
 (* Burrow API *)
 val burrow_address : burrow -> Ligo.address
-val burrow_collateral_at_auction : burrow -> Ligo.tez
+val burrow_collateral_at_auction : burrow -> tok
 
-(** Computes the total amount of tez associated with a burrow. This includes
-  * the collateral, collateral_at_auction, and the creation_deposit if the
-  * burrow is active. *)
-val burrow_total_associated_tez : burrow -> Ligo.tez
+(** Computes the total amount of collateral associated with a burrow. This
+  * includes the collateral, collateral_at_auction, and the creation_deposit if
+  * the burrow is active. *)
+val burrow_total_associated_tok : burrow -> tok
 
 (** Check whether a burrow is overburrowed. A burrow is overburrowed if
   *
-  *   tez_collateral < fminting * kit_outstanding * minting_price
+  *   collateral < fminting * kit_outstanding * minting_price
   *
-  * The quantity tez_collateral / (fminting * minting_price) we call the burrowing
+  * The quantity collateral / (fminting * minting_price) we call the burrowing
   * limit (normally kit_outstanding <= burrowing_limit).
 *)
 val burrow_is_overburrowed : parameters -> burrow -> bool
@@ -33,9 +34,9 @@ val burrow_max_mintable_kit : parameters -> burrow -> kit
 (** Check whether a burrow can be marked for liquidation. A burrow can be
   * marked for liquidation if:
   *
-  *   tez_collateral < fliquidation * kit_outstanding * liquidation_price
+  *   collateral < fliquidation * kit_outstanding * liquidation_price
   *
-  * The quantity tez_collateral / (fliquidation * liquidation_price) we call the
+  * The quantity collateral / (fliquidation * liquidation_price) we call the
   * liquidation limit. Note that for this check we optimistically take into
   * account the expected kit from pending auctions (using the current minting
   * price) when computing the outstanding kit. Note that only active burrows
@@ -54,7 +55,7 @@ val burrow_is_liquidatable : parameters -> burrow -> bool
   * Note that only active burrows can be liquidated; inactive ones are dormant,
   * until either all pending auctions finish or if their creation deposit is
   * restored. *)
-val burrow_is_cancellation_warranted : parameters -> burrow -> Ligo.tez -> bool
+val burrow_is_cancellation_warranted : parameters -> burrow -> tok -> bool
 
 (** Perform housekeeping tasks on the burrow. This includes:
   * - Updating the outstanding kit to reflect accrued burrow fees and imbalance adjustment.
@@ -68,24 +69,23 @@ val burrow_touch : parameters -> burrow -> burrow
   * the amount of kit repaid, and the amount of excess kit. *)
 val burrow_return_kit_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> kit -> burrow -> burrow * kit * kit
 
-(** Cancel the liquidation of a slice. That is, (a) return the tez that is part
-  * of a liquidation slice back to the burrow and (b) adjust the burrow's
-  * pointers to the liquidation queue accordingly (which is a no-op if we are
-  * not deleting the youngest or the oldest liquidation slice). *)
-(* NOTE: the liquidation slice must be the one pointed to by the leaf pointer. *)
+(** Cancel the liquidation of a slice. That is, (a) return the collateral that
+  * is part of a liquidation slice back to the burrow and (b) adjust the
+  * burrow's pointers to the liquidation queue accordingly (which is a no-op if
+  * we are not deleting the youngest or the oldest liquidation slice). *)
 val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidation_slice_contents -> burrow -> burrow
 
-(** Given an amount of tez as collateral (including a creation deposit, not
-  * counting towards that collateral), create a burrow with its owner set to the
-  * input address. Fail if the tez given is less than the creation deposit. *)
-val burrow_create : parameters -> Ligo.address -> Ligo.tez -> Ligo.key_hash option -> burrow
+(** Given an amount of collateral (including a creation deposit, not counting
+  * towards that collateral), create a burrow with its owner set to the input
+  * address. Fail if the collateral given is less than the creation deposit. *)
+val burrow_create : parameters -> Ligo.address -> tok -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
-val burrow_deposit_tez : parameters -> Ligo.tez -> burrow -> burrow
+val burrow_deposit_tez : parameters -> tok -> burrow -> burrow
 
-(** Withdraw a non-negative amount of tez from the burrow, as long as this will
+(** Withdraw an amount of collateral from the burrow, as long as this will
   * not overburrow it. *)
-val burrow_withdraw_tez : parameters -> Ligo.tez -> burrow -> burrow
+val burrow_withdraw_tez : parameters -> tok -> burrow -> burrow
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)
@@ -96,14 +96,14 @@ val burrow_mint_kit : parameters -> kit -> burrow -> burrow
 val burrow_burn_kit : parameters -> kit -> burrow -> burrow * kit
 
 (** Activate a currently inactive burrow. This operation will fail if either
-  * the burrow is already active, or if the amount of tez given is less than
-  * the creation deposit. *)
-val burrow_activate : parameters -> Ligo.tez -> burrow -> burrow
+  * the burrow is already active, or if the amount of collateral given is less
+  * than the creation deposit. *)
+val burrow_activate : parameters -> tok -> burrow -> burrow
 
 (** Deativate a currently active burrow. This operation will fail if the burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
-val burrow_deactivate : parameters -> burrow -> (burrow * Ligo.tez)
+val burrow_deactivate : parameters -> burrow -> (burrow * tok)
 
 (** Set the delegate of a burrow. *)
 val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
@@ -118,8 +118,8 @@ val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
 *)
 
 type liquidation_details =
-  { liquidation_reward : Ligo.tez;
-    tez_to_auction : Ligo.tez;
+  { liquidation_reward : tok;
+    collateral_to_auction : tok;
     burrow_state : burrow;
   }
 
@@ -136,8 +136,8 @@ type liquidation_type =
 
 type liquidation_result = (liquidation_type * liquidation_details) option
 
-val compute_min_kit_for_unwarranted : parameters -> burrow -> Ligo.tez -> kit option
-val compute_expected_kit : parameters -> Ligo.tez -> ratio
+val compute_min_kit_for_unwarranted : parameters -> burrow -> tok -> kit option
+val compute_expected_kit : parameters -> tok -> ratio
 
 val show_liquidation_type : liquidation_type -> string
 val pp_liquidation_type : Format.formatter -> liquidation_type -> unit
@@ -148,21 +148,21 @@ val pp_liquidation_result : Format.formatter -> liquidation_result -> unit
 val burrow_request_liquidation : parameters -> burrow -> liquidation_result
 
 (* BEGIN_OCAML *)
-val burrow_collateral : burrow -> Ligo.tez
+val burrow_collateral : burrow -> tok
 val burrow_active : burrow -> bool
 
 val make_burrow_for_test :
   active:bool ->
   address:Ligo.address ->
   delegate:(Ligo.key_hash option) ->
-  collateral:Ligo.tez ->
+  collateral:tok ->
   outstanding_kit:kit ->
   adjustment_index:fixedpoint ->
-  collateral_at_auction:Ligo.tez ->
+  collateral_at_auction:tok ->
   last_checker_timestamp:Ligo.timestamp ->
   burrow
 
-val compute_tez_to_auction : parameters -> burrow -> Ligo.int
+val compute_collateral_to_auction : parameters -> burrow -> Ligo.int
 
 (** NOTE: For testing only. Check whether a burrow is overburrowed, assuming
   * that all collateral that is in auctions at the moment will be sold at the

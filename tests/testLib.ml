@@ -17,6 +17,7 @@ let assert_nat_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_
 let assert_int_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_int expected real
 let assert_kit_equal ~expected ~real = OUnit2.assert_equal ~printer:Kit.show_kit expected real
 let assert_lqt_equal ~expected ~real = OUnit2.assert_equal ~printer:Lqt.show_lqt expected real
+let assert_tok_equal ~expected ~real = OUnit2.assert_equal ~printer:Tok.show_tok expected real
 let assert_ratio_equal ~expected ~real = OUnit2.assert_equal ~printer:Common.show_ratio ~cmp:Ratio.eq_ratio_ratio expected real
 type key_hash_option = Ligo.key_hash option [@@deriving show]
 let assert_key_hash_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_key_hash_option expected real
@@ -33,6 +34,9 @@ let assert_kit_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_
 
 type tez_option = Ligo.tez option [@@deriving show]
 let assert_tez_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_tez_option expected real
+
+type tok_option = Tok.tok option [@@deriving show]
+let assert_tok_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_tok_option expected real
 
 let assert_burrow_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_burrow expected real
 type slice_content_list = LiquidationAuctionPrimitiveTypes.liquidation_slice_contents list [@@deriving show]

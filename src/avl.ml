@@ -32,7 +32,7 @@
 
 (* The AVL tree double-ended queue backed by a doubly-linked balanced
  * tree where the leaves contain the liquidation elements, and the
- * branches contain the amount of tez on their left and right children.
+ * branches contain the amount of collateral on their left and right children.
  *
  * It acts as a mutable data structure implemented on top of a bigmap
  * (just a Map in Ocaml prototype), acting as a "memory". So, the caller
@@ -56,14 +56,15 @@ open Ptr
 open LiquidationAuctionPrimitiveTypes
 open Common
 open Error
+open Tok
 
 let[@inline] ptr_of_avl_ptr (ptr: avl_ptr) = match ptr with AVLPtr r -> r
 
-let node_tez (n: node) : Ligo.tez =
+let node_tok (n: node) : tok =
   match n with
-  | Leaf leaf -> leaf.value.contents.tez
-  | Branch branch -> Ligo.add_tez_tez branch.left_tez branch.right_tez
-  | Root _ -> (Ligo.failwith internalError_NodeTezFoundRoot : Ligo.tez)
+  | Leaf leaf -> leaf.value.contents.tok
+  | Branch branch -> tok_add branch.left_tok branch.right_tok
+  | Root _ -> (Ligo.failwith internalError_NodeTezFoundRoot : tok)
 
 let node_height (n: node) : Ligo.nat =
   match n with
@@ -126,7 +127,7 @@ let update_matching_child
       then Branch {
           old_branch with
           left = to_ptr;
-          left_tez = node_tez to_;
+          left_tok = node_tok to_;
           left_height = node_height to_;
         }
       else (
@@ -134,7 +135,7 @@ let update_matching_child
         Branch {
           old_branch with
           right = to_ptr;
-          right_tez = node_tez to_;
+          right_tok = node_tok to_;
           right_height = node_height to_;
         }) in
     mem_set mem ptr new_branch
@@ -376,8 +377,8 @@ let rec ref_join_rec
     let new_branch = Branch {
         left = left_ptr;
         left_height = node_height left;
-        left_tez = node_tez left;
-        right_tez = node_tez right;
+        left_tok = node_tok left;
+        right_tok = node_tok right;
         right_height = node_height right;
         right = right_ptr;
         parent = parent_ptr;
@@ -615,31 +616,31 @@ let rec left_fold_ref_split_data
     let new_mem_and_left_ptr_and_right_ptr = ref_split_post_processing d mem_and_left_ptr_and_right_ptr in
     left_fold_ref_split_data (new_mem_and_left_ptr_and_right_ptr, ds)
 
-(* George: This does not split leaves; if the tez on the leaf exceeds the limit
- * then it is not included in the result (it's part of the second tree
- * returned). Essentially this means that the union of the resulting trees has
- * the same contents as the input tree. *)
+(* George: This does not split leaves; if the collateral on the leaf exceeds
+ * the limit then it is not included in the result (it's part of the second
+ * tree returned). Essentially this means that the union of the resulting trees
+ * has the same contents as the input tree. *)
 let rec ref_split_rec
-    (mem, curr_ptr, limit, stack: mem * ptr * Ligo.tez * ref_split_data list)
+    (mem, curr_ptr, limit, stack: mem * ptr * tok * ref_split_data list)
   : mem * ptr option * ptr option =
   match mem_get mem curr_ptr with
   | Root _ -> (Ligo.failwith internalError_RefSplitRecFoundRoot : mem * ptr option * ptr option)
   | Leaf leaf ->
-    if Ligo.leq_tez_tez leaf.value.contents.tez limit
+    if leq_tok_tok leaf.value.contents.tok limit
     then
-      (* Case 1a. Single leaf with not too much tez in it. Include it. *)
+      (* Case 1a. Single leaf with not too much collateral in it. Include it. *)
       let mem = mem_update mem curr_ptr (node_set_parent ptr_null) in
       left_fold_ref_split_data ((mem, Some curr_ptr, (None: ptr option)), stack)
     else
-      (* Case 1b. Single leaf with too much tez in it. Exclude it. *)
+      (* Case 1b. Single leaf with too much collateral in it. Exclude it. *)
       left_fold_ref_split_data ((mem, (None: ptr option), Some curr_ptr), stack)
   | Branch branch ->
-    if Ligo.leq_tez_tez (Ligo.add_tez_tez branch.left_tez branch.right_tez) limit
-    then (* total_tez <= limit *)
-      (* Case 2. The whole tree has not too much tez in it. Include it. *)
+    if leq_tok_tok (tok_add branch.left_tok branch.right_tok) limit
+    then (* total_collateral <= limit *)
+      (* Case 2. The whole tree has not too much collateral in it. Include it. *)
       let mem = mem_update mem curr_ptr (node_set_parent ptr_null) in
       left_fold_ref_split_data ((mem, Some curr_ptr, (None: ptr option)), stack)
-    else (* limit < total_tez *)
+    else (* limit < total_collateral *)
       let mem = mem_del mem curr_ptr in
       let mem = mem_update mem branch.right (node_set_parent branch.parent) in
       (* Semantically it would be better to detach branch.left as well here
@@ -650,17 +651,17 @@ let rec ref_split_rec
        * Unfortunately, this bumps reads and writes significantly (reads+=16%
        * and writes+=20%), so we don't do it. *)
 
-      if branch.left_tez = limit
-      then (* Case 3a. left_tez = limit (no need for recursion, split the tree right here) *)
+      if branch.left_tok = limit
+      then (* Case 3a. left_tok = limit (no need for recursion, split the tree right here) *)
         left_fold_ref_split_data ((mem, Some branch.left, Some branch.right), stack)
       else
         let rec_direction, tree_to_recurse_into, limit_to_use =
-          if Ligo.lt_tez_tez limit branch.left_tez
-          then (* Case 3b. limit < left_tez < total_tez (we have to recurse into and split the left tree) *)
+          if lt_tok_tok limit branch.left_tok
+          then (* Case 3b. limit < left_tok < total_collateral (we have to recurse into and split the left tree) *)
             (Left, branch.left, limit)
-          else (* Case 3c. left_tez < limit < total_tez (we have to recurse into and split the right tree) *)
+          else (* Case 3c. left_tok < limit < total_collateral (we have to recurse into and split the right tree) *)
             let left_branch = mem_get mem branch.left in
-            (Right, branch.right, Ligo.sub_tez_tez limit (node_tez left_branch))
+            (Right, branch.right, tok_sub limit (node_tok left_branch))
         in
         ref_split_rec
           ( mem
@@ -672,7 +673,7 @@ let rec ref_split_rec
 let ref_split
     (mem: mem)
     (curr_ptr: ptr)
-    (limit: Ligo.tez)
+    (limit: tok)
   : mem * ptr option * ptr option =
   ref_split_rec
     ( mem
@@ -683,10 +684,9 @@ let ref_split
 
 (* ************************** *)
 
-(* Split the longest prefix of the tree with less than
- * given amount of tez.
-*)
-let avl_take (mem: mem) (root_ptr: avl_ptr) (limit: Ligo.tez) (root_data: auction_outcome option)
+(* Split the longest prefix of the tree with less than given amount of
+ * collateral. *)
+let avl_take (mem: mem) (root_ptr: avl_ptr) (limit: tok) (root_data: auction_outcome option)
   : mem * avl_ptr =
   let (r, old_root_data) = deref_avl_ptr mem root_ptr  in
   let root_ptr = match root_ptr with AVLPtr r -> r in
@@ -703,11 +703,11 @@ let avl_take (mem: mem) (root_ptr: avl_ptr) (limit: Ligo.tez) (root_data: auctio
     let (mem, new_root) = mem_new mem (Root ((None: ptr option), root_data)) in
     (mem, AVLPtr new_root)
 
-let[@inline] avl_tez (mem: mem) (ptr: avl_ptr) : Ligo.tez =
+let[@inline] avl_tok (mem: mem) (ptr: avl_ptr) : tok =
   let (r, _) = deref_avl_ptr mem ptr in
   match r with
-  | Some ptr -> node_tez (mem_get mem ptr)
-  | None -> Ligo.tez_from_literal "0mutez"
+  | Some ptr -> node_tok (mem_get mem ptr)
+  | None -> tok_zero
 
 let[@inline] avl_height (mem: mem) (ptr: avl_ptr): Ligo.nat =
   let (r, _) = deref_avl_ptr mem ptr in
@@ -765,9 +765,9 @@ let assert_avl_invariants (mem: mem) (AVLPtr root) : unit =
       let right = mem_get mem branch.right in
       assert (branch.parent = parent);
       assert (branch.left_height = node_height left);
-      assert (branch.left_tez = node_tez left);
+      assert (branch.left_tok = node_tok left);
       assert (branch.right_height = node_height right);
-      assert (branch.right_tez = node_tez right);
+      assert (branch.right_tok = node_tok right);
       assert (Ligo.lt_nat_nat (Ligo.abs (Ligo.sub_nat_nat branch.left_height branch.right_height)) (Ligo.nat_from_literal "2n"));
       go curr branch.left;
       go curr branch.right

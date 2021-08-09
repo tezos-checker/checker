@@ -1,6 +1,7 @@
 open OUnit2
 open TestLib
 open Error
+open Tok
 
 let assert_unsealed_contract_raises_not_deployed_error f =
   fun _ ->
@@ -234,7 +235,7 @@ let suite =
     ("wrapper_view_burrow_max_mintable_kit - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let initial_amount = Ligo.add_tez_tez Constants.creation_deposit Constants.creation_deposit in
+          let initial_amount = tez_of_tok (tok_add Constants.creation_deposit Constants.creation_deposit) in
           Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:initial_amount;
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
@@ -247,7 +248,7 @@ let suite =
     ("wrapper_view_is_burrow_overburrowed - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:Constants.creation_deposit;
+          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(tez_of_tok Constants.creation_deposit);
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool
@@ -259,7 +260,7 @@ let suite =
     ("wrapper_view_is_burrow_liquidatable - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:Constants.creation_deposit;
+          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(tez_of_tok Constants.creation_deposit);
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool

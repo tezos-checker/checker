@@ -8,6 +8,7 @@
    testTez
    testKit
    testLqt
+   testTok
    testMem
    testParameters
    testLiquidation
@@ -37,6 +38,7 @@
 (rule (alias run-fast-tests) (action (run %{exe:testTez.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testKit.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testLqt.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testTok.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testMem.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testParameters.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testLiquidation.exe})))

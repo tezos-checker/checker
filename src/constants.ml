@@ -1,5 +1,6 @@
 open Common
 open FixedPoint
+open Tok
 
 (** Dimensionless. Factor used for setting the minting limit. *)
 let[@inline] fminting : ratio = make_ratio (Ligo.int_from_literal "21") (Ligo.int_from_literal "10") (* 2.1 *)
@@ -9,7 +10,7 @@ let[@inline] fliquidation : ratio = make_ratio (Ligo.int_from_literal "19") (Lig
 
 (** Number of tez needed to be given for the creation of a burrow; it does
     not count towards the burrow's collateral. *)
-let[@inline] creation_deposit : Ligo.tez = Ligo.tez_from_literal "1_000_000mutez"
+let[@inline] creation_deposit : tok = tok_one
 
 (** Yearly burrow fee percentage. *)
 let[@inline] burrow_fee_percentage : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") (* 0.005 *)
@@ -36,8 +37,8 @@ let[@inline] cfmm_fee : ratio = make_ratio (Ligo.int_from_literal "2") (Ligo.int
     so the inverse is simply 120_000. *)
 let[@inline] protected_index_inverse_epsilon : Ligo.int = Ligo.int_from_literal "120_000"
 
-(** The maximum number of tez that can be in an auction lot. *)
-let[@inline] max_lot_size : Ligo.tez = Ligo.tez_from_literal "10_000_000_000mutez"
+(** The maximum amount of collateral that can be in an auction lot. *)
+let[@inline] max_lot_size : tok = tok_of_denomination (Ligo.nat_from_literal "10_000_000_000n")
 
 (** The minimum fraction of the auction queue which must go into a new auction lot. *)
 let[@inline] min_lot_auction_queue_fraction : ratio =

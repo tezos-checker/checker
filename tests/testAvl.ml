@@ -2,6 +2,7 @@ open Mem
 open LiquidationAuctionPrimitiveTypes
 open Avl
 open Kit
+open Tok
 open OUnit2
 open Format
 open Ptr
@@ -68,7 +69,7 @@ let avl_from_list (mem: mem) (root_data: auction_outcome option) (elements: liqu
 
 let mk_liquidation_slice (n: int): liquidation_slice =
   { contents =
-      { tez = Ligo.tez_from_literal (string_of_int n ^ "mutez")
+      { tok = tok_of_denomination (Ligo.nat_from_literal (string_of_int n ^ "n"))
       ; min_kit_for_unwarranted = Some kit_zero
       ; burrow = (Ligo.address_of_string "someburrow", Ligo.nat_from_literal "0n")
       }
@@ -282,7 +283,7 @@ let suite =
      true
     );
     (qcheck_to_ounit
-     @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list TestArbitrary.arb_liquidation_slice))
+     @@ QCheck.Test.make ~name:"prop_take" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tok (list TestArbitrary.arb_liquidation_slice))
      @@ fun (limit, xs) ->
 
      let (mem, right) = avl_from_list mem_empty None xs in
@@ -295,13 +296,13 @@ let suite =
      let actual_left = avl_to_list mem left in
      let actual_right = avl_to_list mem right in
 
-     let rec split_list (lim: Ligo.tez) (xs: liquidation_slice list) =
+     let rec split_list (lim: tok) (xs: liquidation_slice list) =
        match xs with
        | [] -> ([], [])
        | x :: xs ->
-         if x.contents.tez <= lim
+         if x.contents.tok <= lim
          then
-           match split_list (Ligo.sub_tez_tez lim x.contents.tez) xs with
+           match split_list (tok_sub lim x.contents.tok) xs with
              (l, r) -> (x::l, r)
          else
            ([], x::xs)
@@ -315,7 +316,7 @@ let suite =
      true
     );
     (qcheck_to_ounit
-     @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tez (list TestArbitrary.arb_liquidation_slice))
+     @@ QCheck.Test.make ~name:"prop_take_append" ~count:property_test_count QCheck.(pair TestArbitrary.arb_tok (list TestArbitrary.arb_liquidation_slice))
      @@ fun (limit, xs) ->
 
      let (mem, right) = avl_from_list mem_empty None xs in
@@ -346,7 +347,7 @@ let suite =
        avl_assert_dangling_pointers mem [root];
 
        Mem.reset_ops ();
-       let _ = avl_take mem root (Ligo.tez_from_literal "50_000mutez") None in
+       let _ = avl_take mem root (tok_of_denomination (Ligo.nat_from_literal "50_000n")) None in
 
        assert_equal
          {reads=104; writes=69}
