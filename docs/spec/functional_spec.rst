@@ -73,7 +73,7 @@ there is not enough collateral, or if the sender is not the burrow owner.
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow in which to mint the kit                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| amount        | nat                   | The amount of kit to mint, in mukit                                     |
+| amount        | nat                   | The amount of kit to mint                                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -91,7 +91,7 @@ or if the sender is not the burrow owner.
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow in which to burn the kit                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| amount        | nat                   | The amount of kit to burn, in mukit                                     |
+| amount        | nat                   | The amount of kit to burn                                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -169,7 +169,7 @@ desired amount of kit cannot be bought or if the deadline has passed.
 +===============+=======================+=========================================================================+
 | ctez          | nat                   | An amount of ctez to be sold for kit, in muctez                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| kit           | nat                   | The minimum amount of kit expected to be bought, in mukit               |
+| kit           | nat                   | The minimum amount of kit expected to be bought                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -186,7 +186,7 @@ cannot be bought or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| kit           | nat                   | The amount of kit to be sold, in mukit                                  |
+| kit           | nat                   | The amount of kit to be sold                                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | ctez          | nat                   | The minimum amount of ctez expected to be bought, in muctez             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -209,7 +209,7 @@ liquidity tokens.
 +===============+=======================+=========================================================================+
 | ctez          | nat                   | The amount of ctez to supply as liquidity, in muctez                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| kit           | nat                   | The maximum amount of kit to supply as liquidity, in mukit              |
+| kit           | nat                   | The maximum amount of kit to supply as liquidity                        |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | min_tokens    | nat                   | The minimum number of liquidity tokens expected to be bought, in mulqt  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -232,7 +232,7 @@ ratio.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | ctez          | nat                   | The minimum amount of ctez expected, in muctez                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| kit           | nat                   | The minimum amount of kit expected, in mukit                            |
+| kit           | nat                   | The minimum amount of kit expected                                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -329,7 +329,7 @@ Estimate yield when buying kit with ctez
 
 ``buy_kit_min_kit_expected : nat -> nat``
 
-Get the maximum amount (in ``mukit``) that can be expected for the given amount of ctez, based on the current market price
+Get the maximum amount of kit that can be expected for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -347,7 +347,7 @@ Get the maximum amount (in ``muctez``) that can be expected for the given amount
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| kit           | nat                   | The amount of kit, in mukit                                             |
+| kit           | nat                   | The amount of kit                                                       |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate kit requirements when adding liquidity
@@ -355,7 +355,7 @@ Estimate kit requirements when adding liquidity
 
 ``add_liquidity_max_kit_deposited : nat -> nat``
 
-Get the minimum amount (in ``mukit``) that needs to be deposited when adding liquidity for the given amount of ctez, based on the current market price
+Get the minimum amount of kit that needs to be deposited when adding liquidity for the given amount of ctez, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -394,7 +394,7 @@ Estimate kit yield when removing liquidity
 
 ``remove_liquidity_min_kit_withdrawn : nat -> nat``
 
-Get the maximum amount of kit (in ``mukit``) that can be expected for the given amount of liquidity token, based on the current market price
+Get the maximum amount of kit that can be expected for the given amount of liquidity token, based on the current market price
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -408,7 +408,7 @@ Find maximum kit that can be minted
 
 ``burrow_max_mintable_kit : nat -> nat``
 
-Returns the maximum amount (in ``mukit``) that can be minted from the given burrow.
+Returns the maximum amount of kit that can be minted from the given burrow.
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -443,7 +443,7 @@ Minimum bid for the current liquidation auction (if exists)
 
 ``current_liquidation_auction_minimum_bid : unit -> pair nat nat``
 
-Returns a pair of an identifier to the current auction and a `mukit` amount.
+Returns a pair of an identifier to the current auction and an amount of kit.
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
