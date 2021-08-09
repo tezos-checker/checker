@@ -8,7 +8,7 @@ open Lqt
 let property_test_count = 100
 
 (* Utility functions *)
-let ask_kit_of fa2_state addr = kit_of_mukit (fa2_get_balance (fa2_state, addr, kit_token_id))
+let ask_kit_of fa2_state addr = kit_of_denomination (fa2_get_balance (fa2_state, addr, kit_token_id))
 let ask_lqt_of fa2_state addr = lqt_of_denomination (fa2_get_balance (fa2_state, addr, lqt_token_id))
 
 let mk_kit_tx ~from_ ~to_ ~amount =
@@ -16,7 +16,7 @@ let mk_kit_tx ~from_ ~to_ ~amount =
     txs =
       [ { to_ = to_;
           token_id = kit_token_id;
-          amount = kit_to_mukit_nat amount;
+          amount = kit_to_denomination_nat amount;
         }
       ];
   }
@@ -203,13 +203,13 @@ let suite =
        assert_raises
          (Failure "FA2_INSUFFICIENT_BALANCE")
          (fun () ->
-            let kit_amount = kit_of_mukit (Ligo.nat_from_literal "1n") in
+            let kit_amount = kit_of_denomination (Ligo.nat_from_literal "1n") in
             ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount)
          );
 
        (* Issue an amount, starting from zero. *)
        let fa2_state_in = fa2_state_out in
-       let kit_amount = kit_of_mukit (Ligo.nat_from_literal "123_456n") in
+       let kit_amount = kit_of_denomination (Ligo.nat_from_literal "123_456n") in
        let fa2_state_out = ledger_issue_kit (fa2_state_in, leena_addr, kit_amount) in
        assert_kit_equal
          ~expected:(kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
@@ -217,7 +217,7 @@ let suite =
 
        (* Issue an amount, starting from non-zero. *)
        let fa2_state_in = fa2_state_out in
-       let kit_amount = kit_of_mukit (Ligo.nat_from_literal "789_012_345n") in
+       let kit_amount = kit_of_denomination (Ligo.nat_from_literal "789_012_345n") in
        let fa2_state_out = ledger_issue_kit (fa2_state_in, leena_addr, kit_amount) in
        assert_kit_equal
          ~expected:(kit_add (ask_kit_of fa2_state_in leena_addr) kit_amount)
@@ -228,13 +228,13 @@ let suite =
        assert_raises
          (Failure "FA2_INSUFFICIENT_BALANCE")
          (fun () ->
-            let kit_amount = kit_add (ask_kit_of fa2_state_in leena_addr) (kit_of_mukit (Ligo.nat_from_literal "1n")) in
+            let kit_amount = kit_add (ask_kit_of fa2_state_in leena_addr) (kit_of_denomination (Ligo.nat_from_literal "1n")) in
             ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount)
          );
 
        (* Withdrawing less than entire amount should succeed. *)
        let fa2_state_in = fa2_state_out in
-       let kit_amount = kit_sub (ask_kit_of fa2_state_in leena_addr) (kit_of_mukit (Ligo.nat_from_literal "1_234n")) in
+       let kit_amount = kit_sub (ask_kit_of fa2_state_in leena_addr) (kit_of_denomination (Ligo.nat_from_literal "1_234n")) in
        let fa2_state_out = ledger_withdraw_kit (fa2_state_in, leena_addr, kit_amount) in
        assert_kit_equal
          ~expected:(ask_kit_of fa2_state_in leena_addr)
@@ -438,19 +438,19 @@ let suite =
 
        (* Populate all accounts with different amounts. *)
        let fa2_state_in =
-         let fa2_state_in = ledger_issue_kit (fa2_state_in, leena_addr, kit_of_mukit (Ligo.nat_from_literal "7_000_000n")) in
-         let fa2_state_in = ledger_issue_kit (fa2_state_in, bob_addr,   kit_of_mukit (Ligo.nat_from_literal "8_000_000n")) in
-         let fa2_state_in = ledger_issue_kit (fa2_state_in, alice_addr, kit_of_mukit (Ligo.nat_from_literal "9_000_000n")) in
+         let fa2_state_in = ledger_issue_kit (fa2_state_in, leena_addr, kit_of_denomination (Ligo.nat_from_literal "7_000_000n")) in
+         let fa2_state_in = ledger_issue_kit (fa2_state_in, bob_addr,   kit_of_denomination (Ligo.nat_from_literal "8_000_000n")) in
+         let fa2_state_in = ledger_issue_kit (fa2_state_in, alice_addr, kit_of_denomination (Ligo.nat_from_literal "9_000_000n")) in
          fa2_state_in in
 
        (* Ensure all accounts have the expected kit in them. *)
-       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "7_000_000n")) ~real:(ask_kit_of fa2_state_in leena_addr);
-       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "8_000_000n")) ~real:(ask_kit_of fa2_state_in bob_addr);
-       assert_kit_equal ~expected:(kit_of_mukit (Ligo.nat_from_literal "9_000_000n")) ~real:(ask_kit_of fa2_state_in alice_addr);
+       assert_kit_equal ~expected:(kit_of_denomination (Ligo.nat_from_literal "7_000_000n")) ~real:(ask_kit_of fa2_state_in leena_addr);
+       assert_kit_equal ~expected:(kit_of_denomination (Ligo.nat_from_literal "8_000_000n")) ~real:(ask_kit_of fa2_state_in bob_addr);
+       assert_kit_equal ~expected:(kit_of_denomination (Ligo.nat_from_literal "9_000_000n")) ~real:(ask_kit_of fa2_state_in alice_addr);
 
        (* Scenario 1: Alice sends funds to leena directly. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount = kit_of_mukit (Ligo.nat_from_literal "123_456n") in
+       let amount = kit_of_denomination (Ligo.nat_from_literal "123_456n") in
        let tx = mk_kit_tx ~from_:alice_addr ~to_:leena_addr ~amount:amount in
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
 
@@ -470,7 +470,7 @@ let suite =
        let update_op = add_kit_operator ~owner:leena_addr ~operator:alice_addr in
        let fa2_state_in = fa2_run_update_operators (fa2_state_in, [update_op]) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount = kit_of_mukit (Ligo.nat_from_literal "1_500_000n") in
+       let amount = kit_of_denomination (Ligo.nat_from_literal "1_500_000n") in
        let tx = mk_kit_tx ~from_:leena_addr ~to_:bob_addr ~amount:amount in
        let fa2_state_out = fa2_run_transfer (fa2_state_in, [tx]) in
 
@@ -490,9 +490,9 @@ let suite =
         * this operation to fail. *)
        let fa2_state_in = fa2_state_out in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let amount1 = kit_of_mukit (Ligo.nat_from_literal "5_623_456n") in
+       let amount1 = kit_of_denomination (Ligo.nat_from_literal "5_623_456n") in
        let tx1 = mk_kit_tx ~from_:leena_addr ~to_:alice_addr ~amount:amount1 in
-       let amount2 = kit_of_mukit (Ligo.nat_from_literal "14_500_000n") in
+       let amount2 = kit_of_denomination (Ligo.nat_from_literal "14_500_000n") in
        let tx2 = mk_kit_tx ~from_:alice_addr ~to_:bob_addr ~amount:amount2 in
 
        (* The numbers are too high for the operations to be executed in the wrong order. *)

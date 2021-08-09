@@ -20,7 +20,7 @@ let gen_liquidation_slice_contents_single_burrow_id =
          LiquidationAuctionPrimitiveTypes.
            ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
             ; burrow = burrow_id_1
-            ; min_kit_for_unwarranted = Some (kit_of_mukit (Ligo.nat_from_literal ((string_of_int kit) ^ "n")))
+            ; min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal ((string_of_int kit) ^ "n")))
             })
       )
       (pair (int_range 0 10_000_000_000) (int_range 0 max_int))

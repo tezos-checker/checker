@@ -67,7 +67,7 @@ let burrow_touch (p: parameters) (burrow: burrow) : burrow =
         outstanding_kit =
           kit_of_fraction_floor
             (Ligo.mul_nat_int
-               (kit_to_mukit_nat burrow.outstanding_kit)
+               (kit_to_denomination_nat burrow.outstanding_kit)
                (fixedpoint_to_raw current_adjustment_index)
             )
             (Ligo.mul_int_int
@@ -124,7 +124,7 @@ let[@inline] undercollateralization_condition (f: ratio) (price: ratio) (tez: ra
 let burrow_is_overburrowed (p: parameters) (b: burrow) : bool =
   assert (p.last_touched = b.last_checker_timestamp);
   let tez = { num = tez_to_mutez b.collateral; den = Ligo.int_from_literal "1_000_000"; } in
-  let kit = { num = kit_to_mukit_int b.outstanding_kit; den = kit_scaling_factor_int; } in
+  let kit = { num = kit_to_denomination_int b.outstanding_kit; den = kit_scaling_factor_int; } in
   undercollateralization_condition fminting (minting_price p) tez kit
 
 (*  max_kit_outstanding = FLOOR (tez_collateral / (fminting * minting_price)) *)
@@ -314,7 +314,7 @@ let compute_tez_to_auction (p: parameters) (b: burrow) : Ligo.int =
                num_fm
                (Ligo.mul_int_nat
                   num_mp
-                  (kit_to_mukit_nat b.outstanding_kit)
+                  (kit_to_denomination_nat b.outstanding_kit)
                )
             )
          )
@@ -381,7 +381,7 @@ let burrow_is_liquidatable (p: parameters) (b: burrow) : bool =
     let { num = num_ek; den = den_ek; } = compute_expected_kit p b.collateral_at_auction in
     { num =
         Ligo.sub_int_int
-          (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
+          (Ligo.mul_nat_int (kit_to_denomination_nat b.outstanding_kit) den_ek)
           (Ligo.mul_int_int kit_scaling_factor_int num_ek);
       den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
     } in
@@ -411,7 +411,7 @@ let burrow_is_cancellation_warranted (p: parameters) (b: burrow) (slice_tez: Lig
       compute_expected_kit p (Ligo.sub_tez_tez b.collateral_at_auction slice_tez) in
     { num =
         Ligo.sub_int_int
-          (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
+          (Ligo.mul_nat_int (kit_to_denomination_nat b.outstanding_kit) den_ek)
           (Ligo.mul_int_int kit_scaling_factor_int num_ek);
       den = Ligo.mul_int_int kit_scaling_factor_int den_ek;
     } in
@@ -439,7 +439,7 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
 
   if b.collateral = Ligo.tez_from_literal "0mutez" (* NOTE: division by zero. *)
   then
-    if not (eq_kit_kit b.outstanding_kit (kit_of_mukit (Ligo.nat_from_literal "0n")))
+    if not (eq_kit_kit b.outstanding_kit (kit_of_denomination (Ligo.nat_from_literal "0n")))
     then (None: kit option) (* (a): infinity, basically *)
     else (Some kit_zero) (* (b): zero *)
   else
@@ -452,7 +452,7 @@ let[@inline] compute_min_kit_for_unwarranted (p: parameters) (b: burrow) (tez_to
         Ligo.mul_int_int
           (Ligo.mul_int_int (tez_to_mutez tez_to_auction) num_fl)
           (Ligo.sub_int_int
-             (Ligo.mul_int_nat den_ek (kit_to_mukit_nat b.outstanding_kit))
+             (Ligo.mul_int_nat den_ek (kit_to_denomination_nat b.outstanding_kit))
              (Ligo.mul_int_int kit_scaling_factor_int num_ek)
           ) in
       max_int (Ligo.int_from_literal "0") numerator in
@@ -607,7 +607,7 @@ let burrow_is_optimistically_overburrowed (p: parameters) (b: burrow) : bool =
       num_fm
       (Ligo.mul_int_int
          (Ligo.sub_int_int
-            (Ligo.mul_nat_int (kit_to_mukit_nat b.outstanding_kit) den_ek)
+            (Ligo.mul_nat_int (kit_to_denomination_nat b.outstanding_kit) den_ek)
             (Ligo.mul_int_int kit_scaling_factor_int num_ek)
          )
          (Ligo.mul_int_int num_mp (Ligo.int_from_literal "1_000_000"))

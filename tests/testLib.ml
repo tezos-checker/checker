@@ -88,7 +88,7 @@ let arbitrary_non_empty_cfmm (kit_in_ctez_in_prev_block: Common.ratio) (last_lev
     (QCheck.triple TestArbitrary.arb_positive_ctez TestArbitrary.arb_positive_kit TestArbitrary.arb_lqt)
 
 (* amount >= cfmm_tez * (1 - fee) / fee *)
-(* 1mukit <= min_kit_expected < FLOOR{amount * (cfmm_kit / (cfmm_tez + amount)) * FACTOR} *)
+(* 1 (kit) <= min_kit_expected < FLOOR{amount * (cfmm_kit / (cfmm_tez + amount)) * FACTOR} *)
 (* NB: some values are fixed *)
 let make_inputs_for_buy_kit_to_succeed =
   QCheck.map
@@ -98,7 +98,7 @@ let make_inputs_for_buy_kit_to_succeed =
          let { Common.num = x_num; Common.den = x_den; } =
            Ratio.div_ratio (Ratio.mul_ratio (Ctez.ratio_of_ctez ctez) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
          Ctez.ctez_of_fraction_ceil x_num x_den in
-       let min_kit_expected = Kit.kit_of_mukit (Ligo.nat_from_literal "1n") in (* absolute minimum *)
+       let min_kit_expected = Kit.kit_of_denomination (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (cfmm, amount, min_kit_expected, deadline)
     )

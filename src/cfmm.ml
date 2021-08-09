@@ -37,7 +37,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
       kit_in_ctez_in_prev_block =
         make_ratio
           (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) kit_scaling_factor_int)
-          (Ligo.mul_nat_int (kit_to_mukit_nat cfmm.kit) (Ligo.int_from_literal "1_000_000"));
+          (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) (Ligo.int_from_literal "1_000_000"));
       last_level = !Ligo.Tezos.level;
     }
 
@@ -60,7 +60,7 @@ let cfmm_view_min_kit_expected_buy_kit
     let numerator =
       Ligo.mul_nat_int
         (ctez_to_muctez_nat ctez_amount)
-        (Ligo.mul_nat_int (kit_to_mukit_nat cfmm.kit) num_uf) in
+        (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) num_uf) in
     let denominator =
       Ligo.mul_int_int
         kit_scaling_factor_int
@@ -116,12 +116,12 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
     let new_cfmm_kit = kit_add cfmm.kit kit_amount in
     let numerator =
       Ligo.mul_nat_int
-        (kit_to_mukit_nat kit_amount)
+        (kit_to_denomination_nat kit_amount)
         (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) num_uf) in
     let denominator =
       Ligo.mul_int_int
         (Ligo.int_from_literal "1_000_000")
-        (Ligo.mul_nat_int (kit_to_mukit_nat new_cfmm_kit) den_uf) in
+        (Ligo.mul_nat_int (kit_to_denomination_nat new_cfmm_kit) den_uf) in
     let bought_ctez = ctez_of_fraction_floor numerator denominator in
 
     (* Due to (a) the constant-factor calculation (which means that to deplete
@@ -172,7 +172,7 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
         (Ligo.mul_int_nat lqt_scaling_factor_int cfmm_ctez) in
     let kit_deposited =
       kit_of_fraction_ceil
-        (Ligo.mul_int_nat (kit_to_mukit_int cfmm.kit) (ctez_to_muctez_nat ctez_amount))
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctez_to_muctez_nat ctez_amount))
         (Ligo.mul_int_nat kit_scaling_factor_int cfmm_ctez) in
     (* Since (a) ctez_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
      * computing kit_deposited, it should be impossible to trigger the
@@ -246,7 +246,7 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     in
     let kit_withdrawn =
       kit_of_fraction_floor
-        (Ligo.mul_int_nat (kit_to_mukit_int cfmm.kit) (lqt_to_denomination_nat lqt_burned))
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (lqt_to_denomination_nat lqt_burned))
         (Ligo.mul_int_nat kit_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     (* Since (a) 0 < lqt_burned < cfmm.lqt, and (b) we floor for both the kit

@@ -113,13 +113,13 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Mint_kit" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Mint_kit (Ligo.nat_from_literal "29n", Kit.kit_of_mukit (Ligo.nat_from_literal "231_643n"))) (* note: values randomly chosen *)
+         (Mint_kit (Ligo.nat_from_literal "29n", Kit.kit_of_denomination (Ligo.nat_from_literal "231_643n"))) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Burn_kit" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Burn_kit (Ligo.nat_from_literal "826n", Kit.kit_of_mukit (Ligo.nat_from_literal "5_473_525_867n"))) (* note: values randomly chosen *)
+         (Burn_kit (Ligo.nat_from_literal "826n", Kit.kit_of_denomination (Ligo.nat_from_literal "5_473_525_867n"))) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Activate_burrow" >::
@@ -167,7 +167,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Buy_kit" >::
      fun _ ->
        let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "13n") in
-       let kit = Kit.kit_of_mukit (Ligo.nat_from_literal "29n") in
+       let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "29n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
          (Buy_kit (ctez, kit, deadline)) (* note: values randomly chosen *)
@@ -175,7 +175,7 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Sell_kit" >::
      fun _ ->
-       let kit = Kit.kit_of_mukit (Ligo.nat_from_literal "31n") in
+       let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "31n") in
        let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "5n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
@@ -185,7 +185,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Add_liquidity" >::
      fun _ ->
        let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "97n") in
-       let kit = Kit.kit_of_mukit (Ligo.nat_from_literal "3n") in
+       let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "3n") in
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "59n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
@@ -196,7 +196,7 @@ let suite =
      fun _ ->
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "41n") in
        let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "47n") in
-       let kit = Kit.kit_of_mukit (Ligo.nat_from_literal "19n") in
+       let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "19n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
          (Remove_liquidity (lqt, ctez, kit, deadline)) (* note: values randomly chosen *)
@@ -205,7 +205,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Liquidation_auction_place_bid" >::
      fun _ ->
        let auction_id = AVLPtr (Ptr.(ptr_next ptr_init)) in (* 2 *)
-       let kit = Kit.kit_of_mukit (Ligo.nat_from_literal "98n") in
+       let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "98n") in
        test_deploy_function_with_lazy_params_succeeds
          (Liquidation_auction_place_bid (auction_id, kit)) (* note: values randomly chosen *)
     );
@@ -346,7 +346,7 @@ let suite =
 
           (* Mint_kit *)
           Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, Kit.kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Mint_kit (burrow_id, Kit.kit_of_denomination (Ligo.nat_from_literal "1_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Idea: Might want to touch checker here, before burning the kit, so that the
@@ -355,7 +355,7 @@ let suite =
 
           (* Burn_kit *)
           Ligo.Tezos.new_transaction ~seconds_passed:200 ~blocks_passed:3 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Burn_kit (burrow_id, Kit.kit_of_mukit (Ligo.nat_from_literal "1_000_000n"))))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Burn_kit (burrow_id, Kit.kit_of_denomination (Ligo.nat_from_literal "1_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Set_burrow_delegate *)

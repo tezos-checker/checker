@@ -41,8 +41,8 @@ We currently initialize checker with the following parameters:
    target = 1
    drift = 0
    drift_derivative = 0
-   outstanding_kit = 0mukit
-   circulating_kit = 0mukit
+   outstanding_kit = 0kit
+   circulating_kit = 0kit
    last_touched = now
    burrow_fee_index = 1
    imbalance_index  = 1

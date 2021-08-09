@@ -12,9 +12,9 @@ checker contract, and operations on it.
 State
 -----
 
--  ``ctez``: the total amount of ctez currently held by the cfmm contract (in muctez).
--  ``kit``: the total amount of kit currently held by the cfmm contract (in mukit).
--  ``lqt``: the total amount of liquidity held by the cfmm contract (in mulqt).
+-  ``ctez``: the total amount of ctez currently held by the cfmm contract.
+-  ``kit``: the total amount of kit currently held by the cfmm contract.
+-  ``lqt``: the total amount of liquidity held by the cfmm contract.
 
 Additional fields:
 
@@ -40,15 +40,15 @@ representation.
 Initialization
 --------------
 
-When the system starts, all parameters are set to one. Given that
-Checker gets deployed on the chain at level ``lvl``, we initialize the
-parameters thus:
+When the system starts, all parameters are set to the lowest non-zero amount.
+Given that Checker gets deployed on the chain at level ``lvl``, we initialize
+the parameters thus:
 
 ::
 
-   ctez                      = 1muctez
-   kit                       = 1mukit
-   lqt                       = 1mulqt
+   ctez                      = 1
+   kit                       = 1
+   lqt                       = 1
    kit_in_ctez_in_prev_block = 1     # same as kit/ctez now
    last_level                = lvl
 

@@ -221,7 +221,7 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     match contents_min_kit_for_unwarranted with
     | None -> ((None: kit option), (None: kit option))
     | Some contents_min_kit_for_unwarranted ->
-      let min_kit_for_unwarranted = kit_to_mukit_nat contents_min_kit_for_unwarranted in
+      let min_kit_for_unwarranted = kit_to_denomination_nat contents_min_kit_for_unwarranted in
       let lkit =
         kit_of_fraction_ceil
           (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez ltez))
@@ -317,7 +317,7 @@ let start_liquidation_auction_if_possible
   * dropping). For a descending auction we should improve upon the last bid
   * a fixed factor. *)
 let liquidation_auction_current_auction_minimum_bid (auction: current_liquidation_auction) : kit =
-  kit_max (kit_of_mukit (Ligo.nat_from_literal "1n"))
+  kit_max (kit_of_denomination (Ligo.nat_from_literal "1n"))
     (match auction.state with
      | Descending (start_value, start_time) ->
        let auction_decay_rate = fixedpoint_of_ratio_ceil auction_decay_rate in
