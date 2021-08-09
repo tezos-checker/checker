@@ -54,7 +54,7 @@ let suite =
 
        (* show *)
        assert_string_equal
-         ~expected:"50309951mukit"
+         ~expected:"50.309951kit"
          ~real:(show_kit (kit_of_denomination (Ligo.nat_from_literal "50_309_951n")));
     )
   ]

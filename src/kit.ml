@@ -56,7 +56,20 @@ let[@inline] kit_to_ratio (amnt: kit) : ratio = make_ratio (Ligo.int amnt) kit_s
 
 let kit_compare x y = compare_nat x y
 
-let show_kit amnt = Ligo.string_of_nat amnt ^ "mukit"
+let show_kit amnt =
+  let zfill s width = match Stdlib.(width - (String.length s)) with
+    | to_fill when to_fill <= 0 -> s
+    | to_fill -> (String.make to_fill '0') ^ s
+  in
+  let as_string =
+    if kit_decimal_digits = Ligo.nat_from_literal "0n" then
+      Ligo.string_of_nat amnt
+    else
+      let d, r = Option.get (Ligo.ediv_nat_nat amnt kit_scaling_factor_nat) in
+      let kit_decimal_digits = Stdlib.int_of_string (Ligo.string_of_nat kit_decimal_digits) in (* little hacky *)
+      (Ligo.string_of_nat d) ^ "." ^ zfill (Ligo.string_of_nat r) kit_decimal_digits
+  in as_string ^ "kit"
+
 let pp_kit ppf amnt = Format.fprintf ppf "%s" (show_kit amnt)
 
 [@@@coverage on]
