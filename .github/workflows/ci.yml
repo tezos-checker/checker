@@ -115,7 +115,7 @@ jobs:
             console.log(prs);
 
             async function testsPassed(ref) {
-              const res = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
+              const res = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: ref
