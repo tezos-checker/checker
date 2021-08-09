@@ -221,7 +221,7 @@ let split_liquidation_slice_contents (amnt: Ligo.tez) (contents: liquidation_sli
     match contents_min_kit_for_unwarranted with
     | None -> ((None: kit option), (None: kit option))
     | Some contents_min_kit_for_unwarranted ->
-      let min_kit_for_unwarranted = kit_to_mukit_nat contents_min_kit_for_unwarranted in
+      let min_kit_for_unwarranted = kit_to_denomination_nat contents_min_kit_for_unwarranted in
       let lkit =
         kit_of_fraction_ceil
           (Ligo.mul_nat_int min_kit_for_unwarranted (tez_to_mutez ltez))

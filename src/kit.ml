@@ -24,7 +24,7 @@ let[@inline] kit_one = kit_scaling_factor_nat
 (* Conversions to/from other types. *)
 let[@inline] kit_of_mukit (amnt: Ligo.nat) : kit = amnt
 let[@inline] kit_to_mukit_int (amnt: kit) : Ligo.int = Ligo.int amnt
-let[@inline] kit_to_mukit_nat (amnt: kit) : Ligo.nat = amnt
+let[@inline] kit_to_denomination_nat (amnt: kit) : Ligo.nat = amnt
 
 let kit_of_fraction_ceil (x_num: Ligo.int) (x_den: Ligo.int) : kit =
   assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
