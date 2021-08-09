@@ -39,7 +39,7 @@ let tez_gen : Ligo.tez QCheck.Gen.t = QCheck.Gen.(
   )
 
 let kit_gen = QCheck.Gen.(
-    map (fun x -> Kit.kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) (0 -- max_int)
+    map (fun x -> Kit.kit_of_denomination (Ligo.nat_from_literal (string_of_int x ^ "n"))) (0 -- max_int)
   )
 
 let slice_gen = QCheck.Gen.(

@@ -44,7 +44,7 @@ let assert_checker_invariants (state: checker) : unit =
    * phantom kit token in the cfmm) is at least as much as the total kit in the
    * cfmm. Of course there can be more, e.g., from pending bids, or because of
    * imperfect liquidations. *)
-  assert (geq_kit_kit (kit_add (kit_of_mukit (fa2_get_balance (state.fa2_state, !Ligo.Tezos.self_address, kit_token_id))) (kit_of_mukit (Ligo.nat_from_literal "1n"))) state.cfmm.kit);
+  assert (geq_kit_kit (kit_add (kit_of_denomination (fa2_get_balance (state.fa2_state, !Ligo.Tezos.self_address, kit_token_id))) (kit_of_denomination (Ligo.nat_from_literal "1n"))) state.cfmm.kit);
   (* Check that the total number of liquidity tokens tracked on the fa2 ledger
    * is consistent with (i.e., 1 token less than - because of the phantom lqt
    * token in the cfmm) the total number of liquidity tokens in the cfmm. *)

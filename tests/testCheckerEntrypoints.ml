@@ -28,7 +28,7 @@ let with_sealed_state_and_cfmm_setup f =
        (* Add some liquidity *)
        Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ctez_to_give = Ctez.ctez_of_muctez (Ligo.nat_from_literal "400_000n") in
-       let kit_to_give = Kit.kit_of_mukit (Ligo.nat_from_literal "400_000n") in
+       let kit_to_give = Kit.kit_of_denomination (Ligo.nat_from_literal "400_000n") in
        let min_lqt_to_mint = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
        let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_give, kit_to_give, min_lqt_to_mint, deadline)))) in
@@ -127,7 +127,7 @@ let suite =
           assert_raises
             (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
             (fun () ->
-               let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in
+               let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
                let op = CheckerMain.(CheckerEntrypoint (LazyParams (Buy_kit (ctez_to_sell, min_kit_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
@@ -137,7 +137,7 @@ let suite =
     ("wrapper_view_sell_kit_min_ctez_expected - sealed" >::
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
-          let kit_to_sell = Kit.kit_of_mukit (Ligo.nat_from_literal "100_000n") in
+          let kit_to_sell = Kit.kit_of_denomination (Ligo.nat_from_literal "100_000n") in
           let min_ctez_to_buy = CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (kit_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise wrapper_view_sell_kit_min_ctez_expected overapproximated *)
@@ -174,7 +174,7 @@ let suite =
           assert_raises
             (Failure (Ligo.string_of_int error_AddLiquidityTooMuchKitRequired))
             (fun () ->
-               let max_kit_to_sell = Kit.kit_sub max_kit_to_sell (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in
+               let max_kit_to_sell = Kit.kit_sub max_kit_to_sell (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
                let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             );
@@ -215,7 +215,7 @@ let suite =
           assert_raises
             (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughKit))
             (fun () ->
-               let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_mukit (Ligo.nat_from_literal "1n")) in
+               let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
                let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
@@ -239,7 +239,7 @@ let suite =
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_kit_equal
-            ~expected:(Kit.kit_of_mukit (Ligo.nat_from_literal "476_190n"))
+            ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "476_190n"))
             ~real:(CheckerEntrypoints.wrapper_view_burrow_max_mintable_kit ((bob_addr, Ligo.nat_from_literal "0n"), sealed_wrapper))
        )
     );

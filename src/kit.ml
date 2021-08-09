@@ -22,7 +22,7 @@ let[@inline] kit_zero = Ligo.nat_from_literal "0n"
 let[@inline] kit_one = kit_scaling_factor_nat
 
 (* Conversions to/from other types. *)
-let[@inline] kit_of_mukit (amnt: Ligo.nat) : kit = amnt
+let[@inline] kit_of_denomination (amnt: Ligo.nat) : kit = amnt
 let[@inline] kit_to_denomination_int (amnt: kit) : Ligo.int = Ligo.int amnt
 let[@inline] kit_to_denomination_nat (amnt: kit) : Ligo.nat = amnt
 

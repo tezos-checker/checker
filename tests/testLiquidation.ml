@@ -260,7 +260,7 @@ let initial_burrow =
     ~delegate:None
     ~active:true
     ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
-    ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
+    ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
     ~adjustment_index:(compute_adjustment_index params)
     ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
     ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -274,7 +274,7 @@ let barely_not_overburrowed_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -299,7 +299,7 @@ let barely_overburrowed_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_399mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -324,7 +324,7 @@ let barely_non_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "6_171_200mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -349,7 +349,7 @@ let barely_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "6_171_199mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -369,7 +369,7 @@ let barely_liquidatable_test =
                 ~address:burrow_addr
                 ~delegate:None
                 ~collateral:(Ligo.tez_from_literal "2_346_632mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "2_818_396mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -384,7 +384,7 @@ let barely_liquidatable_test =
       | None | Some (Complete, _) | Some (Close, _) -> failwith "impossible"
       | Some (Partial, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "8_677_329n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "8_677_329n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -413,7 +413,7 @@ let barely_non_complete_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "5_065_065mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -433,7 +433,7 @@ let barely_non_complete_liquidatable_test =
                 ~address:burrow_addr
                 ~delegate:None
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "4_060_000mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -448,7 +448,7 @@ let barely_non_complete_liquidatable_test =
       | None | Some (Complete, _) | Some (Close, _) -> failwith "impossible"
       | Some (Partial, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "15_229_815n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "15_229_815n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -475,7 +475,7 @@ let barely_complete_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "5_065_064mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -495,7 +495,7 @@ let barely_complete_liquidatable_test =
                 ~address:burrow_addr
                 ~delegate:None
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "4_059_999mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -510,7 +510,7 @@ let barely_complete_liquidatable_test =
       | None | Some (Partial, _) | Some (Close, _) -> failwith "impossible"
       | Some (Complete, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "15_229_814n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "15_229_814n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -537,7 +537,7 @@ let barely_non_close_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_001_001mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -557,7 +557,7 @@ let barely_non_close_liquidatable_test =
                 ~address:burrow_addr
                 ~delegate:None
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -596,7 +596,7 @@ let barely_close_liquidatable_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_001_000mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -616,7 +616,7 @@ let barely_close_liquidatable_test =
                 ~address:burrow_addr
                 ~delegate:None
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
                 ~collateral_at_auction:(Ligo.tez_from_literal "999_999mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -631,7 +631,7 @@ let barely_close_liquidatable_test =
       | None | Some (Partial, _) | Some (Complete, _) -> failwith "impossible"
       | Some (Close, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "18_981_000n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "18_981_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -656,7 +656,7 @@ let unwarranted_liquidation_unit_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -684,7 +684,7 @@ let partial_liquidation_unit_test =
                 ~delegate:None
                 ~active:true
                 ~collateral:(Ligo.tez_from_literal "1_847_528mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "20_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "7_142_472mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -701,7 +701,7 @@ let partial_liquidation_unit_test =
       | None | Some (Complete, _) | Some (Close, _) -> failwith "impossible"
       | Some (Partial, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "27_141_394n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "27_141_394n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -727,7 +727,7 @@ let complete_liquidation_unit_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -744,7 +744,7 @@ let complete_liquidation_unit_test =
                 ~delegate:None
                 ~active:true
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "8_990_000mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -761,7 +761,7 @@ let complete_liquidation_unit_test =
       | None | Some (Partial, _) | Some (Close, _) -> failwith "impossible"
       | Some (Complete, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "170_810_000n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "170_810_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -789,7 +789,7 @@ let complete_and_close_liquidation_test =
         ~delegate:None
         ~active:true
         ~collateral:(Ligo.tez_from_literal "1_000_000mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -806,7 +806,7 @@ let complete_and_close_liquidation_test =
                 ~delegate:None
                 ~active:false
                 ~collateral:(Ligo.tez_from_literal "0mutez")
-                ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "100_000_000n"))
+                ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
                 ~collateral_at_auction:(Ligo.tez_from_literal "999_000mutez")
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
@@ -823,7 +823,7 @@ let complete_and_close_liquidation_test =
       | None | Some (Partial, _) | Some (Complete, _) -> failwith "impossible"
       | Some (Close, details) -> details in
 
-    let expected_min_kit_for_unwarranted = kit_of_mukit (Ligo.nat_from_literal "189_810_000n") in
+    let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "189_810_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
@@ -849,7 +849,7 @@ let complete_and_close_liquidation_test =
 let test_burrow_request_liquidation_invariant_close =
   let upper_collat_bound_for_test = 1_001_000 in
   (* upper_collat_bound_for_test / 1.9 + 1 *)
-  let kit_to_allow_liquidation = kit_of_mukit (Ligo.nat_from_literal "526_843n") in
+  let kit_to_allow_liquidation = kit_of_denomination (Ligo.nat_from_literal "526_843n") in
   let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- upper_collat_bound_for_test) in
 
   qcheck_to_ounit
@@ -898,7 +898,7 @@ let test_burrow_request_liquidation_invariant_complete =
          (Ligo.int_from_literal "10_000"))
       (Ligo.int_from_literal "899_999") in
   let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
-    | Some n -> kit_add (kit_of_mukit n) extra_kit
+    | Some n -> kit_add (kit_of_denomination n) extra_kit
     | None -> failwith "The calculated outstanding_kit for the test case was not a nat"
   in
   let burrow0 = make_burrow_for_test
@@ -927,7 +927,7 @@ let test_burrow_request_liquidation_invariant_partial =
   let min_kit_for_case = 5_263_158  in
   (* (999 / 1000 collat - creation_deposit) - 1/10 * (999 / 1000 collat - creation_deposit) *)
   let max_kit_for_case = 8_091_000 in
-  let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_kit_for_case -- max_kit_for_case) in
+  let arb_kit = QCheck.map (fun x -> kit_of_denomination (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(min_kit_for_case -- max_kit_for_case) in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -985,7 +985,7 @@ let regression_test_72 =
     let burrow0 =
       Burrow.make_burrow_for_test
         ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3928478924648448718n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3928478924648448718n"))
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~active:true
         ~address:burrow_addr
@@ -1005,7 +1005,7 @@ let regression_test_93 =
     let burrow_in =
       Burrow.make_burrow_for_test
         ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
-        ~outstanding_kit:(kit_of_mukit (Ligo.nat_from_literal "3928478924648448718n"))
+        ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3928478924648448718n"))
         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
         ~active:true
         ~address:burrow_addr

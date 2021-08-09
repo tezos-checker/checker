@@ -28,7 +28,7 @@ let _ = Checker.assert_checker_invariants empty_checker
 
 (* Enhance the initial checker state with a populated cfmm in a consistent way. *)
 let empty_checker_with_cfmm (cfmm: CfmmTypes.cfmm) =
-  let checker_kit = kit_sub cfmm.kit (kit_of_mukit (Ligo.nat_from_literal "1n")) in
+  let checker_kit = kit_sub cfmm.kit (kit_of_denomination (Ligo.nat_from_literal "1n")) in
   let checker_liquidity = lqt_sub cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")) in
   let checker =
     { empty_checker with
@@ -57,7 +57,7 @@ let checker_with_liquidatable_burrows () =
   let _, checker = Checker.entrypoint_create_burrow (checker, (alice_burrow_1, None)) in
   (* Alice burrow 2:N. Will be liquidatable *)
   Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:3 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-  let _, checker = Checker.entrypoint_mint_kit (checker, (alice_burrow_1, (kit_of_mukit (Ligo.nat_from_literal "100n")))) in
+  let _, checker = Checker.entrypoint_mint_kit (checker, (alice_burrow_1, (kit_of_denomination (Ligo.nat_from_literal "100n")))) in
   let checker = List.fold_left (
       fun checker alice_burrow_no ->
         Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "2_000_000mutez");
@@ -367,14 +367,14 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n")))) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, _ = Checker.entrypoint_add_liquidity
            (checker,
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
-            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
             )
@@ -402,10 +402,10 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n")))) in
        (* Then burn the kit *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       let ops, _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n")))) in
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
@@ -559,7 +559,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       let ops, _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n")))) in
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
@@ -600,14 +600,14 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "100_000_000mutez");
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_mukit (Ligo.nat_from_literal "10_000_000n")))) in
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n")))) in
        (* Add some liquidity to the contract *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_add_liquidity
            (checker,
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
-            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
             )
@@ -619,7 +619,7 @@ let suite =
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
-            , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+            , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
             )
            ) in
@@ -774,7 +774,7 @@ let suite =
        (* Create a burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000mutez");
        let _, checker = newly_created_burrow empty_checker "0n" in
-       let some_kit = Kit.kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let some_kit = Kit.kit_of_denomination (Ligo.nat_from_literal "1n") in
 
        assert_raises
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
@@ -799,14 +799,14 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
+           , (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        (* There should be no operations emitted. *)
        assert_operation_list_equal ~expected:[] ~real:ops;
 
        (* The owner should be able to burn it back. *)
-       let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
+       let kit_token = kit_of_denomination (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token)) in
 
@@ -825,7 +825,7 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
+           , (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        (* There should be no operations emitted. *)
@@ -835,7 +835,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_NonExistentBurrow))
          (fun () ->
-            let kit_token = kit_of_mukit (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, bob_addr)) in
+            let kit_token = kit_of_denomination (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, bob_addr)) in
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token))
          );
@@ -1043,7 +1043,7 @@ let suite =
        * (1 - fee) * cfmm.kit - 1
       *)
       let max_buyable_kit = 997 in
-      let arb_kit = QCheck.map (fun x -> kit_of_mukit (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
+      let arb_kit = QCheck.map (fun x -> kit_of_denomination (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_buyable_kit) in
       let arb_tez = TestArbitrary.arb_small_positive_tez in
 
       qcheck_to_ounit
@@ -1062,7 +1062,7 @@ let suite =
         empty_checker_with_cfmm
           { empty_checker.cfmm with
             ctez = cfmm_ctez;
-            kit = kit_of_mukit cfmm_kit;
+            kit = kit_of_denomination cfmm_kit;
           } in
 
       (* Calculate minimum tez to get the min_expected kit given the state of the cfmm defined above*)
@@ -1110,11 +1110,11 @@ let suite =
          empty_checker_with_cfmm
            { empty_checker.cfmm with
              ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-             kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+             kit = kit_of_denomination (Ligo.nat_from_literal "2n");
            } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_mukit (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
+       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_of_muctez (Ligo.nat_from_literal "1_000_000n"), kit_of_denomination (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
        let kit = get_balance_of checker alice_addr kit_token_id in
 
        let expected_ops = [
@@ -1136,7 +1136,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
 
-       let kit_to_sell = kit_of_mukit (Ligo.nat_from_literal "1_000_000n") in
+       let kit_to_sell = kit_of_denomination (Ligo.nat_from_literal "1_000_000n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
        let checker =
@@ -1144,7 +1144,7 @@ let suite =
            empty_checker_with_cfmm
              { empty_checker.cfmm with
                ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-               kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+               kit = kit_of_denomination (Ligo.nat_from_literal "2n");
                lqt = lqt_of_denomination (Ligo.nat_from_literal "1n");
              } in
          { checker with
@@ -1174,7 +1174,7 @@ let suite =
     ("sell_kit - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let kit_to_sell = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let kit_to_sell = kit_of_denomination (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
@@ -1189,7 +1189,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
 
-       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let min_kit_expected = kit_of_denomination (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
        let sender = alice_addr in
@@ -1197,17 +1197,17 @@ let suite =
        (* Populate the cfmm with some liquidity (carefully crafted) *)
        let checker =
          { empty_checker with
-           parameters = { empty_checker.parameters with circulating_kit = kit_of_mukit (Ligo.nat_from_literal "1n")};
+           parameters = { empty_checker.parameters with circulating_kit = kit_of_denomination (Ligo.nat_from_literal "1n")};
            cfmm =
              { empty_checker.cfmm with
                ctez = ctez_of_muctez (Ligo.nat_from_literal "2n");
-               kit = kit_of_mukit (Ligo.nat_from_literal "2n");
+               kit = kit_of_denomination (Ligo.nat_from_literal "2n");
                lqt = lqt_of_denomination (Ligo.nat_from_literal "2n");
              };
            fa2_state =
              let fa2_state = initial_fa2_state in
              let fa2_state = ledger_issue_lqt (fa2_state, sender, my_liquidity_tokens) in
-             let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, kit_of_mukit (Ligo.nat_from_literal "1n")) in
+             let fa2_state = ledger_issue_kit (fa2_state, !Ligo.Tezos.self_address, kit_of_denomination (Ligo.nat_from_literal "1n")) in
              fa2_state;
          } in
        Checker.assert_checker_invariants checker;
@@ -1232,7 +1232,7 @@ let suite =
     ("remove_liquidity - transaction with value > 0 fails" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let min_kit_expected = kit_of_mukit (Ligo.nat_from_literal "1n") in
+       let min_kit_expected = kit_of_denomination (Ligo.nat_from_literal "1n") in
        let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
 
@@ -1300,7 +1300,7 @@ let suite =
          Checker.entrypoint_add_liquidity
            ( checker,
              ( ctez_of_muctez (Ligo.nat_from_literal "5_000_000n")
-             , kit_of_mukit (Ligo.nat_from_literal "5_000_000n")
+             , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
              , lqt_of_denomination (Ligo.nat_from_literal "5n")
              , Ligo.timestamp_from_seconds_literal 999
              )
@@ -1450,7 +1450,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "200_000_000mutez");
        let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "10_000_000n"))) in
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _lqt_minted_ret_kit_ops, checker =
@@ -1506,7 +1506,7 @@ let suite =
        let (_ops, checker) =
          Checker.entrypoint_mint_kit
            ( checker
-           , (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "4_285_714n"))
+           , (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
        let kit = get_balance_of checker bob_addr kit_token_id in
@@ -1527,7 +1527,7 @@ let suite =
          (fun () ->
             Checker.entrypoint_mint_kit
               ( checker
-              , (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))
+              , (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))
               )
          );
 
@@ -1627,7 +1627,7 @@ let suite =
        let auction_id =
          min_bid.auction_id in
        assert_kit_equal
-         ~expected:(kit_of_mukit (Ligo.nat_from_literal "2_709_185n"))
+         ~expected:(kit_of_denomination (Ligo.nat_from_literal "2_709_185n"))
          ~real:min_bid.minimum_bid;
 
        (* Bid the minimum first *)
@@ -1639,7 +1639,7 @@ let suite =
        let (ops, checker) =
          Checker.entrypoint_liquidation_auction_place_bid
            ( checker
-           , (auction_id, kit_of_mukit (Ligo.nat_from_literal "4_200_000n"))
+           , (auction_id, kit_of_denomination (Ligo.nat_from_literal "4_200_000n"))
            ) in
 
        let auction_id =
@@ -1729,7 +1729,7 @@ let suite =
 
        (* Mint as much kit as possible. *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-       let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_no, kit_of_mukit (Ligo.nat_from_literal "476_667n"))) in
+       let (_ops, checker) = Checker.entrypoint_mint_kit (checker, (burrow_no, kit_of_denomination (Ligo.nat_from_literal "476_667n"))) in
 
        (* Let some time pass. Over time the burrows with outstanding kit should
           	* become overburrowed, and eventually liquidatable. Note that this
@@ -1803,7 +1803,7 @@ let suite =
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
        (* Try to mint some kit out of the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))) in
+       let _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
        ()
     );
 
@@ -1816,13 +1816,13 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None)) in
        (* Mint some kit out of the burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))) in
+       let _ops, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
        (* Try to burn some kit into the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_of_mukit (Ligo.nat_from_literal "1n"))) in
+       let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
        ()
     );
 
@@ -1915,7 +1915,7 @@ let suite =
          (* Add some liquidity *)
          Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
          let ctez_to_give = Ctez.ctez_of_muctez (Ligo.nat_from_literal "400_000n") in
-         let kit_to_give = Kit.kit_of_mukit (Ligo.nat_from_literal "400_000n") in
+         let kit_to_give = Kit.kit_of_denomination (Ligo.nat_from_literal "400_000n") in
          let min_lqt_to_mint = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
          let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
          let _ops, checker = Checker.entrypoint_add_liquidity (checker, (ctez_to_give, kit_to_give, min_lqt_to_mint, deadline)) in
@@ -1941,7 +1941,7 @@ let suite =
 
        "view_sell_kit_min_ctez_expected" >:: with_cfmm_setup
          (fun checker ->
-            let kit_to_sell = Kit.kit_of_mukit (Ligo.nat_from_literal "100_000n") in
+            let kit_to_sell = Kit.kit_of_denomination (Ligo.nat_from_literal "100_000n") in
             let min_ctez_to_buy = Checker.view_sell_kit_min_ctez_expected (kit_to_sell, checker) in
             let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
             (* must succeed, otherwise view_sell_kit_min_ctez_expected overapproximated *)
