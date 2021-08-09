@@ -856,12 +856,12 @@ let suite =
       let sender = alice_addr in
       let checker = empty_checker_with_cfmm cfmm in
 
-      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
-      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
@@ -874,8 +874,8 @@ let suite =
       end;
 
       Ligo.geq_nat_nat
-        senders_new_mukit
-        (Ligo.add_nat_nat senders_old_mukit (kit_to_denomination_nat min_kit_expected))
+        senders_new_kit
+        (Ligo.add_nat_nat senders_old_kit (kit_to_denomination_nat min_kit_expected))
     );
 
     (
@@ -891,14 +891,14 @@ let suite =
       let checker = empty_checker_with_cfmm cfmm in
       let sender = alice_addr in
 
-      let checker_cfmm_old_mukit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let checker_cfmm_old_kit = kit_to_denomination_nat checker.cfmm.kit in
+      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
-      let checker_cfmm_new_mukit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let checker_cfmm_new_kit = kit_to_denomination_nat checker.cfmm.kit in
+      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
@@ -911,8 +911,8 @@ let suite =
       end;
 
       Ligo.eq_nat_nat
-        (Ligo.add_nat_nat checker_cfmm_old_mukit senders_old_mukit)
-        (Ligo.add_nat_nat checker_cfmm_new_mukit senders_new_mukit)
+        (Ligo.add_nat_nat checker_cfmm_old_kit senders_old_kit)
+        (Ligo.add_nat_nat checker_cfmm_new_kit senders_new_kit)
     );
 
     (
@@ -1077,7 +1077,7 @@ let suite =
       (* Adjust transaction by a random amount of extra tez *)
       let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
 
-      let senders_old_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
@@ -1092,11 +1092,11 @@ let suite =
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
-      let senders_new_mukit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
 
       Ligo.geq_nat_nat
-        senders_new_mukit
-        (Ligo.add_nat_nat senders_old_mukit (kit_to_denomination_nat min_expected_kit))
+        senders_new_kit
+        (Ligo.add_nat_nat senders_old_kit (kit_to_denomination_nat min_expected_kit))
         (* FIXME: This test only rarely evaluates the 'eq' part of 'geq'. Reducing the range of possible `additional_tez` or increasing the
          * number of QCheck samples may improve this.
         *)
@@ -1375,8 +1375,8 @@ let suite =
     ("view_total_supply (FA2) - initial kit supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_mukit_amount = Checker.view_total_supply (Fa2Interface.kit_token_id, empty_checker) in
-       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_mukit_amount;
+       let total_kit_amount = Checker.view_total_supply (Fa2Interface.kit_token_id, empty_checker) in
+       assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_kit_amount;
        ()
     );
 

@@ -88,7 +88,7 @@ let arbitrary_non_empty_cfmm (kit_in_ctez_in_prev_block: Common.ratio) (last_lev
     (QCheck.triple TestArbitrary.arb_positive_ctez TestArbitrary.arb_positive_kit TestArbitrary.arb_lqt)
 
 (* amount >= cfmm_tez * (1 - fee) / fee *)
-(* 1mukit <= min_kit_expected < FLOOR{amount * (cfmm_kit / (cfmm_tez + amount)) * FACTOR} *)
+(* 1 (kit) <= min_kit_expected < FLOOR{amount * (cfmm_kit / (cfmm_tez + amount)) * FACTOR} *)
 (* NB: some values are fixed *)
 let make_inputs_for_buy_kit_to_succeed =
   QCheck.map

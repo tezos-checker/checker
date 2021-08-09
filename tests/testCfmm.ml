@@ -76,8 +76,8 @@ let make_inputs_for_remove_liquidity_to_succeed =
         * extant for this operation. When we remove liquidity we round the
         * amounts of kit and ctez to return towards zero; they might end up
         * being zero because of this, which would make remove_liquidity fail.
-        * We make the generator thus ensure that at least 1mukit and 1muctez
-        * will be returned. *)
+        * We make the generator thus ensure that at least the lowest
+        * denomination of each will be returned. *)
        let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn =
          if lqt_to_burn = lqt_zero || min_ctez_withdrawn = ctez_zero || min_kit_withdrawn = kit_zero then
            let lqt_to_burn =
