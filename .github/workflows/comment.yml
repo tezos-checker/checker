@@ -34,12 +34,12 @@ jobs:
             console.log(prs);
 
             async function testsPassed(ref) {
-              const res = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
+              const res = (await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: ref
-              });
-              return res.state === "success";
+              })).check_runs;
+              return res.length > 0 && res.every(r => r.conclusion === "success");
             }
 
             async function commentExists(issue_number, marker) {
