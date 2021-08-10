@@ -64,7 +64,7 @@ jobs:
               // skip if the tests are pending or failed
               if(!(await (testsPassed(base))) || !(await (testsPassed(head)))) {
                 console.log("Tests not successful, skipping.");
-                return;
+                continue;
               }
 
               // we append a hidden marker to the body, so the bot can recognize
