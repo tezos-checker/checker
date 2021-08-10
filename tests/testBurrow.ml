@@ -135,24 +135,24 @@ let suite =
          ~real:(Burrow.burrow_address burrow)
     );
 
-    ("burrow_deposit_tez - does not fail for a burrow which needs to be touched" >::
+    ("burrow_deposit_collateral - does not fail for a burrow which needs to be touched" >::
      fun _ ->
        let _ =
-         Burrow.burrow_deposit_tez
+         Burrow.burrow_deposit_collateral
            {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
            (tok_of_denomination (Ligo.nat_from_literal "1n"))
            burrow_for_needs_touch_tests
        in ()
     );
 
-    ("burrow_deposit_tez - burrow after successful deposit has expected collateral" >::
+    ("burrow_deposit_collateral - burrow after successful deposit has expected collateral" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1n"))
            ~active:true
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "100n")) in
 
-       let burrow = Burrow.burrow_deposit_tez
+       let burrow = Burrow.burrow_deposit_collateral
            Parameters.initial_parameters
            (tok_of_denomination (Ligo.nat_from_literal "1n"))
            burrow0 in
@@ -162,14 +162,14 @@ let suite =
          ~real:(Burrow.burrow_collateral burrow)
     );
 
-    ("burrow_deposit_tez - does not change burrow address" >::
+    ("burrow_deposit_collateral - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
            ~active:true
            ~collateral:tok_zero in
 
-       let burrow = Burrow.burrow_deposit_tez Parameters.initial_parameters (tok_of_denomination (Ligo.nat_from_literal "1n")) burrow0 in
+       let burrow = Burrow.burrow_deposit_collateral Parameters.initial_parameters (tok_of_denomination (Ligo.nat_from_literal "1n")) burrow0 in
 
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
@@ -946,7 +946,7 @@ let suite =
     (
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"burrow_deposit_tez - increases burrow collateral by exactly deposit amount"
+        ~name:"burrow_deposit_collateral - increases burrow collateral by exactly deposit amount"
         ~count:property_test_count
         TestArbitrary.arb_tok
       @@ fun tok_to_deposit ->
@@ -955,7 +955,7 @@ let suite =
           ~active:true
           ~collateral:(tok_of_denomination (Ligo.nat_from_literal "100n")) in
 
-      let burrow = Burrow.burrow_deposit_tez
+      let burrow = Burrow.burrow_deposit_collateral
           Parameters.initial_parameters
           tok_to_deposit
           burrow0 in

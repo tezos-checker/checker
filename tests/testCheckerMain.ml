@@ -98,10 +98,10 @@ let suite =
          (Create_burrow (Ligo.nat_from_literal "63n", Some charles_key_hash)) (* note: values randomly chosen *)
     );
 
-    ("If checker is not sealed, the deployer should be able to call DeployFunction - Deposit_tez" >::
+    ("If checker is not sealed, the deployer should be able to call DeployFunction - Deposit_collateral" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Deposit_tez (Ligo.nat_from_literal "128n")) (* note: values randomly chosen *)
+         (Deposit_collateral (Ligo.nat_from_literal "128n")) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Withdraw_tez" >::
@@ -334,9 +334,9 @@ let suite =
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
-          (* Deposit_tez *)
+          (* Deposit_collateral *)
           Ligo.Tezos.new_transaction ~seconds_passed:62 ~blocks_passed:1 ~sender:user_addr ~amount:(Ligo.tez_from_literal "6_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Deposit_tez (burrow_id)))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Deposit_collateral (burrow_id)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Withdraw_tez *)

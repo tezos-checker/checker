@@ -33,7 +33,7 @@ Deposit collateral in a burrow
 Deposit a non-negative amount of tez as collateral to a burrow. Fail if
 the burrow does not exist, or if the sender is not the burrow owner.
 
-``deposit_tez: nat``
+``deposit_collateral: nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |

@@ -55,7 +55,7 @@ val entrypoint_create_burrow : checker * (Ligo.nat * Ligo.key_hash option) -> (L
     Parameters:
     - The ID of the burrow into which the collateral will be deposited
 *)
-val entrypoint_deposit_tez : checker * Ligo.nat -> (LigoOp.operation list * checker)
+val entrypoint_deposit_collateral : checker * Ligo.nat -> (LigoOp.operation list * checker)
 
 (** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
     does not exist, if this action would overburrow it, or if the sender is not

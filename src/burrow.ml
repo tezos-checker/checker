@@ -192,7 +192,7 @@ let burrow_create (p: parameters) (addr: Ligo.address) (tok: tok) (delegate_opt:
 
 (** Add non-negative collateral to a burrow. *)
 (* TOKFIX: we need a more generic name (e.g., deposit_collateral) *)
-let[@inline] burrow_deposit_tez (p: parameters) (t: tok) (b: burrow) : burrow =
+let[@inline] burrow_deposit_collateral (p: parameters) (t: tok) (b: burrow) : burrow =
   let b = burrow_touch p b in
   let burrow_out = { b with collateral = tok_add b.collateral t } in
   assert (b.address = burrow_out.address);

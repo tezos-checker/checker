@@ -177,12 +177,12 @@ let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.ope
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
-let entrypoint_deposit_tez (state, burrow_no: checker * Ligo.nat) : (LigoOp.operation list * checker) =
+let entrypoint_deposit_collateral (state, burrow_no: checker * Ligo.nat) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let burrow = burrow_deposit_tez state.parameters (tok_of_tez !Ligo.Tezos.amount) burrow in
+  let burrow = burrow_deposit_collateral state.parameters (tok_of_tez !Ligo.Tezos.amount) burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowStoreTez" (burrow_address burrow) : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowStoreTez : LigoOp.operation) in
