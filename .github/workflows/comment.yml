@@ -1,0 +1,93 @@
+name: Comment PR results
+
+# only run one instance at a time
+concurrency: bot-mutex
+
+on:
+  schedule:
+    - cron:  '0/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v13
+      - uses: actions/checkout@v2
+        with:
+           ref: 'ud/fix-bot' # TODO: remove before merging
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - uses: actions/github-script@v4.0.2
+        with:
+          script: |
+            const util = require('util');
+            const execFile = util.promisify(require('child_process').execFile);
+
+            const prs = (await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open"
+            })).data;
+            console.log(prs);
+
+            async function testsPassed(ref) {
+              const res = await github.request('GET /repos/{owner}/{repo}/commits/{ref}/status', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: ref
+              });
+              return res.state === "success";
+            }
+
+            async function commentExists(issue_number, marker) {
+              const cs = await github.issues.listComments({
+                owner,
+                repo,
+                issue_number,
+              })
+
+              return cs.find(comment =>
+                comment.body.includes(marker)
+              );
+            }
+
+            for (let i=0; i < prs.length; i++) {
+              const pr = prs[i];
+              console.log("Processing PR", pr.id);
+
+              const base = pr.base.sha;
+              const head = pr.head.sha;
+
+              // skip if the tests are pending or failed
+              if(!(await (testsPassed(base))) || !(await (testsPassed(head)))) {
+                console.log("Tests not successful, skipping.");
+                continue;
+              }
+
+              // we append a hidden marker to the body, so the bot can recognize
+              // if it already has posted a message.
+              const marker = "bot:" + base + ":" + head;
+
+              // only run the job if there is no existing comment
+              if(await (commentExists(pr.id, marker))) {
+                console.log("Comment exists, skipping.");
+              } else {
+                const ret = await (execFile(
+                  "nix-shell",
+                  [ "--run"
+                  , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
+                  ]
+                ));
+                console.log(ret);
+
+                github.issues.createComment({
+                  issue_number: pr.id,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: ret.stdout + "\n\n[hiddencomment]: " + marker
+                });
+              }
+            }
