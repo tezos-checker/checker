@@ -38,7 +38,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: ref
-              })).check_runs;
+              })).data.check_runs;
               return res.length > 0 && res.every(r => r.conclusion === "success");
             }
 
