@@ -1,4 +1,5 @@
 open Kit
+open Tok
 open OUnit2
 open TestLib
 open LiquidationAuction
@@ -19,9 +20,9 @@ let checker_sender = Ligo.address_from_literal "somebody"
 let gen_liquidation_slice_contents =
   QCheck.Gen.(
     map
-      (fun (tz, adrr) ->
+      (fun (tk, adrr) ->
          LiquidationAuctionPrimitiveTypes.
-           ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
+           ({ tok = tok_of_denomination (Ligo.nat_from_literal ((string_of_int tk) ^ "n"))
             ; burrow = (Ligo.address_of_string ("burrow_" ^ adrr ), Ligo.nat_from_literal "1n")
             ; min_kit_for_unwarranted = Some kit_zero
             })
@@ -85,7 +86,7 @@ let suite =
          (* Values in this slice are arbitrary and should not matter *)
          let slice = {
            burrow = burrow_id_1;
-           tez = Ligo.tez_from_literal "4_000_000mutez";
+           tok = tok_of_denomination (Ligo.nat_from_literal "4_000_000n");
            min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "1_000_000n"))
          } in
          (* 2 ^ (Constants.max_liquidation_queue_height - 2) *)
@@ -242,7 +243,7 @@ let suite =
                  let avl_out = Avl.avl_modify_root_data auctions_out.avl_storage auction_ptr
                      (fun outcome -> match outcome with
                         | _ -> Some {
-                            sold_tez = Ligo.tez_from_literal "1mutez";
+                            sold_tok = tok_of_denomination (Ligo.nat_from_literal "1n");
                             winning_bid = {address=Ligo.address_of_string "someone" ; kit=kit_of_denomination (Ligo.nat_from_literal "1_000_000n")};
                             younger_auction = None;
                             older_auction = None;
@@ -297,7 +298,7 @@ let suite =
        let (auctions, _) =
          liquidation_auction_send_to_auction auctions {
            burrow = burrow_id_1;
-           tez = Ligo.tez_from_literal "2_000_000mutez";
+           tok = tok_of_denomination (Ligo.nat_from_literal "2_000_000n");
            min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "4_000_000n")); (* note: randomly chosen *)
          } in
        let start_price = Common.{num=(Ligo.int_from_literal "3"); den=(Ligo.int_from_literal "7")} in
@@ -315,15 +316,15 @@ let suite =
        let (auctions, _) =
          liquidation_auction_send_to_auction auctions {
            burrow = burrow_id_1;
-           tez = Ligo.tez_from_literal "2_000_000mutez";
+           tok = tok_of_denomination (Ligo.nat_from_literal "2_000_000n");
            min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "4_000_000n")); (* note: randomly chosen *)
          } in
        let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
        let current = Option.get auctions.current_auction in
-       assert_tez_option_equal
-         ~expected:(Some (Ligo.tez_from_literal "2_000_000mutez"))
-         ~real:(liquidation_auction_current_auction_tez auctions);
+       assert_tok_option_equal
+         ~expected:(Some (tok_of_denomination (Ligo.nat_from_literal "2_000_000n")))
+         ~real:(liquidation_auction_current_auction_tok auctions);
        assert_kit_equal
          ~expected:(kit_of_denomination (Ligo.nat_from_literal "2_000_000n"))
          ~real:(liquidation_auction_current_auction_minimum_bid current);
@@ -356,26 +357,26 @@ let suite =
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Ligo.tez_from_literal "5_000_000_000mutez";
+           { burrow = burrow_id_1; tok = tok_of_denomination (Ligo.nat_from_literal "5_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_001n")); (* note: randomly chosen *)
            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
+           { burrow = burrow_id_2; tok = tok_of_denomination (Ligo.nat_from_literal "5_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_002n")); (* note: randomly chosen *)
            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_3; tez = Ligo.tez_from_literal "5_000_000_000mutez";
+           { burrow = burrow_id_3; tok = tok_of_denomination (Ligo.nat_from_literal "5_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_003n")); (* note: randomly chosen *)
            } in
        let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_tez_option_equal
-         ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
-         ~real:(liquidation_auction_current_auction_tez auctions);
+       assert_tok_option_equal
+         ~expected:(Some (tok_of_denomination (Ligo.nat_from_literal "10_000_000_000n")))
+         ~real:(liquidation_auction_current_auction_tok auctions);
     );
 
     ("test splits up auction lots to fit batch size" >::
@@ -385,26 +386,26 @@ let suite =
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Ligo.tez_from_literal "4_000_000_000mutez";
+           { burrow = burrow_id_1; tok = tok_of_denomination (Ligo.nat_from_literal "4_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_004n")); (* note: randomly chosen *)
            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_2; tez = Ligo.tez_from_literal "5_000_000_000mutez";
+           { burrow = burrow_id_2; tok = tok_of_denomination (Ligo.nat_from_literal "5_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_005n")); (* note: randomly chosen *)
            } in
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_3; tez = Ligo.tez_from_literal "3_000_000_000mutez";
+           { burrow = burrow_id_3; tok = tok_of_denomination (Ligo.nat_from_literal "3_000_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "9_000_006n")); (* note: randomly chosen *)
            } in
        let start_price = Common.one_ratio in
        let auctions = liquidation_auction_touch auctions start_price in
-       assert_tez_option_equal
-         ~expected:(Some (Ligo.tez_from_literal "10_000_000_000mutez"))
-         ~real:(liquidation_auction_current_auction_tez auctions);
+       assert_tok_option_equal
+         ~expected:(Some (tok_of_denomination (Ligo.nat_from_literal "10_000_000_000n")))
+         ~real:(liquidation_auction_current_auction_tok auctions);
     );
 
     ("test bidding" >::
@@ -414,7 +415,7 @@ let suite =
        let (auctions, _) =
          liquidation_auction_send_to_auction
            auctions
-           { burrow = burrow_id_1; tez = Ligo.tez_from_literal "2_000_000mutez";
+           { burrow = burrow_id_1; tok = tok_of_denomination (Ligo.nat_from_literal "2_000_000n");
              min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "4_000_007n")); (* note: randomly chosen *)
            } in
        let start_price = Common.one_ratio in
@@ -461,7 +462,7 @@ let suite =
       liquidation_auction_send_to_auction
         auctions
         (* Note: The amounts don't matter here. We are only interested in the bidding logic *)
-        { burrow = burrow_id_1; tez = Ligo.tez_from_literal "1_000_000mutez";
+        { burrow = burrow_id_1; tok = tok_of_denomination (Ligo.nat_from_literal "1_000_000n");
           min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal "1n")); (* note: randomly chosen *)
         } in
     let start_price = Common.one_ratio in

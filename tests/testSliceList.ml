@@ -1,5 +1,6 @@
 open OUnit2
 open Kit
+open Tok
 open LiquidationAuctionTypes
 open SliceList
 open LiquidationAuctionPrimitiveTypes
@@ -16,9 +17,9 @@ let burrow_id_1 = (Ligo.address_of_string "burrow_a"), Ligo.nat_from_literal "1n
 let gen_liquidation_slice_contents_single_burrow_id =
   QCheck.Gen.(
     map
-      (fun (tz, kit) ->
+      (fun (tk, kit) ->
          LiquidationAuctionPrimitiveTypes.
-           ({ tez = Ligo.tez_from_literal ((string_of_int tz) ^ "mutez")
+           ({ tok = tok_of_denomination (Ligo.nat_from_literal ((string_of_int tk) ^ "n"))
             ; burrow = burrow_id_1
             ; min_kit_for_unwarranted = Some (kit_of_denomination (Ligo.nat_from_literal ((string_of_int kit) ^ "n")))
             })
@@ -48,7 +49,7 @@ let suite =
        let orphan_slice = {
          contents={
            burrow=burrow_id_1;
-           tez=Ligo.tez_from_literal "1mutez";
+           tok=tok_of_denomination (Ligo.nat_from_literal "1n");
            min_kit_for_unwarranted=None;
          };
          older=None;
@@ -73,7 +74,7 @@ let suite =
        let slice = {
          contents={
            burrow=burrow_id_1;
-           tez=Ligo.tez_from_literal "1mutez";
+           tok=tok_of_denomination (Ligo.nat_from_literal "1n");
            min_kit_for_unwarranted=None;
          };
          older=None;

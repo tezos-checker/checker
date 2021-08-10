@@ -1,4 +1,5 @@
 open Kit
+open Tok
 open Burrow
 open Ratio
 open OUnit2
@@ -15,7 +16,7 @@ let burrow_addr = Ligo.address_from_literal "BURROW_ADDR"
  * most values are fixed). *)
 let arbitrary_burrow (params: parameters) =
   (* More likely to give Close/Unnecessary ones *)
-  let arb_smart_tez_kit_1 =
+  let arb_smart_tok_kit_1 =
     let positive_int = QCheck.(1 -- max_int) in
     QCheck.map
       (fun (t, k, factor) ->
@@ -25,7 +26,7 @@ let arbitrary_burrow (params: parameters) =
                (ratio_of_int (Ligo.int_from_literal (string_of_int t)))
                (mul_ratio (ratio_of_int (Ligo.int_from_literal "2")) (ratio_of_int (Ligo.int_from_literal (string_of_int factor))))
            in
-           Common.fraction_to_tez_floor x.num x.den in
+           tok_of_fraction_floor x.num x.den in
          let kit =
            let Common.{ num = x_num; den = x_den; } =
              (div_ratio
@@ -38,20 +39,20 @@ let arbitrary_burrow (params: parameters) =
       )
       (QCheck.triple positive_int positive_int positive_int) in
   (* More likely to give Complete/Partial/Unnecessary ones *)
-  let arb_smart_tez_kit_2 =
+  let arb_smart_tok_kit_2 =
     QCheck.map
       (fun (tez, kit) ->
          let tez =
            let x = div_ratio (ratio_of_tez tez) (ratio_of_int (Ligo.int_from_literal "2")) in
-           Common.fraction_to_tez_floor x.num x.den in
+           tok_of_fraction_floor x.num x.den in
          (tez, kit)
       )
       (QCheck.pair TestArbitrary.arb_tez TestArbitrary.arb_kit) in
   (* Chose one of the two. Not perfect, I know, but improves coverage *)
-  let arb_smart_tez_kit =
+  let arb_smart_tok_kit =
     QCheck.map
       (fun (x, y, num) -> if num mod 2 = 0 then x else y)
-      (QCheck.triple arb_smart_tez_kit_1 arb_smart_tez_kit_2 QCheck.int) in
+      (QCheck.triple arb_smart_tok_kit_1 arb_smart_tok_kit_2 QCheck.int) in
   QCheck.map
     (fun (tez, kit) ->
        make_burrow_for_test
@@ -61,10 +62,10 @@ let arbitrary_burrow (params: parameters) =
          ~collateral:tez
          ~outstanding_kit:kit
          ~adjustment_index:(compute_adjustment_index params)
-         ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+         ~collateral_at_auction:tok_zero
          ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     )
-    arb_smart_tez_kit
+    arb_smart_tok_kit
 
 (*
 Other properties
@@ -123,8 +124,8 @@ let optimistically_overburrowed_implies_overburrowed =
  * - is_liquidatable is false for the resulting burrow
  * - is_overburrowed is true for the resulting burrow
  * - is_optimistically_overburrowed is false for the resulting burrow
- * - old_collateral = new_collateral + tez_to_auction + liquidation_reward
- * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
+ * - old_collateral = new_collateral + collateral_to_auction + liquidation_reward
+ * - old_collateral_at_auction = new_collateral_at_auction - collateral_to_auction
  * - the resulting burrow is active
 *)
 let assert_properties_of_partial_liquidation params burrow_in details =
@@ -144,12 +145,12 @@ let assert_properties_of_partial_liquidation params burrow_in details =
   assert_bool
     "partial liquidation means non-optimistically-overburrowed output burrow"
     (not (burrow_is_optimistically_overburrowed params burrow_out));
-  assert_tez_equal
+  assert_tok_equal
     ~expected:(burrow_collateral burrow_in)
-    ~real:(Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward);
-  assert_tez_equal
+    ~real:(tok_add (tok_add (burrow_collateral burrow_out) details.collateral_to_auction) details.liquidation_reward);
+  assert_tok_equal
     ~expected:(burrow_collateral_at_auction burrow_in)
-    ~real:(Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction);
+    ~real:(tok_sub (burrow_collateral_at_auction burrow_out) details.collateral_to_auction);
   assert_bool
     "partial liquidation does not deactivate burrows"
     (burrow_active burrow_out)
@@ -160,8 +161,8 @@ let assert_properties_of_partial_liquidation params burrow_in details =
  * - is_liquidatable is true for the resulting burrow
  * - is_overburrowed is true for the resulting burrow
  * - is_optimistically_overburrowed is true for the resulting burrow
- * - old_collateral = new_collateral + tez_to_auction + liquidation_reward
- * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
+ * - old_collateral = new_collateral + collateral_to_auction + liquidation_reward
+ * - old_collateral_at_auction = new_collateral_at_auction - collateral_to_auction
  * - the resulting burrow has no collateral
  * - the resulting burrow is active
 *)
@@ -184,13 +185,13 @@ let assert_properties_of_complete_liquidation params burrow_in details =
     (burrow_is_optimistically_overburrowed params burrow_out);
   assert_bool
     "complete liquidation means no collateral in the output burrow"
-    (burrow_collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
-  assert_tez_equal
+    (burrow_collateral burrow_out = tok_zero);
+  assert_tok_equal
     ~expected:(burrow_collateral burrow_in)
-    ~real:(Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward);
-  assert_tez_equal
+    ~real:(tok_add (tok_add (burrow_collateral burrow_out) details.collateral_to_auction) details.liquidation_reward);
+  assert_tok_equal
     ~expected:(burrow_collateral_at_auction burrow_in)
-    ~real:(Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction);
+    ~real:(tok_sub (burrow_collateral_at_auction burrow_out) details.collateral_to_auction);
   assert_bool
     "complete liquidation does not deactivate burrows"
     (burrow_active burrow_out)
@@ -202,8 +203,8 @@ let assert_properties_of_complete_liquidation params burrow_in details =
  * - the resulting burrow is not liquidatable (is inactive; no more rewards)
  * - the resulting burrow has no collateral
  * - the resulting burrow is inactive
- * - old_collateral + creation_deposit = new_collateral + tez_to_auction + liquidation_reward
- * - old_collateral_at_auction = new_collateral_at_auction - tez_to_auction
+ * - old_collateral + creation_deposit = new_collateral + collateral_to_auction + liquidation_reward
+ * - old_collateral_at_auction = new_collateral_at_auction - collateral_to_auction
 *)
 let assert_properties_of_close_liquidation params burrow_in details =
   let burrow_out = details.burrow_state in
@@ -221,16 +222,16 @@ let assert_properties_of_close_liquidation params burrow_in details =
     (not (burrow_is_liquidatable params burrow_out));
   assert_bool
     "close liquidation means no collateral in the output burrow"
-    (burrow_collateral burrow_out = (Ligo.tez_from_literal "0mutez"));
+    (burrow_collateral burrow_out = tok_zero);
   assert_bool
     "close liquidation means inactive output burrow"
     (not (burrow_active burrow_out));
-  assert_tez_equal
-    ~expected:(Ligo.add_tez_tez (burrow_collateral burrow_in) Constants.creation_deposit)
-    ~real:(Ligo.add_tez_tez (Ligo.add_tez_tez (burrow_collateral burrow_out) details.tez_to_auction) details.liquidation_reward);
-  assert_tez_equal
+  assert_tok_equal
+    ~expected:(tok_add (burrow_collateral burrow_in) Constants.creation_deposit)
+    ~real:(tok_add (tok_add (burrow_collateral burrow_out) details.collateral_to_auction) details.liquidation_reward);
+  assert_tok_equal
     ~expected:(burrow_collateral_at_auction burrow_in)
-    ~real:(Ligo.sub_tez_tez (burrow_collateral_at_auction burrow_out) details.tez_to_auction)
+    ~real:(tok_sub (burrow_collateral_at_auction burrow_out) details.collateral_to_auction)
 
 let test_general_liquidation_properties =
   qcheck_to_ounit
@@ -259,10 +260,10 @@ let initial_burrow =
     ~address:burrow_addr
     ~delegate:None
     ~active:true
-    ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
+    ~collateral:(tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
     ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
     ~adjustment_index:(compute_adjustment_index params)
-    ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+    ~collateral_at_auction:tok_zero
     ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
 
 (* Minimum amount of collateral for the burrow to be considered collateralized. *)
@@ -273,10 +274,10 @@ let barely_not_overburrowed_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_400n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is not overburrowed" (not (burrow_is_overburrowed params burrow));
@@ -298,10 +299,10 @@ let barely_overburrowed_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "7_673_399mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_399n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -323,10 +324,10 @@ let barely_non_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "6_171_200mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "6_171_200n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -348,10 +349,10 @@ let barely_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "6_171_199mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "6_171_199n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -361,17 +362,17 @@ let barely_liquidatable_test =
     let expected_liquidation_result =
       Some
         ( Partial,
-          { liquidation_reward = Ligo.tez_from_literal "1_006_171mutez";
-            tez_to_auction = Ligo.tez_from_literal "2_818_396mutez";
+          { liquidation_reward = tok_of_denomination (Ligo.nat_from_literal "1_006_171n");
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "2_818_396n");
             burrow_state =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
                 ~delegate:None
-                ~collateral:(Ligo.tez_from_literal "2_346_632mutez")
+                ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_346_632n"))
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
-                ~collateral_at_auction:(Ligo.tez_from_literal "2_818_396mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "2_818_396n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -387,13 +388,13 @@ let barely_liquidatable_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "8_677_329n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "467912067393300348926951424";
                den = Ligo.int_from_literal "67404402845334701604000000";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -412,10 +413,10 @@ let barely_non_complete_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "5_065_065mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_065_065n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -425,17 +426,17 @@ let barely_non_complete_liquidatable_test =
     let expected_liquidation_result =
       Some
         ( Partial,
-          { liquidation_reward = Ligo.tez_from_literal "1_005_065mutez";
-            tez_to_auction = Ligo.tez_from_literal "4_060_000mutez";
+          { liquidation_reward = tok_of_denomination (Ligo.nat_from_literal "1_005_065n");
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "4_060_000n");
             burrow_state =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
                 ~delegate:None
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
-                ~collateral_at_auction:(Ligo.tez_from_literal "4_060_000mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "4_060_000n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -451,13 +452,13 @@ let barely_non_complete_liquidatable_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "15_229_815n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "67404402845334701604864";
                den = Ligo.int_from_literal "6740440284533470160400";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -474,10 +475,10 @@ let barely_complete_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "5_065_064mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_065_064n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -487,17 +488,17 @@ let barely_complete_liquidatable_test =
     let expected_liquidation_result =
       Some
         ( Complete,
-          { liquidation_reward = Ligo.tez_from_literal "1_005_065mutez";
-            tez_to_auction = Ligo.tez_from_literal "4_059_999mutez";
+          { liquidation_reward = tok_of_denomination (Ligo.nat_from_literal "1_005_065n");
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "4_059_999n");
             burrow_state =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
                 ~delegate:None
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
-                ~collateral_at_auction:(Ligo.tez_from_literal "4_059_999mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "4_059_999n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -513,13 +514,13 @@ let barely_complete_liquidatable_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "15_229_814n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "674043862432650352662675456";
                den = Ligo.int_from_literal "67404402845334701604000000";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -536,10 +537,10 @@ let barely_non_close_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "1_001_001mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_001_001n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -549,17 +550,17 @@ let barely_non_close_liquidatable_test =
     let expected_liquidation_result =
       Some
         ( Complete,
-          { liquidation_reward = Ligo.tez_from_literal "1_001_001mutez";
-            tez_to_auction = (Ligo.tez_from_literal "0mutez");
+          { liquidation_reward = tok_of_denomination (Ligo.nat_from_literal "1_001_001n");
+            collateral_to_auction = tok_zero;
             burrow_state =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
                 ~delegate:None
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
-                ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+                ~collateral_at_auction:tok_zero
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -575,10 +576,10 @@ let barely_non_close_liquidatable_test =
     let expected_min_kit_for_unwarranted = kit_zero in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit = Common.zero_ratio in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -595,10 +596,10 @@ let barely_close_liquidatable_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "1_001_000mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_001_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
     assert_bool "is overburrowed" (burrow_is_overburrowed params burrow);
@@ -608,17 +609,17 @@ let barely_close_liquidatable_test =
     let expected_liquidation_result =
       Some
         ( Close,
-          { liquidation_reward = Ligo.tez_from_literal "1_001_001mutez";
-            tez_to_auction = Ligo.tez_from_literal "999_999mutez";
+          { liquidation_reward = tok_of_denomination (Ligo.nat_from_literal "1_001_001n");
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "999_999n");
             burrow_state =
               make_burrow_for_test
                 ~active:false
                 ~address:burrow_addr
                 ~delegate:None
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
-                ~collateral_at_auction:(Ligo.tez_from_literal "999_999mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "999_999n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -634,13 +635,13 @@ let barely_close_liquidatable_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "18_981_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "166020530642689301158035456";
                den = Ligo.int_from_literal "67404402845334701604000000";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -655,10 +656,10 @@ let unwarranted_liquidation_unit_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "7_673_400mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_400n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
 
@@ -676,17 +677,17 @@ let partial_liquidation_unit_test =
     let expected_liquidation_result =
       Some
         ( Partial,
-          { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "10_000mutez");
-            tez_to_auction = Ligo.tez_from_literal "7_142_472mutez";
+          { liquidation_reward = tok_add Constants.creation_deposit (tok_of_denomination (Ligo.nat_from_literal "10_000n"));
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "7_142_472n");
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
                 ~delegate:None
                 ~active:true
-                ~collateral:(Ligo.tez_from_literal "1_847_528mutez")
+                ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_847_528n"))
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
-                ~collateral_at_auction:(Ligo.tez_from_literal "7_142_472mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "7_142_472n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -704,13 +705,13 @@ let partial_liquidation_unit_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "27_141_394n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "1185798177338727676948512768";
                den = Ligo.int_from_literal "67404402845334701604000000";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -726,27 +727,27 @@ let complete_liquidation_unit_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "10_000_000mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
 
     let expected_liquidation_result =
       Some
         ( Complete,
-          { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "10_000mutez");
-            tez_to_auction = Ligo.tez_from_literal "8_990_000mutez";
+          { liquidation_reward = tok_add Constants.creation_deposit (tok_of_denomination (Ligo.nat_from_literal "10_000n"));
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "8_990_000n");
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
                 ~delegate:None
                 ~active:true
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
-                ~collateral_at_auction:(Ligo.tez_from_literal "8_990_000mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "8_990_000n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -764,13 +765,13 @@ let complete_liquidation_unit_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "170_810_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "149252606300383982125056";
                den = Ligo.int_from_literal "6740440284533470160400";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -788,27 +789,27 @@ let complete_and_close_liquidation_test =
         ~address:burrow_addr
         ~delegate:None
         ~active:true
-        ~collateral:(Ligo.tez_from_literal "1_000_000mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
         ~adjustment_index:(compute_adjustment_index params)
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
     in
 
     let expected_liquidation_result =
       Some
         ( Close,
-          { liquidation_reward = Ligo.add_tez_tez Constants.creation_deposit (Ligo.tez_from_literal "1_000mutez");
-            tez_to_auction = Ligo.tez_from_literal "999_000mutez";
+          { liquidation_reward = tok_add Constants.creation_deposit (tok_of_denomination (Ligo.nat_from_literal "1_000n"));
+            collateral_to_auction = tok_of_denomination (Ligo.nat_from_literal "999_000n");
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
                 ~delegate:None
                 ~active:false
-                ~collateral:(Ligo.tez_from_literal "0mutez")
+                ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
                 ~adjustment_index:(compute_adjustment_index params)
-                ~collateral_at_auction:(Ligo.tez_from_literal "999_000mutez")
+                ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "999_000n"))
                 ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0)
           }
         ) in
@@ -826,13 +827,13 @@ let complete_and_close_liquidation_test =
     let expected_min_kit_for_unwarranted = kit_of_denomination (Ligo.nat_from_literal "189_810_000n") in
     assert_kit_option_equal
       ~expected:(Some expected_min_kit_for_unwarranted)
-      ~real:(compute_min_kit_for_unwarranted params burrow details.tez_to_auction);
+      ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
     let expected_expected_kit =
       Common.{ num = Ligo.int_from_literal "165854675966722578579456";
                den = Ligo.int_from_literal "67404402845334701604000";
              } in
-    let expected_kit = compute_expected_kit params details.tez_to_auction in
+    let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
     assert_ratio_equal
       ~expected:expected_expected_kit
@@ -850,7 +851,7 @@ let test_burrow_request_liquidation_invariant_close =
   let upper_collat_bound_for_test = 1_001_000 in
   (* upper_collat_bound_for_test / 1.9 + 1 *)
   let kit_to_allow_liquidation = kit_of_denomination (Ligo.nat_from_literal "526_843n") in
-  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(0 -- upper_collat_bound_for_test) in
+  let arb_tez = QCheck.map (fun x -> tok_of_denomination (Ligo.nat_from_literal ((string_of_int x) ^ "n"))) QCheck.(0 -- upper_collat_bound_for_test) in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -866,7 +867,7 @@ let test_burrow_request_liquidation_invariant_close =
       ~collateral:collateral
       ~outstanding_kit:kit_to_allow_liquidation
       ~adjustment_index:(compute_adjustment_index params)
-      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~collateral_at_auction:tok_zero
       ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
   let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
@@ -881,7 +882,7 @@ let test_burrow_request_liquidation_invariant_close =
 let test_burrow_request_liquidation_invariant_complete =
   (* 1 / liquidation_reward * creation_deposit *)
   let lower_collat_bound_for_test = 1_001_001 in
-  let arb_tez = QCheck.map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) QCheck.(lower_collat_bound_for_test -- max_int) in
+  let arb_tez = QCheck.map (fun x -> tok_of_denomination (Ligo.nat_from_literal ((string_of_int x) ^ "n"))) QCheck.(lower_collat_bound_for_test -- max_int) in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -894,7 +895,7 @@ let test_burrow_request_liquidation_invariant_complete =
   (* Note: the math below is just a simplified version of the above expression *)
   let min_kit_to_trigger_case = Ligo.sub_int_int
       (Common.cdiv_int_int
-         (Ligo.mul_int_int (Ligo.int_from_literal "8_991") (Common.tez_to_mutez collateral))
+         (Ligo.mul_int_int (Ligo.int_from_literal "8_991") (tok_to_denomination_int collateral))
          (Ligo.int_from_literal "10_000"))
       (Ligo.int_from_literal "899_999") in
   let outstanding_kit = match Ligo.is_nat min_kit_to_trigger_case with
@@ -908,7 +909,7 @@ let test_burrow_request_liquidation_invariant_complete =
       ~collateral:collateral
       ~outstanding_kit:outstanding_kit
       ~adjustment_index:(compute_adjustment_index params)
-      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~collateral_at_auction:tok_zero
       ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
   let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
@@ -940,10 +941,10 @@ let test_burrow_request_liquidation_invariant_partial =
       ~address:burrow_addr
       ~delegate:None
       ~active:true
-      ~collateral:(Ligo.tez_from_literal (string_of_int collateral ^ "mutez"))
+      ~collateral:(tok_of_denomination (Ligo.nat_from_literal (string_of_int collateral ^ "n")))
       ~outstanding_kit:outstanding_kit
       ~adjustment_index:(compute_adjustment_index params)
-      ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+      ~collateral_at_auction:tok_zero
       ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
   let liquidation_details = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
@@ -965,16 +966,16 @@ let test_burrow_request_liquidation_preserves_tez =
   let _ = match Burrow.burrow_request_liquidation initial_parameters burrow0 with
     | None -> ()
     | Some (_, liquidation_details) ->
-      let tez_in = burrow_total_associated_tez burrow0 in
-      let tez_out = Ligo.add_tez_tez liquidation_details.liquidation_reward (burrow_total_associated_tez liquidation_details.burrow_state) in
+      let tez_in = burrow_total_associated_tok burrow0 in
+      let tez_out = tok_add liquidation_details.liquidation_reward (burrow_total_associated_tok liquidation_details.burrow_state) in
 
-      assert (Ligo.eq_tez_tez tez_in tez_out);
-      (* Also check that tez_to_auction is exactly reflected in collateral_at_auction *)
-      assert (Ligo.eq_tez_tez
+      assert (eq_tok_tok tez_in tez_out);
+      (* Also check that collateral_to_auction is exactly reflected in collateral_at_auction *)
+      assert (eq_tok_tok
                 (Burrow.burrow_collateral_at_auction burrow0)
-                (Ligo.sub_tez_tez
+                (tok_sub
                    (Burrow.burrow_collateral_at_auction liquidation_details.burrow_state)
-                   liquidation_details.tez_to_auction
+                   liquidation_details.collateral_to_auction
                 )
              );
   in
@@ -984,9 +985,9 @@ let regression_test_72 =
   "regression_test_72" >:: fun _ ->
     let burrow0 =
       Burrow.make_burrow_for_test
-        ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "4369345928872593390n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3928478924648448718n"))
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~active:true
         ~address:burrow_addr
         ~delegate:None
@@ -1004,9 +1005,9 @@ let regression_test_93 =
   "regression_test_93" >:: fun _ ->
     let burrow_in =
       Burrow.make_burrow_for_test
-        ~collateral:(Ligo.tez_from_literal "4369345928872593390mutez")
+        ~collateral:(tok_of_denomination (Ligo.nat_from_literal "4369345928872593390n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3928478924648448718n"))
-        ~collateral_at_auction:(Ligo.tez_from_literal "0mutez")
+        ~collateral_at_auction:tok_zero
         ~active:true
         ~address:burrow_addr
         ~delegate:None
@@ -1020,7 +1021,7 @@ let regression_test_93 =
     in
     assert_properties_of_complete_liquidation Parameters.initial_parameters burrow_in liquidation_details;
     (* The following line must succeed. *)
-    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
+    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.collateral_to_auction in
 
     (* Second liquidation must be close *)
     let burrow_in = liquidation_details.burrow_state in
@@ -1031,9 +1032,9 @@ let regression_test_93 =
     assert_properties_of_close_liquidation Parameters.initial_parameters burrow_in liquidation_details;
     assert_bool
       "For this test to be potent the collateral should have been zero"
-      (Ligo.eq_tez_tez (burrow_collateral burrow_in) (Ligo.tez_from_literal "0mutez"));
+      (eq_tok_tok (burrow_collateral burrow_in) tok_zero);
     (* The following line must succeed. *)
-    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.tez_to_auction in
+    let _ = compute_min_kit_for_unwarranted Parameters.initial_parameters burrow_in liquidation_details.collateral_to_auction in
     ()
 
 let suite =

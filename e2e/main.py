@@ -558,7 +558,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 "queued_slices"
             ](),
         ):
-            queued_tez += leaf["leaf"]["value"]["contents"]["tez"]
+            queued_tez += leaf["leaf"]["value"]["contents"]["tok"]
         assert (
             queued_tez > 10_000_000_000
         ), "queued tez in liquidation auction was not greater than Constants.max_lot_size which is required for this test"

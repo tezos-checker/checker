@@ -5,6 +5,7 @@ open OUnit2
 open Core_kernel.Deque
 open LiquidationAuctionPrimitiveTypes
 open TestLib
+open Tok
 
 type queue_op =
   (* Place new element in back *)
@@ -18,7 +19,7 @@ type queue_op =
   (* Remove the element at queue index i, expressed as a percentage of the queue length  *)
   | Delete of float
   (* Take slices from the front of the queue up to the specified limit *)
-  | Take of Ligo.tez
+  | Take of tok
 [@@deriving show]
 
 type slice_option = liquidation_slice option [@@deriving show]
@@ -34,8 +35,8 @@ let addr_gen = QCheck.Gen.(
 (** Generate a random tez amount that does not exceed 10Ktez. This size should
   * be sufficient to capture realistic tez amounts, and is far enough from
   * [Int64.max_int] to be safe from overflows. *)
-let tez_gen : Ligo.tez QCheck.Gen.t = QCheck.Gen.(
-    map (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez")) (0 -- 10_000_000_000)
+let tok_gen : tok QCheck.Gen.t = QCheck.Gen.(
+    map (fun x -> tok_of_denomination (Ligo.nat_from_literal ((string_of_int x) ^ "n"))) (0 -- 10_000_000_000)
   )
 
 let kit_gen = QCheck.Gen.(
@@ -43,10 +44,10 @@ let kit_gen = QCheck.Gen.(
   )
 
 let slice_gen = QCheck.Gen.(
-    map (fun (addr, tez, kit) ->
+    map (fun (addr, tok, kit) ->
         let contents = {
           burrow=(addr, Ligo.nat_from_literal "0n");
-          tez=tez;
+          tok=tok;
           min_kit_for_unwarranted=Some kit;
         } in
         {
@@ -54,7 +55,7 @@ let slice_gen = QCheck.Gen.(
           older=None;
           younger=None;
         }
-      ) (triple addr_gen tez_gen kit_gen)
+      ) (triple addr_gen tok_gen kit_gen)
   )
 
 let op_gen = QCheck.Gen.(
@@ -65,7 +66,7 @@ let op_gen = QCheck.Gen.(
         | 2 -> return Pop
         | 3 -> map (fun percent -> Get percent) (float_bound_inclusive 1.)
         | 4 -> map (fun percent -> Delete percent) (float_bound_inclusive 1.)
-        | 5 -> map (fun tez -> Take (Ligo.tez_from_literal (string_of_int tez ^ "mutez"))) (int_range 0 max_int)
+        | 5 -> map (fun tok -> Take (tok_of_denomination (Ligo.nat_from_literal (string_of_int tok ^ "n")))) (int_range 0 max_int)
         | _ -> failwith "Generated more cases than there are in queue_op. Check the int_range bounds in op_gen."
     )
   )
@@ -100,21 +101,21 @@ let model_delete (queue: model) (index: int) : model =
 (* Pops liquidation slices until the resulting list contains slices with
  *  total tez >= the provided limit
 *)
-let model_take (limit: Ligo.tez) (model: model) : (liquidation_slice list) =
+let model_take (limit: tok) (model: model) : (liquidation_slice list) =
   let rec rec_model_take limit current_total current_slices current_model =
-    if Ligo.geq_tez_tez current_total limit then
+    if geq_tok_tok current_total limit then
       current_slices
     else
       match peek_front current_model with
       | None -> current_slices
       | Some slice ->
-        let total = Ligo.add_tez_tez current_total slice.contents.tez in
-        if Ligo.gt_tez_tez total limit then
+        let total = tok_add current_total slice.contents.tok in
+        if gt_tok_tok total limit then
           current_slices
         else
           rec_model_take limit total (List.append current_slices [dequeue_front_exn current_model]) current_model
   in
-  rec_model_take limit (Ligo.tez_from_literal "0mutez") [] model
+  rec_model_take limit tok_zero [] model
 
 (* ========================================================================= *)
 (* Helper functions *)

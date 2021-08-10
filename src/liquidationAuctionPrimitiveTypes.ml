@@ -1,5 +1,6 @@
 open Ptr
 open Kit
+open Tok
 
 [@@@coverage off]
 
@@ -11,7 +12,7 @@ type leaf_ptr = LeafPtr of ptr
 
 type liquidation_slice_contents = {
   burrow: Ligo.address * Ligo.nat;
-  tez: Ligo.tez;
+  tok: tok;
   min_kit_for_unwarranted: kit option;
 }
 [@@deriving show]
@@ -30,7 +31,7 @@ type bid = { address: Ligo.address; kit: kit }
 [@@deriving show]
 
 type auction_outcome = {
-  sold_tez: Ligo.tez;
+  sold_tok: tok;
   winning_bid: bid;
   younger_auction: avl_ptr option;
   older_auction: avl_ptr option;
@@ -50,8 +51,8 @@ type leaf = {
 type branch = {
   left: ptr;
   left_height: Ligo.nat;
-  left_tez: Ligo.tez;
-  right_tez: Ligo.tez;
+  left_tok: tok;
+  right_tok: tok;
   right_height: Ligo.nat;
   right: ptr;
   parent: ptr;

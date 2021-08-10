@@ -103,13 +103,13 @@ expect ``(1 - liquidation_penalty)`` returns from all auctions
 considered. Formally:
 
 -  First, from auctioning we expect to get the current
-   ``minting_price``, so, if we send ``tez_to_auction`` and
+   ``minting_price``, so, if we send ``collateral_to_auction`` and
    ``repaid_kit`` is received, we have
 
    ::
 
-      tez_to_auction = repaid_kit * minting_price                   <=>
-      repaid_kit = tez_to_auction / minting_price                   (3)
+      collateral_to_auction = repaid_kit * minting_price                   <=>
+      repaid_kit = collateral_to_auction / minting_price                   (3)
 
 -  Second, we assume that the auction is warranted (so we lose the
    liquidation penalty), thus
@@ -130,14 +130,14 @@ considered. Formally:
 
    ::
 
-      collateral - tez_to_auction >= (optimistic_outstanding - actual_repaid_kit) * fminting * minting_price    (6)
+      collateral - collateral_to_auction >= (optimistic_outstanding - actual_repaid_kit) * fminting * minting_price    (6)
 
 Solving ``(3)``, ``(4)``, ``(5)``, and ``(6)`` the above gives us
 ``(7)``:
 
 ::
 
-   tez_to_auction >=
+   collateral_to_auction >=
      ( outstanding_kit * fminting * minting_price
      - (1 - liquidation_penalty) * fminting * collateral_at_auction
      - collateral
@@ -191,7 +191,7 @@ We cannot replenish the creation deposit.
 ::
 
    collateral            = 0
-   collateral_at_auction = collateral_at_auction + tez_to_auction
+   collateral_at_auction = collateral_at_auction + collateral_to_auction
 
 Case 2B: ``collateral >= creation_deposit``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,7 +209,7 @@ minted”*. For that, we use the ``(7)``:
 
 ::
 
-   tez_to_auction = ceil (
+   collateral_to_auction = ceil (
      ( outstanding_kit * fminting * minting_price
      - (1 - liquidation_penalty) * fminting * collateral_at_auction
      - collateral
@@ -218,7 +218,7 @@ minted”*. For that, we use the ``(7)``:
      ((1 - liquidation_penalty) * fminting - 1)
    )
 
--  If ``tez_to_auction < 0`` or ``tez_to_auction > collateral``, then
+-  If ``collateral_to_auction < 0`` or ``collateral_to_auction > collateral``, then
    restoration is impossible: liquidate the entire remaining collateral
    (Note that the resulting burrow can be targeted for liquidation one
    last time (with the creation deposit being the only reward).
@@ -231,13 +231,13 @@ minted”*. For that, we use the ``(7)``:
       collateral            = 0
       collateral_at_auction = collateral_at_auction + collateral
 
--  Otherwise auction off exactly ``tez_to_auction``:
+-  Otherwise auction off exactly ``collateral_to_auction``:
 
    ::
 
       active                = true
-      collateral            = collateral - tez_to_auction
-      collateral_at_auction = collateral_at_auction + tez_to_auction
+      collateral            = collateral - collateral_to_auction
+      collateral_at_auction = collateral_at_auction + collateral_to_auction
 
 Was the liquidation warranted?
 ------------------------------
@@ -255,51 +255,51 @@ equation (2) above, which we can rewrite as
    liquidation_price <= collateral / (optimistic_outstanding * fliquidation)    (3)
 
 So, if (3) was satisfied, we wouldn’t have triggered a liquidation. If
-we assume that at the end we sent ``tez_to_auction`` to be auctioned off
+we assume that at the end we sent ``collateral_to_auction`` to be auctioned off
 and we received ``repaid_kit`` for it, we have:
 
 ::
 
    maximum_non_liquidating_price = collateral / (optimistic_outstanding * fliquidation)
-   real_price                    = tez_to_auction / repaid_kit    # derived from the auction outcome
+   real_price                    = collateral_to_auction / repaid_kit    # derived from the auction outcome
 
 If ``real_price <= maximum_non_liquidating_price`` then the liquidation
 was not warranted (i.e. the liquidation price we used when calculating
-``tez_to_auction`` was off) and we wish to return the kit we received
+``collateral_to_auction`` was off) and we wish to return the kit we received
 from the auction in its entirety to the burrow:
 
 ::
 
    real_price <= maximum_non_liquidating_price
-   tez_to_auction / repaid_kit <= collateral / (fliquidation * optimistic_outstanding) <=>
-   tez_to_auction * (fliquidation * optimistic_outstanding) <= repaid_kit * collateral <=>
-   tez_to_auction * (fliquidation * optimistic_outstanding) / collateral <= repaid_kit <=>
-   repaid_kit >= tez_to_auction * (fliquidation * optimistic_outstanding) / collateral
+   collateral_to_auction / repaid_kit <= collateral / (fliquidation * optimistic_outstanding) <=>
+   collateral_to_auction * (fliquidation * optimistic_outstanding) <= repaid_kit * collateral <=>
+   collateral_to_auction * (fliquidation * optimistic_outstanding) / collateral <= repaid_kit <=>
+   repaid_kit >= collateral_to_auction * (fliquidation * optimistic_outstanding) / collateral
 
 So, if the kit that the auction yields is more than
 
 ::
 
-   min_received_kit_for_unwarranted = tez_to_auction * (fliquidation * optimistic_outstanding) / collateral
+   min_received_kit_for_unwarranted = collateral_to_auction * (fliquidation * optimistic_outstanding) / collateral
 
 then this liquidation was unwarranted.
 
 What if the liquidation was warranted?
 --------------------------------------
 
-When we send ``tez_to_auction`` to an auction, we also send
+When we send ``collateral_to_auction`` to an auction, we also send
 ``min_received_kit_for_unwarranted`` so that—after the auction is
 over—we can determine whether it was warranted. If it was warranted,
 then we wish to return the received kit in its entirety to the burrow.
 Otherwise we burn 10% of the kit earnings.
 
-The auction logic might end up splitting ``tez_to_auction`` into parts
+The auction logic might end up splitting ``collateral_to_auction`` into parts
 (slices) that can be sold for different prices; we perform the above
 check per slice.
 
 ::
 
-   tez_to_auction = tez_1 + tez_2 + ... + tez_n
+   collateral_to_auction = tez_1 + tez_2 + ... + tez_n
 
 If we end up selling slice ``tez_i`` for ``kit_i``, this part of the
 liquidation is considered unwarranted (and thus ``kit_i`` is returned to
@@ -307,8 +307,8 @@ the burrow) only if
 
 ::
 
-   kit_i >= min_received_kit_for_unwarranted * (tez_i / tez_to_auction) <=>
-   tez_to_auction * kit_i >= min_received_kit_for_unwarranted * tez_i
+   kit_i >= min_received_kit_for_unwarranted * (tez_i / collateral_to_auction) <=>
+   collateral_to_auction * kit_i >= min_received_kit_for_unwarranted * tez_i
 
 Misc
 ----
