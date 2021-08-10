@@ -201,7 +201,7 @@ let[@inline] burrow_deposit_collateral (p: parameters) (t: tok) (b: burrow) : bu
 (** Withdraw a non-negative amount of collateral from the burrow, as long as
   * this will not overburrow it. *)
 (* TOKFIX: we need a more generic name (e.g., withdraw_collateral) *)
-let burrow_withdraw_tez (p: parameters) (t: tok) (b: burrow) : burrow =
+let burrow_withdraw_collateral (p: parameters) (t: tok) (b: burrow) : burrow =
   let b = burrow_touch p b in
   let burrow = { b with collateral = tok_sub b.collateral t } in
   let burrow_out = if burrow_is_overburrowed p burrow

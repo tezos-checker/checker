@@ -65,7 +65,7 @@ val entrypoint_deposit_collateral : checker * Ligo.nat -> (LigoOp.operation list
     - The ID of the burrow from which the collateral should be withdrawn
     - The amount of tez to withdraw
 *)
-val entrypoint_withdraw_tez : checker * (Ligo.nat * Ligo.tez) -> LigoOp.operation list * checker
+val entrypoint_withdraw_collateral : checker * (Ligo.nat * Ligo.tez) -> LigoOp.operation list * checker
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
     there is not enough collateral, or if the sender is not the burrow owner.

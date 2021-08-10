@@ -176,24 +176,24 @@ let suite =
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("burrow_withdraw_tez - does not fail for a burrow which needs to be touched" >::
+    ("burrow_withdraw_collateral - does not fail for a burrow which needs to be touched" >::
      fun _ ->
        let _ =
-         Burrow.burrow_withdraw_tez
+         Burrow.burrow_withdraw_collateral
            {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
            tok_zero
            burrow_for_needs_touch_tests
        in ()
     );
 
-    ("burrow_withdraw_tez - burrow after successful withdrawal has expected collateral" >::
+    ("burrow_withdraw_collateral - burrow after successful withdrawal has expected collateral" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1n"))
            ~active:true
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "100n")) in
 
-       let burrow = Burrow.burrow_withdraw_tez
+       let burrow = Burrow.burrow_withdraw_collateral
            Parameters.initial_parameters
            (tok_of_denomination (Ligo.nat_from_literal "1n"))
            burrow0 in
@@ -203,21 +203,21 @@ let suite =
          ~real:(Burrow.burrow_collateral burrow)
     );
 
-    ("burrow_withdraw_tez - does not change burrow address" >::
+    ("burrow_withdraw_collateral - does not change burrow address" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:kit_zero
            ~active:true
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1n")) in
 
-       let burrow = Burrow.burrow_withdraw_tez Parameters.initial_parameters (tok_of_denomination (Ligo.nat_from_literal "1n")) burrow0 in
+       let burrow = Burrow.burrow_withdraw_collateral Parameters.initial_parameters (tok_of_denomination (Ligo.nat_from_literal "1n")) burrow0 in
 
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
          ~real:(Burrow.burrow_address  burrow)
     );
 
-    ("burrow_withdraw_tez - fails if withdrawal would overburrow the burrow" >::
+    ("burrow_withdraw_collateral - fails if withdrawal would overburrow the burrow" >::
      fun _ ->
        let burrow0 = make_test_burrow
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "4n"))
@@ -228,7 +228,7 @@ let suite =
          (Failure (Ligo.string_of_int error_WithdrawTezFailure))
          (fun () ->
             let _ =
-              Burrow.burrow_withdraw_tez
+              Burrow.burrow_withdraw_collateral
                 {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
                 (tok_of_denomination (Ligo.nat_from_literal "2n"))
                 burrow0
@@ -925,7 +925,7 @@ let suite =
 
       qcheck_to_ounit
       @@ QCheck.Test.make
-        ~name:"burrow_withdraw_tez - fails when the withdrawal would cause the burrow to be overburrowed"
+        ~name:"burrow_withdraw_collateral - fails when the withdrawal would cause the burrow to be overburrowed"
         ~count:property_test_count
         arb_tez
       @@ fun tez_to_withdraw ->
@@ -936,7 +936,7 @@ let suite =
 
       assert_raises
         (Failure (Ligo.string_of_int error_WithdrawTezFailure))
-        (fun () -> Burrow.burrow_withdraw_tez Parameters.initial_parameters tez_to_withdraw burrow);
+        (fun () -> Burrow.burrow_withdraw_collateral Parameters.initial_parameters tez_to_withdraw burrow);
       true
     );
 

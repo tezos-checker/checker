@@ -285,7 +285,7 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("deposit_collateral", 1, amount=2_000_000)
 
         # Withdraw tez
-        call_checker_endpoint("withdraw_tez", (1, 2_000_000))
+        call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
 
         # Set delegate
         call_checker_endpoint("set_burrow_delegate", (1, account))

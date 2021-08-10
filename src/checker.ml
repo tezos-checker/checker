@@ -206,13 +206,13 @@ let entrypoint_mint_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
-let entrypoint_withdraw_tez (state, (burrow_no, tez): checker * (Ligo.nat * Ligo.tez)) : LigoOp.operation list * checker =
+let entrypoint_withdraw_collateral (state, (burrow_no, tez): checker * (Ligo.nat * Ligo.tez)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let burrow = burrow_withdraw_tez state.parameters (tok_of_tez tez) burrow in
+  let burrow = burrow_withdraw_collateral state.parameters (tok_of_tez tez) burrow in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (tez, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
