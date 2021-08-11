@@ -271,10 +271,23 @@ payment is made to Tezos.sender with the liquidation reward.
 | id            | nat                   | The caller's ID for the burrow to mark for liquidation                  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Process completed liquidation slices
 ------------------------------------
 
+Process a number of liquidation slices (i.e., amounts of tez that have been
+auctioned off as part of completed liquidation auctions). Fails if any of the
+identifiers given are not valid. Pointers to slices of incomplete auctions are
+ignored.
+
 ``touch_liquidation_slices: (list int)``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| slice_ptrs    | list int              | The unique identifiers of the slices to be processed                    |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Cancel pending liquidation slices
 ---------------------------------
