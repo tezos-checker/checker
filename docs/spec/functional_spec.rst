@@ -361,7 +361,24 @@ Maintenance entrypoints
 Perform Checker internal maintenance
 ------------------------------------
 
+Perform housekeeping tasks on the contract state. This includes:
+* updating the system parameters;
+* accruing burrowing fees to the cfmm;
+* updating auction-related info (completing an old / starting a new auction);
+* processing a limited number of liquidation slices from completed auctions;
+* updating the index by consulting the oracle.
+
+This operation credits an amount of kit (that is a function of time passed
+since the last time `touch` was called) to Tezos.sender.
+
 ``touch: unit``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| -             | unit                  | -                                                                       |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Apply an Oracle update
 ----------------------
