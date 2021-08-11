@@ -259,7 +259,7 @@ Mark a burrow for liquidation
 
 Mark a burrow for liquidation. Fails if the the burrow does not exist or if it
 is not a candidate for liquidation. If the operation is successful, a tez
-payment is made to Tezos.sender with the liquidation reward.
+payment is made to ``Tezos.sender`` with the liquidation reward.
 
 ``mark_for_liquidation: (pair address nat)``
 
@@ -328,7 +328,8 @@ Claim the collateral from a winning auction bid
 Claim the rewards of a completed liquidation auction. Fails if the sender is
 not the auction winner, if the auction is still ongoing, or if the completed
 auction still has unprocessed liquidation slices. If the operation is
-successful, a tez payment is made to Tezos.sender with the auction winnings.
+successful, a tez payment is made to ``Tezos.sender`` with the auction
+winnings.
 
 ``liquidation_auction_claim_win: nat``
 
@@ -362,14 +363,15 @@ Perform Checker internal maintenance
 ------------------------------------
 
 Perform housekeeping tasks on the contract state. This includes:
-* updating the system parameters;
-* accruing burrowing fees to the cfmm;
-* updating auction-related info (completing an old / starting a new auction);
-* processing a limited number of liquidation slices from completed auctions;
-* updating the index by consulting the oracle.
+
+#. updating the system parameters;
+#. accruing burrowing fees to the cfmm;
+#. updating auction-related info (completing an old / starting a new auction);
+#. processing a limited number of liquidation slices from completed auctions;
+#. updating the index by consulting the oracle.
 
 This operation credits an amount of kit (that is a function of time passed
-since the last time ``touch`` was called) to Tezos.sender.
+since the last time ``touch`` was called) to ``Tezos.sender``.
 
 ``touch: unit``
 
