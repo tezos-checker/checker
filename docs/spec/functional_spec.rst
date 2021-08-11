@@ -95,6 +95,22 @@ or if the sender is not the burrow owner.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
+Activate an inactive burrow
+---------------------------
+
+Activate a currently inactive burrow. Fail if the burrow does not exist,
+if the burrow is already active, if the amount of tez given is less than
+the creation deposit, or if the sender is not the burrow owner.
+
+``activate_burrow: nat``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| id            | nat                   | The caller's ID for the burrow to activate                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
 Deactivate a burrow
 -------------------
 
@@ -110,22 +126,6 @@ the given address.
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow to deactivate                            |
-+---------------+-----------------------+-------------------------------------------------------------------------+
-
-
-Activate an inactive burrow
----------------------------
-
-Activate a currently inactive burrow. Fail if the burrow does not exist,
-if the burrow is already active, if the amount of tez given is less than
-the creation deposit, or if the sender is not the burrow owner.
-
-``activate_burrow: nat``
-
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| Parameter     |      Field Type       | Description                                                             |
-+===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow to activate                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
