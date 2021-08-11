@@ -325,7 +325,19 @@ if the bid is too low.
 Claim the collateral from a winning auction bid
 -----------------------------------------------
 
+Claim the rewards of a completed liquidation auction. Fails if the sender is
+not the auction winner, if the auction is still ongoing, or if the completed
+auction still has unprocessed liquidation slices. If the operation is
+successful, a tez payment is made to Tezos.sender with the auction winnings.
+
 ``liquidation_auction_claim_win: int``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| auction_id    | int                   | The unique identifier of the completed auction                          |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Gather won collateral for a subsequent claim
 --------------------------------------------
