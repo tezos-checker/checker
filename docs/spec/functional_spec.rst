@@ -81,8 +81,9 @@ Burn kit
 --------
 
 Deposit/burn an amount of kit to a burrow. If there is excess kit, simply
-credit it back to the burrow owner. Fails if the burrow does not exist, or if
-the sender is not the burrow owner.
+credit it back to the burrow owner. Fails if the sender does not own the
+specified amount of kit, if the burrow does not exist, or if the sender is not
+the burrow owner.
 
 ``burn_kit: (pair nat nat)``
 
@@ -170,8 +171,9 @@ CFMM Exchange
 Buy kit using ctez
 ------------------
 
-Buy some kit from the CFMM contract in exchange for ctez. Fails if the desired
-amount of kit cannot be bought or if the deadline has passed.
+Buy some kit from the CFMM contract in exchange for ctez. Fails if checker is
+not authorized to transfer the specified amount of ctez, if the desired amount
+of kit cannot be bought, or if the deadline has passed.
 
 ``buy_kit: (pair (pair nat nat) timestamp)``
 
@@ -189,8 +191,9 @@ amount of kit cannot be bought or if the deadline has passed.
 Sell kit for ctez
 -----------------
 
-Sell some kit in exchange for ctez. Fails if the desired amount of ctez cannot
-be bought or if the deadline has passed.
+Sell some kit in exchange for ctez. Fails if the sender does not own the
+specified amount of kit, if the desired amount of ctez cannot be bought, or if
+the deadline has passed.
 
 ``sell_kit: (pair (pair nat nat) timestamp)``
 
@@ -210,7 +213,9 @@ Provide liquidity
 Deposit some ctez and kit for liquidity in exchange for receiving liquidity
 tokens. If the given amounts do not have the right ratio, the CFMM contract
 keeps all the ctez given and as much of the given kit as possible with the
-right ratio, and returns the leftovers, along with the liquidity tokens.
+right ratio, and returns the leftovers, along with the liquidity tokens. Fails
+if checker is not authorized to transfer the specified amount of ctez, or if
+the sender does not own the specified amount of kit.
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``
 
@@ -231,6 +236,7 @@ Withdraw liquidity
 ------------------
 
 Redeem some liquidity tokens in exchange for ctez and kit in the right ratio.
+Fails if the sender does not own the specified liquidity tokens.
 
 ``remove_liquidity: (pair (pair nat nat) nat timestamp)``
 
@@ -304,8 +310,9 @@ the burrow is currently overburrowed.
 Bid in the current liquidation auction
 --------------------------------------
 
-Bid in the current liquidation auction. Fails if there is no ongoing auction or
-if the bid is too low.
+Bid in the current liquidation auction. Fails if the sender does not own the
+specified amount of kit, if there is no ongoing auction, or if the bid is too
+low.
 
 ``liquidation_auction_place_bid: (pair nat nat)``
 
