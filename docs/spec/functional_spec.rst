@@ -560,12 +560,14 @@ Check whether a burrow is overburrowed
 Check whether a burrow can be liquidated
 ----------------------------------------
 
-``is_burrow_liquidatable : nat -> bool``
+``is_burrow_liquidatable : (pair address nat) -> bool``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow                                          |
+| owner         | address               | The burrow owner's address                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| id            | nat                   | The caller's ID for the burrow in question                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
