@@ -32,7 +32,7 @@ jobs:
             console.log(prs);
 
             async function testsPassed(ref) {
-              const res = (await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
+              const res = (await github.request('GET /repos/{context.repo.owner}/{context.repo.repo}/commits/{ref}/check-runs', {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: ref
@@ -42,8 +42,8 @@ jobs:
 
             async function commentExists(issue_number, marker) {
               const cs = await github.issues.listComments({
-                owner,
-                repo,
+                context.repo.owner,
+                context.repo.repo,
                 issue_number,
               })
 
