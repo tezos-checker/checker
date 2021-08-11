@@ -4,8 +4,8 @@ name: Comment PR results
 concurrency: bot-mutex
 
 on:
-  # schedule:
-  #   - cron:  '0/10 * * * *'
+  schedule:
+    - cron:  '0/10 * * * *'
   workflow_dispatch: {}
 
 jobs:
