@@ -12,9 +12,9 @@ supply. These numbers need not be contiguous.
 Create a burrow
 ---------------
 
-Create and return a new burrow containing the supplied tez as collateral,
-minus the creation deposit. Fail if the tez is not enough to cover the
-creation deposit.
+Create and return a new burrow containing the supplied tez as collateral, minus
+the creation deposit. Fail if the tez is not enough to cover the creation
+deposit.
 
 ``create_burrow: (pair nat (option key_hash))``
 
@@ -30,8 +30,8 @@ creation deposit.
 Deposit collateral in a burrow
 ------------------------------
 
-Deposit an amount of tez as collateral to a burrow. Fail if
-the burrow does not exist, or if the sender is not the burrow owner.
+Deposit an amount of tez as collateral to a burrow. Fail if the burrow does not
+exist, or if the sender is not the burrow owner.
 
 ``deposit_collateral: nat``
 
@@ -45,9 +45,8 @@ the burrow does not exist, or if the sender is not the burrow owner.
 Withdraw collateral from a burrow
 ---------------------------------
 
-Withdraw an amount of tez from a burrow. Fail if the burrow
-does not exist, if this action would overburrow it, or if the sender is not
-the burrow owner.
+Withdraw an amount of tez from a burrow. Fail if the burrow does not exist, if
+this action would overburrow it, or if the sender is not the burrow owner.
 
 ``withdraw_collateral: (pair nat mutez)``
 
@@ -63,8 +62,9 @@ the burrow owner.
 Mint kit
 --------
 
-Mint an amount of kit from a specific burrow. Fail if the burrow does not exist, if
-there is not enough collateral, or if the sender is not the burrow owner.
+Mint an amount of kit from a specific burrow. Fail if the burrow does not
+exist, if there is not enough collateral, or if the sender is not the burrow
+owner.
 
 ``mint_kit: (pair nat nat)``
 
@@ -80,9 +80,9 @@ there is not enough collateral, or if the sender is not the burrow owner.
 Burn kit
 --------
 
-Deposit/burn an amount of kit to a burrow. If there is excess kit,
-simply credit it back to the burrow owner. Fail if the burrow does not exist,
-or if the sender is not the burrow owner.
+Deposit/burn an amount of kit to a burrow. If there is excess kit, simply
+credit it back to the burrow owner. Fail if the burrow does not exist, or if
+the sender is not the burrow owner.
 
 ``burn_kit: (pair nat nat)``
 
@@ -98,9 +98,9 @@ or if the sender is not the burrow owner.
 Activate an inactive burrow
 ---------------------------
 
-Activate a currently inactive burrow. Fail if the burrow does not exist,
-if the burrow is already active, if the amount of tez given is less than
-the creation deposit, or if the sender is not the burrow owner.
+Activate a currently inactive burrow. Fail if the burrow does not exist, if the
+burrow is already active, if the amount of tez given is less than the creation
+deposit, or if the sender is not the burrow owner.
 
 ``activate_burrow: nat``
 
@@ -114,11 +114,10 @@ the creation deposit, or if the sender is not the burrow owner.
 Deactivate a burrow
 -------------------
 
-Deactivate a currently active burrow. Fails if the burrow does not exist,
-if it is already inactive, if it is overburrowed, if it has kit
-outstanding, if it has collateral sent off to auctions, or if the sender is
-not the burrow owner. If deactivation is successful, make a tez payment to
-the given address.
+Deactivate a currently active burrow. Fails if the burrow does not exist, if it
+is already inactive, if it is overburrowed, if it has kit outstanding, if it
+has collateral sent off to auctions, or if the sender is not the burrow owner.
+If deactivation is successful, make a tez payment to the given address.
 
 ``deactivate_burrow: (pair nat address)``
 
@@ -152,8 +151,7 @@ burrow was operated on). Fails if the burrow does not exist.
 Set the delegate for a burrow
 -----------------------------
 
-Set the delegate of a burrow. Fail if if the sender is not the burrow
-owner.
+Set the delegate of a burrow. Fail if if the sender is not the burrow owner.
 
 ``set_burrow_delegate: (pair nat (option key_hash))``
 
@@ -172,8 +170,8 @@ CFMM Exchange
 Buy kit using ctez
 ------------------
 
-Buy some kit from the CFMM contract in exchange for ctez. Fail if the
-desired amount of kit cannot be bought or if the deadline has passed.
+Buy some kit from the CFMM contract in exchange for ctez. Fail if the desired
+amount of kit cannot be bought or if the deadline has passed.
 
 ``buy_kit: (pair (pair nat nat) timestamp)``
 
@@ -191,8 +189,8 @@ desired amount of kit cannot be bought or if the deadline has passed.
 Sell kit for ctez
 -----------------
 
-Sell some kit in exchange for ctez. Fail if the desired amount of ctez
-cannot be bought or if the deadline has passed.
+Sell some kit in exchange for ctez. Fail if the desired amount of ctez cannot
+be bought or if the deadline has passed.
 
 ``sell_kit: (pair (pair nat nat) timestamp)``
 
@@ -209,11 +207,10 @@ cannot be bought or if the deadline has passed.
 Provide liquidity
 -----------------
 
-Deposit some ctez and kit for liquidity in exchange for receiving
-liquidity tokens. If the given amounts do not have the right ratio,
-the CFMM contract keeps all the ctez given and as much of the given kit as
-possible with the right ratio, and returns the leftovers, along with the
-liquidity tokens.
+Deposit some ctez and kit for liquidity in exchange for receiving liquidity
+tokens. If the given amounts do not have the right ratio, the CFMM contract
+keeps all the ctez given and as much of the given kit as possible with the
+right ratio, and returns the leftovers, along with the liquidity tokens.
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``
 
@@ -233,8 +230,7 @@ liquidity tokens.
 Withdraw liquidity
 ------------------
 
-Redeem some liquidity tokens in exchange for ctez and kit in the right
-ratio.
+Redeem some liquidity tokens in exchange for ctez and kit in the right ratio.
 
 ``remove_liquidity: (pair (pair nat nat) nat timestamp)``
 
@@ -420,10 +416,9 @@ Update operators
 FA2 Views
 =========
 
-Checker exposes a number of FA2 views in its contract
-metadata. Standard token views are provided, as are a number of custom
-views provided for integration convenience, e.g. for use by front-end
-applications.
+Checker exposes a number of FA2 views in its contract metadata. Standard token
+views are provided, as are a number of custom views provided for integration
+convenience, e.g. for use by front-end applications.
 
 Standard FA2 views
 ------------------
