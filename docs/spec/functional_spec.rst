@@ -259,7 +259,7 @@ Liquidation Auctions
 Mark a burrow for liquidation
 -----------------------------
 
-Mark a burrow for liquidation. Fails if the the burrow does not exist or if it
+Mark a burrow for liquidation. Fails if the the burrow does not exist, or if it
 is not a candidate for liquidation. If the operation is successful, a tez
 payment is made to ``Tezos.sender`` with the liquidation reward.
 
