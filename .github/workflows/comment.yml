@@ -24,17 +24,20 @@ jobs:
             const util = require('util');
             const execFile = util.promisify(require('child_process').execFile);
 
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
             const prs = (await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: owner,
+              repo: repo,
               state: "open"
             })).data;
             console.log(prs);
 
             async function testsPassed(ref) {
-              const res = (await github.request('GET /repos/{context.repo.owner}/{context.repo.repo}/commits/{ref}/check-runs', {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+              const res = (await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
+                owner: owner,
+                repo: repo,
                 ref: ref
               })).data.check_runs;
               return res.length > 0 && res.every(r => r.conclusion === "success");
@@ -42,8 +45,8 @@ jobs:
 
             async function commentExists(issue_number, marker) {
               const cs = await github.issues.listComments({
-                context.repo.owner,
-                context.repo.repo,
+                owner,
+                repo,
                 issue_number,
               })
 
@@ -83,8 +86,8 @@ jobs:
 
                 github.issues.createComment({
                   issue_number: pr.id,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
+                  owner: owner,
+                  repo: repo,
                   body: ret.stdout + "\n\n[hiddencomment]: " + marker
                 });
               }
