@@ -178,7 +178,7 @@ amount of kit cannot be bought or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | An amount of ctez to be sold for kit, in muctez                         |
+| ctez          | nat                   | An amount of ctez to be sold for kit                                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected to be bought                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -199,7 +199,7 @@ be bought or if the deadline has passed.
 +===============+=======================+=========================================================================+
 | kit           | nat                   | The amount of kit to be sold                                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected to be bought, in muctez             |
+| ctez          | nat                   | The minimum amount of ctez expected to be bought                        |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -217,7 +217,7 @@ right ratio, and returns the leftovers, along with the liquidity tokens.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to supply as liquidity, in muctez                    |
+| ctez          | nat                   | The amount of ctez to supply as liquidity                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The maximum amount of kit to supply as liquidity                        |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -239,7 +239,7 @@ Redeem some liquidity tokens in exchange for ctez and kit in the right ratio.
 +===============+=======================+=========================================================================+
 | amount        | nat                   | The number of liquidity tokens to redeem                                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected, in muctez                          |
+| ctez          | nat                   | The minimum amount of ctez expected                                     |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected                                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
