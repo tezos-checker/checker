@@ -54,7 +54,7 @@ jobs:
 
             for (let i=0; i < prs.length; i++) {
               const pr = prs[i];
-              console.log("Processing PR", pr.id);
+              console.log("Processing PR", pr.number);
 
               const base = pr.base.sha;
               const head = pr.head.sha;
@@ -70,7 +70,7 @@ jobs:
               const marker = "bot:" + base + ":" + head;
 
               // only run the job if there is no existing comment
-              if(await (commentExists(pr.id, marker))) {
+              if(await (commentExists(pr.number, marker))) {
                 console.log("Comment exists, skipping.");
               } else {
                 const ret = await (execFile(
