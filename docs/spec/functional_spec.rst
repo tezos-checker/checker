@@ -448,6 +448,7 @@ amount of ctez (when calling ``buy_kit``), based on the current market price.
 | ctez          | nat                   | The amount of ctez to be sold to the cfmm                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Estimate yield when selling kit for ctez
 ----------------------------------------
 
@@ -462,6 +463,7 @@ price.
 +===============+=======================+=========================================================================+
 | kit           | nat                   | The amount of kit to be sold to the cfmm                                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Estimate kit requirements when adding liquidity
 -----------------------------------------------
@@ -478,6 +480,7 @@ current market price.
 | ctez          | nat                   | The amount of ctez to be given as liquidity                             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Estimate yield when adding liquidity
 ------------------------------------
 
@@ -493,6 +496,7 @@ on the current market price.
 | ctez          | nat                   | The amount of ctez to be given as liquidity                             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Estimate ctez yield when removing liquidity
 -------------------------------------------
 
@@ -507,6 +511,7 @@ the current market price.
 +===============+=======================+=========================================================================+
 | liquidity     | nat                   | The amount of liquidity token to be returned to the cfmm                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Estimate kit yield when removing liquidity
 ------------------------------------------
@@ -537,6 +542,7 @@ Returns the maximum amount of kit that can be minted from the given burrow.
 | id            | nat                   | The caller's ID for the burrow                                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Check whether a burrow is overburrowed
 --------------------------------------
 
@@ -548,6 +554,7 @@ Check whether a burrow is overburrowed
 | id            | nat                   | The caller's ID for the burrow                                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
+
 Check whether a burrow can be liquidated
 ----------------------------------------
 
@@ -558,6 +565,7 @@ Check whether a burrow can be liquidated
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow                                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Minimum bid for the current liquidation auction (if exists)
 -----------------------------------------------------------
