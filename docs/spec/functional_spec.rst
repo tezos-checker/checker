@@ -127,7 +127,7 @@ the given address.
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow to deactivate                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| recipient     | address               | The address to send the burrow's collateral and creation deposit to     |
+| receiver      | address               | The address to send the burrow's collateral and creation deposit to     |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
