@@ -308,7 +308,19 @@ the burrow is currently overburrowed.
 Bid in the current liquidation auction
 --------------------------------------
 
+Bid in the current liquidation auction. Fails if there is no ongoing auction or
+if the bid is too low.
+
 ``liquidation_auction_place_bid: (pair nat nat)``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| auction_id    | nat                   | The unique identifier of the currently ongoing liquidation auction      |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| kit           | nat                   | The amount of kit to be bid                                             |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Claim the collateral from a winning auction bid
 -----------------------------------------------
