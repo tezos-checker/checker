@@ -366,7 +366,16 @@ Perform Checker internal maintenance
 Apply an Oracle update
 ----------------------
 
+Internal. Receive a price update from the registered oracle.
+
 ``receive_price: nat``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| price         | nat                   | The current index, as a fixedpoint with a scaling factor of 1000000     |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 FA1.2 Interface
 ===============
