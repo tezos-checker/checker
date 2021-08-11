@@ -120,12 +120,14 @@ outstanding, if it has collateral sent off to auctions, or if the sender is
 not the burrow owner. If deactivation is successful, make a tez payment to
 the given address.
 
-``deactivate_burrow: nat``
+``deactivate_burrow: (pair nat address)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow to deactivate                            |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| recipient     | address               | The address to send the burrow's collateral and creation deposit to     |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
