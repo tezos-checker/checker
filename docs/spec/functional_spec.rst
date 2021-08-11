@@ -134,11 +134,11 @@ the given address.
 Perform burrow maintenance
 --------------------------
 
-``touch_burrow: (pair address nat)``
-
 Perform maintenance tasks on a burrow (i.e., update it's outstanding kit
 according to the system changes that have taken place since the last time the
 burrow was operated on). Fails if the burrow does not exist.
+
+``touch_burrow: (pair address nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
