@@ -546,7 +546,7 @@ Returns the maximum amount of kit that can be minted from the given burrow.
 Check whether a burrow is overburrowed
 --------------------------------------
 
-``is_burrow_overburrowed : (pair address nat) -> bool``
+``is_burrow_overburrowed : pair address nat -> bool``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -560,7 +560,7 @@ Check whether a burrow is overburrowed
 Check whether a burrow can be liquidated
 ----------------------------------------
 
-``is_burrow_liquidatable : (pair address nat) -> bool``
+``is_burrow_liquidatable : pair address nat -> bool``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
