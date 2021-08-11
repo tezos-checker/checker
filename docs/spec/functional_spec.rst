@@ -532,14 +532,16 @@ current market price.
 Find maximum kit that can be minted
 -----------------------------------
 
-``burrow_max_mintable_kit : nat -> nat``
-
 Returns the maximum amount of kit that can be minted from the given burrow.
+
+``burrow_max_mintable_kit : pair address nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow                                          |
+| owner         | address               | The burrow owner's address                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| id            | nat                   | The caller's ID for the burrow in question                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
