@@ -466,14 +466,16 @@ price.
 Estimate kit requirements when adding liquidity
 -----------------------------------------------
 
-``add_liquidity_max_kit_deposited : nat -> nat``
+Get the minimum amount of kit that needs to be deposited when adding liquidity
+for the given amount of ctez (when calling ``add_liquidity``), based on the
+current market price.
 
-Get the minimum amount of kit that needs to be deposited when adding liquidity for the given amount of ctez, based on the current market price
+``add_liquidity_max_kit_deposited : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez, in muctez                                           |
+| ctez          | nat                   | The amount of ctez to be given as liquidity                             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate yield when adding liquidity
