@@ -481,14 +481,16 @@ current market price.
 Estimate yield when adding liquidity
 ------------------------------------
 
-``add_liquidity_min_lqt_minted : nat -> nat``
+Get the maximum amount of the liquidity token that can be expected to be
+received for the given amount of ctez (when calling ``add_liquidity``), based
+on the current market price.
 
-Get the maximum amount of the liquidity token that can be expected for the given amount of ctez, based on the current market price
+``add_liquidity_min_lqt_minted : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez, in muctez                                           |
+| ctez          | nat                   | The amount of ctez to be given as liquidity                             |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate ctez yield when removing liquidity
