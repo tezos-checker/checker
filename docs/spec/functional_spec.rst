@@ -369,7 +369,7 @@ Perform housekeeping tasks on the contract state. This includes:
 * updating the index by consulting the oracle.
 
 This operation credits an amount of kit (that is a function of time passed
-since the last time `touch` was called) to Tezos.sender.
+since the last time ``touch`` was called) to Tezos.sender.
 
 ``touch: unit``
 
