@@ -20,7 +20,9 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - uses: actions/github-script@v4.0.2
         with:
-          script: |
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         script: |
             const util = require('util');
             const execFile = util.promisify(require('child_process').execFile);
 
