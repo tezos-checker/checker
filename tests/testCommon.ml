@@ -80,20 +80,6 @@ let suite =
          ~real:(clamp_int (Ligo.int_from_literal "8") (Ligo.int_from_literal "-5") (Ligo.int_from_literal "7"));
     );
 
-    "max_tez - first greater than the second" >::
-    (fun _ ->
-       assert_tez_equal
-         ~expected:(Ligo.tez_from_literal "9_337_600_103_819mutez")
-         ~real:(max_tez (Ligo.tez_from_literal "9_337_600_103_819mutez") (Ligo.tez_from_literal "9_337_600_103_818mutez")) (* note: randomly chosen *)
-    );
-
-    "max_tez - second greater than the first" >::
-    (fun _ ->
-       assert_tez_equal
-         ~expected:(Ligo.tez_from_literal "9_337_600_103_819mutez")
-         ~real:(max_tez (Ligo.tez_from_literal "9_337_600_103_818mutez") (Ligo.tez_from_literal "9_337_600_103_819mutez")) (* note: randomly chosen *)
-    );
-
     "fraction_to_tez_floor" >::
     (fun _ ->
        assert_tez_equal
