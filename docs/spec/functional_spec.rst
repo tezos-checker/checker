@@ -437,14 +437,15 @@ The following standard FA2 views are supported:
 Estimate yield when buying kit with ctez
 ----------------------------------------
 
-``buy_kit_min_kit_expected : nat -> nat``
+Get the maximum amount of kit that can be expected to be received for the given
+amount of ctez (when calling ``buy_kit``), based on the current market price.
 
-Get the maximum amount of kit that can be expected for the given amount of ctez, based on the current market price
+``buy_kit_min_kit_expected : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez, in muctez                                           |
+| ctez          | nat                   | The amount of ctez to be sold to the cfmm                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate yield when selling kit for ctez
