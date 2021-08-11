@@ -342,7 +342,18 @@ successful, a tez payment is made to Tezos.sender with the auction winnings.
 Gather won collateral for a subsequent claim
 --------------------------------------------
 
+Internal. Receive a liquidation slice (tez) from a burrow.
+
 ``receive_slice_from_burrow: (pair address nat)``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| owner         | address               | The burrow owner's address                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| id            | nat                   | The caller's ID for the burrow sending the slice                        |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Maintenance entrypoints
 =======================
