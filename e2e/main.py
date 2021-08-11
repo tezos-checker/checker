@@ -177,7 +177,7 @@ def cancel_liquidation_slice_profiler(
         }
     }
     for op in ret["contents"]:
-        # Ignore other operations (e.g. deposit_tez)
+        # Ignore other operations (e.g. deposit_collateral)
         if op["parameters"]["entrypoint"] != "cancel_liquidation_slice":
             continue
         profile["cancel_liquidation_slice"]["gas"].append(op["gas_limit"])
@@ -282,10 +282,10 @@ class E2ETest(SandboxedTestCase):
         assert_kit_balance(checker, account, 999_990)
 
         # Deposit tez
-        call_checker_endpoint("deposit_tez", 1, amount=2_000_000)
+        call_checker_endpoint("deposit_collateral", 1, amount=2_000_000)
 
         # Withdraw tez
-        call_checker_endpoint("withdraw_tez", (1, 2_000_000))
+        call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
 
         # Set delegate
         call_checker_endpoint("set_burrow_delegate", (1, account))
@@ -580,7 +580,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         ):
             cancel_ops.append(
                 (
-                    checker.deposit_tez(
+                    checker.deposit_collateral(
                         leaf["leaf"]["value"]["contents"]["burrow"][1]
                     ).with_amount(1_000_000_000),
                     checker.cancel_liquidation_slice(queued_leaf_ptr),

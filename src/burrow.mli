@@ -81,11 +81,11 @@ val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidat
 val burrow_create : parameters -> Ligo.address -> tok -> Ligo.key_hash option -> burrow
 
 (** Add non-negative collateral to a burrow. *)
-val burrow_deposit_tez : parameters -> tok -> burrow -> burrow
+val burrow_deposit_collateral : parameters -> tok -> burrow -> burrow
 
 (** Withdraw an amount of collateral from the burrow, as long as this will
   * not overburrow it. *)
-val burrow_withdraw_tez : parameters -> tok -> burrow -> burrow
+val burrow_withdraw_collateral : parameters -> tok -> burrow -> burrow
 
 (** Mint a non-negative amount of kit from the burrow, as long as this will
   * not overburrow it *)

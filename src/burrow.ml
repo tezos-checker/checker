@@ -192,7 +192,7 @@ let burrow_create (p: parameters) (addr: Ligo.address) (tok: tok) (delegate_opt:
 
 (** Add non-negative collateral to a burrow. *)
 (* TOKFIX: we need a more generic name (e.g., deposit_collateral) *)
-let[@inline] burrow_deposit_tez (p: parameters) (t: tok) (b: burrow) : burrow =
+let[@inline] burrow_deposit_collateral (p: parameters) (t: tok) (b: burrow) : burrow =
   let b = burrow_touch p b in
   let burrow_out = { b with collateral = tok_add b.collateral t } in
   assert (b.address = burrow_out.address);
@@ -201,7 +201,7 @@ let[@inline] burrow_deposit_tez (p: parameters) (t: tok) (b: burrow) : burrow =
 (** Withdraw a non-negative amount of collateral from the burrow, as long as
   * this will not overburrow it. *)
 (* TOKFIX: we need a more generic name (e.g., withdraw_collateral) *)
-let burrow_withdraw_tez (p: parameters) (t: tok) (b: burrow) : burrow =
+let burrow_withdraw_collateral (p: parameters) (t: tok) (b: burrow) : burrow =
   let b = burrow_touch p b in
   let burrow = { b with collateral = tok_sub b.collateral t } in
   let burrow_out = if burrow_is_overburrowed p burrow
