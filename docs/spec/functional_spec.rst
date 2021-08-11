@@ -13,7 +13,7 @@ Create a burrow
 ---------------
 
 Create and return a new burrow containing the supplied tez as collateral, minus
-the creation deposit. Fail if the tez is not enough to cover the creation
+the creation deposit. Fails if the tez is not enough to cover the creation
 deposit.
 
 ``create_burrow: (pair nat (option key_hash))``
@@ -30,8 +30,8 @@ deposit.
 Deposit collateral in a burrow
 ------------------------------
 
-Deposit an amount of tez as collateral to a burrow. Fail if the burrow does not
-exist, or if the sender is not the burrow owner.
+Deposit an amount of tez as collateral to a burrow. Fails if the burrow does
+not exist, or if the sender is not the burrow owner.
 
 ``deposit_collateral: nat``
 
@@ -45,7 +45,7 @@ exist, or if the sender is not the burrow owner.
 Withdraw collateral from a burrow
 ---------------------------------
 
-Withdraw an amount of tez from a burrow. Fail if the burrow does not exist, if
+Withdraw an amount of tez from a burrow. Fails if the burrow does not exist, if
 this action would overburrow it, or if the sender is not the burrow owner.
 
 ``withdraw_collateral: (pair nat mutez)``
@@ -62,7 +62,7 @@ this action would overburrow it, or if the sender is not the burrow owner.
 Mint kit
 --------
 
-Mint an amount of kit from a specific burrow. Fail if the burrow does not
+Mint an amount of kit from a specific burrow. Fails if the burrow does not
 exist, if there is not enough collateral, or if the sender is not the burrow
 owner.
 
@@ -81,7 +81,7 @@ Burn kit
 --------
 
 Deposit/burn an amount of kit to a burrow. If there is excess kit, simply
-credit it back to the burrow owner. Fail if the burrow does not exist, or if
+credit it back to the burrow owner. Fails if the burrow does not exist, or if
 the sender is not the burrow owner.
 
 ``burn_kit: (pair nat nat)``
@@ -98,7 +98,7 @@ the sender is not the burrow owner.
 Activate an inactive burrow
 ---------------------------
 
-Activate a currently inactive burrow. Fail if the burrow does not exist, if the
+Activate a currently inactive burrow. Fails if the burrow does not exist, if the
 burrow is already active, if the amount of tez given is less than the creation
 deposit, or if the sender is not the burrow owner.
 
@@ -151,7 +151,7 @@ burrow was operated on). Fails if the burrow does not exist.
 Set the delegate for a burrow
 -----------------------------
 
-Set the delegate of a burrow. Fail if if the sender is not the burrow owner.
+Set the delegate of a burrow. Fails if if the sender is not the burrow owner.
 
 ``set_burrow_delegate: (pair nat (option key_hash))``
 
@@ -170,7 +170,7 @@ CFMM Exchange
 Buy kit using ctez
 ------------------
 
-Buy some kit from the CFMM contract in exchange for ctez. Fail if the desired
+Buy some kit from the CFMM contract in exchange for ctez. Fails if the desired
 amount of kit cannot be bought or if the deadline has passed.
 
 ``buy_kit: (pair (pair nat nat) timestamp)``
@@ -189,7 +189,7 @@ amount of kit cannot be bought or if the deadline has passed.
 Sell kit for ctez
 -----------------
 
-Sell some kit in exchange for ctez. Fail if the desired amount of ctez cannot
+Sell some kit in exchange for ctez. Fails if the desired amount of ctez cannot
 be bought or if the deadline has passed.
 
 ``sell_kit: (pair (pair nat nat) timestamp)``
