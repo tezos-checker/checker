@@ -41,11 +41,11 @@ jobs:
             }
 
             async function commentExists(issue_number, marker) {
-              const cs = await github.issues.listComments({
+              const cs = (await github.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue_number
-              });
+              })).data;
 
               return cs.find(comment =>
                 comment.body.includes(marker)
