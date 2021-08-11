@@ -280,12 +280,12 @@ auctioned off as part of completed liquidation auctions). Fails if any of the
 identifiers given are not valid. Pointers to slices of incomplete auctions are
 ignored.
 
-``touch_liquidation_slices: (list int)``
+``touch_liquidation_slices: (list nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| slice_ptrs    | list int              | The unique identifiers of the slices to be processed                    |
+| slice_ptrs    | list nat              | The unique identifiers of the slices to be processed                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -296,12 +296,12 @@ Cancel the liquidation of a liquidation slice. Fails if the sender is not the
 burrow owner, if the slice is part of an ongoing or completed auction, or if
 the burrow is currently overburrowed.
 
-``cancel_liquidation_slice: int``
+``cancel_liquidation_slice: nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| slice_ptr     | int                   | The unique identifier of the slice whose liquidation is to be cancelled |
+| slice_ptr     | nat                   | The unique identifier of the slice whose liquidation is to be cancelled |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -330,12 +330,12 @@ not the auction winner, if the auction is still ongoing, or if the completed
 auction still has unprocessed liquidation slices. If the operation is
 successful, a tez payment is made to Tezos.sender with the auction winnings.
 
-``liquidation_auction_claim_win: int``
+``liquidation_auction_claim_win: nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| auction_id    | int                   | The unique identifier of the completed auction                          |
+| auction_id    | nat                   | The unique identifier of the completed auction                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
