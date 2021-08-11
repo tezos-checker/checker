@@ -451,14 +451,16 @@ amount of ctez (when calling ``buy_kit``), based on the current market price.
 Estimate yield when selling kit for ctez
 ----------------------------------------
 
-``sell_kit_min_ctez_expected : nat -> nat``
+Get the maximum amount of ctez that can be expected to be received for the
+given amount of kit (when calling ``sell_kit``), based on the current market
+price.
 
-Get the maximum amount (in ``muctez``) that can be expected for the given amount of ctez, based on the current market price
+``sell_kit_min_ctez_expected : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| kit           | nat                   | The amount of kit                                                       |
+| kit           | nat                   | The amount of kit to be sold to the cfmm                                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 Estimate kit requirements when adding liquidity
