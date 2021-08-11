@@ -63,7 +63,7 @@ the burrow owner.
 Mint kit
 --------
 
-Mint kits from a specific burrow. Fail if the burrow does not exist, if
+Mint an amount of kit from a specific burrow. Fail if the burrow does not exist, if
 there is not enough collateral, or if the sender is not the burrow owner.
 
 ``mint_kit: (pair nat nat)``
