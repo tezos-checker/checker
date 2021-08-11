@@ -257,7 +257,19 @@ Liquidation Auctions
 Mark a burrow for liquidation
 -----------------------------
 
+Mark a burrow for liquidation. Fails if the the burrow does not exist or if it
+is not a candidate for liquidation. If the operation is successful, a tez
+payment is made to Tezos.sender with the liquidation reward.
+
 ``mark_for_liquidation: (pair address nat)``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| owner         | address               | The burrow owner's address                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| id            | nat                   | The caller's ID for the burrow to mark for liquidation                  |
++---------------+-----------------------+-------------------------------------------------------------------------+
 
 Process completed liquidation slices
 ------------------------------------
