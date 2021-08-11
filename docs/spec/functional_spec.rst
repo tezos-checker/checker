@@ -30,7 +30,7 @@ creation deposit.
 Deposit collateral in a burrow
 ------------------------------
 
-Deposit a non-negative amount of tez as collateral to a burrow. Fail if
+Deposit an amount of tez as collateral to a burrow. Fail if
 the burrow does not exist, or if the sender is not the burrow owner.
 
 ``deposit_collateral: nat``
@@ -45,7 +45,7 @@ the burrow does not exist, or if the sender is not the burrow owner.
 Withdraw collateral from a burrow
 ---------------------------------
 
-Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
+Withdraw an amount of tez from a burrow. Fail if the burrow
 does not exist, if this action would overburrow it, or if the sender is not
 the burrow owner.
 
@@ -80,7 +80,7 @@ there is not enough collateral, or if the sender is not the burrow owner.
 Burn kit
 --------
 
-Deposit/burn a non-negative amount of kit to a burrow. If there is excess kit,
+Deposit/burn an amount of kit to a burrow. If there is excess kit,
 simply credit it back to the burrow owner. Fail if the burrow does not exist,
 or if the sender is not the burrow owner.
 
