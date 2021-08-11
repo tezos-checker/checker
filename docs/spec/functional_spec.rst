@@ -511,14 +511,16 @@ the current market price.
 Estimate kit yield when removing liquidity
 ------------------------------------------
 
-``remove_liquidity_min_kit_withdrawn : nat -> nat``
+Get the maximum amount of kit that can be expected to be received for the given
+amount of liquidity token (when calling ``remove_liquidity``), based on the
+current market price.
 
-Get the maximum amount of kit that can be expected for the given amount of liquidity token, based on the current market price
+``remove_liquidity_min_kit_withdrawn : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| liquidity     | nat                   | The amount of liquidity token                                           |
+| liquidity     | nat                   | The amount of liquidity token to be returned to the cfmm                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
