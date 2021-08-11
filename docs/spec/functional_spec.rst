@@ -292,7 +292,18 @@ ignored.
 Cancel pending liquidation slices
 ---------------------------------
 
+Cancel the liquidation of a liquidation slice. Fails if the sender is not the
+burrow owner, if the slice is part of an ongoing or completed auction, or if
+the burrow is currently overburrowed.
+
 ``cancel_liquidation_slice: int``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| slice_ptr     | int                   | The unique identifier of the slice whose liquidation is to be cancelled |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
 
 Bid in the current liquidation auction
 --------------------------------------
