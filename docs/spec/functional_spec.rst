@@ -136,6 +136,17 @@ Perform burrow maintenance
 
 ``touch_burrow: (pair address nat)``
 
+Perform maintenance tasks on a burrow (i.e., update it's outstanding kit
+according to the system changes that have taken place since the last time the
+burrow was operated on). Fails if the burrow does not exist.
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| owner         | address               | The burrow owner's address                                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| id            | nat                   | The caller's ID for the burrow to deactivate                            |
++---------------+-----------------------+-------------------------------------------------------------------------+
 
 
 Set the delegate for a burrow
