@@ -399,8 +399,8 @@ Internal. Receive a price update from the registered oracle.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
-FA1.2 Interface
-===============
+FA2 Interface
+=============
 
 Query balance
 -------------
