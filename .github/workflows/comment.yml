@@ -74,20 +74,29 @@ jobs:
               // only run the job if there is no existing comment
               if(await (commentExists(pr.number, marker))) {
                 console.log("Comment exists, skipping.");
-              } else {
-                const ret = await (execFile(
+                continue;
+              }
+
+              let ret;
+
+              try {
+                ret = await (execFile(
                   "nix-shell",
                   [ "--run"
                   , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
                   ]
                 ));
-                console.log(ret);
-
-                github.issues.createComment({
-                  issue_number: pr.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: ret.stdout + "\n\n[hiddencomment]: " + marker
-                });
+              } catch (error) {
+                console.log("artifacts.py failed, skipping:", error);
+                continue;
               }
+
+              console.log(ret);
+
+              github.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: ret.stdout + "\n\n[hiddencomment]: " + marker
+              });
             }
