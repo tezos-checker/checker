@@ -53,7 +53,7 @@ class Config:
 
     def dump(self):
         with open(self.path, "w") as f:
-            f.write(ConfigSchema().dumps(self))
+            f.write(ConfigSchema().dumps(self, indent=4))
 
 
 class ConfigSchema(Schema):
