@@ -60,6 +60,21 @@ For running the end-to-end tests, type:
 $ CHECKER_DIR=$(nix-build -A michelson --arg e2eTestsHack true --no-out-link) python e2e/main.py
 ```
 
+### Development using Docker
+
+If you are not on Linux, or do not want to install the Nix package manager; a Docker-based development environment is also
+provided:
+
+```
+$ docker build --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -f nix/Dockerfile . -t checker-devcontainer
+$ docker run -it -v "$PWD:/mnt" checker-devcontainer
+```
+
+Within the image, you can use the `make` based workflow above. It also contains the `checker` executable that lets you
+deploy the contract.
+
+If you change the dependencies (including the code for the `checker` executable), spin up a fresh container.
+
 ## Local Deployment
 
 The contract can be deployed to a local, Docker sandbox run using the provided
