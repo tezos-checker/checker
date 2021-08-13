@@ -2,7 +2,7 @@
 # It contains the private key on a testnet. To reproduce, fetch an account from the faucet,
 # and run:
 #
-#   tezos-client activate account alice with tz1Ukue3ZGoNM6UY3mgGcrQnRqg68DsXECZC.json
+#   tezos-client activate account alice with tz1xxx.json
 #   tezos-client reveal key for alice
 #   tezos-client show address alice -S
 #
