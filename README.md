@@ -65,7 +65,7 @@ $ CHECKER_DIR=$(nix-build -A michelson --arg e2eTestsHack true --no-out-link) py
 If you are not on Linux, or do not want to install the Nix package manager; a Docker-based development environment is also
 provided:
 
-```
+```console
 $ docker build --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -f nix/Dockerfile . -t checker-devcontainer
 $ docker run -it -v "$PWD:/mnt" checker-devcontainer
 ```
