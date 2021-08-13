@@ -16,15 +16,15 @@ on:
       node:
         description: 'Node to connect to'
         required: true
-        default: 'https://edonet.smartpy.io/'
+        default: 'https://rpczero.tzbeta.net/'
       ctez:
         description: 'Ctez contract'
         required: true
-        default: 'KT1JHiNYzzwYZ2sZmZGcPCqgi3RAjoWshntQ'
+        default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
       oracle:
         description: 'Oracle contract'
         required: true
-        default: 'KT1RAcdY2zaX5PryXV9PDdJsT3cubWXkVEBg'
+        default: 'KT1Xbo2Lkg6nPqyka4fqD7kLTtW5wDD3vkGe'
 
 jobs:
   deploy:
