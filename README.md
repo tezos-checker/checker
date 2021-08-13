@@ -107,7 +107,7 @@ installed on your system and configured. Below are some instructions for
 setting up from scratch; if you've done this already, you can skip to the
 instructions "Deploy Checker" below.
 
-Initial Setup
+Initial `tezos-client` Download and Setup
 ---
 
 1. Install `tezos-client` (instructions taken from
@@ -179,7 +179,7 @@ checker deploy mock-oracle
 
 7. Finally, deploy checker
 ```console
-$ checker deploy checker --ctez KT1DKZZbMyFeXmZJT729tWPxN5i1kChX8obw --oracle KT1MZ1h1nRXFsMRc7dDxJ9HnVTJh8WcL9qDn
+$ checker deploy checker --ctez <ctez-fa12-address> --oracle <oracle-address>
 ```
 After `--ctez` you need the FA1.2 address for a deployed ctez contract, and
 after `--oracle` you need the address of a deployed oracle contract.  However,
