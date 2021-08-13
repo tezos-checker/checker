@@ -107,8 +107,7 @@ installed on your system and configured. Below are some instructions for
 setting up from scratch; if you've done this already, you can skip to the
 instructions "Deploy Checker" below.
 
-Initial `tezos-client` Download and Setup
----
+### Initial `tezos-client` Download and Setup
 
 1. Install `tezos-client` (instructions taken from
    [here](https://assets.tqtezos.com/docs/setup/1-tezos-client/))
@@ -142,10 +141,7 @@ $ tezos-client activate account alice with tz1Ukue3ZGoNM6UY3mgGcrQnRqg68DsXECZC.
 $ tezos-client reveal key for alice
 ```
 
-Deploy Checker
----
-This is the checker-specific setup that you need to configure and deploy it.
-
+### Deploy Checker
 
 1. Enter a nix-shell
 ```console
