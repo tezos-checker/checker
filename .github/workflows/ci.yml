@@ -2,15 +2,7 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**/*'
-      - '.readthedocs.yaml'
   push:
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**/*'
-      - '.readthedocs.yaml'
 
 jobs:
   build:
