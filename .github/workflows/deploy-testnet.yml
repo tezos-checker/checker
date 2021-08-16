@@ -1,0 +1,61 @@
+# This workflow depends on a repository secret called `TESTNET_ACCOUNT_SECRET_KEY`.
+# It contains the private key on a testnet. To reproduce, fetch an account from the faucet,
+# and run:
+#
+#   tezos-client activate account alice with tz1xxx.json
+#   tezos-client reveal key for alice
+#   tezos-client show address alice -S
+#
+# Then set the `Secret Key` as the aforementioned secret. It should be of the form: unencrypted:edsk****
+
+name: Deploy to the testnet
+
+on:
+  workflow_dispatch:
+    inputs:
+      node:
+        description: 'Node to connect to'
+        required: true
+        default: 'https://rpczero.tzbeta.net/'
+      ctez:
+        description: 'Ctez contract'
+        required: true
+        default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
+      oracle:
+        description: 'Oracle contract'
+        required: true
+        default: 'KT1Xbo2Lkg6nPqyka4fqD7kLTtW5wDD3vkGe'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cachix/install-nix-action@v13
+      - uses: actions/checkout@v2
+      - uses: cachix/cachix-action@v10
+        with:
+          name: tezos-checker
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build shell dependencies
+        run: nix-shell --pure --run ':'
+      - name: Build checker
+        run: nix-build -A michelson
+      - name: Configure checker CLI
+        run: >
+          nix-shell --pure --run '
+            checker show-config \
+              | jq ".tezos_address = \"${{ github.event.inputs.node }}\"" \
+              | jq ".tezos_port = 443" \
+              | jq ".tezos_key = \"${{ secrets.TESTNET_ACCOUNT_SECRET_KEY }}\"" \
+              | cat > ~/checkerconfig.json \
+            '
+      - name: Deploy checker
+        run: >
+          nix-shell --pure --run '
+            checker \
+              --config ~/checkerconfig.json \
+              deploy checker \
+              --src result/ \
+              --ctez "${{ github.event.inputs.ctez }}" \
+              --oracle "${{ github.event.inputs.oracle }}" \
+            '
