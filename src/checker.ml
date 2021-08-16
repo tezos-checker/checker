@@ -91,7 +91,7 @@ let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contract
   | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
 
 let[@inline] get_oracle_entrypoint (external_contracts: external_contracts): (Ligo.nat Ligo.contract) Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt oracle_entrypoint external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
+  match (LigoOp.Tezos.get_entrypoint_opt "%getPrice" external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
   | Some c -> c
   | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint: (Ligo.nat Ligo.contract) Ligo.contract)
 

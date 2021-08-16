@@ -1,8 +1,5 @@
 open Error
 
-(* Oracle data *)
-let oracle_entrypoint : string = "%getPrice"
-
 (* OPERATIONS ON int *)
 let[@inline] int_zero = Ligo.int_from_literal "0"
 
