@@ -6,7 +6,7 @@
 #   tezos-client reveal key for alice
 #   tezos-client show address alice -S
 #
-# Then set the `Secret Key` as the aforamentioned secret. It should be of form: unencrypted:edsk****
+# Then set the `Secret Key` as the aforementioned secret. It should be of the form: unencrypted:edsk****
 
 name: Deploy to the testnet
 
