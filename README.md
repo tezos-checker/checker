@@ -125,7 +125,7 @@ $ source $HOME/.bashrc
 $ tezos-client --endpoint https://rpczero.tzbeta.net config update
 ```
 
-3. Verify that the operation worked
+3. Verify that you can connect to the network
 ```console
 $ tezos-client bootstrapped
 ```
