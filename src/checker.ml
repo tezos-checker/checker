@@ -163,7 +163,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
       !Ligo.Tezos.amount (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
       {checker_address = !Ligo.Tezos.self_address; burrow_id = burrow_id; } in
 
-  let burrow = burrow_create state.parameters burrow_address (tok_of_tez !Ligo.Tezos.amount) delegate_opt in
+  let burrow = burrow_create state.parameters burrow_address (tok_of_tez !Ligo.Tezos.amount) in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   ([op], state)
@@ -283,11 +283,9 @@ let entrypoint_set_burrow_delegate (state, (burrow_no, delegate_opt): checker * 
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
-  let burrow = burrow_set_delegate state.parameters delegate_opt burrow in
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSetDelegate" (burrow_address burrow) : Ligo.key_hash option Ligo.contract option) with
     | Some c -> LigoOp.Tezos.opt_key_hash_transaction delegate_opt (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSetDelegate : LigoOp.operation) in
-  let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
   assert_checker_invariants state;
   ([op], state)
 

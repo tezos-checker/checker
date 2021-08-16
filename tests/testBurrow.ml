@@ -16,7 +16,6 @@ let make_test_burrow ~outstanding_kit ~collateral ~active = Burrow.make_burrow_f
     ~outstanding_kit:outstanding_kit
     ~active:active
     ~address:burrow_addr
-    ~delegate:None
     ~collateral:collateral
     ~adjustment_index:fixedpoint_one
     ~collateral_at_auction:tok_zero
@@ -105,30 +104,6 @@ let suite =
            ~collateral:tok_zero in
 
        let burrow, _actual_burned = Burrow.burrow_burn_kit Parameters.initial_parameters (kit_of_denomination (Ligo.nat_from_literal "1n")) burrow0 in
-
-       assert_address_equal
-         ~expected:(Burrow.burrow_address burrow0)
-         ~real:(Burrow.burrow_address burrow)
-    );
-
-    ("burrow_set_delegate - does not fail for a burrow which needs to be touched" >::
-     fun _ ->
-       let _ =
-         Burrow.burrow_set_delegate
-           {Parameters.initial_parameters with last_touched=(Ligo.timestamp_from_seconds_literal 1)}
-           (Some charles_key_hash)
-           burrow_for_needs_touch_tests
-       in ()
-    );
-
-    ("burrow_set_delegate - does not change burrow address" >::
-     fun _ ->
-       let burrow0 = make_test_burrow
-           ~outstanding_kit:kit_zero
-           ~active:true
-           ~collateral:tok_zero in
-
-       let burrow = Burrow.burrow_set_delegate Parameters.initial_parameters (Some charles_key_hash) burrow0 in
 
        assert_address_equal
          ~expected:(Burrow.burrow_address burrow0)
@@ -446,7 +421,6 @@ let suite =
                   ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "0n"))
                   ~active:true
                   ~address:burrow_addr
-                  ~delegate:None
                   ~collateral:(tok_of_denomination (Ligo.nat_from_literal "10n"))
                   ~adjustment_index:fixedpoint_one
                   ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "1n"))
@@ -481,7 +455,7 @@ let suite =
     (* Note: this is a bit overkill but testing anyways since the address field is extremely important *)
     ("burrow_create - address matches provided address" >::
      fun _ ->
-       let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit None in
+       let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit in
 
        assert_address_equal
          ~expected:burrow_addr
@@ -492,7 +466,7 @@ let suite =
     (
       "burrow_create - created burrow has zero collateral at auction" >::
       fun _ ->
-        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit None in
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit in
 
         assert_tok_equal
           ~expected:tok_zero
@@ -502,7 +476,7 @@ let suite =
     (
       "burrow_create - created burrow has zero outstanding kit" >::
       fun _ ->
-        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit None in
+        let burrow = Burrow.burrow_create Parameters.initial_parameters burrow_addr Constants.creation_deposit in
 
         assert_kit_equal
           ~expected:kit_zero
@@ -533,7 +507,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1n"))
            ~active:true
            ~address:burrow_addr
-           ~delegate:None
            ~collateral:tok_zero
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "1n"))
@@ -557,7 +530,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "2n"))
            ~active:true
            ~address:burrow_addr
-           ~delegate:None
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2n"))
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3n"))
@@ -572,7 +544,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "2n"))
            ~active:true
            ~address:burrow_addr
-           ~delegate:None
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "3n"))
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "2n"))
@@ -590,7 +561,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1n"))
            ~active:true
            ~address:burrow_addr
-           ~delegate:None
            ~collateral:tok_zero
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "1n"))
@@ -670,7 +640,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "5n"))
            ~active:true
            ~address:burrow_addr
-           ~delegate:None
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2n"))
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "2n"))
@@ -708,7 +677,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3n"))
            ~active:true
            ~address:alice_addr
-           ~delegate:None
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "3n"))
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3n"))
@@ -729,7 +697,6 @@ let suite =
            ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "3n"))
            ~active:true
            ~address:alice_addr
-           ~delegate:None
            ~collateral:(tok_of_denomination (Ligo.nat_from_literal "3n"))
            ~adjustment_index:fixedpoint_one
            ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3n"))
@@ -747,7 +714,6 @@ let suite =
               ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10n"))
               ~active:true
               ~address:alice_addr
-              ~delegate:None
               ~collateral:tok_zero
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3n"))
@@ -766,7 +732,6 @@ let suite =
               ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1n"))
               ~active:true
               ~address:alice_addr
-              ~delegate:None
               ~collateral:tok_zero
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "1n"))
@@ -784,7 +749,6 @@ let suite =
               ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "4_657_142n"))
               ~active:true
               ~address:alice_addr
-              ~delegate:None
               ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_000_000n"))
               ~adjustment_index:fixedpoint_one
               ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -803,7 +767,6 @@ let suite =
             ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "4_657_143n"))
             ~active:true
             ~address:alice_addr
-            ~delegate:None
             ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_000_000n"))
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -822,7 +785,6 @@ let suite =
             ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "4_000_000n"))
             ~active:true
             ~address:alice_addr
-            ~delegate:None
             ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_469_999n"))
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -840,7 +802,6 @@ let suite =
             ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "4_000_000n"))
             ~active:true
             ~address:alice_addr
-            ~delegate:None
             ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_470_000n"))
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -858,7 +819,6 @@ let suite =
             ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1_000_000n"))
             ~active:true
             ~address:alice_addr
-            ~delegate:None
             ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_000_000n"))
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -876,7 +836,6 @@ let suite =
             ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "1_000_000n"))
             ~active:false
             ~address:alice_addr
-            ~delegate:None
             ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_000_000n"))
             ~adjustment_index:fixedpoint_one
             ~collateral_at_auction:(tok_of_denomination (Ligo.nat_from_literal "3_000_000n"))
@@ -1031,7 +990,6 @@ let suite =
           ~outstanding_kit:outstanding
           ~active:true
           ~address:burrow_addr
-          ~delegate:None
           ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1n"))
           ~adjustment_index:fixedpoint_one
           ~collateral_at_auction:tok_zero
@@ -1059,7 +1017,6 @@ let suite =
           ~outstanding_kit:outstanding_kit
           ~active:true
           ~address:burrow_addr
-          ~delegate:None
           ~collateral:collateral
           ~adjustment_index:fixedpoint_one
           ~collateral_at_auction:collateral_at_auction

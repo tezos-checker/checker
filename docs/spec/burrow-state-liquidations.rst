@@ -10,8 +10,6 @@ State
   it’s considered “inactive”.
 - ``address``: the address of the contract holding the burrow's collateral and
   creation deposit.
-- ``delegate``: the delegate for the amount of tez (collateral + creation
-  deposit) the burrow holds.
 -  ``collateral``: the amount of tez stored in the burrow. Collateral
    that has been sent to auctions **does not** count towards this
    amount; for all we know, it’s gone forever.

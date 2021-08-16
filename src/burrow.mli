@@ -78,7 +78,7 @@ val burrow_return_slice_from_auction : LiquidationAuctionPrimitiveTypes.liquidat
 (** Given an amount of collateral (including a creation deposit, not counting
   * towards that collateral), create a burrow with its owner set to the input
   * address. Fail if the collateral given is less than the creation deposit. *)
-val burrow_create : parameters -> Ligo.address -> tok -> Ligo.key_hash option -> burrow
+val burrow_create : parameters -> Ligo.address -> tok -> burrow
 
 (** Add non-negative collateral to a burrow. *)
 val burrow_deposit_collateral : parameters -> tok -> burrow -> burrow
@@ -104,9 +104,6 @@ val burrow_activate : parameters -> tok -> burrow -> burrow
   * (a) is already inactive, or (b) is overburrowed, or (c) has kit
   * outstanding, or (d) has collateral sent off to auctions. *)
 val burrow_deactivate : parameters -> burrow -> (burrow * tok)
-
-(** Set the delegate of a burrow. *)
-val burrow_set_delegate : parameters -> Ligo.key_hash option -> burrow -> burrow
 
 (* ************************************************************************* *)
 (*                          Liquidation-related                              *)
@@ -154,7 +151,6 @@ val burrow_active : burrow -> bool
 val make_burrow_for_test :
   active:bool ->
   address:Ligo.address ->
-  delegate:(Ligo.key_hash option) ->
   collateral:tok ->
   outstanding_kit:kit ->
   adjustment_index:fixedpoint ->

@@ -17,9 +17,6 @@ type burrow =
     active : bool;
     (* Address of the contract holding the burrow's collateral. *)
     address: Ligo.address;
-    (* The delegate for the tez (collateral + creation_deposit) the burrow
-     * holds. *) (* TOKFIX: Should be part of the wrapper contract. *)
-    delegate : Ligo.key_hash option;
     (* Collateral currently stored in the burrow. *)
     collateral : tok;
     (* Outstanding kit minted out of the burrow. *)
@@ -176,13 +173,12 @@ let burrow_return_kit_from_auction
   assert (eq_kit_kit (kit_add returned_kit excess_kit) kit);
   (burrow_out, returned_kit, excess_kit)
 
-let burrow_create (p: parameters) (addr: Ligo.address) (tok: tok) (delegate_opt: Ligo.key_hash option) : burrow =
+let burrow_create (p: parameters) (addr: Ligo.address) (tok: tok) : burrow =
   if lt_tok_tok tok creation_deposit
   then (Ligo.failwith error_InsufficientFunds : burrow)
   else
     { active = true;
       address = addr;
-      delegate = delegate_opt;
       collateral = tok_sub tok creation_deposit;
       outstanding_kit = kit_zero;
       adjustment_index = compute_adjustment_index p;
@@ -277,12 +273,6 @@ let burrow_deactivate (p: parameters) (b: burrow) : (burrow * tok) =
   in
   assert (b.address = burrow_out.address);
   burrow_out, return
-
-let burrow_set_delegate (p: parameters) (new_delegate: Ligo.key_hash option) (b: burrow) : burrow =
-  let b = burrow_touch p b in
-  let burrow_out = { b with delegate = new_delegate; } in
-  assert (b.address = burrow_out.address);
-  burrow_out
 
 (* ************************************************************************* *)
 (**                          LIQUIDATION-RELATED                             *)
@@ -566,13 +556,12 @@ let burrow_active (b: burrow) : bool =
 let make_burrow_for_test
     ~active
     ~address
-    ~delegate
     ~collateral
     ~outstanding_kit
     ~adjustment_index
     ~collateral_at_auction
     ~last_checker_timestamp =
-  { delegate = delegate;
+  {
     address = address;
     active = active;
     collateral = collateral;
