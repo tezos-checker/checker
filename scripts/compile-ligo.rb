@@ -16,11 +16,13 @@ MAIN_FILE="#{LIGO_DIR}/main.mligo"
 PROTOCOL = "PsFLoren"
 protocol_arg = ["--protocol", PROTOCOL]
 
+LIGO_COMMAND = ["docker", "run", "-v", "#{Dir.pwd}:#{Dir.pwd}", "-w", "#{Dir.pwd}", "--rm", "ghcr.io/tezos-checker/ligo:0.22.0-checker"]
+
 ##########################
 puts "Compiling contract."
 ##########################
 
-compiled_contract, exit_status = Open3.capture2("ligo", "compile-contract", MAIN_FILE, "main")
+compiled_contract, exit_status = Open3.capture2(*(LIGO_COMMAND + ["compile-contract", MAIN_FILE, "main"]))
 exit_status.success? or raise "compile-contract failed:\n#{compiled_contract}"
 
 begin
@@ -46,11 +48,11 @@ def compile_type_json(type)
   # TZIP-16 requires us to specify the argument and the return type of views, however
   # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
   # in the generated michelson and grab the type from there.
-  stdout, stderr, exit_status = Open3.capture3(
-    "ligo", "compile-expression", "cameligo",
+  stdout, stderr, exit_status = Open3.capture3(*(LIGO_COMMAND + [
+    "compile-expression", "cameligo",
     "--init-file", MAIN_FILE,
     "--michelson-format", "json",
-    "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"
+    "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"])
   )
   exit_status.success? or raise "compiling type #{type} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
   obj = JSON.parse(stdout)
@@ -58,11 +60,11 @@ def compile_type_json(type)
 end
 
 def compile_code_json(expr)
-  stdout, stderr, exit_status = Open3.capture3(
-    "ligo", "compile-expression", "cameligo",
+  stdout, stderr, exit_status = Open3.capture3(*(LIGO_COMMAND + [
+    "compile-expression", "cameligo",
     "--init-file", MAIN_FILE,
     "--michelson-format", "json",
-    expr
+    expr])
   )
   exit_status.success? or raise "compiling expression #{expr} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
   JSON.parse(stdout)
@@ -100,9 +102,9 @@ entrypoints.each_slice([entrypoints.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |entrypoint|
       stdout, stderr, exit_status = Open3.capture3(
-        "ligo", "compile-expression", "cameligo",
+        *(LIGO_COMMAND + ["compile-expression", "cameligo",
         "--init-file", MAIN_FILE,
-        "Bytes.pack lazy_fun_#{entrypoint[:name]}"
+        "Bytes.pack lazy_fun_#{entrypoint[:name]}"])
       )
       exit_status.success? or raise "compiling entrypoint #{entrypoint[:name]} failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
       packed_entrypoints << {
@@ -129,7 +131,8 @@ puts "Extracting the token information."
 ########################################
 
 stdout, stderr, exit_status = Open3.capture3(
-  "ligo", "compile-expression", "cameligo",
+                  *(LIGO_COMMAND + [
+  "compile-expression", "cameligo",
   "--init-file", MAIN_FILE, "--michelson-format", "json",
   '''Map.literal
        [ ("kit_token_id", kit_token_id)
@@ -137,7 +140,7 @@ stdout, stderr, exit_status = Open3.capture3(
        ; ("kit_decimal_digits", kit_decimal_digits)
        ; ("lqt_decimal_digits", lqt_decimal_digits)
        ]
-  '''
+  '''])
 )
 
 exit_status.success? or raise "extracting token info failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
