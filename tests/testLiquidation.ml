@@ -57,7 +57,6 @@ let arbitrary_burrow (params: parameters) =
     (fun (tez, kit) ->
        make_burrow_for_test
          ~address:burrow_addr
-         ~delegate:None
          ~active:true
          ~collateral:tez
          ~outstanding_kit:kit
@@ -258,7 +257,6 @@ let test_general_liquidation_properties =
 let initial_burrow =
   make_burrow_for_test
     ~address:burrow_addr
-    ~delegate:None
     ~active:true
     ~collateral:(tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
     ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
@@ -272,7 +270,6 @@ let barely_not_overburrowed_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_400n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -297,7 +294,6 @@ let barely_overburrowed_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_399n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -322,7 +318,6 @@ let barely_non_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "6_171_200n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -347,7 +342,6 @@ let barely_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "6_171_199n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -368,7 +362,6 @@ let barely_liquidatable_test =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
-                ~delegate:None
                 ~collateral:(tok_of_denomination (Ligo.nat_from_literal "2_346_632n"))
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
@@ -411,7 +404,6 @@ let barely_non_complete_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_065_065n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -432,7 +424,6 @@ let barely_non_complete_liquidatable_test =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
-                ~delegate:None
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
@@ -473,7 +464,6 @@ let barely_complete_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "5_065_064n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -494,7 +484,6 @@ let barely_complete_liquidatable_test =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
-                ~delegate:None
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
@@ -535,7 +524,6 @@ let barely_non_close_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_001_001n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -556,7 +544,6 @@ let barely_non_close_liquidatable_test =
               make_burrow_for_test
                 ~active:true
                 ~address:burrow_addr
-                ~delegate:None
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
@@ -594,7 +581,6 @@ let barely_close_liquidatable_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_001_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -615,7 +601,6 @@ let barely_close_liquidatable_test =
               make_burrow_for_test
                 ~active:false
                 ~address:burrow_addr
-                ~delegate:None
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
                 ~adjustment_index:fixedpoint_one
@@ -654,7 +639,6 @@ let unwarranted_liquidation_unit_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "7_673_400n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))
@@ -682,7 +666,6 @@ let partial_liquidation_unit_test =
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
-                ~delegate:None
                 ~active:true
                 ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_847_528n"))
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
@@ -725,7 +708,6 @@ let complete_liquidation_unit_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
@@ -742,7 +724,6 @@ let complete_liquidation_unit_test =
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
-                ~delegate:None
                 ~active:true
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
@@ -787,7 +768,6 @@ let complete_and_close_liquidation_test =
     let burrow =
       make_burrow_for_test
         ~address:burrow_addr
-        ~delegate:None
         ~active:true
         ~collateral:(tok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
@@ -804,7 +784,6 @@ let complete_and_close_liquidation_test =
             burrow_state =
               make_burrow_for_test
                 ~address:burrow_addr
-                ~delegate:None
                 ~active:false
                 ~collateral:tok_zero
                 ~outstanding_kit:(kit_of_denomination (Ligo.nat_from_literal "100_000_000n"))
@@ -862,7 +841,6 @@ let test_burrow_request_liquidation_invariant_close =
 
   let burrow0 = make_burrow_for_test
       ~address:burrow_addr
-      ~delegate:None
       ~active:true
       ~collateral:collateral
       ~outstanding_kit:kit_to_allow_liquidation
@@ -904,7 +882,6 @@ let test_burrow_request_liquidation_invariant_complete =
   in
   let burrow0 = make_burrow_for_test
       ~address:burrow_addr
-      ~delegate:None
       ~active:true
       ~collateral:collateral
       ~outstanding_kit:outstanding_kit
@@ -939,7 +916,6 @@ let test_burrow_request_liquidation_invariant_partial =
 
   let burrow0 = make_burrow_for_test
       ~address:burrow_addr
-      ~delegate:None
       ~active:true
       ~collateral:(tok_of_denomination (Ligo.nat_from_literal (string_of_int collateral ^ "n")))
       ~outstanding_kit:outstanding_kit
@@ -990,7 +966,6 @@ let regression_test_72 =
         ~collateral_at_auction:tok_zero
         ~active:true
         ~address:burrow_addr
-        ~delegate:None
         ~adjustment_index:fixedpoint_one
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
@@ -1010,7 +985,6 @@ let regression_test_93 =
         ~collateral_at_auction:tok_zero
         ~active:true
         ~address:burrow_addr
-        ~delegate:None
         ~adjustment_index:fixedpoint_one
         ~last_checker_timestamp:(Ligo.timestamp_from_seconds_literal 0) in
 
