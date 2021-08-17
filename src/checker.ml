@@ -991,7 +991,9 @@ let view_current_liquidation_auction_remaining_duration ((), state: unit * check
 
 let view_current_liquidation_auction_collateral ((), state: unit * checker) : tok option =
   assert_checker_invariants state;
-  liquidation_auction_current_auction_tok state.liquidation_auctions
+  match state.liquidation_auctions.current_auction with
+  | None -> (None: tok option)
+  | Some auction -> Some (avl_tok state.liquidation_auctions.avl_storage auction.contents)
 
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
