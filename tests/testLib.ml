@@ -23,11 +23,17 @@ type key_hash_option = Ligo.key_hash option [@@deriving show]
 let assert_key_hash_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_key_hash_option expected real
 let assert_address_equal ~expected ~real = OUnit2.assert_equal ~printer:Ligo.string_of_address expected real
 let assert_fixedpoint_equal ~expected ~real = OUnit2.assert_equal ~printer:FixedPoint.show_fixedpoint_raw expected real
+let assert_bid_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_bid expected real
+type bid_option = bid option [@@deriving show]
+let assert_bid_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_bid_option expected real
 let assert_liquidation_result_equal ~expected ~real = OUnit2.assert_equal ~printer:Burrow.show_liquidation_result expected real
 let assert_avl_ptr_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_avl_ptr expected real
 let assert_ctez_equal ~expected ~real = OUnit2.assert_equal ~printer:Ctez.show_ctez expected real
 let assert_parameters_equal ~expected ~real = OUnit2.assert_equal ~printer:Parameters.show_parameters expected real (* FIXME: contains a ratio *)
 let assert_liquidation_slice_contents_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_liquidation_slice_contents expected real
+
+type liquidation_auction_id_option = liquidation_auction_id option [@@deriving show]
+let assert_liquidation_auction_id_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_liquidation_auction_id_option expected real
 
 type kit_option = Kit.kit option [@@deriving show]
 let assert_kit_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_kit_option expected real

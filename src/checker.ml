@@ -965,6 +965,23 @@ let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : v
   ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
   }
 
+let view_current_liquidation_auction_id ((), state: unit * checker) : liquidation_auction_id option =
+  assert_checker_invariants state;
+  match state.liquidation_auctions.current_auction with
+  | None -> None
+  | Some current_auction -> Some current_auction.contents
+
+let view_current_liquidation_auction_winning_bid ((), state: unit * checker) : bid option =
+  assert_checker_invariants state;
+  match state.liquidation_auctions.current_auction with
+  | None -> (None : bid option)
+  | Some current_auction ->
+    let bid = match current_auction.state with
+      | Descending _ -> (None : bid option)
+      | Ascending (bid, _, _) -> Some bid
+    in
+    bid
+
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
 (* ************************************************************************* *)
