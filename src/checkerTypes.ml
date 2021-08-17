@@ -56,4 +56,10 @@ type view_current_liquidation_auction_minimum_bid_result =
   }
 [@@deriving show]
 
+type view_current_liquidation_auction_remaining_duration_result =
+  { blocks: Ligo.int
+  ; seconds: Ligo.int
+  }
+[@@deriving show]
+
 [@@@coverage on]

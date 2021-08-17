@@ -2107,12 +2107,13 @@ let suite =
        assert_liquidation_auction_id_option_equal ~expected:expected_auction_id ~real:current_auction_id
     );
 
-    ("view_current_liquidation_auction_winning_bid - expected value for state with no current auction" >::
+    ("view_current_liquidation_auction_winning_bid - raises error when there is no current auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
        let checker = empty_checker in
-       let winning_bid = Checker.view_current_liquidation_auction_winning_bid ((), checker) in
-       assert_bid_option_equal ~expected:None ~real:winning_bid
+       assert_raises
+         (Failure (Ligo.string_of_int error_NoOpenAuction))
+         (fun _ -> Checker.view_current_liquidation_auction_winning_bid ((), checker))
     );
 
     ("view_current_liquidation_auction_winning_bid - expected value for descending auction" >::
@@ -2142,6 +2143,45 @@ let suite =
        let winning_bid = Checker.view_current_liquidation_auction_winning_bid ((), checker) in
        let expected_winning_bid = Some LiquidationAuctionPrimitiveTypes.({address=bidder; kit=bid;}) in
        assert_bid_option_equal ~expected:expected_winning_bid ~real:winning_bid
+    );
+
+    ("view_current_liquidation_auction_remaining_duration - raises error when there is no current auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       assert_raises
+         (Failure (Ligo.string_of_int error_NoOpenAuction))
+         (fun _ -> Checker.view_current_liquidation_auction_remaining_duration ((), checker))
+    );
+
+    ("view_current_liquidation_auction_remaining_duration - expected value for descending auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       let remaining_duration = Checker.view_current_liquidation_auction_remaining_duration ((), checker) in
+       assert_view_current_liquidation_auction_remaining_duration_result_option_equal ~expected:None ~real:remaining_duration
+    );
+
+    ("view_current_liquidation_auction_remaining_duration - expected value for ascending auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       (* Place a bid to turn the descending auction into an ascending one *)
+       let current_auction_id = Option.get (Checker.view_current_liquidation_auction_id ((), checker)) in
+       let auction_details = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       let bidder = bob_addr in
+       let bid = auction_details.minimum_bid in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "1_000_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "1n", None)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "1n", bid)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_liquidation_auction_place_bid (checker, (current_auction_id, auction_details.minimum_bid)) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:500 ~blocks_passed:22 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let remaining_duration = Checker.view_current_liquidation_auction_remaining_duration ((), checker) in
+       let expected_remaining_duration = (Some {blocks=(Ligo.int_from_literal "-2"); seconds=(Ligo.int_from_literal "700")}) in
+       assert_view_current_liquidation_auction_remaining_duration_result_option_equal ~expected:expected_remaining_duration ~real:remaining_duration
     );
   ]
 

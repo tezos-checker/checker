@@ -32,6 +32,10 @@ let assert_ctez_equal ~expected ~real = OUnit2.assert_equal ~printer:Ctez.show_c
 let assert_parameters_equal ~expected ~real = OUnit2.assert_equal ~printer:Parameters.show_parameters expected real (* FIXME: contains a ratio *)
 let assert_liquidation_slice_contents_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_liquidation_slice_contents expected real
 
+(* Note: This name is a real mouthful but follows the convention we are using in checkerTypes.ml *)
+type view_current_liquidation_auction_remaining_duration_result_option = CheckerTypes.view_current_liquidation_auction_remaining_duration_result option [@@deriving show]
+let assert_view_current_liquidation_auction_remaining_duration_result_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_view_current_liquidation_auction_remaining_duration_result_option expected real
+
 type liquidation_auction_id_option = liquidation_auction_id option [@@deriving show]
 let assert_liquidation_auction_id_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_liquidation_auction_id_option expected real
 
