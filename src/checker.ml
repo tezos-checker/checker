@@ -989,6 +989,10 @@ let view_current_liquidation_auction_remaining_duration ((), state: unit * check
       blocks=Ligo.sub_nat_nat (Ligo.add_nat_nat bid_level max_bid_interval_in_blocks) !Ligo.Tezos.level;
     }
 
+let view_current_liquidation_auction_collateral ((), state: unit * checker) : tok option =
+  assert_checker_invariants state;
+  liquidation_auction_current_auction_tok state.liquidation_auctions
+
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
 (* ************************************************************************* *)

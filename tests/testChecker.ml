@@ -2183,6 +2183,22 @@ let suite =
        let expected_remaining_duration = (Some {blocks=(Ligo.int_from_literal "-2"); seconds=(Ligo.int_from_literal "700")}) in
        assert_view_current_liquidation_auction_remaining_duration_result_option_equal ~expected:expected_remaining_duration ~real:remaining_duration
     );
+
+    ("view_current_liquidation_auction_collateral - expected value for state with no current auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       let auction_collateral = Checker.view_current_liquidation_auction_collateral ((), checker) in
+       assert_tok_option_equal ~expected:None ~real:auction_collateral
+    );
+
+    ("view_current_liquidation_auction_collateral - expected value for state with current auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       let auction_collateral = Checker.view_current_liquidation_auction_collateral ((), checker) in
+       assert_tok_option_equal ~expected:(Some (tok_of_denomination (Ligo.nat_from_literal "23_669_648n"))) ~real:auction_collateral
+    );
   ]
 
 let () =

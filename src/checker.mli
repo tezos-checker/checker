@@ -1,5 +1,6 @@
 open Ctez
 open Kit
+open Tok
 open Lqt
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
@@ -264,6 +265,7 @@ val view_current_liquidation_auction_minimum_bid : (unit * checker) -> view_curr
 val view_current_liquidation_auction_id : (unit * checker) -> liquidation_auction_id option
 val view_current_liquidation_auction_winning_bid : (unit * checker) -> bid option
 val view_current_liquidation_auction_remaining_duration : (unit * checker) -> view_current_liquidation_auction_remaining_duration_result option
+val view_current_liquidation_auction_collateral : (unit * checker) -> tok option
 
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
