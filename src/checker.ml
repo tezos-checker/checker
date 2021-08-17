@@ -510,6 +510,19 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
   let ops = [op] in
 
+  (* Touch the oldest liquidation slice (if it exists). This should help the
+   * system keep the number of liquidation slices close to linear in many
+   * occasions. *)
+  let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
+    match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
+    | None ->
+      ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state
+    | Some leaf ->
+      let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
+        touch_liquidation_slice ops state_liquidation_auctions state_burrows state_parameters state_fa2_state leaf in
+      ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state
+  in
+
   let state =
     { burrows = state_burrows;
       cfmm = state_cfmm;
