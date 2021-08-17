@@ -38,7 +38,7 @@ let tok_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : tok =
 let tok_of_tez (tz: Ligo.tez) : tok =
   tok_of_fraction_floor
     (Ligo.int (Ligo.div_tez_tez tz (Ligo.tez_from_literal "1mutez")))
-    (Ligo.int_from_literal "1_000_000")
+    tez_scaling_factor_int
 
 let tez_of_tok (tk: tok) : Ligo.tez =
   fraction_to_tez_floor

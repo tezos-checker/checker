@@ -37,7 +37,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
       kit_in_ctez_in_prev_block =
         make_ratio
           (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) kit_scaling_factor_int)
-          (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) (Ligo.int_from_literal "1_000_000"));
+          (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) ctez_scaling_factor_int);
       last_level = !Ligo.Tezos.level;
     }
 
@@ -120,7 +120,7 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
         (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) num_uf) in
     let denominator =
       Ligo.mul_int_int
-        (Ligo.int_from_literal "1_000_000")
+        ctez_scaling_factor_int
         (Ligo.mul_nat_int (kit_to_denomination_nat new_cfmm_kit) den_uf) in
     let bought_ctez = ctez_of_fraction_floor numerator denominator in
 
@@ -242,7 +242,7 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     let ctez_withdrawn =
       ctez_of_fraction_floor
         (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) (lqt_to_denomination_int lqt_burned))
-        (Ligo.mul_int_nat (Ligo.int_from_literal "1_000_000") (lqt_to_denomination_nat cfmm.lqt))
+        (Ligo.mul_int_nat ctez_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     let kit_withdrawn =
       kit_of_fraction_floor

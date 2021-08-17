@@ -60,6 +60,9 @@ let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
 (* OPERATIONS ON tez *)
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
 
+let tez_scaling_factor_int : Ligo.int = Ligo.int_from_literal "1_000_000"
+let tez_scaling_factor_nat : Ligo.nat = Ligo.nat_from_literal "1_000_000n"
+
 (* OPERATIONS ON nat *)
 let min_nat (x: Ligo.nat) (y: Ligo.nat) = if Ligo.leq_nat_nat x y then x else y
 let max_nat (x: Ligo.nat) (y: Ligo.nat) = if Ligo.geq_nat_nat x y then x else y
@@ -92,7 +95,7 @@ let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
   match Ligo.is_nat x_num with
   | None -> (Ligo.failwith internalError_FractionToTezFloorNegative : Ligo.tez)
   | Some n ->
-    let n = Ligo.mul_nat_nat n (Ligo.nat_from_literal "1_000_000n") in
+    let n = Ligo.mul_nat_nat n tez_scaling_factor_nat in
     let d = Ligo.abs x_den in
     (match Ligo.ediv_nat_nat n d with
      (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
