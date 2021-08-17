@@ -61,9 +61,17 @@ jobs:
               const base = pr.base.sha;
               const head = pr.head.sha;
 
+              const base_tests_failed = !(await (testsPassed(base)));
+              const head_tests_failed = !(await (testsPassed(head)));
+
               // skip if the tests are pending or failed
-              if(!(await (testsPassed(base))) || !(await (testsPassed(head)))) {
-                console.log("Tests not successful, skipping.");
+              if(base_tests_failed) {
+                console.log("Tests not successful (base).");
+              }
+              if(head_tests_failed) {
+                console.log("Tests not successful (head).");
+              }
+              if(base_tests_failed || head_tests_failed) {
                 continue;
               }
 
