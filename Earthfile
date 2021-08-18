@@ -35,6 +35,8 @@ build-ligo:
     WORKDIR /root
 
     COPY ./src/*.ml ./src/*.mligo ./src/
+    COPY +generate-entrypoints/checkerEntrypoints.ml ./src/checkerEntrypoints.ml
+
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
 
