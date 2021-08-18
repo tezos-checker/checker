@@ -958,18 +958,11 @@ let view_is_burrow_liquidatable (burrow_id, state: burrow_id * checker) : bool =
   let burrow = burrow_touch state.parameters burrow in
   burrow_is_liquidatable state.parameters burrow
 
-let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : view_current_liquidation_auction_minimum_bid_result =
-  assert_checker_invariants state;
-  let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
-  { auction_id = auction.contents
-  ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
-  }
-
 let view_current_liquidation_auction_details ((), state: unit * checker) : view_current_liquidation_auction_details_result =
   assert_checker_invariants state;
   let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
   let current_bid, blocks, seconds = match auction.state with
-    | Descending _ -> None, None, None
+    | Descending _ -> (None: (bid option)), (None: (Ligo.int option)), (None: (Ligo.int option))
     | Ascending (current_bid, bid_time_seconds, bid_level) ->
       (
         Some current_bid,

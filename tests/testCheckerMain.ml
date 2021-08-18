@@ -409,7 +409,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Liquidation_auction_place_bid *)
-          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
+          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_details ((), sealed_wrapper) in
           Ligo.Tezos.new_transaction ~seconds_passed:394 ~blocks_passed:6 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (min_bid.auction_id, min_bid.minimum_bid)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
@@ -457,7 +457,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Liquidation_auction_place_bid *)
-          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_minimum_bid ((), sealed_wrapper) in
+          let min_bid = CheckerEntrypoints.wrapper_view_current_liquidation_auction_details ((), sealed_wrapper) in
           Ligo.Tezos.new_transaction ~seconds_passed:394 ~blocks_passed:6 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (min_bid.auction_id, min_bid.minimum_bid)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in

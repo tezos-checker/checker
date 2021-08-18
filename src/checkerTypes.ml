@@ -1,4 +1,5 @@
 open Kit
+open Tok
 open Burrow
 open CfmmTypes
 open Parameters
@@ -50,21 +51,9 @@ type wrapper =
 
 [@@@coverage off]
 
-type view_current_liquidation_auction_minimum_bid_result =
-  { auction_id: liquidation_auction_id
-  ; minimum_bid: kit
-  }
-[@@deriving show]
-
-type view_current_liquidation_auction_remaining_duration_result =
-  { blocks: Ligo.int
-  ; seconds: Ligo.int
-  }
-[@@deriving show]
-
 type view_current_liquidation_auction_details_result =
   { auction_id: liquidation_auction_id
-  ; collateral: Tok.tok
+  ; collateral: tok
   ; minimum_bid: kit
   ; current_bid: bid option
   ; remaining_blocks: Ligo.int option

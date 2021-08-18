@@ -165,7 +165,7 @@ let checker_with_active_auction () =
 let checker_with_completed_auction () =
   let checker = checker_with_active_auction () in
   (* Get the current auction minimum bid *)
-  let auction_details = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+  let auction_details = Checker.view_current_liquidation_auction_details ((), checker) in
   (* Mint enough kit to bid *)
   let bidder = alice_addr in
   let new_burrow_no = Ligo.nat_from_literal "100n" in
@@ -471,7 +471,7 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = checker_with_active_auction () in
        (* Lookup the current minimum bid *)
-       let auction_details = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       let auction_details = Checker.view_current_liquidation_auction_details ((), checker) in
        (* Mint some kit to be able to bid *)
        let new_burrow_no = Ligo.nat_from_literal "100n" in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1_000_000_000mutez");
@@ -1435,7 +1435,7 @@ let suite =
        let _, checker = Checker.entrypoint_mark_for_liquidation (checker, (alice_addr, Ligo.nat_from_literal "0n")) in
        let _, checker = Checker.entrypoint_touch (checker, ()) in
 
-       let res = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       let res = Checker.view_current_liquidation_auction_details ((), checker) in
        let other_ptr = match res.auction_id with AVLPtr i -> Ptr.ptr_next i in
 
        assert_raises
@@ -1602,7 +1602,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        assert_raises
          (Failure (Ligo.string_of_int error_NoOpenAuction))
-         (fun () -> Checker.view_current_liquidation_auction_minimum_bid ((), checker));
+         (fun () -> Checker.view_current_liquidation_auction_details ((), checker));
 
        let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
@@ -1624,7 +1624,7 @@ let suite =
        let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
-       let min_bid = Checker.view_current_liquidation_auction_minimum_bid ((), checker) in
+       let min_bid = Checker.view_current_liquidation_auction_details ((), checker) in
 
        let auction_id =
          min_bid.auction_id in
