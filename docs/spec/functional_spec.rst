@@ -614,3 +614,19 @@ Seal the contract and make it ready for use
 -------------------------------------------
 
 ``sealContract: (pair address address)``
+
+Off-chain views
+===============
+
+Get details on the current liquidation auction
+----------------------------------------------
+
+Returns an error if there is currently no active liquidation auction.
+
+``currentLiquidationAuctionDetails: unit -> view_current_liquidation_auction_details_result``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| unit          | unit                  | ()                                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
