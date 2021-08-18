@@ -965,36 +965,6 @@ let view_current_liquidation_auction_minimum_bid ((), state: unit * checker) : v
   ; minimum_bid = liquidation_auction_current_auction_minimum_bid auction
   }
 
-let view_current_liquidation_auction_id ((), state: unit * checker) : liquidation_auction_id option =
-  assert_checker_invariants state;
-  match state.liquidation_auctions.current_auction with
-  | None -> None
-  | Some current_auction -> Some current_auction.contents
-
-let view_current_liquidation_auction_winning_bid ((), state: unit * checker) : bid option =
-  assert_checker_invariants state;
-  let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
-  match current_auction.state with
-  | Descending _ -> (None: bid option)
-  | Ascending (bid, _, _) -> Some bid
-
-let view_current_liquidation_auction_remaining_duration ((), state: unit * checker) : view_current_liquidation_auction_remaining_duration_result option =
-  assert_checker_invariants state;
-  let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
-  match auction.state with
-  | Descending _ -> (None : view_current_liquidation_auction_remaining_duration_result option)
-  | Ascending (_, bid_time_seconds, bid_level) ->
-    Some {
-      seconds=Ligo.sub_timestamp_timestamp (Ligo.add_timestamp_int bid_time_seconds max_bid_interval_in_seconds) !Ligo.Tezos.now;
-      blocks=Ligo.sub_nat_nat (Ligo.add_nat_nat bid_level max_bid_interval_in_blocks) !Ligo.Tezos.level;
-    }
-
-let view_current_liquidation_auction_collateral ((), state: unit * checker) : tok option =
-  assert_checker_invariants state;
-  match state.liquidation_auctions.current_auction with
-  | None -> (None: tok option)
-  | Some auction -> Some (avl_tok state.liquidation_auctions.avl_storage auction.contents)
-
 let view_current_liquidation_auction_details ((), state: unit * checker) : view_current_liquidation_auction_details_result =
   assert_checker_invariants state;
   let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
