@@ -260,8 +260,7 @@ val view_add_liquidity_min_lqt_minted : (ctez * checker) -> lqt
 val view_remove_liquidity_min_ctez_withdrawn : (lqt * checker) -> ctez
 val view_remove_liquidity_min_kit_withdrawn : (lqt * checker) -> kit
 
-val view_current_liquidation_auction_minimum_bid: (unit * checker) -> view_current_liquidation_auction_minimum_bid_result
-
+val view_current_liquidation_auction_details: (unit * checker) -> view_current_liquidation_auction_details_result
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
 val view_is_burrow_liquidatable : (burrow_id * checker) -> bool

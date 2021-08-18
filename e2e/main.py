@@ -603,8 +603,11 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         # And we place a bid for the auction we started earlier:
-        ret = checker.metadata.currentLiquidationAuctionMinimumBid().storage_view()
-        auction_id, minimum_bid = ret["contents"], ret["nat_1"]
+        auction_details = (
+            checker.metadata.currentLiquidationAuctionDetails().storage_view()
+        )
+
+        auction_id, minimum_bid = auction_details["contents"], auction_details["nat_3"]
         # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.

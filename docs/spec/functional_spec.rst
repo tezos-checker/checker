@@ -577,14 +577,12 @@ Check whether a burrow can be liquidated
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
-Minimum bid for the current liquidation auction (if exists)
------------------------------------------------------------
+Get details on the current liquidation auction
+----------------------------------------------
 
-Returns a pair of the unique identifier for the current auction and the minimum
-amount of kit that one could currently bid in said auction. Fails if there is
-no open auction.
+Fails if there is currently no liquidation auction.
 
-``current_liquidation_auction_minimum_bid : unit -> pair nat nat``
+``current_liquidation_auction_details: unit -> view_current_liquidation_auction_details_result``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
