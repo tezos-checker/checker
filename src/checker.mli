@@ -266,7 +266,7 @@ val view_current_liquidation_auction_id : (unit * checker) -> liquidation_auctio
 val view_current_liquidation_auction_winning_bid : (unit * checker) -> bid option
 val view_current_liquidation_auction_remaining_duration : (unit * checker) -> view_current_liquidation_auction_remaining_duration_result option
 val view_current_liquidation_auction_collateral : (unit * checker) -> tok option
-
+val view_current_liquidation_auction_details: (unit * checker) -> view_current_liquidation_auction_details_result
 val view_burrow_max_mintable_kit : (burrow_id * checker) -> kit
 val view_is_burrow_overburrowed : (burrow_id * checker) -> bool
 val view_is_burrow_liquidatable : (burrow_id * checker) -> bool

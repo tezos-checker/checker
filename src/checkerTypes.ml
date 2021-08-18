@@ -62,4 +62,14 @@ type view_current_liquidation_auction_remaining_duration_result =
   }
 [@@deriving show]
 
+type view_current_liquidation_auction_details_result =
+  { auction_id: liquidation_auction_id
+  ; collateral: Tok.tok
+  ; minimum_bid: kit
+  ; current_bid: bid option
+  ; remaining_blocks: Ligo.int option
+  ; remaining_seconds: Ligo.int option
+  }
+[@@deriving show]
+
 [@@@coverage on]

@@ -10,6 +10,7 @@ open Fa2Interface
 open Error
 open Ptr
 open LiquidationAuctionTypes
+open LiquidationAuction
 
 let property_test_count = 10000
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
@@ -2198,6 +2199,63 @@ let suite =
        let checker = checker_with_active_auction () in
        let auction_collateral = Checker.view_current_liquidation_auction_collateral ((), checker) in
        assert_tok_option_equal ~expected:(Some (tok_of_denomination (Ligo.nat_from_literal "23_669_648n"))) ~real:auction_collateral
+    );
+
+    ("view_curent_liquidation_auction_details - raises error when there is no current auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = empty_checker in
+       assert_raises
+         (Failure (Ligo.string_of_int error_NoOpenAuction))
+         (fun _ -> Checker.view_current_liquidation_auction_details ((), checker))
+    );
+
+    ("view_curent_liquidation_auction_details - expected value for descending auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       let auction = Option.get checker.liquidation_auctions.current_auction in
+       let auction_details = Checker.view_current_liquidation_auction_details ((), checker) in
+       let expected_auction_details = {
+         auction_id = auction.contents;
+         collateral = tok_of_denomination (Ligo.nat_from_literal "23_669_648n");
+         minimum_bid = liquidation_auction_current_auction_minimum_bid auction;
+         current_bid = None;
+         remaining_blocks = None;
+         remaining_seconds = None;
+       }
+       in
+       assert_view_current_liquidation_auction_details_result_equal ~expected:expected_auction_details ~real:auction_details
+    );
+
+    ("view_curent_liquidation_auction_details - expected value for ascending auction" >::
+     fun _ ->
+       Ligo.Tezos.reset ();
+       let checker = checker_with_active_auction () in
+       let auction = Option.get checker.liquidation_auctions.current_auction in
+       (* Place a bid to turn the descending auction into an ascending one *)
+       let bidder = bob_addr in
+       let bid_amnt = liquidation_auction_current_auction_minimum_bid auction in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "1_000_000_000mutez");
+       let _, checker = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "1n", None)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "1n", bid_amnt)) in
+       Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let _, checker = Checker.entrypoint_liquidation_auction_place_bid (checker, (auction.contents, bid_amnt)) in
+
+       Ligo.Tezos.new_transaction ~seconds_passed:500 ~blocks_passed:22 ~sender:bidder ~amount:(Ligo.tez_from_literal "0mutez");
+       let auction = Option.get checker.liquidation_auctions.current_auction in
+       let auction_details = Checker.view_current_liquidation_auction_details ((), checker) in
+       let expected_auction_details = {
+         auction_id = auction.contents;
+         collateral = tok_of_denomination (Ligo.nat_from_literal "23_669_648n");
+         minimum_bid = liquidation_auction_current_auction_minimum_bid auction;
+         current_bid = Some LiquidationAuctionPrimitiveTypes.({address=bidder; kit=bid_amnt;});
+         remaining_blocks = Some (Ligo.int_from_literal "-2");
+         remaining_seconds = Some (Ligo.int_from_literal "700");
+       }
+       in
+       assert_view_current_liquidation_auction_details_result_equal ~expected:expected_auction_details ~real:auction_details
     );
   ]
 

@@ -995,6 +995,27 @@ let view_current_liquidation_auction_collateral ((), state: unit * checker) : to
   | None -> (None: tok option)
   | Some auction -> Some (avl_tok state.liquidation_auctions.avl_storage auction.contents)
 
+let view_current_liquidation_auction_details ((), state: unit * checker) : view_current_liquidation_auction_details_result =
+  assert_checker_invariants state;
+  let auction = liquidation_auction_get_current_auction state.liquidation_auctions in
+  let current_bid, blocks, seconds = match auction.state with
+    | Descending _ -> None, None, None
+    | Ascending (current_bid, bid_time_seconds, bid_level) ->
+      (
+        Some current_bid,
+        Some (Ligo.sub_nat_nat (Ligo.add_nat_nat bid_level max_bid_interval_in_blocks) !Ligo.Tezos.level),
+        Some (Ligo.sub_timestamp_timestamp (Ligo.add_timestamp_int bid_time_seconds max_bid_interval_in_seconds) !Ligo.Tezos.now)
+      )
+  in
+  {
+    auction_id = auction.contents;
+    collateral = avl_tok state.liquidation_auctions.avl_storage auction.contents;
+    minimum_bid = liquidation_auction_current_auction_minimum_bid auction;
+    current_bid = current_bid;
+    remaining_blocks = blocks;
+    remaining_seconds = seconds;
+  }
+
 (* ************************************************************************* *)
 (**                            FA2_VIEWS                                     *)
 (* ************************************************************************* *)
