@@ -359,7 +359,7 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
 (* Note that this function prepends the operation to the list of operations
  * given. This means that if we entrypoint_touch a list of liquidation slices,
  * the order of operations is reversed. *)
-let touch_liquidation_slice
+let[@inline] touch_liquidation_slice
     (ops: LigoOp.operation list)
     (auctions: liquidation_auctions)
     (state_burrows: burrow_map)
