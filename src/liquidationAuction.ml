@@ -593,7 +593,7 @@ let liquidation_auction_touch (auctions: liquidation_auctions) (price: ratio) : 
   auctions
 
 
-let liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidation_auctions) : leaf_ptr option =
+let[@inline] liquidation_auction_oldest_completed_liquidation_slice (auctions: liquidation_auctions) : leaf_ptr option =
   match auctions.completed_auctions with
   | None -> (None: leaf_ptr option)
   | Some completed_auctions -> begin
