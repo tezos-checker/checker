@@ -314,48 +314,6 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   else
     (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
-  assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
-  let burrow = find_burrow state.burrows burrow_id in
-
-  let
-    { liquidation_reward = liquidation_reward;
-      collateral_to_auction = collateral_to_auction;
-      burrow_state = burrow;
-    } = match burrow_request_liquidation state.parameters burrow with
-    | None ->
-      (* Note: disabling coverage for the unreported but accessed right-hand side;
-       * accessibility is sufficiently marked on the pattern itself. *)
-      ((Ligo.failwith error_NotLiquidationCandidate [@coverage off]): liquidation_details)
-    | Some type_and_details -> let _, details = type_and_details in details
-  in
-
-  let state =
-    if eq_tok_tok collateral_to_auction tok_zero then
-      (* If the slice would be empty, don't create it. *)
-      { state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows; }
-    else
-      (* Otherwise do. *)
-      let contents =
-        { burrow = burrow_id;
-          tok = collateral_to_auction;
-          min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow collateral_to_auction;
-        } in
-      let (updated_liquidation_auctions, _leaf_ptr) =
-        liquidation_auction_send_to_auction state.liquidation_auctions contents in
-      { state with
-        burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
-        liquidation_auctions = updated_liquidation_auctions;
-      } in
-
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_tok liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
-
-  assert_checker_invariants state;
-  ([op], state)
-
 (* Note that this function prepends the operation to the list of operations
  * given. This means that if we entrypoint_touch a list of liquidation slices,
  * the order of operations is reversed. *)
@@ -452,6 +410,48 @@ let[@inline] touch_liquidation_slice
     | Some c -> LigoOp.Tezos.tez_transaction (tez_of_tok slice.tok) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendSliceToChecker : LigoOp.operation) in
   ((op :: ops), auctions, state_burrows, state_parameters, state_fa2_state)
+
+let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
+  assert_checker_invariants state;
+  let _ = ensure_no_tez_given () in
+  let burrow = find_burrow state.burrows burrow_id in
+
+  let
+    { liquidation_reward = liquidation_reward;
+      collateral_to_auction = collateral_to_auction;
+      burrow_state = burrow;
+    } = match burrow_request_liquidation state.parameters burrow with
+    | None ->
+      (* Note: disabling coverage for the unreported but accessed right-hand side;
+       * accessibility is sufficiently marked on the pattern itself. *)
+      ((Ligo.failwith error_NotLiquidationCandidate [@coverage off]): liquidation_details)
+    | Some type_and_details -> let _, details = type_and_details in details
+  in
+
+  let state =
+    if eq_tok_tok collateral_to_auction tok_zero then
+      (* If the slice would be empty, don't create it. *)
+      { state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows; }
+    else
+      (* Otherwise do. *)
+      let contents =
+        { burrow = burrow_id;
+          tok = collateral_to_auction;
+          min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow collateral_to_auction;
+        } in
+      let (updated_liquidation_auctions, _leaf_ptr) =
+        liquidation_auction_send_to_auction state.liquidation_auctions contents in
+      { state with
+        burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
+        liquidation_auctions = updated_liquidation_auctions;
+      } in
+
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
+    | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_tok liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
+
+  assert_checker_invariants state;
+  ([op], state)
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
