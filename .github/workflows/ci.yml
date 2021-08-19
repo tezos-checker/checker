@@ -5,43 +5,6 @@ on:
   push:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: cachix/install-nix-action@v13
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - uses: cachix/cachix-action@v10
-        with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies
-        run: nix-shell --pure --run ':'
-      - name: Check formatting
-        run: nix-shell --pure --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
-      - name: Build and test
-        run: nix-build -A michelson --arg doCheck true
-
-      - name: Export lazy entrypoint sizes
-        run: |
-          cat result/functions.json \
-            | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
-            | tee entrypoint-sizes.json
-      - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
-        with:
-          name: stats
-          path: entrypoint-sizes.json
-          if-no-files-found: error
-      - name: Export the test coverage report
-        run: nix-shell --pure --run 'make test-coverage.json'
-      - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
-        with:
-          name: stats
-          path: test-coverage.json
-          if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
     steps:
