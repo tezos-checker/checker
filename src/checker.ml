@@ -497,29 +497,9 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_tok liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
-  let ops = [op] in
-
-  (* Touch the oldest liquidation slice (if it exists). This should help the
-   * system keep the number of liquidation slices close to linear in many
-   * occasions. *)
-  let ops, state =
-    match liquidation_auction_oldest_completed_liquidation_slice state.liquidation_auctions with
-    | None -> (ops, state)
-    | Some leaf ->
-      let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-        touch_liquidation_slice ops state.liquidation_auctions state.burrows state.parameters state.fa2_state leaf in
-      ( ops,
-        { state with
-          liquidation_auctions = state_liquidation_auctions;
-          burrows = state_burrows;
-          parameters = state_parameters;
-          fa2_state = state_fa2_state;
-        }
-      )
-  in
 
   assert_checker_invariants state;
-  (ops, state)
+  ([op], state)
 
 (* ************************************************************************* *)
 (**                                 CFMM                                     *)
