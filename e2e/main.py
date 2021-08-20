@@ -541,7 +541,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 )
                 for burrow_no in burrows
             ],
-            batch_size=40,
+            batch_size=32,
             profiler=mark_for_liquidation_profiler,
         )
 
