@@ -356,6 +356,31 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   else
     (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
+let rec find_oldest_slices (n, leaf_ptr, liquidation_auctions, acc : Ligo.nat * leaf_ptr * liquidation_auctions * leaf_ptr list) : leaf_ptr list =
+  match Ligo.is_nat (Ligo.sub_nat_nat n (Ligo.nat_from_literal "1n")) with
+  | None -> acc
+  | Some n -> begin
+    match mem_get_opt liquidation_auctions.avl_storage (match leaf_ptr with LeafPtr r -> r) with
+    | None -> acc
+    | Some (Leaf leaf) -> begin
+      match leaf.value.younger with
+      | None -> acc
+      | Some younger_ptr ->
+        find_oldest_slices (n, younger_ptr, liquidation_auctions, (younger_ptr :: acc)) (* REVERSE ORDER!! *)
+      end
+    | _ -> Ligo.failwith error_InvalidLeafPtr
+    end
+
+let[@inline] find_oldest_slices (n: Ligo.nat) (liquidation_auctions: liquidation_auctions) : leaf_ptr list =
+  (* Pick the first one to be able to begin the recursion *)
+  match Ligo.is_nat (Ligo.sub_nat_nat n (Ligo.nat_from_literal "1n")) with
+  | None -> []
+  | Some n -> begin
+    match liquidation_auction_oldest_completed_liquidation_slice liquidation_auctions with
+    | None -> []
+    | Some leaf -> find_oldest_slices (n, leaf, liquidation_auctions, [leaf])
+    end
+
 (* Note that this function prepends the operation to the list of operations
  * given. This means that if we entrypoint_touch a list of liquidation slices,
  * the order of operations is reversed. *)
