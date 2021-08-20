@@ -365,15 +365,15 @@ let rec find_oldest_slices_rec (n, leaf_ptr, liquidation_auctions, acc : Ligo.na
   match Ligo.is_nat (Ligo.sub_nat_nat n (Ligo.nat_from_literal "1n")) with
   | None -> acc
   | Some n -> begin
-    match mem_get_opt liquidation_auctions.avl_storage (match leaf_ptr with LeafPtr r -> r) with
-    | None -> acc
-    | Some (Leaf leaf) -> begin
-      match leaf.value.younger with
+      match mem_get_opt liquidation_auctions.avl_storage (match leaf_ptr with LeafPtr r -> r) with
       | None -> acc
-      | Some younger_ptr ->
-        find_oldest_slices_rec (n, younger_ptr, liquidation_auctions, (younger_ptr :: acc)) (* REVERSE ORDER! *)
-      end
-    | _ -> Ligo.failwith error_InvalidLeafPtr
+      | Some (Leaf leaf) -> begin
+          match leaf.value.younger with
+          | None -> acc
+          | Some younger_ptr ->
+            find_oldest_slices_rec (n, younger_ptr, liquidation_auctions, (younger_ptr :: acc)) (* REVERSE ORDER! *)
+        end
+      | _ -> Ligo.failwith error_InvalidLeafPtr
     end
 
 let[@inline] find_oldest_slices (n: Ligo.nat) (liquidation_auctions: liquidation_auctions) : leaf_ptr list =
@@ -381,11 +381,11 @@ let[@inline] find_oldest_slices (n: Ligo.nat) (liquidation_auctions: liquidation
   match Ligo.is_nat (Ligo.sub_nat_nat n (Ligo.nat_from_literal "1n")) with
   | None -> []
   | Some n -> begin
-    match liquidation_auction_oldest_completed_liquidation_slice liquidation_auctions with
-    | None -> []
-    | Some leaf ->
-      let slices_reversed = find_oldest_slices_rec (n, leaf, liquidation_auctions, [leaf]) in (* REVERSE ORDER! *)
-      reverse_list (slices_reversed, ([]: leaf_ptr list))
+      match liquidation_auction_oldest_completed_liquidation_slice liquidation_auctions with
+      | None -> []
+      | Some leaf ->
+        let slices_reversed = find_oldest_slices_rec (n, leaf, liquidation_auctions, [leaf]) in (* REVERSE ORDER! *)
+        reverse_list (slices_reversed, ([]: leaf_ptr list))
     end
 
 (* Note that this function prepends the operation to the list of operations
