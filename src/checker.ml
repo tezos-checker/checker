@@ -414,24 +414,13 @@ let[@inline] touch_liquidation_slice
 let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let _ = ensure_no_tez_given () in
-
-  let
-    { burrows = state_burrows;
-      cfmm = state_cfmm;
-      parameters = state_parameters;
-      liquidation_auctions = state_liquidation_auctions;
-      last_price = state_last_price;
-      fa2_state = state_fa2_state;
-      external_contracts = state_external_contracts;
-    } = state in
-
-  let burrow = find_burrow state_burrows burrow_id in
+  let burrow = find_burrow state.burrows burrow_id in
 
   let
     { liquidation_reward = liquidation_reward;
       collateral_to_auction = collateral_to_auction;
       burrow_state = burrow;
-    } = match burrow_request_liquidation state_parameters burrow with
+    } = match burrow_request_liquidation state.parameters burrow with
     | None ->
       (* Note: disabling coverage for the unreported but accessed right-hand side;
        * accessibility is sufficiently marked on the pattern itself. *)
@@ -439,23 +428,23 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
     | Some type_and_details -> let _, details = type_and_details in details
   in
 
-  let state_burrows = Ligo.Big_map.update burrow_id (Some burrow) state_burrows in
-
-  let state_liquidation_auctions =
+  let state =
     if eq_tok_tok collateral_to_auction tok_zero then
       (* If the slice would be empty, don't create it. *)
-      state_liquidation_auctions
+      { state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows; }
     else
       (* Otherwise do. *)
       let contents =
         { burrow = burrow_id;
           tok = collateral_to_auction;
-          min_kit_for_unwarranted = compute_min_kit_for_unwarranted state_parameters burrow collateral_to_auction;
+          min_kit_for_unwarranted = compute_min_kit_for_unwarranted state.parameters burrow collateral_to_auction;
         } in
-      let (state_liquidation_auctions, _leaf_ptr) =
-        liquidation_auction_send_to_auction state_liquidation_auctions contents in
-      state_liquidation_auctions
-  in
+      let (updated_liquidation_auctions, _leaf_ptr) =
+        liquidation_auction_send_to_auction state.liquidation_auctions contents in
+      { state with
+        burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows;
+        liquidation_auctions = updated_liquidation_auctions;
+      } in
 
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_tok liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
@@ -465,25 +454,21 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   (* Touch the oldest liquidation slice (if it exists). This should help the
    * system keep the number of liquidation slices close to linear in many
    * occasions. *)
-  let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-    match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-    | None ->
-      ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state
+  let ops, state =
+    match liquidation_auction_oldest_completed_liquidation_slice state.liquidation_auctions with
+    | None -> (ops, state)
     | Some leaf ->
       let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-        touch_liquidation_slice ops state_liquidation_auctions state_burrows state_parameters state_fa2_state leaf in
-      ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state
+        touch_liquidation_slice ops state.liquidation_auctions state.burrows state.parameters state.fa2_state leaf in
+      ( ops,
+        { state with
+          liquidation_auctions = state_liquidation_auctions;
+          burrows = state_burrows;
+          parameters = state_parameters;
+          fa2_state = state_fa2_state;
+        }
+      )
   in
-
-  let state =
-    { burrows = state_burrows;
-      cfmm = state_cfmm;
-      parameters = state_parameters;
-      liquidation_auctions = state_liquidation_auctions;
-      last_price = state_last_price;
-      fa2_state = state_fa2_state;
-      external_contracts = state_external_contracts;
-    } in
 
   assert_checker_invariants state;
   (ops, state)
