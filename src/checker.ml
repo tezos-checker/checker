@@ -449,9 +449,10 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%burrowSendTezTo" (burrow_address burrow): (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_tok liquidation_reward, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureBurrowSendTezTo : LigoOp.operation) in
+  let ops = [op] in
 
   assert_checker_invariants state;
-  ([op], state)
+  (ops, state)
 
 (* NOTE: The list of operations returned is in reverse order (with respect to
  * the order the input slices were processed in). However, since the operations
