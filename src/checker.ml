@@ -356,7 +356,12 @@ let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : 
   else
     (Ligo.failwith error_AuthenticationError : LigoOp.operation list * checker)
 
-let rec find_oldest_slices (n, leaf_ptr, liquidation_auctions, acc : Ligo.nat * leaf_ptr * liquidation_auctions * leaf_ptr list) : leaf_ptr list =
+let rec reverse_list (xs, ys : leaf_ptr list * leaf_ptr list) : leaf_ptr list =
+  match xs with
+  | [] -> ys
+  | (x :: xs) -> reverse_list (xs, x :: ys)
+
+let rec find_oldest_slices_rec (n, leaf_ptr, liquidation_auctions, acc : Ligo.nat * leaf_ptr * liquidation_auctions * leaf_ptr list) : leaf_ptr list =
   match Ligo.is_nat (Ligo.sub_nat_nat n (Ligo.nat_from_literal "1n")) with
   | None -> acc
   | Some n -> begin
@@ -366,7 +371,7 @@ let rec find_oldest_slices (n, leaf_ptr, liquidation_auctions, acc : Ligo.nat * 
       match leaf.value.younger with
       | None -> acc
       | Some younger_ptr ->
-        find_oldest_slices (n, younger_ptr, liquidation_auctions, (younger_ptr :: acc)) (* REVERSE ORDER!! *)
+        find_oldest_slices_rec (n, younger_ptr, liquidation_auctions, (younger_ptr :: acc)) (* REVERSE ORDER! *)
       end
     | _ -> Ligo.failwith error_InvalidLeafPtr
     end
@@ -378,7 +383,9 @@ let[@inline] find_oldest_slices (n: Ligo.nat) (liquidation_auctions: liquidation
   | Some n -> begin
     match liquidation_auction_oldest_completed_liquidation_slice liquidation_auctions with
     | None -> []
-    | Some leaf -> find_oldest_slices (n, leaf, liquidation_auctions, [leaf])
+    | Some leaf ->
+      let slices_reversed = find_oldest_slices_rec (n, leaf, liquidation_auctions, [leaf]) in (* REVERSE ORDER! *)
+      reverse_list (slices_reversed, ([]: leaf_ptr list))
     end
 
 (* Note that this function prepends the operation to the list of operations
@@ -779,28 +786,15 @@ let calculate_touch_reward (last_touched: Ligo.timestamp) : kit =
  * to the order the input slices were processed in). However, since the
  * operations computed are independent from each other, this needs not be a
  * problem. *)
-let rec touch_oldest
-    (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, maximum
-                                                                                        : LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state * Ligo.nat)
+let[@inline] touch_oldest_slices
+    (ops: LigoOp.operation list)
+    (state_liquidation_auctions: liquidation_auctions)
+    (state_burrows: burrow_map)
+    (state_parameters: parameters)
+    (state_fa2_state: fa2_state)
   : (LigoOp.operation list * liquidation_auctions * burrow_map * parameters * fa2_state) =
-  match Ligo.is_nat (Ligo.sub_nat_nat maximum (Ligo.nat_from_literal "1n")) with
-  | None -> (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state)
-  | Some maximum ->
-    begin
-      match liquidation_auction_oldest_completed_liquidation_slice state_liquidation_auctions with
-      | None -> (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state)
-      | Some leaf ->
-        let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-          touch_liquidation_slice ops state_liquidation_auctions state_burrows state_parameters state_fa2_state leaf in
-        touch_oldest
-          ( ops,
-            state_liquidation_auctions,
-            state_burrows,
-            state_parameters,
-            state_fa2_state,
-            maximum
-          )
-    end
+  let slices = find_oldest_slices number_of_slices_to_process state_liquidation_auctions in
+  touch_liquidation_slices_rec (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, slices)
 
 (* Note that the list of operations returned is in reverse order (with respect to
  * the order in which the things are expected to happen). However, all inputs
@@ -870,7 +864,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-      touch_oldest ([op], state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, number_of_slices_to_process) in
+      touch_oldest_slices [op] state_liquidation_auctions state_burrows state_parameters state_fa2_state in
 
     let state =
       { burrows = state_burrows;
