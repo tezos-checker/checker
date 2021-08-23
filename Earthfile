@@ -53,30 +53,44 @@ build-ligo:
     SAVE ARTIFACT ./generated/michelson/* /
 
 e2e:
-    FROM earthly/dind:alpine
+    FROM ubuntu:21.04
 
-    RUN apk add make \
-          g++ linux-headers libtool autoconf automake \
-          zeromq-dev libffi-dev gmp-dev zlib-dev jpeg-dev \
-          python3-dev py3-pip
-    RUN pip install poetry
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
 
+    # Download ZCash parameters necessary for the node
+    # We do this as early as possible so changing anything else does not invalidate the cache.
+    RUN apt install -y curl
+    RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
+
+    RUN apt install -y \
+          pkg-config autoconf libtool libev4 \
+          libgmp-dev openssl libsodium23 libsodium-dev \
+          curl net-tools libhidapi-dev \
+          python3-pip python-is-python3
+
+    # bring ligo, which is required for ctez deployment
     COPY +ligo-binary/ligo /bin/ligo
+
+    # install poetry
+    RUN pip install --upgrade pip
+    RUN pip install poetry
 
     WORKDIR /root
     COPY pyproject.toml poetry.lock ./
     COPY ./e2e ./e2e
     COPY ./client ./client
+
     RUN poetry install
 
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
 
+    COPY +tezos-binaries/* /usr/bin/
+
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
-    WITH DOCKER --pull tqtezos/flextesa:20210514
-        RUN poetry run python ./e2e/main.py
-    END
+    RUN poetry run python ./e2e/main.py
 
 # Utilities
 
@@ -85,26 +99,34 @@ ligo-binary:
     SAVE ARTIFACT /root/ligo ligo
 
 tezos-binaries:
-    FROM alpine:3.14
+    FROM ubuntu:21.04
 
-    RUN apk add make g++ m4 gmp-dev bash rustup opam git
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
+    RUN apt install -y curl libgmp-dev git bash opam
+
+    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init
+    RUN chmod +x /usr/bin/rustup-init
 
     WORKDIR /root
-    RUN git clone https://gitlab.com/tezos/tezos -b v10.0-rc3 --depth 1
+    RUN git clone https://gitlab.com/tezos/tezos.git -b v10-release --depth 1
 
     WORKDIR /root/tezos
 
+    RUN ln -sf /bin/bash /bin/sh
     RUN source scripts/version.sh; rustup-init --profile minimal --default-toolchain $recommended_rust_version -y
 
     RUN opam init --disable-sandboxing --bare
-    RUN source scripts/version.sh; opam switch create . $ocaml_version
-    RUN source $HOME/.cargo/env; OPAMSOLVERTIMEOUT=2400 opam exec -- make build-deps
+    RUN source scripts/version.sh; opam repository add tezos --dont-select "$opam_repository"
 
-    # FIXME:
-    # We're getting the error:
-    #
-    #    [ERROR] Sorry, resolution of the request timed out.
-    #    Try to specify a simpler request, use a different solver, or increase the allowed time by
-    #     setting OPAMSOLVERTIMEOUT to a bigger value (currently, it is set to 2400.0 seconds)
-    #
-    # Even though our OPAMSOLVERTIMEOUT is 40 minutes.
+    RUN OPAMSWITCH=for_tezos
+    RUN source scripts/version.sh; opam switch create . $ocaml_version --repositories=tezos
+
+    RUN source $HOME/.cargo/env; OPAMSOLVERTIMEOUT=2400 opam exec -- make build-deps
+    RUN source $HOME/.cargo/env; opam exec -- make
+    RUN source $HOME/.cargo/env; opam exec -- make build-sandbox
+
+    SAVE ARTIFACT tezos-* /
+
+
+

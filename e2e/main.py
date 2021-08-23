@@ -27,16 +27,17 @@ WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
         port = portpicker.pick_unused_port()
-        client, docker_client, docker_container = start_sandbox(
+        client, teardownFun = start_sandbox(
             "checker-e2e-container-{}".format(port), port, wait_for_level=2
         )
-        self.docker_client = docker_client
-        self.docker_container = docker_container
+        self.teardownFun = teardownFun
         self.client = client
         self.gas_profiles = {}
 
     def tearDown(self):
-        self.docker_container.kill()
+        self.teardownFun()
+
+        docker_container.kill()
         self.docker_client.close()
 
 

@@ -149,18 +149,12 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
         },
     }
 
-
 def start_sandbox(name: str, port: int, wait_for_level=0):
-    docker_client = docker.from_env()
-    docker_container = docker_client.containers.run(
-        "tqtezos/flextesa:20210514",
-        command=["flobox", "start"],
-        environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
-        ports={"20000/tcp": port},
-        name=name,
-        detach=True,
-        remove=True,
-    )
+    if os.path.exists("/var/run/docker.sock"):
+        teardownFun = start_docker_sandbox(name, port)
+    else:
+        teardownFun = start_local_sandbox(name, port)
+
     client = pytezos.pytezos.using(
         shell="http://127.0.0.1:{}".format(port),
         key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
@@ -185,13 +179,52 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
             last_level = level
         if level >= wait_for_level:
             break
-    return client, docker_client, docker_container
 
+    return client, teardownFun
 
-def stop_sandbox(name: str):
+def start_docker_sandbox(name: str, port: int):
     docker_client = docker.from_env()
-    container = docker_client.containers.get(name)
-    container.kill()
+    docker_container = docker_client.containers.run(
+        "tqtezos/flextesa:20210514",
+        command=["flobox", "start"],
+        environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
+        ports={"20000/tcp": port},
+        name=name,
+        detach=True,
+        remove=True,
+    )
+
+    def teardownFun():
+        docker_container.kill()
+        docker_client.close()
+
+    return teardownFun
+
+
+def start_local_sandbox(name: str, port: int):
+    alice_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "alice"]).decode("utf-8")
+    bob_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "bob"]).decode("utf-8")
+
+    # below command is mainly from the 'granabox' script from flextesa docker
+    # container.
+    handle = subprocess.Popen(
+      [ "tezos-sandbox", "mini-net"
+      , f"--base-port={port}"
+      , "--set-history-mode=N000:archive"
+      , "--number-of-b=1"
+      , f"--time-b={SANDBOX_TIME_BETWEEN_BLOCKS}"
+      , f"--minimal-block-delay=1"
+      , f"--add-bootstrap-account={alice_key}@2_000_000_000_000"
+      , f"--add-bootstrap-account={bob_key}@2_000_000_000_000"
+      , "--no-daemons-for=alice"
+      , "--no-daemons-for=bob"
+      , "--until-level=200_000_000"
+      , "--protocol-kind=Granada"
+      , "--root=/tmp/mini-box/"
+      ]
+    )
+
+    return handle.kill
 
 
 def is_sandbox_container_running(name: str):
