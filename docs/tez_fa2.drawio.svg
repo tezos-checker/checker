@@ -1,0 +1,147 @@
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="731px" height="551px" viewBox="-0.5 -0.5 731 551" content="&lt;mxfile&gt;&lt;diagram id=&quot;V7P_57_8SjkkDLCae6tB&quot; name=&quot;Page-1&quot;&gt;7VhLc5swEP41TE/NYGTs+OhH0h7aTmdyaHrqyCCDEiFRIfz69V0JYVDAqTthckjjg41Wq8d++0n7YQ8ts/0nifP0q4gJ8wI/3nto5QXBKBgj+NGWQ2WZ+WFlSCSNrVNjuKNHYo2+tZY0JoXjqIRgiuauMRKck0g5Niyl2LluG8HcVXOckI7hLsKsa/1BY5VW1uvQb+yfCU3SeuWRb3vWOHpMpCi5Xc8L0MZ8qu4M13NZ/yLFsdi1TOjGQ0sphKqesv2SMI1tDVs17vZM72nfknB10YCgGrHFrCT1ls3G1KEGw4RD9ADfQ4tdShW5y3Gke3eQfrClKmPQGsGjnY5IRfZn9zQ6RQoMIiIjSh7AZddAPUUWoLQFc1jjj216k9PYJkR4sFH2Rxx24iMx5N42hVSpSATH7KaxLlwEGp8vQuQ27gei1MESGZdKuKiQPVX3reefeqqr0LZWezuzaRzqBofI7tuN1ijdbIaZVj3uDNwQsihlZGO2WVZYJsR62SOr0Xg2S5IwrOjWPSl9GTFD51LiQ8shF5SrojXzd20AB8uW8dTm2N4cwTR0CfwX/xHyn7Ch2kHDjVMoF9Hl+p0u/XSZDE2XSw/w7D0j/RmZvokDPA6GPcDdAqfIEQy3cysglMSgIIIJAxgXawlPiTJZOGeJ6dbh3+R3qcv1Aiqe+ogZTbiH5uDxUBaKbg6NQz3REhbFlBc6fymB77IoMTvtybChhtnHTPDEFEeojdD0ND52a83OwoKoFWEkwYrU3YBMy6M1rVFE0uS0gN1SMz82IJVMfdCrxnauq9ZkJu6BoTiP8jMLnkyn1Y5GID4SjWlrid6JXqJuUiHpUWfPlTs9Z7WjgLrn0PaGTwpYLSVbamg07VFDaAg1hM6cjgZGw4k2qq0z83Kh+DLk0AXQ9QnJyQDITd4ScsE4fD3kpm8JOTR7Rc7Vr8fO21q3FsQkFwVVvwysfbVggjONDF8XuZFDNKEcLvuiXQYc0H0ML7RQQjJa1SQOXyInEnSE0M/gxosNkbKqJVVVy6XYUp0bMNgbWsfSzaGuFm6iCiXhNl8KBmUKrbjgWsRtKGNPTLbErCJIKJGaOZBICu/xc9uR0Tg2CrCPGS53BiBH5y6f9pDjuoccsyHIMbqIHHWqLmHGWhjNUeaxZUeV2EqmMC00ZZ8cmX9bXTL7v7GpyElEN9TQCWeQOU1LsXHJVblK8MwppNFIGcPmq/+HdEHfjTQQ6aDZ/DdVifHmD0B08wc=&lt;/diagram&gt;&lt;/mxfile&gt;" style="background-color: rgb(255, 255, 255);">
+    <defs/>
+    <g>
+        <rect x="0" y="0" width="730" height="550" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <path d="M 220 275 L 470 275 L 470 130 L 523.63 130" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 528.88 130 L 521.88 133.5 L 523.63 130 L 521.88 126.5 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 220 275 L 523.63 275" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 528.88 275 L 521.88 278.5 L 523.63 275 L 521.88 271.5 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="all"/>
+        <path d="M 220 275 L 470 275 L 470 420 L 523.63 420" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke"/>
+        <path d="M 528.88 420 L 521.88 423.5 L 523.63 420 L 521.88 416.5 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="all"/>
+        <rect x="50" y="100" width="170" height="350" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 168px; height: 1px; padding-top: 275px; margin-left: 51px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                tez FA2 contract
+                                <br/>
+                                <br/>
+                                <div style="text-align: justify">
+                                    Contains the usual FA2 entrypoints along with a
+                                    <b>
+                                        %setDelegate
+                                    </b>
+                                    entrypoint for assigning a vault's delegate.
+                                </div>
+                                <div style="text-align: justify">
+                                    <br/>
+                                </div>
+                                <div>
+                                    "tez tokens"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="135" y="279" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    tez FA2 contract...
+                </text>
+            </switch>
+        </g>
+        <rect x="530" y="100" width="130" height="60" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 128px; height: 1px; padding-top: 130px; margin-left: 531px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                tez "vault" contract
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="595" y="134" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    tez "vault" contract
+                </text>
+            </switch>
+        </g>
+        <rect x="530" y="245" width="130" height="60" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 128px; height: 1px; padding-top: 275px; margin-left: 531px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                tez "vault" contract
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="595" y="279" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    tez "vault" contract
+                </text>
+            </switch>
+        </g>
+        <rect x="530" y="390" width="130" height="60" fill="#ffffff" stroke="#000000" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 128px; height: 1px; padding-top: 420px; margin-left: 531px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                tez "vault" contract
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="595" y="424" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    tez "vault" contract
+                </text>
+            </switch>
+        </g>
+        <rect x="250" y="170" width="180" height="90" fill="none" stroke="none" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 178px; height: 1px; padding-top: 215px; margin-left: 251px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                <b>
+                                    %deposit_tez
+                                </b>
+                                originates a vault contract and emits an operation transferring the provided tez to it
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="340" y="219" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    %deposit_tez originates a vaul...
+                </text>
+            </switch>
+        </g>
+        <rect x="250" y="290" width="180" height="90" fill="none" stroke="none" pointer-events="all"/>
+        <g transform="translate(-0.5 -0.5)">
+            <switch>
+                <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 178px; height: 1px; padding-top: 335px; margin-left: 251px;">
+                        <div style="box-sizing: border-box; font-size: 0; text-align: center; ">
+                            <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                <b>
+                                    %transfer
+                                </b>
+                                both updates the FA2 ledger
+                                <b>
+                                    AND
+                                </b>
+                                emits an operation transferring the specified amount of tez to the recipient's vault.
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+                <text x="340" y="339" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">
+                    %transfer both updates the FA2...
+                </text>
+            </switch>
+        </g>
+    </g>
+    <switch>
+        <g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/>
+        <a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank">
+            <text text-anchor="middle" font-size="10px" x="50%" y="100%">
+                Viewer does not support full SVG 1.1
+            </text>
+        </a>
+    </switch>
+</svg>
