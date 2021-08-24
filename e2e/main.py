@@ -26,7 +26,9 @@ WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
-        port = portpicker.pick_unused_port()
+        #  sometimes doesn't work, needs investigation:
+        #    port = portpicker.pick_unused_port()
+        port = 20000
         client, teardownFun = start_sandbox(
             "checker-e2e-container-{}".format(port), port, wait_for_level=2
         )

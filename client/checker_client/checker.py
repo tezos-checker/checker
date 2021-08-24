@@ -2,8 +2,10 @@ import json
 import logging
 import math
 import os
+import sys
 import subprocess
 import tempfile
+import shutil
 import time
 from collections import namedtuple
 from decimal import Decimal
@@ -162,19 +164,24 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     )
     # Increase log level to avoid connection errors
     client.loglevel = logging.ERROR
+
     # wait some time for the node to start
-    while True:
+    print("Trying to connect to the sandbox.")
+    for _ in range(20):
         try:
             client.shell.node.get("/version/")
             break
-        except requests.exceptions.ConnectionError:
-            time.sleep(0.1)
+        except requests.exceptions.ConnectionError as exc:
+            print("Connection failed, retrying:", exc)
+            time.sleep(1)
+    else:
+        raise Exception("Can not connect to the sandbox.")
 
     print(f"Sandbox initialized. Waiting for expected level to be reached... ")
     last_level = 0
     while True:
         # Wait until enough blocks have been baked for further deploy operations, etc.
-        level = client.shell.head.level()
+        level = client.shell.head.header()["level"]
         if level != last_level:
             print(f"Sandbox at level {level} / {wait_for_level}")
             last_level = level
@@ -188,7 +195,7 @@ def start_docker_sandbox(name: str, port: int):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
         "tqtezos/flextesa:20210514",
-        command=["flobox", "start"],
+        command=["granabox", "start"],
         environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
         ports={"20000/tcp": port},
         name=name,
@@ -207,28 +214,34 @@ def start_local_sandbox(name: str, port: int):
     alice_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "alice"]).decode("utf-8")
     bob_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "bob"]).decode("utf-8")
 
+    tmpdir = tempfile.mkdtemp(prefix=name)
+
     # below command is mainly from the 'granabox' script from flextesa docker
     # container.
-    handle = subprocess.Popen(
-        [
-            "tezos-sandbox",
-            "mini-net",
-            f"--base-port={port}",
-            "--set-history-mode=N000:archive",
-            "--number-of-b=1",
-            f"--time-b={SANDBOX_TIME_BETWEEN_BLOCKS}",
-            f"--minimal-block-delay=1",
-            f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
-            f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
-            "--no-daemons-for=alice",
-            "--no-daemons-for=bob",
-            "--until-level=200_000_000",
-            "--protocol-kind=Granada",
-            "--root=/tmp/mini-box/",
-        ]
-    )
+    args = [
+        "tezos-sandbox",
+        "mini-net",
+        f"--root={tmpdir}",
+        f"--base-port={port}",
+        "--size=1",
+        "--set-history-mode=N000:archive",
+        f"--time-b={SANDBOX_TIME_BETWEEN_BLOCKS}",
+        f"--minimal-block-delay=1",
+        f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
+        f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
+        "--no-daemons-for=alice",
+        "--no-daemons-for=bob",
+        "--until-level=200_000_000",
+        "--protocol-kind=Granada"
+    ]
 
-    return handle.kill
+    handle = subprocess.Popen(args)
+
+    def teardownFun():
+        handle.kill()
+        shutil.rmtree(tmpdir)
+
+    return teardownFun
 
 
 def is_sandbox_container_running(name: str):
