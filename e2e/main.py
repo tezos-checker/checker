@@ -37,9 +37,6 @@ class SandboxedTestCase(unittest.TestCase):
     def tearDown(self):
         self.teardownFun()
 
-        docker_container.kill()
-        self.docker_client.close()
-
 
 def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
     # TODO: There might be a way to get this from contract metadata

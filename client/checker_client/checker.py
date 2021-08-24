@@ -149,6 +149,7 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
         },
     }
 
+
 def start_sandbox(name: str, port: int, wait_for_level=0):
     if os.path.exists("/var/run/docker.sock"):
         teardownFun = start_docker_sandbox(name, port)
@@ -182,6 +183,7 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
 
     return client, teardownFun
 
+
 def start_docker_sandbox(name: str, port: int):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
@@ -208,20 +210,22 @@ def start_local_sandbox(name: str, port: int):
     # below command is mainly from the 'granabox' script from flextesa docker
     # container.
     handle = subprocess.Popen(
-      [ "tezos-sandbox", "mini-net"
-      , f"--base-port={port}"
-      , "--set-history-mode=N000:archive"
-      , "--number-of-b=1"
-      , f"--time-b={SANDBOX_TIME_BETWEEN_BLOCKS}"
-      , f"--minimal-block-delay=1"
-      , f"--add-bootstrap-account={alice_key}@2_000_000_000_000"
-      , f"--add-bootstrap-account={bob_key}@2_000_000_000_000"
-      , "--no-daemons-for=alice"
-      , "--no-daemons-for=bob"
-      , "--until-level=200_000_000"
-      , "--protocol-kind=Granada"
-      , "--root=/tmp/mini-box/"
-      ]
+        [
+            "tezos-sandbox",
+            "mini-net",
+            f"--base-port={port}",
+            "--set-history-mode=N000:archive",
+            "--number-of-b=1",
+            f"--time-b={SANDBOX_TIME_BETWEEN_BLOCKS}",
+            f"--minimal-block-delay=1",
+            f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
+            f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
+            "--no-daemons-for=alice",
+            "--no-daemons-for=bob",
+            "--until-level=200_000_000",
+            "--protocol-kind=Granada",
+            "--root=/tmp/mini-box/",
+        ]
     )
 
     return handle.kill
