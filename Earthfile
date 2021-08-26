@@ -24,7 +24,10 @@ build-ocaml:
 
     RUN opam exec -- dune build @install
     RUN opam exec -- dune build @run-fast-tests
-    # RUN opam exec -- dune build @run-avl-tests
+
+ocaml-slow-tests:
+    FROM +build-ocaml
+    RUN opam exec -- dune build @run-avl-tests
 
 build-ligo:
     FROM alpine:3.14
