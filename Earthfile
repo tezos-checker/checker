@@ -72,11 +72,11 @@ python-deps:
     RUN pip install poetry
 
     WORKDIR /root
-    RUN mkdir e2e/ client/
-    COPY pyproject.toml poetry.lock ./
-    COPY ./e2e/pyproject.toml ./e2e/
-    COPY ./client/pyproject.toml ./client/
 
+    # We only copy the files necessary for the build to succeed.
+    COPY pyproject.toml poetry.lock ./
+    COPY ./e2e ./e2e
+    COPY ./client ./client
     RUN poetry install
     RUN rm -rf e2e/ client/ pyproject.toml poetry.lock
 
@@ -110,6 +110,18 @@ e2e:
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
     RUN poetry run python ./e2e/main.py
+
+cli:
+    FROM +python-deps
+
+    WORKDIR /root
+    COPY pyproject.toml poetry.lock ./
+    COPY ./e2e ./e2e
+    COPY ./client ./client
+
+    RUN poetry install checker-client
+
+    # TODO
 
 # Utilities
 
