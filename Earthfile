@@ -56,29 +56,44 @@ build-ligo:
 
     SAVE ARTIFACT ./generated/michelson/* /
 
-e2e:
+python-deps:
     FROM ubuntu:21.04
 
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update
 
-    # Download ZCash parameters necessary for the node
-    # We do this as early as possible so changing anything else does not invalidate the cache.
-    RUN apt install -y curl
-    RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
-
     RUN apt install -y \
           pkg-config autoconf libtool libev4 \
           libgmp-dev openssl libsodium23 libsodium-dev \
+          python3-pip python-is-python3
+
+    # install poetry
+    RUN pip install --upgrade pip
+    RUN pip install poetry
+
+    WORKDIR /root
+    RUN mkdir e2e/ client/
+    COPY pyproject.toml poetry.lock ./
+    COPY ./e2e/pyproject.toml ./e2e/
+    COPY ./client/pyproject.toml ./client/
+
+    RUN poetry install
+    RUN rm -rf e2e/ client/ pyproject.toml poetry.lock
+
+e2e:
+    FROM +python-deps
+    ENV DEBIAN_FRONTEND=noninteractive
+
+    RUN apt install -y \
+          openssl libsodium23 libsodium-dev \
           curl net-tools libhidapi-dev \
           python3-pip python-is-python3
 
     # bring ligo, which is required for ctez deployment
     COPY +ligo-binary/ligo /bin/ligo
 
-    # install poetry
-    RUN pip install --upgrade pip
-    RUN pip install poetry
+    # Bring ZCash parameters necessary for the node
+    COPY +zcash-params/zcash-params /root/.zcash-params
 
     WORKDIR /root
     COPY pyproject.toml poetry.lock ./
@@ -101,6 +116,12 @@ e2e:
 ligo-binary:
     FROM ghcr.io/tezos-checker/ligo:0.22.0-checker
     SAVE ARTIFACT /root/ligo ligo
+
+zcash-params:
+    FROM alpine:3.14
+    RUN apk add curl wget
+    RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
+    SAVE ARTIFACT /root/.zcash-params /zcash-params
 
 tezos-binaries:
     FROM ubuntu:21.04
