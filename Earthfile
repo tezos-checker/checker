@@ -5,6 +5,7 @@ generate-entrypoints:
     COPY ./src/checker.mli checker.mli
     RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
+    SAVE ARTIFACT checkerEntrypoints.ml /
 
 build-ocaml:
     FROM alpine:3.14
