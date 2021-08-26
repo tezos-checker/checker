@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import shutil
 import time
+import signal
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
@@ -238,7 +239,11 @@ def start_local_sandbox(name: str, port: int):
     handle = subprocess.Popen(args)
 
     def teardownFun():
-        handle.kill()
+        # send a keyboard interrupt and wait
+        handle.send_signal(signal.SIGINT)
+        handle.wait(timeout=10)
+
+        # remove the state directory
         shutil.rmtree(tmpdir)
 
     return teardownFun
