@@ -154,10 +154,11 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
 
 
 def start_sandbox(name: str, port: int, wait_for_level=0):
-    if os.path.exists("/var/run/docker.sock"):
-        teardownFun = start_docker_sandbox(name, port)
-    else:
-        teardownFun = start_local_sandbox(name, port)
+    # TODO: Remove this line and only use local sandbox
+    # if os.path.exists("/var/run/docker.sock"):
+    #     teardownFun = start_docker_sandbox(name, port)
+    # else:
+    teardownFun = start_local_sandbox(name, port)
 
     client = pytezos.pytezos.using(
         shell="http://127.0.0.1:{}".format(port),
@@ -183,12 +184,13 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     while True:
         # Wait until enough blocks have been baked for further deploy operations, etc.
         level = client.shell.head.header()["level"]
+        print(level)
         if level != last_level:
             print(f"Sandbox at level {level} / {wait_for_level}")
             last_level = level
         if level >= wait_for_level:
             break
-
+    print("Sandbox started!")
     return client, teardownFun
 
 
@@ -212,16 +214,16 @@ def start_docker_sandbox(name: str, port: int):
 
 
 def start_local_sandbox(name: str, port: int):
-    alice_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "alice"]).decode("utf-8")
-    bob_key = subprocess.check_output(["tezos-sandbox", "key-of-name", "bob"]).decode("utf-8")
+    alice_key = subprocess.check_output(["flextesa", "key-of-name", "alice"]).decode("utf-8")
+    bob_key = subprocess.check_output(["flextesa", "key-of-name", "bob"]).decode("utf-8")
 
     tmpdir = tempfile.mkdtemp(prefix=name)
 
     # below command is mainly from the 'granabox' script from flextesa docker
     # container.
     args = [
-        "tezos-sandbox",
-        "mini-net",
+        "flextesa",
+        "mini-network",
         f"--root={tmpdir}",
         f"--base-port={port}",
         "--size=1",
@@ -233,17 +235,22 @@ def start_local_sandbox(name: str, port: int):
         "--no-daemons-for=alice",
         "--no-daemons-for=bob",
         "--until-level=200_000_000",
-        "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
+        # "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
         "--protocol-kind=Granada",
     ]
 
-    handle = subprocess.Popen(args)
+    handle = subprocess.Popen(
+        args, close_fds=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+    )
 
     def teardownFun():
         # send a keyboard interrupt and wait
         handle.send_signal(signal.SIGINT)
         handle.wait(timeout=10)
 
+        if handle.returncode is not None:
+            for line in handle.stderr.readlines():
+                print(line)
         # remove the state directory
         shutil.rmtree(tmpdir)
 

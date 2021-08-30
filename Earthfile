@@ -69,7 +69,8 @@ python-deps:
 
     # install poetry
     RUN pip install --upgrade pip
-    RUN pip install poetry
+    ARG POETRY_VERSION="==1.1.8"
+    RUN pip install poetry"$POETRY_VERSION"
 
     WORKDIR /root
 
@@ -105,7 +106,7 @@ e2e:
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
 
-    COPY +tezos-binaries/* /usr/bin/
+    COPY +flextesa/* /usr/bin/
 
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
@@ -165,5 +166,63 @@ tezos-binaries:
 
     SAVE ARTIFACT tezos-* /
 
+    SAVE IMAGE tezos-sandbox:latest
 
+flextesa:
+    FROM ubuntu:21.04
 
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
+    RUN apt install -y \
+        curl \
+        git \
+        bash \
+        opam
+
+    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init && chmod +x /usr/bin/rustup-init
+    RUN rustup-init -y
+
+    WORKDIR /root
+    RUN git clone https://gitlab.com/tezos/flextesa.git
+
+    WORKDIR /root/flextesa
+
+    ARG FLEXTESA_REV = "95a2badf3b226b121f6281f98d86aaee1de5b6e8"
+    ARG OCAML_VERSION = "4.10.2"
+
+    RUN git checkout "$FLEXTESA_REV"
+
+    # TODO: Move all of these system dependencies to the top now that we've figured out what they are...
+    RUN apt install -y libev-dev pkg-config
+    RUN opam init --disable-sandboxing --bare
+    RUN opam switch create flextesa "$OCAML_VERSION"
+    ENV OPAM_SWITCH="flextesa"
+    RUN apt install -y cargo libev-dev
+    RUN apt install -y pkg-config autoconf zlib1g-dev libffi-dev libusb-dev libhidapi-dev libgmp-dev libev-dev
+    RUN opam switch import src/tezos-master.opam-switch
+    ENV PATH="/root/.opam/$OPAM_SWITCH/bin:$PATH"
+
+    RUN make vendors
+
+    # Build flextesa
+    RUN eval $(opam env) && \
+        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
+        make build
+
+    # Unfortunately unless we want write logic to get the top N protocol exes this will
+    # have to be updated whenever we bump the protocol in our end to end tests.
+    ENV PROTO_DIR = "010_PtGRANAD"
+    # Build tezos exes which are required at runtime
+    RUN eval $(opam env) && \
+        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
+        cd local-vendor/tezos-master && \
+        dune build src/bin_node/main.exe && \
+        dune build src/bin_client/main_client.exe && \
+        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe"
+        # dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe"
+        # dune build "src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" && \
+        # dune build "src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe"
+
+    # TODO: Save additional exes above as artifacts
+    # cp local-vendor/tezos-master/_build/default/src/...
+    SAVE ARTIFACT flextesa /
