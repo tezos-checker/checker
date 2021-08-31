@@ -184,7 +184,6 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     while True:
         # Wait until enough blocks have been baked for further deploy operations, etc.
         level = client.shell.head.header()["level"]
-        print(level)
         if level != last_level:
             print(f"Sandbox at level {level} / {wait_for_level}")
             last_level = level
@@ -235,22 +234,15 @@ def start_local_sandbox(name: str, port: int):
         "--no-daemons-for=alice",
         "--no-daemons-for=bob",
         "--until-level=200_000_000",
-        # "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
+        "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
         "--protocol-kind=Granada",
     ]
 
-    handle = subprocess.Popen(
-        args, close_fds=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
-    )
+    handle = subprocess.Popen(args)
 
     def teardownFun():
         # send a keyboard interrupt and wait
-        handle.send_signal(signal.SIGINT)
-        handle.wait(timeout=10)
-
-        if handle.returncode is not None:
-            for line in handle.stderr.readlines():
-                print(line)
+        handle.send_signal(signal.SIGKILL)
         # remove the state directory
         shutil.rmtree(tmpdir)
 
