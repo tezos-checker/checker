@@ -106,6 +106,7 @@ e2e:
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
 
+    # Bring flextesa + tezos-* binaries, which are required by the checker client
     COPY +flextesa/* /usr/bin/
 
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
@@ -136,37 +137,38 @@ zcash-params:
     RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
     SAVE ARTIFACT /root/.zcash-params /zcash-params
 
-tezos-binaries:
-    FROM ubuntu:21.04
+# TODO: We might be able to remove this section dependening on whether we want to stick with flextesa.
+# tezos-binaries:
+#     FROM ubuntu:21.04
 
-    ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y curl libgmp-dev git bash opam
+#     ENV DEBIAN_FRONTEND=noninteractive
+#     RUN apt update
+#     RUN apt install -y curl libgmp-dev git bash opam
 
-    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init
-    RUN chmod +x /usr/bin/rustup-init
+#     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init
+#     RUN chmod +x /usr/bin/rustup-init
 
-    WORKDIR /root
-    RUN git clone https://gitlab.com/tezos/tezos.git -b v10-release --depth 1
+#     WORKDIR /root
+#     RUN git clone https://gitlab.com/tezos/tezos.git -b v10-release --depth 1
 
-    WORKDIR /root/tezos
+#     WORKDIR /root/tezos
 
-    RUN ln -sf /bin/bash /bin/sh
-    RUN source scripts/version.sh; rustup-init --profile minimal --default-toolchain $recommended_rust_version -y
+#     RUN ln -sf /bin/bash /bin/sh
+#     RUN source scripts/version.sh; rustup-init --profile minimal --default-toolchain $recommended_rust_version -y
 
-    RUN opam init --disable-sandboxing --bare
-    RUN source scripts/version.sh; opam repository add tezos --dont-select "$opam_repository"
+#     RUN opam init --disable-sandboxing --bare
+#     RUN source scripts/version.sh; opam repository add tezos --dont-select "$opam_repository"
 
-    RUN OPAMSWITCH=for_tezos
-    RUN source scripts/version.sh; opam switch create . $ocaml_version --repositories=tezos
+#     RUN OPAMSWITCH=for_tezos
+#     RUN source scripts/version.sh; opam switch create . $ocaml_version --repositories=tezos
 
-    RUN source $HOME/.cargo/env; OPAMSOLVERTIMEOUT=2400 opam exec -- make build-deps
-    RUN source $HOME/.cargo/env; opam exec -- make
-    RUN source $HOME/.cargo/env; opam exec -- make build-sandbox
+#     RUN source $HOME/.cargo/env; OPAMSOLVERTIMEOUT=2400 opam exec -- make build-deps
+#     RUN source $HOME/.cargo/env; opam exec -- make
+#     RUN source $HOME/.cargo/env; opam exec -- make build-sandbox
 
-    SAVE ARTIFACT tezos-* /
+#     SAVE ARTIFACT tezos-* /
 
-    SAVE IMAGE tezos-sandbox:latest
+#     SAVE IMAGE tezos-sandbox:latest
 
 flextesa:
     FROM ubuntu:21.04
@@ -177,52 +179,67 @@ flextesa:
         curl \
         git \
         bash \
-        opam
+        opam \
+        pkg-config \
+        cargo \
+        autoconf \
+        zlib1g-dev \
+        libev-dev \
+        libffi-dev \
+        libusb-dev \
+        libhidapi-dev \
+        libgmp-dev
+    # TODO: Clear package cache here
 
+    # Install rust (required by tezos)
     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init && chmod +x /usr/bin/rustup-init
     RUN rustup-init -y
 
+    # Checkout flextesa
     WORKDIR /root
     RUN git clone https://gitlab.com/tezos/flextesa.git
-
     WORKDIR /root/flextesa
 
     ARG FLEXTESA_REV = "95a2badf3b226b121f6281f98d86aaee1de5b6e8"
-    ARG OCAML_VERSION = "4.10.2"
 
     RUN git checkout "$FLEXTESA_REV"
 
-    # TODO: Move all of these system dependencies to the top now that we've figured out what they are...
-    RUN apt install -y libev-dev pkg-config
-    RUN opam init --disable-sandboxing --bare
-    RUN opam switch create flextesa "$OCAML_VERSION"
+    # Create opam switch and install flextesa deps
+    ARG OCAML_VERSION = "4.10.2"
     ENV OPAM_SWITCH="flextesa"
-    RUN apt install -y cargo libev-dev
-    RUN apt install -y pkg-config autoconf zlib1g-dev libffi-dev libusb-dev libhidapi-dev libgmp-dev libev-dev
+    RUN opam init --disable-sandboxing --bare
+    RUN opam switch create "$OPAM_SWITCH" "$OCAML_VERSION"
     RUN opam switch import src/tezos-master.opam-switch
-    ENV PATH="/root/.opam/$OPAM_SWITCH/bin:$PATH"
 
-    RUN make vendors
+    # ENV PATH="/root/.opam/$OPAM_SWITCH/bin:$PATH"
 
     # Build flextesa
+    RUN eval $(opam env) && make vendors
     RUN eval $(opam env) && \
         export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
         make build
 
     # Unfortunately unless we want write logic to get the top N protocol exes this will
     # have to be updated whenever we bump the protocol in our end to end tests.
-    ENV PROTO_DIR = "010_PtGRANAD"
-    # Build tezos exes which are required at runtime
+    ARG PROTO_DIR = "010_PtGRANAD"
+
+    # Build tezos exes which are required by flextesa at runtime
     RUN eval $(opam env) && \
         export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
         cd local-vendor/tezos-master && \
         dune build src/bin_node/main.exe && \
         dune build src/bin_client/main_client.exe && \
-        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe"
-        # dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe"
-        # dune build "src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" && \
-        # dune build "src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe"
+        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
+        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
+        dune build "src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" && \
+        dune build "src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe"
 
-    # TODO: Save additional exes above as artifacts
-    # cp local-vendor/tezos-master/_build/default/src/...
+    # Create expected binary names
+    RUN cp "local-vendor/tezos-master/_build/default/src/bin_node/main.exe" ./tezos-node && \
+        cp "local-vendor/tezos-master/_build/default/src/bin_client/main_client.exe" ./tezos-client && \
+        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" "./tezos-baker-$(echo $PROTO_DIR | tr '_' '-')" && \
+        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" "./tezos-endorser-$(echo $PROTO_DIR | tr '_' '-')" && \
+        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe" "./tezos-accuser-$(echo $PROTO_DIR | tr '_' '-')"
+
+    SAVE ARTIFACT tezos-* /
     SAVE ARTIFACT flextesa /
