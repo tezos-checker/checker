@@ -366,7 +366,7 @@ def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
     """Compiles an mligo file into michelson using ligo"""
     try:
         res = subprocess.run(
-            ["ligo", "compile-contract", str(src_file), entrypoint], capture_output=True
+            ["ligo", "compile-contract", str(src_file), entrypoint], check=True, capture_output=True
         )
     except subprocess.CalledProcessError as e:
         print(e.stdout)
