@@ -211,8 +211,6 @@ flextesa:
     RUN opam switch create "$OPAM_SWITCH" "$OCAML_VERSION"
     RUN opam switch import src/tezos-master.opam-switch
 
-    # ENV PATH="/root/.opam/$OPAM_SWITCH/bin:$PATH"
-
     # Build flextesa
     RUN eval $(opam env) && make vendors
     RUN eval $(opam env) && \

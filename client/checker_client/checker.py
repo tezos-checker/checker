@@ -242,7 +242,12 @@ def start_local_sandbox(name: str, port: int):
 
     def teardownFun():
         # send a keyboard interrupt and wait
-        handle.send_signal(signal.SIGKILL)
+        print("Stopping sandbox process")
+        handle.send_signal(signal.SIGINT)
+        timeout = 20
+        print(f"Waiting up to {timeout}s for sandbox process to exit...")
+        handle.wait(timeout=20)
+        print("Sandbox exited. Removing sandbox data dir.")
         # remove the state directory
         shutil.rmtree(tmpdir)
 
