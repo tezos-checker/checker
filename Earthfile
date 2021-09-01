@@ -43,6 +43,24 @@ ocaml-slow-tests:
     FROM +build-ocaml
     RUN opam exec -- dune build @run-avl-tests
 
+mutation-tests:
+    FROM +build-ocaml
+
+    RUN apt install -y python3 python-is-python3
+
+    # Note: If mutate.py ever depends on external packages we can also install them here
+    # as we do for the e2e tests. Skipping this for now since it reduces the layer size and
+    # is not currently required.
+
+    ARG test_cmd = 'dune build @run-fast-tests'
+    ARG n_mutations = "25"
+    ARG modules = 'src/burrow.ml src/checker.ml'
+
+    # Need git tree for restoring mutated src files
+    COPY .git .git
+    COPY scripts/mutate.py ./mutate.py
+    RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
+
 build-ligo:
     FROM alpine:3.14
     RUN apk add bash ruby ruby-etc ruby-json
