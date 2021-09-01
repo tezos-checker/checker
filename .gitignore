@@ -20,6 +20,7 @@ _opam
 # python stuff
 __pycache__
 .python-version
+.ipynb_checkpoints
 
 # tezos client scripts
 *2net.sh
