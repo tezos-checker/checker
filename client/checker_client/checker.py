@@ -364,12 +364,16 @@ def deploy_checker(
 
 def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
     """Compiles an mligo file into michelson using ligo"""
-    with out_file.open("wb") as f:
-        subprocess.run(
-            ["ligo", "compile-contract", str(src_file), entrypoint],
-            check=True,
-            stdout=f,
+    try:
+        res = subprocess.run(
+            ["ligo", "compile-contract", str(src_file), entrypoint], capture_output=True
         )
+    except subprocess.CalledProcessError as e:
+        print(e.stdout)
+        print(e.stderr)
+        raise e
+    with out_file.open("wb") as f:
+        f.write(res.stdout)
 
 
 def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
