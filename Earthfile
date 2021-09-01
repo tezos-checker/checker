@@ -7,9 +7,19 @@ generate-entrypoints:
     SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml /
 
-build-ocaml:
-    FROM alpine:3.14
-    RUN apk add make g++ m4 gmp-dev bash opam
+ocaml-base:
+    FROM ubuntu:21.04
+
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
+    RUN apt install -y \
+        m4 \
+        git \
+        bash \
+        opam \
+        g++ \
+        libgmp-dev
+
     WORKDIR /root
 
     RUN opam init --disable-sandboxing --bare
@@ -17,6 +27,9 @@ build-ocaml:
 
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
+
+build-ocaml:
+    FROM +ocaml-base
 
     COPY src/*.ml src/*.mli src/dune ./src/
     COPY +generate-entrypoints/checkerEntrypoints.ml ./src/
@@ -136,39 +149,6 @@ zcash-params:
     RUN apk add curl wget
     RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
     SAVE ARTIFACT /root/.zcash-params /zcash-params
-
-# TODO: We might be able to remove this section dependening on whether we want to stick with flextesa.
-# tezos-binaries:
-#     FROM ubuntu:21.04
-
-#     ENV DEBIAN_FRONTEND=noninteractive
-#     RUN apt update
-#     RUN apt install -y curl libgmp-dev git bash opam
-
-#     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init
-#     RUN chmod +x /usr/bin/rustup-init
-
-#     WORKDIR /root
-#     RUN git clone https://gitlab.com/tezos/tezos.git -b v10-release --depth 1
-
-#     WORKDIR /root/tezos
-
-#     RUN ln -sf /bin/bash /bin/sh
-#     RUN source scripts/version.sh; rustup-init --profile minimal --default-toolchain $recommended_rust_version -y
-
-#     RUN opam init --disable-sandboxing --bare
-#     RUN source scripts/version.sh; opam repository add tezos --dont-select "$opam_repository"
-
-#     RUN OPAMSWITCH=for_tezos
-#     RUN source scripts/version.sh; opam switch create . $ocaml_version --repositories=tezos
-
-#     RUN source $HOME/.cargo/env; OPAMSOLVERTIMEOUT=2400 opam exec -- make build-deps
-#     RUN source $HOME/.cargo/env; opam exec -- make
-#     RUN source $HOME/.cargo/env; opam exec -- make build-sandbox
-
-#     SAVE ARTIFACT tezos-* /
-
-#     SAVE IMAGE tezos-sandbox:latest
 
 flextesa:
     FROM ubuntu:21.04
