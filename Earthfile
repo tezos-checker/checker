@@ -4,7 +4,6 @@ all:
     BUILD +build-ligo
     # Run additional test suites
     BUILD +ocaml-slow-tests
-    BUILD +e2e
     BUILD +cli
 
 spec:
@@ -207,7 +206,15 @@ e2e:
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
     RUN poetry run python ./e2e/main.py
+    SAVE ARTIFACT e2e/gas_profiles.json /gas_profiles.json
+    SAVE ARTIFACT gas-costs.json /gas-costs.json
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
+
+gas-profiles:
+    FROM +python-deps
+    COPY +e2e/gas_profiles.json .
+    RUN poetry run python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png
+    SAVE ARTIFACT auction-gas-profiles.png /auction-gas-profiles.png
 
 cli:
     FROM +python-deps

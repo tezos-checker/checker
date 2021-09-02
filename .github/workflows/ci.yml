@@ -8,23 +8,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: cachix/cachix-action@v10
-        with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies
-        run: nix-shell --pure --run ':'
-      - name: Check formatting
-        run: nix-shell --pure --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
+      - name: Log in to container registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+
+      # Only push earthly cache from master
+      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+      # - if: github.ref == ‘refs/heads/integration’ && github.event_name == ‘push’
+      #   run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+      - name: Lint
+        run: earthly "${{ env.push_flag }}" --ci +lint
       - name: Build and test
-        run: nix-build -A michelson --arg doCheck true
+        run: earthly "${{ env.push_flag }}" --ci +all
 
       - name: Export lazy entrypoint sizes
         run: |
+          earthly "${{ env.push_flag }}" --ci --artifact +build-ligo/functions.json functions.json
           cat result/functions.json \
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
             | tee entrypoint-sizes.json
@@ -34,8 +38,9 @@ jobs:
           name: stats
           path: entrypoint-sizes.json
           if-no-files-found: error
+
       - name: Export the test coverage report
-        run: nix-shell --pure --run 'make test-coverage.json'
+        run: earthly --ci --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
@@ -45,22 +50,24 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: cachix/cachix-action@v10
-        with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies
-        run: nix-shell --pure --run ':'
-      - name: Build checker with e2eTestsHack
-        run: nix-build -A michelson --arg doCheck false --arg e2eTestsHack true --out-link ./checker-e2eTestsHack
+      - name: Log in to container registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+
+      # Only push earthly cache from master
+      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+
       - name: Run e2e tests
-        run: nix-shell --pure --run "WRITE_GAS_PROFILES=$PWD/gas_profiles.json WRITE_GAS_COSTS=$PWD/gas-costs.json CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
+        run: earthly "${{ env.push_flag }}" --ci --artifact +e2e/gas-costs.json gas-costs.json
+
       - name: Generate profile plots
-        run: nix-shell --pure --run "python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png"
+        run: earthly "${{ env.push_flag }}" --ci --artifact +gas-profiles/auction-gas-profiles.png auction-gas-profiles.png
+
       - uses: actions/upload-artifact@v2.2.4
         # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
         # per commit.
