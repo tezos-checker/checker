@@ -1,3 +1,27 @@
+all:
+    # Build checker
+    BUILD +build-ocaml
+    BUILD +build-ligo
+    # Run additional test suites
+    BUILD +ocaml-slow-tests
+    BUILD +e2e
+    BUILD +cli
+
+spec:
+    FROM ubuntu:21.04
+
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
+    RUN apt install -y \
+          make \
+          python3-pip \
+          python-is-python3
+
+    RUN pip install --upgrade pip && pip install sphinx-rtd-theme
+    COPY docs docs
+    RUN make -C docs/spec html
+    SAVE ARTIFACT docs/spec/_build/html /
+
 generate-entrypoints:
     FROM alpine:3.14
     RUN apk add ruby
@@ -18,7 +42,8 @@ ocaml-base:
         bash \
         opam \
         g++ \
-        libgmp-dev
+        libgmp-dev \
+        fd-find
 
     WORKDIR /root
 
@@ -28,20 +53,58 @@ ocaml-base:
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
 
-build-ocaml:
-    FROM +ocaml-base
+lint:
+    BUILD +lint-ocaml
+    BUILD +lint-python
 
+lint-ocaml:
+    FROM +src-ocaml
+    COPY .git .git
+    COPY ./scripts/format-ocaml.sh .
+    RUN opam exec -- ./format-ocaml.sh && \
+        diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-ocaml.sh\":"; echo "$diff"; exit 1; fi'
+
+lint-python:
+    FROM +python-deps
+    RUN apt install -y fd-find git
+    COPY .git .git
+    COPY ./scripts/format-python.sh .
+    RUN poetry run ./format-python.sh && \
+        diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-ocaml.sh\":"; echo "$diff"; exit 1; fi'
+
+src-ocaml:
+    FROM +ocaml-base
     COPY src/*.ml src/*.mli src/dune ./src/
     COPY +generate-entrypoints/checkerEntrypoints.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
 
+build-ocaml:
+    FROM +src-ocaml
     RUN opam exec -- dune build @install
     RUN opam exec -- dune build @run-fast-tests
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ocaml:master
 
 ocaml-slow-tests:
     FROM +build-ocaml
     RUN opam exec -- dune build @run-avl-tests
+
+test-coverage:
+    FROM +build-ocaml
+    RUN apt install -y jq gawk
+    RUN opam exec -- dune runtest --instrument-with bisect_ppx --force .
+    RUN opam exec -- bisect-ppx-report html
+    RUN echo "$(opam exec -- bisect-ppx-report summary --per-file)"
+    RUN opam exec -- bisect-ppx-report summary --per-file \
+	  | awk '{ match($0, "^ *([0-9.]+) *% *[^ ]* *(.*)$", res); print res[1] "|" res[2] }' \
+	  | jq -R "split(\"|\") | { \
+	      \"value\": .[0] | tonumber, \
+	      \"key\": (.[1] | if . == \"Project coverage\" then \"TOTAL\" else ltrimstr(\"src/\") end) \
+	    }" \
+	  | jq --sort-keys -s 'from_entries' \
+	  | tee test-coverage.json
+    SAVE ARTIFACT _coverage /_coverage
+    SAVE ARTIFACT test-coverage.json /
 
 mutation-tests:
     FROM +build-ocaml
@@ -60,6 +123,7 @@ mutation-tests:
     COPY .git .git
     COPY scripts/mutate.py ./mutate.py
     RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/mutation-tests:master
 
 build-ligo:
     FROM alpine:3.14
@@ -86,6 +150,7 @@ build-ligo:
     RUN ./scripts/compile-ligo.rb
 
     SAVE ARTIFACT ./generated/michelson/* /
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ligo:master
 
 python-deps:
     FROM ubuntu:21.04
@@ -110,7 +175,6 @@ python-deps:
     COPY ./e2e ./e2e
     COPY ./client ./client
     RUN poetry install
-    RUN rm -rf e2e/ client/ pyproject.toml poetry.lock
 
 e2e:
     FROM +python-deps
@@ -143,18 +207,12 @@ e2e:
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
     RUN poetry run python ./e2e/main.py
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
 
 cli:
     FROM +python-deps
-
-    WORKDIR /root
-    COPY pyproject.toml poetry.lock ./
-    COPY ./e2e ./e2e
-    COPY ./client ./client
-
-    RUN poetry install checker-client
-
-    # TODO
+    ENTRYPOINT poetry run checker
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:master
 
 # Utilities
 
@@ -239,3 +297,4 @@ flextesa:
 
     SAVE ARTIFACT tezos-* /
     SAVE ARTIFACT flextesa /
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/flextesa:master
