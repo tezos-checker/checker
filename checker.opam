@@ -11,6 +11,9 @@ depends: [
   "core_kernel"
   "ounit2"
   "qcheck"
+
+  # Formatting
+  "ocp-indent"
 ]
 build: [
 ]
