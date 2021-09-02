@@ -51,6 +51,7 @@ ocaml-base:
 
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/ocaml-base:master
 
 lint:
     BUILD +lint-ocaml
@@ -174,6 +175,7 @@ python-deps:
     COPY ./e2e ./e2e
     COPY ./client ./client
     RUN poetry install
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/python-deps:master
 
 e2e:
     FROM +python-deps
