@@ -16,5 +16,6 @@ jobs:
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: Build spec
+        # FIXME: Use if statement to only push on commits to master here
         # TODO: Not sure if the output path here is what readthedocs expects
-        run: earthly --ci --artifact +spec/ ./result
+        run: earthly --ci --push --artifact +spec/ ./result

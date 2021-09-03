@@ -23,6 +23,7 @@ spec:
     COPY docs docs
     RUN make -C docs/spec html
     SAVE ARTIFACT docs/spec/_build/html /
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:spec
 
 generate-entrypoints:
     FROM alpine:3.14

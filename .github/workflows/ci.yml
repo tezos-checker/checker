@@ -42,32 +42,31 @@ jobs:
         run: |
           earthly --verbose --ci +lint-python
           earthly --verbose --ci +lint-ocaml
-      - name: Build & Test
+      - name: Build
         run: |
           earthly --verbose --ci --push +generate-entrypoints
           earthly --verbose --ci --push +build-ocaml
           earthly --verbose --ci --push +build-ligo
-          earthly --verbose --ci --push +ocaml-slow-tests
-      # - name: Export lazy entrypoint sizes
-      #   run: |
-      #     earthly ${{ env.push_flag }} --ci --artifact +build-ligo/functions.json functions.json
-      #     cat result/functions.json \
-      #       | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
-      #       | tee entrypoint-sizes.json
-      # - uses: actions/upload-artifact@v2.2.4
-      #   if: github.event_name == 'push'
-      #   with:
-      #     name: stats
-      #     path: entrypoint-sizes.json
-      #     if-no-files-found: error
-      # - name: Export the test coverage report
-      #   run: earthly --ci --artifact +test-coverage/test-coverage.json test-coverage.json
-      # - uses: actions/upload-artifact@v2.2.4
-      #   if: github.event_name == 'push'
-      #   with:
-      #     name: stats
-      #     path: test-coverage.json
-      #     if-no-files-found: error
+      - name: Export lazy entrypoint sizes
+        run: |
+          earthly --ci --artifact +build-ligo/functions.json functions.json
+          cat result/functions.json \
+            | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
+            | tee entrypoint-sizes.json
+      - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
+        with:
+          name: stats
+          path: entrypoint-sizes.json
+          if-no-files-found: error
+      - name: Test
+        run: earthly --verbose --ci --push --artifact +test-coverage/test-coverage.json test-coverage.json
+      - uses: actions/upload-artifact@v2.2.4
+        if: github.event_name == 'push'
+        with:
+          name: stats
+          path: test-coverage.json
+          if-no-files-found: error
   # e2e:
   #   runs-on: ubuntu-latest
   #   steps:
