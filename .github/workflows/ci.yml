@@ -31,7 +31,10 @@ jobs:
       - name: CACHE_DEBUGGING
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
         run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints +generate-entrypoints
-        # generate-entrypoints
+      - name: Lint
+        run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/earthly-cache:lint +lint
+      # TODO: Re-enable build below (try linting first)
+      # generate-entrypoints
       # Only push earthly cache from master
       # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
