@@ -33,8 +33,11 @@ jobs:
       - name: CACHE_DEBUGGING
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
         run: earthly --verbose --ci  --push +generate-entrypoints
-      - name: Python
-        run: earthly --verbose --ci  --push +python-deps
+      - name: Dependencies
+        run: |
+          earthly --verbose --ci  --push +flextesa
+          earthly --verbose --ci  --push +python-deps
+          earthly --verbose --ci  --push +ocaml-base
       # TODO: Re-enable build below (try linting first)
       # generate-entrypoints
       # Only push earthly cache from master
