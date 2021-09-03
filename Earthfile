@@ -51,7 +51,8 @@ ocaml-base:
 
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/ocaml-base:master
+    # TODO: Might want to push an image here for dev purposes. Not 100% sure.
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/ocaml-base:master
 
 lint:
     BUILD +lint-ocaml
@@ -83,7 +84,7 @@ build-ocaml:
     FROM +src-ocaml
     RUN opam exec -- dune build @install
     RUN opam exec -- dune build @run-fast-tests
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ocaml:master
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ocaml:master
 
 ocaml-slow-tests:
     FROM +build-ocaml
@@ -123,7 +124,7 @@ mutation-tests:
     COPY .git .git
     COPY scripts/mutate.py ./mutate.py
     RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/mutation-tests:master
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/mutation-tests:master
 
 build-ligo:
     FROM alpine:3.14
@@ -150,7 +151,7 @@ build-ligo:
     RUN ./scripts/compile-ligo.rb
 
     SAVE ARTIFACT ./generated/michelson/* /
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ligo:master
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ligo:master
 
 python-deps:
     FROM ubuntu:21.04
@@ -175,7 +176,7 @@ python-deps:
     COPY ./e2e ./e2e
     COPY ./client ./client
     RUN poetry install
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/python-deps:master
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/python-deps:master
 
 e2e:
     FROM +python-deps
@@ -210,7 +211,7 @@ e2e:
     RUN poetry run python ./e2e/main.py
     SAVE ARTIFACT e2e/gas_profiles.json /gas_profiles.json
     SAVE ARTIFACT gas-costs.json /gas-costs.json
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
 
 gas-profiles:
     FROM +python-deps

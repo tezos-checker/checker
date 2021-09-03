@@ -31,9 +31,9 @@ jobs:
       # - if: github.ref == ‘refs/heads/integration’ && github.event_name == ‘push’
       #   run: echo "{push_flag}={--push}" >> $GITHUB_ENV
       - name: Lint
-        run: earthly ${{ env.push_flag }} --ci +lint
+        run: earthly --ci --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +lint
       - name: Build and test
-        run: earthly ${{ env.push_flag }} --ci +all
+        run: earthly --ci ${{ env.push_flag }} --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
 
       - name: Export lazy entrypoint sizes
         run: |
@@ -56,38 +56,34 @@ jobs:
           name: stats
           path: test-coverage.json
           if-no-files-found: error
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Log in to container registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Install earthly
-        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
-
-      # Only push earthly cache from master
-      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
-
-      - name: Run e2e tests
-        run: earthly ${{ env.push_flag }} --ci --artifact +e2e/gas-costs.json gas-costs.json
-
-      - name: Generate profile plots
-        run: earthly ${{ env.push_flag }} --ci --artifact +gas-profiles/auction-gas-profiles.png auction-gas-profiles.png
-
-      - uses: actions/upload-artifact@v2.2.4
-        # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
-        # per commit.
-        if: github.event_name == 'push'
-        with:
-          name: stats
-          path: gas-costs.json
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
-        with:
-          name: gas-profile-plots
-          path: auction-gas-profiles.png
-          if-no-files-found: error
+  # e2e:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         submodules: recursive
+  #     - name: Log in to container registry
+  #       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+  #     - name: Install earthly
+  #       run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+  #     # Only push earthly cache from master
+  #     - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  #       run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+  #     - name: Run e2e tests
+  #       run: earthly ${{ env.push_flag }} --ci --artifact +e2e/gas-costs.json gas-costs.json
+  #     - name: Generate profile plots
+  #       run: earthly ${{ env.push_flag }} --ci --artifact +gas-profiles/auction-gas-profiles.png auction-gas-profiles.png
+  #     - uses: actions/upload-artifact@v2.2.4
+  #       # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
+  #       # per commit.
+  #       if: github.event_name == 'push'
+  #       with:
+  #         name: stats
+  #         path: gas-costs.json
+  #         if-no-files-found: error
+  #     - uses: actions/upload-artifact@v2.2.4
+  #       if: github.event_name == 'push'
+  #       with:
+  #         name: gas-profile-plots
+  #         path: auction-gas-profiles.png
+  #         if-no-files-found: error
