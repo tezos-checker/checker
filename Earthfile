@@ -7,7 +7,7 @@ all:
     # Run additional test suites
     BUILD +ocaml-slow-tests
     BUILD +cli
-    SAVE IMAGE --cache-hint
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:all
 
 spec:
     FROM ubuntu:21.04
@@ -32,7 +32,7 @@ generate-entrypoints:
     RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml /
-    SAVE IMAGE --cache-hint
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints
 
 ocaml-base:
     FROM ubuntu:21.04
@@ -55,8 +55,7 @@ ocaml-base:
 
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
-    SAVE IMAGE --cache-hint
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
 
 lint:
     BUILD +lint-ocaml
@@ -158,7 +157,7 @@ build-ligo:
 
     SAVE ARTIFACT ./generated/michelson/* /
     SAVE IMAGE --cache-hint
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ligo:master
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
 python-deps:
     FROM ubuntu:21.04
@@ -183,8 +182,7 @@ python-deps:
     COPY ./e2e ./e2e
     COPY ./client ./client
     RUN poetry install
-    SAVE IMAGE --cache-hint
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:python-deps
 
 e2e:
     FROM +python-deps
@@ -316,5 +314,4 @@ flextesa:
 
     SAVE ARTIFACT tezos-* /
     SAVE ARTIFACT flextesa /
-    SAVE IMAGE --cache-hint
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/flextesa:master
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:flextesa
