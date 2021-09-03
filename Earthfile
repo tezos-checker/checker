@@ -213,7 +213,10 @@ e2e:
 
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
-    RUN poetry run python ./e2e/main.py
+    RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
+        WRITE_GAS_COSTS=$PWD/gas-costs.json \
+        poetry run python ./e2e/main.py
+
     SAVE ARTIFACT e2e/gas_profiles.json /gas_profiles.json
     SAVE ARTIFACT gas-costs.json /gas-costs.json
     # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
