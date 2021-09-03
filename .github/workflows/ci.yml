@@ -34,7 +34,9 @@ jobs:
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
         run: earthly --verbose --ci  --push +generate-entrypoints
       - name: Lint
-        run: earthly --verbose --ci  --push +lint
+        run: |
+          earthly --verbose --ci  --push +lint-python
+          earthly --verbose --ci  --push +lint-ocaml
       # TODO: Re-enable build below (try linting first)
       # generate-entrypoints
       # Only push earthly cache from master
