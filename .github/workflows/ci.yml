@@ -30,10 +30,10 @@ jobs:
         run: echo "{push_flag}={--push}" >> $GITHUB_ENV
       # - if: github.ref == ‘refs/heads/integration’ && github.event_name == ‘push’
       #   run: echo "{push_flag}={--push}" >> $GITHUB_ENV
-      - name: Lint
-        run: earthly --ci --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +lint
-      - name: Build and test
-        run: earthly --ci ${{ env.push_flag }} --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
+      # - name: Lint
+      #   run: earthly --ci --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +lint
+      - name: Lint / Build / Test
+        run: earthly --verbose --ci ${{ env.push_flag }} --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
 
       - name: Export lazy entrypoint sizes
         run: |

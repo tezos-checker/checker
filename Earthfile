@@ -1,4 +1,6 @@
 all:
+    # Lint
+    BUILD +lint
     # Build checker
     BUILD +build-ocaml
     BUILD +build-ligo
