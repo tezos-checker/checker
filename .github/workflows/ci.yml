@@ -20,18 +20,18 @@ jobs:
             branch="${GITHUB_REF##*/}"
           fi
           git checkout -b "$branch" || true
-      - name: Log in to container registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
 
       # Only push earthly cache from master
       - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
-      # - if: github.ref == ‘refs/heads/integration’ && github.event_name == ‘push’
-      #   run: echo "{push_flag}={--push}" >> $GITHUB_ENV
-      # - name: Lint
-      #   run: earthly --ci --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +lint
+        run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
       - name: Lint / Build / Test
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
         run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
