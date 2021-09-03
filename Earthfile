@@ -7,6 +7,7 @@ all:
     # Run additional test suites
     BUILD +ocaml-slow-tests
     BUILD +cli
+    SAVE IMAGE --cache-hint
 
 spec:
     FROM ubuntu:21.04
@@ -31,6 +32,7 @@ generate-entrypoints:
     RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml /
+    SAVE IMAGE --cache-hint
 
 ocaml-base:
     FROM ubuntu:21.04
@@ -53,8 +55,8 @@ ocaml-base:
 
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
-    # TODO: Might want to push an image here for dev purposes. Not 100% sure.
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/ocaml-base:master
+    SAVE IMAGE --cache-hint
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
 
 lint:
     BUILD +lint-ocaml
@@ -81,11 +83,13 @@ src-ocaml:
     COPY +generate-entrypoints/checkerEntrypoints.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
+    SAVE IMAGE --cache-hint
 
 build-ocaml:
     FROM +src-ocaml
     RUN opam exec -- dune build @install
     RUN opam exec -- dune build @run-fast-tests
+    SAVE IMAGE --cache-hint
     # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ocaml:master
 
 ocaml-slow-tests:
@@ -153,6 +157,7 @@ build-ligo:
     RUN ./scripts/compile-ligo.rb
 
     SAVE ARTIFACT ./generated/michelson/* /
+    SAVE IMAGE --cache-hint
     # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ligo:master
 
 python-deps:
@@ -178,7 +183,8 @@ python-deps:
     COPY ./e2e ./e2e
     COPY ./client ./client
     RUN poetry install
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/python-deps:master
+    SAVE IMAGE --cache-hint
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
 
 e2e:
     FROM +python-deps
@@ -237,6 +243,7 @@ zcash-params:
     RUN apk add curl wget
     RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
     SAVE ARTIFACT /root/.zcash-params /zcash-params
+    SAVE IMAGE --cache-hint
 
 flextesa:
     FROM ubuntu:21.04
@@ -309,4 +316,5 @@ flextesa:
 
     SAVE ARTIFACT tezos-* /
     SAVE ARTIFACT flextesa /
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/flextesa:master
+    SAVE IMAGE --cache-hint
+    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/flextesa:master
