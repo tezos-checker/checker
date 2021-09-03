@@ -28,35 +28,36 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
-
-      # Only push earthly cache from master
-      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
-      - name: Lint / Build / Test
+      - name: CACHE_DEBUGGING
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
-        run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
-
-      - name: Export lazy entrypoint sizes
-        run: |
-          earthly ${{ env.push_flag }} --ci --artifact +build-ligo/functions.json functions.json
-          cat result/functions.json \
-            | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
-            | tee entrypoint-sizes.json
-      - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
-        with:
-          name: stats
-          path: entrypoint-sizes.json
-          if-no-files-found: error
-
-      - name: Export the test coverage report
-        run: earthly --ci --artifact +test-coverage/test-coverage.json test-coverage.json
-      - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
-        with:
-          name: stats
-          path: test-coverage.json
-          if-no-files-found: error
+        run: earthly --verbose --ci  --push --max-remote-cache --remote-cache=ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints +generate-entrypoints
+        # generate-entrypoints
+      # Only push earthly cache from master
+      # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
+      # - name: Lint / Build / Test
+      #   # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
+      #   run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
+      # - name: Export lazy entrypoint sizes
+      #   run: |
+      #     earthly ${{ env.push_flag }} --ci --artifact +build-ligo/functions.json functions.json
+      #     cat result/functions.json \
+      #       | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
+      #       | tee entrypoint-sizes.json
+      # - uses: actions/upload-artifact@v2.2.4
+      #   if: github.event_name == 'push'
+      #   with:
+      #     name: stats
+      #     path: entrypoint-sizes.json
+      #     if-no-files-found: error
+      # - name: Export the test coverage report
+      #   run: earthly --ci --artifact +test-coverage/test-coverage.json test-coverage.json
+      # - uses: actions/upload-artifact@v2.2.4
+      #   if: github.event_name == 'push'
+      #   with:
+      #     name: stats
+      #     path: test-coverage.json
+      #     if-no-files-found: error
   # e2e:
   #   runs-on: ubuntu-latest
   #   steps:
