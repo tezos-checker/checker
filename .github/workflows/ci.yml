@@ -30,10 +30,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
-      - name: CACHE_DEBUGGING
-        # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
-        run: earthly --verbose --ci  --push +generate-entrypoints
-      - name: Dependencies
+      - name: Build dependencies
         run: |
           earthly --verbose --ci  --push +flextesa
           earthly --verbose --ci  --push +python-deps
@@ -41,6 +38,7 @@ jobs:
       - name: Lint
         run: |
           earthly --verbose --ci +lint-python
+          earthly --verbose --ci +lint-ocaml
       # TODO: Re-enable build below (try linting first)
       # generate-entrypoints
       # Only push earthly cache from master
