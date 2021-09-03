@@ -30,6 +30,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      # FIXME: Only push earthly cache from master
+      # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
       - name: Build dependencies
         run: |
           earthly --verbose --ci  --push +flextesa
@@ -39,14 +42,12 @@ jobs:
         run: |
           earthly --verbose --ci +lint-python
           earthly --verbose --ci +lint-ocaml
-      # TODO: Re-enable build below (try linting first)
-      # generate-entrypoints
-      # Only push earthly cache from master
-      # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
-      # - name: Lint / Build / Test
-      #   # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
-      #   run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
+      - name: Build & Test
+        run: |
+          earthly --verbose --ci --push +generate-entrypoints
+          earthly --verbose --ci --push +build-ocaml
+          earthly --verbose --ci --push +build-ligo
+          earthly --verbose --ci --push +ocaml-slow-tests
       # - name: Export lazy entrypoint sizes
       #   run: |
       #     earthly ${{ env.push_flag }} --ci --artifact +build-ligo/functions.json functions.json

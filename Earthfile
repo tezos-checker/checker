@@ -88,8 +88,7 @@ build-ocaml:
     FROM +src-ocaml
     RUN opam exec -- dune build @install
     RUN opam exec -- dune build @run-fast-tests
-    SAVE IMAGE --cache-hint
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/build-ocaml:master
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ocaml
 
 ocaml-slow-tests:
     FROM +build-ocaml
@@ -156,7 +155,6 @@ build-ligo:
     RUN ./scripts/compile-ligo.rb
 
     SAVE ARTIFACT ./generated/michelson/* /
-    SAVE IMAGE --cache-hint
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
 python-deps:
