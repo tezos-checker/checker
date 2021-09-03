@@ -30,7 +30,7 @@ jobs:
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: CACHE_DEBUGGING
         # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
-        run: earthly --verbose --ci  --push --max-remote-cache --remote-cache=ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints +generate-entrypoints
+        run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints +generate-entrypoints
         # generate-entrypoints
       # Only push earthly cache from master
       # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
