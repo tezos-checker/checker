@@ -33,7 +33,8 @@ jobs:
       # - name: Lint
       #   run: earthly --ci --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +lint
       - name: Lint / Build / Test
-        run: earthly --verbose --ci ${{ env.push_flag }} --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
+        # TODO: Add ${{ env.push_flag }} back in below instead of explicit --push
+        run: earthly --verbose --ci  --push --remote-cache=ghcr.io/tezos-checker/checker/cache:earthly-all +all
 
       - name: Export lazy entrypoint sizes
         run: |
