@@ -38,6 +38,9 @@ jobs:
           earthly --verbose --ci  --push +flextesa
           earthly --verbose --ci  --push +python-deps
           earthly --verbose --ci  --push +ocaml-base
+      - name: Lint
+        run: |
+          earthly --verbose --ci +lint-python
       # TODO: Re-enable build below (try linting first)
       # generate-entrypoints
       # Only push earthly cache from master
