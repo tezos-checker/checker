@@ -1,8 +1,12 @@
 name: CI
 
 on:
+  # FIXME: Re-enable PR trigger
   # pull_request:
   push:
+
+# TODO: Once https://github.com/earthly/actions is more mature we can
+# switch to it for installing earthly.
 
 jobs:
   build:
@@ -30,7 +34,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
-      # FIXME: Only push earthly cache from master
+      # FIXME: Re-enable this - Only push earthly cache from master
       # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
       - name: Build dependencies
@@ -95,6 +99,11 @@ jobs:
       # Note: Not pushing here to avoid clashing with pushes from the main `build` job
       - name: Run e2e tests
         run: earthly --ci --artifact +e2e/gas-costs.json gas-costs.json
+      - name: DEBUG EARTHLY CACHE
+        run: |
+          docker ps
+          docker docker volume inspect earthly-cache
+          docker logs earthly-buildkitd
       - name: Generate profile plots
         run: earthly --ci --artifact +gas-profiles/auction-gas-profiles.png auction-gas-profiles.png
       - uses: actions/upload-artifact@v2.2.4
