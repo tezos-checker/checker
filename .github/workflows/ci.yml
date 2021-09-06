@@ -39,18 +39,18 @@ jobs:
 
       - name: Build dependencies
         run: |
-          earthly --verbose --ci {{ env.push_flag }} +flextesa
-          earthly --verbose --ci {{ env.push_flag }} +python-deps
-          earthly --verbose --ci {{ env.push_flag }} +ocaml-base
+          earthly --verbose --ci ${{ env.push_flag }} +flextesa
+          earthly --verbose --ci ${{ env.push_flag }} +python-deps
+          earthly --verbose --ci ${{ env.push_flag }} +ocaml-base
       - name: Lint
         run: |
           earthly --verbose --ci +lint-python
           earthly --verbose --ci +lint-ocaml
       - name: Build
         run: |
-          earthly --verbose --ci {{ env.push_flag }} +generate-entrypoints
-          earthly --verbose --ci {{ env.push_flag }} +build-ocaml
-          earthly --verbose --ci {{ env.push_flag }} +build-ligo
+          earthly --verbose --ci ${{ env.push_flag }} +generate-entrypoints
+          earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
+          earthly --verbose --ci ${{ env.push_flag }} +build-ligo
       - name: Export lazy entrypoint sizes
         run: |
           earthly --ci --artifact +build-ligo/functions.json functions.json
@@ -64,7 +64,7 @@ jobs:
           path: entrypoint-sizes.json
           if-no-files-found: error
       - name: Test
-        run: earthly --verbose --ci {{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
+        run: earthly --verbose --ci ${{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
