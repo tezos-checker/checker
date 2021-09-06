@@ -536,7 +536,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
                 for burrow_id in burrows
             ],
-            batch_size=20,
+            batch_size=350,
         )
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
@@ -546,7 +546,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         call_bulk(
             [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
-            batch_size=20,
+            batch_size=350,
         )
 
         # Change the index (kits are 10x valuable)
@@ -571,7 +571,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 )
                 for burrow_no in burrows
             ],
-            batch_size=20,
+            batch_size=170,
             profiler=mark_for_liquidation_profiler,
         )
 
@@ -628,7 +628,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             flattened_cancel_ops += [op1, op2]
         call_bulk(
             flattened_cancel_ops,
-            batch_size=20,
+            batch_size=178,
             profiler=cancel_liquidation_slice_profiler,
         )
 
