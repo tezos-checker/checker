@@ -7,7 +7,6 @@ all:
     # Run additional test suites
     BUILD +ocaml-slow-tests
     BUILD +cli
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:all
 
 spec:
     FROM ubuntu:21.04
