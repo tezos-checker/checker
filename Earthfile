@@ -216,9 +216,11 @@ e2e:
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
         poetry run python ./e2e/main.py
 
+    RUN poetry run python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png
+
     SAVE ARTIFACT gas_profiles.json /gas_profiles.json
     SAVE ARTIFACT gas-costs.json /gas-costs.json
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/e2e:master
+    SAVE ARTIFACT gas_profiles.json /auction-gas-profiles.png
 
 gas-profiles:
     FROM +python-deps
