@@ -1,8 +1,7 @@
 name: CI
 
 on:
-  # FIXME: Re-enable PR trigger
-  # pull_request:
+  pull_request:
   push:
 
 # TODO: Once https://github.com/earthly/actions is more mature we can
@@ -34,23 +33,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
-      # FIXME: Re-enable this - Only push earthly cache from master
-      # - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      #   run: echo "{push_flag}={--push --max-remote-cache}" >> $GITHUB_ENV
+      # Only push earthly cache from master
+      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+
       - name: Build dependencies
         run: |
-          earthly --verbose --ci  --push +flextesa
-          earthly --verbose --ci  --push +python-deps
-          earthly --verbose --ci  --push +ocaml-base
+          earthly --verbose --ci {{ env.push_flag }} +flextesa
+          earthly --verbose --ci {{ env.push_flag }} +python-deps
+          earthly --verbose --ci {{ env.push_flag }} +ocaml-base
       - name: Lint
         run: |
           earthly --verbose --ci +lint-python
           earthly --verbose --ci +lint-ocaml
       - name: Build
         run: |
-          earthly --verbose --ci --push +generate-entrypoints
-          earthly --verbose --ci --push +build-ocaml
-          earthly --verbose --ci --push +build-ligo
+          earthly --verbose --ci {{ env.push_flag }} +generate-entrypoints
+          earthly --verbose --ci {{ env.push_flag }} +build-ocaml
+          earthly --verbose --ci {{ env.push_flag }} +build-ligo
       - name: Export lazy entrypoint sizes
         run: |
           earthly --ci --artifact +build-ligo/functions.json functions.json
@@ -64,7 +64,7 @@ jobs:
           path: entrypoint-sizes.json
           if-no-files-found: error
       - name: Test
-        run: earthly --verbose --ci --push --artifact +test-coverage/test-coverage.json test-coverage.json
+        run: earthly --verbose --ci {{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
