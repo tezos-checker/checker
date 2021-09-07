@@ -94,6 +94,11 @@ ocaml-slow-tests:
     FROM +build-ocaml
     RUN opam exec -- dune build @run-avl-tests
 
+docs:
+    FROM +src-ocaml
+    RUN opam exec -- dune build @doc
+    SAVE ARTIFACT _build/default/_doc/_html /
+
 test-coverage:
     FROM +build-ocaml
     RUN apt install -y jq gawk
