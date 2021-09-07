@@ -20,16 +20,16 @@ You should not use it for anything serious.**
 
 Various ad-hoc documentation can be found in the [docs](./docs) folder.
 
-The full docs are taking shape under [docs/spec](./docs/spec): use `make spec`
-to build them if you're in a Nix shell or have `sphinx` installed). These docs
+The full docs are taking shape under [docs/spec](./docs/spec): use `earthly --artifact +spec/ ./spec`
+to build them. These docs
 are published at [checker.readthedocs.io](https://checker.readthedocs.io/).
 
 ## Development
 
-Currently the team uses [Nix](https://nixos.org/) to provide all dependencies,
-including OCaml packages and appropriate (perhaps even patched) versions of
-Ligo and other necessary tools, so this is the recommended method. For the
-curious, the dependencies are listed in `shell.nix`.
+Currently the team uses Docker (via the [Earthly](https://earthly.dev/get-earthly) command line tool) to provide all dependencies, including OCaml packages and appropriate (perhaps even patched) versions of
+Ligo and other necessary tools.
+
+All Docker images are stored on GitHub container registry. To benefit from the cached versions of images built by CI you'll want to ensure that you follow [GitHub's instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry) for authenticating to the container registry.
 
 For development, you'll also need the [ctez](https://github.com/tezos-checker/ctez)
 submodule. To fetch all submodules, run:
@@ -37,27 +37,24 @@ submodule. To fetch all submodules, run:
 $ git submodule update --init
 ```
 
-Within a `nix-shell` (the first time this might take a while, since it must
-fetch all dependencies), type
+To enable remote caching, you'll want to pass the `--use-inline-cache` flag to `earthly` or set the following environment variable:
 
-* `make build-ocaml` to build and compile the ocaml code (in [./src](./src)).
-* `make generate-ligo` to generate the ligo code (in `./generated/ligo`).
-* `make build-ligo` to generate the michelson code (in `./generated/michelson`).
-* `make build` to do all of the above.
-* `make test` to run all the (OCaml) tests ([./src/tests.ml](./src/tests.ml)). Note that this takes several minutes.
-* `make fast-test` to run the fast (OCaml) tests
-* `make` to do all the above.
+`export EARTHLY_USE_INLINE_CACHE=true`
+
+* `earthly +build-ocaml` to build and compile the OCaml code (in [./src](./src)). This will also run a fast subset of the test suite.
+* `earthly --artifact +build-ligo/ ./generated` to generate ligo and michelson code (in `./generated`).
+* `earthly +ocaml-slow-tests` to run the full OCaml test suite.
 
 For test coverage report using bisect_ppx, type
-*  `make test-coverage` (report in `./_coverage/index.html`), or
-*  `make test-coverage.json` (report of per-file summary in `./test-coverage.json`).
+*  `earthly --artifact +test-coverage/ ./coverage_out`
+  * (report in `./coverage_out/_coverage/index.html`) and JSON summary in /coverage_out/test-coverage.json
 
 For extracting (haddock-style) documentation from the code using dune, type
-*  `make docs` (docs entrypoint: `./_build/default/_doc/_html/index.html`)
+*  `earthly --artifact +docs/ ocaml-docs/`
 
-For running the end-to-end tests, type:
+For running the end-to-end tests (can take 10s of minutes to run), type:
 ```console
-$ CHECKER_DIR=$(nix-build -A michelson --arg e2eTestsHack true --no-out-link) python e2e/main.py
+$ earthly +e2e
 ```
 
 ## Local Deployment
@@ -65,6 +62,8 @@ $ CHECKER_DIR=$(nix-build -A michelson --arg e2eTestsHack true --no-out-link) py
 The contract can be deployed to a local, Docker sandbox run using the provided
 [client library](./client). Note that this workflow has only been tested on
 Linux.
+
+# TODO: Fix these instructions
 
 First, enter a nix shell:
 ```console
@@ -74,7 +73,7 @@ $ nix-shell
 Generate the LIGO and Michelson code:
 
 ```console
-$ make build-ligo
+$ earthly --artifact +build-ligo/ ./generated/michelson
 ```
 
 Ensure that the submodules (ctez in particular) are up-to-date:
