@@ -14,6 +14,11 @@ depends: [
 
   # Formatting
   "ocp-indent"
+
+  # Other dev tools
+  "odoc"
+  "ocaml-lsp-server"
+  "ocamlfind-secondary"
 ]
 build: [
 ]
