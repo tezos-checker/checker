@@ -40,8 +40,7 @@ jobs:
       - name: Build dependencies
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
-          earthly --verbose --ci ${{ env.push_flag }} +python-deps
-          earthly --verbose --ci ${{ env.push_flag }} +ocaml-base
+          earthly --verbose --ci ${{ env.push_flag }} +deps-full
       - name: Lint
         run: |
           earthly --verbose --ci +lint-python
@@ -98,7 +97,7 @@ jobs:
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       # Note: Not pushing here to avoid clashing with pushes from the main `build` job
       - name: Run e2e tests
-        run: earthly --ci --artifact +e2e/ e2e-outputs
+        run: earthly --ci --artifact +test-e2e/ e2e-outputs
       - uses: actions/upload-artifact@v2.2.4
         # We only upload artifacts on 'push' events, this is simply to have one set of artifacts
         # per commit.

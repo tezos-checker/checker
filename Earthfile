@@ -1,143 +1,147 @@
 all:
-    # Lint
     BUILD +lint
-    # Build checker
-    BUILD +build-ocaml
-    BUILD +build-ligo
-    # Run additional test suites
-    BUILD +ocaml-slow-tests
+    BUILD +build
+    BUILD +test
     BUILD +cli
+    BUILD +dev-container
 
-spec:
+# =============================================================================
+# Base images
+# =============================================================================
+# Base image for building project
+builder:
     FROM ubuntu:21.04
-
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update
     RUN apt install -y \
-          make \
-          python3-pip \
-          python-is-python3
+            autoconf \
+            bash \
+            curl \
+            fd-find \
+            gawk \
+            git \
+            g++ \
+            jq \
+            libev4 \
+            libgmp-dev \
+            libhidapi-dev \
+            libsodium-dev \
+            libsodium23 \
+            libtool \
+            make \
+            m4 \
+            net-tools \
+            opam \
+            openssl \
+            pkg-config \
+            python-is-python3 \
+            python3-pip \
+            ruby \
+            ruby-json
 
-    RUN pip install --upgrade pip && pip install sphinx-rtd-theme
-    COPY docs docs
-    RUN make -C docs/spec html
-    SAVE ARTIFACT docs/spec/_build/html /
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:spec
+    # Update language-specific package managers
+    RUN pip install --upgrade pip
+    ARG POETRY_VERSION="==1.1.8"
+    RUN pip install poetry"$POETRY_VERSION"
 
-generate-entrypoints:
-    FROM alpine:3.14
-    RUN apk add ruby
-    COPY ./scripts/generate-entrypoints.rb ./generate-entrypoints.rb
-    COPY ./src/checker.mli checker.mli
-    RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
-    SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
-    SAVE ARTIFACT checkerEntrypoints.ml /
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints
-
-ocaml-base:
-    FROM ubuntu:21.04
-
-    ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
-        m4 \
-        git \
-        bash \
-        opam \
-        g++ \
-        libgmp-dev \
-        fd-find
+    RUN opam init --disable-sandboxing --bare
+    RUN opam update --all
 
     WORKDIR /root
 
-    RUN opam init --disable-sandboxing --bare
-    RUN opam switch create . ocaml-base-compiler.4.12.0
+    # Image for inline caching
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:builder
 
+deps-ocaml:
+    FROM +builder
+    RUN opam switch create . ocaml-base-compiler.4.12.0
     COPY checker.opam ./
     RUN opam install -y --deps-only --with-test --locked=locked ./checker.opam
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ocaml-base
+    # Image for inline caching
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:deps-ocaml
 
+# Note: nesting this below `deps-ocaml` since it is likely to change more often
+deps-full:
+    FROM +deps-ocaml
+    COPY pyproject.toml poetry.lock ./
+    COPY ./e2e ./e2e
+    COPY ./client ./client
+    RUN poetry install
+    # Image for inline caching
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:deps-full
+
+# =============================================================================
+# Documentation
+# =============================================================================
+docs:
+    FROM +build-ocaml
+    RUN opam exec -- dune build @doc
+    SAVE ARTIFACT _build/default/_doc/_html /
+
+spec:
+    FROM +builder
+    RUN pip install sphinx-rtd-theme
+    COPY docs docs
+    RUN make -C docs/spec html
+    SAVE ARTIFACT docs/spec/_build/html AS LOCAL docs/spec/_build/html
+    SAVE ARTIFACT docs/spec/_build/html /
+    # Image for inline caching
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:spec
+
+# =============================================================================
+# Formatting
+# =============================================================================
 lint:
     BUILD +lint-ocaml
     BUILD +lint-python
 
 lint-ocaml:
-    FROM +src-ocaml
+    FROM +build-ocaml
     COPY .git .git
     COPY ./scripts/format-ocaml.sh .
     RUN opam exec -- ./format-ocaml.sh && \
         diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-ocaml.sh\":"; echo "$diff"; exit 1; fi'
 
 lint-python:
-    FROM +python-deps
-    RUN apt install -y fd-find git
+    FROM +deps-full
     COPY .git .git
     COPY ./scripts/format-python.sh .
     RUN poetry run ./format-python.sh && \
-        diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-ocaml.sh\":"; echo "$diff"; exit 1; fi'
+        diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-python.sh\":"; echo "$diff"; exit 1; fi'
 
-src-ocaml:
-    FROM +ocaml-base
+# =============================================================================
+# Build & Tests
+# =============================================================================
+build:
+    BUILD +build-ocaml
+    BUILD +build-ligo
+
+test:
+    BUILD +test-ocaml
+    # In the future if we add python unit tests, etc. we can call their target(s) here
+
+generate-entrypoints:
+    FROM +builder
+    COPY ./scripts/generate-entrypoints.rb ./generate-entrypoints.rb
+    COPY ./src/checker.mli checker.mli
+    RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
+    SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
+    SAVE ARTIFACT checkerEntrypoints.ml /
+    # Image for inline caching
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints
+
+build-ocaml:
+    FROM +deps-ocaml
     COPY src/*.ml src/*.mli src/dune ./src/
     COPY +generate-entrypoints/checkerEntrypoints.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
-    SAVE IMAGE --cache-hint
-
-build-ocaml:
-    FROM +src-ocaml
     RUN opam exec -- dune build @install
-    RUN opam exec -- dune build @run-fast-tests
+    # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ocaml
 
-ocaml-slow-tests:
-    FROM +build-ocaml
-    RUN opam exec -- dune build @run-avl-tests
-
-docs:
-    FROM +src-ocaml
-    RUN opam exec -- dune build @doc
-    SAVE ARTIFACT _build/default/_doc/_html /
-
-test-coverage:
-    FROM +build-ocaml
-    RUN apt install -y jq gawk
-    RUN opam exec -- dune runtest --instrument-with bisect_ppx --force .
-    RUN opam exec -- bisect-ppx-report html
-    RUN echo "$(opam exec -- bisect-ppx-report summary --per-file)"
-    RUN opam exec -- bisect-ppx-report summary --per-file \
-	  | awk '{ match($0, "^ *([0-9.]+) *% *[^ ]* *(.*)$", res); print res[1] "|" res[2] }' \
-	  | jq -R "split(\"|\") | { \
-	      \"value\": .[0] | tonumber, \
-	      \"key\": (.[1] | if . == \"Project coverage\" then \"TOTAL\" else ltrimstr(\"src/\") end) \
-	    }" \
-	  | jq --sort-keys -s 'from_entries' \
-	  | tee test-coverage.json
-    SAVE ARTIFACT _coverage /_coverage
-    SAVE ARTIFACT test-coverage.json /
-
-mutation-tests:
-    FROM +build-ocaml
-
-    RUN apt install -y python3 python-is-python3
-
-    # Note: If mutate.py ever depends on external packages we can also install them here
-    # as we do for the e2e tests. Skipping this for now since it reduces the layer size and
-    # is not currently required.
-
-    ARG test_cmd = 'dune build @run-fast-tests'
-    ARG n_mutations = "25"
-    ARG modules = 'src/burrow.ml src/checker.ml'
-
-    # Need git tree for restoring mutated src files
-    COPY .git .git
-    COPY scripts/mutate.py ./mutate.py
-    RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
-    # SAVE IMAGE --push ghcr.io/tezos-checker/checker/cache/mutation-tests:master
-
 build-ligo:
-    FROM alpine:3.14
-    RUN apk add bash ruby ruby-etc ruby-json
+    FROM +builder
 
     COPY +ligo-binary/ligo /bin/ligo
 
@@ -163,59 +167,49 @@ build-ligo:
     SAVE ARTIFACT ./generated/michelson/* /
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
-python-deps:
-    FROM ubuntu:21.04
+test-ocaml:
+    BUILD +test-ocaml-fast
+    BUILD +test-ocaml-slow
 
-    ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
+test-ocaml-fast:
+    FROM +build-ocaml
+    COPY ./scripts/ensure-unique-errors.sh ./scripts/
+    RUN bash ./scripts/ensure-unique-errors.sh
+    RUN opam exec -- dune build @run-fast-tests
 
-    RUN apt install -y \
-          pkg-config autoconf libtool libev4 \
-          libgmp-dev openssl libsodium23 libsodium-dev \
-          python3-pip python-is-python3
+test-ocaml-slow:
+    FROM +build-ocaml
+    RUN opam exec -- dune build @run-avl-tests
 
-    # install poetry
-    RUN pip install --upgrade pip
-    ARG POETRY_VERSION="==1.1.8"
-    RUN pip install poetry"$POETRY_VERSION"
+test-coverage:
+    FROM +build-ocaml
+    RUN opam exec -- dune runtest --instrument-with bisect_ppx --force .
+    RUN opam exec -- bisect-ppx-report html
+    RUN echo "$(opam exec -- bisect-ppx-report summary --per-file)"
+    RUN opam exec -- bisect-ppx-report summary --per-file \
+	  | awk '{ match($0, "^ *([0-9.]+) *% *[^ ]* *(.*)$", res); print res[1] "|" res[2] }' \
+	  | jq -R "split(\"|\") | { \
+	      \"value\": .[0] | tonumber, \
+	      \"key\": (.[1] | if . == \"Project coverage\" then \"TOTAL\" else ltrimstr(\"src/\") end) \
+	    }" \
+	  | jq --sort-keys -s 'from_entries' \
+	  | tee test-coverage.json
+    SAVE ARTIFACT _coverage AS LOCAL ./_coverage
+    SAVE ARTIFACT _coverage /_coverage
+    SAVE ARTIFACT test-coverage.json /
 
-    WORKDIR /root
-
-    # We only copy the files necessary for the build to succeed.
-    COPY pyproject.toml poetry.lock ./
-    COPY ./e2e ./e2e
-    COPY ./client ./client
-    RUN poetry install
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:python-deps
-
-e2e:
-    FROM +python-deps
-    ENV DEBIAN_FRONTEND=noninteractive
-
-    RUN apt install -y \
-          openssl libsodium23 libsodium-dev \
-          curl net-tools libhidapi-dev \
-          python3-pip python-is-python3
-
-    # bring ligo, which is required for ctez deployment
+test-e2e:
+    FROM +deps-full
+    # Bring ligo, which is required for ctez deployment
     COPY +ligo-binary/ligo /bin/ligo
-
     # Bring ZCash parameters necessary for the node
     COPY +zcash-params/zcash-params /root/.zcash-params
-
-    WORKDIR /root
-    COPY pyproject.toml poetry.lock ./
-    COPY ./e2e ./e2e
-    COPY ./client ./client
-
-    RUN poetry install
-
+    # Bring ctez contract and mock oracle (for running checker in sandbox)
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
-
     # Bring flextesa + tezos-* binaries, which are required by the checker client
     COPY +flextesa/* /usr/bin/
-
+    # And the checker contract itself
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
 
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
@@ -228,13 +222,69 @@ e2e:
     SAVE ARTIFACT gas-costs.json /gas-costs.json
     SAVE ARTIFACT auction-gas-profiles.png /auction-gas-profiles.png
 
+test-mutations:
+    FROM +build-ocaml
+
+    ARG test_cmd = 'dune build @run-fast-tests'
+    ARG n_mutations = "25"
+    ARG modules = 'src/burrow.ml src/checker.ml'
+
+    # Need git tree for restoring mutated src files
+    COPY .git .git
+    COPY scripts/mutate.py ./mutate.py
+    RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
+
+# =============================================================================
+# Other artifacts
+# =============================================================================
+dev-container:
+    FROM +deps-full
+    # Ensure interactive terminal is also already in correct opam switch env
+    RUN echo 'eval $(opam env --switch=/root --set-switch)' >> /root/.bashrc
+    RUN echo 'eval $(opam env --switch=/root --set-switch); /bin/bash $@' > entrypoint.sh && chmod +x entrypoint.sh
+
+    RUN mkdir /checker
+    WORKDIR /checker
+
+    ENTRYPOINT /root/entrypoint.sh
+    SAVE IMAGE checker-dev:latest
+
+# Note: Building CLI independently so that it doesn't include the full closure of all
+# of our dev dependencies
 cli:
-    FROM +python-deps
+    FROM ubuntu:21.04
+
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt update
+    RUN apt install -y \
+          pkg-config autoconf libtool libev4 \
+          libgmp-dev openssl libsodium23 libsodium-dev \
+          python3-pip python-is-python3
+
+    RUN pip install --upgrade pip
+    ARG POETRY_VERSION="==1.1.8"
+    RUN pip install poetry"$POETRY_VERSION"
+
+    WORKDIR /root
+
+    COPY +ligo-binary/ligo /bin/ligo
+    COPY +flextesa/* /usr/bin/
+    COPY +zcash-params/zcash-params /root/.zcash-params
+    COPY ./vendor/ctez ./vendor/ctez
+    COPY ./util/mock_oracle.tz ./util/
+
+    # Baking in the current version of Checker for convenience
+    COPY +build-ligo/ ./generated/michelson
+
+    COPY ./client .
+    RUN poetry install
+
     ENTRYPOINT poetry run checker
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:master
 
+# =============================================================================
 # Utilities
-
+# =============================================================================
 ligo-binary:
     FROM ghcr.io/tezos-checker/ligo:0.22.0-checker
     SAVE ARTIFACT /root/ligo ligo
@@ -244,7 +294,7 @@ zcash-params:
     RUN apk add curl wget
     RUN curl https://raw.githubusercontent.com/zcash/zcash/master/zcutil/fetch-params.sh | sh -
     SAVE ARTIFACT /root/.zcash-params /zcash-params
-    SAVE IMAGE --cache-hint
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:zcash-params
 
 flextesa:
     FROM ubuntu:21.04

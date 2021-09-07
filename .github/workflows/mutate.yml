@@ -39,4 +39,4 @@ jobs:
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: Run mutation tests
-        run: earthly --ci ${{matrix.args}} +mutation-tests
+        run: earthly --ci ${{matrix.args}} +test-mutations
