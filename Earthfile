@@ -159,6 +159,7 @@ build-ligo:
     RUN ./scripts/generate-ligo.sh
     RUN ./scripts/compile-ligo.rb
 
+    SAVE ARTIFACT ./generated/ligo /ligo
     SAVE ARTIFACT ./generated/michelson/* /
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
@@ -225,12 +226,6 @@ e2e:
 
     SAVE ARTIFACT gas_profiles.json /gas_profiles.json
     SAVE ARTIFACT gas-costs.json /gas-costs.json
-    SAVE ARTIFACT gas_profiles.json /auction-gas-profiles.png
-
-gas-profiles:
-    FROM +python-deps
-    COPY +e2e/gas_profiles.json .
-    RUN poetry run python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png
     SAVE ARTIFACT auction-gas-profiles.png /auction-gas-profiles.png
 
 cli:
