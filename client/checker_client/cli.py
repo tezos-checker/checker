@@ -3,6 +3,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+import time
 from urllib.parse import urlparse, urlunparse
 
 import click
@@ -37,8 +38,6 @@ def construct_url(address: str, port: int):
 @dataclass
 class Config:
     path: str
-    sandbox_port: int = 18731
-    sandbox_container: str = "checker-sandbox-node"
     tezos_address: str = "http://127.0.0.1"
     tezos_port: int = 18731
     tezos_key: str = "edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt"  # bob's private key from "flobox info"
@@ -58,9 +57,6 @@ class Config:
 
 class ConfigSchema(Schema):
     path = fields.String(required=True)
-    sandbox_container = fields.String()
-    sandbox_port = fields.Int()
-    sandbox_container = fields.String()
     tezos_address = fields.String()
     tezos_port = fields.Int()
     tezos_key = fields.String()
@@ -79,10 +75,7 @@ def _patch_operation_ttl(config: Config) -> int:
     # Checks if the node is running on the local loopback and if so,
     # returns a shorter ttl to allow operations on the sandbox to run
     # as fast as possible.
-    if (
-        any([loopback in config.tezos_address for loopback in ("localhost", "127.0.0.1")])
-        and config.tezos_port == config.sandbox_port
-    ):
+    if any([loopback in config.tezos_address for loopback in ("localhost", "127.0.0.1")]):
         ttl = SANDBOX_TTL
         print(f"Detected sandbox address. Using operation ttl={ttl}")
     else:
@@ -127,39 +120,30 @@ def sandbox():
 
 
 @sandbox.command()
-@click.option("--port", type=int, help="The port on which the sandbox should listen")
 @click.pass_obj
-def start(config: Config, port=None):
-    """Starts the sandbox"""
-    if checker_lib.is_sandbox_container_running(Config.sandbox_container):
-        click.echo(f"Container {Config.sandbox_container} is already running.")
-    else:
-        if port is not None:
-            config.sandbox_port = port
-            # Note: also setting the default tezos client port here as well which optimizes
-            # the experience for people primarily working with the sandbox. If this proves
-            # annoying we can remove this line.
-            config.tezos_port = port
-            config.dump()
-        click.echo(f"Starting sandbox container using host port {config.sandbox_port}...")
-        checker_lib.start_sandbox(
-            config.sandbox_container,
-            config.sandbox_port,
+def start(config: Config):
+    """Starts the sandbox interactively. Runs until interrupted."""
+    port = 20000
+    # Note: also setting the default tezos client port here as well which optimizes
+    # the experience for people primarily working with the sandbox. If this proves
+    # annoying we can remove this line.
+    config.tezos_port = port
+    config.dump()
+    click.echo(f"Starting sandbox container using host port {port}...")
+    teardown = None
+    try:
+        _, teardown = checker_lib.start_sandbox(
+            "checker-sandbox",
+            port,
             wait_for_level=(MAX_OPERATIONS_TTL - SANDBOX_TTL) + 2,
         )
-        click.echo("Sandbox started.")
-
-
-@sandbox.command()
-@click.pass_obj
-def stop(config: Config):
-    """Stops the sandbox"""
-    if not checker_lib.is_sandbox_container_running(Config.sandbox_container):
-        click.echo(f"Container {Config.sandbox_container} is already stopped.")
-    else:
-        click.echo("Stopping sandbox container...")
-        checker_lib.stop_sandbox(config.sandbox_container)
-        click.echo("Sandbox stopped.")
+        click.echo("Sandbox started. Running until cancelled...")
+        while True:
+            time.sleep(1)
+    except Exception as e:
+        if teardown is not None:
+            teardown()
+        raise e
 
 
 @cli.group()

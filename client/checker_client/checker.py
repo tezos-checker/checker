@@ -154,10 +154,6 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
 
 
 def start_sandbox(name: str, port: int, wait_for_level=0):
-    # TODO: Remove this line and only use local sandbox
-    # if os.path.exists("/var/run/docker.sock"):
-    #     teardownFun = start_docker_sandbox(name, port)
-    # else:
     teardownFun = start_local_sandbox(name, port)
 
     client = pytezos.pytezos.using(
@@ -193,6 +189,7 @@ def start_sandbox(name: str, port: int, wait_for_level=0):
     return client, teardownFun
 
 
+# FIXME: Deprecated
 def start_docker_sandbox(name: str, port: int):
     docker_client = docker.from_env()
     docker_container = docker_client.containers.run(
@@ -213,6 +210,7 @@ def start_docker_sandbox(name: str, port: int):
 
 
 def start_local_sandbox(name: str, port: int):
+    # FIXME: Port selection for flextesa seems to be a bit flaky if port !=20_000.
     alice_key = subprocess.check_output(["flextesa", "key-of-name", "alice"]).decode("utf-8")
     bob_key = subprocess.check_output(["flextesa", "key-of-name", "bob"]).decode("utf-8")
 
@@ -254,6 +252,7 @@ def start_local_sandbox(name: str, port: int):
     return teardownFun
 
 
+# FIXME: Deprecated
 def is_sandbox_container_running(name: str):
     docker_client = docker.from_env()
     try:
