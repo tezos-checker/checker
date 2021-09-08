@@ -22,82 +22,102 @@ for anything serious.**
 Various ad-hoc documentation can be found in the [docs](./docs) folder.
 
 The full docs are taking shape under [docs/spec](./docs/spec): use `earthly
---artifact +spec/ ./spec` to build them. These docs are published at
++spec` to build them. These docs are published at
 [checker.readthedocs.io](https://checker.readthedocs.io/).
 
-## Development
+# Development
 
-Currently the team uses Docker (via the
-[Earthly](https://earthly.dev/get-earthly) command line tool) to provide all
+## Overview
+
+Currently the team uses Docker to provide all
 dependencies, including OCaml packages and appropriate (perhaps even patched)
 versions of Ligo and other necessary tools.
 
-All Docker images are stored on GitHub container registry. To benefit from the
-cached versions of images built by CI you'll want to ensure that you follow
-[GitHub's
-instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry)
-for authenticating to the container registry.
+All Docker images are stored on [GitHub container registry](https://github.com/orgs/tezos-checker/packages?repo_name=checker). Docker builds are orchestrated using [Earthly](https://earthly.dev/), with all image definitions residing in [./Earthfile](./Earthfile).
 
-For development, you'll also need the
-[ctez](https://github.com/tezos-checker/ctez) submodule. To fetch all
+## Setup
+
+We provide a development Docker container with all of the dependencies you need for building the project, so the minimum requirements for getting started are [Docker](https://docs.docker.com/get-docker/) and git. For development, you'll also need the
+[ctez](https://github.com/tezos-checker/ctez) git submodule. To fetch all
 submodules, run:
+
 ```console
 $ git submodule update --init
 ```
 
-To enable remote caching, you'll want to pass the `--use-inline-cache` flag to
-`earthly` or set the following environment variable:
+With that out of the way you can start up the dev container. We use [Earthly](https://earthly.dev/) to
+specify and build our Docker images. We recommend launching the dev container as follows. This gives
+earthly access to your local Docker daemon for executing builds.
 
-`export EARTHLY_USE_INLINE_CACHE=true`
+```console
+docker run -it \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v $PWD:/checker \
+  ghcr.io/tezos-checker/checker/dev
+```
+
+The rest of this guide assumes that you are running them in the dev container.
+
+Note that the dev container also includes all language-specific tooling, so you can run language-specific
+build commands as desired (e.g. `dune build .` or `poetry run <cmd>`). This can be helpful for ensuring that editor
+integrations function properly (e.g. `ocaml-platform` for VSCode).
+
+## Build
+
+All of the build targets specified in the project [Earthfile](./Earthfile) may be built
+within the dev container (or locally if you have earthly installed). Some helpful targets are:
 
 * `earthly +build-ocaml` to build and compile the OCaml code (in
   [./src](./src)).
-* `earthly --artifact +build-ligo/ ./generated` to generate ligo and michelson
-  code (in `./generated`).
+* `earthly +build-ligo` to generate ligo and michelson
+  code (produces local output in `./generated`).
 * `earthly +test` to run the full test suite.
 
+For linting type:
+* `earthly +lint`
+
 For test coverage report using bisect_ppx, type:
-*  `earthly --artifact +test-coverage/ ./coverage_out`
-  * (report in `./coverage_out/_coverage/index.html`) and JSON summary in
-    /coverage_out/test-coverage.json
+* `earthly +test-coverage` (report in `./_coverage/index.html`)
 
 For extracting (haddock-style) documentation from the code using dune, type:
-`earthly --artifact +docs/ ocaml-docs/`
+* `earthly --artifact +docs/ ocaml-docs/`
 
-For running the end-to-end tests (can take 10s of minutes to run), type: `earthly +e2e`
+For running the end-to-end tests (can take 10s of minutes to run), type:
+* `earthly +test-e2e`
+
+For running mutation tests, type:
+* `earthly +test-mutations`
+  * You may also specify the following build arguments (via `--build-arg`):
+  * `n_mutations` (default=25): Number of mutations to perform
+  * `modules` (default='src/burrow.ml src/checker.ml'): A list of src modules to perform mutations on.
+  * `test_cmd` (default='dune build @run-fast-tests'): The test suite to run.
 
 
-For editor integration, etc. a dev Docker container is provided at
-`ghcr.io/tezos-checker/checker/dev`. This container is preconfigured to include
-all project dependencies, and language-specific tooling can be executed in it
-(e.g. `dune build ` or `poetry run <cmd>`). You can rebuild this dev container
-using:
+## Local Deployment [WIP]
+
+The contract can be deployed to a local flextesa sandbox using the provided
+[client library](./client).
+
+Ensure that the submodules (ctez in particular) are up-to-date. You will
+need to run this on your host if you don't have GitHub authentication set up in
+the dev container.
+
 ```console
-$ earthly +dev-container
+$ git pull --recurse-submodules
 ```
 
-## Local Deployment
-
-The contract can be deployed to a local, Docker sandbox run using the provided
-[client library](./client). Note that this workflow has only been tested on
-Linux.
-
-# TODO: Fix these instructions
-
-First, enter a nix shell:
-```console
-$ nix-shell
-```
+Then, within the dev container:
 
 Generate the LIGO and Michelson code:
 
 ```console
-$ earthly --artifact +build-ligo/ ./generated/michelson
+$ earthly +build-ligo
 ```
 
-Ensure that the submodules (ctez in particular) are up-to-date:
+Ensure that the client is up to date:
 ```console
-$ git pull --recurse-submodules
+$ poetry install
+$ poetry shell
 ```
 
 Use the client to start the sandbox and deploy the required ctez and mock oracle

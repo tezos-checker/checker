@@ -270,11 +270,19 @@ dev-container:
     # **
     RUN wget "https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-$TARGETARCH" -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly
 
+    # Extra useful applications for development
+    COPY +ligo-binary/ligo /bin/ligo
+    COPY +zcash-params/zcash-params /root/.zcash-params
+    COPY +flextesa/* /usr/bin/
+
     RUN mkdir /checker
     WORKDIR /checker
     # Ensure that we restore the debian frontend to dialog since the dev container
     # should be interactive.
     ENV DEBIAN_FRONTEND=dialog
+    # Set earthly to use caching by default
+    ENV EARTHLY_USE_INLINE_CACHE=true
+
     ENTRYPOINT /root/entrypoint.sh
     ARG TAG_DEV_CONTAINER = "latest"
     # Local image
