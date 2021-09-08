@@ -152,19 +152,21 @@ build-ligo:
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
+    COPY ./patches/e2e-tests-hack.patch .
 
     ARG E2E_TESTS_HACK=""
-    IF [[ "$E2E_TESTS_HACK" = "true" ]]
-       RUN apk add patch
-       COPY ./patches/e2e-tests-hack.patch .
-       RUN patch -p1 <e2e-tests-hack.patch
-    END
+
+    # Note: using bash if-then here instead of earthly's IF-END because the earthly
+    # version was flaky as of version v0.5.23
+    RUN bash -c 'if [ "$E2E_TESTS_HACK" = "true" ]; then patch -p1 <e2e-tests-hack.patch; fi'
 
     RUN ./scripts/generate-ligo.sh
     RUN ./scripts/compile-ligo.rb
 
     SAVE ARTIFACT ./generated/ligo /ligo
-    SAVE ARTIFACT ./generated/michelson/* /
+    SAVE ARTIFACT ./generated/michelson /michelson
+    SAVE ARTIFACT ./generated/ligo AS LOCAL ./generated/ligo
+    SAVE ARTIFACT ./generated/michelson AS LOCAL ./generated/michelson
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
 test-ocaml:
@@ -210,8 +212,7 @@ test-e2e:
     # Bring flextesa + tezos-* binaries, which are required by the checker client
     COPY +flextesa/* /usr/bin/
     # And the checker contract itself
-    COPY --build-arg E2E_TESTS_HACK=true +build-ligo/ ./generated/michelson
-
+    COPY --build-arg E2E_TESTS_HACK=true +build-ligo/michelson ./generated/michelson
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
         poetry run python ./e2e/main.py
@@ -239,15 +240,45 @@ test-mutations:
 # =============================================================================
 dev-container:
     FROM +deps-full
+
+    # Extra dependencies for development
+    RUN apt install -y \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release \
+        wget
+
     # Ensure interactive terminal is also already in correct opam switch env
     RUN echo 'eval $(opam env --switch=/root --set-switch)' >> /root/.bashrc
     RUN echo 'eval $(opam env --switch=/root --set-switch); /bin/bash $@' > entrypoint.sh && chmod +x entrypoint.sh
+
+    # Install docker
+    ARG TARGETARCH
+    RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    RUN echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    RUN apt update && \
+        apt install -y docker-ce docker-ce-cli containerd.io && \
+        (getent group docker || groupadd docker) && \
+        usermod -aG docker root
+
+    # Install earthly.
+    # ** Note: earthly will only be usable if the container is launched with access to docker,
+    #    e.g. via mounting the host docker socket
+    # **
+    RUN wget "https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-$TARGETARCH" -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly
 
     RUN mkdir /checker
     WORKDIR /checker
 
     ENTRYPOINT /root/entrypoint.sh
-    SAVE IMAGE checker-dev:latest
+    ARG TAG_DEV_CONTAINER = "latest"
+    # Local image
+    SAVE IMAGE checker/dev:latest
+    # Published image
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:$TAG_DEV_CONTAINER
 
 # Note: Building CLI independently so that it doesn't include the full closure of all
 # of our dev dependencies
@@ -274,12 +305,16 @@ cli:
     COPY ./util/mock_oracle.tz ./util/
 
     # Baking in the current version of Checker for convenience
-    COPY +build-ligo/ ./generated/michelson
+    COPY +build-ligo/michelson ./generated/michelson
 
     COPY ./client .
-    RUN poetry install
+    RUN poetry config virtualenvs.in-project true && poetry install
 
-    ENTRYPOINT poetry run checker
+    ENV PATH="/root/.venv/bin:$PATH"
+    CMD checker
+    # Local image
+    SAVE IMAGE checker-client:latest
+    # Published image
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:master
 
 # =============================================================================
