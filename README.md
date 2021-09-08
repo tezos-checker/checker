@@ -62,7 +62,7 @@ docker run -it \
   ghcr.io/tezos-checker/checker/dev
 ```
 
-The rest of this guide assumes that you are running them in the dev container.
+The rest of this guide assumes that you are running commands in the dev container.
 
 Note that the dev container also includes all language-specific tooling, so you
 can run language-specific build commands as desired (e.g. `dune build .` or
