@@ -320,6 +320,8 @@ cli:
     COPY ./client .
     RUN poetry config virtualenvs.in-project true && poetry install
 
+    # Required dir for pytezos
+    RUN mkdir /root/.tezos-client
     ENV PATH="/root/.venv/bin:$PATH"
     CMD checker
     # Local image
