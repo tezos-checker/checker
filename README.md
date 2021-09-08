@@ -29,25 +29,31 @@ The full docs are taking shape under [docs/spec](./docs/spec): use `earthly
 
 ## Overview
 
-Currently the team uses Docker to provide all
-dependencies, including OCaml packages and appropriate (perhaps even patched)
-versions of Ligo and other necessary tools.
+Currently the team uses Docker to provide all dependencies, including OCaml
+packages and appropriate (perhaps even patched) versions of Ligo and other
+necessary tools.
 
-All Docker images are stored on [GitHub container registry](https://github.com/orgs/tezos-checker/packages?repo_name=checker). Docker builds are orchestrated using [Earthly](https://earthly.dev/), with all image definitions residing in [./Earthfile](./Earthfile).
+All Docker images are stored on [GitHub container
+registry](https://github.com/orgs/tezos-checker/packages?repo_name=checker).
+Docker builds are orchestrated using [Earthly](https://earthly.dev/), with all
+image definitions residing in [./Earthfile](./Earthfile).
 
 ## Setup
 
-We provide a development Docker container with all of the dependencies you need for building the project, so the minimum requirements for getting started are [Docker](https://docs.docker.com/get-docker/) and git. For development, you'll also need the
-[ctez](https://github.com/tezos-checker/ctez) git submodule. To fetch all
-submodules, run:
+We provide a development Docker container with all of the dependencies you need
+for building the project, so the minimum requirements for getting started are
+[Docker](https://docs.docker.com/get-docker/) and git. For development, you'll
+also need the [ctez](https://github.com/tezos-checker/ctez) git submodule. To
+fetch all submodules, run:
 
 ```console
 $ git submodule update --init
 ```
 
-With that out of the way you can start up the dev container. We use [Earthly](https://earthly.dev/) to
-specify and build our Docker images. We recommend launching the dev container as follows. This gives
-earthly access to your local Docker daemon for executing builds.
+With that out of the way you can start up the dev container. We use
+[Earthly](https://earthly.dev/) to specify and build our Docker images. We
+recommend launching the dev container as follows. This gives earthly access to
+your local Docker daemon for executing builds.
 
 ```console
 docker run -it \
@@ -58,19 +64,21 @@ docker run -it \
 
 The rest of this guide assumes that you are running them in the dev container.
 
-Note that the dev container also includes all language-specific tooling, so you can run language-specific
-build commands as desired (e.g. `dune build .` or `poetry run <cmd>`). This can be helpful for ensuring that editor
-integrations function properly (e.g. `ocaml-platform` for VSCode).
+Note that the dev container also includes all language-specific tooling, so you
+can run language-specific build commands as desired (e.g. `dune build .` or
+`poetry run <cmd>`). This can be helpful for ensuring that editor integrations
+function properly (e.g. `ocaml-platform` for VSCode).
 
 ## Build
 
-All of the build targets specified in the project [Earthfile](./Earthfile) may be built
-within the dev container (or locally if you have earthly installed). Some helpful targets are:
+All of the build targets specified in the project [Earthfile](./Earthfile) may
+be built within the dev container (or locally if you have earthly installed).
+Some helpful targets are:
 
 * `earthly +build-ocaml` to build and compile the OCaml code (in
   [./src](./src)).
-* `earthly +build-ligo` to generate ligo and michelson
-  code (produces local output in `./generated`).
+* `earthly +build-ligo` to generate ligo and michelson code (produces local
+  output in `./generated`).
 * `earthly +test` to run the full test suite.
 
 For linting type:
@@ -89,18 +97,19 @@ For running mutation tests, type:
 * `earthly +test-mutations`
   * You may also specify the following build arguments (via `--build-arg`):
   * `n_mutations` (default=25): Number of mutations to perform
-  * `modules` (default='src/burrow.ml src/checker.ml'): A list of src modules to perform mutations on.
+  * `modules` (default='src/burrow.ml src/checker.ml'): A list of src modules to
+    perform mutations on.
   * `test_cmd` (default='dune build @run-fast-tests'): The test suite to run.
 
 
-## Local Deployment [WIP]
+## Local Dev Deployment
 
 The contract can be deployed to a local flextesa sandbox using the provided
 [client library](./client).
 
-Ensure that the submodules (ctez in particular) are up-to-date. You will
-need to run this on your host if you don't have GitHub authentication set up in
-the dev container.
+Ensure that the submodules (ctez in particular) are up-to-date. You will need to
+run this on your host if you don't have GitHub authentication set up in the dev
+container.
 
 ```console
 $ git pull --recurse-submodules
@@ -117,35 +126,35 @@ $ earthly +build-ligo
 Ensure that the client is up to date:
 ```console
 $ poetry install
-$ poetry shell
 ```
 
-Use the client to start the sandbox and deploy the required ctez and mock oracle
-contracts:
+Use the client to start the sandbox. This will run interactively until
+cancelled:
 
 ```console
-$ checker sandbox start
-$ checker deploy mock-oracle
-$ checker deploy ctez
+$ poetry run checker sandbox start
 ```
 
-> Note: If no port is specified, the client will attempt to select a default
-> one. To view the port number for use with tezos-client, etc. you can use:
-> `checker show-config`.
+In a new terminal, deploy the mock oracle and ctez contracts:
+
+```console
+$ poetry run checker deploy mock-oracle
+$ poetry run checker deploy ctez
+```
 
 And finally, deploy checker itself:
 ```console
-$ checker deploy checker
+$ poetry run checker deploy checker
 ```
 
-## Deployment to a Testnet (Manually)
+# Deployment to a Testnet (Manually)
 
 To be able to deploy checker on a testnet you need to have `tezos-client`
 installed on your system and configured. Below are some instructions for setting
 up from scratch; if you've done this already, you can skip to the instructions
 "Deploy Checker" below.
 
-### Initial `tezos-client` Download and Setup
+## Initial `tezos-client` Download and Setup
 
 1. Install `tezos-client` (instructions taken from
    [here](https://assets.tqtezos.com/docs/setup/1-tezos-client/))
@@ -160,7 +169,7 @@ $ source $HOME/.bashrc
 
 2. Set the node to connect to
 ```console
-$ tezos-client --endpoint https://rpczero.tzbeta.net config update
+$ tezos-client --endpoint https://granadanet.api.tez.ie config update
 ```
 
 3. Verify that you can connect to the network
@@ -180,46 +189,84 @@ $ tezos-client activate account alice with tz1Ukue3ZGoNM6UY3mgGcrQnRqg68DsXECZC.
 $ tezos-client reveal key for alice
 ```
 
-### Deploy Checker
+## Deploy Checker
 
-1. Enter a nix-shell
+While Checker can be deployed from within the dev container using the `checker`
+CLI, the CLI is also available as a standalone Docker image which includes the
+latest version of the contract. To use the image, you'll want to mount your
+account's json file to the Docker container to ensure that it is
+available to the CLI as shown in the examples below.
+
+To deploy the version of the contract bundled in the CLI image (assuming your
+key file is `./my-account.json`):
+
 ```console
-$ nix-shell
+  docker run --rm \
+    -v $PWD/my-account.json:/my-account.json \
+    ghcr.io/tezos-checker/checker/checker-client:master \
+      checker \
+      deploy \
+      --address <node-address> \
+      --port <node-port> \
+      --key /my-account.json \
+      checker \
+      --ctez <ctez-fa12-address> \
+      --oracle <oracle-address>
 ```
 
-2. Build checker
+In this example, `<node-address>` could be replaced with
+ `https://granadanet.api.tez.ie` and `port` could be replaced with `443` (i.e.,
+ the standard https port).
+
+To deploy local copies of the contract (e.g. in `./generated/michelson`):
+
 ```console
-$ make build
+  docker run --rm \
+    -v $PWD/my-account.json:/my-account.json \
+    -v $PWD/generated:/generated \
+    ghcr.io/tezos-checker/checker/checker-client:master \
+      checker \
+      deploy \
+      --address <node-address> \
+      --port <node-port> \
+      --key /my-account.json \
+      checker \
+      --ctez <ctez-fa12-address> \
+      --oracle <oracle-address> \
+      --src /generated/michelson
 ```
 
-3. Find the path to CLI config file (usually at $HOME/.config/.checker)
+If you need to deploy the `ctez` or mock oracle contracts, you'll want to also
+mount their source code to the container.
+
+Deploy ctez (vendored version):
+
 ```console
-$ checker --help
+  docker run --rm \
+    -v $PWD/my-account.json:/my-account.json \
+    -v $PWD/vendor/ctez:/ctez \
+    ghcr.io/tezos-checker/checker/checker-client:master \
+      checker \
+      deploy \
+      --address <node-address> \
+      --port <node-port> \
+      --key /my-account.json \
+      ctez \
+      --src /ctez
 ```
 
-4. Modify the CLI config file
-   - Set `tezos_address` to the endpoint URL above (in this case
-     https://rpczero.tzbeta.net).
-   - Set `tezos_key` to your private key (you can find this by typing
-     `tezos-client show address alice -S`).
-   - Set `tezos_port` to 443 (i.e., standard https port).
+Deploy mock oracle:
 
-5. If `ctez` is not already deployed, deploy one
 ```console
-checker deploy ctez
+  docker run --rm \
+    -v $PWD/my-account.json:/my-account.json \
+    -v $PWD/util/mock_oracle.tz:/mock_oracle.tz \
+    ghcr.io/tezos-checker/checker/checker-client:master \
+      checker \
+      deploy \
+      --address <node-address> \
+      --port <node-port> \
+      --key /my-account.json \
+      mock-oracle \
+      --src /mock_oracle.tz
 ```
-
-6. If an oracle is not already deployed, you can deploy the mock oracle
-```console
-checker deploy mock-oracle
-```
-
-7. Finally, deploy checker
-```console
-$ checker deploy checker --ctez <ctez-fa12-address> --oracle <oracle-address>
-```
-After `--ctez` you need the FA1.2 address for a deployed ctez contract, and
-after `--oracle` you need the address of a deployed oracle contract.  However,
-if you had to do both `checker deploy ctez` and `checker deploy mock-oracle`,
-then `checker deploy checker` should suffice (since both these instructions
-update the CLI config file in place).
