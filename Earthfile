@@ -170,8 +170,10 @@ build-ligo:
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:build-ligo
 
 test-ocaml:
-    BUILD +test-ocaml-fast
-    BUILD +test-ocaml-slow
+    FROM +build-ocaml
+    COPY ./scripts/ensure-unique-errors.sh ./scripts/
+    RUN bash ./scripts/ensure-unique-errors.sh
+    RUN opam exec -- dune runtest .
 
 test-ocaml-fast:
     FROM +build-ocaml
@@ -179,12 +181,10 @@ test-ocaml-fast:
     RUN bash ./scripts/ensure-unique-errors.sh
     RUN opam exec -- dune build @run-fast-tests
 
-test-ocaml-slow:
-    FROM +build-ocaml
-    RUN opam exec -- dune build @run-avl-tests
-
 test-coverage:
     FROM +build-ocaml
+    COPY ./scripts/ensure-unique-errors.sh ./scripts/
+    RUN bash ./scripts/ensure-unique-errors.sh
     RUN opam exec -- dune runtest --instrument-with bisect_ppx --force .
     RUN opam exec -- bisect-ppx-report html
     RUN echo "$(opam exec -- bisect-ppx-report summary --per-file)"
@@ -272,7 +272,9 @@ dev-container:
 
     RUN mkdir /checker
     WORKDIR /checker
-
+    # Ensure that we restore the debian frontend to dialog since the dev container
+    # should be interactive.
+    ENV DEBIAN_FRONTEND=dialog
     ENTRYPOINT /root/entrypoint.sh
     ARG TAG_DEV_CONTAINER = "latest"
     # Local image
