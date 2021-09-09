@@ -10,8 +10,7 @@ let neg_int (x: Ligo.int) = Ligo.sub_int_int (Ligo.int_from_literal "0") x
 
 (* Note that ligo is not happy with nested lets. Take out when ready, but
  * keep internal for now. *)
-let rec pow_rec (y, x,
-n: Ligo.int * Ligo.int * Ligo.nat) : Ligo.int =
+let rec pow_rec (y, x, n: Ligo.int * Ligo.int * Ligo.nat) : Ligo.int =
   if Ligo.eq_nat_nat n (Ligo.nat_from_literal "0n") then
     y
   else if Ligo.eq_nat_nat n (Ligo.nat_from_literal "1n") then
