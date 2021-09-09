@@ -92,22 +92,45 @@ spec:
 # =============================================================================
 # Formatting
 # =============================================================================
-lint:
-    BUILD +lint-ocaml
-    BUILD +lint-python
+format:
+    BUILD +format-ocaml
+    BUILD +format-python
 
-lint-ocaml:
-    FROM +build-ocaml
+format-ocaml:
+    FROM +deps-ocaml
+    COPY ./src ./src
+    COPY ./tests ./tests
+    COPY ./scripts/format-ocaml.sh .
+    RUN opam exec -- ./format-ocaml.sh
+    SAVE ARTIFACT src AS LOCAL src
+    SAVE ARTIFACT tests AS LOCAL test
+
+format-python:
+    FROM +deps-full
+    COPY ./scripts ./scripts
+    RUN poetry run ./scripts/format-python.sh
+    SAVE ARTIFACT scripts AS LOCAL ./scripts
+    SAVE ARTIFACT client AS LOCAL ./client
+    SAVE ARTIFACT e2e AS LOCAL ./e2e
+
+format-check:
+    BUILD +format-ocaml-check
+    BUILD +format-python-check
+
+format-ocaml-check:
+    FROM +deps-ocaml
+    COPY ./src ./src
+    COPY ./tests ./tests
     COPY .git .git
     COPY ./scripts/format-ocaml.sh .
     RUN opam exec -- ./format-ocaml.sh && \
         diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-ocaml.sh\":"; echo "$diff"; exit 1; fi'
 
-lint-python:
+format-python-check:
     FROM +deps-full
     COPY .git .git
-    COPY ./scripts/format-python.sh .
-    RUN poetry run ./format-python.sh && \
+    COPY ./scripts ./scripts
+    RUN poetry run ./scripts/format-python.sh && \
         diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-python.sh\":"; echo "$diff"; exit 1; fi'
 
 # =============================================================================

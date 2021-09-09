@@ -81,8 +81,9 @@ Some helpful targets are:
   output in `./generated`).
 * `earthly +test` to run the full test suite.
 
-For linting type:
-* `earthly +lint`
+For formatting type:
+* `earthly +format` (formats in-place)
+* `earthly +format-check` (checks formatting)
 
 For test coverage report using bisect_ppx, type:
 * `earthly +test-coverage` (report in `./_coverage/index.html`)
