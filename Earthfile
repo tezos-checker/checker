@@ -103,7 +103,7 @@ format-ocaml:
     COPY ./scripts/format-ocaml.sh .
     RUN opam exec -- ./format-ocaml.sh
     SAVE ARTIFACT src AS LOCAL src
-    SAVE ARTIFACT tests AS LOCAL test
+    SAVE ARTIFACT tests AS LOCAL tests
 
 format-python:
     FROM +deps-full
