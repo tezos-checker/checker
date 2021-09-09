@@ -76,7 +76,8 @@ deps-full:
 docs:
     FROM +build-ocaml
     RUN opam exec -- dune build @doc
-    SAVE ARTIFACT _build/default/_doc/_html /
+    SAVE ARTIFACT _build/default/_doc/_html AS LOCAL ./ocaml-docs
+    SAVE ARTIFACT _build/default/_doc/_html /ocaml-docs
 
 spec:
     FROM +builder

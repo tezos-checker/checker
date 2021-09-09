@@ -9,6 +9,7 @@ _build
 _coverage
 checker.byte
 _opam
+ocaml-docs
 
 *.cmi
 *.cmo

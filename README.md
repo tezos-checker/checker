@@ -88,7 +88,7 @@ For test coverage report using bisect_ppx, type:
 * `earthly +test-coverage` (report in `./_coverage/index.html`)
 
 For extracting (haddock-style) documentation from the code using dune, type:
-* `earthly --artifact +docs/ ocaml-docs/`
+* `earthly +docs` (output in `./ocaml-docs`)
 
 For running the end-to-end tests (can take 10s of minutes to run), type:
 * `earthly +test-e2e`
