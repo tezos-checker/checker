@@ -197,6 +197,7 @@ test-coverage:
 	  | jq --sort-keys -s 'from_entries' \
 	  | tee test-coverage.json
     SAVE ARTIFACT _coverage AS LOCAL ./_coverage
+    SAVE ARTIFACT test-coverage.json AS LOCAL test-coverage.json
     SAVE ARTIFACT _coverage /_coverage
     SAVE ARTIFACT test-coverage.json /
 
