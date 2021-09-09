@@ -180,7 +180,7 @@ def deploy(config: Config, address=None, port=None, key=None):
     help="optional JSON file containing the TZIP-12 token_metadata.",
 )
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
+def checker(config: Config, checker_dir, oracle, ctez, token_metadata   ):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
