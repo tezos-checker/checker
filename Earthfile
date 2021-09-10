@@ -66,6 +66,8 @@ deps-full:
     COPY pyproject.toml poetry.lock ./
     COPY ./e2e ./e2e
     COPY ./client ./client
+    # Ensure that venv gets created in a known directory
+    RUN poetry config virtualenvs.in-project true
     RUN poetry install
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:deps-full
@@ -304,6 +306,9 @@ dev-container:
 
     RUN mkdir /checker
     WORKDIR /checker
+
+    # Add the pre-installed poetry env to the PATH for convenience
+    ENV PATH=/root/.venv/bin:$PATH
     # Ensure that we restore the debian frontend to dialog since the dev container
     # should be interactive.
     ENV DEBIAN_FRONTEND=dialog

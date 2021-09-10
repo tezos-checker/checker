@@ -56,7 +56,8 @@ recommend launching the dev container as follows. This gives earthly access to
 your local Docker daemon for executing builds.
 
 ```console
-docker run -it \
+docker run --rm -it \
+  --name checker-dev-container \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $PWD:/checker \
   ghcr.io/tezos-checker/checker/dev
@@ -127,28 +128,33 @@ Generate the LIGO and Michelson code:
 $ earthly +build-ligo
 ```
 
-Ensure that the client is up to date:
-```console
-$ poetry install
-```
+By default, the dev container includes the latest version of the client library,
+so you can call the `checker` command directly. Note that if you are actively
+developing the client library, you'll want to make sure to prepend your local changes to the
+`PYTHONPATH` variable (`export PYTHONPATH=$PWD/client:$PYTHONPATH`).
 
 Use the client to start the sandbox. This will run interactively until
 cancelled:
 
 ```console
-$ poetry run checker sandbox start
+$ checker sandbox start
 ```
 
-In a new terminal, deploy the mock oracle and ctez contracts:
+In a new terminal, deploy the mock oracle and ctez contracts. To get
+a new terminal manually (e.g. if not using VSCode), you can use:
 
 ```console
-$ poetry run checker deploy mock-oracle
-$ poetry run checker deploy ctez
+$ docker exec -it checker-dev-container bash
+```
+
+```console
+$ checker deploy mock-oracle
+$ checker deploy ctez
 ```
 
 And finally, deploy checker itself:
 ```console
-$ poetry run checker deploy checker
+$ checker deploy checker
 ```
 
 # Deployment to a Testnet (Manually)
