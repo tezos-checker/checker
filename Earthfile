@@ -145,10 +145,12 @@ test:
     # In the future if we add python unit tests, etc. we can call their target(s) here
 
 generate-entrypoints:
-    FROM +builder
+    FROM +deps-ocaml
     COPY ./scripts/generate-entrypoints.rb ./generate-entrypoints.rb
     COPY ./src/checker.mli checker.mli
     RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
+    # Ensure that the generated module obeys formatting rules:
+    RUN opam exec -- ocp-indent -i checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
     SAVE ARTIFACT checkerEntrypoints.ml /
     # Image for inline caching
