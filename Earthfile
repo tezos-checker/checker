@@ -1,5 +1,5 @@
 all:
-    BUILD +lint
+    BUILD +format
     BUILD +build
     BUILD +test
     BUILD +cli
