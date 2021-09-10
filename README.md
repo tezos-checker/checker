@@ -91,6 +91,9 @@ For test coverage report using bisect_ppx, type:
 For extracting (haddock-style) documentation from the code using dune, type:
 * `earthly +docs` (output in `./ocaml-docs`)
 
+For building the spec documentation, type:
+* `earthly +spec` (output in `./docs/spec/_build/html`)
+
 For running the end-to-end tests (can take 10s of minutes to run), type:
 * `earthly +test-e2e`
 
