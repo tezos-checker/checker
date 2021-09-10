@@ -2,9 +2,12 @@ import json
 import logging
 import math
 import os
+import sys
 import subprocess
 import tempfile
+import shutil
 import time
+import signal
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
@@ -151,49 +154,105 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
 
 
 def start_sandbox(name: str, port: int, wait_for_level=0):
-    docker_client = docker.from_env()
-    docker_container = docker_client.containers.run(
-        "tqtezos/flextesa:20210514",
-        command=["flobox", "start"],
-        environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
-        ports={"20000/tcp": port},
-        name=name,
-        detach=True,
-        remove=True,
-    )
+    teardownFun = start_local_sandbox(name, port)
+
     client = pytezos.pytezos.using(
         shell="http://127.0.0.1:{}".format(port),
         key="edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt",  # bob's key from "flobox info"
     )
     # Increase log level to avoid connection errors
     client.loglevel = logging.ERROR
+
     # wait some time for the node to start
-    while True:
+    print("Trying to connect to the sandbox.")
+    for _ in range(20):
         try:
             client.shell.node.get("/version/")
             break
-        except requests.exceptions.ConnectionError:
-            time.sleep(0.1)
+        except requests.exceptions.ConnectionError as exc:
+            print("Connection failed, retrying:", exc)
+            time.sleep(1)
+    else:
+        raise Exception("Can not connect to the sandbox.")
 
     print(f"Sandbox initialized. Waiting for expected level to be reached... ")
     last_level = 0
     while True:
         # Wait until enough blocks have been baked for further deploy operations, etc.
-        level = client.shell.head.level()
+        level = client.shell.head.header()["level"]
         if level != last_level:
             print(f"Sandbox at level {level} / {wait_for_level}")
             last_level = level
         if level >= wait_for_level:
             break
-    return client, docker_client, docker_container
+    print("Sandbox started!")
+    return client, teardownFun
 
 
-def stop_sandbox(name: str):
+# FIXME: Deprecated
+def start_docker_sandbox(name: str, port: int):
     docker_client = docker.from_env()
-    container = docker_client.containers.get(name)
-    container.kill()
+    docker_container = docker_client.containers.run(
+        "tqtezos/flextesa:20210514",
+        command=["granabox", "start"],
+        environment={"block_time": SANDBOX_TIME_BETWEEN_BLOCKS},
+        ports={"20000/tcp": port},
+        name=name,
+        detach=True,
+        remove=True,
+    )
+
+    def teardownFun():
+        docker_container.kill()
+        docker_client.close()
+
+    return teardownFun
 
 
+def start_local_sandbox(name: str, port: int):
+    # FIXME: Port selection for flextesa seems to be a bit flaky if port !=20_000.
+    alice_key = subprocess.check_output(["flextesa", "key-of-name", "alice"]).decode("utf-8")
+    bob_key = subprocess.check_output(["flextesa", "key-of-name", "bob"]).decode("utf-8")
+
+    tmpdir = tempfile.mkdtemp(prefix=name)
+
+    # below command is mainly from the 'granabox' script from flextesa docker
+    # container.
+    args = [
+        "flextesa",
+        "mini-network",
+        f"--root={tmpdir}",
+        f"--base-port={port}",
+        "--size=1",
+        "--set-history-mode=N000:archive",
+        f"--time-between-blocks={SANDBOX_TIME_BETWEEN_BLOCKS}",
+        f"--minimal-block-delay=1",
+        f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
+        f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
+        "--no-daemons-for=alice",
+        "--no-daemons-for=bob",
+        "--until-level=200_000_000",
+        "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
+        "--protocol-kind=Granada",
+    ]
+
+    handle = subprocess.Popen(args)
+
+    def teardownFun():
+        # send a keyboard interrupt and wait
+        print("Stopping sandbox process")
+        handle.send_signal(signal.SIGINT)
+        timeout = 20
+        print(f"Waiting up to {timeout}s for sandbox process to exit...")
+        handle.wait(timeout=20)
+        print("Sandbox exited. Removing sandbox data dir.")
+        # remove the state directory
+        shutil.rmtree(tmpdir)
+
+    return teardownFun
+
+
+# FIXME: Deprecated
 def is_sandbox_container_running(name: str):
     docker_client = docker.from_env()
     try:
@@ -246,7 +305,6 @@ def deploy_checker(
         initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
         ttl=ttl,
     )
-
     print("Checker address: {}".format(checker.context.address))
 
     with open(os.path.join(checker_dir, "functions.json")) as f:
@@ -305,12 +363,18 @@ def deploy_checker(
 
 def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
     """Compiles an mligo file into michelson using ligo"""
-    with out_file.open("wb") as f:
-        subprocess.run(
+    try:
+        res = subprocess.run(
             ["ligo", "compile-contract", str(src_file), entrypoint],
             check=True,
-            stdout=f,
+            capture_output=True,
         )
+    except subprocess.CalledProcessError as e:
+        print(e.stdout)
+        print(e.stderr)
+        raise e
+    with out_file.open("wb") as f:
+        f.write(res.stdout)
 
 
 def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):

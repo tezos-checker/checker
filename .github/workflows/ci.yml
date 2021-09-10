@@ -4,27 +4,55 @@ on:
   pull_request:
   push:
 
+# TODO: Once https://github.com/earthly/actions is more mature we can
+# switch to it for installing earthly.
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: cachix/cachix-action@v10
+      - name: Add git branch for earthly
+        run: |
+          branch=""
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            branch="$GITHUB_HEAD_REF"
+          else
+            branch="${GITHUB_REF##*/}"
+          fi
+          git checkout -b "$branch" || true
+      # FIXME: Might need to swap to a PAT here since GITHUB_TOKEN is still unreliable
+      #   See: https://github.community/t/403-error-on-container-registry-push-from-github-action/173071
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
         with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies
-        run: nix-shell --pure --run ':'
-      - name: Check formatting
-        run: nix-shell --pure --run 'make indent && if [ -n "$(git status --porcelain)" ]; then echo "Some files require formatting, run \"make indent\"."; exit 1; fi'
-      - name: Build and test
-        run: nix-build -A michelson --arg doCheck true
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      # Only push earthly cache from master
+      - if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
 
+      - name: Build dependencies
+        run: |
+          earthly --verbose --ci ${{ env.push_flag }} +flextesa
+          earthly --verbose --ci ${{ env.push_flag }} +deps-full
+      - name: Formatting
+        run: |
+          earthly --verbose --ci +format-python-check
+          earthly --verbose --ci +format-ocaml-check
+      - name: Build
+        run: |
+          earthly --verbose --ci ${{ env.push_flag }} +generate-entrypoints
+          earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
+          earthly --verbose --ci ${{ env.push_flag }} +build-ligo
       - name: Export lazy entrypoint sizes
         run: |
+          earthly --ci --artifact +build-ligo/michelson/functions.json functions.json
           cat result/functions.json \
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
             | tee entrypoint-sizes.json
@@ -34,8 +62,8 @@ jobs:
           name: stats
           path: entrypoint-sizes.json
           if-no-files-found: error
-      - name: Export the test coverage report
-        run: nix-shell --pure --run 'make test-coverage.json'
+      - name: Test
+        run: earthly --verbose --ci ${{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
@@ -45,33 +73,42 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: cachix/cachix-action@v10
+      - name: Add git branch for earthly
+        run: |
+          branch=""
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            branch="$GITHUB_HEAD_REF"
+          else
+            branch="${GITHUB_REF##*/}"
+          fi
+          git checkout -b "$branch" || true
+      # FIXME: Might need to swap to a PAT here since GITHUB_TOKEN is still unreliable
+      #   See: https://github.community/t/403-error-on-container-registry-push-from-github-action/173071
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
         with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build dependencies
-        run: nix-shell --pure --run ':'
-      - name: Build checker with e2eTestsHack
-        run: nix-build -A michelson --arg doCheck false --arg e2eTestsHack true --out-link ./checker-e2eTestsHack
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      # Note: Not pushing here to avoid clashing with pushes from the main `build` job
       - name: Run e2e tests
-        run: nix-shell --pure --run "WRITE_GAS_PROFILES=$PWD/gas_profiles.json WRITE_GAS_COSTS=$PWD/gas-costs.json CHECKER_DIR=$PWD/checker-e2eTestsHack python e2e/main.py"
-      - name: Generate profile plots
-        run: nix-shell --pure --run "python e2e/plot-gas-profiles.py gas_profiles.json --output auction-gas-profiles.png"
+        run: earthly --ci --artifact +test-e2e/ e2e-outputs
       - uses: actions/upload-artifact@v2.2.4
-        # we only upload artifacts on 'push' events, this is simply to have one set of artifacts
+        # We only upload artifacts on 'push' events, this is simply to have one set of artifacts
         # per commit.
         if: github.event_name == 'push'
         with:
           name: stats
-          path: gas-costs.json
+          path: e2e-outputs/gas-costs.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v2.2.4
         if: github.event_name == 'push'
         with:
           name: gas-profile-plots
-          path: auction-gas-profiles.png
+          path: e2e-outputs/auction-gas-profiles.png
           if-no-files-found: error

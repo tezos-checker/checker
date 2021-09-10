@@ -1,0 +1,24 @@
+opam-version: "2.0"
+depends: [
+  "dune" {>= "2.8"}
+
+  # checker desp
+  "ppx_deriving"
+  "zarith"
+  "bisect_ppx"
+
+  # test deps
+  "core_kernel"
+  "ounit2"
+  "qcheck"
+
+  # Formatting
+  "ocp-indent"
+
+  # Other dev tools
+  "odoc"
+  "ocaml-lsp-server"
+  "ocamlfind-secondary"
+]
+build: [
+]

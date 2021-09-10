@@ -1,27 +1,20 @@
+# Locally generated files
 src/checkerEntrypoints.ml
-
 generated/michelson/main.tz
 generated/michelson/functions.json
-
 generated/ligo
 
-_build
-_coverage
-checker.byte
-_opam
-ocaml-docs
-
-*.cmi
-*.cmo
+# Local dune directories and opam switches
+**/_build
+**/_coverage
+**/_opam
+**/__pycache__
+**/.pytest_cache
+**/.ipynb_checkpoints
 
 # editors
 .vscode
 /result
-
-# python stuff
-__pycache__
-.python-version
-.ipynb_checkpoints
 
 # tezos client scripts
 *2net.sh

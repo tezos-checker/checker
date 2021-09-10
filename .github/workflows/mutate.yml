@@ -2,7 +2,7 @@ name: Mutate
 
 on:
   schedule:
-    - cron:  '0 0,12 * * *'
+    - cron: '0 0,12 * * *'
   workflow_dispatch: {}
 
 jobs:
@@ -10,19 +10,33 @@ jobs:
     strategy:
       matrix:
         args:
-          - "--test 'make fast-test' --num-mutations 500 src/{burrow,cfmm,checker,checkerMain,common,constants}.ml"
-          - "--test 'make fast-test' --num-mutations 500 src/{fa2Interface,lqt,parameters}.ml"
-          - "--test 'make test'      --num-mutations 50  src/{liquidationAuction,sliceList,mem,ptr}.ml"
-          - "--test 'make test'      --num-mutations 50  src/avl.ml"
+          - '--build-arg n_mutations=500 --build-arg modules=src/{burrow,cfmm,checker,checkerMain,common,constants}.ml'
+          - '--build-arg n_mutations=500 --build-arg modules=src/{fa2Interface,lqt,parameters}.ml'
+          - '--build-arg n_mutations=50  --build-arg modules=src/{liquidationAuction,sliceList,mem,ptr}.ml'
+          - '--build-arg n_mutations=50  --build-arg modules=src/avl.ml'
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
-      - uses: cachix/cachix-action@v10
         with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - name: Build shell dependencies
-        run: nix-shell --pure --run ':'
+          submodules: recursive
+      - name: Add git branch for earthly
+        run: |
+          branch=""
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            branch="$GITHUB_HEAD_REF"
+          else
+            branch="${GITHUB_REF##*/}"
+          fi
+          git checkout -b "$branch" || true
+      # FIXME: Might need to swap to a PAT here since GITHUB_TOKEN is still unreliable
+      #   See: https://github.community/t/403-error-on-container-registry-push-from-github-action/173071
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: Run mutation tests
-        run: nix-shell --pure --run "make src/checkerEntrypoints.ml && ./scripts/mutate.py ${{matrix.args}}"
+        run: earthly --ci ${{matrix.args}} +test-mutations

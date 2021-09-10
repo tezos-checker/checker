@@ -31,6 +31,8 @@
 (rule (alias run-avl-tests) (action (run %{exe:testAvl.exe})))
 (rule (alias run-avl-tests) (action (run %{exe:testAvlModel.exe})))
 
+(rule (alias run-auction-tests) (action (run %{exe:testLiquidationAuction.exe})))
+
 (rule (alias run-fast-tests) (action (run %{exe:testBurrow.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCommon.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCtez.exe})))

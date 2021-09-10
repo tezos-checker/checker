@@ -1,10 +1,11 @@
-from copy import deepcopy
 import json
 import os
-from random import shuffle
+import time
 import unittest
 from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
+from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
@@ -26,18 +27,18 @@ WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
-        port = portpicker.pick_unused_port()
-        client, docker_client, docker_container = start_sandbox(
+        #  sometimes doesn't work, needs investigation:
+        #    port = portpicker.pick_unused_port()
+        port = 20000
+        client, teardownFun = start_sandbox(
             "checker-e2e-container-{}".format(port), port, wait_for_level=2
         )
-        self.docker_client = docker_client
-        self.docker_container = docker_container
+        self.teardownFun = teardownFun
         self.client = client
         self.gas_profiles = {}
 
     def tearDown(self):
-        self.docker_container.kill()
-        self.docker_client.close()
+        self.teardownFun()
 
 
 def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
@@ -93,13 +94,48 @@ def auction_avl_leaves(
 Profiler: Callable[[PyTezosClient, ContractInterface, List[OperationGroup]], Dict]
 
 
+def bulk(client: PyTezosClient, *operations) -> OperationGroup:
+    """Combines a list of operation groups / contract calls into a single OperationGroup
+
+    **Only for use within this test suite. Not for general consumption.**
+
+    Combines operations using PyTezosClient.bulk() while also setting their gas
+    limits using the current protocol hard gas limits and the number of input operations.
+    This is necessary because the default approach of passing hard_gas_limit_per_operation
+    to the interpreter in order to get a real gas_limit estimate fails in cases where
+    hard_gas_limit_per_operation * len(operations) > hard_gas_limit_per_block.
+
+    This method only works for bulk operations which have approximately uniform gas costs.
+    Use with caution.
+
+    Args:
+        client:
+        *operations: An arbitrary number of
+
+    Returns:
+        OperationGroup: [description]
+    """
+    combined_ops = client.bulk(*operations)
+    max_block_gas = int(client.context.constants["hard_gas_limit_per_block"])
+    max_mean_op_gas = str(
+        min(
+            int(client.context.constants["hard_gas_limit_per_operation"]),
+            (max_block_gas // len(operations)),
+        )
+    )
+    # Since PytezosClient.bulk() resets the gas limits, we need to explicitly set them.
+    for op in combined_ops.contents:
+        op["gas_limit"] = max_mean_op_gas
+    return combined_ops
+
+
 def general_gas_profiler(
     client: PyTezosClient, checker: ContractInterface, op_batch: List[OperationGroup]
 ) -> Dict:
     """Calls inject for a list of entrypoint calls, recording the gas cost of each call."""
     ret = inject(
         client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+        bulk(client, *op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
     )
     profile = {}
     for op in ret["contents"]:
@@ -129,7 +165,7 @@ def mark_for_liquidation_profiler(
     )
     ret = inject(
         client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+        bulk(client, *op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
     )
 
     profile = {
@@ -167,7 +203,7 @@ def cancel_liquidation_slice_profiler(
     )
     ret = inject(
         client,
-        client.bulk(*op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
+        bulk(client, *op_batch).autofill(ttl=MAX_OPERATIONS_TTL).sign(),
     )
 
     profile = {
@@ -478,13 +514,8 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.
-        call_bulk(
-            [
-                checker.create_burrow((0, None)).with_amount(200_000_000),
-                checker.mint_kit((0, 80_000_000)),
-            ],
-            batch_size=10,
-        )
+        call_endpoint(checker, "create_burrow", (0, None), amount=200_000_000)
+        call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
 
         call_endpoint(
             ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
@@ -505,9 +536,8 @@ class LiquidationsStressTest(SandboxedTestCase):
                 checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
                 for burrow_id in burrows
             ],
-            batch_size=100,
+            batch_size=350,
         )
-
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
         max_mintable_kit = checker.metadata.burrowMaxMintableKit(
@@ -516,7 +546,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         call_bulk(
             [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
-            batch_size=100,
+            batch_size=350,
         )
 
         # Change the index (kits are 10x valuable)
@@ -541,7 +571,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 )
                 for burrow_no in burrows
             ],
-            batch_size=40,
+            batch_size=170,
             profiler=mark_for_liquidation_profiler,
         )
 
@@ -598,7 +628,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             flattened_cancel_ops += [op1, op2]
         call_bulk(
             flattened_cancel_ops,
-            batch_size=100,
+            batch_size=170,
             profiler=cancel_liquidation_slice_profiler,
         )
 
