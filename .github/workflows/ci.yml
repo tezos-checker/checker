@@ -35,7 +35,7 @@ jobs:
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       # Only push earthly cache from master
       - if: github.ref == 'refs/heads/dorranh/baseImage' && github.event_name == 'push'
-        run: echo "{push_flag}={--push}" >> $GITHUB_ENV
+        run: echo "push_flag=--push" >> $GITHUB_ENV
         name: Enable push to build cache
 
       - name: Build dependencies
