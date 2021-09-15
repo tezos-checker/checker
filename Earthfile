@@ -10,7 +10,7 @@ all:
 # =============================================================================
 # Base image for building project
 builder:
-    FROM ubuntu:21.04
+    FROM ubuntu:20.04
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update
     RUN apt install -y \
@@ -325,7 +325,7 @@ dev-container:
 # Note: Building CLI independently so that it doesn't include the full closure of all
 # of our dev dependencies
 cli:
-    FROM ubuntu:21.04
+    FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update
@@ -376,7 +376,7 @@ zcash-params:
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:zcash-params
 
 flextesa:
-    FROM ubuntu:21.04
+    FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update
