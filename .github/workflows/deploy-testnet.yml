@@ -8,56 +8,54 @@
 #
 # Then set the `Secret Key` as the aforementioned secret. It should be of the form: unencrypted:edsk****
 
-# FIXME: Update this workflow to use the new non-nix build.
-
-# name: Deploy to the testnet
-
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       node:
-#         description: 'Node to connect to'
-#         required: true
-#         default: 'https://rpczero.tzbeta.net/'
-#       ctez:
-#         description: 'Ctez contract'
-#         required: true
-#         default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
-#       oracle:
-#         description: 'Oracle contract'
-#         required: true
-#         default: 'KT1Xbo2Lkg6nPqyka4fqD7kLTtW5wDD3vkGe'
-
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: cachix/install-nix-action@v13
-#       - uses: actions/checkout@v2
-#       - uses: cachix/cachix-action@v10
-#         with:
-#           name: tezos-checker
-#           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-#       - name: Build shell dependencies
-#         run: nix-shell --pure --run ':'
-#       - name: Build checker
-#         run: nix-build -A michelson
-#       - name: Configure checker CLI
-#         run: >
-#           nix-shell --pure --run '
-#             checker show-config \
-#               | jq ".tezos_address = \"${{ github.event.inputs.node }}\"" \
-#               | jq ".tezos_port = 443" \
-#               | jq ".tezos_key = \"${{ secrets.TESTNET_ACCOUNT_SECRET_KEY }}\"" \
-#               | cat > ~/checkerconfig.json \
-#             '
-#       - name: Deploy checker
-#         run: >
-#           nix-shell --pure --run '
-#             checker \
-#               --config ~/checkerconfig.json \
-#               deploy checker \
-#               --src result/ \
-#               --ctez "${{ github.event.inputs.ctez }}" \
-#               --oracle "${{ github.event.inputs.oracle }}" \
-#             '
+name: Deploy to the testnet
+on:
+  workflow_dispatch:
+    inputs:
+      node:
+        description: 'Node to connect to'
+        required: true
+        default: 'https://rpczero.tzbeta.net/'
+      ctez:
+        description: 'Ctez contract'
+        required: true
+        default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
+      oracle:
+        description: 'Oracle contract'
+        required: true
+        default: 'KT1Xbo2Lkg6nPqyka4fqD7kLTtW5wDD3vkGe'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build dependencies
+        run: |
+          earthly --verbose --ci ${{ env.push_flag }} +flextesa
+          earthly --verbose --ci ${{ env.push_flag }} +deps-full
+      - name: Pull client Docker image
+        run: docker pull ghcr.io/tezos-checker/checker/checker-client:master
+      - name: Deploy contract
+        # Note: if we ever use this for non-testnet deployments we will
+        # likely want a more secure way to pass the key to the process
+        env:
+          TESTNET_KEY: ${{ secrets.TESTNET_ACCOUNT_SECRET_KEY }}
+        run: |
+          docker run --rm \
+            ghcr.io/tezos-checker/checker/checker-client:master \
+              checker \
+              deploy \
+              --address "${{ github.event.inputs.node }}" \
+              --port 443 \
+              --key "$TESTNET_KEY" \
+              checker \
+              --ctez "${{ github.event.inputs.ctez }}" \
+              --oracle "${{ github.event.inputs.oracle }}"

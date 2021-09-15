@@ -10,10 +10,10 @@ jobs:
     strategy:
       matrix:
         args:
-          - '--build-arg n_mutations=500 --build-arg modules=src/{burrow,cfmm,checker,checkerMain,common,constants}.ml'
-          - '--build-arg n_mutations=500 --build-arg modules=src/{fa2Interface,lqt,parameters}.ml'
-          - '--build-arg n_mutations=50  --build-arg modules=src/{liquidationAuction,sliceList,mem,ptr}.ml'
-          - '--build-arg n_mutations=50  --build-arg modules=src/avl.ml'
+          - '--build-arg n_mutations=500 --build-arg modules="src/burrow.ml src/cfmm.ml src/checker.ml src/checkerMain.ml src/common.ml src/constants.ml"'
+          - '--build-arg n_mutations=500 --build-arg modules="src/fa2Interface.ml src/lqt.ml src/parameters.ml"'
+          - '--build-arg n_mutations=50  --build-arg modules="src/liquidationAuction.ml src/sliceList.ml src/mem.ml src/ptr.ml"'
+          - '--build-arg n_mutations=50  --build-arg modules="src/avl.ml"'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
