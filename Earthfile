@@ -263,7 +263,9 @@ test-mutations:
     COPY .git .git
     COPY scripts/mutate.py ./mutate.py
     RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules | tee mutations.out
+
     SAVE ARTIFACT mutations.out AS LOCAL ./mutations.out
+    SAVE ARTIFACT mutations.out /mutations.out
 
 # =============================================================================
 # Other artifacts

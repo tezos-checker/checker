@@ -39,4 +39,12 @@ jobs:
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: Run mutation tests
-        run: earthly --ci ${{matrix.args}} +test-mutations
+        run: earthly --ci ${{matrix.args}} --artifact +test-mutations/mutations.out mutations.out
+      - uses: actions/upload-artifact@v2.2.4
+        # We only upload artifacts on 'push' events, this is simply to have one set of artifacts
+        # per commit.
+        if: github.event_name == 'push'
+        with:
+          name: mutations
+          path: mutations.out
+          if-no-files-found: error
