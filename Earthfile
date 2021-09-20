@@ -262,7 +262,8 @@ test-mutations:
     # Need git tree for restoring mutated src files
     COPY .git .git
     COPY scripts/mutate.py ./mutate.py
-    RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules
+    RUN opam exec -- ./mutate.py --test "$test_cmd" --num-mutations "$n_mutations" $modules | tee mutations.out
+    SAVE ARTIFACT mutations.out AS LOCAL ./mutations.out
 
 # =============================================================================
 # Other artifacts
