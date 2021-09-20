@@ -47,7 +47,26 @@ MUTATION_GROUPS = [
     # KIT
     {"kit_zero", "kit_one"},
     {"kit_add", "kit_sub", "kit_min", "kit_max"},
-    {"gt_kit_kit", "geq_kit_kit", "eq_kit_kit", "lt_kit_kit"},
+    {"geq_kit_kit", "lt_kit_kit", "gt_kit_kit", "eq_kit_kit"},
+    {"kit_of_fraction_ceil", "kit_of_fraction_floor"},
+    # CTEZ
+    {"ctez_add", "ctez_sub"},
+    {"eq_ctez_ctez", "lt_ctez_ctez", "gt_ctez_ctez"},
+    {"ctez_of_fraction_ceil", "ctez_of_fraction_floor"},
+    # LQT
+    {"lqt_add", "lqt_sub"},
+    {"lqt_zero", "lqt_one"},
+    {"lqt_of_fraction_ceil", "lqt_of_fraction_floor"},
+    {"geq_lqt_lqt", "eq_lqt_lqt", "lt_lqt_lqt"},
+    # TOK
+    {"tok_add", "tok_sub", "max_tok"},
+    {"tok_zero", "tok_one"},
+    {"tok_of_fraction_ceil", "tok_of_fraction_floor"},
+    {"geq_tok_tok", "leq_tok_tok", "eq_tok_tok", "gt_tok_tok", "lt_tok_tok"},
+    # FIXEDPOINT
+    {"fixedpoint_zero", "fixedpoint_one"},
+    {"fixedpoint_add", "fixedpoint_sub"},
+    {"fixedpoint_of_ratio_ceil", "fixedpoint_of_ratio_floor"},
     # INT
     {"mul_int_int", "sub_int_int", "add_int_int", "div_int_int"},
     {"eq_int_int", "lt_int_int", "gt_int_int", "leq_int_int", "geq_int_int"},
@@ -57,9 +76,6 @@ MUTATION_GROUPS = [
     # TEZ
     {"sub_tez_tez", "add_tez_tez"},
     {"eq_tez_tez", "lt_tez_tez", "gt_tez_tez", "leq_tez_tez", "geq_tez_tez"},
-    # FIXED POINT
-    {"fixedpoint_add", "fixedpoint_sub"},
-    {"fixedpoint_of_ratio_ceil", "fixedpoint_of_ratio_floor"},
     # RATIO
     {
         "mul_ratio",
