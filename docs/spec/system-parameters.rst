@@ -12,8 +12,7 @@ State
 -  ``q``: of type (1 / kit).
 -  ``index``: of type tez.
 -  ``protected_index``: of type tez.
--  ``target``: TODO: said dimensionless, but I think tez/kit? Hmmm. I
-   have to re-check the units of measure.
+-  ``target``: dimensionless.
 -  ``drift_derivative``
 -  ``drift``
 -  ``outstanding_kit``: approximation of the total amount of kit that
