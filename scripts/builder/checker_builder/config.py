@@ -1,5 +1,5 @@
 """
-Configuration file schemas for Checker
+Configuration file logic for Checker builds
 """
 import logging
 import math
@@ -10,13 +10,17 @@ from typing import Optional
 import yaml
 from jinja2 import Environment, PackageLoader, select_autoescape
 from jinja2.environment import Template
-from marshmallow import Schema, fields
+from marshmallow import Schema, ValidationError, fields
 from marshmallow.decorators import post_load
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = Path("checker.yaml")
+
+# ================================================================================================
+# Config classes
+# ================================================================================================
 
 # TODO: Additional support for setting certain parameters at build time can be implemented
 # using:
@@ -55,6 +59,10 @@ class CollateralTokenConfigSchema(Schema):
 
     @post_load
     def make(self, data, **kwargs):
+        # Extra validation logic:
+        if data["scaling_factor"] <= 0:
+            raise ValidationError("collateral.scaling_factor must by > 0")
+
         return CollateralTokenConfig(**data)
 
 
@@ -66,6 +74,9 @@ class CheckerConfigSchema(Schema):
         return CheckerConfig(**data)
 
 
+# ================================================================================================
+# Helpers
+# ================================================================================================
 def load_checker_config(path: Optional[Path] = None) -> CheckerConfig:
     if path is None:
         path = DEFAULT_CONFIG
