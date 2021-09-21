@@ -4,14 +4,15 @@ version = "0.1.0"
 description = "Tools for building Checker"
 authors = []
 
-# [tool.poetry.scripts]
-# checker-build = 'checker_builder.cli:cli'
+[tool.poetry.scripts]
+checker-build = 'checker_builder.cli:cli'
 
 [tool.poetry.dependencies]
 python = "^3.8"
-marshmallow = "^3.12.1"
+
 click = "^7.1.2"
 Jinja2 = "^3.0.1"
+marshmallow = "^3.12.1"
 PyYAML = "^5.4.1"
 
 [tool.poetry.dev-dependencies]

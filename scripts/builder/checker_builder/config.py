@@ -82,9 +82,8 @@ def load_template_env() -> Environment:
     )
 
 
-def generate_token_module(template: Template, config: CheckerConfig, src_dir: Path):
-    """Generates a tok.ml module using the provided configuration"""
-    module = src_dir.joinpath("tok.ml")
+def generate_src_module(module: Path, template: Template, config: CheckerConfig):
+    """Generates a source code module using the provided template and configuration"""
     logger.info(
         f"Rendering src module template '{template.name}' using provided config"
     )
@@ -92,14 +91,3 @@ def generate_token_module(template: Template, config: CheckerConfig, src_dir: Pa
     logger.info(f"Writing rendered module at {module}")
     with module.open("w") as f:
         f.write(rendered)
-
-
-# FIXME: Move this into a CLI
-if __name__ == "__main__":
-    env = load_template_env()
-    template = env.get_template("tok.ml.jinja")
-    config = load_checker_config()
-
-    generate_token_module(
-        template, config, Path("/home/dorran/Documents/nomadic/checker/src")
-    )

@@ -48,7 +48,7 @@ jobs:
           earthly --verbose --ci +format-ocaml-check
       - name: Build
         run: |
-          earthly --verbose --ci ${{ env.push_flag }} +generate-entrypoints
+          earthly --verbose --ci ${{ env.push_flag }} +generate-code
           earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
           earthly --verbose --ci ${{ env.push_flag }} +build-ligo
       - name: Export lazy entrypoint sizes
