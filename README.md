@@ -72,6 +72,14 @@ function properly (e.g. `ocaml-platform` for VSCode).
 
 ## Build
 
+### Configuration
+
+Certain settings of Checker can be customized at *build-time*. These configurations
+can be set by modifying the [checker.yaml](./checker.yaml) configuration file
+in the repository root.
+
+### Commands
+
 All of the build targets specified in the project [Earthfile](./Earthfile) may
 be built within the dev container (or locally if you have earthly installed).
 Some helpful targets are:
