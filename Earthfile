@@ -188,6 +188,7 @@ build-ligo:
 
     COPY ./src/*.ml ./src/*.mligo ./src/
     COPY +generate-code/checkerEntrypoints.ml ./src/checkerEntrypoints.ml
+    COPY +generate-code/tok.ml ./src/tok.ml
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
