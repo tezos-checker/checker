@@ -225,20 +225,22 @@ def test_mutated_src(test_cmd):
     print("Checking validity of modified src code...")
     result = subprocess.run(["dune build"], capture_output=True, shell=True)
     if result.returncode != 0:
-        raise Exception(
+        print(
             "Failed to build mutated src with error: "
             + result.stdout.decode()
             + result.stderr.decode()
         )
-
-    print("Running tests...")
-    result = subprocess.run([test_cmd], capture_output=True, shell=True)
-    tests_fail = True
-    if result.returncode == 0:
-        tests_fail = False
-    # print(result.stderr)
-    print("Done.")
-    return tests_fail
+        print("Skipping.")
+        return True
+    else:
+        print("Running tests...")
+        result = subprocess.run([test_cmd], capture_output=True, shell=True)
+        tests_fail = True
+        if result.returncode == 0:
+            tests_fail = False
+        # print(result.stderr)
+        print("Done.")
+        return tests_fail
 
 
 @contextmanager
