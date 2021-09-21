@@ -146,7 +146,7 @@ build:
 
 test:
     BUILD +test-ocaml
-    # In the future if we add python unit tests, etc. we can call their target(s) here
+    BUILD +test-builder
 
 generate-code:
     FROM +deps-full
@@ -239,6 +239,10 @@ test-coverage:
     SAVE ARTIFACT test-coverage.json AS LOCAL test-coverage.json
     SAVE ARTIFACT _coverage /_coverage
     SAVE ARTIFACT test-coverage.json /
+
+test-builder:
+    FROM +deps-full
+    RUN poetry run pytest ./scripts/builder
 
 test-e2e:
     FROM +deps-full
