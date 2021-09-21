@@ -1,7 +1,4 @@
 
-(* TODO: Consider whether we want to have this behavior conflated into
- * Send_tez, or if it's better to have two separate entrypoints. *)
-
 type storage = { owner : Ligo.address; }
 
 type params =
@@ -26,6 +23,8 @@ let main (p, storage: params * storage): Ligo.Op.operation list * storage =
       failwith "unauthorized"
     else
       let recipient, tz = recipient_tz in
+      (* TODO: Consider whether we want to have this behavior conflated into
+       * Send_tez, or if it's better to have two separate entrypoints. *)
       let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_tez" recipient : unit Ligo.contract option) with
         | Some c ->
           LigoOp.Tezos.address_unit_transaction () tz c
@@ -36,4 +35,3 @@ let main (p, storage: params * storage): Ligo.Op.operation list * storage =
           end
       in
       ([op], storage)
-
