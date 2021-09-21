@@ -8,6 +8,7 @@ authors = [""]
 python = "^3.8"
 checker-client = { develop=true, path = "./client" }
 checker-e2e = { develop=true, path = "./e2e" }
+checker-builder = { develop=true, path = "./scripts/builder" }
 
 tqdm = "*"
 matplotlib = "=3.3.4"
