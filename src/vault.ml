@@ -6,7 +6,7 @@ type params =
   | Receive_tez of unit
   | Send_tez of Ligo.address * Ligo.tez
 
-let main (p, storage: params * storage): Ligo.Op.operation list * storage =
+let main (p, storage: params * storage): LigoOp.operation list * storage =
   match p with
   | Set_delegate kho ->
     let _ = ensure_no_tez_given () in
