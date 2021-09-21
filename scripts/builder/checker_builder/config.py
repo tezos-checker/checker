@@ -21,22 +21,6 @@ DEFAULT_CONFIG = Path("checker.yaml")
 # ================================================================================================
 # Config classes
 # ================================================================================================
-
-# TODO: Additional support for setting certain parameters at build time can be implemented
-# using:
-# def commented(comment: str, default=None) -> Field:
-#     """Creates a dataclass field with a comment in its metadata"""
-#     return field(default=default, metadata={"comment": comment})
-# @dataclass
-# class SystemParameters:
-#     """Checker system parameters"""
-
-#     fminting: Decimal = commented(
-#         "Dimensionless. Factor used for setting the minting limit.",
-#         default=(Decimal(21) / Decimal(10)),
-#     )
-
-
 @dataclass
 class CollateralTokenConfig:
     scaling_factor: int = 1_000_000
