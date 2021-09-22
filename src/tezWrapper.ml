@@ -105,6 +105,12 @@ let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.ope
       | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
       | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
     ([op], state)
-  | Set_delegate _kho ->
-    failwith "not implemented yet" (* TODO *)
-
+  | Set_delegate kho ->
+    (* 1. Ensure no tez given *)
+    let _ = ensure_no_tez_given () in
+    (* 2. Instruct the vault to set its own delegate *)
+    let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+    ([op], state) (* unchanged state *)
