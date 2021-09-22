@@ -1,2 +1,4 @@
 collateral:
   decimal_digits: 6
+constants:
+  fminting: 0.25
