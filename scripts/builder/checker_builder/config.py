@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from decimal import Decimal
 
 import yaml
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -61,12 +62,34 @@ class CheckerConfigSchema(Schema):
 # ================================================================================================
 # Helpers
 # ================================================================================================
+
+
+def _construct_float_as_decimal(
+    self, node: yaml.ScalarNode, decimal_constructor=Decimal
+):
+    # PyYaml constructor which converts Yaml "float" values into a Decimal directly
+    # from the raw yaml string to avoid precision issues which can occur when
+    # converting them to floats.
+    assert node.tag == "tag:yaml.org,2002:float"
+    value = node.value.lower()
+    if ".inf" in value or value == ".nan" or ":" in value:
+        raise ValueError(
+            f"Special yaml float values such as .inf, .nan or ':' "
+            f"notation are not supported in this custom yaml loader. Failed to parse: {value}"
+        )
+    return decimal_constructor(node.value)
+
+
+Loader = yaml.SafeLoader
+Loader.add_constructor("tag:yaml.org,2002:float", _construct_float_as_decimal)
+
+
 def load_checker_config(path: Optional[Path] = None) -> CheckerConfig:
     if path is None:
         path = DEFAULT_CONFIG
     logger.info(f"Loading config from {path}")
     with path.open() as f:
-        raw_config = yaml.load(f, Loader=yaml.SafeLoader)
+        raw_config = yaml.load(f, Loader=Loader)
     return CheckerConfigSchema().load(raw_config)
 
 
