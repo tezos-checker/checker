@@ -8,6 +8,7 @@ authors = [""]
 python = "^3.8"
 checker-client = { develop=true, path = "./client" }
 checker-e2e = { develop=true, path = "./e2e" }
+checker-builder = { develop=true, path = "./scripts/builder" }
 
 tqdm = "*"
 matplotlib = "=3.3.4"
@@ -15,6 +16,7 @@ matplotlib = "=3.3.4"
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"
 isort = "^5.8.0"
+pytest = "^6.2.5"
 
 [build-system]
 requires = ["poetry>=0.12"]

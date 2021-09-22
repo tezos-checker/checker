@@ -1,5 +1,7 @@
 # Locally generated files
 src/checkerEntrypoints.ml
+src/tok.ml
+
 generated/michelson/main.tz
 generated/michelson/functions.json
 generated/ligo

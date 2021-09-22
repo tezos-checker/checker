@@ -42,13 +42,15 @@ jobs:
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
           earthly --verbose --ci ${{ env.push_flag }} +deps-full
+      - name: Test build scripts
+        run: earthly --verbose --ci ${{ env.push_flag }} +test-builder
       - name: Formatting
         run: |
           earthly --verbose --ci +format-python-check
           earthly --verbose --ci +format-ocaml-check
       - name: Build
         run: |
-          earthly --verbose --ci ${{ env.push_flag }} +generate-entrypoints
+          earthly --verbose --ci ${{ env.push_flag }} +generate-code
           earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
           earthly --verbose --ci ${{ env.push_flag }} +build-ligo
       - name: Export lazy entrypoint sizes

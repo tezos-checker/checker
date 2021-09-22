@@ -66,6 +66,8 @@ deps-full:
     COPY pyproject.toml poetry.lock ./
     COPY ./e2e ./e2e
     COPY ./client ./client
+    RUN mkdir ./scripts
+    COPY ./scripts/builder ./scripts/builder
     # Ensure that venv gets created in a known directory
     RUN poetry config virtualenvs.in-project true
     RUN poetry install
@@ -144,24 +146,33 @@ build:
 
 test:
     BUILD +test-ocaml
-    # In the future if we add python unit tests, etc. we can call their target(s) here
+    BUILD +test-builder
 
-generate-entrypoints:
-    FROM +deps-ocaml
+generate-code:
+    FROM +deps-full
+    RUN mkdir ./src
     COPY ./scripts/generate-entrypoints.rb ./generate-entrypoints.rb
-    COPY ./src/checker.mli checker.mli
-    RUN ./generate-entrypoints.rb checker.mli > checkerEntrypoints.ml
-    # Ensure that the generated module obeys formatting rules:
-    RUN opam exec -- ocp-indent -i checkerEntrypoints.ml
-    SAVE ARTIFACT checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
-    SAVE ARTIFACT checkerEntrypoints.ml /
+    COPY ./src/checker.mli ./src/checker.mli
+    COPY ./checker.yaml checker.yaml
+    # Generate entrypoints
+    RUN ./generate-entrypoints.rb ./src/checker.mli > ./src/checkerEntrypoints.ml
+    # Generate other src modules using newer code generation tool
+    RUN poetry run checker-build generate
+    # Ensure that the generated modules obey formatting rules:
+    RUN opam exec -- ocp-indent -i ./src/*
+
+    SAVE ARTIFACT ./src/checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
+    SAVE ARTIFACT ./src/checkerEntrypoints.ml /
+    SAVE ARTIFACT ./src/tok.ml AS LOCAL src/tok.ml
+    SAVE ARTIFACT ./src/tok.ml /
     # Image for inline caching
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-entrypoints
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
 build-ocaml:
     FROM +deps-ocaml
     COPY src/*.ml src/*.mli src/dune ./src/
-    COPY +generate-entrypoints/checkerEntrypoints.ml ./src/
+    COPY +generate-code/checkerEntrypoints.ml ./src/
+    COPY +generate-code/tok.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -176,7 +187,8 @@ build-ligo:
     WORKDIR /root
 
     COPY ./src/*.ml ./src/*.mligo ./src/
-    COPY +generate-entrypoints/checkerEntrypoints.ml ./src/checkerEntrypoints.ml
+    COPY +generate-code/checkerEntrypoints.ml ./src/checkerEntrypoints.ml
+    COPY +generate-code/tok.ml ./src/tok.ml
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
@@ -228,6 +240,10 @@ test-coverage:
     SAVE ARTIFACT test-coverage.json AS LOCAL test-coverage.json
     SAVE ARTIFACT _coverage /_coverage
     SAVE ARTIFACT test-coverage.json /
+
+test-builder:
+    FROM +deps-full
+    RUN poetry run pytest ./scripts/builder
 
 test-e2e:
     FROM +deps-full
