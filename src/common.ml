@@ -58,7 +58,11 @@ let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
   min_int upper (max_int v lower)
 
 (* OPERATIONS ON tez *)
-let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
+
+(* TODO: Move to common.ml. Use in tez_to_mutez as well. *)
+let[@inline] tez_to_mutez_nat (amnt: Ligo.tez) = Ligo.div_tez_tez amnt (Ligo.tez_from_literal "1mutez")
+
+let tez_to_mutez (x: Ligo.tez) = Ligo.int (tez_to_mutez_nat x)
 
 let tez_scaling_factor_int : Ligo.int = Ligo.int_from_literal "1_000_000"
 let tez_scaling_factor_nat : Ligo.nat = Ligo.nat_from_literal "1_000_000n"
