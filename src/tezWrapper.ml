@@ -1,19 +1,13 @@
 open Fa2Interface
 open Error
 open Common
+open VaultTypes
 
 (*****************************************************************************)
 (**                             {1 VAULTS}                                   *)
 (*****************************************************************************)
 
-type vault_storage = { owner : Ligo.address; }
-
-type vault_params =
-  | Vault_set_delegate of Ligo.key_hash option
-  | Vault_receive_tez of unit
-  | Vault_send_tez of (Ligo.tez * Ligo.address) (* TODO: flipped order to reuse tez_address_transaction *)
-
-let vault_main (p, storage: vault_params * vault_storage): LigoOp.operation list * vault_storage =
+let vault_main (p, storage: vault_parameter * vault_storage): LigoOp.operation list * vault_storage =
   match p with
   | Vault_set_delegate kho ->
     let _ = ensure_no_tez_given () in

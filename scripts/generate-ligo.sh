@@ -27,6 +27,7 @@ inputs=(
   avl
   liquidationAuctionTypes
   burrowTypes
+  vaultTypes
   constants
   parameters
   burrow
@@ -101,6 +102,9 @@ for name in "${inputs[@]}"; do
 
     # map specialized 'Tezos.*_transaction' functions to the generic one
     sed -E 's/Tezos\.([0-9a-zA-Z_]+)_transaction/Tezos\.transaction/g' |
+
+    # map specialized 'Tezos.*_create_contract' functions to the generic one
+    sed -E 's/Tezos\.([0-9a-zA-Z_]+)_create_contract/Tezos\.create_contract/g' |
 
     cat > "$to"
 done

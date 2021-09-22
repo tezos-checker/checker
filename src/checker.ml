@@ -131,7 +131,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt): checker
     then Ligo.failwith error_BurrowAlreadyExists
     else () in
   let op, burrow_address =
-    LigoOp.Tezos.create_contract
+    LigoOp.Tezos.burrow_create_contract
       (fun (p, storage : burrow_parameter * burrow_storage) ->
          if !Ligo.Tezos.sender <> storage.checker_address then
            (Ligo.failwith (Ligo.int_from_literal "-1") : LigoOp.operation list * burrow_storage)

@@ -420,11 +420,11 @@ let suite =
        (* Note: it's not really possible to check the first parameter of the contract here which is the
         * function which defines the contract's logic.
        *)
-       | [(CreateContract (_, delegate, tez, storage))] ->
+       | [(CreateBurrowContract (_, delegate, tez, storage))] ->
          assert_key_hash_option_equal ~expected:None ~real:delegate;
          assert_tez_equal ~expected:(Ligo.tez_from_literal "100_000_000mutez") ~real:tez;
          assert_equal BurrowTypes.({checker_address=checker_address; burrow_id=(alice_addr, (Ligo.nat_from_literal "0n"))}) storage
-       | _ -> failwith ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops)
+       | _ -> failwith ("Expected [CreateBurrowContract (_, _, _, _)] but got " ^ show_operation_list ops)
     );
 
     ("entrypoint_deactivate_burrow - emits expected operations" >::
@@ -1473,8 +1473,8 @@ let suite =
          let (ops, checker0) = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
          (* created burrow should be deposited (incl. the creation deposit) *)
          let () = match ops with
-           | [ CreateContract (_, _, sent_tez, _) ; ] -> assert_tez_equal ~expected:tez ~real:sent_tez
-           | _ -> assert_failure ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops) in
+           | [ CreateBurrowContract (_, _, sent_tez, _) ; ] -> assert_tez_equal ~expected:tez ~real:sent_tez
+           | _ -> assert_failure ("Expected [CreateBurrowContract (_, _, _, _)] but got " ^ show_operation_list ops) in
 
          let burrow_addr =
            burrow_address

@@ -2,6 +2,7 @@
 
 open Ligo
 open BurrowTypes
+open VaultTypes
 
 (* contract *)
 
@@ -41,19 +42,26 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
 type operation =
   | SetDelegate of key_hash option
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
-  | CreateContract of
+  | CreateBurrowContract of
       ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
       key_hash option *
       tez *
       burrow_storage
+  | CreateVaultContract of
+      ((vault_parameter * vault_storage) -> (operation list * vault_storage)) *
+      key_hash option *
+      tez *
+      vault_storage
 
 let show_operation (op: operation) : String.t =
   match op with
   | SetDelegate kho -> "SetDelegate (" ^ show_key_hash_option kho ^ ")"
   | Transaction (tv,tz,c) ->
     "Transaction " ^ "(" ^ show_transaction_value tv ^ ", " ^ string_of_tez tz ^ ", " ^ show_contract c ^ ")"
-  | CreateContract (_code, kho, init_tez, init_store) ->
-    "CreateContract (<code>, " ^ show_key_hash_option kho ^ ", " ^ string_of_tez init_tez ^ ", " ^ show_burrow_storage init_store ^ ")"
+  | CreateBurrowContract (_code, kho, init_tez, init_store) ->
+    "CreateBurrowContract (<code>, " ^ show_key_hash_option kho ^ ", " ^ string_of_tez init_tez ^ ", " ^ show_burrow_storage init_store ^ ")"
+  | CreateVaultContract (_code, kho, init_tez, init_store) ->
+    "CreateVaultContract (<code>, " ^ show_key_hash_option kho ^ ", " ^ string_of_tez init_tez ^ ", " ^ show_vault_storage init_store ^ ")"
 
 let pp_operation fmt op = Format.pp_print_string fmt (show_operation op)
 
@@ -81,8 +89,13 @@ module Tezos = struct
 
   let get_contract_opt address = Some (contract_of_address address)
 
-  let create_contract code delegate tez store =
-    let contract = CreateContract (code, delegate, tez, store) in
+  let burrow_create_contract code delegate tez store =
+    let contract = CreateBurrowContract (code, delegate, tez, store) in
+    let address = get_next_address () in
+    (contract, address)
+
+  let vault_create_contract code delegate tez store =
+    let contract = CreateVaultContract (code, delegate, tez, store) in
     let address = get_next_address () in
     (contract, address)
 end
