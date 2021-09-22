@@ -80,8 +80,7 @@ let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.ope
   (* Wrapper-specific entrypoints *)
   | Deposit () ->
     (* 1. Update the balance on the ledger *)
-    let amnt = tez_to_mutez_nat !Ligo.Tezos.amount in
-    let state_fa2_state = ledger_issue (state.fa2_state, tez_token_id, !Ligo.Tezos.sender, amnt) in
+    let state_fa2_state = ledger_issue_tez_token (state.fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
     let state = { state with fa2_state = state_fa2_state } in
     (* 2. Create a vault, if it does not exist already. *)
     let vault_address, state =
@@ -94,25 +93,18 @@ let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.ope
       | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
     in
     ([op], state)
-  | Withdraw _amnt ->
-(*
+  | Withdraw amnt ->
+    (* 1. Ensure no tez given *)
     let _ = ensure_no_tez_given () in
-*)
-    failwith "not implemented yet"
+    (* 2. Reduce the balance of the tez owner *)
+    let state_fa2_state = ledger_withdraw_tez_token (state.fa2_state, !Ligo.Tezos.sender, amnt) in
+    let state = { state with fa2_state = state_fa2_state; } in
+    (* 3. Instruct the vault to send the actual tez to the owner *)
+    let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
+      | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+    ([op], state)
   | Set_delegate _kho ->
-    failwith "not implemented yet"
+    failwith "not implemented yet" (* TODO *)
 
-(*
-Fail if Tezos.amount <> 0
-Fail if amount is greater than the Tezos.sender's available FA2 token balance
-Reduce Tezos.sender's token balance by amount
-Emit the following operations:
-A %send_tez operation to the vault corresponding to Tezos.sender with (Tezos.sender, amount)
-
-
-  let new_state_fa2_state =
-    let state_fa2_state = ledger_withdraw_kit (state_fa2_state, !Ligo.Tezos.self_address, slice_kit) in
-    let state_fa2_state = ledger_issue_kit (state_fa2_state, burrow_owner, excess_kit) in
-    state_fa2_state in
-
-*)
