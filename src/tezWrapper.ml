@@ -2,6 +2,15 @@ open Fa2Interface
 open Error
 open Common
 
+(* TODO: I think we must be more eager to create vaults if they don't already
+ * exist. Even with plain FA2 entrypoints we might need to transfer some tez
+ * from vault to vault (e.g., due to a %transfer), which would fail if there
+ * were no vault.
+*)
+
+(* TODO: Do we want this to become "2n" and join the other two in fa2Interface.ml? *)
+let[@inline] tez_token_id = Ligo.nat_from_literal "0n"
+
 type vault_map = (Ligo.address, Ligo.address) Ligo.big_map
 
 type tez_wrapper_state =
@@ -15,7 +24,7 @@ type tez_wrapper_params =
   | Transfer of fa2_transfer list
   | Update_operators of fa2_update_operator list
   (* Wrapper-specific entrypoints *)
-  | Deposit of Ligo.tez
+  | Deposit of unit (* TODO: not nice, having a unit type. Perhaps pass the tez as a number too? *)
   | Withdraw of Ligo.tez
   | Set_delegate of (Ligo.key_hash option)
 
@@ -48,8 +57,22 @@ let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.ope
     let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
     (([]: LigoOp.operation list), state)
   (* Wrapper-specific entrypoints *)
-  | Deposit _amnt ->
-    failwith "not implemented yet"
+  | Deposit () ->
+    (* 1. Update the balance on the ledger *)
+    let amnt = Ligo.div_tez_tez !Ligo.Tezos.amount (Ligo.tez_from_literal "1mutez") in
+    let state_fa2_state = ledger_issue (state.fa2_state, tez_token_id, !Ligo.Tezos.sender, amnt) in
+    let state = { state with fa2_state = state_fa2_state } in
+    (* 2. Create a vault, if it does not exist already. *)
+    let vault_address, state =
+      match Ligo.Big_map.find_opt !Ligo.Tezos.sender state.vaults with
+      | None -> failwith "not implemented yet" (* TODO: Create the vault here and update the maps *)
+      | Some vault_address -> vault_address, state in
+    (* 3. Transfer the actual tez to the vault of the sender. *)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_tez" vault_address : unit Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
+      | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
+    in
+    ([op], state)
   | Withdraw _amnt ->
     failwith "not implemented yet"
   | Set_delegate _kho ->
