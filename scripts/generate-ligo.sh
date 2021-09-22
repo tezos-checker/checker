@@ -28,6 +28,7 @@ inputs=(
   liquidationAuctionTypes
   burrowTypes
   vaultTypes
+  tezWrapper
   constants
   parameters
   burrow

@@ -1,32 +1,34 @@
 open Fa2Interface
 open Common
 open VaultTypes
+open Error
 
-(*****************************************************************************)
-(**                             {1 VAULTS}                                   *)
-(*****************************************************************************)
-
-(* NOTE: We always start with no delegate and no tez. Why? So that we can fire
- * up vaults on the fly. The only thing we need is the address of the "owner".
-*)
-
+(** Originate a vault contract with no delegate and zero tez. This way we can
+  * originate vaults pretty easily, everytime we look one up: if it's not
+  * there, just originate it now. *)
 let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.address =
   LigoOp.Tezos.vault_create_contract
     (fun (p, storage : vault_parameter * vault_storage) ->
        match p with
        | Vault_set_delegate kho ->
-         let _ = ensure_no_tez_given () in
+         let _ = (* inlined ensure_no_tez_given *)
+           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+           then Ligo.failwith (Ligo.int_from_literal "-1")
+           else () in
          if !Ligo.Tezos.sender <> storage.owner then
-           failwith "unauthorized" (* TODO: Add new error in error.ml *)
+           (Ligo.failwith (Ligo.int_from_literal "-2") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            ([LigoOp.Tezos.set_delegate kho], storage)
        | Vault_receive_tez () ->
          (* TODO: allowed from everyone? *)
-         ([], storage)
+         (([]: LigoOp.operation list), storage)
        | Vault_send_tez tz_recipient ->
-         let _ = ensure_no_tez_given () in
+         let _ = (* inlined ensure_no_tez_given *)
+           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+           then Ligo.failwith (Ligo.int_from_literal "-3")
+           else () in
          if !Ligo.Tezos.sender <> storage.owner then
-           failwith "unauthorized" (* TODO: Add new error in error.ml *)
+           (Ligo.failwith (Ligo.int_from_literal "-4") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            let tz, recipient = tz_recipient in
            (* TODO: Consider whether we want to have this behavior conflated into
@@ -37,19 +39,20 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
              | None ->
                begin match (LigoOp.Tezos.get_contract_opt recipient : unit Ligo.contract option) with
                  | Some c -> LigoOp.Tezos.unit_transaction () tz c
-                 | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
+                 | None -> (Ligo.failwith (Ligo.int_from_literal "-5") : LigoOp.operation) (* entrypoint not supported *)
                end
            in
            ([op], storage)
     )
     (None: Ligo.key_hash option)
-    (Ligo.tez_from_literal "0mutea")
+    (Ligo.tez_from_literal "0mutez")
     {owner = owner}
 
 (*****************************************************************************)
 (**                          {1 WRAPPER TYPES}                               *)
 (*****************************************************************************)
 
+(** Map from vault owner addresses to vault addresses. *)
 type vault_map = (Ligo.address, Ligo.address) Ligo.big_map
 
 type tez_wrapper_state =
@@ -59,9 +62,9 @@ type tez_wrapper_state =
 
 type tez_wrapper_params =
   (* FA2 entrypoints *)
-  | Balance_of of fa2_balance_of_param
-  | Transfer of fa2_transfer list
-  | Update_operators of fa2_update_operator list
+  | Renamed_balance_of of fa2_balance_of_param
+  | Renamed_transfer of fa2_transfer list
+  | Renamed_update_operators of fa2_update_operator list
   (* Wrapper-specific entrypoints *)
   | Deposit of unit (* TODO: not nice, having a unit type. Perhaps pass the tez as a number too? *)
   | Withdraw of Ligo.tez (* TODO: the docs said nat, but I think it should be tez *)
@@ -71,7 +74,7 @@ type tez_wrapper_params =
   * with Tezos.self_address as the owner. *)
 let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) : LigoOp.operation option * tez_wrapper_state * Ligo.address =
   match Ligo.Big_map.find_opt user state.vaults with
-  | Some vault_address -> None, state, vault_address
+  | Some vault_address -> (None: LigoOp.operation option), state, vault_address
   | None ->
     let op, vault_address = originate_vault !Ligo.Tezos.self_address in
     Some op, {state with vaults = Ligo.Big_map.update user (Some vault_address) state.vaults}, vault_address
@@ -95,7 +98,9 @@ let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) 
  * tez_tokens.
 *)
 
-(* TODO: Do we want this to become "2n" and join the other two in fa2Interface.ml? *)
+(* TODO: Do we want this to become "2n" and join the other two in
+ * fa2Interface.ml? Then again, this is a separate contract, and checker would
+ * not always serve such tokens. Hmmmm. *)
 let[@inline] tez_token_id = Ligo.nat_from_literal "0n"
 
 let[@inline] ledger_issue_tez_token
@@ -115,7 +120,7 @@ let[@inline] balance_of (state: tez_wrapper_state) (param: fa2_balance_of_param)
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (state.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
-  ([op], state)
+  ([op], state) (* unchanged state; no attempt to originate vaults either *)
 
 let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
   (* TODO: fa2_transfers always come in a list, so it's not very easy to emit
@@ -130,7 +135,7 @@ let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoO
 let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operator list) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
-  (([]: LigoOp.operation list), state)
+  (([]: LigoOp.operation list), state) (* no need to originate vaults *)
 
 (*****************************************************************************)
 (**                      {1 WRAPPER ENTRYPOINTS}                             *)
@@ -145,7 +150,7 @@ let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation lis
   (* 3. Transfer the actual tez to the vault of the sender. *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
-    | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultReceiveTez : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
@@ -161,7 +166,7 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
   (* 4. Instruct the vault to send the actual tez to the owner *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
-    | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTez : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
@@ -174,7 +179,7 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
   (* 3. Instruct the vault to set its own delegate *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
     | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
-    | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSetDelegate : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
@@ -186,9 +191,17 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
 let tez_wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * tez_wrapper_state =
   match op with
   (* FA2 entrypoints *)
-  | Balance_of param -> balance_of state param
-  | Transfer xs -> transfer state xs
-  | Update_operators xs -> update_operators state xs
+  (* TODO: Temporarily renamed the following constructors. If we don't , we get
+   * an error of the form:
+   * | Invalid variant.
+   * | Constructor "Update_operators" already exists as part of another variant.
+   * Eventually we'll need to separate this contract (i.e., tezWrapper.ml
+   * should NOT be opened by definition in the final checker contract, but be a
+   * separate contract entirely, even if code is shared).
+  *)
+  | Renamed_balance_of param -> balance_of state param
+  | Renamed_transfer xs -> transfer state xs
+  | Renamed_update_operators xs -> update_operators state xs
   (* Wrapper-specific entrypoints *)
   | Deposit () -> deposit state ()
   | Withdraw amnt -> withdraw state amnt
