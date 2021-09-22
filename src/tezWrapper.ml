@@ -1,4 +1,6 @@
 open Fa2Interface
+open Error
+open Common
 
 type vault_map = (Ligo.address, Ligo.address) Ligo.big_map
 
@@ -18,13 +20,12 @@ type tez_wrapper_params =
   | Set_delegate of (Ligo.key_hash option)
 
 (** Find the address of the vault of given user, or fail. *)
-(* TODO: Add error_NonExistentVault to error.ml. *)
 let[@inline] find_vault_address (vaults: vault_map) (user: Ligo.address) : Ligo.address =
   match Ligo.Big_map.find_opt user vaults with
   | None -> (Ligo.failwith error_NonExistentVault : Ligo.address)
   | Some vault_address -> vault_address
 
-let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * state =
+let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * tez_wrapper_state =
   match op with
   (* FA2 entrypoints *)
   | Balance_of param ->
@@ -47,9 +48,9 @@ let wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.ope
     let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
     (([]: LigoOp.operation list), state)
   (* Wrapper-specific entrypoints *)
-  | Deposit amnt ->
+  | Deposit _amnt ->
     failwith "not implemented yet"
-  | Withdraw amnt ->
+  | Withdraw _amnt ->
     failwith "not implemented yet"
-  | Set_delegate kho ->
+  | Set_delegate _kho ->
     failwith "not implemented yet"

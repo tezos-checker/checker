@@ -112,12 +112,6 @@ let ensure_burrow_has_no_unclaimed_slices (auctions: liquidation_auctions) (burr
   then ()
   else Ligo.failwith error_BurrowHasCompletedLiquidation
 
-(* Ensure that there is no tez given. To prevent accidental fund loss. *)
-let ensure_no_tez_given () =
-  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
-  then Ligo.failwith error_UnwantedTezGiven
-  else ()
-
 (* Ensure that the given pointer exists and that it points to a Root node. *)
 let[@inline] ensure_valid_avl_ptr (mem: mem) (avl_ptr: avl_ptr) : unit =
   match mem_get_opt mem (match avl_ptr with AVLPtr r -> r) with

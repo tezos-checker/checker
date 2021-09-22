@@ -121,6 +121,12 @@ let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
        quot (* ignore the remainder; we floor towards zero here *)
     )
 
+(* Ensure that there is no tez given. To prevent accidental fund loss. *)
+let ensure_no_tez_given () =
+  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+  then Ligo.failwith error_UnwantedTezGiven
+  else ()
+
 (* BEGIN_OCAML *)
 [@@@coverage off]
 let compare_int (i: Ligo.int) (j: Ligo.int) : Int.t =

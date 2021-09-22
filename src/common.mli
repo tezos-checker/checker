@@ -36,6 +36,8 @@ val one_ratio : ratio
 val fraction_to_tez_floor : Ligo.int -> Ligo.int -> Ligo.tez
 val fraction_to_nat_floor : Ligo.int -> Ligo.int -> Ligo.nat
 
+val ensure_no_tez_given : unit -> unit
+
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t
 val compare_nat : Ligo.nat -> Ligo.nat -> Int.t

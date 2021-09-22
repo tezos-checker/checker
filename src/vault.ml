@@ -1,17 +1,18 @@
+open Common
 
 type storage = { owner : Ligo.address; }
 
 type params =
   | Set_delegate of Ligo.key_hash option
   | Receive_tez of unit
-  | Send_tez of Ligo.address * Ligo.tez
+  | Send_tez of (Ligo.address * Ligo.tez)
 
 let main (p, storage: params * storage): LigoOp.operation list * storage =
   match p with
   | Set_delegate kho ->
     let _ = ensure_no_tez_given () in
-    if !Ligo.Tezos.sender <> state.owner then
-      failwith "unauthorized"
+    if !Ligo.Tezos.sender <> storage.owner then
+      failwith "unauthorized" (* TODO: Add new error in error.ml *)
     else
       ([LigoOp.Tezos.set_delegate kho], storage)
   | Receive_tez () ->
@@ -19,19 +20,19 @@ let main (p, storage: params * storage): LigoOp.operation list * storage =
     ([], storage)
   | Send_tez recipient_tz ->
     let _ = ensure_no_tez_given () in
-    if !Ligo.Tezos.sender <> state.owner then
-      failwith "unauthorized"
+    if !Ligo.Tezos.sender <> storage.owner then
+      failwith "unauthorized" (* TODO: Add new error in error.ml *)
     else
       let recipient, tz = recipient_tz in
       (* TODO: Consider whether we want to have this behavior conflated into
        * Send_tez, or if it's better to have two separate entrypoints. *)
       let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_tez" recipient : unit Ligo.contract option) with
         | Some c ->
-          LigoOp.Tezos.address_unit_transaction () tz c
+          LigoOp.Tezos.unit_transaction () tz c
         | None ->
           begin match (LigoOp.Tezos.get_contract_opt recipient : unit Ligo.contract option) with
             | Some c -> LigoOp.Tezos.unit_transaction () tz c
-            | None -> (failwith "failure" : Ligo.Op.operation)
+            | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
           end
       in
       ([op], storage)

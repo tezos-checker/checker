@@ -70,6 +70,8 @@ let[@inline] error_UnexpectedParams                                     : Ligo.i
 let[@inline] error_GetLazyFunctionUnpackFailure                         : Ligo.int = Ligo.int_from_literal "150"
 let[@inline] error_GetLazyFunctionMissingFunction                       : Ligo.int = Ligo.int_from_literal "151"
 
+let[@inline] error_NonExistentVault                                     : Ligo.int = Ligo.int_from_literal "160"
+
 (* INTERNAL ERRORS *)
 
 let[@inline] internalError_NodeTezFoundRoot                             : Ligo.int = Ligo.int_from_literal "200"
