@@ -95,7 +95,7 @@ let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation lis
     | None -> failwith "not implemented yet" (* TODO: Create the vault here and update the maps *)
     | Some vault_address -> vault_address, state in
   (* 3. Transfer the actual tez to the vault of the sender. *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%receive_tez" vault_address : unit Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
     | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
   in
@@ -109,7 +109,7 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
   let state = { state with fa2_state = state_fa2_state; } in
   (* 3. Instruct the vault to send the actual tez to the owner *)
   let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
   ([op], state)
@@ -119,7 +119,7 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
   let _ = ensure_no_tez_given () in
   (* 2. Instruct the vault to set its own delegate *)
   let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
     | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
   ([op], state) (* unchanged state *)
