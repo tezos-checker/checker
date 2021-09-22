@@ -1,2 +1,2 @@
 collateral:
-  scaling_factor: 1_000_000
+  decimal_digits: 6

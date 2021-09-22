@@ -23,11 +23,11 @@ DEFAULT_CONFIG = Path("checker.yaml")
 # ================================================================================================
 @dataclass
 class CollateralTokenConfig:
-    scaling_factor: int = 1_000_000
+    decimal_digits: int = 6
 
     @property
-    def decimal_digits(self) -> int:
-        return math.floor(math.log10(self.scaling_factor))
+    def scaling_factor(self) -> int:
+        return 10 ** self.decimal_digits
 
 
 @dataclass
@@ -39,13 +39,13 @@ class CheckerConfig:
 # Schemas
 # ================================================================================================
 class CollateralTokenConfigSchema(Schema):
-    scaling_factor = fields.Integer(strict=True)
+    decimal_digits = fields.Integer(strict=True)
 
     @post_load
     def make(self, data, **kwargs):
         # Extra validation logic:
-        if data["scaling_factor"] <= 0:
-            raise ValidationError("collateral.scaling_factor must by > 0")
+        if data["decimal_digits"] < 0:
+            raise ValidationError("collateral.decimal_digits must by >= 0")
 
         return CollateralTokenConfig(**data)
 
