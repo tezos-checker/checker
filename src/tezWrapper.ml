@@ -1,5 +1,4 @@
 open Fa2Interface
-open Error
 open Common
 open VaultTypes
 
@@ -68,11 +67,14 @@ type tez_wrapper_params =
   | Withdraw of Ligo.tez (* TODO: the docs said nat, but I think it should be tez *)
   | Set_delegate of (Ligo.key_hash option)
 
-(** Find the address of the vault of given user, or fail. *) (* TODO: never fail; create instead *)
-let[@inline] find_vault_address (vaults: vault_map) (user: Ligo.address) : Ligo.address =
-  match Ligo.Big_map.find_opt user vaults with
-  | None -> (Ligo.failwith error_NonExistentVault : Ligo.address)
-  | Some vault_address -> vault_address
+(** Find the address of the vault of given user, or originate it on the fly,
+  * with Tezos.self_address as the owner. *)
+let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) : LigoOp.operation option * tez_wrapper_state * Ligo.address =
+  match Ligo.Big_map.find_opt user state.vaults with
+  | Some vault_address -> None, state, vault_address
+  | None ->
+    let op, vault_address = originate_vault !Ligo.Tezos.self_address in
+    Some op, {state with vaults = Ligo.Big_map.update user (Some vault_address) state.vaults}, vault_address
 
 (* TODO: I think we must be more eager to create vaults if they don't already
  * exist. Even with plain FA2 entrypoints we might need to transfer some tez
@@ -138,17 +140,15 @@ let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation lis
   (* 1. Update the balance on the ledger *)
   let state_fa2_state = ledger_issue_tez_token (state.fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
   let state = { state with fa2_state = state_fa2_state } in
-  (* 2. Create a vault, if it does not exist already. *)
-  let vault_address, state =
-    match Ligo.Big_map.find_opt !Ligo.Tezos.sender state.vaults with
-    | None -> failwith "not implemented yet" (* TODO: Create the vault here and update the maps *)
-    | Some vault_address -> vault_address, state in
+  (* 2. Create a vault, if it does not exist already, and update the map. *)
+  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
   (* 3. Transfer the actual tez to the vault of the sender. *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
     | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
-    | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *)
-  in
-  ([op], state)
+    | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
+  match op_opt with
+  | None -> ([op], state)
+  | Some origination -> ([origination; op], state)
 
 let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
   (* 1. Ensure no tez given *)
@@ -156,22 +156,28 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
   (* 2. Reduce the balance of the tez owner *)
   let state_fa2_state = ledger_withdraw_tez_token (state.fa2_state, !Ligo.Tezos.sender, amnt) in
   let state = { state with fa2_state = state_fa2_state; } in
-  (* 3. Instruct the vault to send the actual tez to the owner *)
-  let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
+  (* 3. Create a vault, if it does not exist already, and update the map. *)
+  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
+  (* 4. Instruct the vault to send the actual tez to the owner *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
-  ([op], state)
+  match op_opt with
+  | None -> ([op], state)
+  | Some origination -> ([origination; op], state)
 
 let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
   (* 1. Ensure no tez given *)
   let _ = ensure_no_tez_given () in
-  (* 2. Instruct the vault to set its own delegate *)
-  let vault_address = find_vault_address state.vaults !Ligo.Tezos.sender in
+  (* 2. Create a vault, if it does not exist already, and update the map. *)
+  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
+  (* 3. Instruct the vault to set its own delegate *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
     | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
     | None -> (failwith "failure" : LigoOp.operation) (* TODO: Add new error in error.ml *) in
-  ([op], state) (* unchanged state *)
+  match op_opt with
+  | None -> ([op], state)
+  | Some origination -> ([origination; op], state)
 
 (*****************************************************************************)
 (**                              {1 MAIN}                                    *)
