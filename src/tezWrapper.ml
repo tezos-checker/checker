@@ -67,12 +67,12 @@ type tez_wrapper_state =
 
 type tez_wrapper_params =
   (* FA2 entrypoints *)
-  | Renamed_balance_of of fa2_balance_of_param
-  | Renamed_transfer of fa2_transfer list
-  | Renamed_update_operators of fa2_update_operator list
+  | Balance_of of fa2_balance_of_param
+  | Transfer of fa2_transfer list
+  | Update_operators of fa2_update_operator list
   (* Wrapper-specific entrypoints *)
   | Deposit of unit (* TODO: not nice, having a unit type. Perhaps pass the tez as a number too? *)
-  | Withdraw of Ligo.tez (* TODO: the docs said nat, but I think it should be tez *)
+  | Withdraw of Ligo.tez (* AMENDMENT: the docs said nat, but I think it should be tez *)
   | Set_delegate of (Ligo.key_hash option)
 
 (** Find the address of the vault of given user, or originate it on the fly,
@@ -193,20 +193,12 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
 (**                              {1 MAIN}                                    *)
 (*****************************************************************************)
 
-let tez_wrapper_main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * tez_wrapper_state =
+let main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * tez_wrapper_state =
   match op with
   (* FA2 entrypoints *)
-  (* TODO: Temporarily renamed the following constructors. If we don't , we get
-   * an error of the form:
-   * | Invalid variant.
-   * | Constructor "Update_operators" already exists as part of another variant.
-   * Eventually we'll need to separate this contract (i.e., tezWrapper.ml
-   * should NOT be opened by definition in the final checker contract, but be a
-   * separate contract entirely, even if code is shared).
-  *)
-  | Renamed_balance_of param -> balance_of state param
-  | Renamed_transfer xs -> transfer state xs
-  | Renamed_update_operators xs -> update_operators state xs
+  | Balance_of param -> balance_of state param
+  | Transfer xs -> transfer state xs
+  | Update_operators xs -> update_operators state xs
   (* Wrapper-specific entrypoints *)
   | Deposit () -> deposit state ()
   | Withdraw amnt -> withdraw state amnt

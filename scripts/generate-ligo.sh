@@ -10,7 +10,7 @@ rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
 # Note: order here does matter since it affects the order of #includes in main.mligo
-inputs=(
+all_sources=(
   error
   fa12Interface
   ptr
@@ -41,7 +41,48 @@ inputs=(
   checkerMain
 )
 
-for name in "${inputs[@]}"; do
+checker_sources=(
+  error
+  fa12Interface
+  ptr
+  common
+  fixedPoint
+  ctez
+  kit
+  lqt
+  tok
+  cfmmTypes
+  fa2Interface
+  liquidationAuctionPrimitiveTypes
+  mem
+  avl
+  liquidationAuctionTypes
+  burrowTypes
+  vaultTypes
+  constants
+  parameters
+  burrow
+  checkerTypes
+  cfmm
+  sliceList
+  liquidationAuction
+  checker
+  checkerEntrypoints
+  checkerMain
+)
+
+tez_wrapper_sources=(
+  error
+  common
+  fixedPoint
+  kit
+  lqt
+  fa2Interface
+  vaultTypes
+  tezWrapper
+)
+
+for name in "${all_sources[@]}"; do
   from="$PWD/src/$name".ml
   to="$target_dir/$name".mligo
   echo "$from -> $to" 1>&2
@@ -113,12 +154,22 @@ done
 echo "$PWD/src/ligo.mligo => $target_dir/ligo.mligo" 2>&1
 cp "$PWD/src/ligo.mligo" "$target_dir/ligo.mligo"
 
+# Generate the Checker contract
 echo "=> main.mligo" 2>&1
 
 echo '#include "ligo.mligo"' > "$target_dir/main.mligo"
 
-( IFS=$'\n'; echo "${inputs[*]}" ) |
+( IFS=$'\n'; echo "${checker_sources[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> "$target_dir/main.mligo"
+
+# Generate the TezWrapper contract
+echo "=> tezWrapperMain.mligo" 2>&1
+
+echo '#include "ligo.mligo"' > "$target_dir/tezWrapperMain.mligo"
+
+( IFS=$'\n'; echo "${tez_wrapper_sources[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> "$target_dir/tezWrapperMain.mligo"
 
 echo "done." 1>&2
