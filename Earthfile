@@ -205,7 +205,7 @@ build-ligo:
 
     # Note: using bash if-then here instead of earthly's IF-END because the earthly
     # version was flaky as of version v0.5.23
-    RUN bash -c 'if [ "$E2E_TESTS_HACK" = "true" ]; then patch -p1 <e2e-tests-hack.patch; fi'
+    RUN bash -c 'if [ "$E2E_TESTS_HACK" = "true" ]; then patch -p0 <e2e-tests-hack.patch; fi'
 
     RUN ./scripts/generate-ligo.sh
     RUN ./scripts/compile-ligo.rb
