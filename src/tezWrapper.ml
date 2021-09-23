@@ -156,48 +156,50 @@ let[@inline] reverse_op_list (ops: LigoOp.operation list) : LigoOp.operation lis
 
 (* TODO: reverse the output operation list *)
 let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : tez_wrapper_state * LigoOp.operation list =
-  Ligo.List.fold_left
-    (fun (((st, ops), tx): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer) ->
-       let { from_ = from_; txs = txs; } = tx in
+  let state, rev_ops =
+    Ligo.List.fold_left
+      (fun (((st, ops), tx): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer) ->
+         let { from_ = from_; txs = txs; } = tx in
 
-       (* Origination of the from_ vault, if needed *)
-       let op_opt, st, from_vault_address = find_vault_address st from_ in
-       let ops = match op_opt with
-         | None -> ops (* vault is already originated *)
-         | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
+         (* Origination of the from_ vault, if needed *)
+         let op_opt, st, from_vault_address = find_vault_address st from_ in
+         let ops = match op_opt with
+           | None -> ops (* vault is already originated *)
+           | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
 
-       (* TODO: Do we really need to restrict the to_ and from_ here? *)
-       Ligo.List.fold_left
-         (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
-            let fa2_st = st.fa2_state in
-            let { to_ = to_; token_id = token_id; amount = amnt; } = x in
-            if fa2_is_operator (fa2_st, !Ligo.Tezos.sender, from_, token_id)
-            then
-              (* FA2-related changes *)
-              let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
-              let fa2_st = ledger_withdraw (fa2_st, token_id, from_, amnt) in
-              let fa2_st = ledger_issue (fa2_st, token_id, to_, amnt) in
-              let st = { st with fa2_state = fa2_st } in
-              (* Origination of the to_ vault, if needed *)
-              let op_opt, st, to_vault_address = find_vault_address st to_ in
-              let ops = match op_opt with
-                | None -> ops (* vault is already originated *)
-                | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
-              (* Instruct the from_ vault to send the actual tez to the to_ vault *)
-              let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_vault" from_vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
-                | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_mutez_nat amnt, to_vault_address) (Ligo.tez_from_literal "0mutez") c
-                | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
-              let ops = (op :: ops) in (* NOTE: reversed! *)
+         (* TODO: Do we really need to restrict the to_ and from_ here? *)
+         Ligo.List.fold_left
+           (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
+              let fa2_st = st.fa2_state in
+              let { to_ = to_; token_id = token_id; amount = amnt; } = x in
+              if fa2_is_operator (fa2_st, !Ligo.Tezos.sender, from_, token_id)
+              then
+                (* FA2-related changes *)
+                let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
+                let fa2_st = ledger_withdraw (fa2_st, token_id, from_, amnt) in
+                let fa2_st = ledger_issue (fa2_st, token_id, to_, amnt) in
+                let st = { st with fa2_state = fa2_st } in
+                (* Origination of the to_ vault, if needed *)
+                let op_opt, st, to_vault_address = find_vault_address st to_ in
+                let ops = match op_opt with
+                  | None -> ops (* vault is already originated *)
+                  | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
+                (* Instruct the from_ vault to send the actual tez to the to_ vault *)
+                let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_vault" from_vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
+                  | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_mutez_nat amnt, to_vault_address) (Ligo.tez_from_literal "0mutez") c
+                  | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
+                let ops = (op :: ops) in (* NOTE: reversed! *)
 
-              (st, ops)
-            else
-              (failwith "FA2_NOT_OPERATOR" : tez_wrapper_state * LigoOp.operation list)
-         )
-         (st, ops)
-         txs
-    )
-    (st, ([]: LigoOp.operation list))
-    xs
+                (st, ops)
+              else
+                (failwith "FA2_NOT_OPERATOR" : tez_wrapper_state * LigoOp.operation list)
+           )
+           (st, ops)
+           txs
+      )
+      (st, ([]: LigoOp.operation list))
+      xs in
+  (state, reverse_op_list rev_ops)
 (* TODO: END COPY-PASTE AND MANUALLY EDIT *)
 
 let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
