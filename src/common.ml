@@ -59,6 +59,7 @@ let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
 
 (* OPERATIONS ON tez *)
 let[@inline] tez_to_mutez_nat (amnt: Ligo.tez) = Ligo.div_tez_tez amnt (Ligo.tez_from_literal "1mutez")
+let[@inline] tez_of_mutez_nat (amnt: Ligo.nat) = Ligo.mul_nat_tez amnt (Ligo.tez_from_literal "1mutez")
 
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (tez_to_mutez_nat x)
 

@@ -15,6 +15,7 @@ val clamp_int : Ligo.int -> Ligo.int -> Ligo.int -> Ligo.int
 
 (* OPERATIONS ON tez *)
 val tez_to_mutez_nat : Ligo.tez -> Ligo.nat
+val tez_of_mutez_nat : Ligo.nat -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
 
 val tez_scaling_factor_int : Ligo.int
