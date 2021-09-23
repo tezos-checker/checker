@@ -1,4 +1,51 @@
+## Configurations for Checker builds and code generation
+
+# Collateral token configuration
 collateral:
+  # Specifies the number of decimal digits used by the collateral token
+  # e.g. tez has 6 decimal digits.
   decimal_digits: 6
+
+# Checker system constants
 constants:
-  fminting: 0.25
+  # ====================================================================================
+  # General constants
+  # ====================================================================================
+  burrow_fee_percentage: 5/1000
+  cfmm_fee: 2/1000
+  creation_deposit: 1_000_000
+  fliquidation: 19/10
+  fminting: 21/10
+  imbalance_limit: 5/100
+  imbalance_scaling_factor: 3/4
+  liquidation_penalty: 1/10
+  liquidation_reward_percentage: 1/1000
+  protected_index_inverse_epsilon: 120_000
+  # ====================================================================================
+  # Touch constants
+  # ====================================================================================
+  number_of_slices_to_process: 5
+  touch_high_reward: 1/60
+  touch_low_reward: 1/600
+  touch_reward_low_bracket: 600
+  # ====================================================================================
+  # Liquidation auction constants
+  # ====================================================================================
+  auction_decay_rate: 1/6000
+  bid_improvement_factor: 33/10000
+  max_bid_interval_in_blocks: 20
+  max_bid_interval_in_seconds: 1200
+  max_liquidation_queue_height: 12
+  max_lot_size: 10_000_000_000
+  min_lot_auction_queue_fraction: 5/100
+  # ====================================================================================
+  # Control function constants
+  # ====================================================================================
+  # Note: All of the integers below are expressed in fixedpoint format (2^64).
+  # See src/fixedPoint.ml for more details
+  high_negative_acceleration: -1235555
+  high_positive_acceleration: 1235555
+  low_negative_acceleration: -247111
+  low_positive_acceleration: 247111
+  target_high_bracket: 5/100
+  target_low_bracket: 5/1000

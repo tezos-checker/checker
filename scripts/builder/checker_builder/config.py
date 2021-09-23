@@ -1,11 +1,12 @@
 """
 Configuration file logic for Checker builds
 """
+
+from decimal import Decimal
 import logging
-from dataclasses import dataclass, Field, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from decimal import Decimal, getcontext, Rounded
 
 import yaml
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -18,18 +19,33 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = Path("checker.yaml")
 
-# Set global decimal context to raise exception on rounding for extra safety.
-# Note: This only affects cases where we are operating on the Decimal value -
-# the Decimal constructor does not truncate its input.
-DECIMAL_PRECISION = 28
-decimal_context = getcontext()
-decimal_context.prec = DECIMAL_PRECISION
-decimal_context.traps[Rounded] = True
+
+@dataclass
+class Ratio:
+    # Numerator
+    num: int
+    # Denominator
+    den: int
 
 
-def commented(comment: str, default=None) -> Field:
-    """Creates a dataclass field with a comment in its metadata"""
-    return field(default=default, metadata={"comment": comment})
+def ratio_from_str(ratio_str: str) -> Ratio:
+    """
+    Args:
+        ratio_str: The raw string representing the ratio
+
+    Returns:
+        The parsed ratio
+
+    Raises:
+        ValueError: If the input string cannot be parsed
+    """
+    parts = ratio_str.strip().split("/", maxsplit=1)
+    if len(parts) != 2:
+        raise ValueError(f"Unable to parse ratio from string '{ratio_str}'. ")
+    num_str, den_str = parts
+    num = int(num_str.strip())
+    den = int(den_str.strip())
+    return Ratio(num, den)
 
 
 # ================================================================================================
@@ -48,36 +64,33 @@ class CollateralTokenConfig:
 class Constants:
     """Checker system constants"""
 
-    # Note: Any Decimal (ratio) values should be specified using literals only to
-    # avoid issues with precision.
-    fminting: Decimal = Decimal("2.1")
-    fliquidation: Decimal = Decimal("1.9")
-    creation_deposit: int = 1
-    burrow_fee_percentage: Decimal = Decimal("0.005")
-    imbalance_scaling_factor: Decimal = Decimal("0.75")
-    imbalance_limit: Decimal = Decimal("0.05")
-    liquidation_reward_percentage: Decimal = Decimal("0.001")
-    cfmm_fee: Decimal = Decimal("0.002")
-    protected_index_inverse_epsilon: int = 120_000
-    max_lot_size: int = 10_000_000_000
-    min_lot_auction_queue_fraction: Decimal = Decimal("0.05")
-    liquidation_penalty: Decimal = Decimal("0.1")
-    target_low_bracket: Decimal = Decimal("0.005")
-    target_high_bracket: Decimal = Decimal("0.05")
-    low_positive_acceleration: int = 247111
-    low_negative_acceleration: int = -247111
-    high_positive_acceleration: int = 1235555
-    high_negative_acceleration: int = -1235555
-    auction_decay_rate: Decimal = Decimal("0.01") / Decimal("60")
-    max_bid_interval_in_seconds: int = 1200
-    max_bid_interval_in_blocks: int = 20
-    bid_improvement_factor: Decimal = Decimal("0.0033")
-    touch_reward_low_bracket: int = 600
-    touch_low_reward: Decimal = Decimal("0.1") / Decimal("60")
-    # FIXME: Hard to specify this ratio in yaml file
-    touch_high_reward: Decimal = Decimal("1") / Decimal("60")
-    number_of_slices_to_process: int = 5
-    max_liquidation_queue_height: int = 12
+    auction_decay_rate: Ratio
+    bid_improvement_factor: Ratio
+    burrow_fee_percentage: Ratio
+    cfmm_fee: Ratio
+    creation_deposit: int
+    fliquidation: Ratio
+    fminting: Ratio
+    high_negative_acceleration: int
+    high_positive_acceleration: int
+    imbalance_limit: Ratio
+    imbalance_scaling_factor: Ratio
+    liquidation_penalty: Ratio
+    liquidation_reward_percentage: Ratio
+    low_negative_acceleration: int
+    low_positive_acceleration: int
+    max_bid_interval_in_blocks: int
+    max_bid_interval_in_seconds: int
+    max_liquidation_queue_height: int
+    max_lot_size: int
+    min_lot_auction_queue_fraction: Ratio
+    number_of_slices_to_process: int
+    protected_index_inverse_epsilon: int
+    target_high_bracket: Ratio
+    target_low_bracket: Ratio
+    touch_high_reward: Ratio
+    touch_low_reward: Ratio
+    touch_reward_low_bracket: int
 
 
 @dataclass
@@ -89,34 +102,53 @@ class CheckerConfig:
 # ================================================================================================
 # Schemas
 # ================================================================================================
-class NonNegativeInt(fields.Integer):
+class BoundedIntField(fields.Integer):
+    def __init__(self, *, lower=None, upper=None, **kwargs):
+        self.lower_bound = lower
+        self.upper_bound = upper
+        super().__init__(**kwargs)
+
     def _deserialize(self, value, attr, data, **kwargs):
         value = super()._deserialize(value, attr, data, **kwargs)
-        if value < 0:
-            raise ValidationError(f"Value must be non-negative: {value}")
+        if self.lower_bound is not None and value < self.lower_bound:
+            raise ValidationError(
+                f"Value is less than required lower bound of: {self.lower_bound}"
+            )
+        if self.upper_bound is not None and value > self.upper_bound:
+            raise ValidationError(
+                f"Value is greater than required upper bound of: {self.upper_bound}"
+            )
         return value
 
 
-class PositiveInt(fields.Integer):
+class RatioField(fields.Field):
+    def _serialize(self, value: Ratio, attr, obj, **kwargs):
+        return f"{value.num}/{value.den}"
+
     def _deserialize(self, value, attr, data, **kwargs):
-        value = super()._deserialize(value, attr, data, **kwargs)
-        if value <= 0:
-            raise ValidationError(f"Value must be positive: {value}")
-        return value
+        try:
+            ratio = ratio_from_str(value)
+        except ValueError as error:
+            raise ValidationError from error
+        if ratio.den == 0:
+            raise ValidationError(f"Provided ratio had a zero denominator: {value}")
+        return ratio
 
 
-class PositiveDecimal(fields.Decimal):
+class PositiveRatioField(RatioField):
     def _deserialize(self, value, attr, data, **kwargs):
-        value = super()._deserialize(value, attr, data, **kwargs)
-        if value <= 0:
-            raise ValidationError(f"Value must be positive: {value}")
-        if not value.is_finite():
-            raise ValidationError(f"Value must be finite: {value}")
-        return value
+        ratio = super()._deserialize(value, attr, data, **kwargs)
+        if (
+            (ratio.num < 0 and ratio.den >= 0)
+            or (ratio.num >= 0 and ratio.den < 0)
+            or (ratio.num == 0)
+        ):
+            raise ValidationError(f"The provided ratio was not positive: {ratio}")
+        return ratio
 
 
 class CollateralTokenConfigSchema(Schema):
-    decimal_digits = NonNegativeInt(strict=True)
+    decimal_digits = BoundedIntField(lower=0, strict=True)
 
     @post_load
     def make(self, data, **kwargs):
@@ -124,11 +156,59 @@ class CollateralTokenConfigSchema(Schema):
 
 
 class ConstantsSchema(Schema):
-    fminting = PositiveDecimal(allow_nan=False)
-    fliquidation = PositiveDecimal(allow_nan=False)
+
+    creation_deposit = BoundedIntField(lower=1, strict=True, required=True)
+    # TODO: double check that fliquidation and fminting *must* be greater than 1
+    fliquidation = PositiveRatioField(required=True)  # > 1
+    fminting = PositiveRatioField(required=True)  # > 1, and should be > fliquidation
+
+    burrow_fee_percentage = PositiveRatioField(required=True)  # positive
+    cfmm_fee = PositiveRatioField(required=True)  # positive
+    imbalance_limit = PositiveRatioField(required=True)  # positive
+    imbalance_scaling_factor = PositiveRatioField(required=True)  # positive
+    liquidation_penalty = PositiveRatioField(required=True)  # positive
+    liquidation_reward_percentage = PositiveRatioField(required=True)  # positive
+    protected_index_inverse_epsilon = BoundedIntField(
+        lower=1, strict=True, required=True
+    )
+
+    # TODO: The drift derivative configurations below will most likely get dropped in the near future
+    #   since the control function will be made pluggable instead (these are specific to the current
+    #   control function).
+    target_low_bracket = PositiveRatioField(required=True)
+    target_high_bracket = PositiveRatioField(required=True)
+    low_negative_acceleration = fields.Integer(strict=True, required=True)
+    low_positive_acceleration = fields.Integer(strict=True, required=True)
+    high_negative_acceleration = fields.Integer(strict=True, required=True)
+    high_positive_acceleration = fields.Integer(strict=True, required=True)
+
+    auction_decay_rate = PositiveRatioField(required=True)  # positive
+    bid_improvement_factor = PositiveRatioField(required=True)  # positive
+    max_bid_interval_in_blocks = BoundedIntField(lower=1, strict=True, required=True)
+    max_bid_interval_in_seconds = BoundedIntField(lower=1, strict=True, required=True)
+    max_liquidation_queue_height = BoundedIntField(lower=1, strict=True, required=True)
+    max_lot_size = BoundedIntField(lower=1, strict=True, required=True)
+    min_lot_auction_queue_fraction = PositiveRatioField(required=True)  # positive
+
+    number_of_slices_to_process = BoundedIntField(lower=1, strict=True, required=True)
+    touch_high_reward = PositiveRatioField(required=True)  # positive
+    touch_low_reward = PositiveRatioField(required=True)  # positive
+    touch_reward_low_bracket = BoundedIntField(lower=1, strict=True, required=True)
 
     @post_load
     def make(self, data, **kwargs):
+        # Note: This comparison is only precise to the (fixed) precision used by Decimal, but since this
+        # is a "soft" check this should be acceptable.
+        fminting = Decimal(data["fminting"].num) / Decimal(data["fminting"].den)
+        fliquidation = Decimal(data["fliquidation"].num) / Decimal(
+            data["fliquidation"].den
+        )
+        if fminting <= fliquidation:
+            raise ValidationError("fminting must be > fliquidation")
+        if fminting <= 1 or fliquidation <= 1:
+            raise ValidationError(
+                "Both fminting and fliquidation must be greater than 1"
+            )
         return Constants(**data)
 
 
@@ -144,36 +224,8 @@ class CheckerConfigSchema(Schema):
 # ================================================================================================
 # Helpers
 # ================================================================================================
-
-
-def num(x: Decimal) -> int:
-    """Gets the numerator of a decimal's ratio representation"""
-    return x.as_integer_ratio()[0]
-
-
-def den(x: Decimal) -> int:
-    """Gets the denominator of a decimal's ratio representation"""
-    return x.as_integer_ratio()[1]
-
-
-def _construct_float_as_decimal(
-    self, node: yaml.ScalarNode, decimal_constructor=Decimal
-):
-    # PyYaml constructor which converts Yaml "float" values into a Decimal directly
-    # from the raw yaml string to avoid precision issues which can occur when
-    # converting them to floats.
-    assert node.tag == "tag:yaml.org,2002:float"
-    value = node.value.lower()
-    if ".inf" in value or value == ".nan" or ":" in value:
-        raise ValueError(
-            f"Special yaml float values such as .inf, .nan or ':' "
-            f"notation are not supported in this custom yaml loader. Failed to parse: {value}"
-        )
-    return decimal_constructor(node.value)
-
-
+# Default yaml Loader for this package
 Loader = yaml.SafeLoader
-Loader.add_constructor("tag:yaml.org,2002:float", _construct_float_as_decimal)
 
 
 def load_checker_config(path: Optional[Path] = None) -> CheckerConfig:
@@ -197,7 +249,7 @@ def generate_src_module(module: Path, template: Template, config: CheckerConfig)
     logger.info(
         f"Rendering src module template '{template.name}' using provided config"
     )
-    rendered = template.render(config=config, num=num, den=den)
+    rendered = template.render(config=config)
     logger.info(f"Writing rendered module at {module}")
     with module.open("w") as f:
         f.write(rendered)
