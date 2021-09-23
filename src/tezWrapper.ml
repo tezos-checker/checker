@@ -133,7 +133,7 @@ let[@inline] tez_wrapper_fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let { owner = owner; token_id = token_id; } = req in
+       let { owner = owner; token_id = token_id; } : fa2_balance_of_request = req in
        let blnc = tez_wrapper_fa2_get_balance (st, owner, token_id) in
        { request=req; balance = blnc; }
     )
