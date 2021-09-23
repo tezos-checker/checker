@@ -71,8 +71,9 @@ let[@inline] error_GetLazyFunctionUnpackFailure                         : Ligo.i
 let[@inline] error_GetLazyFunctionMissingFunction                       : Ligo.int = Ligo.int_from_literal "151"
 
 let[@inline] error_GetEntrypointOptFailureVaultReceiveTez               : Ligo.int = Ligo.int_from_literal "160"
-let[@inline] error_GetEntrypointOptFailureVaultSendTez                  : Ligo.int = Ligo.int_from_literal "161"
-let[@inline] error_GetEntrypointOptFailureVaultSetDelegate              : Ligo.int = Ligo.int_from_literal "162"
+let[@inline] error_GetEntrypointOptFailureVaultSendTezToVault           : Ligo.int = Ligo.int_from_literal "161"
+let[@inline] error_GetEntrypointOptFailureVaultSendTezToContract        : Ligo.int = Ligo.int_from_literal "162"
+let[@inline] error_GetEntrypointOptFailureVaultSetDelegate              : Ligo.int = Ligo.int_from_literal "163"
 
 (* INTERNAL ERRORS *)
 

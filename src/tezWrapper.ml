@@ -22,7 +22,20 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
        | Vault_receive_tez () ->
          (* TODO: allowed from everyone? *)
          (([]: LigoOp.operation list), storage)
-       | Vault_send_tez tz_recipient ->
+       | Vault_send_tez_to_vault tz_recipient ->
+         let _ = (* inlined ensure_no_tez_given *)
+           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+           then Ligo.failwith (Ligo.int_from_literal "-6")
+           else () in
+         if !Ligo.Tezos.sender <> storage.owner then
+           (Ligo.failwith (Ligo.int_from_literal "-7") : LigoOp.operation list * vault_storage) (* unauthorized *)
+         else
+           let tz, recipient = tz_recipient in
+           let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" recipient : unit Ligo.contract option) with
+             | Some c -> LigoOp.Tezos.unit_transaction () tz c
+             | None -> (Ligo.failwith (Ligo.int_from_literal "-8") : LigoOp.operation) in
+           ([op], storage)
+       | Vault_send_tez_to_contract tz_recipient ->
          let _ = (* inlined ensure_no_tez_given *)
            if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
            then Ligo.failwith (Ligo.int_from_literal "-3")
@@ -31,17 +44,9 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
            (Ligo.failwith (Ligo.int_from_literal "-4") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            let tz, recipient = tz_recipient in
-           (* TODO: Consider whether we want to have this behavior conflated into
-            * Vault_send_tez, or if it's better to have two separate entrypoints. *)
-           let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" recipient : unit Ligo.contract option) with
-             | Some c ->
-               LigoOp.Tezos.unit_transaction () tz c
-             | None ->
-               begin match (LigoOp.Tezos.get_contract_opt recipient : unit Ligo.contract option) with
-                 | Some c -> LigoOp.Tezos.unit_transaction () tz c
-                 | None -> (Ligo.failwith (Ligo.int_from_literal "-5") : LigoOp.operation) (* entrypoint not supported *)
-               end
-           in
+           let op = match (LigoOp.Tezos.get_contract_opt recipient : unit Ligo.contract option) with
+             | Some c -> LigoOp.Tezos.unit_transaction () tz c
+             | None -> (Ligo.failwith (Ligo.int_from_literal "-5") : LigoOp.operation) in
            ([op], storage)
     )
     (None: Ligo.key_hash option)
@@ -164,9 +169,9 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
   (* 3. Create a vault, if it does not exist already, and update the map. *)
   let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
   (* 4. Instruct the vault to send the actual tez to the owner *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTez : LigoOp.operation) in
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToContract : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
