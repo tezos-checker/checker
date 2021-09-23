@@ -11,6 +11,8 @@ open Error
  * package it properly.
 *)
 
+(* TODO: We'll also need FA2 metadata for tez_tokens. *)
+
 (** Originate a vault contract with no delegate and zero tez. This way we can
   * originate vaults pretty easily, everytime we look one up: if it's not
   * there, just originate it now. *)
@@ -73,6 +75,12 @@ type tez_wrapper_state =
     vaults : vault_map;
   }
 
+(** Token id for tez tokens. Note that this could have been 0n instead, but I'd
+  * like to think of checker as a family of contracts, in which case I'd like
+  * all valid tokens to be distinct. Either way, the choice of token_id is
+  * arbitrary, so 2n is just as good as 0n. *)
+let[@inline] tez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
+
 type tez_wrapper_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
@@ -102,20 +110,6 @@ let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) 
 (**                             {1 LEDGER}                                   *)
 (*****************************************************************************)
 
-(* TODO: For the FA2 entrypoints we internally check that the tokens transfered
- * are valid. We have to include tez_tokens in the list or deal with this in a
- * different way. I think the safest and easiest way is to use "2n" for tez
- * tokens and included them in the list. This would implicitly make
- * fa2_run_transfer behave correctly too (since it depends on
- * ensure_valid_fa2_token internally). Also we'll need FA2 metadata for
- * tez_tokens.
-*)
-
-(* TODO: Do we want this to become "2n" and join the other two in
- * fa2Interface.ml? Then again, this is a separate contract, and checker would
- * not always serve such tokens. Hmmmm. *)
-let[@inline] tez_token_id = Ligo.nat_from_literal "0n"
-
 let[@inline] ledger_issue_tez_token
     (st, addr, amnt: fa2_state * Ligo.address * Ligo.tez) : fa2_state =
   ledger_issue (st, tez_token_id, addr, tez_to_mutez_nat amnt)
@@ -128,12 +122,55 @@ let[@inline] ledger_withdraw_tez_token
 (**                        {1 FA2 ENTRYPOINTS}                               *)
 (*****************************************************************************)
 
+(* TODO: START COPY-PASTE AND MANUALLY EDIT *)
+let[@inline] tez_wrapper_fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
+  let ledger = st.ledger in
+  let key = (token_id, owner) in
+  let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
+  get_fa2_ledger_value ledger key
+
+let[@inline] tez_wrapper_fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
+  : fa2_balance_of_response list =
+  List.map
+    (fun (req: fa2_balance_of_request) ->
+       let { owner = owner; token_id = token_id; } = req in
+       let blnc = tez_wrapper_fa2_get_balance (st, owner, token_id) in
+       { request=req; balance = blnc; }
+    )
+    xs
+(* TODO: END COPY-PASTE AND MANUALLY EDIT *)
+
 let[@inline] balance_of (state: tez_wrapper_state) (param: fa2_balance_of_param) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
-  let response = fa2_run_balance_of (state.fa2_state, requests) in
+  let response = tez_wrapper_fa2_run_balance_of (state.fa2_state, requests) in (* TODO: Uses specialized tez_wrapper_fa2_run_balance_of *)
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
   ([op], state) (* unchanged state; no attempt to originate vaults either *)
+
+(* TODO: START COPY-PASTE AND MANUALLY EDIT *)
+let[@inline] tez_wrapper_fa2_run_transfer (st, xs: fa2_state * fa2_transfer list) : fa2_state =
+  Ligo.List.fold_left
+    (fun ((st, tx): fa2_state * fa2_transfer) ->
+       let { from_ = from_; txs = txs; } = tx in
+
+       Ligo.List.fold_left
+         (fun ((st, x): fa2_state * fa2_transfer_destination) ->
+            let { to_ = to_; token_id = token_id; amount = amnt; } = x in
+            if fa2_is_operator (st, !Ligo.Tezos.sender, from_, token_id)
+            then
+              let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
+              let st = ledger_withdraw (st, token_id, from_, amnt) in
+              let st = ledger_issue (st, token_id, to_, amnt) in
+              st
+            else
+              (failwith "FA2_NOT_OPERATOR" : fa2_state)
+         )
+         st
+         txs
+    )
+    st
+    xs
+(* TODO: END COPY-PASTE AND MANUALLY EDIT *)
 
 let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
   (* TODO: fa2_transfers always come in a list, so it's not very easy to emit
@@ -141,13 +178,13 @@ let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoO
    * vault) at the same time.  Either we should do a second pass to transfer
    * the tez amounts, or we have to change our current abstractions. *)
   let _ = ensure_no_tez_given () in
-  let state = { state with fa2_state = fa2_run_transfer (state.fa2_state, xs) } in
+  let state = { state with fa2_state = tez_wrapper_fa2_run_transfer (state.fa2_state, xs) } in (* TODO: Uses specialized tez_wrapper_fa2_run_transfer *)
   (* TODO: Move tez from vault to vault here *)
   (([]: LigoOp.operation list), state)
 
 let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operator list) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
-  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
+  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in (* NOTE: No need for specialized calls, since the spec does not require checking the token_ids here. *)
   (([]: LigoOp.operation list), state) (* no need to originate vaults *)
 
 (*****************************************************************************)

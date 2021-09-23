@@ -141,8 +141,8 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 
 [@@@coverage on]
 
-let[@inline] kit_token_id = Ligo.nat_from_literal "0n"
-let[@inline] lqt_token_id = Ligo.nat_from_literal "1n"
+let[@inline] kit_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
+let[@inline] lqt_token_id : fa2_token_id = Ligo.nat_from_literal "1n"
 
 let ensure_valid_fa2_token (n: fa2_token_id): unit =
   if n = kit_token_id || n = lqt_token_id
