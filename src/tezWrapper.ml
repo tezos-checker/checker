@@ -3,6 +3,14 @@ open Common
 open VaultTypes
 open Error
 
+(* TODO: Do we need to specify
+ *   (tez_token_id = 0) and
+ *   (tez_token_decimal_digits = 6)?
+ * Probably. This contract will also need metadata information and changes will
+ * be needed in compile-ligo.rb as well, to extract that information and
+ * package it properly.
+*)
+
 (** Originate a vault contract with no delegate and zero tez. This way we can
   * originate vaults pretty easily, everytime we look one up: if it's not
   * there, just originate it now. *)
