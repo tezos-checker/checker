@@ -78,6 +78,11 @@ Certain settings of Checker can be customized at *build-time*. These configurati
 can be set by modifying the [checker.yaml](./checker.yaml) configuration file
 in the repository root.
 
+The configuration file checked into the repo is the source of truth used in CI
+builds and tests. While these values can be adjusted, the full test suite
+is not guaranteed to pass since unit tests for calculations are affected by
+the values of the constants. Use with caution.
+
 ### Commands
 
 All of the build targets specified in the project [Earthfile](./Earthfile) may
