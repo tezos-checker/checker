@@ -21,8 +21,6 @@ checker_sources=(
   tok
   cfmmTypes
   fa2Interface
-  fa2Ledger
-  fa2Implementation
   liquidationAuctionPrimitiveTypes
   mem
   avl
@@ -48,7 +46,6 @@ tez_wrapper_sources=(
   kit
   lqt
   fa2Interface
-  fa2Ledger
   vaultTypes
   tezWrapper
 )

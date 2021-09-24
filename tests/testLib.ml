@@ -146,7 +146,7 @@ let debug_print_all_kit_in_sealed_state msg wrapper =
     print_string "\nkit_on_ledger :\n";
     List.iter
       (fun (addr, amnt) -> print_string ("  " ^ Ligo.string_of_address addr ^ " : " ^ Ligo.string_of_nat amnt ^ "\n"))
-      (Fa2Implementation.get_kit_credits_from_fa2_state state.fa2_state)
+      (Fa2Interface.get_kit_credits_from_fa2_state state.fa2_state)
 
 (* Extracts the pointers to all of a given AVL tree's leaves *)
 let avl_leaves_to_list (mem: Mem.mem) (AVLPtr ptr) : leaf_ptr list =

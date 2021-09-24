@@ -1,5 +1,4 @@
 open Fa2Interface
-open Fa2Ledger
 open Common
 open VaultTypes
 open Error
@@ -110,36 +109,39 @@ let[@inline] ledger_withdraw_tez_token
 (**                        {1 FA2 ENTRYPOINTS}                               *)
 (*****************************************************************************)
 
-let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
+(* TODO: START COPY-PASTE AND MANUALLY EDIT *)
+let[@inline] tez_wrapper_fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
   let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
   get_fa2_ledger_value ledger key
 
-let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
+let[@inline] tez_wrapper_fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
        let { owner = owner; token_id = token_id; } : fa2_balance_of_request = req in
-       let blnc = fa2_get_balance (st, owner, token_id) in
+       let blnc = tez_wrapper_fa2_get_balance (st, owner, token_id) in
        { request=req; balance = blnc; }
     )
     xs
+(* TODO: END COPY-PASTE AND MANUALLY EDIT *)
 
 let[@inline] balance_of (state: tez_wrapper_state) (param: fa2_balance_of_param) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
-  let response = fa2_run_balance_of (state.fa2_state, requests) in
+  let response = tez_wrapper_fa2_run_balance_of (state.fa2_state, requests) in (* TODO: Uses specialized tez_wrapper_fa2_run_balance_of *)
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
   ([op], state) (* unchanged state; no attempt to originate vaults either *)
 
+(* TODO: START COPY-PASTE AND MANUALLY EDIT *)
 let[@inline] reverse_op_list (ops: LigoOp.operation list) : LigoOp.operation list =
   Ligo.List.fold_left
     (fun ((ops, op) : LigoOp.operation list * LigoOp.operation) -> (op :: ops))
     ([] : LigoOp.operation list)
     ops
 
-let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : tez_wrapper_state * LigoOp.operation list =
+let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : tez_wrapper_state * LigoOp.operation list =
   let state, rev_ops =
     Ligo.List.fold_left
       (fun (((st, ops), tx): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer) ->
@@ -184,55 +186,16 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
       (st, ([]: LigoOp.operation list))
       xs in
   (state, reverse_op_list rev_ops)
+(* TODO: END COPY-PASTE AND MANUALLY EDIT *)
 
 let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
-  let state, ops = fa2_run_transfer (state, xs) in
+  let state, ops = tez_wrapper_fa2_run_transfer (state, xs) in (* TODO: Uses specialized tez_wrapper_fa2_run_transfer *)
   (ops, state)
-
-let[@inline] fa2_run_update_operators
-    (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
-  Ligo.List.fold_left
-    (fun ((st : fa2_state), (x : fa2_update_operator)) ->
-       match x with
-       | Add_operator op ->
-         let { owner = owner;
-               operator = operator;
-               token_id = token_id;
-             } = op in
-         (* The standard does not specify who is permitted to update operators. We restrict
-            it only to the owner. *)
-         if owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.add
-                 (operator, owner, token_id)
-                 ()
-                 st.operators;
-           }
-       | Remove_operator op ->
-         let { owner = owner;
-               operator = operator;
-               token_id = token_id;
-             } = op in
-         if owner <> !Ligo.Tezos.sender
-         then (failwith "FA2_NOT_OWNER" : fa2_state)
-         else
-           { st  with
-             operators =
-               Ligo.Big_map.remove
-                 (operator, owner, token_id)
-                 st.operators;
-           }
-    )
-    st
-    xs
 
 let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operator list) : LigoOp.operation list * tez_wrapper_state =
   let _ = ensure_no_tez_given () in
-  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
+  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in (* NOTE: No need for specialized calls, since the spec does not require checking the token_ids here. *)
   (([]: LigoOp.operation list), state) (* no need to originate vaults *)
 
 (*****************************************************************************)
