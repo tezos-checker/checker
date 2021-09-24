@@ -88,7 +88,7 @@ type tez_wrapper_params =
   | Update_operators of fa2_update_operator list
   (* Wrapper-specific entrypoints *)
   | Deposit of unit (* TODO: not nice, having a unit type. Perhaps pass the tez as a number too? *)
-  | Withdraw of Ligo.tez (* AMENDMENT: the docs said nat, but I think it should be tez *)
+  | Withdraw of Ligo.tez
   | Set_delegate of (Ligo.key_hash option)
 
 (** Find the address of the vault of given user, or originate it on the fly,
