@@ -5,7 +5,7 @@ open CfmmTypes
 open Parameters
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
-open Fa2Interface
+open Fa2Ledger
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
 

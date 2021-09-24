@@ -17,6 +17,8 @@ open CheckerTypes
 open Error
 open Fa12Interface
 open Fa2Interface
+open Fa2Ledger
+open Fa2Implementation
 open Mem
 
 (* BEGIN_OCAML *)

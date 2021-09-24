@@ -16,7 +16,7 @@
    testChecker
    testCheckerMain
    testCheckerEntrypoints
-   testFa2Interface
+   testFa2
    testAvl
    testAvlModel
    testLiquidationAuction
@@ -50,4 +50,4 @@
 (rule (alias run-fast-tests) (action (run %{exe:testChecker.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerMain.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
-(rule (alias run-fast-tests) (action (run %{exe:testFa2Interface.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testFa2.exe})))
