@@ -3,15 +3,7 @@ open Common
 open VaultTypes
 open Error
 
-(* TODO: Do we need to specify
- *   (tez_token_id = 0) and
- *   (tez_token_decimal_digits = 6)?
- * Probably. This contract will also need metadata information and changes will
- * be needed in compile-ligo.rb as well, to extract that information and
- * package it properly.
-*)
-
-(* TODO: We'll also need FA2 metadata for tez_tokens. *)
+(* TODO: Expose FA2 metadata for tez_tokens. *)
 
 (** Originate a vault contract with no delegate and zero tez. This way we can
   * originate vaults pretty easily, everytime we look one up: if it's not
@@ -81,6 +73,10 @@ type tez_wrapper_state =
   * arbitrary, so 2n is just as good as 0n. *)
 let[@inline] tez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
 
+(** Number of decimal digits for tez tokens, identical to that for tez. *)
+(* NOTE: Currently unused. *)
+let[@inline] tez_token_decimal_digits = Ligo.nat_from_literal "6n"
+
 type tez_wrapper_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
@@ -99,12 +95,6 @@ let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) 
   | None ->
     let op, vault_address = originate_vault !Ligo.Tezos.self_address in
     Some op, {state with vaults = Ligo.Big_map.update user (Some vault_address) state.vaults}, vault_address
-
-(* TODO: I think we must be more eager to create vaults if they don't already
- * exist. Even with plain FA2 entrypoints we might need to transfer some tez
- * from vault to vault (e.g., due to a %transfer), which would fail if there
- * were no vault.
-*)
 
 (*****************************************************************************)
 (**                             {1 LEDGER}                                   *)
@@ -154,7 +144,6 @@ let[@inline] reverse_op_list (ops: LigoOp.operation list) : LigoOp.operation lis
     ([] : LigoOp.operation list)
     ops
 
-(* TODO: reverse the output operation list *)
 let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : tez_wrapper_state * LigoOp.operation list =
   let state, rev_ops =
     Ligo.List.fold_left
@@ -165,7 +154,7 @@ let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_trans
          let op_opt, st, from_vault_address = find_vault_address st from_ in
          let ops = match op_opt with
            | None -> ops (* vault is already originated *)
-           | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
+           | Some origination -> (origination :: ops) in (* originate now *)
 
          (* TODO: Do we really need to restrict the to_ and from_ here? *)
          Ligo.List.fold_left
@@ -183,12 +172,12 @@ let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_trans
                 let op_opt, st, to_vault_address = find_vault_address st to_ in
                 let ops = match op_opt with
                   | None -> ops (* vault is already originated *)
-                  | Some origination -> (origination :: ops) in (* originate now *) (* NOTE: reversed! *)
+                  | Some origination -> (origination :: ops) in (* originate now *)
                 (* Instruct the from_ vault to send the actual tez to the to_ vault *)
                 let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_vault" from_vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
                   | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_mutez_nat amnt, to_vault_address) (Ligo.tez_from_literal "0mutez") c
                   | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
-                let ops = (op :: ops) in (* NOTE: reversed! *)
+                let ops = (op :: ops) in
 
                 (st, ops)
               else
@@ -203,10 +192,6 @@ let[@inline] tez_wrapper_fa2_run_transfer (st, xs: tez_wrapper_state * fa2_trans
 (* TODO: END COPY-PASTE AND MANUALLY EDIT *)
 
 let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
-  (* TODO: fa2_transfers always come in a list, so it's not very easy to emit
-   * all the additional operations for moving tez around (from vault to
-   * vault) at the same time.  Either we should do a second pass to transfer
-   * the tez amounts, or we have to change our current abstractions. *)
   let _ = ensure_no_tez_given () in
   let state, ops = tez_wrapper_fa2_run_transfer (state, xs) in (* TODO: Uses specialized tez_wrapper_fa2_run_transfer *)
   (ops, state)
