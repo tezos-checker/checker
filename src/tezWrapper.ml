@@ -8,16 +8,15 @@ open Error
 (** Originate a vault contract with no delegate and zero tez. This way we can
   * originate vaults pretty easily, everytime we look one up: if it's not
   * there, just originate it now. *)
-let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.address =
+(* TODO: Investigate whether we should or should not inline this one. *)
+let originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.address =
   LigoOp.Tezos.vault_create_contract
     (fun (p, storage : vault_parameter * vault_storage) ->
        match p with
        | Vault_set_delegate kho ->
-         let _ = (* inlined ensure_no_tez_given *)
-           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
-           then Ligo.failwith (Ligo.int_from_literal "-1")
-           else () in
-         if !Ligo.Tezos.sender <> storage.owner then
+         if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez" then
+           (Ligo.failwith (Ligo.int_from_literal "-1") : LigoOp.operation list * vault_storage) (* unwanted tez *)
+         else if !Ligo.Tezos.sender <> storage.owner then
            (Ligo.failwith (Ligo.int_from_literal "-2") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            ([LigoOp.Tezos.set_delegate kho], storage)
@@ -25,12 +24,10 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
          (* TODO: allowed from everyone? *)
          (([]: LigoOp.operation list), storage)
        | Vault_send_tez_to_vault tz_recipient ->
-         let _ = (* inlined ensure_no_tez_given *)
-           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
-           then Ligo.failwith (Ligo.int_from_literal "-6")
-           else () in
-         if !Ligo.Tezos.sender <> storage.owner then
-           (Ligo.failwith (Ligo.int_from_literal "-7") : LigoOp.operation list * vault_storage) (* unauthorized *)
+         if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez" then
+           (Ligo.failwith (Ligo.int_from_literal "-3") : LigoOp.operation list * vault_storage) (* unwanted tez *)
+         else if !Ligo.Tezos.sender <> storage.owner then
+           (Ligo.failwith (Ligo.int_from_literal "-4") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            let tz, recipient = tz_recipient in
            let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" recipient : unit Ligo.contract option) with
@@ -38,17 +35,15 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
              | None -> (Ligo.failwith (Ligo.int_from_literal "-8") : LigoOp.operation) in
            ([op], storage)
        | Vault_send_tez_to_contract tz_recipient ->
-         let _ = (* inlined ensure_no_tez_given *)
-           if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
-           then Ligo.failwith (Ligo.int_from_literal "-3")
-           else () in
-         if !Ligo.Tezos.sender <> storage.owner then
-           (Ligo.failwith (Ligo.int_from_literal "-4") : LigoOp.operation list * vault_storage) (* unauthorized *)
+         if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez" then
+           (Ligo.failwith (Ligo.int_from_literal "-5") : LigoOp.operation list * vault_storage) (* unwanted tez *)
+         else if !Ligo.Tezos.sender <> storage.owner then
+           (Ligo.failwith (Ligo.int_from_literal "-6") : LigoOp.operation list * vault_storage) (* unauthorized *)
          else
            let tz, recipient = tz_recipient in
            let op = match (LigoOp.Tezos.get_contract_opt recipient : unit Ligo.contract option) with
              | Some c -> LigoOp.Tezos.unit_transaction () tz c
-             | None -> (Ligo.failwith (Ligo.int_from_literal "-5") : LigoOp.operation) in
+             | None -> (Ligo.failwith (Ligo.int_from_literal "-7") : LigoOp.operation) in
            ([op], storage)
     )
     (None: Ligo.key_hash option)
@@ -73,9 +68,11 @@ type tez_wrapper_state =
   * arbitrary, so 2n is just as good as 0n. *)
 let[@inline] tez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
 
+(*
 (** Number of decimal digits for tez tokens, identical to that for tez. *)
 (* NOTE: Currently unused. *)
 let[@inline] tez_token_decimal_digits = Ligo.nat_from_literal "6n"
+*)
 
 type tez_wrapper_params =
   (* FA2 entrypoints *)
