@@ -9,40 +9,6 @@ target_dir="$PWD/generated/ligo"
 rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
-# Note: order here does matter since it affects the order of #includes in main.mligo
-all_sources=(
-  error
-  fa12Interface
-  ptr
-  common
-  fixedPoint
-  ctez
-  kit
-  lqt
-  tok
-  cfmmTypes
-  fa2Interface
-  fa2Ledger
-  fa2Implementation
-  liquidationAuctionPrimitiveTypes
-  mem
-  avl
-  liquidationAuctionTypes
-  burrowTypes
-  vaultTypes
-  tezWrapper
-  constants
-  parameters
-  burrow
-  checkerTypes
-  cfmm
-  sliceList
-  liquidationAuction
-  checker
-  checkerEntrypoints
-  checkerMain
-)
-
 checker_sources=(
   error
   fa12Interface
@@ -86,6 +52,9 @@ tez_wrapper_sources=(
   vaultTypes
   tezWrapper
 )
+
+all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" )
+all_sources=($(echo "${all_sources[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 for name in "${all_sources[@]}"; do
   from="$PWD/src/$name".ml
