@@ -130,8 +130,8 @@ class RatioField(fields.Field):
             ratio = ratio_from_str(value)
         except ValueError as error:
             raise ValidationError from error
-        if ratio.den == 0:
-            raise ValidationError(f"Provided ratio had a zero denominator: {value}")
+        if ratio.den <= 0:
+            raise ValidationError(f"Provided ratio had a non-positive denominator: {value}")
         return ratio
 
 

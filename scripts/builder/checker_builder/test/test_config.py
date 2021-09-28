@@ -31,6 +31,13 @@ def test_deserialize_ratio_zero_den_fails():
         RatioField().deserialize("1/0")
 
 
+def test_deserialize_ratio_negative_den_fails():
+    from checker_builder.config import RatioField
+
+    with pytest.raises(ValidationError):
+        RatioField().deserialize("1/-1")
+
+
 def test_serialiation_roundtrip_ratio():
     from checker_builder.config import Ratio, RatioField
 
@@ -42,7 +49,6 @@ def test_serialiation_roundtrip_ratio():
 def test_deserialize_positive_ratio():
     from checker_builder.config import PositiveRatioField, Ratio
 
-    assert PositiveRatioField().deserialize("-1/-9") == Ratio(-1, -9)
     assert PositiveRatioField().deserialize("1/9") == Ratio(1, 9)
 
 
