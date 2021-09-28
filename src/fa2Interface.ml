@@ -56,6 +56,19 @@ type fa2_balance_of_param =
     callback : (fa2_balance_of_response list) Ligo.contract;
   }
 
+type fa2_operator_param =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  {
+    owner : Ligo.address;
+    operator : Ligo.address;
+    token_id: fa2_token_id;
+  }
+
+type fa2_update_operator =
+  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
+  | Add_operator of fa2_operator_param
+  | Remove_operator of fa2_operator_param
+
 type token_metadata =
   (* BEGIN_LIGO [@layout:comb] END_LIGO *)
   {
@@ -141,13 +154,7 @@ https://gitlab.com/tzip/tzip/-/blob/4b3c67aad5abbf04ec36caea4a1809e7b6e55bb8/pro
 
 [@@@coverage on]
 
-let[@inline] kit_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
-let[@inline] lqt_token_id : fa2_token_id = Ligo.nat_from_literal "1n"
-
-let ensure_valid_fa2_token (n: fa2_token_id): unit =
-  if n = kit_token_id || n = lqt_token_id
-  then ()
-  else failwith "FA2_TOKEN_UNDEFINED"
+(* FA2 LEDGER IMPLEMENTATION *)
 
 type fa2_state =
   { ledger : (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map;
@@ -220,6 +227,16 @@ let[@inline] ledger_issue_then_withdraw
 let[@inline] fa2_is_operator (st, operator, owner, token_id: fa2_state * Ligo.address * Ligo.address * fa2_token_id) =
   owner = operator || Ligo.Big_map.mem (operator, owner, token_id) st.operators
 
+(* CHECKER-SPECIFIC FA2 IMPLEMENTATION *)
+
+let[@inline] kit_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
+let[@inline] lqt_token_id : fa2_token_id = Ligo.nat_from_literal "1n"
+
+let ensure_valid_fa2_token (n: fa2_token_id): unit =
+  if n = kit_token_id || n = lqt_token_id
+  then ()
+  else failwith "FA2_TOKEN_UNDEFINED"
+
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
@@ -233,24 +250,11 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
   : fa2_balance_of_response list =
   List.map
     (fun (req: fa2_balance_of_request) ->
-       let { owner = owner; token_id = token_id; } = req in
+       let { owner = owner; token_id = token_id; } : fa2_balance_of_request = req in
        let blnc = fa2_get_balance (st, owner, token_id) in
        { request=req; balance = blnc; }
     )
     xs
-
-type fa2_operator_param =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  {
-    owner : Ligo.address;
-    operator : Ligo.address;
-    token_id: fa2_token_id;
-  }
-
-type fa2_update_operator =
-  (* BEGIN_LIGO [@layout:comb] END_LIGO *)
-  | Add_operator of fa2_operator_param
-  | Remove_operator of fa2_operator_param
 
 let[@inline] fa2_run_update_operators
     (st, xs: fa2_state * fa2_update_operator list) : fa2_state =
