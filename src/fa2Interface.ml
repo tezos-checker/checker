@@ -232,7 +232,7 @@ let[@inline] fa2_is_operator (st, operator, owner, token_id: fa2_state * Ligo.ad
 let[@inline] kit_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
 let[@inline] lqt_token_id : fa2_token_id = Ligo.nat_from_literal "1n"
 
-let ensure_valid_fa2_token (n: fa2_token_id): unit =
+let[@inline] ensure_valid_fa2_token (n: fa2_token_id): unit =
   if n = kit_token_id || n = lqt_token_id
   then ()
   else failwith "FA2_TOKEN_UNDEFINED"
