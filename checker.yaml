@@ -33,7 +33,7 @@ constants:
   # [percent] - The percentage of a burrow's collateral that we offer to whoever triggers
   #   the burrow's liquidation
   liquidation_reward_percentage: 1/1000
-  # [min/cNp?] - Protected index epsilon. The higher this value is, the faster the protected
+  # [cNp/s] - Protected index epsilon. The higher this value is, the faster the protected
   # index catches up with the actual index. Currently calculated as 0.05cNp
   # per minute. Basically {[(0.05 / 100) / 60 = 5/600_000 = 1/120_000]}
   # so the inverse is simply 120_000.
