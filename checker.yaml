@@ -49,7 +49,7 @@ constants:
   # [kit/s] - We want the reward in the first bracket to be 0.1 kit / minute, so we just
   #   divide by 60 to get roughly how much should it be per second.
   touch_low_reward: 1/600
-  # [s?] - Parameter used for calculating the current reward for touching the checker
+  # [s] - Parameter used for calculating the current reward for touching the checker
   #   contract. See {!Checker.calculate_touch_reward} for their use.
   touch_reward_low_bracket: 600
   # ====================================================================================
