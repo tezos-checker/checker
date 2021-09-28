@@ -90,7 +90,7 @@ type token_metadata_param =
     handler : (token_metadata list) -> unit;
   }
 
-(* Each FA2-compliant contrat should implement the following entrypoints:
+(* Each FA2-compliant contract should implement the following entrypoints:
    type fa2_entry_points =
    | Transfer of fa2_transfer list
    | Balance_of of fa2_balance_of_param
