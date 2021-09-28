@@ -9,6 +9,7 @@ target_dir="$PWD/generated/ligo"
 rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
+# Note: order here does matter since it affects the order of #includes in main.mligo
 checker_sources=(
   error
   fa12Interface
@@ -39,6 +40,7 @@ checker_sources=(
   checkerMain
 )
 
+# Note: order here does matter since it affects the order of #includes in tezWrapperMain.mligo
 tez_wrapper_sources=(
   error
   common
