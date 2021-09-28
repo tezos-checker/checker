@@ -46,7 +46,7 @@ constants:
   # [kit/s?] - We want the reward in the first bracket to be 1 kit / minute, so we just
   #   divide by 60 to get roughly how much should it be per second.
   touch_high_reward: 1/60
-  # [kit/s?] - We want the reward in the first bracket to be 0.1 kit / minute, so we just
+  # [kit/s] - We want the reward in the first bracket to be 0.1 kit / minute, so we just
   #   divide by 60 to get roughly how much should it be per second.
   touch_low_reward: 1/600
   # [s?] - Parameter used for calculating the current reward for touching the checker
