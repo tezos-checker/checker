@@ -56,7 +56,7 @@ jobs:
       - name: Export lazy entrypoint sizes
         run: |
           earthly --ci --artifact +build-ligo/michelson/functions.json functions.json
-          cat result/functions.json \
+          cat functions.json \
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
             | tee entrypoint-sizes.json
       - uses: actions/upload-artifact@v2.2.4
