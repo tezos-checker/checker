@@ -14,7 +14,7 @@ type fa2_state =
                 ) Ligo.big_map;
   }
 
-let initial_fa2_state =
+let[@inline] initial_fa2_state =
   { ledger = (Ligo.Big_map.empty: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map);
     operators = (Ligo.Big_map.empty: (Ligo.address * Ligo.address * fa2_token_id, unit) Ligo.big_map);
   }
@@ -27,7 +27,7 @@ let[@inline] get_fa2_ledger_value
   | Some i -> i
   | None -> Ligo.nat_from_literal "0n"
 
-let set_fa2_ledger_value
+let[@inline] set_fa2_ledger_value
     (ledger: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map)
     (key: fa2_token_id * Ligo.address)
     (value: Ligo.nat)
@@ -36,7 +36,7 @@ let set_fa2_ledger_value
   then Ligo.Big_map.remove key ledger
   else Ligo.Big_map.add key value ledger
 
-let ledger_issue
+let[@inline] ledger_issue
     (st, tok, addr, amnt: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
   let ledger = st.ledger in
   let key = (tok , addr) in
@@ -45,7 +45,7 @@ let ledger_issue
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
 
-let ledger_withdraw
+let[@inline] ledger_withdraw
     (st, tok, addr, amnt: fa2_state * fa2_token_id * Ligo.address * Ligo.nat) : fa2_state =
   let ledger = st.ledger in
   let key = (tok, addr) in
