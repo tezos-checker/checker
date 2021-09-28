@@ -203,7 +203,7 @@ let ledger_withdraw
   let prev_balance = get_fa2_ledger_value ledger key in
   let new_balance =
     match Ligo.is_nat (Ligo.sub_nat_nat prev_balance amnt) with
-    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : Ligo.nat)
     | Some b -> b in
   let ledger = set_fa2_ledger_value ledger key new_balance in
   { st with ledger = ledger }
@@ -218,7 +218,7 @@ let[@inline] ledger_issue_then_withdraw
   (* WITHDRAW *)
   let balance_ =
     match Ligo.is_nat (Ligo.sub_nat_nat balance_ amnt_to_withdraw) with
-    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : fa2_token_id)
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : Ligo.nat)
     | Some b -> b in
   (* UPDATE STATE *)
   let ledger = set_fa2_ledger_value ledger key balance_ in
