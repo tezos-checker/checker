@@ -34,23 +34,25 @@ constants:
   #   the burrow's liquidation
   liquidation_reward_percentage: 1/1000
   # [cNp/s] - Protected index epsilon. The higher this value is, the faster the protected
-  # index catches up with the actual index. Currently calculated as 0.05cNp
-  # per minute. Basically {[(0.05 / 100) / 60 = 5/600_000 = 1/120_000]}
-  # so the inverse is simply 120_000.
+  #   index catches up with the actual index. Currently calculated as 0.05cNp
+  #   per minute. Basically {[(0.05 / 100) / 60 = 5/600_000 = 1/120_000]}
+  #   so the inverse is simply 120_000.
   protected_index_inverse_epsilon: 120_000
   # ====================================================================================
   # Touch constants
   # ====================================================================================
   # The number of liquidation slices to process every time `touch` is called
   number_of_slices_to_process: 5
-  # [kit/s] - We want the reward in the first bracket to be 1 kit / minute, so we just
-  #   divide by 60 to get roughly how much should it be per second.
-  touch_high_reward: 1/60
   # [kit/s] - We want the reward in the first bracket to be 0.1 kit / minute, so we just
   #   divide by 60 to get roughly how much should it be per second.
+  #   See {!Checker.calculate_touch_reward} for its use.
   touch_low_reward: 1/600
+  # [kit/s] - We want the reward in the second bracket to be 1 kit / minute, so we just
+  #   divide by 60 to get roughly how much should it be per second.
+  #   See {!Checker.calculate_touch_reward} for its use.
+  touch_high_reward: 1/60
   # [s] - Parameter used for calculating the current reward for touching the checker
-  #   contract. See {!Checker.calculate_touch_reward} for their use.
+  #   contract. See {!Checker.calculate_touch_reward} for its use.
   touch_reward_low_bracket: 600
   # ====================================================================================
   # Liquidation auction constants
@@ -85,11 +87,11 @@ constants:
   # See src/fixedPoint.ml for more details.
 
   # The drift derivative can take one of 5 distinct values: 0, +/-0.01 cNp/day,
-  #  and +/-0.05 cNp/day. We calculate those statically thus as follows:
-  #  {[
-  #    low_acceleration  = 0.01/100 * (86400 * 86400) = 1/74649600000000 =  247111 in fixedpoint
-  #    high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
-  #  ]}
+  # and +/-0.05 cNp/day. We calculate those statically thus as follows:
+  # {[
+  #   low_acceleration  = 0.01/100 * (86400 * 86400) = 1/74649600000000 =  247111 in fixedpoint
+  #   high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
+  # ]}
   high_negative_acceleration: -1235555
   high_positive_acceleration: 1235555
   low_negative_acceleration: -247111
