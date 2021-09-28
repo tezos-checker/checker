@@ -162,7 +162,7 @@ generate-code:
     RUN opam exec -- ocp-indent -i ./src/*
 
     # TODO: Find a way to drop all generated code in one directory
-    # so that we can extract it without having to explicitely name
+    # so that we can extract it without having to explicitly name
     # each file.
     SAVE ARTIFACT ./src/checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
     SAVE ARTIFACT ./src/checkerEntrypoints.ml /
