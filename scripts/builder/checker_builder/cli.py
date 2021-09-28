@@ -4,7 +4,10 @@ import click
 from checker_builder import config
 
 # Mapping of generated src modules to their templates
-GENERATE_SRCS = {"tok.ml": "tok.ml.jinja"}
+GENERATE_SRCS = {
+    "tok.ml": "tok.ml.jinja",
+    "constants.ml": "constants.ml.jinja",
+}
 
 
 @click.group()
