@@ -165,7 +165,7 @@ type fa2_state =
                 ) Ligo.big_map;
   }
 
-let initial_fa2_state =
+let[@inline] initial_fa2_state =
   { ledger = (Ligo.Big_map.empty: (fa2_token_id * Ligo.address, Ligo.nat) Ligo.big_map);
     operators = (Ligo.Big_map.empty: (Ligo.address * Ligo.address * fa2_token_id, unit) Ligo.big_map);
   }
