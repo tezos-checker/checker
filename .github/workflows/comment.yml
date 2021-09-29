@@ -21,12 +21,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       - name: Build dependencies
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
           earthly --verbose --ci ${{ env.push_flag }} +deps-full
-      - name: Pull Docker image
-        run: docker ghcr.io/tezos-checker/checker/dev
       - uses: actions/github-script@v4.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
