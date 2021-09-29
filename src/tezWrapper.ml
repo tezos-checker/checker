@@ -151,11 +151,24 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
            | None -> ops (* vault is already originated *)
            | Some origination -> (origination :: ops) in (* originate now *)
 
+         (* TODO: Revisit this; do we really need to restrict the from_ here? *)
+         let () =
+           if (from_ = !Ligo.Tezos.self_address) (* || (is_vault_address st.vaults from_) *) then
+             failwith "FA2_INVALID_ADDRESS" (* NOTE: CUSTOM MNEMONIC *)
+           else () in
+
          (* TODO: Do we really need to restrict the to_ and from_ here? *)
          Ligo.List.fold_left
            (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
               let fa2_st = st.fa2_state in
               let { to_ = to_; token_id = token_id; amount = amnt; } = x in
+
+              (* TODO: Revisit this; do we really need to restrict the to_ here? *)
+              let () =
+                if (to_ = !Ligo.Tezos.self_address) (* || (is_vault_address st.vaults to_) *) then
+                  failwith "FA2_INVALID_ADDRESS" (* NOTE: CUSTOM MNEMONIC *)
+                else () in
+
               if fa2_is_operator (fa2_st, !Ligo.Tezos.sender, from_, token_id)
               then
                 (* FA2-related changes *)
