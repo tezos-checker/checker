@@ -12,12 +12,21 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
-      - uses: cachix/cachix-action@v10
         with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          submodules: recursive
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build dependencies
+        run: |
+          earthly --verbose --ci ${{ env.push_flag }} +flextesa
+          earthly --verbose --ci ${{ env.push_flag }} +deps-full
+      - name: Pull Docker image
+        run: docker ghcr.io/tezos-checker/checker/dev
       - uses: actions/github-script@v4.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -89,8 +98,8 @@ jobs:
 
               try {
                 ret = await (execFile(
-                  "nix-shell",
-                  [ "--run"
+                  "docker",
+                  [ "run --rm ghcr.io/tezos-checker/checker/dev"
                   , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
                   ]
                 ));
