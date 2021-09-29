@@ -98,9 +98,9 @@ jobs:
 
               try {
                 ret = await (execFile(
-                  "docker",
-                  [ "run --rm ghcr.io/tezos-checker/checker/dev"
-                  , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
+                  "earthly",
+                  ["+execute-comment-bot"
+                  , "--base_sha=" + pr.base.sha + " --head_sha=" + pr.head.sha
                   ]
                 ));
               } catch (error) {
