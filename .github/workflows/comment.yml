@@ -5,7 +5,7 @@ concurrency: bot-mutex
 
 on:
   schedule:
-    - cron:  '0/10 * * * *'
+    - cron:  '* * 30 2 *'
   workflow_dispatch: {}
 
 jobs:
