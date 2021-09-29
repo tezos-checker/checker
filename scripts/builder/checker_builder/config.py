@@ -71,14 +71,10 @@ class Constants:
     creation_deposit: int
     fliquidation: Ratio
     fminting: Ratio
-    high_negative_acceleration: int
-    high_positive_acceleration: int
     imbalance_limit: Ratio
     imbalance_scaling_factor: Ratio
     liquidation_penalty: Ratio
     liquidation_reward_percentage: Ratio
-    low_negative_acceleration: int
-    low_positive_acceleration: int
     max_bid_interval_in_blocks: int
     max_bid_interval_in_seconds: int
     max_liquidation_queue_height: int
@@ -86,8 +82,6 @@ class Constants:
     min_lot_auction_queue_fraction: Ratio
     number_of_slices_to_process: int
     protected_index_inverse_epsilon: int
-    target_high_bracket: Ratio
-    target_low_bracket: Ratio
     touch_high_reward: Ratio
     touch_low_reward: Ratio
     touch_reward_low_bracket: int
@@ -173,16 +167,6 @@ class ConstantsSchema(Schema):
     protected_index_inverse_epsilon = BoundedIntField(
         lower=1, strict=True, required=True
     )
-
-    # TODO: The drift derivative configurations below will most likely get dropped in the near future
-    #   since the control function will be made pluggable instead (these are specific to the current
-    #   control function).
-    target_low_bracket = PositiveRatioField(required=True)
-    target_high_bracket = PositiveRatioField(required=True)
-    low_negative_acceleration = fields.Integer(strict=True, required=True)
-    low_positive_acceleration = fields.Integer(strict=True, required=True)
-    high_negative_acceleration = fields.Integer(strict=True, required=True)
-    high_positive_acceleration = fields.Integer(strict=True, required=True)
 
     auction_decay_rate = PositiveRatioField(required=True)  # positive
     bid_improvement_factor = PositiveRatioField(required=True)  # positive

@@ -161,6 +161,22 @@ let compute_adjustment_index (p: parameters) : fixedpoint =
 let compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
 
+  (* Curve parameters
+
+     The drift derivative can take one of 5 distinct values: 0, +/-0.01 cNp/day,
+     and +/-0.05 cNp/day. We calculate those statically thus as follows:
+     {[
+       low_acceleration  = 0.01/100 * (86400 * 86400) = 1/74649600000000 =  247111 in fixedpoint
+       high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
+     ]}
+  *)
+  let[@inline] target_low_bracket : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "1000") in
+  let[@inline] target_high_bracket : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100") in
+  let[@inline] low_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "247111") in
+  let[@inline] low_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-247111") in
+  let[@inline] high_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "1235555") in
+  let[@inline] high_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-1235555") in
+
   let { num = num_tlb; den = den_tlb; } = target_low_bracket in
   let { num = num_thb; den = den_thb; } = target_high_bracket in
   let target = fixedpoint_to_raw target in

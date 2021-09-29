@@ -893,8 +893,8 @@ let test_compute_current_q =
     let last_q                   = fixedpoint_one in
     let last_drift               = fixedpoint_of_raw (Ligo.int_from_literal "1_234_567") in
 
-    let last_drift_derivative    = Constants.low_positive_acceleration in
-    let current_drift_derivative = Constants.high_positive_acceleration in
+    let last_drift_derivative    = fixedpoint_of_raw (Ligo.int_from_literal "247111") in (* low_positive_acceleration *)
+    let current_drift_derivative = fixedpoint_of_raw (Ligo.int_from_literal "1235555") in (* high_positive_acceleration *)
     let duration_in_seconds      = Ligo.int_from_literal "193" in (* around three blocks *)
 
     let current_q = compute_current_q last_q last_drift last_drift_derivative current_drift_derivative duration_in_seconds in
@@ -932,8 +932,8 @@ let test_compute_current_drift =
   "test_compute_current_drift" >:: fun _ ->
     (* some random input values *)
     let last_drift               = fixedpoint_of_raw (Ligo.int_from_literal "1_234_567") in
-    let last_drift_derivative    = Constants.low_positive_acceleration in
-    let current_drift_derivative = Constants.high_positive_acceleration in
+    let last_drift_derivative    = fixedpoint_of_raw (Ligo.int_from_literal "247111") in (* low_positive_acceleration *)
+    let current_drift_derivative = fixedpoint_of_raw (Ligo.int_from_literal "1235555") in (* high_positive_acceleration *)
     let duration_in_seconds      = Ligo.int_from_literal "193" in (* around three blocks *)
 
     let current_drift = compute_current_drift last_drift last_drift_derivative current_drift_derivative duration_in_seconds in

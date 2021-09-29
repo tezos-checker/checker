@@ -80,23 +80,3 @@ constants:
   # [dimensionless] The minimum fraction of the auction queue which **must**
   #   go into a new auction lot.
   min_lot_auction_queue_fraction: 5/100
-  # ====================================================================================
-  # Control function constants
-  # ====================================================================================
-  # Note: All of the integers below are expressed in fixedpoint format (2^64).
-  # See src/fixedPoint.ml for more details.
-
-  # The drift derivative can take one of 5 distinct values: 0, +/-0.01 cNp/day,
-  # and +/-0.05 cNp/day. We calculate those statically thus as follows:
-  # {[
-  #   low_acceleration  = 0.01/100 * (86400 * 86400) = 1/74649600000000 =  247111 in fixedpoint
-  #   high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
-  # ]}
-  high_negative_acceleration: -1235555
-  high_positive_acceleration: 1235555
-  low_negative_acceleration: -247111
-  low_positive_acceleration: 247111
-  # [dimensionless] - High bracket used for the calculation of the drift derivative.
-  target_high_bracket: 5/100
-  # [dimensionless] - Low bracket used for the calculation of the drift derivative.
-  target_low_bracket: 5/1000
