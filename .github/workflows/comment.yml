@@ -1,0 +1,13 @@
+name: Comment PR results
+
+# only run one instance at a time
+concurrency: bot-mutex
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
