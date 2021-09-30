@@ -4,25 +4,37 @@ name: Comment PR results
 concurrency: bot-mutex
 
 on:
-  schedule:
-    - cron:  '0/10 * * * *'
+  # schedule:
+  #   - cron:  '0/10 * * * *'
   workflow_dispatch: {}
 
 jobs:
   comment:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v13
       - uses: actions/checkout@v2
-      - uses: cachix/cachix-action@v10
+      - name: Add git branch for earthly
+        run: |
+          branch=""
+          if [ -n "$GITHUB_HEAD_REF" ]; then
+            branch="$GITHUB_HEAD_REF"
+          else
+            branch="${GITHUB_REF##*/}"
+          fi
+          git checkout -b "$branch" || true
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
         with:
-          name: tezos-checker
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-      - uses: actions/github-script@v4.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Ensure artifact script environment for the current commit is built. Most of the time this should
+      # just pull from the cache.
+      - name: Build current dev container
+        run: earthly --use-inline-cache --strict +deps-full
+      - uses: actions/github-script@v5.0.0
         with:
-         script: |
+          script: |
             const util = require('util');
             const execFile = util.promisify(require('child_process').execFile);
 
@@ -89,9 +101,20 @@ jobs:
 
               try {
                 ret = await (execFile(
-                  "nix-shell",
-                  [ "--run"
-                  , "./scripts/artifacts.py compare-stats --previous " + pr.base.sha + " --next " + pr.head.sha
+                  "docker",
+                  [ "run"
+                  , "-v"
+                  , "$PWD/scripts:/scripts"
+                  , "-v"
+                  , "$HOME/.config:/root/.config"
+                  , "checker/deps-full:latest"
+                  , "poetry"
+                  , "run"
+                  , "python"
+                  , "/scripts/artifacts.py"
+                  , "compare-stats"
+                  , "--previous " + pr.base.sha
+                  , " --next " + pr.head.sha
                   ]
                 ));
               } catch (error) {
