@@ -21,6 +21,7 @@
    testAvlModel
    testLiquidationAuction
    testSliceList
+   testPtr
  )
  (libraries checker core_kernel ounit2 qcheck)
  (preprocess
@@ -42,6 +43,7 @@
 (rule (alias run-fast-tests) (action (run %{exe:testLqt.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testTok.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testMem.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testPtr.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testParameters.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testLiquidation.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCfmm.exe})))

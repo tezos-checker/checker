@@ -8,7 +8,7 @@ let suite =
     (fun _ ->
        assert_raises
          (Failure (Ligo.string_of_int internalError_MemGetElementNotFound))
-         (fun _ -> mem_get mem_empty (Ptr.ptr_init))
+         (fun _ -> mem_get mem_empty (Ptr.ptr_next Ptr.ptr_null))
     )
   ]
 

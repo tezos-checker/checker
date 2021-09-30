@@ -149,7 +149,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Cancel_liquidation_slice" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Cancel_liquidation_slice (LeafPtr (Ptr.(ptr_next (ptr_next ptr_init))))) (* note: values randomly chosen *)
+         (Cancel_liquidation_slice (LeafPtr (Ptr.(ptr_next (ptr_next (ptr_next ptr_null)))))) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Touch_burrow" >::
@@ -204,7 +204,7 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Liquidation_auction_place_bid" >::
      fun _ ->
-       let auction_id = AVLPtr (Ptr.(ptr_next ptr_init)) in (* 2 *)
+       let auction_id = AVLPtr (Ptr.(ptr_next (ptr_next ptr_null))) in (* 2 *)
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "98n") in
        test_deploy_function_with_lazy_params_succeeds
          (Liquidation_auction_place_bid (auction_id, kit)) (* note: values randomly chosen *)
@@ -212,7 +212,7 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Liquidation_auction_claim_win" >::
      fun _ ->
-       let auction_id = AVLPtr (Ptr.(ptr_next (ptr_next (ptr_next ptr_init)))) in (* 4 *)
+       let auction_id = AVLPtr (Ptr.(ptr_next (ptr_next (ptr_next (ptr_next ptr_null))))) in (* 4 *)
        test_deploy_function_with_lazy_params_succeeds
          (Liquidation_auction_claim_win (auction_id)) (* note: values randomly chosen *)
     );
@@ -543,7 +543,7 @@ let suite =
           assert_raises
             (Failure (Ligo.string_of_int error_InvalidLeafPtr))
             (fun () ->
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Cancel_liquidation_slice (LeafPtr (Ptr.(ptr_next (ptr_next ptr_init))))))) in  (* note: values randomly chosen *)
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Cancel_liquidation_slice (LeafPtr (Ptr.(ptr_next (ptr_next (ptr_next ptr_null)))))))) in  (* note: values randomly chosen *)
                Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
                CheckerMain.main (op, sealed_wrapper)
             )
@@ -558,7 +558,7 @@ let suite =
           assert_raises
             (Failure (Ligo.string_of_int error_InvalidAvlPtr))
             (fun () ->
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_claim_win (AVLPtr (Ptr.(ptr_next ptr_init)))))) in  (* note: values randomly chosen *)
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Liquidation_auction_claim_win (AVLPtr (Ptr.(ptr_next (ptr_next ptr_null))))))) in  (* note: values randomly chosen *)
                Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
                CheckerMain.main (op, sealed_wrapper)
             )
