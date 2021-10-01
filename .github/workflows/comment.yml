@@ -32,7 +32,7 @@ jobs:
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       # Ensure artifact script environment for the current commit is built. Most of the time this should
       # just pull from the cache.
-      - name: Build current dev container
+      - name: Build script environment
         run: earthly --use-inline-cache --strict +deps-full
       - uses: actions/github-script@v5.0.0
         with:
@@ -46,90 +46,3 @@ jobs:
               state: "open"
             })).data;
             console.log(prs);
-
-            async function testsPassed(ref) {
-              const res = (await github.request('GET /repos/{owner}/{repo}/commits/{ref}/check-runs', {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: ref
-              })).data.check_runs;
-              return res.length > 0 && res.every(r => r.conclusion === "success");
-            }
-
-            async function commentExists(issue_number, marker) {
-              const cs = (await github.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue_number
-              })).data;
-
-              return cs.find(comment =>
-                comment.body.includes(marker)
-              );
-            }
-
-            for (let i=0; i < prs.length; i++) {
-              const pr = prs[i];
-              console.log("Processing PR", pr.number);
-
-              const base = pr.base.sha;
-              const head = pr.head.sha;
-
-              const base_tests_failed = !(await (testsPassed(base)));
-              const head_tests_failed = !(await (testsPassed(head)));
-
-              // skip if the tests are pending or failed
-              if(base_tests_failed) {
-                console.log("Tests not successful (base).");
-              }
-              if(head_tests_failed) {
-                console.log("Tests not successful (head).");
-              }
-              if(base_tests_failed || head_tests_failed) {
-                continue;
-              }
-
-              // we append a hidden marker to the body, so the bot can recognize
-              // if it already has posted a message.
-              const marker = "bot:" + base + ":" + head;
-
-              // only run the job if there is no existing comment
-              if(await (commentExists(pr.number, marker))) {
-                console.log("Comment exists, skipping.");
-                continue;
-              }
-
-              let ret;
-
-              try {
-                ret = await (execFile(
-                  "docker",
-                  [ "run"
-                  , "-v"
-                  , "$PWD/scripts:/scripts"
-                  , "-v"
-                  , "$HOME/.config:/root/.config"
-                  , "checker/deps-full:latest"
-                  , "poetry"
-                  , "run"
-                  , "python"
-                  , "/scripts/artifacts.py"
-                  , "compare-stats"
-                  , "--previous " + pr.base.sha
-                  , " --next " + pr.head.sha
-                  ]
-                ));
-              } catch (error) {
-                console.log("artifacts.py failed, skipping:", error);
-                continue;
-              }
-
-              console.log(ret);
-
-              github.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: ret.stdout + "\n\n[hiddencomment]: " + marker
-              });
-            }
