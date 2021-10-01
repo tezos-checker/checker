@@ -11,6 +11,10 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
  *     n <> m =>
  *     ptr_next (..n_times (ptr_next ptr_null)..) <> ptr_next (..m_times (ptr_next ptr_null)..)
  *
+ *   forall (n: nat) (m: nat).
+ *     n = m =>
+ *     ptr_next (..n_times (ptr_next ptr_null)..) = ptr_next (..m_times (ptr_next ptr_null)..)
+ *
  * But that can be satisfied in many ways (hashing, adding a non-zero value,
  * etc.), not just by adding 1 every time we call ptr_next. The simplest way to
  * address the mutation is to use the show instance for pointers for writing a
@@ -22,19 +26,22 @@ let apply_times f n e = List.fold_left (fun x _ -> f x) e (List.init n (fun x ->
 
 let coerce_ptr_to_int (p : Ptr.ptr) : int = Stdlib.int_of_string (Ptr.show_ptr p)
 
-(* ptr_next must be injective *)
-let test_ptr_next_injective =
+let test_ptr_next_property =
   qcheck_to_ounit
   @@ QCheck.Test.make
-    ~name:"test_ptr_next_injective"
+    ~name:"test_ptr_next_property"
     ~count:property_test_count
     (QCheck.pair QCheck.small_nat QCheck.small_nat) (* must be small_nat or it will run for a very long time *)
   @@ fun (n, m) ->
-  QCheck.(
-    (apply_times Ptr.ptr_next n Ptr.ptr_null = apply_times Ptr.ptr_next m Ptr.ptr_null)
-    ==>
-    (n = m)
-  )
+  if n <> m then (* n <> m *)
+    assert_bool
+      "test_ptr_next_property (unequal)"
+      (apply_times Ptr.ptr_next n Ptr.ptr_null <> apply_times Ptr.ptr_next m Ptr.ptr_null)
+  else (* n = m *)
+    assert_bool
+      "test_ptr_next_property (equal)"
+      (apply_times Ptr.ptr_next n Ptr.ptr_null =  apply_times Ptr.ptr_next m Ptr.ptr_null);
+  true
 
 (* too tight (to catch mutations): null = 0 *)
 let test_ptr_null_is_zero =
@@ -61,7 +68,7 @@ let test_ptr_next_difference =
 let suite =
   "Ptr tests" >::: [
     (* property-based random tests *)
-    test_ptr_next_injective;
+    test_ptr_next_property;
     test_ptr_next_difference;
 
     (* unit tests *)
