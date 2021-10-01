@@ -30,19 +30,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+
       # Ensure artifact script environment for the current commit is built. Most of the time this should
       # just pull from the cache.
       - name: Build script environment
         run: earthly --use-inline-cache --strict +deps-full
-      - uses: actions/github-script@v5.0.0
-        with:
-          script: |
-            const util = require('util');
-            const execFile = util.promisify(require('child_process').execFile);
 
-            const prs = (await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open"
-            })).data;
-            console.log(prs);
+      - name: Run PR comment script
+        run: |
+          docker run \
+            -v $PWD/scripts:/root/scripts \
+            -v $HOME/.config:/root/.config \
+            checker/deps-full:latest \
+            poetry run python scripts/comment-prs.py
