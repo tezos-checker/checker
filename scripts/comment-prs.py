@@ -1,9 +1,10 @@
-import os
-from github import Github
-import click
-from github.Repository import Repository
-import subprocess
 import logging
+import os
+import subprocess
+
+import click
+from github import Github
+from github.Repository import Repository
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
