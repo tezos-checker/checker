@@ -96,6 +96,19 @@ spec:
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:spec
 
 # =============================================================================
+# Comment script (CI only)
+# =============================================================================
+
+execute-comment-bot:
+    FROM +deps-full
+
+    ARG base_sha = 'UNDEFINED_BASE_SHA'
+    ARG head_sha = 'UNDEFINED_HEAD_SHA'
+
+    COPY ./scripts/artifacts.py ./artifacts.py
+    RUN poetry run python ./artifacts.py compare-stats --previous "$base_sha" --next "$head_sha"
+
+# =============================================================================
 # Formatting
 # =============================================================================
 format:
