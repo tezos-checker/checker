@@ -71,6 +71,8 @@ deps-full:
     # Ensure that venv gets created in a known directory
     RUN poetry config virtualenvs.in-project true
     RUN poetry install
+    # Image for local use
+    SAVE IMAGE checker/deps-full:latest
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:deps-full
 

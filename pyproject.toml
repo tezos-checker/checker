@@ -12,6 +12,7 @@ checker-builder = { develop=true, path = "./scripts/builder" }
 
 tqdm = "*"
 matplotlib = "=3.3.4"
+PyGithub = "^1.55"
 
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"
