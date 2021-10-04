@@ -37,6 +37,8 @@ jobs:
         run: earthly --use-inline-cache --strict +deps-full
 
       - name: Run PR comment script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           docker run \
             -v $PWD/scripts:/root/scripts \
