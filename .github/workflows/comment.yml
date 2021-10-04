@@ -37,10 +37,9 @@ jobs:
         run: earthly --use-inline-cache --strict +deps-full
 
       - name: Run PR comment script
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           docker run \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
             -v $PWD/scripts:/root/scripts \
             -v $HOME/.config:/root/.config \
             checker/deps-full:latest \
