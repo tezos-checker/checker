@@ -10,7 +10,7 @@ rm -rf "$target_dir"
 mkdir -p "$target_dir"
 
 # Note: order here does matter since it affects the order of #includes in main.mligo
-inputs=(
+checker_sources=(
   error
   fa12Interface
   ptr
@@ -22,11 +22,14 @@ inputs=(
   tok
   cfmmTypes
   fa2Interface
+  fa2Ledger
+  fa2Implementation
   liquidationAuctionPrimitiveTypes
   mem
   avl
   liquidationAuctionTypes
   burrowTypes
+  vaultTypes
   constants
   parameters
   burrow
@@ -39,7 +42,23 @@ inputs=(
   checkerMain
 )
 
-for name in "${inputs[@]}"; do
+# Note: order here does matter since it affects the order of #includes in tezWrapperMain.mligo
+tez_wrapper_sources=(
+  error
+  common
+  fixedPoint
+  kit
+  lqt
+  fa2Interface
+  fa2Ledger
+  vaultTypes
+  tezWrapper
+)
+
+all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" )
+all_sources=($(echo "${all_sources[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+
+for name in "${all_sources[@]}"; do
   from="$PWD/src/$name".ml
   to="$target_dir/$name".mligo
   echo "$from -> $to" 1>&2
@@ -102,18 +121,31 @@ for name in "${inputs[@]}"; do
     # map specialized 'Tezos.*_transaction' functions to the generic one
     sed -E 's/Tezos\.([0-9a-zA-Z_]+)_transaction/Tezos\.transaction/g' |
 
+    # map specialized 'Tezos.*_create_contract' functions to the generic one
+    sed -E 's/Tezos\.([0-9a-zA-Z_]+)_create_contract/Tezos\.create_contract/g' |
+
     cat > "$to"
 done
 
 echo "$PWD/src/ligo.mligo => $target_dir/ligo.mligo" 2>&1
 cp "$PWD/src/ligo.mligo" "$target_dir/ligo.mligo"
 
+# Generate the Checker contract
 echo "=> main.mligo" 2>&1
 
 echo '#include "ligo.mligo"' > "$target_dir/main.mligo"
 
-( IFS=$'\n'; echo "${inputs[*]}" ) |
+( IFS=$'\n'; echo "${checker_sources[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> "$target_dir/main.mligo"
+
+# Generate the TezWrapper contract
+echo "=> tezWrapperMain.mligo" 2>&1
+
+echo '#include "ligo.mligo"' > "$target_dir/tezWrapperMain.mligo"
+
+( IFS=$'\n'; echo "${tez_wrapper_sources[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> "$target_dir/tezWrapperMain.mligo"
 
 echo "done." 1>&2

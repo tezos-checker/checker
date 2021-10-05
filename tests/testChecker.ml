@@ -7,6 +7,8 @@ open OUnit2
 open TestLib
 open CheckerTypes
 open Fa2Interface
+open Fa2Ledger
+open Fa2Implementation
 open Error
 open Ptr
 open LiquidationAuctionTypes
@@ -420,11 +422,11 @@ let suite =
        (* Note: it's not really possible to check the first parameter of the contract here which is the
         * function which defines the contract's logic.
        *)
-       | [(CreateContract (_, delegate, tez, storage))] ->
+       | [(CreateBurrowContract (_, delegate, tez, storage))] ->
          assert_key_hash_option_equal ~expected:None ~real:delegate;
          assert_tez_equal ~expected:(Ligo.tez_from_literal "100_000_000mutez") ~real:tez;
          assert_equal BurrowTypes.({checker_address=checker_address; burrow_id=(alice_addr, (Ligo.nat_from_literal "0n"))}) storage
-       | _ -> failwith ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops)
+       | _ -> failwith ("Expected [CreateBurrowContract (_, _, _, _)] but got " ^ show_operation_list ops)
     );
 
     ("entrypoint_deactivate_burrow - emits expected operations" >::
@@ -808,7 +810,7 @@ let suite =
        assert_operation_list_equal ~expected:[] ~real:ops;
 
        (* The owner should be able to burn it back. *)
-       let kit_token = kit_of_denomination (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender)) in
+       let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender)) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token)) in
 
@@ -837,7 +839,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_NonExistentBurrow))
          (fun () ->
-            let kit_token = kit_of_denomination (Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, bob_addr)) in
+            let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, bob_addr)) in
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token))
          );
@@ -858,12 +860,12 @@ let suite =
       let sender = alice_addr in
       let checker = empty_checker_with_cfmm cfmm in
 
-      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
-      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
@@ -894,13 +896,13 @@ let suite =
       let sender = alice_addr in
 
       let checker_cfmm_old_kit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_amount, min_kit_expected, deadline)) in
 
       let checker_cfmm_new_kit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
@@ -1079,7 +1081,7 @@ let suite =
       (* Adjust transaction by a random amount of extra tez *)
       let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
 
-      let senders_old_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctez_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
@@ -1094,7 +1096,7 @@ let suite =
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
-      let senders_new_kit = Fa2Interface.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Interface.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Fa2Implementation.kit_token_id, sender) in (* after *)
 
       Ligo.geq_nat_nat
         senders_new_kit
@@ -1377,7 +1379,7 @@ let suite =
     ("view_total_supply (FA2) - initial kit supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_kit_amount = Checker.view_total_supply (Fa2Interface.kit_token_id, empty_checker) in
+       let total_kit_amount = Checker.view_total_supply (Fa2Implementation.kit_token_id, empty_checker) in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_kit_amount;
        ()
     );
@@ -1385,7 +1387,7 @@ let suite =
     ("view_total_supply (FA2) - initial lqt supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_lqt_amount = Checker.view_total_supply (Fa2Interface.lqt_token_id, empty_checker) in
+       let total_lqt_amount = Checker.view_total_supply (Fa2Implementation.lqt_token_id, empty_checker) in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_lqt_amount;
        ()
     );
@@ -1402,7 +1404,7 @@ let suite =
        Ligo.Tezos.reset ();
        let all_tokens = Checker.view_all_tokens ((), empty_checker) in
        assert_nat_list_equal
-         ~expected:[ Fa2Interface.kit_token_id; Fa2Interface.lqt_token_id ]
+         ~expected:[ Fa2Implementation.kit_token_id; Fa2Implementation.lqt_token_id ]
          ~real:all_tokens;
        ()
     );
@@ -1473,8 +1475,8 @@ let suite =
          let (ops, checker0) = Checker.entrypoint_create_burrow (checker, (Ligo.nat_from_literal "0n", None)) in
          (* created burrow should be deposited (incl. the creation deposit) *)
          let () = match ops with
-           | [ CreateContract (_, _, sent_tez, _) ; ] -> assert_tez_equal ~expected:tez ~real:sent_tez
-           | _ -> assert_failure ("Expected [CreateContract (_, _, _, _)] but got " ^ show_operation_list ops) in
+           | [ CreateBurrowContract (_, _, sent_tez, _) ; ] -> assert_tez_equal ~expected:tez ~real:sent_tez
+           | _ -> assert_failure ("Expected [CreateBurrowContract (_, _, _, _)] but got " ^ show_operation_list ops) in
 
          let burrow_addr =
            burrow_address

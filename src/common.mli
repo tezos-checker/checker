@@ -14,7 +14,10 @@ val fdiv_int_int : Ligo.int -> Ligo.int -> Ligo.int
 val clamp_int : Ligo.int -> Ligo.int -> Ligo.int -> Ligo.int
 
 (* OPERATIONS ON tez *)
+val tez_to_mutez_nat : Ligo.tez -> Ligo.nat
+val tez_of_mutez_nat : Ligo.nat -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
+
 val tez_scaling_factor_int : Ligo.int
 val tez_scaling_factor_nat : Ligo.nat
 
@@ -35,6 +38,8 @@ val one_ratio : ratio
 
 val fraction_to_tez_floor : Ligo.int -> Ligo.int -> Ligo.tez
 val fraction_to_nat_floor : Ligo.int -> Ligo.int -> Ligo.nat
+
+val ensure_no_tez_given : unit -> unit
 
 (* BEGIN_OCAML *)
 val compare_int : Ligo.int -> Ligo.int -> Int.t

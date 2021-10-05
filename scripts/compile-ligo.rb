@@ -8,17 +8,20 @@ require 'ostruct'
 
 LIGO_DIR="#{__dir__}/../generated/ligo"
 MICHELSON_DIR="#{__dir__}/../generated/michelson"
-CONTRACT_TARGET="#{MICHELSON_DIR}/main.tz"
-FUNCTIONS_TARGET="#{MICHELSON_DIR}/functions.json"
 
 MAIN_FILE="#{LIGO_DIR}/main.mligo"
+MAIN_CONTRACT_TARGET="#{MICHELSON_DIR}/main.tz"
+FUNCTIONS_TARGET="#{MICHELSON_DIR}/functions.json"
+
+TEZ_WRAPPER_FILE="#{LIGO_DIR}/tezWrapperMain.mligo"
+TEZ_WRAPPER_CONTRACT_TARGET="#{MICHELSON_DIR}/tezWrapperMain.tz"
 
 PROTOCOL = "PsFLoren"
 protocol_arg = ["--protocol", PROTOCOL]
 
-##########################
-puts "Compiling contract."
-##########################
+###################################
+puts "Compiling the main contract."
+###################################
 
 compiled_contract, exit_status = Open3.capture2("ligo", "compile-contract", MAIN_FILE, "main")
 exit_status.success? or raise "compile-contract failed:\n#{compiled_contract}"
@@ -27,6 +30,24 @@ begin
   # Convert the contract to binary to measure the size.
   # (we don't want to generate it as binary because it's nice to have it human-readable)
   output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_contract, "from", "michelson", "to", "binary")
+rescue
+  puts "  Can't run tezos-client, skipping measurement."
+else
+  status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
+  puts "  ~#{output.length / 2} bytes"
+end
+
+##########################################
+puts "Compiling the tez wrapper contract."
+##########################################
+
+compiled_tez_wrapper_contract, exit_status = Open3.capture2("ligo", "compile-contract", TEZ_WRAPPER_FILE, "main")
+exit_status.success? or raise "compile-contract failed:\n#{compiled_tez_wrapper_contract}"
+
+begin
+  # Convert the contract to binary to measure the size.
+  # (we don't want to generate it as binary because it's nice to have it human-readable)
+  output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_tez_wrapper_contract, "from", "michelson", "to", "binary")
 rescue
   puts "  Can't run tezos-client, skipping measurement."
 else
@@ -156,8 +177,10 @@ functions_json = {
 functions_json = JSON.pretty_generate(functions_json)
 
 system("mkdir", "-p", MICHELSON_DIR)
-File.write(CONTRACT_TARGET, compiled_contract)
-puts "Wrote #{CONTRACT_TARGET}"
+File.write(MAIN_CONTRACT_TARGET, compiled_contract)
+puts "Wrote #{MAIN_CONTRACT_TARGET}"
+File.write(TEZ_WRAPPER_CONTRACT_TARGET, compiled_tez_wrapper_contract)
+puts "Wrote #{TEZ_WRAPPER_CONTRACT_TARGET}"
 File.write(FUNCTIONS_TARGET, functions_json)
 puts "Wrote #{FUNCTIONS_TARGET}"
 

@@ -5,6 +5,7 @@ src/constants.ml
 
 generated/michelson/main.tz
 generated/michelson/functions.json
+generated/michelson/tezWrapperMain.tz
 generated/ligo
 
 _build

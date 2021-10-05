@@ -58,7 +58,10 @@ let clamp_int (v: Ligo.int) (lower: Ligo.int) (upper: Ligo.int) : Ligo.int =
   min_int upper (max_int v lower)
 
 (* OPERATIONS ON tez *)
-let tez_to_mutez (x: Ligo.tez) = Ligo.int (Ligo.div_tez_tez x (Ligo.tez_from_literal "1mutez"))
+let[@inline] tez_to_mutez_nat (amnt: Ligo.tez) = Ligo.div_tez_tez amnt (Ligo.tez_from_literal "1mutez")
+let[@inline] tez_of_mutez_nat (amnt: Ligo.nat) = Ligo.mul_nat_tez amnt (Ligo.tez_from_literal "1mutez")
+
+let tez_to_mutez (x: Ligo.tez) = Ligo.int (tez_to_mutez_nat x)
 
 let tez_scaling_factor_int : Ligo.int = Ligo.int_from_literal "1_000_000"
 let tez_scaling_factor_nat : Ligo.nat = Ligo.nat_from_literal "1_000_000n"
@@ -120,6 +123,12 @@ let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =
        let (quot, _) = quot_and_rem in
        quot (* ignore the remainder; we floor towards zero here *)
     )
+
+(* Ensure that there is no tez given. To prevent accidental fund loss. *)
+let ensure_no_tez_given () =
+  if !Ligo.Tezos.amount <> Ligo.tez_from_literal "0mutez"
+  then Ligo.failwith error_UnwantedTezGiven
+  else ()
 
 (* BEGIN_OCAML *)
 [@@@coverage off]

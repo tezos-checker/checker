@@ -2,6 +2,8 @@ open OUnit2
 open TestLib
 open TestArbitrary
 open Fa2Interface
+open Fa2Ledger
+open Fa2Implementation
 open Kit
 open Lqt
 

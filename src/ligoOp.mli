@@ -1,5 +1,6 @@
 open Ligo
 open BurrowTypes
+open VaultTypes
 
 type 'parameter transaction_value = (* GADT *)
   | UnitTransactionValue : unit transaction_value
@@ -16,11 +17,16 @@ type 'parameter transaction_value = (* GADT *)
 type operation =
   | SetDelegate of key_hash option
   | Transaction : 'a transaction_value * tez * 'a contract -> operation (* For inspection (in tests) pattern match on the transaction_value ;-) *)
-  | CreateContract of
+  | CreateBurrowContract of
       ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) *
       key_hash option *
       tez *
       burrow_storage
+  | CreateVaultContract of
+      ((vault_parameter * vault_storage) -> (operation list * vault_storage)) *
+      key_hash option *
+      tez *
+      vault_storage
   (**
       An operation emitted by the contract
   *)
@@ -46,10 +52,17 @@ module Tezos : sig
   val get_entrypoint_opt : string -> address -> 'parameter contract option
   val get_contract_opt : address -> unit contract option (* could also leave it as a parameter *)
 
-  val create_contract :
+  val burrow_create_contract :
     ((burrow_parameter * burrow_storage) -> (operation list * burrow_storage)) ->
     key_hash option ->
     tez ->
     burrow_storage ->
+    (operation * address)
+
+  val vault_create_contract :
+    ((vault_parameter * vault_storage) -> (operation list * vault_storage)) ->
+    key_hash option ->
+    tez ->
+    vault_storage ->
     (operation * address)
 end
