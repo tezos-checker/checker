@@ -288,6 +288,26 @@ def deploy_contract(
     return tz.contract(addr)
 
 
+def deploy_tez_wrapper(
+    tz: PyTezosClient,
+    checker_dir: str,
+    ttl: Optional[int] = None,
+):
+    print("Deploying the Tez FA2 wrapper.")
+    src = os.path.join(checker_dir, "tezWrapperMain.tz")
+    initial_storage = {
+        "fa2_state": {
+            "ledger": {},
+            "operators": {},
+        },
+        "vaults": {},
+    }
+    wrapper = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
+    print("Done.")
+    print(f"Tez Wrapper address: {wrapper.context.address}")
+    return wrapper
+
+
 def deploy_checker(
     tz,
     checker_dir,

@@ -44,6 +44,7 @@ class Config:
     ctez_address: str = ""
     oracle_address: str = ""
     checker_address: str = ""
+    tez_wrapper_address: str = ""
 
     @staticmethod
     def load(file: Path):
@@ -63,12 +64,14 @@ class ConfigSchema(Schema):
     ctez_address = fields.String()
     oracle_address = fields.String()
     checker_address = fields.String()
+    tez_wrapper_address = fields.String()
 
     @post_load
     def make(self, data, **kwargs):
         return Config(**data)
 
 
+# FIXME: Might be able to remove this now that we use our own inject() implementation
 # TODO: This whole function is bit of a hack. Not sure if there is a better way
 # of doing this though.
 def _patch_operation_ttl(config: Config) -> int:
@@ -210,6 +213,34 @@ def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
+    config.dump()
+
+
+@deploy.command()
+@click.option(
+    "--src",
+    "checker_dir",
+    type=str,
+    help="Checker michelson src directory",
+    default="generated/michelson",
+    show_default=True,
+)
+@click.pass_obj
+def tez_wrapper(config: Config, checker_dir):
+    """
+    Deploy Tez FA2 wrapper contract.
+    """
+    shell = construct_url(config.tezos_address, config.tezos_port)
+    click.echo(f"Connecting to tezos node at: {shell}")
+    client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
+    wrapper = checker_lib.deploy_tez_wrapper(
+        client,
+        checker_dir,
+        ttl=_patch_operation_ttl(config),
+    )
+    click.echo(f"Tez wrapper contract deployed with address: {wrapper.context.address}")
+    config.tez_wrapper_address = wrapper.context.address
     config.dump()
 
 

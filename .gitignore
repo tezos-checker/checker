@@ -17,6 +17,9 @@ ocaml-docs
 *.cmi
 *.cmo
 
+# Locally generated binaries (e.g. by earthly)
+bin
+
 # editors
 .vscode
 /result
