@@ -84,6 +84,10 @@ type tez_wrapper_params =
   | Deposit of unit (* TODO: not nice, having a unit type. Perhaps pass the tez as a number too? *)
   | Withdraw of Ligo.tez
   | Set_delegate of (Ligo.key_hash option)
+  (* Internal entrypoints *)
+  | Call_vault_receive_tez of (Ligo.address * Ligo.tez)
+  | Call_vault_send_tez_to_contract of (Ligo.address * Ligo.tez * Ligo.address)
+  | Call_vault_set_delegate of (Ligo.address * Ligo.key_hash option)
 
 (** Find the address of the vault of given user, or originate it on the fly,
   * with Tezos.self_address as the owner. *)
@@ -258,10 +262,10 @@ let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation lis
   let state = { state with fa2_state = state_fa2_state } in
   (* 2. Create a vault, if it does not exist already, and update the map. *)
   let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
-  (* 3. Transfer the actual tez to the vault of the sender. *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultReceiveTez : LigoOp.operation) in
+  (* 3. Transfer the actual tez to the vault of the sender (via indirect internal call). *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_receive_tez" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez) Ligo.contract option) with
+    | Some c -> LigoOp.Tezos.address_tez_transaction (vault_address, !Ligo.Tezos.amount) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultReceiveTez : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
@@ -274,10 +278,10 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
   let state = { state with fa2_state = state_fa2_state; } in
   (* 3. Create a vault, if it does not exist already, and update the map. *)
   let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
-  (* 4. Instruct the vault to send the actual tez to the owner *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToContract : LigoOp.operation) in
+  (* 4. Instruct the vault to send the actual tez to the owner (via indirect internal call). *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_send_tez_to_contract" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez * Ligo.address) Ligo.contract option) with
+    | Some c -> LigoOp.Tezos.address_tez_address_transaction (vault_address, amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSendTezToContract : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
@@ -287,13 +291,44 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
   let _ = ensure_no_tez_given () in
   (* 2. Create a vault, if it does not exist already, and update the map. *)
   let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
-  (* 3. Instruct the vault to set its own delegate *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSetDelegate : LigoOp.operation) in
+  (* 3. Instruct the vault to set its own delegate (via indirect internal call). *)
+  let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_set_delegate" !Ligo.Tezos.self_address : (Ligo.address * Ligo.key_hash option) Ligo.contract option) with
+    | Some c -> LigoOp.Tezos.address_opt_key_hash_transaction (vault_address, kho) (Ligo.tez_from_literal "0mutez") c
+    | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSetDelegate : LigoOp.operation) in
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
+
+(*****************************************************************************)
+(**                      {1 INTERNAL ENTRYPOINTS}                            *)
+(*****************************************************************************)
+
+let[@inline] call_vault_receive_tez (state: tez_wrapper_state) (vault_address, amnt : Ligo.address * Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
+  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+  else
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.unit_transaction () amnt c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultReceiveTez : LigoOp.operation) in
+    ([op], state)
+
+let[@inline] call_vault_send_tez_to_contract (state: tez_wrapper_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * tez_wrapper_state =
+  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+  else
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, recipient) (Ligo.tez_from_literal "0mutez") c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToContract : LigoOp.operation) in
+    ([op], state)
+
+let[@inline] call_vault_set_delegate (state: tez_wrapper_state) (vault_address, kho : Ligo.address * Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
+  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+  else
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSetDelegate : LigoOp.operation) in
+    ([op], state)
 
 (*****************************************************************************)
 (**                              {1 MAIN}                                    *)
@@ -309,3 +344,7 @@ let main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation l
   | Deposit () -> deposit state ()
   | Withdraw amnt -> withdraw state amnt
   | Set_delegate kho -> set_delegate state kho
+  (* Internal entrypoints *)
+  | Call_vault_receive_tez p -> call_vault_receive_tez state p
+  | Call_vault_send_tez_to_contract p -> call_vault_send_tez_to_contract state p
+  | Call_vault_set_delegate p -> call_vault_set_delegate state p
