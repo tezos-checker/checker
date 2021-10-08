@@ -448,6 +448,203 @@ class E2ETest(SandboxedTestCase):
                 json.dump(gas_costs_sorted, f, indent=4)
 
 
+class TezWrapperTest(SandboxedTestCase):
+    def test_e2e(self):
+        gas_costs = {}
+        account = self.client.key.public_key_hash()
+        # ===============================================================================
+        # Deploy contract
+        # ===============================================================================
+        oracle = deploy_(
+            self.client,
+            source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
+            initial_storage=(self.client.key.public_key_hash(), 1000000),
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
+        print("Deploying ctez contract.")
+        ctez = deploy_ctez(
+            self.client,
+            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
+        print("Deploying Checker.")
+        checker = deploy_checker(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            oracle=oracle.context.address,
+            ctez=ctez["fa12_ctez"].context.address,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
+        print("Deployment finished.")
+        gas_costs = {}
+
+        def call_endpoint(contract, name, param, amount=0, client=self.client):
+            return inject(
+                client,
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
+            )
+
+        def call_checker_endpoint(
+            name, param, amount=0, contract=checker, client=self.client
+        ):
+            print("Calling", name, "with", param)
+            ret = call_endpoint(contract, name, param, amount, client=client)
+            gas_costs[name] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        # ===============================================================================
+        # Burrows
+        # ===============================================================================
+        # Create a burrow
+        call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
+        assert_kit_balance(checker, account, 0)
+
+        # Get some kit
+        call_checker_endpoint("mint_kit", (1, 1_000_000))
+        assert_kit_balance(checker, account, 1_000_000)
+
+        # Burn some kit
+        call_checker_endpoint("burn_kit", (1, 10))
+        assert_kit_balance(checker, account, 999_990)
+
+        # Deposit tez
+        call_checker_endpoint("deposit_collateral", 1, amount=2_000_000)
+
+        # Withdraw tez
+        call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
+
+        # Set delegate
+        call_checker_endpoint("set_burrow_delegate", (1, account))
+
+        # Deactivate a burrow
+        call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
+        call_checker_endpoint("deactivate_burrow", (2, account))
+
+        # Re-activate a burrow
+        call_checker_endpoint("activate_burrow", 2, amount=1_000_000)
+
+        # Touch checker
+        call_checker_endpoint("touch", None)
+
+        # Touch burrow
+        call_checker_endpoint("touch_burrow", (account, 1))
+
+        # ===============================================================================
+        # FA2 interface
+        # ===============================================================================
+        # Note: using alice's account which is assumed to be already initialized in the sandbox
+        checker_alice = pytezos.pytezos.using(
+            shell=checker.shell,
+            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+        ).contract(checker.address)
+
+        # Transfer from the main test account to alice's account
+        fa2_transfer = {
+            "from_": account,
+            "txs": [
+                {
+                    "to_": checker_alice.key.public_key_hash(),
+                    "token_id": kit_token_id,
+                    "amount": 90,
+                },
+            ],
+        }
+        call_checker_endpoint("transfer", [fa2_transfer])
+        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
+
+        # Add the main account as an operator on alice's account
+        # Note: using a client instance with alice's key for this since she is the
+        # account owner.
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": checker_alice.key.public_key_hash(),
+                    "operator": account,
+                    "token_id": kit_token_id,
+                }
+            },
+        ]
+        call_checker_endpoint(
+            "update_operators",
+            update_operators,
+            client=checker_alice,
+            contract=checker_alice,
+        )
+
+        # Send some kit back to the main test account
+        fa2_transfer = {
+            "from_": checker_alice.key.public_key_hash(),
+            "txs": [
+                {
+                    "to_": account,
+                    "token_id": kit_token_id,
+                    "amount": 80,
+                },
+            ],
+        }
+        call_checker_endpoint("transfer", [fa2_transfer])
+        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
+
+        # `balance_of` requires a contract callback when executing on-chain. To make tests
+        # more light-weight and avoid needing an additional mock contract, we call it as a view.
+        # This comes with a downside, however, since using a view means that we don't get an
+        # estimate of the gas cost.
+        fa2_balance_of = {
+            "requests": [
+                {"owner": checker_alice.key.public_key_hash(), "token_id": kit_token_id}
+            ],
+            "callback": None,
+        }
+        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+        balance = checker.balance_of(**fa2_balance_of).callback_view()
+        # Check that this balance agrees with the kit balance view
+        assert_kit_balance(
+            checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
+        )
+
+        # ===============================================================================
+        # CFMM
+        # ===============================================================================
+        # Get some ctez
+        call_endpoint(
+            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
+        )
+        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+        # Approve checker to spend the ctez
+        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
+
+        call_checker_endpoint(
+            "add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20)
+        )
+        # Note: not adding FA2 balance assertions here since the amount of kit depends on the price
+        # and adding an assertion might make the test flaky
+        call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
+        call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
+
+        call_checker_endpoint(
+            "remove_liquidity", (5, 1, 1, int(datetime.now().timestamp()) + 20)
+        )
+
+        print("Gas costs:")
+        gas_costs_sorted = OrderedDict()
+        for k, v in sorted(
+            gas_costs.items(), key=lambda tup: int(tup[1]), reverse=True
+        ):
+            gas_costs_sorted[k] = v
+
+        print(json.dumps(gas_costs_sorted, indent=4))
+        if WRITE_GAS_COSTS:
+            with open(WRITE_GAS_COSTS, "w") as f:
+                json.dump(gas_costs_sorted, f, indent=4)
+
+
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         print("Deploying the mock oracle.")
