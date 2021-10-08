@@ -304,7 +304,7 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
 (*****************************************************************************)
 
 let[@inline] call_vault_receive_tez (state: tez_wrapper_state) (vault_address, amnt : Ligo.address * Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
-  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+  if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
@@ -313,7 +313,7 @@ let[@inline] call_vault_receive_tez (state: tez_wrapper_state) (vault_address, a
     ([op], state)
 
 let[@inline] call_vault_send_tez_to_contract (state: tez_wrapper_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * tez_wrapper_state =
-  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+  if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
@@ -322,7 +322,7 @@ let[@inline] call_vault_send_tez_to_contract (state: tez_wrapper_state) (vault_a
     ([op], state)
 
 let[@inline] call_vault_set_delegate (state: tez_wrapper_state) (vault_address, kho : Ligo.address * Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
-  if Ligo.Tezos.sender <> Ligo.Tezos.self_address then
+  if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
