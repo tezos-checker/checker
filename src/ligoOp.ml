@@ -15,8 +15,20 @@ type 'parameter transaction_value = (* GADT *)
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
   | FA12TransferTransactionValue : Fa12Interface.fa12_transfer -> Fa12Interface.fa12_transfer transaction_value
   | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
+  | AddressTezTransactionValue : (address * tez) -> (address * tez) transaction_value
+  | AddressTezAddressTransactionValue : (address * tez * address) -> (address * tez * address) transaction_value
+  | AddressOptKeyHashTransactionValue : (address * key_hash option) -> (address * key_hash option) transaction_value
 
 type address_and_nat = (address * nat)
+[@@deriving show]
+
+type address_and_tez = (address * tez)
+[@@deriving show]
+
+type address_and_tez_and_address = (address * tez * address)
+[@@deriving show]
+
+type address_and_key_hash_option = (address * key_hash option)
 [@@deriving show]
 
 type tez_and_address = (tez * address)
@@ -36,6 +48,9 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | NatContractTransactionValue c -> show_contract c
   | FA12TransferTransactionValue t -> Fa12Interface.show_fa12_transfer t
   | FA2BalanceOfResponseTransactionValue xs -> Fa2Interface.show_fa2_balance_of_response_list xs
+  | AddressTezTransactionValue at -> show_address_and_tez at
+  | AddressTezAddressTransactionValue ata -> show_address_and_tez_and_address ata
+  | AddressOptKeyHashTransactionValue akho -> show_address_and_key_hash_option akho
 
 (* operation *)
 
@@ -83,6 +98,9 @@ module Tezos = struct
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
   let fa12_transfer_transaction value tez contract = Transaction (FA12TransferTransactionValue value, tez, contract)
   let fa2_balance_of_response_transaction value tez contract = Transaction (FA2BalanceOfResponseTransactionValue value, tez, contract)
+  let address_tez_transaction value tez contract = Transaction (AddressTezTransactionValue value, tez, contract)
+  let address_tez_address_transaction value tez contract = Transaction (AddressTezAddressTransactionValue value, tez, contract)
+  let address_opt_key_hash_transaction value tez contract = Transaction (AddressOptKeyHashTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (contract_of_address (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)
