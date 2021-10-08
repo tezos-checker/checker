@@ -530,7 +530,7 @@ class TezWrapperTest(SandboxedTestCase):
         # Deposit some tez into the test account's vault
         call_endpoint("deposit", None, amount=2_000_000)
         assert_wrapped_tez_balance(wrapper, account, 2_000_000)
-        # Withdraw some tez into the test account's vault
+        # Withdraw some tez from the test account's vault
         call_endpoint("withdraw", 100)
         assert_wrapped_tez_balance(wrapper, account, 1_999_900)
         # Set test account vault's delegate
