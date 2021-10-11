@@ -506,6 +506,7 @@ class TezWrapperTest(SandboxedTestCase):
                 .as_transaction()
                 .autofill(ttl=MAX_OPERATIONS_TTL)
                 .sign(),
+                min_confirmations=3,
             )
             gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
