@@ -24,6 +24,10 @@ WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # tests
 WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
+# FA2 token id for tokens issued by the tez wrapper contract
+# FIXME: Find a way to get this value programatically
+TEZ_TOKEN_ID = 2
+
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
@@ -45,7 +49,18 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
     # TODO: There might be a way to get this from contract metadata
     kit_token_id = 0
     kit_balance = checker.metadata.getBalance((address, kit_token_id)).storage_view()
-    assert expected_kit == kit_balance
+    if expected_kit != kit_balance:
+        raise AssertionError(f"Expected {expected_kit} but got {kit_balance}")
+
+
+def assert_wrapped_tez_balance(wrapper: ContractInterface, address: str, expected: int):
+    fa2_balance_of = {
+        "requests": [{"owner": address, "token_id": TEZ_TOKEN_ID}],
+        "callback": None,
+    }
+    balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
+    if expected != balance:
+        raise AssertionError(f"Expected {expected} but got {balance}")
 
 
 def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
@@ -247,6 +262,30 @@ def merge_gas_profiles(profile1: Dict, profile2: Dict) -> Dict:
     return merged
 
 
+def write_gas_costs(gas_costs: Dict[str, int], output_path: str) -> None:
+    """
+    Writes the sorted contents of the provided gas costs dictionary to the specified file.
+    If a file already exists at output_path the provided input will be merged with it,
+    with the function input taking precedence in cases of conflicting keys.
+    """
+    if os.path.exists(output_path):
+        with open(output_path) as f:
+            existing_data = json.load(f)
+    else:
+        existing_data = {}
+    # Favor the input over the existing data
+    existing_data.update(gas_costs)
+
+    gas_costs_sorted = OrderedDict()
+    for k, v in sorted(
+        existing_data.items(), key=lambda tup: int(tup[1]), reverse=True
+    ):
+        gas_costs_sorted[k] = v
+
+    with open(output_path, "w") as f:
+        json.dump(gas_costs_sorted, f, indent=4)
+
+
 class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
@@ -299,7 +338,7 @@ class E2ETest(SandboxedTestCase):
         ):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
-            gas_costs[name] = int(ret["contents"][0]["gas_limit"])
+            gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         # ===============================================================================
@@ -436,16 +475,117 @@ class E2ETest(SandboxedTestCase):
         )
 
         print("Gas costs:")
-        gas_costs_sorted = OrderedDict()
-        for k, v in sorted(
-            gas_costs.items(), key=lambda tup: int(tup[1]), reverse=True
-        ):
-            gas_costs_sorted[k] = v
-
-        print(json.dumps(gas_costs_sorted, indent=4))
+        print(json.dumps(gas_costs, indent=4))
         if WRITE_GAS_COSTS:
-            with open(WRITE_GAS_COSTS, "w") as f:
-                json.dump(gas_costs_sorted, f, indent=4)
+            write_gas_costs(gas_costs, WRITE_GAS_COSTS)
+
+
+class TezWrapperTest(SandboxedTestCase):
+    def test_e2e(self):
+        gas_costs = {}
+
+        wrapper = deploy_tez_wrapper(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+        print("Deployment finished.")
+
+        account = self.client.key.public_key_hash()
+        # Note: using alice's account which is assumed to be already initialized in the sandbox
+        wrapper_alice = pytezos.pytezos.using(
+            shell=wrapper.shell,
+            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+        ).contract(wrapper.address)
+        account_alice = wrapper_alice.key.public_key_hash()
+
+        def call_endpoint(name, param, amount=0, client=self.client, contract=wrapper):
+            print(f"Calling {name} with {param} and mutez={amount}")
+            ret = inject(
+                client,
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
+            )
+            gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def single_fa2_transfer(
+            sender: str, recipient: str, amount: int, token_id=TEZ_TOKEN_ID
+        ):
+            return [
+                {
+                    "from_": sender,
+                    "txs": [
+                        {
+                            "to_": recipient,
+                            "token_id": token_id,
+                            "amount": amount,
+                        },
+                    ],
+                }
+            ]
+
+        # ===============================================================================
+        # Wrapper-specific entrypoints
+        # ===============================================================================
+        # Deposit some tez into the test account's vault
+        call_endpoint("deposit", None, amount=2_000_000)
+        assert_wrapped_tez_balance(wrapper, account, 2_000_000)
+        # Withdraw some tez from the test account's vault
+        call_endpoint("withdraw", 100)
+        assert_wrapped_tez_balance(wrapper, account, 1_999_900)
+        # Set test account vault's delegate
+        call_endpoint("set_delegate", None)
+
+        # ===============================================================================
+        # FA2 interface
+        # ===============================================================================
+        # Transfer from the test account to alice's account
+        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
+        assert_wrapped_tez_balance(wrapper, account, 1_999_810)
+        assert_wrapped_tez_balance(wrapper, account_alice, 90)
+        # Add the main account as an operator on alice's account
+        # Note: using a client instance with alice's key for this since she is the
+        # account owner.
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": wrapper_alice.key.public_key_hash(),
+                    "operator": account,
+                    "token_id": TEZ_TOKEN_ID,
+                }
+            },
+        ]
+        call_endpoint(
+            "update_operators",
+            update_operators,
+            client=wrapper_alice,
+            contract=wrapper_alice,
+        )
+
+        # Send some tez tokens back to the main test account
+        call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
+        assert_wrapped_tez_balance(wrapper, account, 1_999_890)
+        # `balance_of` requires a contract callback when executing on-chain. To make tests
+        # more light-weight and avoid needing an additional mock contract, we call it as a view.
+        # This comes with a downside, however, since using a view means that we don't get an
+        # estimate of the gas cost.
+        fa2_balance_of = {
+            "requests": [
+                {"owner": wrapper_alice.key.public_key_hash(), "token_id": TEZ_TOKEN_ID}
+            ],
+            "callback": None,
+        }
+        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+        wrapper.balance_of(**fa2_balance_of).callback_view()
+
+        print("Gas costs:")
+        print(json.dumps(gas_costs, indent=4))
+        if WRITE_GAS_COSTS:
+            write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
 
 class LiquidationsStressTest(SandboxedTestCase):
