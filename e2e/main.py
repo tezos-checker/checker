@@ -55,7 +55,7 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
 
 def assert_wrapped_tez_balance(wrapper: ContractInterface, address: str, expected: int):
     fa2_balance_of = {
-        "requests": [{"owner": address, "token_id": 2}],
+        "requests": [{"owner": address, "token_id": TEZ_TOKEN_ID}],
         "callback": None,
     }
     balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
@@ -512,7 +512,9 @@ class TezWrapperTest(SandboxedTestCase):
             gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def single_fa2_transfer(sender: str, recipient: str, amount: int, token_id=TEZ_TOKEN_ID):
+        def single_fa2_transfer(
+            sender: str, recipient: str, amount: int, token_id=TEZ_TOKEN_ID
+        ):
             return [
                 {
                     "from_": sender,
