@@ -24,6 +24,10 @@ WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # tests
 WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
+# FA2 token id for tokens issued by the tez wrapper contract
+# FIXME: Find a way to get this value programatically
+TEZ_TOKEN_ID = 2
+
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
@@ -488,8 +492,6 @@ class TezWrapperTest(SandboxedTestCase):
         print("Deployment finished.")
 
         account = self.client.key.public_key_hash()
-        # FIXME: Find a way to read this token id
-        token_id = 2
         # Note: using alice's account which is assumed to be already initialized in the sandbox
         wrapper_alice = pytezos.pytezos.using(
             shell=wrapper.shell,
@@ -510,7 +512,7 @@ class TezWrapperTest(SandboxedTestCase):
             gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def single_fa2_transfer(sender: str, recipient: str, amount: int, token_id=2):
+        def single_fa2_transfer(sender: str, recipient: str, amount: int, token_id=TEZ_TOKEN_ID):
             return [
                 {
                     "from_": sender,
@@ -551,7 +553,7 @@ class TezWrapperTest(SandboxedTestCase):
                 "add_operator": {
                     "owner": wrapper_alice.key.public_key_hash(),
                     "operator": account,
-                    "token_id": token_id,
+                    "token_id": TEZ_TOKEN_ID,
                 }
             },
         ]
@@ -571,7 +573,7 @@ class TezWrapperTest(SandboxedTestCase):
         # estimate of the gas cost.
         fa2_balance_of = {
             "requests": [
-                {"owner": wrapper_alice.key.public_key_hash(), "token_id": token_id}
+                {"owner": wrapper_alice.key.public_key_hash(), "token_id": TEZ_TOKEN_ID}
             ],
             "callback": None,
         }
