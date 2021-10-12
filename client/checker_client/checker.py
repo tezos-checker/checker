@@ -236,7 +236,7 @@ def start_local_sandbox(name: str, port: int):
         "--protocol-kind=Granada",
     ]
 
-    handle = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    handle = subprocess.Popen(args)
 
     def teardownFun():
         # send a keyboard interrupt and wait
