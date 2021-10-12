@@ -562,7 +562,7 @@ class TezWrapperTest(SandboxedTestCase):
             contract=wrapper_alice,
         )
 
-        # Send some kit back to the main test account
+        # Send some tez tokens back to the main test account
         call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
         assert_wrapped_tez_balance(wrapper, account, 1_999_890)
         # `balance_of` requires a contract callback when executing on-chain. To make tests
