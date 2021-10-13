@@ -279,18 +279,26 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
 
 let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
   let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
-  (* 1. Ensure no tez given *)
   let _ = ensure_no_tez_given () in
-  (* 2. Create a vault, if it does not exist already, and update the map. *)
-  let op_opt, vaults, vault_address = find_vault_address vaults !Ligo.Tezos.sender in
-  (* 3. Instruct the vault to set its own delegate (via indirect internal call). *)
-  let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_set_delegate" !Ligo.Tezos.self_address : (Ligo.address * Ligo.key_hash option) Ligo.contract option) with
-    | Some c -> LigoOp.Tezos.address_opt_key_hash_transaction (vault_address, kho) (Ligo.tez_from_literal "0mutez") c
-    | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSetDelegate : LigoOp.operation) in
-  let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
-  match op_opt with
-  | None -> ([op], state)
-  | Some origination -> ([origination; op], state)
+  match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
+  | Some vault_address ->
+    (* Case 1: The vault already exists. We can just instruct it to set its own
+     * delegate via a direct call. Cheaper than Case 2 below. *)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSetDelegate : LigoOp.operation) in
+    ([op], state)
+  | None ->
+    (* Case 2: The vault does not exist yet. We need to create it, and then
+     * instruct it to set its own delegate via an indirect call. This can be
+     * expensive the first time. *)
+    let origination, vault_address = originate_vault !Ligo.Tezos.self_address in
+    let vaults = Ligo.Big_map.update !Ligo.Tezos.sender (Some vault_address) vaults in
+    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_set_delegate" !Ligo.Tezos.self_address : (Ligo.address * Ligo.key_hash option) Ligo.contract option) with
+      | Some c -> LigoOp.Tezos.address_opt_key_hash_transaction (vault_address, kho) (Ligo.tez_from_literal "0mutez") c
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSetDelegate : LigoOp.operation) in
+    ([origination; op], state)
 
 (*****************************************************************************)
 (**                      {1 INTERNAL ENTRYPOINTS}                            *)
