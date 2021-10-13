@@ -1,10 +1,37 @@
 ## Configurations for Checker builds and code generation
 
-# Collateral token configuration
-collateral:
-  # Specifies the number of decimal digits used by the collateral token
-  # e.g. tez has 6 decimal digits.
-  decimal_digits: 6
+tokens:
+  # Collateral token configuration
+  collateral:
+    # The token's FA2 id
+    token_id: 2
+    # Specifies the number of decimal digits used by the token
+    # e.g. tez has 6 decimal digits.
+    decimal_digits: 6
+    # Optional FA2 display name
+    name: tok (checker dev)
+    # Optional FA2 token symbol
+    symbol: tok
+  # Collateral token configuration
+  kit:
+    # The token's FA2 id
+    token_id: 0
+    # Specifies the number of decimal digits used by the token
+    decimal_digits: 6
+    # Optional FA2 display name
+    name: kit (checker dev)
+    # Optional FA2 token symbol
+    symbol: kit
+  # Liquidity token configuration
+  liquidity:
+    # The token's FA2 id
+    token_id: 1
+    # Specifies the number of decimal digits used by the token
+    decimal_digits: 6
+    # Optional FA2 display name
+    name: liquidity (checker dev)
+    # Optional FA2 token symbol
+    symbol: lqt
 
 # Checker system constants
 constants:

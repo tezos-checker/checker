@@ -52,12 +52,22 @@ def ratio_from_str(ratio_str: str) -> Ratio:
 # Config classes
 # ================================================================================================
 @dataclass
-class CollateralTokenConfig:
+class TokenConfig:
+    token_id: int
     decimal_digits: int = 6
+    name: str = ""
+    symbol: str = ""
 
     @property
     def scaling_factor(self) -> int:
         return 10 ** self.decimal_digits
+
+
+@dataclass
+class Tokens:
+    collateral: TokenConfig
+    kit: TokenConfig
+    liquidity: TokenConfig
 
 
 @dataclass
@@ -89,7 +99,7 @@ class Constants:
 
 @dataclass
 class CheckerConfig:
-    collateral: CollateralTokenConfig
+    tokens: Tokens
     constants: Constants
 
 
@@ -143,12 +153,28 @@ class PositiveRatioField(RatioField):
         return ratio
 
 
-class CollateralTokenConfigSchema(Schema):
+class TokenConfigSchema(Schema):
+    token_id = BoundedIntField(lower=0, strict=True, required=True)
     decimal_digits = BoundedIntField(lower=0, strict=True)
+    name = fields.String()
+    symbol = fields.String()
 
     @post_load
     def make(self, data, **kwargs):
-        return CollateralTokenConfig(**data)
+        return TokenConfig(**data)
+
+
+class TokensSchema(Schema):
+    collateral = fields.Nested(TokenConfigSchema(), required=True)
+    kit = fields.Nested(TokenConfigSchema(), required=True)
+    liquidity = fields.Nested(TokenConfigSchema(), required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        # FIXME: Once we add a switch for indicating whether we are using
+        # the tez wrapper for collateral we can add logic here checking
+        # that all of the token ids are unique.
+        return Tokens(**data)
 
 
 class ConstantsSchema(Schema):
@@ -199,8 +225,8 @@ class ConstantsSchema(Schema):
 
 
 class CheckerConfigSchema(Schema):
-    collateral = fields.Nested(CollateralTokenConfigSchema())
-    constants = fields.Nested(ConstantsSchema())
+    tokens = fields.Nested(TokensSchema(), required=True)
+    constants = fields.Nested(ConstantsSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):
