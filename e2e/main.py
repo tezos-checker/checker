@@ -355,8 +355,8 @@ class E2ETest(SandboxedTestCase):
             update_operators = [
                 {
                     "add_operator": {
-                        "owner": account,  # bob?
-                        "operator": checker.context.address,  # checker
+                        "owner": account,
+                        "operator": checker.context.address,
                         "token_id": COLLATERAL_TOKEN_ID,
                     }
                 },
@@ -694,8 +694,8 @@ class LiquidationsStressTest(SandboxedTestCase):
             update_operators = [
                 {
                     "add_operator": {
-                        "owner": self.client.key.public_key_hash(),  # account,  # bob?
-                        "operator": checker.context.address,  # checker
+                        "owner": self.client.key.public_key_hash(),
+                        "operator": checker.context.address,
                         "token_id": COLLATERAL_TOKEN_ID,
                     }
                 },
