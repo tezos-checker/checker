@@ -24,9 +24,10 @@ WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # tests
 WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
-# FA2 token id for tokens issued by the tez wrapper contract
-# FIXME: Find a way to get this value programatically
-TEZ_TOKEN_ID = 2
+# FIXME: How to determine this field programmatically?  It must be equal to
+# tezWrapper.tez_token_id when collateral=tez or the same as the one used by
+# the FA2 we use as collateral.
+COLLATERAL_TOKEN_ID = 2
 
 
 class SandboxedTestCase(unittest.TestCase):
@@ -55,7 +56,7 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
 
 def assert_wrapped_tez_balance(wrapper: ContractInterface, address: str, expected: int):
     fa2_balance_of = {
-        "requests": [{"owner": address, "token_id": TEZ_TOKEN_ID}],
+        "requests": [{"owner": address, "token_id": COLLATERAL_TOKEN_ID}],
         "callback": None,
     }
     balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
@@ -304,6 +305,13 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        print("Deploying the tez wrapper.")
+        tez_wrapper = deploy_tez_wrapper(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
@@ -315,6 +323,7 @@ class E2ETest(SandboxedTestCase):
         checker = deploy_checker(
             self.client,
             checker_dir=CHECKER_DIR,
+            tez_wrapper=tez_wrapper.context.address,
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
@@ -341,11 +350,25 @@ class E2ETest(SandboxedTestCase):
             gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
+        def get_tez_tokens_and_make_checker_an_operator(amnt):
+            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            update_operators = [
+                {
+                    "add_operator": {
+                        "owner": account,  # bob?
+                        "operator": checker.context.address,  # checker
+                        "token_id": COLLATERAL_TOKEN_ID,
+                    }
+                },
+            ]
+            call_endpoint(tez_wrapper, "update_operators", update_operators)
+
         # ===============================================================================
         # Burrows
         # ===============================================================================
         # Create a burrow
-        call_checker_endpoint("create_burrow", (1, None), amount=10_000_000)
+        get_tez_tokens_and_make_checker_an_operator(10_000_000)
+        call_checker_endpoint("create_burrow", (1, None, 10_000_000))
         assert_kit_balance(checker, account, 0)
 
         # Get some kit
@@ -357,7 +380,8 @@ class E2ETest(SandboxedTestCase):
         assert_kit_balance(checker, account, 999_990)
 
         # Deposit tez
-        call_checker_endpoint("deposit_collateral", 1, amount=2_000_000)
+        get_tez_tokens_and_make_checker_an_operator(2_000_000)
+        call_checker_endpoint("deposit_collateral", (1, 2_000_000))
 
         # Withdraw tez
         call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
@@ -366,11 +390,13 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("set_burrow_delegate", (1, account))
 
         # Deactivate a burrow
-        call_checker_endpoint("create_burrow", (2, None), amount=3_000_000)
+        get_tez_tokens_and_make_checker_an_operator(3_000_000)
+        call_checker_endpoint("create_burrow", (2, None, 3_000_000))
         call_checker_endpoint("deactivate_burrow", (2, account))
 
         # Re-activate a burrow
-        call_checker_endpoint("activate_burrow", 2, amount=1_000_000)
+        get_tez_tokens_and_make_checker_an_operator(1_000_000)
+        call_checker_endpoint("activate_burrow", (2, 1_000_000))
 
         # Touch checker
         call_checker_endpoint("touch", None)
@@ -513,7 +539,7 @@ class TezWrapperTest(SandboxedTestCase):
             return ret
 
         def single_fa2_transfer(
-            sender: str, recipient: str, amount: int, token_id=TEZ_TOKEN_ID
+            sender: str, recipient: str, amount: int, token_id=COLLATERAL_TOKEN_ID
         ):
             return [
                 {
@@ -555,7 +581,7 @@ class TezWrapperTest(SandboxedTestCase):
                 "add_operator": {
                     "owner": wrapper_alice.key.public_key_hash(),
                     "operator": account,
-                    "token_id": TEZ_TOKEN_ID,
+                    "token_id": COLLATERAL_TOKEN_ID,
                 }
             },
         ]
@@ -575,7 +601,10 @@ class TezWrapperTest(SandboxedTestCase):
         # estimate of the gas cost.
         fa2_balance_of = {
             "requests": [
-                {"owner": wrapper_alice.key.public_key_hash(), "token_id": TEZ_TOKEN_ID}
+                {
+                    "owner": wrapper_alice.key.public_key_hash(),
+                    "token_id": COLLATERAL_TOKEN_ID,
+                }
             ],
             "callback": None,
         }
@@ -598,6 +627,13 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        print("Deploying the tez wrapper.")
+        tez_wrapper = deploy_tez_wrapper(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
@@ -609,6 +645,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         checker = deploy_checker(
             self.client,
             checker_dir=CHECKER_DIR,
+            tez_wrapper=tez_wrapper.context.address,
             oracle=oracle.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
@@ -652,9 +689,23 @@ class LiquidationsStressTest(SandboxedTestCase):
                 profile = profiler(self.client, checker, batch)
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
+        def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
+            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            update_operators = [
+                {
+                    "add_operator": {
+                        "owner": self.client.key.public_key_hash(),  # account,  # bob?
+                        "operator": checker.context.address,  # checker
+                        "token_id": COLLATERAL_TOKEN_ID,
+                    }
+                },
+            ]
+            call_endpoint(tez_wrapper, "update_operators", update_operators)
+
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.
-        call_endpoint(checker, "create_burrow", (0, None), amount=200_000_000)
+        get_tez_tokens_and_make_checker_an_operator(checker, 200_000_000)
+        call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
         call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
 
         call_endpoint(
@@ -671,12 +722,15 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         burrows = list(range(1, 1001))
 
+        get_tez_tokens_and_make_checker_an_operator(
+            checker, 100_000_000 * 1000
+        )  # 1000 = number of burrows
         call_bulk(
             [
-                checker.create_burrow((burrow_id, None)).with_amount(100_000_000)
+                checker.create_burrow((burrow_id, None, 100_000_000))
                 for burrow_id in burrows
             ],
-            batch_size=350,
+            batch_size=115,
         )
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
@@ -711,7 +765,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 )
                 for burrow_no in burrows
             ],
-            batch_size=170,
+            batch_size=100,
             profiler=mark_for_liquidation_profiler,
         )
 
@@ -740,6 +794,9 @@ class LiquidationsStressTest(SandboxedTestCase):
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
         cancel_ops = []
+        get_tez_tokens_and_make_checker_an_operator(
+            checker, 1_000_000_000 * 895
+        )  # the maximum amount of cancel_ops (see below)
         for i, (queued_leaf_ptr, leaf) in enumerate(
             auction_avl_leaves(
                 checker,
@@ -751,8 +808,8 @@ class LiquidationsStressTest(SandboxedTestCase):
             cancel_ops.append(
                 (
                     checker.deposit_collateral(
-                        leaf["leaf"]["value"]["contents"]["burrow"][1]
-                    ).with_amount(1_000_000_000),
+                        (leaf["leaf"]["value"]["contents"]["burrow"][1], 1_000_000_000)
+                    ),
                     checker.cancel_liquidation_slice(queued_leaf_ptr),
                 )
             )

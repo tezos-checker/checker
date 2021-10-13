@@ -52,15 +52,14 @@ let[@inline] error_InvalidLiquidationAuction                            : Ligo.i
 
 let[@inline] error_GetContractOptFailure                                : Ligo.int = Ligo.int_from_literal "95"
 
-let[@inline] error_GetEntrypointOptFailureTransferAddress               : Ligo.int = Ligo.int_from_literal "102"
-let[@inline] error_GetEntrypointOptFailureBurrowStoreTez                : Ligo.int = Ligo.int_from_literal "103"
-let[@inline] error_GetEntrypointOptFailureBurrowSendTezTo               : Ligo.int = Ligo.int_from_literal "105"
 let[@inline] error_GetEntrypointOptFailureBurrowSetDelegate             : Ligo.int = Ligo.int_from_literal "106"
-let[@inline] error_GetEntrypointOptFailureBurrowSendSliceToChecker      : Ligo.int = Ligo.int_from_literal "107"
+let[@inline] error_GetEntrypointOptFailureBurrowTransfer                : Ligo.int = Ligo.int_from_literal "108"
+
 let[@inline] error_UnauthorisedCaller                                   : Ligo.int = Ligo.int_from_literal "111"
 let[@inline] error_GetEntrypointOptFailureReceivePrice                  : Ligo.int = Ligo.int_from_literal "112"
 let[@inline] error_GetEntrypointOptFailureOracleEntrypoint              : Ligo.int = Ligo.int_from_literal "113"
 let[@inline] error_GetEntrypointOptFailureFA12Transfer                  : Ligo.int = Ligo.int_from_literal "114"
+let[@inline] error_GetEntrypointOptFailureFA2Transfer                   : Ligo.int = Ligo.int_from_literal "115"
 
 let[@inline] error_ContractNotDeployed                                  : Ligo.int = Ligo.int_from_literal "134"
 let[@inline] error_ContractAlreadyDeployed                              : Ligo.int = Ligo.int_from_literal "135"

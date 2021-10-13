@@ -63,6 +63,7 @@ let[@inline] tez_of_mutez_nat (amnt: Ligo.nat) = Ligo.mul_nat_tez amnt (Ligo.tez
 
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (tez_to_mutez_nat x)
 
+let tez_zero : Ligo.tez = Ligo.tez_from_literal "0mutez"
 let tez_scaling_factor_int : Ligo.int = Ligo.int_from_literal "1_000_000"
 let tez_scaling_factor_nat : Ligo.nat = Ligo.nat_from_literal "1_000_000n"
 

@@ -12,11 +12,13 @@ supply. These numbers need not be contiguous.
 Create a burrow
 ---------------
 
-Create and return a new burrow containing the supplied tez as collateral, minus
-the creation deposit. Fails if the tez is not enough to cover the creation
-deposit.
+Create and return a new burrow containing the supplied amount of token as
+collateral, minus the creation deposit. Fails if the collateral given is not
+enough to cover the creation deposit, if the sender does not own said amount of
+collateral, or if Checker is not authorized to transfer said amount of
+collateral.
 
-``create_burrow: (pair nat (option key_hash))``
+``create_burrow: (pair (pair nat (option key_hash)) nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -25,37 +27,43 @@ deposit.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | delegate      | option key_hash       | An optional delegate for the created burrow contract                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
+| tok           | nat                   | The amount of token supplied as collateral (including creation deposit) |
++---------------+-----------------------+-------------------------------------------------------------------------+
 
 
 Deposit collateral in a burrow
 ------------------------------
 
-Deposit an amount of tez as collateral to a burrow. Fails if the burrow does
-not exist, or if the sender is not the burrow owner.
+Deposit an amount of token as collateral to a burrow. Fails if the burrow does
+not exist, if the sender does not own said collateral, or if Checker is not
+authorized to transfer said collateral.
 
-``deposit_collateral: nat``
+``deposit_collateral: (pair nat nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow in which to deposit the tez              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
+| tok           | nat                   | The amount of token supplied to be used as collateral                   |
++---------------+-----------------------+-------------------------------------------------------------------------+
 
 
 Withdraw collateral from a burrow
 ---------------------------------
 
-Withdraw an amount of tez from a burrow. Fails if the burrow does not exist, if
-this action would overburrow it, or if the sender is not the burrow owner.
+Withdraw an amount of collateral from a burrow. Fails if the burrow does not
+exist, if this action would overburrow it, or if the sender is not the burrow
+owner.
 
-``withdraw_collateral: (pair nat mutez)``
+``withdraw_collateral: (pair nat nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow from which to withdraw the tez           |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| amount        | mutez                 | The amount of collateral to withdraw                                    |
+| amount        | nat                   | The amount of collateral to withdraw                                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -99,16 +107,19 @@ the burrow owner.
 Activate an inactive burrow
 ---------------------------
 
-Activate a currently inactive burrow. Fails if the burrow does not exist, if the
-burrow is already active, if the amount of tez given is less than the creation
-deposit, or if the sender is not the burrow owner.
+Activate a currently inactive burrow. Fails if the burrow does not exist, if
+the burrow is already active, if the amount of collateral given is not enough
+to cover the creation deposit, if the sender does not own said collateral, or
+if Checker is not authorized to transfer said collateral.
 
-``activate_burrow: nat``
+``activate_burrow: (pair nat nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | id            | nat                   | The caller's ID for the burrow to activate                              |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| tok           | nat                   | The amount of token supplied as collateral (including creation deposit) |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -116,9 +127,9 @@ Deactivate a burrow
 -------------------
 
 Deactivate a currently active burrow. Fails if the burrow does not exist, if it
-is already inactive, if it is overburrowed, if it has kit outstanding, if it
-has collateral sent off to auctions, or if the sender is not the burrow owner.
-If deactivation is successful, make a tez payment to the given address.
+is already inactive, if it is overburrowed, if it has kit outstanding, or if it
+has collateral sent off to auctions. If deactivation is successful, emits an
+FA2 transfer to the given address.
 
 ``deactivate_burrow: (pair nat address)``
 
@@ -152,7 +163,8 @@ burrow was operated on). Fails if the burrow does not exist.
 Set the delegate for a burrow
 -----------------------------
 
-Set the delegate of a burrow. Fails if if the sender is not the burrow owner.
+Set the delegate of a burrow. Fails if if the sender is not the burrow owner or
+if the deployed checker instance does not use tez as collateral.
 
 ``set_burrow_delegate: (pair nat (option key_hash))``
 
@@ -260,8 +272,8 @@ Mark a burrow for liquidation
 -----------------------------
 
 Mark a burrow for liquidation. Fails if the the burrow does not exist, or if it
-is not a candidate for liquidation. If the operation is successful, a tez
-payment is made to ``Tezos.sender`` with the liquidation reward.
+is not a candidate for liquidation. If the operation is successful, a payment
+is made to ``Tezos.sender`` with the liquidation reward.
 
 ``mark_for_liquidation: (pair address nat)``
 
@@ -340,22 +352,6 @@ winnings.
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
 | auction_id    | nat                   | The unique identifier of the completed auction                          |
-+---------------+-----------------------+-------------------------------------------------------------------------+
-
-
-Gather won collateral for a subsequent claim
---------------------------------------------
-
-Internal. Receive a liquidation slice (tez) from a burrow.
-
-``receive_slice_from_burrow: (pair address nat)``
-
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| Parameter     |      Field Type       | Description                                                             |
-+===============+=======================+=========================================================================+
-| owner         | address               | The burrow owner's address                                              |
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow sending the slice                        |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -611,4 +607,4 @@ Prior to sealing, the bytecode for all metadata must be deployed.
 Seal the contract and make it ready for use
 -------------------------------------------
 
-``sealContract: (pair address address)``
+``sealContract: pair ((pair address address) address)``

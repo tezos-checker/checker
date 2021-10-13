@@ -18,6 +18,7 @@ val tez_to_mutez_nat : Ligo.tez -> Ligo.nat
 val tez_of_mutez_nat : Ligo.nat -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
 
+val tez_zero : Ligo.tez
 val tez_scaling_factor_int : Ligo.int
 val tez_scaling_factor_nat : Ligo.nat
 

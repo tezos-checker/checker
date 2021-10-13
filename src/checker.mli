@@ -1,6 +1,7 @@
 open Ctez
 open Kit
 open Lqt
+open Tok
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
@@ -18,6 +19,7 @@ val entrypoint_touch : checker * unit -> (LigoOp.operation list * checker)
 
 (**/**)
 (* ONLY EXPOSED FOR TESTING REASONS. *)
+val collateral_token_id : Ligo.nat
 val assert_checker_invariants : checker -> unit
 val touch_with_index : checker -> Ligo.nat -> (LigoOp.operation list * checker)
 val calculate_touch_reward : Ligo.timestamp -> kit
@@ -32,40 +34,46 @@ val compute_outstanding_dissonance : checker -> kit (* "real" *) * kit (* approx
 (**/**)
 val get_transfer_ctez_entrypoint : external_contracts -> fa12_transfer Ligo.contract
 val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
+val get_transfer_collateral_fa2_entrypoint : external_contracts -> fa2_transfer list Ligo.contract
+
 (**/**)
 
 (*****************************************************************************)
 (**                            {1 BURROWS}                                   *)
 (*****************************************************************************)
 
-(** Create and return a new burrow containing the given tez as collateral,
-    minus the creation deposit. Fail if the tez is not enough to cover the
-    creation deposit.
+(** Create and return a new burrow containing the given amount of token as
+    collateral, minus the creation deposit. Fail if the collateral given is not
+    enough to cover the creation deposit, if the sender does not own said
+    collateral, or if Checker is not authorized to transfer said collateral.
 
     Parameters:
     - A new ID to be used for the newly-created burrow, that is distinct from
       all previously-used ones for this burrow owner
     - An optional delegate address for the freshly-originated burrow contract
+    - The amount of FA2 token to be deposited
 *)
-val entrypoint_create_burrow : checker * (Ligo.nat * Ligo.key_hash option) -> (LigoOp.operation list * checker)
+val entrypoint_create_burrow : checker * (Ligo.nat * Ligo.key_hash option * tok) -> (LigoOp.operation list * checker)
 
-(** Deposit a non-negative amount of tez as collateral to a burrow. Fail if
-    the burrow does not exist, or if the sender is not the burrow owner.
+(** Deposit an amount of token as collateral. Fail if the burrow does not
+    exist, if the sender does not own said collateral, or if Checker is not
+    authorized to transfer said collateral.
 
     Parameters:
     - The ID of the burrow into which the collateral will be deposited
+    - The amount of FA2 token to be deposited
 *)
-val entrypoint_deposit_collateral : checker * Ligo.nat -> (LigoOp.operation list * checker)
+val entrypoint_deposit_collateral : checker * (Ligo.nat * tok) -> (LigoOp.operation list * checker)
 
-(** Withdraw a non-negative amount of tez from a burrow. Fail if the burrow
-    does not exist, if this action would overburrow it, or if the sender is not
-    the burrow owner.
+(** Withdraw an amount of collateral from a burrow. Fail if the burrow does not
+    exist, if this action would overburrow it, or if the sender is not the
+    burrow owner.
 
     Parameters:
     - The ID of the burrow from which the collateral should be withdrawn
-    - The amount of tez to withdraw
+    - The amount of collateral to withdraw
 *)
-val entrypoint_withdraw_collateral : checker * (Ligo.nat * Ligo.tez) -> LigoOp.operation list * checker
+val entrypoint_withdraw_collateral : checker * (Ligo.nat * tok) -> (LigoOp.operation list * checker)
 
 (** Mint kits from a specific burrow. Fail if the burrow does not exist, if
     there is not enough collateral, or if the sender is not the burrow owner.
@@ -86,26 +94,28 @@ val entrypoint_mint_kit : checker * (Ligo.nat * kit) -> LigoOp.operation list * 
 *)
 val entrypoint_burn_kit : checker * (Ligo.nat * kit) -> (LigoOp.operation list * checker)
 
-(** Activate a currently inactive burrow. Fail if the burrow does not exist,
-    if the burrow is already active, if the amount of tez given is less than
-    the creation deposit, or if the sender is not the burrow owner.
+(** Activate a currently inactive burrow. Fail if the burrow does not exist, if
+    the burrow is already active, if the amount of collateral given is not
+    enough to cover the creation deposit, if the sender does not own said
+    collateral, or if Checker is not authorized to transfer said collateral.
 
     Parameters:
     - The ID of the burrow to activate
+    - The amount of FA2 token to be deposited as collateral (including the creation deposit)
 *)
-val entrypoint_activate_burrow : checker * Ligo.nat -> LigoOp.operation list * checker
+val entrypoint_activate_burrow : checker * (Ligo.nat * tok) -> (LigoOp.operation list * checker)
 
 (** Deativate a currently active burrow. Fails if the burrow does not exist,
     if it is already inactive, if it is overburrowed, if it has kit
     outstanding, if it has collateral sent off to auctions, or if the sender is
-    not the burrow owner. If deactivation is successful, make a tez payment to
+    not the burrow owner. If deactivation is successful, make an FA2 payment to
     the given address.
 
     Parameters:
     - The ID of the burrow to deactivate
-    - The address to make the tez payment to
+    - The address to make the FA2 transfer to
 *)
-val entrypoint_deactivate_burrow : checker * (Ligo.nat * Ligo.address) -> LigoOp.operation list * checker
+val entrypoint_deactivate_burrow : checker * (Ligo.nat * Ligo.address) -> (LigoOp.operation list * checker)
 
 (** Mark a burrow for liquidation. Fail if the burrow is not a candidate for
     liquidation or if the burrow does not exist. If successful, the reward is
@@ -220,15 +230,6 @@ val entrypoint_liquidation_auction_place_bid : checker * (liquidation_auction_id
     - The id of the completed auction
 *)
 val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id -> LigoOp.operation list * checker
-
-(** (INTERNAL) Receive a liquidation slice (tez) from a burrow; we gather the
-    slices in the checker contract, and the checker contract is responsible for
-    transfering the lot to the liquidation auction winner.
-
-    Parameters:
-    - The ID of the burrow sending the slice
-*)
-val entrypoint_receive_slice_from_burrow : checker * burrow_id -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                            {1 ORACLE}                                    *)

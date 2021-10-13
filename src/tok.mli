@@ -16,10 +16,6 @@ val tok_of_denomination : Ligo.nat -> tok
 val tok_to_denomination_int : tok -> Ligo.int
 val tok_to_denomination_nat : tok -> Ligo.nat
 
-(* TOKFIX: temporary, compatibility layer *)
-val tok_of_tez : Ligo.tez -> tok
-val tez_of_tok : tok -> Ligo.tez
-
 val tok_of_fraction_ceil : Ligo.int -> Ligo.int -> tok
 val tok_of_fraction_floor : Ligo.int -> Ligo.int -> tok
 

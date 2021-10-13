@@ -36,17 +36,6 @@ let tok_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : tok =
   then (Ligo.failwith internalError_TokOfFractionFloorNegative : tok)
   else Ligo.abs (fdiv_int_int (Ligo.mul_int_int x_num tok_scaling_factor_int) x_den)
 
-(* TOKFIX: temporary, compatibility layer *)
-let tok_of_tez (tz: Ligo.tez) : tok =
-  tok_of_fraction_floor
-    (Ligo.int (Ligo.div_tez_tez tz (Ligo.tez_from_literal "1mutez")))
-    tez_scaling_factor_int
-
-let tez_of_tok (tk: tok) : Ligo.tez =
-  fraction_to_tez_floor
-    (tok_to_denomination_int tk)
-    tok_scaling_factor_int
-
 let[@inline] geq_tok_tok = Ligo.geq_nat_nat
 let[@inline] leq_tok_tok = Ligo.leq_nat_nat
 

@@ -1,17 +1,14 @@
-open LiquidationAuctionTypes
 [@@@coverage off]
 
 type burrow_storage =
   { checker_address: Ligo.address;
-    burrow_id: burrow_id
+    collateral_fa2: Ligo.address;
   }
 [@@deriving show]
 
 type burrow_parameter =
   | BurrowSetDelegate of Ligo.key_hash option
-  | BurrowStoreTez
-  | BurrowSendTezTo of (Ligo.tez * Ligo.address)
-  | BurrowSendSliceToChecker of Ligo.tez
+  | BurrowTransfer of (Ligo.address * Ligo.nat)
 [@@deriving show]
 
 [@@@coverage on]
