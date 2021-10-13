@@ -190,15 +190,15 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metada
     """
     if not config.oracle_address and not oracle:
         raise ValueError(
-            "Oracle address was neither specified in the CLI config or provided as an argument."
+            "Oracle address was neither specified in the CLI config nor provided as an argument."
         )
     if not config.tez_wrapper and not tez_wrapper:
         raise ValueError(
-            "TezWrapper address was neither specified in the CLI config or provided as an argument."
+            "TezWrapper address was neither specified in the CLI config nor provided as an argument."
         )
     if not config.ctez_address and not ctez:
         raise ValueError(
-            "ctez address was neither specified in the CLI config or provided as an argument."
+            "ctez address was neither specified in the CLI config nor provided as an argument."
         )
     if oracle:
         config.oracle_address = oracle
