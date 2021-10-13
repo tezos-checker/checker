@@ -10,7 +10,7 @@ open Error
   * originate vaults pretty easily, everytime we look one up: if it's not
   * there, just originate it now. *)
 (* TODO: Investigate whether we should or should not inline this one. *)
-let originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.address =
+let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.address =
   LigoOp.Tezos.vault_create_contract
     (fun (p, storage : vault_parameter * vault_storage) ->
        match p with
