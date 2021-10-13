@@ -98,6 +98,15 @@ let[@inline] find_vault_address (vaults: vault_map) (user: Ligo.address) : LigoO
     let op, vault_address = originate_vault !Ligo.Tezos.self_address in
     Some op, (Ligo.Big_map.update user (Some vault_address) vaults), vault_address
 
+(** Find the address of the vault of given user, or originate it on the fly,
+  * with Tezos.self_address as the owner. *)
+let[@inline] find_vault_address_append (vaults: vault_map) (user: Ligo.address) (ops: LigoOp.operation list) : LigoOp.operation list * vault_map * Ligo.address =
+  match Ligo.Big_map.find_opt user vaults with
+  | Some vault_address -> ops, vaults, vault_address
+  | None ->
+    let op, vault_address = originate_vault !Ligo.Tezos.self_address in
+    (op :: ops), (Ligo.Big_map.update user (Some vault_address) vaults), vault_address
+
 (*****************************************************************************)
 (**                             {1 LEDGER}                                   *)
 (*****************************************************************************)
@@ -151,11 +160,8 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
          let { from_ = from_; txs = txs; } = tx in
 
          (* Origination of the from_ vault, if needed *)
-         let op_opt, vaults, from_vault_address = find_vault_address vaults from_ in
+         let ops, vaults, from_vault_address = find_vault_address_append vaults from_ ops in
          let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
-         let ops = match op_opt with
-           | None -> ops (* vault is already originated *)
-           | Some origination -> (origination :: ops) in (* originate now *)
 
          Ligo.List.fold_left
            (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
@@ -169,11 +175,11 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
                 let fa2_state = ledger_withdraw (fa2_state, token_id, from_, amnt) in
                 let fa2_state = ledger_issue (fa2_state, token_id, to_, amnt) in
                 (* Origination of the to_ vault, if needed *)
-                let op_opt, vaults, to_vault_address = find_vault_address vaults to_ in
-                let ops = match op_opt with
-                  | None -> ops (* vault is already originated *)
-                  | Some origination -> (origination :: ops) in (* originate now *)
+                let ops, vaults, to_vault_address = find_vault_address_append vaults to_ ops in
                 (* Instruct the from_ vault to send the actual tez to the to_ vault *)
+                (* FIXME: I think the following line can fail, if the
+                 * from_vault_address has not been originated yet. We might
+                 * need an indirect call here (%call_vault_send_tez_to_vault). *)
                 let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_vault" from_vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
                   | Some c -> LigoOp.Tezos.tez_address_transaction (tez_of_mutez_nat amnt, to_vault_address) (Ligo.tez_from_literal "0mutez") c
                   | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
