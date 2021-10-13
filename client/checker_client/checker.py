@@ -312,8 +312,8 @@ def deploy_checker(
     tz,
     checker_dir,
     *,
-    tez_wrapper,
     oracle,
+    tez_wrapper,
     ctez,
     ttl: Optional[int] = None,
     token_metadata_file=None,
@@ -383,7 +383,7 @@ def deploy_checker(
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
-    )  # TODO: Here we need the freshly deployed tez wrapper contract
+    )
 
     return checker
 

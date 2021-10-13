@@ -323,8 +323,8 @@ class E2ETest(SandboxedTestCase):
         checker = deploy_checker(
             self.client,
             checker_dir=CHECKER_DIR,
-            tez_wrapper=tez_wrapper.context.address,
             oracle=oracle.context.address,
+            tez_wrapper=tez_wrapper.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -645,8 +645,8 @@ class LiquidationsStressTest(SandboxedTestCase):
         checker = deploy_checker(
             self.client,
             checker_dir=CHECKER_DIR,
-            tez_wrapper=tez_wrapper.context.address,
             oracle=oracle.context.address,
+            tez_wrapper=tez_wrapper.context.address,
             ctez=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )

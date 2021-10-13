@@ -211,8 +211,8 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metada
     checker = checker_lib.deploy_checker(
         client,
         checker_dir,
-        tez_wrapper=config.tez_wrapper_address,
         oracle=config.oracle_address,
+        tez_wrapper=config.tez_wrapper_address,
         ctez=config.ctez_address,
         ttl=_patch_operation_ttl(config),
         token_metadata_file=token_metadata,
