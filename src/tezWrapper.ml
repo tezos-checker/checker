@@ -91,12 +91,12 @@ type tez_wrapper_params =
 
 (** Find the address of the vault of given user, or originate it on the fly,
   * with Tezos.self_address as the owner. *)
-let[@inline] find_vault_address (state: tez_wrapper_state) (user: Ligo.address) : LigoOp.operation option * tez_wrapper_state * Ligo.address =
-  match Ligo.Big_map.find_opt user state.vaults with
-  | Some vault_address -> (None: LigoOp.operation option), state, vault_address
+let[@inline] find_vault_address (vaults: vault_map) (user: Ligo.address) : LigoOp.operation option * vault_map * Ligo.address =
+  match Ligo.Big_map.find_opt user vaults with
+  | Some vault_address -> (None: LigoOp.operation option), vaults, vault_address
   | None ->
     let op, vault_address = originate_vault !Ligo.Tezos.self_address in
-    Some op, {state with vaults = Ligo.Big_map.update user (Some vault_address) state.vaults}, vault_address
+    Some op, (Ligo.Big_map.update user (Some vault_address) vaults), vault_address
 
 (*****************************************************************************)
 (**                             {1 LEDGER}                                   *)
@@ -147,28 +147,29 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
   let state, rev_ops =
     Ligo.List.fold_left
       (fun (((st, ops), tx): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer) ->
+         let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
          let { from_ = from_; txs = txs; } = tx in
 
          (* Origination of the from_ vault, if needed *)
-         let op_opt, st, from_vault_address = find_vault_address st from_ in
+         let op_opt, vaults, from_vault_address = find_vault_address vaults from_ in
+         let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
          let ops = match op_opt with
            | None -> ops (* vault is already originated *)
            | Some origination -> (origination :: ops) in (* originate now *)
 
          Ligo.List.fold_left
            (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
-              let fa2_st = st.fa2_state in
+              let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
               let { to_ = to_; token_id = token_id; amount = amnt; } = x in
 
-              if fa2_is_operator (fa2_st, !Ligo.Tezos.sender, from_, token_id)
+              if fa2_is_operator (fa2_state, !Ligo.Tezos.sender, from_, token_id)
               then
                 (* FA2-related changes *)
                 let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
-                let fa2_st = ledger_withdraw (fa2_st, token_id, from_, amnt) in
-                let fa2_st = ledger_issue (fa2_st, token_id, to_, amnt) in
-                let st = { st with fa2_state = fa2_st } in
+                let fa2_state = ledger_withdraw (fa2_state, token_id, from_, amnt) in
+                let fa2_state = ledger_issue (fa2_state, token_id, to_, amnt) in
                 (* Origination of the to_ vault, if needed *)
-                let op_opt, st, to_vault_address = find_vault_address st to_ in
+                let op_opt, vaults, to_vault_address = find_vault_address vaults to_ in
                 let ops = match op_opt with
                   | None -> ops (* vault is already originated *)
                   | Some origination -> (origination :: ops) in (* originate now *)
@@ -178,6 +179,7 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
                   | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
                 let ops = (op :: ops) in
 
+                let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
                 (st, ops)
               else
                 (failwith "FA2_NOT_OPERATOR" : tez_wrapper_state * LigoOp.operation list)
@@ -244,44 +246,48 @@ let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operato
 (*****************************************************************************)
 
 let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation list * tez_wrapper_state =
+  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   (* 1. Update the balance on the ledger *)
-  let state_fa2_state = ledger_issue_tez_token (state.fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
-  let state = { state with fa2_state = state_fa2_state } in
+  let fa2_state = ledger_issue_tez_token (fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
   (* 2. Create a vault, if it does not exist already, and update the map. *)
-  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
+  let op_opt, vaults, vault_address = find_vault_address vaults !Ligo.Tezos.sender in
   (* 3. Transfer the actual tez to the vault of the sender (via indirect internal call). *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_receive_tez" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.address_tez_transaction (vault_address, !Ligo.Tezos.amount) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultReceiveTez : LigoOp.operation) in
+  let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
 
 let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
+  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   (* 1. Ensure no tez given *)
   let _ = ensure_no_tez_given () in
   (* 2. Reduce the balance of the tez owner *)
-  let state_fa2_state = ledger_withdraw_tez_token (state.fa2_state, !Ligo.Tezos.sender, amnt) in
-  let state = { state with fa2_state = state_fa2_state; } in
+  let fa2_state = ledger_withdraw_tez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
   (* 3. Create a vault, if it does not exist already, and update the map. *)
-  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
+  let op_opt, vaults, vault_address = find_vault_address vaults !Ligo.Tezos.sender in
   (* 4. Instruct the vault to send the actual tez to the owner (via indirect internal call). *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_send_tez_to_contract" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez * Ligo.address) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.address_tez_address_transaction (vault_address, amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSendTezToContract : LigoOp.operation) in
+  let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
 
 let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
+  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   (* 1. Ensure no tez given *)
   let _ = ensure_no_tez_given () in
   (* 2. Create a vault, if it does not exist already, and update the map. *)
-  let op_opt, state, vault_address = find_vault_address state !Ligo.Tezos.sender in
+  let op_opt, vaults, vault_address = find_vault_address vaults !Ligo.Tezos.sender in
   (* 3. Instruct the vault to set its own delegate (via indirect internal call). *)
   let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_set_delegate" !Ligo.Tezos.self_address : (Ligo.address * Ligo.key_hash option) Ligo.contract option) with
     | Some c -> LigoOp.Tezos.address_opt_key_hash_transaction (vault_address, kho) (Ligo.tez_from_literal "0mutez") c
     | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSetDelegate : LigoOp.operation) in
+  let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
   match op_opt with
   | None -> ([op], state)
   | Some origination -> ([origination; op], state)
