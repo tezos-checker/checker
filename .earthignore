@@ -1,5 +1,7 @@
 # Locally generated files
 src/checkerEntrypoints.ml
+src/kit.ml
+src/lqt.ml
 src/tok.ml
 src/constants.ml
 

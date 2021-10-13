@@ -1,6 +1,8 @@
 # Generated code
 src/checkerEntrypoints.ml
 src/tok.ml
+src/kit.ml
+src/lqt.ml
 src/constants.ml
 
 generated/michelson/main.tz

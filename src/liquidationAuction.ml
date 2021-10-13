@@ -280,7 +280,7 @@ let start_liquidation_auction_if_possible
     let split_threshold =
       (* split_threshold = max (max_lot_size, FLOOR(queued_amount * min_lot_auction_queue_fraction)) *)
       let { num = num_qf; den = den_qf; } = min_lot_auction_queue_fraction in
-      max_tok
+      tok_max
         max_lot_size
         (tok_of_fraction_floor
            (Ligo.mul_nat_int (tok_to_denomination_nat queued_amount) num_qf)

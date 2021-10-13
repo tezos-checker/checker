@@ -256,8 +256,33 @@ def load_template_env() -> Environment:
     )
 
 
-def generate_src_module(module: Path, template: Template, config: CheckerConfig):
-    """Generates a source code module using the provided template and configuration"""
+def generate_token_src_module(
+    module: Path, template: Template, token_config: TokenConfig
+) -> None:
+    """Generates a token source code module using the provided template and configuration
+
+    Provides the following variables to the template:
+        * token_config (TokenConfig)
+        * module_name (str)
+    """
+    logger.info(
+        f"Rendering token src module template '{template.name}' using provided config"
+    )
+    module_name = module.name.split(".")[0]
+    rendered = template.render(module_name=module_name, token_config=token_config)
+    logger.info(f"Writing rendered module at {module}")
+    with module.open("w") as f:
+        f.write(rendered)
+
+
+def generate_src_module(
+    module: Path, template: Template, config: CheckerConfig
+) -> None:
+    """Generates a source code module using the provided template and configuration
+
+    Provides the following variables to the template:
+        * config (CheckerConfig)
+    """
     logger.info(
         f"Rendering src module template '{template.name}' using provided config"
     )
