@@ -554,6 +554,9 @@ class TezWrapperTest(SandboxedTestCase):
                 }
             ]
 
+        # Edge case: this call should succeed, according to the FA2 spec
+        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
+
         # ===============================================================================
         # Wrapper-specific entrypoints
         # ===============================================================================
