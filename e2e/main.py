@@ -828,7 +828,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             flattened_cancel_ops += [op1, op2]
         call_bulk(
             flattened_cancel_ops,
-            batch_size=170,
+            batch_size=100,
             profiler=cancel_liquidation_slice_profiler,
         )
 
