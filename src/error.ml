@@ -76,7 +76,8 @@ let[@inline] error_GetEntrypointOptFailureVaultSetDelegate              : Ligo.i
 
 let[@inline] error_GetEntrypointOptFailureCallVaultReceiveTez           : Ligo.int = Ligo.int_from_literal "170"
 let[@inline] error_GetEntrypointOptFailureCallVaultSendTezToContract    : Ligo.int = Ligo.int_from_literal "171"
-let[@inline] error_GetEntrypointOptFailureCallVaultSetDelegate          : Ligo.int = Ligo.int_from_literal "172"
+let[@inline] error_GetEntrypointOptFailureCallVaultSendTezToVault       : Ligo.int = Ligo.int_from_literal "172"
+let[@inline] error_GetEntrypointOptFailureCallVaultSetDelegate          : Ligo.int = Ligo.int_from_literal "173"
 
 (* INTERNAL ERRORS *)
 
