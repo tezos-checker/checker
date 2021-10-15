@@ -19,8 +19,8 @@ let with_sealed_state_and_cfmm_setup f =
        Ligo.Tezos.reset ();
        let burrow_id = Ligo.nat_from_literal "74n" in
        (* Create a burrow *)
-       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-       let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
+       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
+       let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None, tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))))) in
        let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
        (* Mint some kit *)
        Ligo.Tezos.new_transaction ~seconds_passed:62 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -235,9 +235,9 @@ let suite =
     ("wrapper_view_burrow_max_mintable_kit - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let initial_amount = tez_of_tok (tok_add Constants.creation_deposit Constants.creation_deposit) in
-          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:initial_amount;
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
+          let initial_amount = tok_add Constants.creation_deposit Constants.creation_deposit in
+          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None, initial_amount)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_kit_equal
             ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "476_190n"))
@@ -248,8 +248,8 @@ let suite =
     ("wrapper_view_is_burrow_overburrowed - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(tez_of_tok Constants.creation_deposit);
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None, Constants.creation_deposit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool
             "burrow cannot be overburrowed already"
@@ -260,8 +260,8 @@ let suite =
     ("wrapper_view_is_burrow_liquidatable - sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(tez_of_tok Constants.creation_deposit);
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (Ligo.nat_from_literal "0n", None, Constants.creation_deposit)))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
           assert_bool
             "burrow cannot be liquidatable already"

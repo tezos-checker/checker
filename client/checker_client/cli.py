@@ -176,6 +176,7 @@ def deploy(config: Config, address=None, port=None, key=None):
     show_default=True,
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
+@click.option("--tez_wrapper", type=str, help="TezWrapper contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
 @click.option(
     "--token-metadata",
@@ -183,17 +184,21 @@ def deploy(config: Config, address=None, port=None, key=None):
     help="optional JSON file containing the TZIP-12 token_metadata.",
 )
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
+def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metadata):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
     if not config.oracle_address and not oracle:
         raise ValueError(
-            "Oracle address was neither specified in the CLI config or provided as an argument."
+            "Oracle address was neither specified in the CLI config nor provided as an argument."
+        )
+    if not config.tez_wrapper and not tez_wrapper:
+        raise ValueError(
+            "TezWrapper address was neither specified in the CLI config nor provided as an argument."
         )
     if not config.ctez_address and not ctez:
         raise ValueError(
-            "ctez address was neither specified in the CLI config or provided as an argument."
+            "ctez address was neither specified in the CLI config nor provided as an argument."
         )
     if oracle:
         config.oracle_address = oracle
@@ -207,6 +212,7 @@ def checker(config: Config, checker_dir, oracle, ctez, token_metadata):
         client,
         checker_dir,
         oracle=config.oracle_address,
+        tez_wrapper=config.tez_wrapper_address,
         ctez=config.ctez_address,
         ttl=_patch_operation_ttl(config),
         token_metadata_file=token_metadata,

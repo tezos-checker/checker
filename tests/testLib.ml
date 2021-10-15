@@ -7,6 +7,7 @@ let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
 let ctez_addr = Ligo.address_of_string "ctez_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"
+let collateral_fa2_addr = Ligo.address_of_string "collateral_fa2_addr"
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
@@ -52,6 +53,8 @@ let assert_slice_content_list_equal ~expected ~real = OUnit2.assert_equal ~print
 type liquidation_slice_list = LiquidationAuctionPrimitiveTypes.liquidation_slice list [@@deriving show]
 let assert_liquidation_slice_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_liquidation_slice_list expected real
 
+let assert_operation_equal ~expected ~real = OUnit2.assert_equal ~printer:LigoOp.show_operation expected real
+
 type operation_list = LigoOp.operation list [@@deriving show]
 let assert_operation_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_operation_list expected real
 
@@ -78,7 +81,7 @@ let with_sealed_wrapper f =
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
 
   let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
+  let op = CheckerMain.SealContract (oracle_addr, ctez_addr, collateral_fa2_addr) in
   let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
   f wrapper
 

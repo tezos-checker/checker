@@ -22,6 +22,7 @@ type fa2_transfer_destination =
     token_id : fa2_token_id;
     amount : Ligo.nat;
   }
+[@@deriving show]
 
 type fa2_transfer =
   (* BEGIN_LIGO [@layout:comb] END_LIGO *)
@@ -29,6 +30,7 @@ type fa2_transfer =
     from_ : Ligo.address;
     txs : fa2_transfer_destination list;
   }
+[@@deriving show]
 
 type fa2_balance_of_request =
   (* BEGIN_LIGO [@layout:comb] END_LIGO *)
@@ -145,6 +147,9 @@ type fa2_token_sender =
 [@@@coverage off]
 
 type fa2_balance_of_response_list = fa2_balance_of_response list
+[@@deriving show]
+
+type fa2_transfer_list = fa2_transfer list
 [@@deriving show]
 
 [@@@coverage on]

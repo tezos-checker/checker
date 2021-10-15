@@ -313,6 +313,7 @@ def deploy_checker(
     checker_dir,
     *,
     oracle,
+    tez_wrapper,
     ctez,
     ttl: Optional[int] = None,
     token_metadata_file=None,
@@ -376,7 +377,13 @@ def deploy_checker(
             print("  deployed: chunk {}.".format(chunk_no))
 
     print("Sealing.")
-    inject(tz, checker.sealContract((oracle, ctez)).as_transaction().autofill(ttl=ttl).sign())
+    inject(
+        tz,
+        checker.sealContract((oracle, tez_wrapper, ctez))
+        .as_transaction()
+        .autofill(ttl=ttl)
+        .sign(),
+    )
 
     return checker
 

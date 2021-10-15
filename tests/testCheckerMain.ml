@@ -19,7 +19,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
  * argument and increase test coverage. *)
 let test_deploy_function_with_lazy_params_succeeds lazy_params =
   Ligo.Tezos.reset ();
-  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
+  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:leena_addr ~amount:Common.tez_zero;
 
   let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
@@ -95,19 +95,19 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Create_burrow" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Create_burrow (Ligo.nat_from_literal "63n", Some charles_key_hash)) (* note: values randomly chosen *)
+         (Create_burrow (Ligo.nat_from_literal "63n", Some charles_key_hash, Tok.tok_zero)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Deposit_collateral" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Deposit_collateral (Ligo.nat_from_literal "128n")) (* note: values randomly chosen *)
+         (Deposit_collateral (Ligo.nat_from_literal "128n", Tok.tok_zero)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Withdraw_collateral" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Withdraw_collateral (Ligo.nat_from_literal "32n", Ligo.tez_from_literal "4_231_643mutez")) (* note: values randomly chosen *)
+         (Withdraw_collateral (Ligo.nat_from_literal "32n", Tok.tok_of_denomination (Ligo.nat_from_literal "4_231_643n"))) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Mint_kit" >::
@@ -125,7 +125,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Activate_burrow" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Activate_burrow (Ligo.nat_from_literal "62_516n")) (* note: values randomly chosen *)
+         (Activate_burrow (Ligo.nat_from_literal "62_516n", Tok.tok_zero)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Deactivate_burrow" >::
@@ -217,12 +217,6 @@ let suite =
          (Liquidation_auction_claim_win (auction_id)) (* note: values randomly chosen *)
     );
 
-    ("If checker is not sealed, the deployer should be able to call DeployFunction - Receive_slice_from_burrow" >::
-     fun _ ->
-       test_deploy_function_with_lazy_params_succeeds
-         (Receive_slice_from_burrow (bob_addr, Ligo.nat_from_literal "57n")) (* note: values randomly chosen *)
-    );
-
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Receive_price" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
@@ -262,7 +256,7 @@ let suite =
        let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
+       let op = CheckerMain.SealContract (oracle_addr, ctez_addr, collateral_fa2_addr) in
        assert_raises
          (Failure (Ligo.string_of_int error_UnauthorisedCaller))
          (fun () -> CheckerMain.main (op, wrapper))
@@ -330,18 +324,18 @@ let suite =
           let user_addr = alice_addr in
 
           (* Create_burrow *)
-          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "5_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None, Tok.tok_of_denomination (Ligo.nat_from_literal "5_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Deposit_collateral *)
-          Ligo.Tezos.new_transaction ~seconds_passed:62 ~blocks_passed:1 ~sender:user_addr ~amount:(Ligo.tez_from_literal "6_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Deposit_collateral (burrow_id)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:62 ~blocks_passed:1 ~sender:user_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Deposit_collateral (burrow_id, Tok.tok_of_denomination (Ligo.nat_from_literal "6_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Withdraw_collateral *)
           Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:user_addr ~amount:(Ligo.tez_from_literal "0mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Withdraw_collateral (burrow_id, Ligo.tez_from_literal "1_000_000mutez")))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Withdraw_collateral (burrow_id, Tok.tok_of_denomination (Ligo.nat_from_literal "1_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Mint_kit *)
@@ -369,8 +363,8 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Activate_burrow *)
-          Ligo.Tezos.new_transaction ~seconds_passed:129 ~blocks_passed:2 ~sender:user_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Activate_burrow (burrow_id)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:129 ~blocks_passed:2 ~sender:user_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Activate_burrow (burrow_id, Tok.tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* Touch_burrow *)
@@ -427,8 +421,8 @@ let suite =
           let user_addr = alice_addr in
 
           (* Create_burrow *)
-          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None, Tok.tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: mint as much kit as possible *)
@@ -482,8 +476,8 @@ let suite =
           let user_addr = alice_addr in
 
           (* Create_burrow *)
-          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:(Ligo.tez_from_literal "10_000_000mutez");
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None)))) in
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:user_addr ~amount:Common.tez_zero;
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Create_burrow (burrow_id, None, Tok.tok_of_denomination (Ligo.nat_from_literal "10_000_000n"))))) in
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: mint as much kit as possible *)
@@ -565,22 +559,6 @@ let suite =
        )
     );
 
-    (* Note: rather superficial call, to increase path coverage; I don't
-     * think we can actually call this reasonably, since the only contract
-     * that can call this entrypoint and succeed is a burrow contract. *)
-    ("If checker is sealed, users should be able to call CheckerEntrypoint/LazyParams/Receive_slice_from_burrow" >::
-     with_sealed_wrapper
-       (fun sealed_wrapper ->
-          assert_raises
-            (Failure (Ligo.string_of_int error_NonExistentBurrow))
-            (fun () ->
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Receive_slice_from_burrow (bob_addr, Ligo.nat_from_literal "412n")))) in  (* note: values randomly chosen *)
-               Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-               CheckerMain.main (op, sealed_wrapper)
-            )
-       )
-    );
-
     ("If checker is sealed, users should be able to call CheckerEntrypoint/LazyParams/Receive_price" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
@@ -624,7 +602,7 @@ let suite =
     ("SealContract - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let op = CheckerMain.SealContract (oracle_addr, ctez_addr) in
+          let op = CheckerMain.SealContract (oracle_addr, ctez_addr, collateral_fa2_addr) in
           assert_raises
             (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
             (fun () -> CheckerMain.main (op, sealed_wrapper))

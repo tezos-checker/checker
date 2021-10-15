@@ -11,9 +11,9 @@ type 'parameter transaction_value = (* GADT *)
   | AddressNatTransactionValue : (address * nat) -> (address * nat) transaction_value
   | TezAddressTransactionValue : (tez * address) -> (tez * address) transaction_value
   | OptKeyHashTransactionValue : key_hash option -> key_hash option transaction_value
-  | TezTransactionValue : tez -> tez transaction_value
   | NatContractTransactionValue : nat contract -> nat contract transaction_value
   | FA12TransferTransactionValue : Fa12Interface.fa12_transfer -> Fa12Interface.fa12_transfer transaction_value
+  | FA2TransferTransactionValue : Fa2Interface.fa2_transfer list -> Fa2Interface.fa2_transfer list transaction_value
   | FA2BalanceOfResponseTransactionValue : Fa2Interface.fa2_balance_of_response list -> Fa2Interface.fa2_balance_of_response list transaction_value
   | AddressTezTransactionValue : (address * tez) -> (address * tez) transaction_value
   | AddressTezAddressTransactionValue : (address * tez * address) -> (address * tez * address) transaction_value
@@ -44,9 +44,9 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | AddressNatTransactionValue p -> show_address_and_nat p
   | TezAddressTransactionValue ta -> show_tez_and_address ta
   | OptKeyHashTransactionValue kho -> show_key_hash_option kho
-  | TezTransactionValue tz -> string_of_tez tz
   | NatContractTransactionValue c -> show_contract c
   | FA12TransferTransactionValue t -> Fa12Interface.show_fa12_transfer t
+  | FA2TransferTransactionValue t -> Fa2Interface.show_fa2_transfer_list t
   | FA2BalanceOfResponseTransactionValue xs -> Fa2Interface.show_fa2_balance_of_response_list xs
   | AddressTezTransactionValue at -> show_address_and_tez at
   | AddressTezAddressTransactionValue ata -> show_address_and_tez_and_address ata
@@ -94,9 +94,9 @@ module Tezos = struct
   let address_nat_transaction p tez contract = Transaction (AddressNatTransactionValue p, tez, contract)
   let tez_address_transaction value tez contract = Transaction (TezAddressTransactionValue value, tez, contract)
   let opt_key_hash_transaction value tez contract = Transaction (OptKeyHashTransactionValue value, tez, contract)
-  let tez_transaction value tez contract = Transaction (TezTransactionValue value, tez, contract)
   let nat_contract_transaction value tez contract = Transaction (NatContractTransactionValue value, tez, contract)
   let fa12_transfer_transaction value tez contract = Transaction (FA12TransferTransactionValue value, tez, contract)
+  let fa2_transfer_transaction value tez contract = Transaction (FA2TransferTransactionValue value, tez, contract)
   let fa2_balance_of_response_transaction value tez contract = Transaction (FA2BalanceOfResponseTransactionValue value, tez, contract)
   let address_tez_transaction value tez contract = Transaction (AddressTezTransactionValue value, tez, contract)
   let address_tez_address_transaction value tez contract = Transaction (AddressTezAddressTransactionValue value, tez, contract)
