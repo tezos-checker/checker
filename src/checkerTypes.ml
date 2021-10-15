@@ -11,8 +11,8 @@ type burrow_map = (burrow_id, burrow) Ligo.big_map
 
 type external_contracts = {
   oracle : Ligo.address;
-  ctez : Ligo.address;
   collateral_fa2 : Ligo.address;
+  ctez : Ligo.address;
 }
 
 type checker =

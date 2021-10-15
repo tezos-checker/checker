@@ -554,7 +554,11 @@ class TezWrapperTest(SandboxedTestCase):
                 }
             ]
 
-        # Edge case: this call should succeed, according to the FA2 spec
+        # Edge case: this call should succeed, according to the FA2 spec. It
+        # must come first: by trying to transfer zero tokens before either the
+        # source or the target account is created, we ensure that
+        # TezWrapper.transfer does not fail due to non-originated vault
+        # contracts.
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
 
         # ===============================================================================

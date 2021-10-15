@@ -379,7 +379,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, ctez, tez_wrapper))
+        checker.sealContract((oracle, tez_wrapper, ctez))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
