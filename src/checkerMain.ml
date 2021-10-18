@@ -3,6 +3,7 @@ open CheckerTypes
 open Checker
 open Fa2Interface
 open Error
+open Common
 
 (* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
  * up parameters we can not serialize here.
@@ -47,6 +48,8 @@ let initial_wrapper (addr: Ligo.address) =
    END_LIGO *)
 
 let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
+  let _ = ensure_no_tez_given () in
+
   let { lazy_functions = lazy_functions; metadata = metadata; deployment_state = deployment_state } = state in
 
   let ops, lazy_functions, metadata, deployment_state = match deployment_state with
