@@ -36,7 +36,7 @@ open FixedPoint
                                                                                                                                           d_t' = -0.0005 / 86400^2    if exp(-0.05)  >= p_t > -infinity
     ]}
 *)
-let compute_drift_derivative (target : fixedpoint) : fixedpoint =
+let[@inline] compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
 
   (* Curve parameters
