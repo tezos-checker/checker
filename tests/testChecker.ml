@@ -313,23 +313,6 @@ let suite =
        | None -> assert_failure "Expected a burrow representation to exist but none was found"
     );
 
-    (* FIXME:
-        ("withdraw_collateral - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           let initial_deposit = tok_of_denomination (Ligo.nat_from_literal "3_000_000n") in
-           let withdrawal = tok_of_denomination (Ligo.nat_from_literal "1_000_000n") in
-
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
-           let _, checker = newly_created_burrow empty_checker "0n" initial_deposit in
-
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "42mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () -> Checker.entrypoint_withdraw_collateral (checker, (Ligo.nat_from_literal "0n", withdrawal)))
-        );
-    *)
-
     ("withdraw_collateral - non-owner cannot withdraw" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -831,24 +814,6 @@ let suite =
 
     );
 
-    (* FIXME:
-        ("burn_kit - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           (* Create a burrow *)
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
-           let _, checker = newly_created_burrow empty_checker "0n" Constants.creation_deposit in
-           let some_kit = Kit.kit_of_denomination (Ligo.nat_from_literal "1n") in
-
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () ->
-                Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-                Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", some_kit))
-             )
-        );
-    *)
-
     ("burn_kit - owner can burn" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -1086,23 +1051,6 @@ let suite =
       ctez_add new_checker.cfmm.ctez (ctez_of_muctez bought_muctez) = checker.cfmm.ctez
     );
 
-    (* FIXME:
-        ("set_burrow_delegate - transaction with value > 0 fails" >::
-         fun _ ->
-           (* Create a burrow *)
-           Ligo.Tezos.reset ();
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
-           let _, checker = newly_created_burrow empty_checker "0n" Constants.creation_deposit in
-
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () ->
-                Checker.entrypoint_set_burrow_delegate (checker, (Ligo.nat_from_literal "0n", None))
-             )
-        );
-    *)
-
     (
       let cfmm_kit = Ligo.nat_from_literal ("1_000n") in
       let cfmm_ctez = ctez_of_muctez (Ligo.nat_from_literal ("1_000n")) in
@@ -1238,22 +1186,6 @@ let suite =
        assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
-    (* FIXME:
-        ("sell_kit - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           let kit_to_sell = kit_of_denomination (Ligo.nat_from_literal "1n") in
-           let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
-
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () ->
-                Checker.entrypoint_sell_kit (empty_checker, (kit_to_sell, min_ctez_expected, Ligo.timestamp_from_seconds_literal 1))
-             )
-        );
-    *)
-
     ("remove_liquidity - returns expected kit and tez" >::
      fun _ ->
        Ligo.Tezos.reset ();
@@ -1298,64 +1230,9 @@ let suite =
        ()
     );
 
-    (* FIXME:
-        ("remove_liquidity - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           let min_kit_expected = kit_of_denomination (Ligo.nat_from_literal "1n") in
-           let min_ctez_expected = ctez_of_muctez (Ligo.nat_from_literal "1n") in
-           let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
-
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () ->
-                Checker.entrypoint_remove_liquidity (empty_checker, (my_liquidity_tokens, min_ctez_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1))
-             )
-        );
-    *)
-
     (* ************************************************************************* *)
     (**                               FA2                                        *)
     (* ************************************************************************* *)
-    (* FIXME:
-        ("strict_entrypoint_transfer (FA2) - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () -> Checker.strict_entrypoint_transfer (empty_checker, []))
-        );
-    *)
-
-    (* FIXME:
-        ("strict_entrypoint_balance_of (FA2) - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-
-           let fa2_balance_of_param =
-             { requests = [];
-               callback = Ligo.contract_of_address (Ligo.address_of_string "test address");
-             } in
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () -> Checker.strict_entrypoint_balance_of (empty_checker, fa2_balance_of_param))
-        );
-    *)
-
-    (* FIXME:
-        ("entrypoint_update_operators (FA2) - transaction with value > 0 fails" >::
-         fun _ ->
-           Ligo.Tezos.reset ();
-           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
-           assert_raises
-             (Failure (Ligo.string_of_int error_UnwantedTezGiven))
-             (fun () -> Checker.entrypoint_update_operators (empty_checker, []))
-        );
-    *)
-
     ("fa2 scenario" >::
      fun _ ->
        Ligo.Tezos.reset ();

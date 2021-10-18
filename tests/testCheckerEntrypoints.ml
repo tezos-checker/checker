@@ -305,6 +305,69 @@ let suite =
        )
     );
 
+    (* Test failures when checker is accidentally given any tez. *)
+    ("strict_entrypoint_transfer (main) - fails when unwanted tez is given - sealed state" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          Ligo.Tezos.reset ();
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+          assert_raises
+            (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+            (fun () -> CheckerMain.(main (CheckerEntrypoint (StrictParams (Transfer ([]))), sealed_wrapper)))
+       )
+    );
+
+    ("strict_entrypoint_balance_of (main) - fails when unwanted tez is given - sealed state" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          Ligo.Tezos.reset ();
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+          let fa2_balance_of_param =
+            Fa2Interface.{
+              requests = [];
+              callback = Ligo.contract_of_address (Ligo.address_of_string "test address");
+            } in
+          assert_raises
+            (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+            (fun () -> CheckerMain.(main (CheckerEntrypoint (StrictParams (Balance_of (fa2_balance_of_param))), sealed_wrapper)))
+       )
+    );
+
+    ("entrypoint_update_operators (main) - fails when unwanted tez is given - sealed state" >::
+     with_sealed_wrapper
+       (fun sealed_wrapper ->
+          Ligo.Tezos.reset ();
+          Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+          assert_raises
+            (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+            (fun () -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Update_operators ([]))), sealed_wrapper)))
+       )
+    );
+
+    (* FIXME: Add tests for the remaining entrypoints here:
+     * - entrypoint_touch
+     * - entrypoint_create_burrow
+     * - entrypoint_deposit_collateral
+     * - entrypoint_withdraw_collateral
+     * - entrypoint_mint_kit
+     * - entrypoint_burn_kit
+     * - entrypoint_activate_burrow
+     * - entrypoint_deactivate_burrow
+     * - entrypoint_mark_for_liquidation
+     * - entrypoint_touch_liquidation_slices
+     * - entrypoint_cancel_liquidation_slice
+     * - entrypoint_touch_burrow
+     * - entrypoint_set_burrow_delegate
+     * - entrypoint_buy_kit
+     * - entrypoint_sell_kit
+     * - entrypoint_add_liquidity
+     * - entrypoint_remove_liquidity
+     * - entrypoint_liquidation_auction_place_bid
+     * - entrypoint_liquidation_auction_claim_win
+     * - entrypoint_receive_price
+    *)
+    (* FIXME: Add tests for an unsealed wrapper for each entrypoint too. *)
+
     (* Add tests here *)
   ]
 
