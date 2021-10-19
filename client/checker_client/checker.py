@@ -11,7 +11,7 @@ import signal
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import docker
 import pytezos
@@ -19,6 +19,7 @@ import requests
 from pytezos.client import PyTezosClient
 from pytezos.operation import MAX_OPERATIONS_TTL
 
+from checker_builder.config import load_checker_config, CheckerConfig, TokenConfig
 from checker_client.operations import inject
 
 # Time between blocks for sandbox container
@@ -41,22 +42,22 @@ default_token_metadata = {
 }
 
 
-def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], token_info):
-    # start with defaults
-    metadata = default_token_metadata
+def _token_config_to_metadata(token_config: TokenConfig) -> Tuple[int, Dict]:
+    return token_config.token_id, {
+        "name": token_config.name,
+        "symbol": token_config.symbol,
+        "decimals": token_config.decimal_digits,
+    }
 
-    # insert the user overrides
-    if token_metadata_file:
-        with open(token_metadata_file) as f:
-            for tok, ms in json.load(f).items():
-                metadata[tok].update(ms)
 
-    # insert the required metadata
-    metadata["kit"]["decimals"] = token_info["kit_decimal_digits"]
-    metadata["liquidity"]["decimals"] = token_info["lqt_decimal_digits"]
+def token_metadata_view_from_config(*, config: CheckerConfig):
+    metadata = [
+        _token_config_to_metadata(config.tokens.kit),
+        _token_config_to_metadata(config.tokens.liquidity),
+    ]
 
     # convert the attributes to bytes
-    for attrs in metadata.values():
+    for _, attrs in metadata:
         for k, v in attrs.items():
             if isinstance(v, bytes):
                 pass
@@ -71,10 +72,7 @@ def get_token_metadata_view_from_file(*, token_metadata_file: Optional[str], tok
             attrs[k] = v
 
     # create the TokenMetadata objects
-    tokens = [
-        TokenMetadata(token_info["kit_token_id"], metadata["kit"]),
-        TokenMetadata(token_info["lqt_token_id"], metadata["liquidity"]),
-    ]
+    tokens = [TokenMetadata(token_id, m) for token_id, m in metadata]
 
     # compile and return the view
     return compile_view_fa2_token_metadata(tokens)
@@ -316,8 +314,10 @@ def deploy_checker(
     tez_wrapper,
     ctez,
     ttl: Optional[int] = None,
-    token_metadata_file=None,
+    checker_config_path: Optional[Path] = None,
 ):
+    config = load_checker_config(checker_config_path)
+
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
@@ -333,10 +333,7 @@ def deploy_checker(
 
     print("Deploying the TZIP-16 metadata.")
 
-    token_metadata_view = get_token_metadata_view_from_file(
-        token_metadata_file=token_metadata_file,
-        token_info=functions["token_info"],
-    )
+    token_metadata_view = token_metadata_view_from_config(config=config)
 
     metadata = {
         "interfaces": ["TZIP-012-4b3c67aad5abb"],
@@ -379,7 +376,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, tez_wrapper, ctez))
+        checker.sealContract((oracle, ctez, tez_wrapper))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
