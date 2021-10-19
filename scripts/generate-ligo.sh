@@ -38,6 +38,7 @@ checker_sources=(
   cfmm
   sliceList
   liquidationAuction
+  burrowOrigination
   checker
   checkerEntrypoints
   checkerMain
