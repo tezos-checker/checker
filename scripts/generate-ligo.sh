@@ -31,6 +31,7 @@ checker_sources=(
   burrowTypes
   vaultTypes
   constants
+  driftDerivative
   parameters
   burrow
   checkerTypes
