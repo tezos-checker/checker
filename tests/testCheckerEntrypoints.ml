@@ -520,12 +520,29 @@ let suite =
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n"))), sealed_wrapper)))
     );
 
-    (* FIXME: Add tests for the remaining entrypoints here:
-     *
-     * - DeployFunction
-     * - DeployMetadata
-     * - SealContract
-    *)
+    ("DeployFunction (main) - fails when unwanted tez is given - sealed state" >::
+     assert_sealed_contract_fails_with_unwanted_tez
+       (fun sealed_wrapper ->
+          let param = (Ligo.int_from_literal "42", Ligo.bytes_from_literal "0x01AF") in
+          CheckerMain.(main (DeployFunction (param), sealed_wrapper))
+       )
+    );
+
+    ("DeployMetadata (main) - fails when unwanted tez is given - sealed state" >::
+     assert_sealed_contract_fails_with_unwanted_tez
+       (fun sealed_wrapper ->
+          let param = (Ligo.bytes_from_literal "0x01533AFBCD") in
+          CheckerMain.(main (DeployMetadata (param), sealed_wrapper))
+       )
+    );
+
+    ("SealContract (main) - fails when unwanted tez is given - sealed state" >::
+     assert_sealed_contract_fails_with_unwanted_tez
+       (fun sealed_wrapper ->
+          let param = (Ligo.address_from_literal "oracle address", Ligo.address_from_literal "col fa2 address", Ligo.address_from_literal "ctez fa2 address") in
+          CheckerMain.(main (SealContract (param), sealed_wrapper))
+       )
+    );
 
     (* Test failures when checker is accidentally given any tez (unsealed wrapper). *)
     ("strict_entrypoint_transfer (main) - fails when unwanted tez is given - unsealed state" >::
