@@ -131,9 +131,6 @@ let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) : unit =
   | Some (Leaf _) -> ()
   | _ -> Ligo.failwith error_InvalidLeafPtr
 
-(* TODO: if no tez is allowed to be given anywhere, it might be a better idea
- * to check it once in checkerMain.ml instead of in each entrypoint. *)
-
 let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): checker * (Ligo.nat * Ligo.key_hash option * tok)) =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
