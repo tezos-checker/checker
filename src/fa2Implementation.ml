@@ -3,9 +3,6 @@ open Lqt
 open Fa2Interface
 open Fa2Ledger
 
-let[@inline] kit_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
-let[@inline] lqt_token_id : fa2_token_id = Ligo.nat_from_literal "1n"
-
 let[@inline] fa2_all_tokens : Ligo.nat list =
   [ kit_token_id; lqt_token_id ]
 
