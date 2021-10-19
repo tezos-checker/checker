@@ -13,6 +13,7 @@ type external_contracts = {
   oracle : Ligo.address;
   collateral_fa2 : Ligo.address;
   ctez : Ligo.address;
+  collateral_fa2 : Ligo.address;
 }
 
 type checker =

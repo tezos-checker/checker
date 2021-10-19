@@ -312,6 +312,7 @@ def deploy_checker(
     tz,
     checker_dir,
     *,
+    tez_wrapper,
     oracle,
     tez_wrapper,
     ctez,
@@ -379,11 +380,11 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, tez_wrapper, ctez))
+        checker.sealContract((oracle, ctez, tez_wrapper))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
-    )
+    )  # TODO: Here we need the freshly deployed tez wrapper contract
 
     return checker
 

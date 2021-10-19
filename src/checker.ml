@@ -158,6 +158,8 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): ch
            match p with
            | BurrowSetDelegate kho ->
              (* NOTE: this deviates slightly from the design in the issue. *)
+             (* TODO: Also, I am not happy that an FA2 contract could "pretend"
+              * to have a set_delegate entrypoint and succeed here. *)
              let op = match (LigoOp.Tezos.get_entrypoint_opt "%set_delegate" storage.collateral_fa2 : Ligo.key_hash option Ligo.contract option) with
                | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
                | None -> (Ligo.failwith (Ligo.int_from_literal "-3") : LigoOp.operation) in (* i.e., set_delegate not supported *)

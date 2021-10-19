@@ -271,9 +271,9 @@ Liquidation Auctions
 Mark a burrow for liquidation
 -----------------------------
 
-Mark a burrow for liquidation. Fails if the burrow does not exist, or if it is
-not a candidate for liquidation. If the operation is successful, a payment is
-made to ``Tezos.sender`` with the liquidation reward.
+Mark a burrow for liquidation. Fails if the the burrow does not exist, or if it
+is not a candidate for liquidation. If the operation is successful, a payment
+is made to ``Tezos.sender`` with the liquidation reward.
 
 ``mark_for_liquidation: (pair address nat)``
 
@@ -607,4 +607,4 @@ Prior to sealing, the bytecode for all metadata must be deployed.
 Seal the contract and make it ready for use
 -------------------------------------------
 
-``sealContract: (pair (pair address address) address)``
+``sealContract: pair ((pair address address) address)``
