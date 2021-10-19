@@ -16,7 +16,7 @@ let assert_unsealed_contract_raises_not_deployed_error f =
     (Failure (Ligo.string_of_int error_ContractNotDeployed))
     (fun () -> (f init_wrapper))
 
-let assert_unsealed_contract_fails_with_unwanted_tez f =
+let assert_sealed_contract_fails_with_unwanted_tez f =
   with_sealed_wrapper
     (fun sealed_wrapper ->
        Ligo.Tezos.reset ();
@@ -25,6 +25,16 @@ let assert_unsealed_contract_fails_with_unwanted_tez f =
          (Failure (Ligo.string_of_int error_UnwantedTezGiven))
          (fun () -> (f sealed_wrapper))
     )
+
+let assert_unsealed_contract_fails_with_unwanted_tez f =
+  fun _ ->
+  Ligo.Tezos.reset ();
+  let init_wrapper = CheckerMain.initial_wrapper bob_addr in
+
+  Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "1mutez");
+  assert_raises
+    (Failure (Ligo.string_of_int error_UnwantedTezGiven))
+    (fun () -> (f init_wrapper))
 
 let with_sealed_state_and_cfmm_setup f =
   with_sealed_wrapper
@@ -320,12 +330,12 @@ let suite =
 
     (* Test failures when checker is accidentally given any tez (sealed wrapper). *)
     ("strict_entrypoint_transfer (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (StrictParams (Transfer ([]))), sealed_wrapper)))
     );
 
     ("strict_entrypoint_balance_of (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let fa2_balance_of_param =
             Fa2Interface.{
@@ -337,17 +347,17 @@ let suite =
     );
 
     ("entrypoint_update_operators (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Update_operators ([]))), sealed_wrapper)))
     );
 
     ("entrypoint_touch (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch ())), sealed_wrapper)))
     );
 
     ("entrypoint_create_burrow (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "123n", None, tok_of_denomination (Ligo.nat_from_literal "2_245_874n")) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Create_burrow (param))), sealed_wrapper))
@@ -355,7 +365,7 @@ let suite =
     );
 
     ("entrypoint_deposit_collateral (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "3_000n", tok_of_denomination (Ligo.nat_from_literal "1_532_321n")) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Deposit_collateral (param))), sealed_wrapper))
@@ -363,7 +373,7 @@ let suite =
     );
 
     ("entrypoint_withdraw_collateral (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "4n", tok_of_denomination (Ligo.nat_from_literal "1_321n")) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Withdraw_collateral (param))), sealed_wrapper))
@@ -371,7 +381,7 @@ let suite =
     );
 
     ("entrypoint_mint_kit (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Mint_kit (param))), sealed_wrapper))
@@ -379,7 +389,7 @@ let suite =
     );
 
     ("entrypoint_burn_kit (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "12n", (kit_of_denomination (Ligo.nat_from_literal "11_000_000n"))) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Burn_kit (param))), sealed_wrapper))
@@ -387,7 +397,7 @@ let suite =
     );
 
     ("entrypoint_activate_burrow (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "15n", Constants.creation_deposit) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Activate_burrow (param))), sealed_wrapper))
@@ -395,7 +405,7 @@ let suite =
     );
 
     ("entrypoint_deactivate_burrow (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "119n", bob_addr) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Deactivate_burrow (param))), sealed_wrapper))
@@ -403,7 +413,7 @@ let suite =
     );
 
     ("entrypoint_mark_for_liquidation (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (bob_addr, Ligo.nat_from_literal "119n") in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Mark_for_liquidation (param))), sealed_wrapper))
@@ -411,12 +421,12 @@ let suite =
     );
 
     ("entrypoint_touch_liquidation_slices (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch_liquidation_slices ([]))), sealed_wrapper)))
     );
 
     ("entrypoint_cancel_liquidation_slice (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = LiquidationAuctionPrimitiveTypes.LeafPtr (Ptr.random_ptr ()) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Cancel_liquidation_slice (param))), sealed_wrapper))
@@ -424,7 +434,7 @@ let suite =
     );
 
     ("entrypoint_touch_burrow (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (bob_addr, Ligo.nat_from_literal "43235n") in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch_burrow (param))), sealed_wrapper))
@@ -432,7 +442,7 @@ let suite =
     );
 
     ("entrypoint_set_burrow_delegate (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (Ligo.nat_from_literal "43235n", Some charles_key_hash) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Set_burrow_delegate (param))), sealed_wrapper))
@@ -440,7 +450,7 @@ let suite =
     );
 
     ("entrypoint_buy_kit (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
               ctez_of_muctez (Ligo.nat_from_literal "1n"),
@@ -452,7 +462,7 @@ let suite =
     );
 
     ("entrypoint_sell_kit (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
               kit_of_denomination (Ligo.nat_from_literal "1n"),
@@ -464,7 +474,7 @@ let suite =
     );
 
     ("entrypoint_add_liquidity (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
               ctez_of_muctez (Ligo.nat_from_literal "1n"),
@@ -477,7 +487,7 @@ let suite =
     );
 
     ("entrypoint_remove_liquidity (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
               lqt_of_denomination (Ligo.nat_from_literal "1n"),
@@ -490,7 +500,7 @@ let suite =
     );
 
     ("entrypoint_liquidation_auction_place_bid (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (LiquidationAuctionPrimitiveTypes.AVLPtr (Ptr.random_ptr ()), kit_of_denomination (Ligo.nat_from_literal "3n")) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (param))), sealed_wrapper))
@@ -498,7 +508,7 @@ let suite =
     );
 
     ("entrypoint_liquidation_auction_claim_win (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (LiquidationAuctionPrimitiveTypes.AVLPtr (Ptr.random_ptr ())) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Liquidation_auction_claim_win (param))), sealed_wrapper))
@@ -506,13 +516,215 @@ let suite =
     );
 
     ("entrypoint_receive_price (main) - fails when unwanted tez is given - sealed state" >::
-     assert_unsealed_contract_fails_with_unwanted_tez
+     assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n"))), sealed_wrapper)))
     );
 
-    (* FIXME: Add tests for the remaining entrypoints here *)
+    (* FIXME: Add tests for the remaining entrypoints here:
+     *
+     * - DeployFunction
+     * - DeployMetadata
+     * - SealContract
+    *)
 
-    (* FIXME: Add tests for an unsealed wrapper for each entrypoint too. *)
+    (* Test failures when checker is accidentally given any tez (unsealed wrapper). *)
+    ("strict_entrypoint_transfer (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (StrictParams (Transfer ([]))), unsealed_wrapper)))
+    );
+
+    ("strict_entrypoint_balance_of (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let fa2_balance_of_param =
+            Fa2Interface.{
+              requests = [];
+              callback = Ligo.contract_of_address (Ligo.address_of_string "test address");
+            } in
+          CheckerMain.(main (CheckerEntrypoint (StrictParams (Balance_of (fa2_balance_of_param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_update_operators (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Update_operators ([]))), unsealed_wrapper)))
+    );
+
+    ("entrypoint_touch (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch ())), unsealed_wrapper)))
+    );
+
+    ("entrypoint_create_burrow (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "123n", None, tok_of_denomination (Ligo.nat_from_literal "2_245_874n")) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Create_burrow (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_deposit_collateral (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "3_000n", tok_of_denomination (Ligo.nat_from_literal "1_532_321n")) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Deposit_collateral (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_withdraw_collateral (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "4n", tok_of_denomination (Ligo.nat_from_literal "1_321n")) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Withdraw_collateral (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_mint_kit (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "0n", (kit_of_denomination (Ligo.nat_from_literal "10_000_000n"))) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Mint_kit (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_burn_kit (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "12n", (kit_of_denomination (Ligo.nat_from_literal "11_000_000n"))) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Burn_kit (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_activate_burrow (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "15n", Constants.creation_deposit) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Activate_burrow (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_deactivate_burrow (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "119n", bob_addr) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Deactivate_burrow (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_mark_for_liquidation (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (bob_addr, Ligo.nat_from_literal "119n") in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Mark_for_liquidation (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_touch_liquidation_slices (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch_liquidation_slices ([]))), unsealed_wrapper)))
+    );
+
+    ("entrypoint_cancel_liquidation_slice (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = LiquidationAuctionPrimitiveTypes.LeafPtr (Ptr.random_ptr ()) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Cancel_liquidation_slice (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_touch_burrow (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (bob_addr, Ligo.nat_from_literal "43235n") in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Touch_burrow (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_set_burrow_delegate (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (Ligo.nat_from_literal "43235n", Some charles_key_hash) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Set_burrow_delegate (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_buy_kit (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (
+              ctez_of_muctez (Ligo.nat_from_literal "1n"),
+              kit_of_denomination (Ligo.nat_from_literal "2n"),
+              Ligo.timestamp_from_seconds_literal 3
+            ) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Buy_kit (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_sell_kit (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (
+              kit_of_denomination (Ligo.nat_from_literal "1n"),
+              ctez_of_muctez (Ligo.nat_from_literal "2n"),
+              Ligo.timestamp_from_seconds_literal 3
+            ) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Sell_kit (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_add_liquidity (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (
+              ctez_of_muctez (Ligo.nat_from_literal "1n"),
+              kit_of_denomination (Ligo.nat_from_literal "2n"),
+              lqt_of_denomination (Ligo.nat_from_literal "3n"),
+              Ligo.timestamp_from_seconds_literal 4
+            ) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Add_liquidity (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_remove_liquidity (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (
+              lqt_of_denomination (Ligo.nat_from_literal "1n"),
+              ctez_of_muctez (Ligo.nat_from_literal "2n"),
+              kit_of_denomination (Ligo.nat_from_literal "3n"),
+              Ligo.timestamp_from_seconds_literal 4
+            ) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Remove_liquidity (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_liquidation_auction_place_bid (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (LiquidationAuctionPrimitiveTypes.AVLPtr (Ptr.random_ptr ()), kit_of_denomination (Ligo.nat_from_literal "3n")) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Liquidation_auction_place_bid (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_liquidation_auction_claim_win (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper ->
+          let param = (LiquidationAuctionPrimitiveTypes.AVLPtr (Ptr.random_ptr ())) in
+          CheckerMain.(main (CheckerEntrypoint (LazyParams (Liquidation_auction_claim_win (param))), unsealed_wrapper))
+       )
+    );
+
+    ("entrypoint_receive_price (main) - fails when unwanted tez is given - unsealed state" >::
+     assert_unsealed_contract_fails_with_unwanted_tez
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n"))), unsealed_wrapper)))
+    );
+
+    (* FIXME: Add tests for the remaining entrypoints here:
+     *
+     * - DeployFunction
+     * - DeployMetadata
+     * - SealContract
+    *)
 
     (* Add tests here *)
   ]
