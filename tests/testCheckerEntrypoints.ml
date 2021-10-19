@@ -453,10 +453,10 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-              ctez_of_muctez (Ligo.nat_from_literal "1n"),
-              kit_of_denomination (Ligo.nat_from_literal "2n"),
-              Ligo.timestamp_from_seconds_literal 3
-            ) in
+            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            kit_of_denomination (Ligo.nat_from_literal "2n"),
+            Ligo.timestamp_from_seconds_literal 3
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Buy_kit (param))), sealed_wrapper))
        )
     );
@@ -465,10 +465,10 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-              kit_of_denomination (Ligo.nat_from_literal "1n"),
-              ctez_of_muctez (Ligo.nat_from_literal "2n"),
-              Ligo.timestamp_from_seconds_literal 3
-            ) in
+            kit_of_denomination (Ligo.nat_from_literal "1n"),
+            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            Ligo.timestamp_from_seconds_literal 3
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Sell_kit (param))), sealed_wrapper))
        )
     );
@@ -477,11 +477,11 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-              ctez_of_muctez (Ligo.nat_from_literal "1n"),
-              kit_of_denomination (Ligo.nat_from_literal "2n"),
-              lqt_of_denomination (Ligo.nat_from_literal "3n"),
-              Ligo.timestamp_from_seconds_literal 4
-            ) in
+            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            kit_of_denomination (Ligo.nat_from_literal "2n"),
+            lqt_of_denomination (Ligo.nat_from_literal "3n"),
+            Ligo.timestamp_from_seconds_literal 4
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Add_liquidity (param))), sealed_wrapper))
        )
     );
@@ -490,11 +490,11 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-              lqt_of_denomination (Ligo.nat_from_literal "1n"),
-              ctez_of_muctez (Ligo.nat_from_literal "2n"),
-              kit_of_denomination (Ligo.nat_from_literal "3n"),
-              Ligo.timestamp_from_seconds_literal 4
-            ) in
+            lqt_of_denomination (Ligo.nat_from_literal "1n"),
+            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            kit_of_denomination (Ligo.nat_from_literal "3n"),
+            Ligo.timestamp_from_seconds_literal 4
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Remove_liquidity (param))), sealed_wrapper))
        )
     );
@@ -652,10 +652,10 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-              ctez_of_muctez (Ligo.nat_from_literal "1n"),
-              kit_of_denomination (Ligo.nat_from_literal "2n"),
-              Ligo.timestamp_from_seconds_literal 3
-            ) in
+            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            kit_of_denomination (Ligo.nat_from_literal "2n"),
+            Ligo.timestamp_from_seconds_literal 3
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Buy_kit (param))), unsealed_wrapper))
        )
     );
@@ -664,10 +664,10 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-              kit_of_denomination (Ligo.nat_from_literal "1n"),
-              ctez_of_muctez (Ligo.nat_from_literal "2n"),
-              Ligo.timestamp_from_seconds_literal 3
-            ) in
+            kit_of_denomination (Ligo.nat_from_literal "1n"),
+            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            Ligo.timestamp_from_seconds_literal 3
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Sell_kit (param))), unsealed_wrapper))
        )
     );
@@ -676,11 +676,11 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-              ctez_of_muctez (Ligo.nat_from_literal "1n"),
-              kit_of_denomination (Ligo.nat_from_literal "2n"),
-              lqt_of_denomination (Ligo.nat_from_literal "3n"),
-              Ligo.timestamp_from_seconds_literal 4
-            ) in
+            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            kit_of_denomination (Ligo.nat_from_literal "2n"),
+            lqt_of_denomination (Ligo.nat_from_literal "3n"),
+            Ligo.timestamp_from_seconds_literal 4
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Add_liquidity (param))), unsealed_wrapper))
        )
     );
@@ -689,11 +689,11 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-              lqt_of_denomination (Ligo.nat_from_literal "1n"),
-              ctez_of_muctez (Ligo.nat_from_literal "2n"),
-              kit_of_denomination (Ligo.nat_from_literal "3n"),
-              Ligo.timestamp_from_seconds_literal 4
-            ) in
+            lqt_of_denomination (Ligo.nat_from_literal "1n"),
+            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            kit_of_denomination (Ligo.nat_from_literal "3n"),
+            Ligo.timestamp_from_seconds_literal 4
+          ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Remove_liquidity (param))), unsealed_wrapper))
        )
     );
