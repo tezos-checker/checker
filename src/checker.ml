@@ -21,11 +21,6 @@ open Fa2Ledger
 open Fa2Implementation
 open Mem
 
-(* FIXME: How to determine this field programmatically?  It must be equal to
- * tezWrapper.tez_token_id when collateral=tez or the same as the one used by
- * the FA2 we use as collateral. *)
-let[@inline] collateral_token_id : Ligo.nat = Ligo.nat_from_literal "2n"
-
 (* BEGIN_OCAML *)
 [@@@coverage off]
 let compute_outstanding_dissonance (state: checker) : kit (* "real" *) * kit (* approximation *) =
@@ -170,7 +165,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): ch
                { from_ = !Ligo.Tezos.self_address; (* from: FA2 account of burrow contract *)
                  txs = [
                    { to_ = addr;                   (* to: FA2 account of the given address *)
-                     token_id = Ligo.nat_from_literal "2n"; (* FIXME: THIS IS GREAT; collateral_token_id IS NOT ALLOWED HERE *)
+                     token_id = Ligo.nat_from_literal "2n"; (* FIXME: THIS IS GREAT; tok_token_id IS NOT ALLOWED HERE *)
                      amount = amnt;
                    }
                  ];
@@ -195,7 +190,7 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): ch
     { from_ = !Ligo.Tezos.sender; (* from: FA2 account of burrow owner *)
       txs = [
         { to_ = burrow_address;   (* to: FA2 account of the burrow contract *)
-          token_id = collateral_token_id;
+          token_id = tok_token_id;
           amount = tok_to_denomination_nat tok; (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
         }
       ];
@@ -230,7 +225,7 @@ let entrypoint_deposit_collateral (state, (burrow_no, tok): checker * (Ligo.nat 
     { from_ = !Ligo.Tezos.sender;        (* from: FA2 account of burrow owner *)
       txs = [
         { to_ = (burrow_address burrow); (* to: FA2 account of the burrow contract *)
-          token_id = collateral_token_id;
+          token_id = tok_token_id;
           amount = tok_to_denomination_nat tok; (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
         }
       ];
@@ -314,7 +309,7 @@ let entrypoint_activate_burrow (state, (burrow_no, tok): checker * (Ligo.nat * t
     { from_ = !Ligo.Tezos.sender; (* from: FA2 account of burrow owner *)
       txs = [
         { to_ = (burrow_address burrow);   (* to: FA2 account of the burrow contract *)
-          token_id = collateral_token_id;
+          token_id = tok_token_id;
           amount = tok_to_denomination_nat tok; (* NOTE!!! The creation deposit is in the burrow too, even if we don't consider it to be collateral! *)
         }
       ];
@@ -777,7 +772,7 @@ let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liqui
     { from_ = !Ligo.Tezos.self_address; (* from: FA2 account of the checker contract *)
       txs = [
         { to_ = !Ligo.Tezos.sender;     (* to: FA2 account of the auction winner *)
-          token_id = collateral_token_id;
+          token_id = tok_token_id;
           amount = tok_to_denomination_nat tok;
         }
       ];
