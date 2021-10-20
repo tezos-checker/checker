@@ -23,7 +23,7 @@ let[@inline] originate_burrow (state: checker) (delegate_opt: Ligo.key_hash opti
              { from_ = !Ligo.Tezos.self_address; (* from: FA2 account of burrow contract *)
                txs = [
                  { to_ = addr;                   (* to: FA2 account of the given address *)
-                   token_id = Ligo.nat_from_literal "2n"; (* FIXME: THIS IS GREAT; collateral_token_id IS NOT ALLOWED HERE *)
+                   token_id = Ligo.nat_from_literal "{{ config.tokens.collateral.token_id }}n";
                    amount = amnt;
                  }
                ];

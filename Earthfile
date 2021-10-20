@@ -189,6 +189,8 @@ generate-code:
     SAVE ARTIFACT ./src/lqt.ml /
     SAVE ARTIFACT ./src/constants.ml AS LOCAL src/constants.ml
     SAVE ARTIFACT ./src/constants.ml /
+    SAVE ARTIFACT ./src/burrowOrigination.ml AS LOCAL src/burrowOrigination.ml
+    SAVE ARTIFACT ./src/burrowOrigination.ml /
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
@@ -200,6 +202,7 @@ build-ocaml:
     COPY +generate-code/kit.ml ./src/
     COPY +generate-code/lqt.ml ./src/
     COPY +generate-code/constants.ml ./src/
+    COPY +generate-code/burrowOrigination.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -219,6 +222,7 @@ build-ligo:
     COPY +generate-code/kit.ml ./src/
     COPY +generate-code/lqt.ml ./src/
     COPY +generate-code/constants.ml ./src/
+    COPY +generate-code/burrowOrigination.ml ./src/
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/

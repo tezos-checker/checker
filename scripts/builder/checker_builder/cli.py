@@ -5,10 +5,11 @@ from checker_builder import config
 # Mapping of generated src modules to their templates
 GENERATE_SRCS = {
     "constants.ml": "constants.ml.jinja",
+    "burrowOrigination.ml": "burrowOrigination.ml.jinja",
 }
 
 # Template used for all token modules
-TOKEN_TEMPLATE = "generic_token.ml.jinja"
+TOKEN_TEMPLATE = "genericToken.ml.jinja"
 # Mapping of token config fields to their corresponding src modules
 TOKEN_SRCS = {"collateral": "tok.ml", "kit": "kit.ml", "liquidity": "lqt.ml"}
 
