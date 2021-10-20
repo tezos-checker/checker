@@ -67,13 +67,13 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
                 | None -> Ligo.Big_map.add "m" bs metadata
                 | Some prev -> Ligo.Big_map.add "m" (Ligo.Bytes.concat prev bs) metadata in
               (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
-            | SealContract (oracle_addr, ctez_addr, collateral_fa2_addr) ->
-              let external_contracts = { oracle = oracle_addr; ctez = ctez_addr; collateral_fa2 = collateral_fa2_addr; } in
+            | SealContract (oracle_addr, collateral_fa2_addr, ctez_addr) ->
+              let external_contracts = { oracle = oracle_addr; collateral_fa2 = collateral_fa2_addr; ctez = ctez_addr; } in
 
-              (* check if the given oracle, ctez, and collateral_fa2 contracts have the entrypoints we need *)
-              let _ = get_transfer_ctez_entrypoint external_contracts in
+              (* check if the given oracle, collateral_fa2, and ctez contracts have the entrypoints we need *)
               let _ = get_oracle_entrypoint external_contracts in
               let _ = get_transfer_collateral_fa2_entrypoint external_contracts in
+              let _ = get_transfer_ctez_entrypoint external_contracts in
 
               (* emit a touch operation to checker *)
               let touchOp =
