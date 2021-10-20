@@ -91,9 +91,9 @@ def test_ratio_from_str_extra_slash_fails():
 
 
 def test_collateral_config_decimal_digits():
-    from checker_builder.config import CollateralTokenConfig
+    from checker_builder.config import TokenConfig
 
-    collateral_config = CollateralTokenConfig(decimal_digits=3)
+    collateral_config = TokenConfig(token_id=0, decimal_digits=3)
     assert collateral_config.scaling_factor == 1000
 
 
