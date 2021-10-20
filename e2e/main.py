@@ -10,6 +10,7 @@ from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
 from checker_client.checker import *
+from checker_builder.config import load_checker_config
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 from pytezos.operation.group import OperationGroup
@@ -24,14 +25,10 @@ WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # tests
 WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
-# FIXME: How to determine this field programmatically?  It must be equal to
-# tezWrapper.tez_token_id when collateral=tez or the same as the one used by
-# the FA2 we use as collateral.
-COLLATERAL_TOKEN_ID = 2
-
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
+        self.config = load_checker_config()
         #  sometimes doesn't work, needs investigation:
         #    port = portpicker.pick_unused_port()
         port = 20000
@@ -54,9 +51,14 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
         raise AssertionError(f"Expected {expected_kit} but got {kit_balance}")
 
 
-def assert_wrapped_tez_balance(wrapper: ContractInterface, address: str, expected: int):
+def assert_wrapped_tez_balance(
+    wrapper: ContractInterface,
+    address: str,
+    token_id: int,
+    expected: int,
+):
     fa2_balance_of = {
-        "requests": [{"owner": address, "token_id": COLLATERAL_TOKEN_ID}],
+        "requests": [{"owner": address, "token_id": token_id}],
         "callback": None,
     }
     balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
@@ -291,9 +293,8 @@ class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         account = self.client.key.public_key_hash()
-        # Read kit token id for fa2 tests
-        with open(os.path.join(CHECKER_DIR, "functions.json")) as f:
-            kit_token_id = json.load(f)["token_info"]["kit_token_id"]
+        kit_token_id = self.config.tokens.kit.token_id
+        collateral_token_id = self.config.tokens.collateral.token_id
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -357,7 +358,7 @@ class E2ETest(SandboxedTestCase):
                     "add_operator": {
                         "owner": account,
                         "operator": checker.context.address,
-                        "token_id": COLLATERAL_TOKEN_ID,
+                        "token_id": collateral_token_id,
                     }
                 },
             ]
@@ -509,6 +510,7 @@ class E2ETest(SandboxedTestCase):
 class TezWrapperTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
+        collateral_token_id = self.config.tokens.collateral.token_id
 
         wrapper = deploy_tez_wrapper(
             self.client,
@@ -539,7 +541,7 @@ class TezWrapperTest(SandboxedTestCase):
             return ret
 
         def single_fa2_transfer(
-            sender: str, recipient: str, amount: int, token_id=COLLATERAL_TOKEN_ID
+            sender: str, recipient: str, amount: int, token_id=collateral_token_id
         ):
             return [
                 {
@@ -566,10 +568,10 @@ class TezWrapperTest(SandboxedTestCase):
         # ===============================================================================
         # Deposit some tez into the test account's vault
         call_endpoint("deposit", None, amount=2_000_000)
-        assert_wrapped_tez_balance(wrapper, account, 2_000_000)
+        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 2_000_000)
         # Withdraw some tez from the test account's vault
         call_endpoint("withdraw", 100)
-        assert_wrapped_tez_balance(wrapper, account, 1_999_900)
+        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_900)
         # Set test account vault's delegate
         call_endpoint("set_delegate", None)
 
@@ -578,8 +580,8 @@ class TezWrapperTest(SandboxedTestCase):
         # ===============================================================================
         # Transfer from the test account to alice's account
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
-        assert_wrapped_tez_balance(wrapper, account, 1_999_810)
-        assert_wrapped_tez_balance(wrapper, account_alice, 90)
+        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_810)
+        assert_wrapped_tez_balance(wrapper, account_alice, collateral_token_id, 90)
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
         # account owner.
@@ -588,7 +590,7 @@ class TezWrapperTest(SandboxedTestCase):
                 "add_operator": {
                     "owner": wrapper_alice.key.public_key_hash(),
                     "operator": account,
-                    "token_id": COLLATERAL_TOKEN_ID,
+                    "token_id": collateral_token_id,
                 }
             },
         ]
@@ -601,7 +603,7 @@ class TezWrapperTest(SandboxedTestCase):
 
         # Send some tez tokens back to the main test account
         call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
-        assert_wrapped_tez_balance(wrapper, account, 1_999_890)
+        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_890)
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
         # This comes with a downside, however, since using a view means that we don't get an
@@ -610,7 +612,7 @@ class TezWrapperTest(SandboxedTestCase):
             "requests": [
                 {
                     "owner": wrapper_alice.key.public_key_hash(),
-                    "token_id": COLLATERAL_TOKEN_ID,
+                    "token_id": collateral_token_id,
                 }
             ],
             "callback": None,
@@ -626,6 +628,8 @@ class TezWrapperTest(SandboxedTestCase):
 
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
+        collateral_token_id = self.config.tokens.collateral.token_id
+
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
             self.client,
@@ -703,7 +707,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                     "add_operator": {
                         "owner": self.client.key.public_key_hash(),
                         "operator": checker.context.address,
-                        "token_id": COLLATERAL_TOKEN_ID,
+                        "token_id": collateral_token_id,
                     }
                 },
             ]

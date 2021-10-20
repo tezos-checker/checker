@@ -288,6 +288,9 @@ test-e2e:
     COPY +flextesa/* /usr/bin/
     # And the checker contract itself
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/michelson ./generated/michelson
+    # Also need checker config file
+    COPY checker.yaml .
+
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
         poetry run python ./e2e/main.py
