@@ -51,7 +51,7 @@ def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: i
         raise AssertionError(f"Expected {expected_kit} but got {kit_balance}")
 
 
-def assert_wrapped_tez_balance(
+def assert_fa2_token_balance(
     wrapper: ContractInterface,
     address: str,
     token_id: int,
@@ -568,10 +568,10 @@ class TezWrapperTest(SandboxedTestCase):
         # ===============================================================================
         # Deposit some tez into the test account's vault
         call_endpoint("deposit", None, amount=2_000_000)
-        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 2_000_000)
+        assert_fa2_token_balance(wrapper, account, collateral_token_id, 2_000_000)
         # Withdraw some tez from the test account's vault
         call_endpoint("withdraw", 100)
-        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_900)
+        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_900)
         # Set test account vault's delegate
         call_endpoint("set_delegate", None)
 
@@ -580,8 +580,8 @@ class TezWrapperTest(SandboxedTestCase):
         # ===============================================================================
         # Transfer from the test account to alice's account
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
-        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_810)
-        assert_wrapped_tez_balance(wrapper, account_alice, collateral_token_id, 90)
+        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_810)
+        assert_fa2_token_balance(wrapper, account_alice, collateral_token_id, 90)
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
         # account owner.
@@ -603,7 +603,7 @@ class TezWrapperTest(SandboxedTestCase):
 
         # Send some tez tokens back to the main test account
         call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
-        assert_wrapped_tez_balance(wrapper, account, collateral_token_id, 1_999_890)
+        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_890)
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
         # This comes with a downside, however, since using a view means that we don't get an
