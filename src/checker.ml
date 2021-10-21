@@ -131,12 +131,8 @@ let[@inline] ensure_valid_leaf_ptr (mem: mem) (leaf_ptr: leaf_ptr) : unit =
   | Some (Leaf _) -> ()
   | _ -> Ligo.failwith error_InvalidLeafPtr
 
-(* TODO: if no tez is allowed to be given anywhere, it might be a better idea
- * to check it once in checkerMain.ml instead of in each entrypoint. *)
-
 let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): checker * (Ligo.nat * Ligo.key_hash option * tok)) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let () = if Ligo.Big_map.mem burrow_id state.burrows
     then Ligo.failwith error_BurrowAlreadyExists
@@ -165,7 +161,6 @@ let[@inline] entrypoint_create_burrow (state, (burrow_no, delegate_opt, tok): ch
 
 let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let burrow = burrow_touch state.parameters burrow in
   let state = {state with burrows = Ligo.Big_map.update burrow_id (Some burrow) state.burrows} in
@@ -174,7 +169,6 @@ let entrypoint_touch_burrow (state, burrow_id: checker * burrow_id) : LigoOp.ope
 
 let entrypoint_deposit_collateral (state, (burrow_no, tok): checker * (Ligo.nat * tok)) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
@@ -199,7 +193,6 @@ let entrypoint_deposit_collateral (state, (burrow_no, tok): checker * (Ligo.nat 
 let entrypoint_mint_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
-  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let burrow = burrow_mint_kit state.parameters kit burrow in
@@ -215,7 +208,6 @@ let entrypoint_mint_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
 let entrypoint_withdraw_collateral (state, (burrow_no, tok): checker * (Ligo.nat * tok)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
-  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let burrow = burrow_withdraw_collateral state.parameters tok burrow in
@@ -229,7 +221,6 @@ let entrypoint_withdraw_collateral (state, (burrow_no, tok): checker * (Ligo.nat
 let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
-  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
   let burrow, actual_burned = burrow_burn_kit state.parameters kit burrow in
@@ -258,7 +249,6 @@ let entrypoint_burn_kit (state, (burrow_no, kit): checker * (Ligo.nat * kit)) : 
 
 let entrypoint_activate_burrow (state, (burrow_no, tok): checker * (Ligo.nat * tok)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
@@ -282,7 +272,6 @@ let entrypoint_activate_burrow (state, (burrow_no, tok): checker * (Ligo.nat * t
 
 let entrypoint_deactivate_burrow (state, (burrow_no, receiver): checker * (Ligo.nat * Ligo.address)) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
@@ -296,7 +285,6 @@ let entrypoint_deactivate_burrow (state, (burrow_no, receiver): checker * (Ligo.
 
 let entrypoint_set_burrow_delegate (state, (burrow_no, delegate_opt): checker * (Ligo.nat * Ligo.key_hash option)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow_id = (!Ligo.Tezos.sender, burrow_no) in
   let burrow = find_burrow state.burrows burrow_id in
   let _ = ensure_burrow_has_no_unclaimed_slices state.liquidation_auctions burrow_id in
@@ -308,7 +296,6 @@ let entrypoint_set_burrow_delegate (state, (burrow_no, delegate_opt): checker * 
 
 let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow_id) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let burrow = find_burrow state.burrows burrow_id in
 
   let
@@ -351,7 +338,6 @@ let[@inline] entrypoint_mark_for_liquidation (state, burrow_id: checker * burrow
 (* Cancel the liquidation of a slice. *)
 let entrypoint_cancel_liquidation_slice (state, leaf_ptr: checker * leaf_ptr) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let _ = ensure_valid_leaf_ptr state.liquidation_auctions.avl_storage leaf_ptr in
   let (cancelled, auctions) = liquidation_auctions_cancel_slice state.liquidation_auctions leaf_ptr in
   let (burrow_owner, _) = cancelled.burrow in
@@ -490,7 +476,6 @@ let rec touch_liquidation_slices_rec
  * computed are independent from each other, this needs not be a problem. *)
 let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_ptr list): (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   (* NOTE: the order of the operations is reversed here (wrt to the order of
    * the slices), but hopefully we don't care in this instance about this. *)
   let
@@ -525,7 +510,6 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
 let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let ctez, min_kit_expected, deadline = p in
-  let _ = ensure_no_tez_given () in
   let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctez min_kit_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
@@ -562,7 +546,6 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
 let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let kit, min_ctez_expected, deadline = p in
-  let _ = ensure_no_tez_given () in
   let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctez_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.self_address;
@@ -596,7 +579,6 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
 let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let ctez_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
-  let _ = ensure_no_tez_given () in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
     cfmm_add_liquidity state.cfmm ctez_deposited max_kit_deposited min_lqt_minted deadline in
   let transfer =
@@ -635,7 +617,6 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.times
 let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
   let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline = p in
-  let _ = ensure_no_tez_given () in
   let (ctez, kit_tokens, updated_cfmm) =
     cfmm_remove_liquidity state.cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
   let transfer =
@@ -675,7 +656,6 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.ti
 
 let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker * (liquidation_auction_id * kit)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
 
   let bid = { address=(!Ligo.Tezos.sender); kit=kit; } in
   let current_auction = liquidation_auction_get_current_auction state.liquidation_auctions in
@@ -723,7 +703,6 @@ let entrypoint_liquidation_auction_place_bid (state, (auction_id, kit): checker 
 
 let entrypoint_liquidation_auction_claim_win (state, auction_id: checker * liquidation_auction_id) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let _ = ensure_valid_avl_ptr state.liquidation_auctions.avl_storage auction_id in
   let (tok, liquidation_auctions) = liquidation_auction_claim_win state.liquidation_auctions auction_id in
   let transfer =
@@ -816,7 +795,6 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
       external_contracts = state_external_contracts;
     } = state in
   assert (Ligo.geq_timestamp_timestamp !Ligo.Tezos.now state.parameters.last_touched);
-  let _ = ensure_no_tez_given () in
   if state_parameters.last_touched = !Ligo.Tezos.now then
     (* Do nothing if up-to-date (idempotence) *)
     (([]: LigoOp.operation list), state)
@@ -896,7 +874,6 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 
 let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
@@ -908,14 +885,12 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
 
 let strict_entrypoint_transfer (state, xs: checker * fa2_transfer list) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_transfer (state.fa2_state, xs) } in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
 
 let[@inline] strict_entrypoint_balance_of (state, param: checker * fa2_balance_of_param) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (state.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
@@ -924,7 +899,6 @@ let[@inline] strict_entrypoint_balance_of (state, param: checker * fa2_balance_o
 
 let entrypoint_update_operators (state, xs: checker * fa2_update_operator list) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
-  let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
   assert_checker_invariants state;
   (([]: LigoOp.operation list), state)
