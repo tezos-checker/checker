@@ -145,25 +145,6 @@ chunked_entrypoints = packed_entrypoints.map do |i|
   { name: i[:name], fn_id: i[:fn_id], chunks: chunks }
 end
 
-########################################
-puts "Extracting the token information."
-########################################
-
-stdout, stderr, exit_status = Open3.capture3(
-  "ligo", "compile-expression", "cameligo",
-  "--init-file", MAIN_FILE, "--michelson-format", "json",
-  '''Map.literal
-       [ ("kit_token_id", kit_token_id)
-       ; ("lqt_token_id", lqt_token_id)
-       ; ("kit_decimal_digits", kit_decimal_digits)
-       ; ("lqt_decimal_digits", lqt_decimal_digits)
-       ]
-  '''
-)
-
-exit_status.success? or raise "extracting token info failed.\nstdout:\n#{stdout}\nstderr\n#{stderr}"
-token_info = JSON.parse(stdout).to_h { |i| [ i["args"][0]["string"], i["args"][1]["int"].to_i ] }
-
 #########################
 puts "Saving the result."
 #########################
@@ -171,7 +152,6 @@ puts "Saving the result."
 functions_json = {
   lazy_functions: chunked_entrypoints,
   views: packed_views,
-  token_info: token_info
 }
 
 functions_json = JSON.pretty_generate(functions_json)

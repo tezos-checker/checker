@@ -9,12 +9,15 @@ checker = 'checker_client.cli:cli'
 
 [tool.poetry.dependencies]
 python = "^3.8"
-pytezos = "^3.2.2"
-docker = "^4.4.4"
-marshmallow = "^3.12.1"
-eth-hash = "*"
+
+checker_builder = "*"
+
 click = "^7.1.2"
+docker = "^4.4.4"
+eth-hash = "*"
+marshmallow = "^3.12.1"
 pytest-runner = "2.6.2"
+pytezos = "^3.2.2"
 
 [tool.poetry.dev-dependencies]
 

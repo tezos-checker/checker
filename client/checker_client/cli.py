@@ -179,12 +179,13 @@ def deploy(config: Config, address=None, port=None, key=None):
 @click.option("--tez_wrapper", type=str, help="TezWrapper contract address")
 @click.option("--ctez", type=str, help="ctez contract address")
 @click.option(
-    "--token-metadata",
+    "--checker_config",
     type=click.Path(exists=True),
-    help="optional JSON file containing the TZIP-12 token_metadata.",
+    default=Path("checker.yaml"),
+    help="optional path to the checker.yaml config file. Defaults to ./checker.yaml",
 )
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metadata):
+def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, checker_config):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -192,7 +193,7 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metada
         raise ValueError(
             "Oracle address was neither specified in the CLI config nor provided as an argument."
         )
-    if not config.tez_wrapper and not tez_wrapper:
+    if not config.tez_wrapper_address and not tez_wrapper:
         raise ValueError(
             "TezWrapper address was neither specified in the CLI config nor provided as an argument."
         )
@@ -204,6 +205,9 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metada
         config.oracle_address = oracle
     if ctez:
         config.ctez_address = ctez
+    if tez_wrapper:
+        config.tez_wrapper_address = tez_wrapper
+
     shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
@@ -215,7 +219,7 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, token_metada
         tez_wrapper=config.tez_wrapper_address,
         ctez=config.ctez_address,
         ttl=_patch_operation_ttl(config),
-        token_metadata_file=token_metadata,
+        checker_config_path=checker_config,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address

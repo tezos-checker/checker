@@ -183,8 +183,14 @@ generate-code:
     SAVE ARTIFACT ./src/checkerEntrypoints.ml /
     SAVE ARTIFACT ./src/tok.ml AS LOCAL src/tok.ml
     SAVE ARTIFACT ./src/tok.ml /
+    SAVE ARTIFACT ./src/kit.ml AS LOCAL src/kit.ml
+    SAVE ARTIFACT ./src/kit.ml /
+    SAVE ARTIFACT ./src/lqt.ml AS LOCAL src/lqt.ml
+    SAVE ARTIFACT ./src/lqt.ml /
     SAVE ARTIFACT ./src/constants.ml AS LOCAL src/constants.ml
     SAVE ARTIFACT ./src/constants.ml /
+    SAVE ARTIFACT ./src/burrowOrigination.ml AS LOCAL src/burrowOrigination.ml
+    SAVE ARTIFACT ./src/burrowOrigination.ml /
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
@@ -193,7 +199,10 @@ build-ocaml:
     COPY src/*.ml src/*.mli src/dune ./src/
     COPY +generate-code/checkerEntrypoints.ml ./src/
     COPY +generate-code/tok.ml ./src/
+    COPY +generate-code/kit.ml ./src/
+    COPY +generate-code/lqt.ml ./src/
     COPY +generate-code/constants.ml ./src/
+    COPY +generate-code/burrowOrigination.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -208,9 +217,12 @@ build-ligo:
     WORKDIR /root
 
     COPY ./src/*.ml ./src/*.mligo ./src/
-    COPY +generate-code/checkerEntrypoints.ml ./src/checkerEntrypoints.ml
-    COPY +generate-code/tok.ml ./src/tok.ml
-    COPY +generate-code/constants.ml ./src/constants.ml
+    COPY +generate-code/checkerEntrypoints.ml ./src/
+    COPY +generate-code/tok.ml ./src/
+    COPY +generate-code/kit.ml ./src/
+    COPY +generate-code/lqt.ml ./src/
+    COPY +generate-code/constants.ml ./src/
+    COPY +generate-code/burrowOrigination.ml ./src/
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
@@ -280,6 +292,9 @@ test-e2e:
     COPY +flextesa/* /usr/bin/
     # And the checker contract itself
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/michelson ./generated/michelson
+    # Also need checker config file
+    COPY checker.yaml .
+
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
         poetry run python ./e2e/main.py

@@ -16,14 +16,14 @@ checker_sources=(
   ptr
   common
   fixedPoint
+  fa2Interface
   ctez
   kit
   lqt
   tok
-  cfmmTypes
-  fa2Interface
   fa2Ledger
   fa2Implementation
+  cfmmTypes
   liquidationAuctionPrimitiveTypes
   mem
   avl
@@ -38,6 +38,7 @@ checker_sources=(
   cfmm
   sliceList
   liquidationAuction
+  burrowOrigination
   checker
   checkerEntrypoints
   checkerMain
@@ -48,10 +49,10 @@ tez_wrapper_sources=(
   error
   common
   fixedPoint
-  kit
-  lqt
   fa2Interface
   fa2Ledger
+  kit
+  lqt
   vaultTypes
   tezWrapper
 )
