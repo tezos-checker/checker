@@ -48,11 +48,8 @@ checker_sources=(
 tez_wrapper_sources=(
   error
   common
-  fixedPoint
   fa2Interface
   fa2Ledger
-  kit
-  lqt
   vaultTypes
   tezWrapper
 )
