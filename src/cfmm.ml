@@ -1,3 +1,25 @@
+(* The general concept of cfmm is that you have quantity a of an asset A
+ * and b of an asset B and you process buy and sell requests by maintaining
+ * the product a * b constant. So if someone wants to sell a quantity da of
+ * asset A to the contract, the balance would become (a + da) so you can
+ * give that person a quantity db of asset B in exchange such that (a +
+ * da)(b - db) = a * b. Solving for db gives db  = da * b / (a + da). We
+ * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
+ * represents the  "price" before the order and a / (a + da)  represents
+ * the "slippage". Indeed, a property of cfmm is that with arbitrageurs
+ * around, the ratio (a / b) gives you the market price of A in terms of B.
+ *
+ * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
+ * something like db = da * b / (a + da) * (1 - 0.2/100) (note that this
+ * formula is a first-order approximation in the sense that two orders of size
+ * da / 2 will give you a better price than one order of size da, but the
+ * difference is far smaller than typical fees or any amount we care about.
+*)
+(* Check out dexter for technical details:
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/ligo/dexter.ligo
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
+*)
+
 open Ctez
 open Kit
 open Lqt
@@ -18,6 +40,10 @@ let[@inline] cfmm_assert_initialized (u: cfmm) : cfmm =
   assert (not (u.lqt = lqt_zero));
   u
 
+(** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
+    contract), as it was at the end of the last block. This is to be used when
+    required for the calculation of the drift derivative instead of up-to-date
+    kit_in_ctez, because it is a little harder to manipulate. *)
 let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
   let cfmm = cfmm_assert_initialized cfmm in
   cfmm.kit_in_ctez_in_prev_block
@@ -41,6 +67,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
       last_level = !Ligo.Tezos.level;
     }
 
+(** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
 let cfmm_view_min_kit_expected_buy_kit
     (cfmm: cfmm)
     (ctez_amount: ctez)
@@ -79,6 +106,8 @@ let cfmm_view_min_kit_expected_buy_kit
       }
     )
 
+(** Buy some kit from the cfmm contract by providing some ctez. Fail if the
+    desired amount of kit cannot be bought or if the deadline has passed. *)
 let cfmm_buy_kit
     (cfmm: cfmm)
     (ctez_amount: ctez)
@@ -98,6 +127,7 @@ let cfmm_buy_kit
     else
       (bought_kit, cfmm)
 
+(** Compute the maximum [min_ctez_expected] for [cfmm_sell_kit] to succeed. *)
 let cfmm_view_min_ctez_expected_cfmm_sell_kit
     (cfmm: cfmm)
     (kit_amount: kit)
@@ -137,6 +167,8 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
       }
     )
 
+(** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
+    cannot be bought or if the deadline has passed. *)
 let cfmm_sell_kit
     (cfmm: cfmm)
     (kit_amount: kit)
@@ -156,6 +188,8 @@ let cfmm_sell_kit
     else
       (bought_ctez, cfmm)
 
+(** Compute the minimum [max_kit_deposited] and the maximum [min_lqt_minted]
+    for [cfmm_add_liquidity] to succeed. *)
 let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
     (cfmm: cfmm)
     (ctez_amount: ctez)
@@ -187,6 +221,10 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
       }
     )
 
+(** Buy some liquidity from the cfmm contract, by giving it some ctez and
+    some kit. If the given amounts does not have the right ratio, we
+    liquidate all the ctez given and as much kit as we can with the right
+    ratio, and return the leftovers, along with the liquidity tokens. *)
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
  * same proportion as the contract la / lb = a / b . Assuming there are n
@@ -228,6 +266,8 @@ let cfmm_add_liquidity
       *)
       (lqt_minted, kit_to_return, cfmm)
 
+(** Compute the maximum [min_ctez_withdrawn] and the minimum
+    [min_kit_withdrawn] for [cfmm_remove_liquidity] to succeed. *)
 let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     (cfmm: cfmm)
     (lqt_burned: lqt)
@@ -264,6 +304,10 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
                     lqt = remaining_lqt } in
     (ctez_withdrawn, kit_withdrawn, updated)
 
+(** Sell some liquidity to the cfmm contract. Selling liquidity always
+    succeeds, but might leave the contract without ctez and kit if everybody
+    sells their liquidity. I think it is unlikely to happen, since the last
+    liquidity holders wouldn't want to lose the burrow fees. *)
 (* Selling liquidity always succeeds, but might leave the contract
  * without ctez and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
@@ -295,6 +339,7 @@ let cfmm_remove_liquidity
     else
       (ctez_withdrawn, kit_withdrawn, cfmm)
 
+(** Add accrued burrowing fees to the cfmm contract. *)
 let cfmm_add_accrued_kit (cfmm: cfmm) (accrual: kit) : cfmm =
   let cfmm = cfmm_sync_last_observed cfmm in
   { cfmm with kit = kit_add cfmm.kit accrual }
