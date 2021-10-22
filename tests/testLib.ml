@@ -81,7 +81,7 @@ let with_sealed_wrapper f =
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
 
   let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, ctez_addr, collateral_fa2_addr) in
+  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_addr) in
   let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
   f wrapper
 
