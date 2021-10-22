@@ -20,6 +20,7 @@ open Fa2Ledger
 open Fa2Implementation
 open Mem
 open BurrowOrigination
+open Price
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
@@ -810,11 +811,9 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
     let state_parameters = add_circulating_kit state_parameters reward in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.sender, reward) in
 
-    (* TODO: Generalize the price situation here too. *)
-
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
+    let kit_in_tez_in_prev_block = calculate_kit_in_tez state_cfmm state_external_contracts in
     let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in
     (* Note: state_parameters.circulating kit here already includes the accrual to the CFMM. *)
     let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
