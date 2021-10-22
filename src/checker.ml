@@ -1,4 +1,4 @@
-open Ctez
+open Ctok
 open Kit
 open Tok
 open Lqt
@@ -87,8 +87,8 @@ let assert_checker_invariants (state: checker) : unit =
 (**                           EXTERNAL_CONTRACTS                             *)
 (* ************************************************************************* *)
 
-let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez : fa12_transfer Ligo.contract option) with
+let[@inline] get_transfer_cfmm_token_fa12_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.cfmm_token_fa12 : fa12_transfer Ligo.contract option) with
   | Some c -> c
   | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
 
@@ -507,19 +507,19 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
 (**                                 CFMM                                     *)
 (* ************************************************************************* *)
 
-let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_buy_kit (state, p: checker * (ctok * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let ctez, min_kit_expected, deadline = p in
-  let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctez min_kit_expected deadline in
+  let ctok, min_kit_expected, deadline = p in
+  let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctok min_kit_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
       address_to = !Ligo.Tezos.self_address;
-      value = ctez_to_muctez_nat ctez;
+      value = ctok_to_muctok_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
       transfer (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_cfmm_token_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -543,20 +543,20 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
 
   ([op], state)
 
-let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_sell_kit (state, p: checker * (kit * ctok * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let kit, min_ctez_expected, deadline = p in
-  let (ctez, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctez_expected deadline in
+  let kit, min_ctok_expected, deadline = p in
+  let (ctok, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctok_expected deadline in
   let transfer =
     { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
-      value = ctez_to_muctez_nat ctez;
+      value = ctok_to_muctok_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_cfmm_token_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -576,21 +576,21 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
 
   ([op], state)
 
-let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_add_liquidity (state, p: checker * (ctok * kit * lqt * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let ctez_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
+  let ctok_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
-    cfmm_add_liquidity state.cfmm ctez_deposited max_kit_deposited min_lqt_minted deadline in
+    cfmm_add_liquidity state.cfmm ctok_deposited max_kit_deposited min_lqt_minted deadline in
   let transfer =
     { address_from = !Ligo.Tezos.sender;
       address_to = !Ligo.Tezos.self_address;
-      value = ctez_to_muctez_nat ctez_deposited;
+      value = ctok_to_muctok_nat ctok_deposited;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_cfmm_token_fa12_entrypoint state.external_contracts) in
 
   let deposited_kit = kit_sub max_kit_deposited kit_tokens in
 
@@ -614,21 +614,21 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.times
 
   ([op], state)
 
-let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
+let entrypoint_remove_liquidity (state, p: checker * (lqt * ctok * kit * Ligo.timestamp)) : LigoOp.operation list * checker =
   assert_checker_invariants state;
-  let lqt_burned, min_ctez_withdrawn, min_kit_withdrawn, deadline = p in
-  let (ctez, kit_tokens, updated_cfmm) =
-    cfmm_remove_liquidity state.cfmm lqt_burned min_ctez_withdrawn min_kit_withdrawn deadline in
+  let lqt_burned, min_ctok_withdrawn, min_kit_withdrawn, deadline = p in
+  let (ctok, kit_tokens, updated_cfmm) =
+    cfmm_remove_liquidity state.cfmm lqt_burned min_ctok_withdrawn min_kit_withdrawn deadline in
   let transfer =
     { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
-      value = ctez_to_muctez_nat ctez;
+      value = ctok_to_muctok_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_cfmm_token_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -814,7 +814,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
 
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let kit_in_tez_in_prev_block = (cfmm_kit_in_ctez_in_prev_block state_cfmm) in (* FIXME: times ctez_in_tez *)
+    let kit_in_tez_in_prev_block = (cfmm_kit_in_ctok_in_prev_block state_cfmm) in (* FIXME: times ctok_in_tez *)
     let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in
     (* Note: state_parameters.circulating kit here already includes the accrual to the CFMM. *)
     let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
@@ -907,34 +907,34 @@ let entrypoint_update_operators (state, xs: checker * fa2_update_operator list) 
 (**                               VIEWS                                      *)
 (* ************************************************************************* *)
 
-let view_buy_kit_min_kit_expected (ctez, state: ctez * checker) : kit =
+let view_buy_kit_min_kit_expected (ctok, state: ctok * checker) : kit =
   assert_checker_invariants state;
-  let (kit, _cfmm) = cfmm_view_min_kit_expected_buy_kit state.cfmm ctez in
+  let (kit, _cfmm) = cfmm_view_min_kit_expected_buy_kit state.cfmm ctok in
   kit
 
-let view_sell_kit_min_ctez_expected (kit, state: kit * checker) : ctez =
+let view_sell_kit_min_ctok_expected (kit, state: kit * checker) : ctok =
   assert_checker_invariants state;
-  let (ctez, _cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit state.cfmm kit in
-  ctez
+  let (ctok, _cfmm) = cfmm_view_min_ctok_expected_cfmm_sell_kit state.cfmm kit in
+  ctok
 
-let view_add_liquidity_max_kit_deposited (ctez, state: ctez * checker) : kit =
+let view_add_liquidity_max_kit_deposited (ctok, state: ctok * checker) : kit =
   assert_checker_invariants state;
-  let (_lqt, kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
+  let (_lqt, kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctok in
   kit
 
-let view_add_liquidity_min_lqt_minted (ctez, state: ctez * checker) : lqt =
+let view_add_liquidity_min_lqt_minted (ctok, state: ctok * checker) : lqt =
   assert_checker_invariants state;
-  let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctez in
+  let (lqt, _kit, _cfmm) = cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity state.cfmm ctok in
   lqt
 
-let view_remove_liquidity_min_ctez_withdrawn (lqt, state: lqt * checker) : ctez =
+let view_remove_liquidity_min_ctok_withdrawn (lqt, state: lqt * checker) : ctok =
   assert_checker_invariants state;
-  let (ctez, _kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
-  ctez
+  let (ctok, _kit, _cfmm) = cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
+  ctok
 
 let view_remove_liquidity_min_kit_withdrawn (lqt, state: lqt * checker) : kit =
   assert_checker_invariants state;
-  let (_ctez, kit, _cfmm) = cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
+  let (_ctok, kit, _cfmm) = cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity state.cfmm lqt in
   kit
 
 let view_burrow_max_mintable_kit (burrow_id, state: burrow_id * checker) : kit =

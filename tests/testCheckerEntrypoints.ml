@@ -3,7 +3,7 @@ open TestLib
 open Error
 open Tok
 open Kit
-open Ctez
+open Ctok
 open Lqt
 
 let assert_unsealed_contract_raises_not_deployed_error f =
@@ -51,11 +51,11 @@ let with_sealed_state_and_cfmm_setup f =
        let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
        (* Add some liquidity *)
        Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ctez_to_give = Ctez.ctez_of_muctez (Ligo.nat_from_literal "400_000n") in
+       let ctok_to_give = Ctok.ctok_of_muctok (Ligo.nat_from_literal "400_000n") in
        let kit_to_give = Kit.kit_of_denomination (Ligo.nat_from_literal "400_000n") in
        let min_lqt_to_mint = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
-       let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_give, kit_to_give, min_lqt_to_mint, deadline)))) in
+       let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctok_to_give, kit_to_give, min_lqt_to_mint, deadline)))) in
        let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
        (* Proceed with what comes next *)
        Ligo.Tezos.new_transaction ~seconds_passed:59 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -67,27 +67,27 @@ let suite =
     (* Test views on unsealed checker *)
     ("wrapper_view_buy_kit_min_kit_expected - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (Ctok.ctok_zero, init_wrapper));
     );
 
-    ("wrapper_view_sell_kit_min_ctez_expected - unsealed" >::
+    ("wrapper_view_sell_kit_min_ctok_expected - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (Kit.kit_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_sell_kit_min_ctok_expected (Kit.kit_zero, init_wrapper));
     );
 
     ("wrapper_view_add_liquidity_max_kit_deposited - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (Ctok.ctok_zero, init_wrapper));
     );
 
     ("wrapper_view_add_liquidity_min_lqt_minted - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctez.ctez_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (Ctok.ctok_zero, init_wrapper));
     );
 
-    ("wrapper_view_remove_liquidity_min_ctez_withdrawn - unsealed" >::
+    ("wrapper_view_remove_liquidity_min_ctok_withdrawn - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (Lqt.lqt_zero, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctok_withdrawn (Lqt.lqt_zero, init_wrapper));
     );
 
     ("wrapper_view_remove_liquidity_min_kit_withdrawn - unsealed" >::
@@ -139,12 +139,12 @@ let suite =
     ("wrapper_view_buy_kit_min_kit_expected - sealed" >::
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
-          let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
-          let min_kit_to_buy = CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (ctez_to_sell, sealed_wrapper) in
+          let ctok_to_sell = Ctok.ctok_of_muctok (Ligo.nat_from_literal "100_000n") in
+          let min_kit_to_buy = CheckerEntrypoints.wrapper_view_buy_kit_min_kit_expected (ctok_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise wrapper_view_buy_kit_min_kit_expected overapproximated *)
           let _ =
-            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Buy_kit (ctez_to_sell, min_kit_to_buy, deadline)))) in
+            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Buy_kit (ctok_to_sell, min_kit_to_buy, deadline)))) in
             let _ops, _sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
             () in
           (* must fail, otherwise wrapper_view_buy_kit_min_kit_expected underapproximated *)
@@ -152,29 +152,29 @@ let suite =
             (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
             (fun () ->
                let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Buy_kit (ctez_to_sell, min_kit_to_buy, deadline)))) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Buy_kit (ctok_to_sell, min_kit_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
        )
     );
 
-    ("wrapper_view_sell_kit_min_ctez_expected - sealed" >::
+    ("wrapper_view_sell_kit_min_ctok_expected - sealed" >::
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let kit_to_sell = Kit.kit_of_denomination (Ligo.nat_from_literal "100_000n") in
-          let min_ctez_to_buy = CheckerEntrypoints.wrapper_view_sell_kit_min_ctez_expected (kit_to_sell, sealed_wrapper) in
+          let min_ctok_to_buy = CheckerEntrypoints.wrapper_view_sell_kit_min_ctok_expected (kit_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
-          (* must succeed, otherwise wrapper_view_sell_kit_min_ctez_expected overapproximated *)
+          (* must succeed, otherwise wrapper_view_sell_kit_min_ctok_expected overapproximated *)
           let _ =
-            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Sell_kit (kit_to_sell, min_ctez_to_buy, deadline)))) in
+            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Sell_kit (kit_to_sell, min_ctok_to_buy, deadline)))) in
             let _ops, _sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
             () in
-          (* must fail, otherwise wrapper_view_sell_kit_min_ctez_expected underapproximated *)
+          (* must fail, otherwise wrapper_view_sell_kit_min_ctok_expected underapproximated *)
           assert_raises
             (Failure (Ligo.string_of_int error_SellKitPriceFailure))
             (fun () ->
-               let min_ctez_to_buy = Ctez.ctez_add min_ctez_to_buy (Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Sell_kit (kit_to_sell, min_ctez_to_buy, deadline)))) in
+               let min_ctok_to_buy = Ctok.ctok_add min_ctok_to_buy (Ctok.ctok_of_muctok (Ligo.nat_from_literal "1n")) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Sell_kit (kit_to_sell, min_ctok_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
        )
@@ -183,15 +183,15 @@ let suite =
     ("wrapper_view_add_liquidity_max_kit_deposited / wrapper_view_add_liquidity_min_lqt_minted - sealed" >::
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
-          let ctez_to_sell = Ctez.ctez_of_muctez (Ligo.nat_from_literal "100_000n") in
-          let max_kit_to_sell = CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (ctez_to_sell, sealed_wrapper) in
-          let min_lqt_to_buy = CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (ctez_to_sell, sealed_wrapper) in
+          let ctok_to_sell = Ctok.ctok_of_muctok (Ligo.nat_from_literal "100_000n") in
+          let max_kit_to_sell = CheckerEntrypoints.wrapper_view_add_liquidity_max_kit_deposited (ctok_to_sell, sealed_wrapper) in
+          let min_lqt_to_buy = CheckerEntrypoints.wrapper_view_add_liquidity_min_lqt_minted (ctok_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise
            * wrapper_view_add_liquidity_max_kit_deposited underapproximated or
            * wrapper_view_add_liquidity_min_lqt_minted overapproximated (or both of them did) *)
           let _ =
-            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
+            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctok_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
             let _ops, _sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
             () in
           (* must fail, otherwise wrapper_view_add_liquidity_max_kit_deposited overapproximated *)
@@ -199,7 +199,7 @@ let suite =
             (Failure (Ligo.string_of_int error_AddLiquidityTooMuchKitRequired))
             (fun () ->
                let max_kit_to_sell = Kit.kit_sub max_kit_to_sell (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctok_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             );
           (* must fail, otherwise wrapper_view_add_liquidity_min_lqt_minted underapproximated *)
@@ -207,32 +207,32 @@ let suite =
             (Failure (Ligo.string_of_int error_AddLiquidityTooLowLiquidityMinted))
             (fun () ->
                let min_lqt_to_buy = Lqt.lqt_add min_lqt_to_buy (Lqt.lqt_of_denomination (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctez_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Add_liquidity (ctok_to_sell, max_kit_to_sell, min_lqt_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
        )
     );
 
-    ("wrapper_view_remove_liquidity_min_ctez_withdrawn / wrapper_view_remove_liquidity_min_kit_withdrawn - sealed" >::
+    ("wrapper_view_remove_liquidity_min_ctok_withdrawn / wrapper_view_remove_liquidity_min_kit_withdrawn - sealed" >::
      with_sealed_state_and_cfmm_setup
        (fun sealed_wrapper ->
           let lqt_to_sell = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
-          let min_ctez_to_buy = CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctez_withdrawn (lqt_to_sell, sealed_wrapper) in
+          let min_ctok_to_buy = CheckerEntrypoints.wrapper_view_remove_liquidity_min_ctok_withdrawn (lqt_to_sell, sealed_wrapper) in
           let min_kit_to_buy = CheckerEntrypoints.wrapper_view_remove_liquidity_min_kit_withdrawn (lqt_to_sell, sealed_wrapper) in
           let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
           (* must succeed, otherwise
-           * wrapper_view_remove_liquidity_min_ctez_withdrawn overapproximated or
+           * wrapper_view_remove_liquidity_min_ctok_withdrawn overapproximated or
            * wrapper_view_remove_liquidity_min_kit_withdrawn overapproximated (or both of them did) *)
           let _ =
-            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)))) in
+            let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctok_to_buy, min_kit_to_buy, deadline)))) in
             let _ops, _sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
             () in
-          (* must fail, otherwise wrapper_view_remove_liquidity_min_ctez_withdrawn underapproximated *)
+          (* must fail, otherwise wrapper_view_remove_liquidity_min_ctok_withdrawn underapproximated *)
           assert_raises
-            (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughCtez))
+            (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughCtok))
             (fun () ->
-               let min_ctez_to_buy = Ctez.ctez_add min_ctez_to_buy (Ctez.ctez_of_muctez (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)))) in
+               let min_ctok_to_buy = Ctok.ctok_add min_ctok_to_buy (Ctok.ctok_of_muctok (Ligo.nat_from_literal "1n")) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctok_to_buy, min_kit_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             );
           (* must fail, otherwise wrapper_view_remove_liquidity_min_kit_withdrawn underapproximated *)
@@ -240,7 +240,7 @@ let suite =
             (Failure (Ligo.string_of_int error_RemoveLiquidityCantWithdrawEnoughKit))
             (fun () ->
                let min_kit_to_buy = Kit.kit_add min_kit_to_buy (Kit.kit_of_denomination (Ligo.nat_from_literal "1n")) in
-               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctez_to_buy, min_kit_to_buy, deadline)))) in
+               let op = CheckerMain.(CheckerEntrypoint (LazyParams (Remove_liquidity (lqt_to_sell, min_ctok_to_buy, min_kit_to_buy, deadline)))) in
                CheckerMain.main (op, sealed_wrapper)
             )
        )
@@ -453,7 +453,7 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            ctok_of_muctok (Ligo.nat_from_literal "1n"),
             kit_of_denomination (Ligo.nat_from_literal "2n"),
             Ligo.timestamp_from_seconds_literal 3
           ) in
@@ -466,7 +466,7 @@ let suite =
        (fun sealed_wrapper ->
           let param = (
             kit_of_denomination (Ligo.nat_from_literal "1n"),
-            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            ctok_of_muctok (Ligo.nat_from_literal "2n"),
             Ligo.timestamp_from_seconds_literal 3
           ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Sell_kit (param))), sealed_wrapper))
@@ -477,7 +477,7 @@ let suite =
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
           let param = (
-            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            ctok_of_muctok (Ligo.nat_from_literal "1n"),
             kit_of_denomination (Ligo.nat_from_literal "2n"),
             lqt_of_denomination (Ligo.nat_from_literal "3n"),
             Ligo.timestamp_from_seconds_literal 4
@@ -491,7 +491,7 @@ let suite =
        (fun sealed_wrapper ->
           let param = (
             lqt_of_denomination (Ligo.nat_from_literal "1n"),
-            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            ctok_of_muctok (Ligo.nat_from_literal "2n"),
             kit_of_denomination (Ligo.nat_from_literal "3n"),
             Ligo.timestamp_from_seconds_literal 4
           ) in
@@ -539,7 +539,7 @@ let suite =
     ("SealContract (main) - fails when unwanted tez is given - sealed state" >::
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
-          let param = (Ligo.address_from_literal "oracle address", Ligo.address_from_literal "col fa2 address", Ligo.address_from_literal "ctez fa2 address") in
+          let param = (Ligo.address_from_literal "oracle address", Ligo.address_from_literal "col fa2 address", Ligo.address_from_literal "ctok fa12 address") in
           CheckerMain.(main (SealContract (param), sealed_wrapper))
        )
     );
@@ -669,7 +669,7 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            ctok_of_muctok (Ligo.nat_from_literal "1n"),
             kit_of_denomination (Ligo.nat_from_literal "2n"),
             Ligo.timestamp_from_seconds_literal 3
           ) in
@@ -682,7 +682,7 @@ let suite =
        (fun unsealed_wrapper ->
           let param = (
             kit_of_denomination (Ligo.nat_from_literal "1n"),
-            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            ctok_of_muctok (Ligo.nat_from_literal "2n"),
             Ligo.timestamp_from_seconds_literal 3
           ) in
           CheckerMain.(main (CheckerEntrypoint (LazyParams (Sell_kit (param))), unsealed_wrapper))
@@ -693,7 +693,7 @@ let suite =
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
           let param = (
-            ctez_of_muctez (Ligo.nat_from_literal "1n"),
+            ctok_of_muctok (Ligo.nat_from_literal "1n"),
             kit_of_denomination (Ligo.nat_from_literal "2n"),
             lqt_of_denomination (Ligo.nat_from_literal "3n"),
             Ligo.timestamp_from_seconds_literal 4
@@ -707,7 +707,7 @@ let suite =
        (fun unsealed_wrapper ->
           let param = (
             lqt_of_denomination (Ligo.nat_from_literal "1n"),
-            ctez_of_muctez (Ligo.nat_from_literal "2n"),
+            ctok_of_muctok (Ligo.nat_from_literal "2n"),
             kit_of_denomination (Ligo.nat_from_literal "3n"),
             Ligo.timestamp_from_seconds_literal 4
           ) in
@@ -755,7 +755,7 @@ let suite =
     ("SealContract (main) - fails when unwanted tez is given - unsealed state" >::
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
-          let param = (Ligo.address_from_literal "oracle address", Ligo.address_from_literal "col fa2 address", Ligo.address_from_literal "ctez fa2 address") in
+          let param = (Ligo.address_from_literal "oracle address", Ligo.address_from_literal "col fa2 address", Ligo.address_from_literal "ctok fa12 address") in
           CheckerMain.(main (SealContract (param), unsealed_wrapper))
        )
     );

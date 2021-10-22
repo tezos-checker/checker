@@ -4,22 +4,22 @@ let[@inline] error_CfmmTooLate                                          : Ligo.i
 
 let[@inline] error_BuyKitTooLowExpectedKit                              : Ligo.int = Ligo.int_from_literal "10"
 let[@inline] error_BuyKitPriceFailure                                   : Ligo.int = Ligo.int_from_literal "11"
-let[@inline] error_BuyKitNoCtezGiven                                    : Ligo.int = Ligo.int_from_literal "13"
+let[@inline] error_BuyKitNoCtokGiven                                    : Ligo.int = Ligo.int_from_literal "13"
 
-let[@inline] error_SellKitTooLowExpectedCtez                            : Ligo.int = Ligo.int_from_literal "21"
+let[@inline] error_SellKitTooLowExpectedCtok                            : Ligo.int = Ligo.int_from_literal "21"
 let[@inline] error_SellKitPriceFailure                                  : Ligo.int = Ligo.int_from_literal "22"
 let[@inline] error_SellKitNoKitGiven                                    : Ligo.int = Ligo.int_from_literal "24"
 
-let[@inline] error_AddLiquidityNoCtezGiven                              : Ligo.int = Ligo.int_from_literal "30"
+let[@inline] error_AddLiquidityNoCtokGiven                              : Ligo.int = Ligo.int_from_literal "30"
 let[@inline] error_AddLiquidityNoKitGiven                               : Ligo.int = Ligo.int_from_literal "31"
 let[@inline] error_AddLiquidityNoLiquidityToBeAdded                     : Ligo.int = Ligo.int_from_literal "32"
 let[@inline] error_AddLiquidityTooLowLiquidityMinted                    : Ligo.int = Ligo.int_from_literal "33"
 let[@inline] error_AddLiquidityTooMuchKitRequired                       : Ligo.int = Ligo.int_from_literal "34"
 
 let[@inline] error_RemoveLiquidityNoLiquidityBurned                     : Ligo.int = Ligo.int_from_literal "41"
-let[@inline] error_RemoveLiquidityNoCtezWithdrawnExpected               : Ligo.int = Ligo.int_from_literal "42"
+let[@inline] error_RemoveLiquidityNoCtokWithdrawnExpected               : Ligo.int = Ligo.int_from_literal "42"
 let[@inline] error_RemoveLiquidityNoKitWithdrawnExpected                : Ligo.int = Ligo.int_from_literal "43"
-let[@inline] error_RemoveLiquidityCantWithdrawEnoughCtez                : Ligo.int = Ligo.int_from_literal "44"
+let[@inline] error_RemoveLiquidityCantWithdrawEnoughCtok                : Ligo.int = Ligo.int_from_literal "44"
 let[@inline] error_RemoveLiquidityCantWithdrawEnoughKit                 : Ligo.int = Ligo.int_from_literal "46"
 let[@inline] error_RemoveLiquidityTooMuchLiquidityWithdrawn             : Ligo.int = Ligo.int_from_literal "48"
 
@@ -138,3 +138,7 @@ let[@inline] internalError_MemGetElementNotFound                        : Ligo.i
 let[@inline] internalError_TokSubNegative                               : Ligo.int = Ligo.int_from_literal "320"
 let[@inline] internalError_TokOfFractionCeilNegative                    : Ligo.int = Ligo.int_from_literal "321"
 let[@inline] internalError_TokOfFractionFloorNegative                   : Ligo.int = Ligo.int_from_literal "322"
+
+let[@inline] internalError_CtokSubNegative                              : Ligo.int = Ligo.int_from_literal "330"
+let[@inline] internalError_CtokOfFractionCeilNegative                   : Ligo.int = Ligo.int_from_literal "331"
+let[@inline] internalError_CtokOfFractionFloorNegative                  : Ligo.int = Ligo.int_from_literal "332"

@@ -18,6 +18,7 @@ checker_sources=(
   fixedPoint
   fa2Interface
   ctez
+  ctok
   kit
   lqt
   tok
