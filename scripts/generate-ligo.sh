@@ -36,10 +36,10 @@ checker_sources=(
   burrow
   checkerTypes
   cfmm
-  price
   sliceList
   liquidationAuction
   burrowOrigination
+  price
   checker
   checkerEntrypoints
   checkerMain
