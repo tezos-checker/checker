@@ -88,8 +88,8 @@ let assert_checker_invariants (state: checker) : unit =
 (**                           EXTERNAL_CONTRACTS                             *)
 (* ************************************************************************* *)
 
-let[@inline] get_transfer_ctez_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez : fa12_transfer Ligo.contract option) with
+let[@inline] get_transfer_ctez_fa12_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctez_fa12 : fa12_transfer Ligo.contract option) with
   | Some c -> c
   | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
 
@@ -520,7 +520,7 @@ let entrypoint_buy_kit (state, p: checker * (ctez * kit * Ligo.timestamp)) : Lig
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
       transfer (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_ctez_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -557,7 +557,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctez * Ligo.timestamp)) : Li
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_ctez_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -591,7 +591,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctez * kit * lqt * Ligo.times
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_ctez_fa12_entrypoint state.external_contracts) in
 
   let deposited_kit = kit_sub max_kit_deposited kit_tokens in
 
@@ -629,7 +629,7 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctez * kit * Ligo.ti
     LigoOp.Tezos.fa12_transfer_transaction
       transfer
       (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctez_entrypoint state.external_contracts) in
+      (get_transfer_ctez_fa12_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in

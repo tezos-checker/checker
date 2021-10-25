@@ -23,7 +23,7 @@ let checker_address = !Ligo.Tezos.self_address
 
 let empty_checker =
   initial_checker
-    { ctez = ctez_addr;
+    { ctez_fa12 = ctez_addr;
       oracle = oracle_addr;
       collateral_fa2 = collateral_fa2_addr;
     }
@@ -388,7 +388,7 @@ let suite =
                value=(Ligo.nat_from_literal "5_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -678,7 +678,7 @@ let suite =
                value=(Ligo.nat_from_literal "5_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -1140,7 +1140,7 @@ let suite =
                value=(Ligo.nat_from_literal "1_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
@@ -1180,7 +1180,7 @@ let suite =
                value=(Ligo.nat_from_literal "1n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
