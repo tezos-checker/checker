@@ -19,7 +19,7 @@ type checker_params =
 type params =
   | DeployFunction of (lazy_function_id * Ligo.bytes)
   | DeployMetadata of Ligo.bytes
-  | SealContract of (Ligo.address * Ligo.address * Ligo.address)
+  | SealContract of (Ligo.address * Ligo.address * Ligo.address * Ligo.address)
   | CheckerEntrypoint of checker_params
 
 (*
@@ -70,13 +70,19 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
                 | None -> Ligo.Big_map.add "m" bs metadata
                 | Some prev -> Ligo.Big_map.add "m" (Ligo.Bytes.concat prev bs) metadata in
               (([]: LigoOp.operation list), lazy_functions, metadata, Unsealed deployer)
-            | SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr) ->
-              let external_contracts = { oracle = oracle_addr; collateral_fa2 = collateral_fa2_addr; ctez_fa12 = ctez_fa12_addr; } in
+            | SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) ->
+              let external_contracts =
+                { oracle = oracle_addr;
+                  collateral_fa2 = collateral_fa2_addr;
+                  ctez_fa12 = ctez_fa12_addr;
+                  ctez_cfmm = ctez_cfmm_addr;
+                } in
 
               (* check if the given oracle, collateral_fa2, and ctez contracts have the entrypoints we need *)
               let _ = get_oracle_entrypoint external_contracts in
               let _ = get_transfer_collateral_fa2_entrypoint external_contracts in
               let _ = get_transfer_ctez_fa12_entrypoint external_contracts in
+              (* FIXME: let _ = get_ctez_cfmm_price_entrypoint external_contracts in *)
 
               (* emit a touch operation to checker *)
               let touchOp =

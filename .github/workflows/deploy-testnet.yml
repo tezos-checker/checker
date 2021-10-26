@@ -16,10 +16,14 @@ on:
         description: 'Node to connect to'
         required: true
         default: 'https://rpczero.tzbeta.net/'
-      ctez:
-        description: 'Ctez contract'
+      ctez-fa12:
+        description: 'Ctez FA1.2 contract'
         required: true
         default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
+      ctez-cfmm:
+        description: 'Ctez CFMM contract'
+        required: true
+        default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE' # FIXME: This is the wrong address.
       oracle:
         description: 'Oracle contract'
         required: true
@@ -57,5 +61,6 @@ jobs:
               --port 443 \
               --key "$TESTNET_KEY" \
               checker \
-              --ctez "${{ github.event.inputs.ctez }}" \
+              --ctez-fa12 "${{ github.event.inputs.ctez-fa12 }}" \
+              --ctez-cfmm "${{ github.event.inputs.ctez-cfmm }}" \
               --oracle "${{ github.event.inputs.oracle }}"

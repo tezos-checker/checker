@@ -326,7 +326,8 @@ class E2ETest(SandboxedTestCase):
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
             tez_wrapper=tez_wrapper.context.address,
-            ctez=ctez["fa12_ctez"].context.address,
+            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ctez_cfmm=ctez["cfmm"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -658,7 +659,8 @@ class LiquidationsStressTest(SandboxedTestCase):
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
             tez_wrapper=tez_wrapper.context.address,
-            ctez=ctez["fa12_ctez"].context.address,
+            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ctez_cfmm=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 

@@ -23,7 +23,8 @@ let checker_address = !Ligo.Tezos.self_address
 
 let empty_checker =
   initial_checker
-    { ctez_fa12 = ctez_addr;
+    { ctez_fa12 = ctez_fa12_addr;
+      ctez_cfmm = ctez_cfmm_addr;
       oracle = oracle_addr;
       collateral_fa2 = collateral_fa2_addr;
     }

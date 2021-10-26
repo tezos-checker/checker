@@ -312,7 +312,8 @@ def deploy_checker(
     *,
     oracle,
     tez_wrapper,
-    ctez,
+    ctez_fa12,
+    ctez_cfmm,
     ttl: Optional[int] = None,
     checker_config_path: Optional[Path] = None,
 ):
@@ -376,7 +377,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, tez_wrapper, ctez))
+        checker.sealContract((oracle, tez_wrapper, ctez_fa12, ctez_cfmm))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
