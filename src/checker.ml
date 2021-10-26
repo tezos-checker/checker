@@ -490,6 +490,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       last_index = state_last_index;
+      last_ctez_price = state_last_ctez_price;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
@@ -503,6 +504,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       last_index = state_last_index;
+      last_ctez_price = state_last_ctez_price;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } in
@@ -797,6 +799,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
       last_index = state_last_index;
+      last_ctez_price = state_last_ctez_price;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
@@ -858,6 +861,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
         parameters = state_parameters;
         liquidation_auctions = state_liquidation_auctions;
         last_index = state_last_index;
+        last_ctez_price = state_last_ctez_price;
         fa2_state = state_fa2_state;
         external_contracts = state_external_contracts;
       } in
