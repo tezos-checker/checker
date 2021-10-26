@@ -43,12 +43,12 @@ let lift_to_sealed_wrapper (f: CheckerTypes.checker -> 'a) : CheckerTypes.wrappe
     | Sealed state -> f state
   )
 
-let set_last_price_in_wrapper wrapper price_option =
+let set_last_index_in_wrapper wrapper index_option =
   CheckerTypes.(
     match wrapper.deployment_state with
     | Unsealed _ -> wrapper
     | Sealed state ->
-      {wrapper with deployment_state = Sealed {state with last_price = price_option}}
+      {wrapper with deployment_state = Sealed {state with last_index = index_option}}
   )
 
 let find_burrow_in_sealed_wrapper sealed_wrapper burrow_id =
@@ -379,7 +379,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -432,7 +432,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -487,7 +487,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in

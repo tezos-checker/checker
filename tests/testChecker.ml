@@ -1366,7 +1366,7 @@ let suite =
     ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = { empty_checker with last_price = Some (Ligo.nat_from_literal "1_000_000n") } in
+       let checker = { empty_checker with last_index = Some (Ligo.nat_from_literal "1_000_000n") } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_touch (checker, ()) in
@@ -1377,7 +1377,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", max_kit)) in
-       let checker = { checker with last_price = Some (Ligo.nat_from_literal "10_000_000n") } in
+       let checker = { checker with last_index = Some (Ligo.nat_from_literal "10_000_000n") } in
        let _, checker = Checker.entrypoint_touch (checker, ()) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:1_000_000 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");

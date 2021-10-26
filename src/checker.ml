@@ -489,7 +489,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      last_price = state_last_price;
+      last_index = state_last_index;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
@@ -502,7 +502,7 @@ let[@inline] entrypoint_touch_liquidation_slices (state, slices: checker * leaf_
       cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      last_price = state_last_price;
+      last_index = state_last_index;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } in
@@ -796,7 +796,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
       cfmm = state_cfmm;
       parameters = state_parameters;
       liquidation_auctions = state_liquidation_auctions;
-      last_price = state_last_price;
+      last_index = state_last_index;
       fa2_state = state_fa2_state;
       external_contracts = state_external_contracts;
     } = state in
@@ -857,7 +857,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
         cfmm = state_cfmm;
         parameters = state_parameters;
         liquidation_auctions = state_liquidation_auctions;
-        last_price = state_last_price;
+        last_index = state_last_index;
         fa2_state = state_fa2_state;
         external_contracts = state_external_contracts;
       } in
@@ -867,7 +867,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
     (ops, state)
 
 let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * checker) =
-  let index = match state.last_price with
+  let index = match state.last_index with
     | None -> state.parameters.index (* use the old one *)
     | Some i -> i in (* FIXME: Is the nat supposed to represent tez? *)
   touch_with_index state index
@@ -881,7 +881,7 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
-    (([]: LigoOp.operation list), {state with last_price = Some price})
+    (([]: LigoOp.operation list), {state with last_index = Some price})
 
 (* ************************************************************************* *)
 (**                               FA2                                        *)
