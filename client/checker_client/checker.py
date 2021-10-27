@@ -450,15 +450,17 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
 
         print("Deploying ctez CFMM contract...")
         cfmm_storage = {
-            "tokenPool": 1,
+            "tezPool": 1,
             "cashPool": 1,
+            "target": 281474976710656,  # Bitwise.shift_left 1n 48n
             "lqtTotal": 1,
-            "pendingPoolUpdates": 0,
-            "tokenAddress": fa12_ctez.context.address,
+            "ctez_address": ctez.context.address,
+            "cashAddress": fa12_ctez.context.address,
             "lqtAddress": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
             "lastOracleUpdate": math.floor(time.time()),
-            "consumerEntrypoint": ctez.context.address,
+            "consumerEntrypoint": ctez.context.address,  # FIXME: This looks like it needs a %cfmm_price attached to it
         }
+
         cfmm = deploy_contract(
             tz,
             source_file=str(cfmm_michelson),
