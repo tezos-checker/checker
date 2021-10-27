@@ -851,6 +851,11 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
         (Ligo.tez_from_literal "0mutez")
         (get_oracle_entrypoint state_external_contracts) in
 
+    (* FIXME: Create an operation to ask the ctez cfmm to send updated values.
+     * Emit this operation next to the one requesting prices from oracles, at
+     * the end, so that the system parameters do not change between touching
+     * different slices. *)
+
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
       touch_oldest ([op], state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, number_of_slices_to_process) in
@@ -887,13 +892,14 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
   else
     (([]: LigoOp.operation list), {state with last_index = Some price})
 
-let entrypoint_receive_ctez_marginal_price (state, price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
+let entrypoint_receive_ctez_marginal_price (state, _price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   if !Ligo.Tezos.sender <> state.external_contracts.ctez_cfmm then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
-    (* FIXME: Figure out how to interpret the received fraction. *)
-    (([]: LigoOp.operation list), {state with last_ctez_in_tez = Some price})
+    (* FIXME: Figure out how to interpret the received fraction instead of
+     * hardwiring it to one_ratio. *)
+    (([]: LigoOp.operation list), {state with last_ctez_in_tez = Some one_ratio})
 
 
 (* ************************************************************************* *)

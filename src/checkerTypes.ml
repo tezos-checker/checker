@@ -6,6 +6,7 @@ open Parameters
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Fa2Ledger
+open Common
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
 
@@ -22,7 +23,7 @@ type checker =
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     last_index : Ligo.nat option;
-    last_ctez_in_tez : (Ligo.nat * Ligo.nat) option;
+    last_ctez_in_tez : ratio option;
     fa2_state : fa2_state;
     external_contracts : external_contracts;
   }
@@ -34,7 +35,7 @@ let initial_checker (external_contracts: external_contracts) =
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     last_index = (None : Ligo.nat option);
-    last_ctez_in_tez = (None : (Ligo.nat * Ligo.nat) option);
+    last_ctez_in_tez = (None : ratio option);
     fa2_state = initial_fa2_state;
     external_contracts = external_contracts;
   }
