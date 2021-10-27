@@ -22,7 +22,7 @@ type checker =
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
     last_index : Ligo.nat option;
-    last_ctez_price : (Ligo.nat * Ligo.nat) option;
+    last_ctez_in_tez : (Ligo.nat * Ligo.nat) option;
     fa2_state : fa2_state;
     external_contracts : external_contracts;
   }
@@ -34,7 +34,7 @@ let initial_checker (external_contracts: external_contracts) =
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
     last_index = (None : Ligo.nat option);
-    last_ctez_price = (None : (Ligo.nat * Ligo.nat) option);
+    last_ctez_in_tez = (None : (Ligo.nat * Ligo.nat) option);
     fa2_state = initial_fa2_state;
     external_contracts = external_contracts;
   }
