@@ -887,6 +887,15 @@ let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operat
   else
     (([]: LigoOp.operation list), {state with last_index = Some price})
 
+let entrypoint_receive_ctez_marginal_price (state, price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
+  assert_checker_invariants state;
+  if !Ligo.Tezos.sender <> state.external_contracts.ctez_cfmm then
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
+  else
+    (* FIXME: Figure out how to interpret the received fraction. *)
+    (([]: LigoOp.operation list), {state with last_ctez_in_tez = Some price})
+
+
 (* ************************************************************************* *)
 (**                               FA2                                        *)
 (* ************************************************************************* *)
