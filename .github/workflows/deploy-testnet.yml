@@ -8,6 +8,16 @@
 #
 # Then set the `Secret Key` as the aforementioned secret. It should be of the form: unencrypted:edsk****
 
+# FIXME: The default values for ctez-fa12 and ctez-cfmm for the ctez contract
+# below come from the following ctez instance:
+#
+#   https://better-call.dev/granadanet/KT1QqSAj6krgr3pqg7aqd1ukVZYwJoQ8HYCS/storage
+#
+# However, this instance does not expose an entrypoint for receiving the
+# marginal price of ctez in tez, so deploying with it as the default will
+# certainly fail. Once the next branch becomes the main one and a new ctez
+# instance is deployed, we should change these defaults.
+
 name: Deploy to the testnet
 on:
   workflow_dispatch:
@@ -23,7 +33,7 @@ on:
       ctez-cfmm:
         description: 'Ctez CFMM contract'
         required: true
-        default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE' # FIXME: This is the wrong address.
+        default: 'KT1K7mXY1YjAdqYETwNfgYL4qe6frWvSGJSu'
       oracle:
         description: 'Oracle contract'
         required: true
