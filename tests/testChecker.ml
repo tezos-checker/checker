@@ -698,6 +698,11 @@ let suite =
             (Ligo.tez_from_literal "0mutez")
             (Checker.get_oracle_entrypoint checker.external_contracts)
          );
+         (LigoOp.Tezos.nat_nat_contract_transaction
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address))
+            (Ligo.tez_from_literal "0mutez")
+            (Checker.get_ctez_cfmm_price_entrypoint checker.external_contracts)
+         );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
@@ -1652,8 +1657,9 @@ let suite =
         * request to the oracle to update the index. *)
        begin match ops with
          | [
-           Transaction (AddressNatTransactionValue _, _, _);  (* send tez requests *)
-           Transaction (NatContractTransactionValue _, _, _); (* oracle call *)
+           Transaction (AddressNatTransactionValue _, _, _);     (* send tez requests *)
+           Transaction (NatContractTransactionValue _, _, _);    (* oracle call *)
+           Transaction (NatNatContractTransactionValue _, _, _); (* ctez cfmm call *)
          ] -> ()
          | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
        end;

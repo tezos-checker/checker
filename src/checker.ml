@@ -845,20 +845,30 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
     let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
       | Some cb -> cb
       | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-    let op =
+    let op_oracle =
       LigoOp.Tezos.nat_contract_transaction
         cb
         (Ligo.tez_from_literal "0mutez")
         (get_oracle_entrypoint state_external_contracts) in
 
-    (* FIXME: Create an operation to ask the ctez cfmm to send updated values.
-     * Emit this operation next to the one requesting prices from oracles, at
-     * the end, so that the system parameters do not change between touching
+    (* Create an operation to ask the ctez cfmm to send updated values. Emit
+     * this operation next to the one requesting prices from oracles, at the
+     * end, so that the system parameters do not change between touching
      * different slices. *)
+    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address : ((Ligo.nat * Ligo.nat) Ligo.contract) option) with
+      | Some cb -> cb
+      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceiveCtezMarginalPrice : (Ligo.nat * Ligo.nat) Ligo.contract) in
+    let op_ctez_price =
+      LigoOp.Tezos.nat_nat_contract_transaction
+        cb
+        (Ligo.tez_from_literal "0mutez")
+        (get_ctez_cfmm_price_entrypoint state_external_contracts) in
+
+    let ops = [op_oracle; op_ctez_price] in
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
     let ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state =
-      touch_oldest ([op], state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, number_of_slices_to_process) in
+      touch_oldest (ops, state_liquidation_auctions, state_burrows, state_parameters, state_fa2_state, number_of_slices_to_process) in
 
     let state =
       { burrows = state_burrows;
