@@ -82,7 +82,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
               let _ = get_oracle_entrypoint external_contracts in
               let _ = get_transfer_collateral_fa2_entrypoint external_contracts in
               let _ = get_transfer_ctez_fa12_entrypoint external_contracts in
-              (* FIXME: let _ = get_ctez_cfmm_price_entrypoint external_contracts in *)
+              let _ = get_ctez_cfmm_price_entrypoint external_contracts in
 
               (* emit a touch operation to checker *)
               let touchOp =
