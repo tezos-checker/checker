@@ -660,7 +660,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             oracle=oracle.context.address,
             tez_wrapper=tez_wrapper.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
-            ctez_cfmm=ctez["fa12_ctez"].context.address,
+            ctez_cfmm=ctez["cfmm"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
