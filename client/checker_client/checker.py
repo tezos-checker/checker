@@ -458,7 +458,7 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
             "cashAddress": fa12_ctez.context.address,
             "lqtAddress": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
             "lastOracleUpdate": math.floor(time.time()),
-            "consumerEntrypoint": ctez.context.address,  # FIXME: This looks like it needs a %cfmm_price attached to it
+            "consumerEntrypoint": f"{ctez.context.address}%cfmm_price",
         }
 
         cfmm = deploy_contract(
