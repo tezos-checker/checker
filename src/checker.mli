@@ -245,7 +245,7 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 (** (INTERNAL) Receive a price from the ctez (CFMM) contract.
 
     Parameters:
-    - The current price as a pair of the numerator and the denominator. FIXME: How to interpret exactly the given fraction?
+    - The current price as a pair of the numerator and the denominator.
 *)
 val entrypoint_receive_ctez_marginal_price : checker * (Ligo.nat * Ligo.nat) -> (LigoOp.operation list * checker)
 
