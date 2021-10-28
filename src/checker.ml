@@ -842,10 +842,10 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
     (* Create an operation to ask the oracles to send updated values. This
        should be the last operation we emit, so that the system parameters do
        not change between touching different slices. *)
-    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
-      | Some cb -> cb
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
     let op_oracle =
+      let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
+        | Some cb -> cb
+        | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
       LigoOp.Tezos.nat_contract_transaction
         cb
         (Ligo.tez_from_literal "0mutez")
@@ -855,10 +855,10 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
      * this operation next to the one requesting prices from oracles, at the
      * end, so that the system parameters do not change between touching
      * different slices. *)
-    let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address : ((Ligo.nat * Ligo.nat) Ligo.contract) option) with
-      | Some cb -> cb
-      | None -> (Ligo.failwith error_GetEntrypointOptFailureReceiveCtezMarginalPrice : (Ligo.nat * Ligo.nat) Ligo.contract) in
     let op_ctez_price =
+      let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address : ((Ligo.nat * Ligo.nat) Ligo.contract) option) with
+        | Some cb -> cb
+        | None -> (Ligo.failwith error_GetEntrypointOptFailureReceiveCtezMarginalPrice : (Ligo.nat * Ligo.nat) Ligo.contract) in
       LigoOp.Tezos.nat_nat_contract_transaction
         cb
         (Ligo.tez_from_literal "0mutez")
