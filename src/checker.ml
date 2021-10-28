@@ -821,7 +821,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
 
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let kit_in_tez_in_prev_block = calculate_kit_in_tez state_cfmm state_last_ctez_in_tez state_external_contracts in
+    let kit_in_tez_in_prev_block = calculate_kit_in_tez state_cfmm state_last_ctez_in_tez in
     let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in
     (* Note: state_parameters.circulating kit here already includes the accrual to the CFMM. *)
     let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
