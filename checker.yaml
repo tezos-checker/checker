@@ -34,12 +34,12 @@ tokens:
     symbol: lqt
 
 # Drift derivative curve type and respective parameters
-drift_curve:
+drift_derivative_curve:
   curve_type: bang-bang
   parameters:
     # [cNp] - target value defining the start of the low bracket
     target_low_bracket: 5/1000
-    # [cNp] - target value defining the start of the high bracke
+    # [cNp] - target value defining the start of the high bracket
     target_high_bracket: 5/100
     # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the low bracket
     low_acceleration: 247111

@@ -34,7 +34,9 @@ def generate():
     base_path = Path("./src")
 
     # Select the drift derivative template at runtime based on config
-    GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[type(checker_config.drift_curve)]
+    GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[
+        type(checker_config.drift_derivative_curve)
+    ]
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to

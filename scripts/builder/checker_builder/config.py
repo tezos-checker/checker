@@ -115,7 +115,7 @@ class Constants:
 class CheckerConfig:
     tokens: Tokens
     constants: Constants
-    drift_curve: Union[BangBang, Continuous]
+    drift_derivative_curve: Union[BangBang, Continuous]
 
 
 # ================================================================================================
@@ -195,7 +195,6 @@ class TokensSchema(Schema):
 class ContinuousSchema(Schema):
     # FIXME: Specify actual parameters instead of foo
     foo = fields.Int(strict=True, required=True)
-    dataclass = Continuous
 
     @post_load
     def make(self, data, **kwargs):
@@ -207,7 +206,6 @@ class BangBangSchema(Schema):
     target_high_bracket = PositiveRatioField(required=True)
     low_acceleration = BoundedIntField(lower=1, strict=True, required=True)
     high_acceleration = BoundedIntField(lower=1, strict=True, required=True)
-    dataclass = BangBang
 
     @post_load
     def make(self, data, **kwargs):
@@ -284,7 +282,7 @@ class ConstantsSchema(Schema):
 class CheckerConfigSchema(Schema):
     tokens = fields.Nested(TokensSchema(), required=True)
     constants = fields.Nested(ConstantsSchema(), required=True)
-    drift_curve = fields.Nested(DriftDerivativeCurveSchema(), required=True)
+    drift_derivative_curve = fields.Nested(DriftDerivativeCurveSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):

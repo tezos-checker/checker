@@ -48,12 +48,12 @@ let[@inline] compute_drift_derivative (target : fixedpoint) : fixedpoint =
        high_acceleration = 0.05/100 * (86400 * 86400) = 5/74649600000000 = 1235555 in fixedpoint
      ]}
   *)
-  let[@inline] target_low_bracket : ratio = make_ratio (Ligo.int_from_literal "{{ config.drift_curve.target_low_bracket.num }}") (Ligo.int_from_literal "{{ config.drift_curve.target_low_bracket.den }}") in
-  let[@inline] target_high_bracket : ratio = make_ratio (Ligo.int_from_literal "{{ config.drift_curve.target_high_bracket.num }}") (Ligo.int_from_literal "{{ config.drift_curve.target_high_bracket.den }}") in
-  let[@inline] low_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "{{ config.drift_curve.low_acceleration }}") in
-  let[@inline] low_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-{{ config.drift_curve.low_acceleration }}") in
-  let[@inline] high_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "{{ config.drift_curve.high_acceleration }}") in
-  let[@inline] high_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-{{ config.drift_curve.high_acceleration }}") in
+  let[@inline] target_low_bracket : ratio = make_ratio (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_low_bracket.num }}") (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_low_bracket.den }}") in
+  let[@inline] target_high_bracket : ratio = make_ratio (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_high_bracket.num }}") (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_high_bracket.den }}") in
+  let[@inline] low_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "{{ config.drift_derivative_curve.low_acceleration }}") in
+  let[@inline] low_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-{{ config.drift_derivative_curve.low_acceleration }}") in
+  let[@inline] high_positive_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "{{ config.drift_derivative_curve.high_acceleration }}") in
+  let[@inline] high_negative_acceleration : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-{{ config.drift_derivative_curve.high_acceleration }}") in
 
   let { num = num_tlb; den = den_tlb; } = target_low_bracket in
   let { num = num_thb; den = den_thb; } = target_high_bracket in
