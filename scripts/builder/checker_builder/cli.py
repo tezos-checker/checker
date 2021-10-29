@@ -13,6 +13,12 @@ TOKEN_TEMPLATE = "genericToken.ml.jinja"
 # Mapping of token config fields to their corresponding src modules
 TOKEN_SRCS = {"collateral": "tok.ml", "kit": "kit.ml", "liquidity": "lqt.ml"}
 
+DRIFT_SRC = "driftDerivative.ml"
+DRIFT_TEMPLATES = {
+    config.BangBang: "bangBangDriftDerivative.ml.jinja",
+    config.Continuous: "foo.ml.jinja",
+}
+
 
 @click.group()
 def cli():
@@ -26,6 +32,9 @@ def generate():
     checker_config = config.load_checker_config()
     env = config.load_template_env()
     base_path = Path("./src")
+
+    # Select the drift derivative template at runtime based on config
+    GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[type(checker_config.drift_curve)]
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to

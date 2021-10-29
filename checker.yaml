@@ -33,6 +33,15 @@ tokens:
     # Optional FA2 token symbol
     symbol: lqt
 
+# Drift derivative curve type and respective parameters
+drift_curve:
+  curve_type: bang-bang
+  parameters:
+    target_low_bracket: 5/1000
+    target_high_bracket: 5/100
+    low_acceleration: 247111
+    high_acceleration: 1235555
+
 # Checker system constants
 constants:
   # ====================================================================================
