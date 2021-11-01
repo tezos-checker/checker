@@ -312,7 +312,8 @@ def deploy_checker(
     *,
     oracle,
     tez_wrapper,
-    ctez,
+    ctez_fa12,
+    ctez_cfmm,
     ttl: Optional[int] = None,
     checker_config_path: Optional[Path] = None,
 ):
@@ -376,7 +377,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, tez_wrapper, ctez))
+        checker.sealContract((oracle, tez_wrapper, ctez_fa12, ctez_cfmm))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),
@@ -449,15 +450,17 @@ def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
 
         print("Deploying ctez CFMM contract...")
         cfmm_storage = {
-            "tokenPool": 1,
+            "tezPool": 1,
             "cashPool": 1,
+            "target": 281474976710656,  # Bitwise.shift_left 1n 48n
             "lqtTotal": 1,
-            "pendingPoolUpdates": 0,
-            "tokenAddress": fa12_ctez.context.address,
+            "ctez_address": ctez.context.address,
+            "cashAddress": fa12_ctez.context.address,
             "lqtAddress": "tz1Ke2h7sDdakHJQh8WX4Z372du1KChsksyU",
             "lastOracleUpdate": math.floor(time.time()),
-            "consumerEntrypoint": ctez.context.address,
+            "consumerEntrypoint": f"{ctez.context.address}%cfmm_price",
         }
+
         cfmm = deploy_contract(
             tz,
             source_file=str(cfmm_michelson),

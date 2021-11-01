@@ -607,4 +607,4 @@ Prior to sealing, the bytecode for all metadata must be deployed.
 Seal the contract and make it ready for use
 -------------------------------------------
 
-``sealContract: (pair (pair address address) address)``
+``sealContract: (pair (pair (pair address address) address) address)``

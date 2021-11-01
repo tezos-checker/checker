@@ -39,6 +39,7 @@ checker_sources=(
   sliceList
   liquidationAuction
   burrowOrigination
+  price
   checker
   checkerEntrypoints
   checkerMain

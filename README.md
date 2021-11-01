@@ -233,7 +233,8 @@ key file is `./my-account.json`):
       --port <node-port> \
       --key /my-account.json \
       checker \
-      --ctez <ctez-fa12-address> \
+      --ctez-fa12 <ctez-fa12-address> \
+      --ctez-cfmm <ctez-cfmm-address> \
       --oracle <oracle-address>
 ```
 
@@ -254,7 +255,8 @@ To deploy local copies of the contract (e.g. in `./generated/michelson`):
       --port <node-port> \
       --key /my-account.json \
       checker \
-      --ctez <ctez-fa12-address> \
+      --ctez-fa12 <ctez-fa12-address> \
+      --ctez-cfmm <ctez-cfmm-address> \
       --oracle <oracle-address> \
       --src /generated/michelson
 ```

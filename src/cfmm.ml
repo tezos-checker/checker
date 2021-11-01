@@ -44,7 +44,7 @@ let[@inline] cfmm_assert_initialized (u: cfmm) : cfmm =
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date
     kit_in_ctez, because it is a little harder to manipulate. *)
-let cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) =
+let[@inline] cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) : ratio =
   let cfmm = cfmm_assert_initialized cfmm in
   cfmm.kit_in_ctez_in_prev_block
 

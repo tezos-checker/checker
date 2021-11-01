@@ -43,12 +43,12 @@ let lift_to_sealed_wrapper (f: CheckerTypes.checker -> 'a) : CheckerTypes.wrappe
     | Sealed state -> f state
   )
 
-let set_last_price_in_wrapper wrapper price_option =
+let set_last_index_in_wrapper wrapper index_option =
   CheckerTypes.(
     match wrapper.deployment_state with
     | Unsealed _ -> wrapper
     | Sealed state ->
-      {wrapper with deployment_state = Sealed {state with last_price = price_option}}
+      {wrapper with deployment_state = Sealed {state with last_index = index_option}}
   )
 
 let find_burrow_in_sealed_wrapper sealed_wrapper burrow_id =
@@ -256,7 +256,7 @@ let suite =
        let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_addr) in
+       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) in
        assert_raises
          (Failure (Ligo.string_of_int error_UnauthorisedCaller))
          (fun () -> CheckerMain.main (op, wrapper))
@@ -379,7 +379,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -432,7 +432,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -487,7 +487,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_price_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -602,7 +602,7 @@ let suite =
     ("SealContract - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_addr) in
+          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) in
           assert_raises
             (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
             (fun () -> CheckerMain.main (op, sealed_wrapper))

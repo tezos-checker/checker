@@ -41,7 +41,8 @@ class Config:
     tezos_address: str = "http://127.0.0.1"
     tezos_port: int = 20000
     tezos_key: str = "edsk3RFfvaFaxbHx8BMtEW1rKQcPtDML3LXjNqMNLCzC3wLC1bWbAt"  # bob's private key from "flobox info"
-    ctez_address: str = ""
+    ctez_fa12_address: str = ""
+    ctez_cfmm_address: str = ""
     oracle_address: str = ""
     checker_address: str = ""
     tez_wrapper_address: str = ""
@@ -61,7 +62,8 @@ class ConfigSchema(Schema):
     tezos_address = fields.String()
     tezos_port = fields.Int()
     tezos_key = fields.String()
-    ctez_address = fields.String()
+    ctez_fa12_address = fields.String()
+    ctez_cfmm_address = fields.String()
     oracle_address = fields.String()
     checker_address = fields.String()
     tez_wrapper_address = fields.String()
@@ -177,7 +179,8 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
 @click.option("--tez_wrapper", type=str, help="TezWrapper contract address")
-@click.option("--ctez", type=str, help="ctez contract address")
+@click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
+@click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
 @click.option(
     "--checker_config",
     type=click.Path(exists=True),
@@ -185,7 +188,9 @@ def deploy(config: Config, address=None, port=None, key=None):
     help="optional path to the checker.yaml config file. Defaults to ./checker.yaml",
 )
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, checker_config):
+def checker(
+    config: Config, checker_dir, oracle, tez_wrapper, ctez_fa12, ctez_cfmm, checker_config
+):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -197,14 +202,20 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, checker_conf
         raise ValueError(
             "TezWrapper address was neither specified in the CLI config nor provided as an argument."
         )
-    if not config.ctez_address and not ctez:
+    if not config.ctez_fa12_address and not ctez_fa12:
         raise ValueError(
-            "ctez address was neither specified in the CLI config nor provided as an argument."
+            "ctez fa12 address was neither specified in the CLI config nor provided as an argument."
+        )
+    if not config.ctez_cfmm_address and not ctez_cfmm:
+        raise ValueError(
+            "ctez cfmm address was neither specified in the CLI config nor provided as an argument."
         )
     if oracle:
         config.oracle_address = oracle
-    if ctez:
-        config.ctez_address = ctez
+    if ctez_fa12:
+        config.ctez_fa12_address = ctez_fa12
+    if ctez_cfmm:
+        config.ctez_cfmm_address = ctez_cfmm
     if tez_wrapper:
         config.tez_wrapper_address = tez_wrapper
 
@@ -217,7 +228,8 @@ def checker(config: Config, checker_dir, oracle, tez_wrapper, ctez, checker_conf
         checker_dir,
         oracle=config.oracle_address,
         tez_wrapper=config.tez_wrapper_address,
-        ctez=config.ctez_address,
+        ctez_fa12=config.ctez_fa12_address,
+        ctez_cfmm=config.ctez_cfmm_address,
         ttl=_patch_operation_ttl(config),
         checker_config_path=checker_config,
     )
@@ -273,8 +285,11 @@ def ctez(config: Config, ctez_dir):
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
     ctez = checker_lib.deploy_ctez(client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config))
-    click.echo(f"ctez contract deployed with address: {ctez['fa12_ctez'].context.address}")
-    config.ctez_address = ctez["fa12_ctez"].context.address
+    click.echo(
+        f"ctez contract deployed with FA1.2 address: {ctez['fa12_ctez'].context.address} and cfmm address: {ctez['cfmm'].context.address}"
+    )
+    config.ctez_fa12_address = ctez["fa12_ctez"].context.address
+    config.ctez_cfmm_address = ctez["cfmm"].context.address
     config.dump()
 
 

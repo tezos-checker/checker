@@ -5,7 +5,8 @@ let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"
 let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
-let ctez_addr = Ligo.address_of_string "ctez_addr"
+let ctez_fa12_addr = Ligo.address_of_string "ctez_fa12_addr"
+let ctez_cfmm_addr = Ligo.address_of_string "ctez_cfmm_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"
 let collateral_fa2_addr = Ligo.address_of_string "collateral_fa2_addr"
 
@@ -81,7 +82,7 @@ let with_sealed_wrapper f =
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
 
   let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_addr) in
+  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) in
   let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
   f wrapper
 

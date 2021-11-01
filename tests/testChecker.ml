@@ -23,7 +23,8 @@ let checker_address = !Ligo.Tezos.self_address
 
 let empty_checker =
   initial_checker
-    { ctez = ctez_addr;
+    { ctez_fa12 = ctez_fa12_addr;
+      ctez_cfmm = ctez_cfmm_addr;
       oracle = oracle_addr;
       collateral_fa2 = collateral_fa2_addr;
     }
@@ -388,7 +389,7 @@ let suite =
                value=(Ligo.nat_from_literal "5_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -678,7 +679,7 @@ let suite =
                value=(Ligo.nat_from_literal "5_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -696,6 +697,11 @@ let suite =
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address))
             (Ligo.tez_from_literal "0mutez")
             (Checker.get_oracle_entrypoint checker.external_contracts)
+         );
+         (LigoOp.Tezos.nat_nat_contract_transaction
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address))
+            (Ligo.tez_from_literal "0mutez")
+            (Checker.get_ctez_cfmm_price_entrypoint checker.external_contracts)
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -1140,7 +1146,7 @@ let suite =
                value=(Ligo.nat_from_literal "1_000_000n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
@@ -1180,7 +1186,7 @@ let suite =
                value=(Ligo.nat_from_literal "1n")}
             )
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctez_fa12))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -1365,7 +1371,7 @@ let suite =
     ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = { empty_checker with last_price = Some (Ligo.nat_from_literal "1_000_000n") } in
+       let checker = { empty_checker with last_index = Some (Ligo.nat_from_literal "1_000_000n") } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_touch (checker, ()) in
@@ -1376,7 +1382,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", max_kit)) in
-       let checker = { checker with last_price = Some (Ligo.nat_from_literal "10_000_000n") } in
+       let checker = { checker with last_index = Some (Ligo.nat_from_literal "10_000_000n") } in
        let _, checker = Checker.entrypoint_touch (checker, ()) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:1_000_000 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -1651,8 +1657,9 @@ let suite =
         * request to the oracle to update the index. *)
        begin match ops with
          | [
-           Transaction (AddressNatTransactionValue _, _, _);  (* send tez requests *)
-           Transaction (NatContractTransactionValue _, _, _); (* oracle call *)
+           Transaction (AddressNatTransactionValue _, _, _);     (* send tez requests *)
+           Transaction (NatContractTransactionValue _, _, _);    (* oracle call *)
+           Transaction (NatNatContractTransactionValue _, _, _); (* ctez cfmm call *)
          ] -> ()
          | _ -> assert_failure ("Unexpected operations/operation order: " ^ show_operation_list ops)
        end;

@@ -18,6 +18,7 @@ type 'parameter transaction_value = (* GADT *)
   | AddressTezTransactionValue : (address * tez) -> (address * tez) transaction_value
   | AddressTezAddressTransactionValue : (address * tez * address) -> (address * tez * address) transaction_value
   | AddressOptKeyHashTransactionValue : (address * key_hash option) -> (address * key_hash option) transaction_value
+  | NatNatContractTransactionValue : (nat * nat) contract -> (nat * nat) contract transaction_value
 
 type address_and_nat = (address * nat)
 [@@deriving show]
@@ -51,6 +52,7 @@ let show_transaction_value : type parameter. parameter transaction_value -> Stri
   | AddressTezTransactionValue at -> show_address_and_tez at
   | AddressTezAddressTransactionValue ata -> show_address_and_tez_and_address ata
   | AddressOptKeyHashTransactionValue akho -> show_address_and_key_hash_option akho
+  | NatNatContractTransactionValue c -> show_contract c
 
 (* operation *)
 
@@ -101,6 +103,7 @@ module Tezos = struct
   let address_tez_transaction value tez contract = Transaction (AddressTezTransactionValue value, tez, contract)
   let address_tez_address_transaction value tez contract = Transaction (AddressTezAddressTransactionValue value, tez, contract)
   let address_opt_key_hash_transaction value tez contract = Transaction (AddressOptKeyHashTransactionValue value, tez, contract)
+  let nat_nat_contract_transaction value tez contract = Transaction (NatNatContractTransactionValue value, tez, contract)
 
   let get_entrypoint_opt ep address = (* Sad, giving always Some, I know, but I know of no other way. *)
     Some (contract_of_address (address_of_string (string_of_address address ^ ep))) (* ep includes the % character *)

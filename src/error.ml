@@ -60,6 +60,8 @@ let[@inline] error_GetEntrypointOptFailureReceivePrice                  : Ligo.i
 let[@inline] error_GetEntrypointOptFailureOracleEntrypoint              : Ligo.int = Ligo.int_from_literal "113"
 let[@inline] error_GetEntrypointOptFailureFA12Transfer                  : Ligo.int = Ligo.int_from_literal "114"
 let[@inline] error_GetEntrypointOptFailureFA2Transfer                   : Ligo.int = Ligo.int_from_literal "115"
+let[@inline] error_GetEntrypointOptFailureCtezGetMarginalPrice          : Ligo.int = Ligo.int_from_literal "116"
+let[@inline] error_GetEntrypointOptFailureReceiveCtezMarginalPrice      : Ligo.int = Ligo.int_from_literal "117"
 
 let[@inline] error_ContractNotDeployed                                  : Ligo.int = Ligo.int_from_literal "134"
 let[@inline] error_ContractAlreadyDeployed                              : Ligo.int = Ligo.int_from_literal "135"

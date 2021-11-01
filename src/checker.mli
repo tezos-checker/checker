@@ -31,7 +31,8 @@ val compute_outstanding_dissonance : checker -> kit (* "real" *) * kit (* approx
 (*****************************************************************************)
 
 (**/**)
-val get_transfer_ctez_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_transfer_ctez_fa12_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_ctez_cfmm_price_entrypoint : external_contracts -> ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract
 val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 val get_transfer_collateral_fa2_entrypoint : external_contracts -> fa2_transfer list Ligo.contract
 
@@ -240,6 +241,13 @@ val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id 
     - The current index, as a fixedpoint with a scaling factor of 1_000_000
 *)
 val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
+
+(** (INTERNAL) Receive a price from the ctez (CFMM) contract.
+
+    Parameters:
+    - The current price as a pair of the numerator and the denominator.
+*)
+val entrypoint_receive_ctez_marginal_price : checker * (Ligo.nat * Ligo.nat) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                             {1 FA2}                                      *)

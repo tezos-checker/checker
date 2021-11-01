@@ -8,6 +8,16 @@
 #
 # Then set the `Secret Key` as the aforementioned secret. It should be of the form: unencrypted:edsk****
 
+# FIXME: The default values for ctez-fa12 and ctez-cfmm for the ctez contract
+# below come from the following ctez instance:
+#
+#   https://better-call.dev/granadanet/KT1QqSAj6krgr3pqg7aqd1ukVZYwJoQ8HYCS/storage
+#
+# However, this instance does not expose an entrypoint for receiving the
+# marginal price of ctez in tez, so deploying with it as the default will
+# certainly fail. Once the next branch becomes the main one and a new ctez
+# instance is deployed, we should change these defaults.
+
 name: Deploy to the testnet
 on:
   workflow_dispatch:
@@ -16,10 +26,14 @@ on:
         description: 'Node to connect to'
         required: true
         default: 'https://rpczero.tzbeta.net/'
-      ctez:
-        description: 'Ctez contract'
+      ctez-fa12:
+        description: 'Ctez FA1.2 contract'
         required: true
         default: 'KT1XaQyVJHKzr1qXPMoLawi56esqKzyzeuhE'
+      ctez-cfmm:
+        description: 'Ctez CFMM contract'
+        required: true
+        default: 'KT1K7mXY1YjAdqYETwNfgYL4qe6frWvSGJSu'
       oracle:
         description: 'Oracle contract'
         required: true
@@ -57,5 +71,6 @@ jobs:
               --port 443 \
               --key "$TESTNET_KEY" \
               checker \
-              --ctez "${{ github.event.inputs.ctez }}" \
+              --ctez-fa12 "${{ github.event.inputs.ctez-fa12 }}" \
+              --ctez-cfmm "${{ github.event.inputs.ctez-cfmm }}" \
               --oracle "${{ github.event.inputs.oracle }}"
