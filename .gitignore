@@ -5,6 +5,7 @@ src/kit.ml
 src/lqt.ml
 src/constants.ml
 src/burrowOrigination.ml
+src/driftDerivative.ml
 
 generated/michelson/main.tz
 generated/michelson/functions.json

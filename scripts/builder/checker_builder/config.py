@@ -6,7 +6,7 @@ from decimal import Decimal
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import yaml
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG = Path("checker.yaml")
 
 
-@dataclass
+@dataclass(frozen=True)
 class Ratio:
     # Numerator
     num: int
@@ -51,7 +51,7 @@ def ratio_from_str(ratio_str: str) -> Ratio:
 # ================================================================================================
 # Config classes
 # ================================================================================================
-@dataclass
+@dataclass(frozen=True)
 class TokenConfig:
     token_id: int
     decimal_digits: int = 6
@@ -63,14 +63,28 @@ class TokenConfig:
         return 10 ** self.decimal_digits
 
 
-@dataclass
+@dataclass(frozen=True)
 class Tokens:
     collateral: TokenConfig
     kit: TokenConfig
     liquidity: TokenConfig
 
 
-@dataclass
+@dataclass(frozen=True)
+class Continuous:
+    # FIXME: Specify these parameters
+    foo: int
+
+
+@dataclass(frozen=True)
+class BangBang:
+    target_low_bracket: Ratio
+    target_high_bracket: Ratio
+    low_acceleration: int
+    high_acceleration: int
+
+
+@dataclass(frozen=True)
 class Constants:
     """Checker system constants"""
 
@@ -97,10 +111,11 @@ class Constants:
     touch_reward_low_bracket: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class CheckerConfig:
     tokens: Tokens
     constants: Constants
+    drift_derivative_curve: Union[BangBang, Continuous]
 
 
 # ================================================================================================
@@ -177,6 +192,46 @@ class TokensSchema(Schema):
         return Tokens(**data)
 
 
+class ContinuousSchema(Schema):
+    # FIXME: Specify actual parameters instead of foo
+    foo = fields.Int(strict=True, required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        return Continuous(**data)
+
+
+class BangBangSchema(Schema):
+    target_low_bracket = PositiveRatioField(required=True)
+    target_high_bracket = PositiveRatioField(required=True)
+    low_acceleration = BoundedIntField(lower=1, strict=True, required=True)
+    high_acceleration = BoundedIntField(lower=1, strict=True, required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        return BangBang(**data)
+
+
+class DriftDerivativeCurveSchema(Schema):
+    curve_type = fields.String(required=True)
+    parameters = fields.Dict(keys=fields.Str(), required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        if data["curve_type"] == "bang-bang":
+            curve_schema = BangBangSchema()
+        elif data["curve_type"] == "continuous":
+            curve_schema = ContinuousSchema()
+            # FIXME: Remove this check once continuous curve template is implemented
+            raise NotImplementedError("Continuous curve support not yet implemented")
+        else:
+            raise ValidationError(
+                f"Unknown drift derivative curve type '{data['curve_type']}'. "
+                f"Valid types are: 'bang-bang', 'continuous'"
+            )
+        return curve_schema.load(data["parameters"])
+
+
 class ConstantsSchema(Schema):
 
     creation_deposit = BoundedIntField(lower=1, strict=True, required=True)
@@ -227,6 +282,7 @@ class ConstantsSchema(Schema):
 class CheckerConfigSchema(Schema):
     tokens = fields.Nested(TokensSchema(), required=True)
     constants = fields.Nested(ConstantsSchema(), required=True)
+    drift_derivative_curve = fields.Nested(DriftDerivativeCurveSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):
