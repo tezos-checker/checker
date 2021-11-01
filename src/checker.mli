@@ -245,7 +245,7 @@ val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * ch
 (** (INTERNAL) Receive a price from the ctez (CFMM) contract.
 
     Parameters:
-    - The current price as a pair of the numerator and the denominator.
+    - The current price of tez/ctez as a fraction
 *)
 val entrypoint_receive_ctez_marginal_price : checker * (Ligo.nat * Ligo.nat) -> (LigoOp.operation list * checker)
 
