@@ -36,23 +36,23 @@ tokens:
 # Drift derivative curve type and respective parameters
 drift_derivative_curve:
   # Default configuration for the bang-bang (default) curve
-  # curve_type: bang-bang
-  # parameters:
-  #   # [cNp] - target value defining the start of the low bracket
-  #   target_low_bracket: 5/1000
-  #   # [cNp] - target value defining the start of the high bracket
-  #   target_high_bracket: 5/100
-  #   # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the low bracket
-  #   low_acceleration: 247111
-  #   # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the high bracket
-  #   high_acceleration: 1235555
-  # Default configuration for the continuous curve
-  curve_type: continuous
+  curve_type: bang-bang
   parameters:
-    # [cNp] - target value defining the start of the high bracket (saturated)
-    target_bracket: 5/100
+    # [cNp] - target value defining the start of the low bracket
+    target_low_bracket: 5/1000
+    # [cNp] - target value defining the start of the high bracket
+    target_high_bracket: 5/100
+    # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the low bracket
+    low_acceleration: 247111
     # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the high bracket
-    max_acceleration: 1235555
+    high_acceleration: 1235555
+  # Default configuration for the continuous curve
+  # curve_type: continuous
+  # parameters:
+  #   # [cNp] - target value defining the start of the high bracket (saturated)
+  #   target_bracket: 5/100
+  #   # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the high bracket
+  #   max_acceleration: 1235555
 
 # Checker system constants
 constants:
