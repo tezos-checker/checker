@@ -1,19 +1,13 @@
 open OUnit2
 open TestLib
 open FixedPoint
-open Kit
 open ContinuousDriftDerivative
 
 let property_test_count = 100
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
-let sort_three_kit_amounts_increasing_order kit1 kit2 kit3 =
-  match List.stable_sort kit_compare [kit1;kit2;kit3;] with
-  | [kit1;kit2;kit3;] -> (kit1, kit2, kit3)
-  | _ -> failwith "impossible"
-
 (* ************************************************************************* *)
-(*                        compute_drift_derivative                           *)
+(*                  compute_drift_derivative (unit tests)                    *)
 (* ************************************************************************* *)
 (*
 exp( high): 21/20   = 1.05  = 1.0CCCCCCCCCCCCCCCCCCD
@@ -59,12 +53,6 @@ let test_compute_drift_derivative_barely_negative_acceleration =
     assert_fixedpoint_equal
       ~expected:(fixedpoint_of_hex_string "-0.0000000000000001")
       ~real:(compute_drift_derivative target)
-
-
-(* FIXME: Add property-based, random tests:
-   - strictly monotonic in [-cutoff, +cutoff]
-   - flat everywhere else (with known values)
-*)
 
 let test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated =
   "test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated" >:: fun _ ->
@@ -112,6 +100,47 @@ let test_compute_drift_derivative_high_negative_acceleration_oversaturated =
       ~expected:(fixedpoint_of_hex_string "-0.000000000012DA63")
       ~real:(compute_drift_derivative target)
 
+(* ************************************************************************* *)
+(*              compute_drift_derivative (property-based tests)              *)
+(* ************************************************************************* *)
+
+(* The drift derivative cannot go above 0.05 cNp/day^2 *)
+let test_compute_drift_derivative_upper_bound =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_compute_drift_derivative_upper_bound"
+    ~count:property_test_count
+    TestArbitrary.arb_target
+  @@ fun target ->
+  Ligo.leq_int_int
+    (fixedpoint_to_raw (compute_drift_derivative target))
+    (fixedpoint_to_raw (fixedpoint_of_hex_string "0.000000000012DA63"))
+
+(* The drift derivative cannot go below -0.05 cNp/day^2 *)
+let test_compute_drift_derivative_lower_bound =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_compute_drift_derivative_lower_bound"
+    ~count:property_test_count
+    TestArbitrary.arb_target
+  @@ fun target ->
+  Ligo.geq_int_int
+    (fixedpoint_to_raw (compute_drift_derivative target))
+    (fixedpoint_to_raw (fixedpoint_of_hex_string "-0.000000000012DA63"))
+
+(* The drift derivative calculation is monotonic (not strictly) *)
+let test_compute_drift_derivative_monotonic =
+  qcheck_to_ounit
+  @@ QCheck.Test.make
+    ~name:"test_compute_drift_derivative_monotonic"
+    ~count:property_test_count
+    (QCheck.pair TestArbitrary.arb_target TestArbitrary.arb_target)
+  @@ fun (t1, t2) ->
+  let t1, t2 = if t1 <= t2 then (t1, t2) else (t2, t1) in
+  Ligo.leq_int_int
+    (fixedpoint_to_raw (compute_drift_derivative t1))
+    (fixedpoint_to_raw (compute_drift_derivative t2))
+
 let suite =
   "ContinuousDriftDerivative tests" >::: [
     (* At target = 1 *)
@@ -134,6 +163,11 @@ let suite =
     test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated;
     test_compute_drift_derivative_high_negative_acceleration_barely_saturated;
     test_compute_drift_derivative_high_negative_acceleration_oversaturated;
+
+    (* Property-based random tests. *)
+    test_compute_drift_derivative_upper_bound;
+    test_compute_drift_derivative_lower_bound;
+    test_compute_drift_derivative_monotonic;
   ]
 
 let () =

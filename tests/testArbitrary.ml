@@ -2,6 +2,7 @@ open Ctez
 open Kit
 open Lqt
 open Tok
+open FixedPoint
 
 (** Generate a random non-negative tez amount in the full spectrum. Note that
   * most of these amounts are not expected in practice, since there is not that
@@ -79,3 +80,9 @@ let arb_liquidation_slice =
           })
     )
     arb_liquidation_slice_contents
+
+(** Generate a positive fixedpoint somewhere in (0, 2), to capture potential values for target. *)
+let arb_target =
+  QCheck.map
+    (fun x -> fixedpoint_of_raw (Ligo.add_int_int fixedpoint_scaling_factor (Ligo.int_from_literal (Int64.to_string x))))
+    QCheck.int64
