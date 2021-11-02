@@ -24,7 +24,7 @@ exp(-high): 19/20   = 0.95  = 0.F3333333333333333333
 
 let test_compute_drift_derivative_no_acceleration =
   "test_compute_drift_derivative_no_acceleration" >:: fun _ ->
-    (* exp( 0 ): 1 *)
+    (* d'(1) = 0 *)
     let target = fixedpoint_of_hex_string "1.0000000000000000" in
     assert_fixedpoint_equal
       ~expected:fixedpoint_zero
@@ -68,16 +68,16 @@ let test_compute_drift_derivative_barely_negative_acceleration =
    - flat everywhere else (with known values)
 *)
 
-let test_compute_drift_derivative_high_positive_acceleration_non_saturated =
-  "test_compute_drift_derivative_high_positive_acceleration_non_saturated" >:: fun _ ->
+let test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated =
+  "test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated" >:: fun _ ->
     (* exp( high): 21/20   = 1.05 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCC" in
     assert_fixedpoint_equal
       ~expected:(fixedpoint_of_hex_string "0.000000000012DA62")
       ~real:(compute_drift_derivative target)
 
-let test_compute_drift_derivative_high_positive_acceleration_saturated =
-  "test_compute_drift_derivative_high_positive_acceleration_saturated" >:: fun _ ->
+let test_compute_drift_derivative_high_positive_acceleration_barely_saturated =
+  "test_compute_drift_derivative_high_positive_acceleration_barely_saturated" >:: fun _ ->
     (* exp( high): 21/20   = 1.05 (rounded UP) *)
     let target = fixedpoint_of_hex_string "1.0CCCCCCCCCCCCCCD" in
     assert_fixedpoint_equal
@@ -86,16 +86,16 @@ let test_compute_drift_derivative_high_positive_acceleration_saturated =
 
 (* FIXME: add a test past positive saturation. *)
 
-let test_compute_drift_derivative_high_negative_acceleration_non_saturated =
-  "test_compute_drift_derivative_high_negative_acceleration_non_saturated" >:: fun _ ->
+let test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated =
+  "test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated" >:: fun _ ->
     (* exp(-high): 19/20   = 0.95 (rounded UP) *)
     let target = fixedpoint_of_hex_string "0.F333333333333334" in
     assert_fixedpoint_equal
       ~expected:(fixedpoint_of_hex_string "-0.000000000012DA62")
       ~real:(compute_drift_derivative target)
 
-let test_compute_drift_derivative_high_negative_acceleration_saturated =
-  "test_compute_drift_derivative_high_negative_acceleration_saturated" >:: fun _ ->
+let test_compute_drift_derivative_high_negative_acceleration_barely_saturated =
+  "test_compute_drift_derivative_high_negative_acceleration_barely_saturated" >:: fun _ ->
     (* exp(-high): 19/20   = 0.95 (rounded DOWN) *)
     let target = fixedpoint_of_hex_string "0.F333333333333333" in
     assert_fixedpoint_equal
@@ -118,12 +118,12 @@ let suite =
     test_compute_drift_derivative_barely_negative_acceleration;
 
     (* Around saturation (positive limit) *)
-    test_compute_drift_derivative_high_positive_acceleration_non_saturated;
-    test_compute_drift_derivative_high_positive_acceleration_saturated;
+    test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated;
+    test_compute_drift_derivative_high_positive_acceleration_barely_saturated;
 
     (* Around saturation (negative limit) *)
-    test_compute_drift_derivative_high_negative_acceleration_non_saturated;
-    test_compute_drift_derivative_high_negative_acceleration_saturated;
+    test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated;
+    test_compute_drift_derivative_high_negative_acceleration_barely_saturated;
   ]
 
 let () =
