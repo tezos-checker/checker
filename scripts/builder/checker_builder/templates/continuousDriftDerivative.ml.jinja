@@ -30,13 +30,13 @@ let[@inline] compute_drift_derivative (target : fixedpoint) : fixedpoint =
   assert (target > fixedpoint_zero);
   let target = fixedpoint_to_raw target in
 
-  let[@inline] amplitude : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "1235555") in
+  let[@inline] amplitude : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "{{ config.drift_derivative_curve.max_acceleration }}") in
   let amplitude = fixedpoint_to_raw amplitude in
 
-  let[@inline] minus_amplitude : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-1235555") in
+  let[@inline] minus_amplitude : fixedpoint = fixedpoint_of_raw (Ligo.int_from_literal "-{{ config.drift_derivative_curve.max_acceleration }}") in
   let minus_amplitude = fixedpoint_to_raw minus_amplitude in
 
-  let[@inline] cutoff : ratio = make_ratio (Ligo.int_from_literal "5") (Ligo.int_from_literal "100") in
+  let[@inline] cutoff : ratio = make_ratio (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_bracket.num }}") (Ligo.int_from_literal "{{ config.drift_derivative_curve.target_bracket.den }}") in
   let { num = num_c; den = den_c; } = cutoff in
 
   (*
