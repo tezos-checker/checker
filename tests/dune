@@ -11,7 +11,6 @@
    testTok
    testMem
    testParameters
-   testContinuousDriftDerivative
    testLiquidation
    testCfmm
    testChecker
