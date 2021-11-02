@@ -1,9 +1,7 @@
 open OUnit2
 open TestLib
-(* open Ratio *)
 open FixedPoint
 open Kit
-(* open Parameters *)
 open ContinuousDriftDerivative
 
 let property_test_count = 100
@@ -84,7 +82,12 @@ let test_compute_drift_derivative_high_positive_acceleration_barely_saturated =
       ~expected:(fixedpoint_of_hex_string "0.000000000012DA63")
       ~real:(compute_drift_derivative target)
 
-(* FIXME: add a test past positive saturation. *)
+let test_compute_drift_derivative_high_positive_acceleration_oversaturated =
+  "test_compute_drift_derivative_high_positive_acceleration_oversaturated" >:: fun _ ->
+    let target = fixedpoint_of_hex_string "1.1234567788ABCD9F" in
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "0.000000000012DA63")
+      ~real:(compute_drift_derivative target)
 
 let test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated =
   "test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated" >:: fun _ ->
@@ -102,7 +105,12 @@ let test_compute_drift_derivative_high_negative_acceleration_barely_saturated =
       ~expected:(fixedpoint_of_hex_string "-0.000000000012DA63")
       ~real:(compute_drift_derivative target)
 
-(* FIXME: add a test past negative saturation. *)
+let test_compute_drift_derivative_high_negative_acceleration_oversaturated =
+  "test_compute_drift_derivative_high_negative_acceleration_oversaturated" >:: fun _ ->
+    let target = fixedpoint_of_hex_string "0.ABCDEF1243475869" in
+    assert_fixedpoint_equal
+      ~expected:(fixedpoint_of_hex_string "-0.000000000012DA63")
+      ~real:(compute_drift_derivative target)
 
 let suite =
   "ContinuousDriftDerivative tests" >::: [
@@ -120,10 +128,12 @@ let suite =
     (* Around saturation (positive limit) *)
     test_compute_drift_derivative_high_positive_acceleration_barely_non_saturated;
     test_compute_drift_derivative_high_positive_acceleration_barely_saturated;
+    test_compute_drift_derivative_high_positive_acceleration_oversaturated;
 
     (* Around saturation (negative limit) *)
     test_compute_drift_derivative_high_negative_acceleration_barely_non_saturated;
     test_compute_drift_derivative_high_negative_acceleration_barely_saturated;
+    test_compute_drift_derivative_high_negative_acceleration_oversaturated;
   ]
 
 let () =
