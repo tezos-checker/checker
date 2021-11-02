@@ -16,7 +16,7 @@ TOKEN_SRCS = {"collateral": "tok.ml", "kit": "kit.ml", "liquidity": "lqt.ml"}
 DRIFT_SRC = "driftDerivative.ml"
 DRIFT_TEMPLATES = {
     config.BangBang: "bangBangDriftDerivative.ml.jinja",
-    config.Continuous: "foo.ml.jinja",
+    config.Continuous: "continuousDriftDerivative.ml.jinja",
 }
 
 

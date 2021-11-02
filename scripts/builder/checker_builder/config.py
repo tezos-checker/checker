@@ -72,8 +72,8 @@ class Tokens:
 
 @dataclass(frozen=True)
 class Continuous:
-    # FIXME: Specify these parameters
-    foo: int
+    target_bracket: Ratio
+    max_acceleration: int
 
 
 @dataclass(frozen=True)
@@ -193,8 +193,8 @@ class TokensSchema(Schema):
 
 
 class ContinuousSchema(Schema):
-    # FIXME: Specify actual parameters instead of foo
-    foo = fields.Int(strict=True, required=True)
+    target_bracket = PositiveRatioField(required=True)
+    max_acceleration = BoundedIntField(lower=1, strict=True, required=True)
 
     @post_load
     def make(self, data, **kwargs):
@@ -222,8 +222,6 @@ class DriftDerivativeCurveSchema(Schema):
             curve_schema = BangBangSchema()
         elif data["curve_type"] == "continuous":
             curve_schema = ContinuousSchema()
-            # FIXME: Remove this check once continuous curve template is implemented
-            raise NotImplementedError("Continuous curve support not yet implemented")
         else:
             raise ValidationError(
                 f"Unknown drift derivative curve type '{data['curve_type']}'. "
