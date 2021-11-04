@@ -62,7 +62,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
     { cfmm with
       kit_in_ctok_in_prev_block =
         make_ratio
-          (Ligo.mul_nat_int (ctok_to_muctok_nat cfmm.ctok) kit_scaling_factor_int)
+          (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) kit_scaling_factor_int)
           (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) ctok_scaling_factor_int);
       last_level = !Ligo.Tezos.level;
     }
@@ -86,12 +86,12 @@ let cfmm_view_min_kit_expected_buy_kit
     let new_cfmm_ctok = ctok_add cfmm.ctok ctok_amount in
     let numerator =
       Ligo.mul_nat_int
-        (ctok_to_muctok_nat ctok_amount)
+        (ctok_to_denomination_nat ctok_amount)
         (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) num_uf) in
     let denominator =
       Ligo.mul_int_int
         kit_scaling_factor_int
-        (Ligo.mul_nat_int (ctok_to_muctok_nat new_cfmm_ctok) den_uf) in
+        (Ligo.mul_nat_int (ctok_to_denomination_nat new_cfmm_ctok) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
     (* Due to (a) the constant-factor calculation (which means that to deplete
      * the one amount the other would in effect have to become infinite), (b)
@@ -147,7 +147,7 @@ let cfmm_view_min_ctok_expected_cfmm_sell_kit
     let numerator =
       Ligo.mul_nat_int
         (kit_to_denomination_nat kit_amount)
-        (Ligo.mul_nat_int (ctok_to_muctok_nat cfmm.ctok) num_uf) in
+        (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) num_uf) in
     let denominator =
       Ligo.mul_int_int
         ctok_scaling_factor_int
@@ -199,14 +199,14 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
   if eq_ctok_ctok ctok_amount ctok_zero then
     (Ligo.failwith error_AddLiquidityNoCtokGiven : (lqt * kit * cfmm))
   else
-    let cfmm_ctok = ctok_to_muctok_nat cfmm.ctok in
+    let cfmm_ctok = ctok_to_denomination_nat cfmm.ctok in
     let lqt_minted =
       lqt_of_fraction_floor
-        (Ligo.mul_int_nat (lqt_to_denomination_int cfmm.lqt) (ctok_to_muctok_nat ctok_amount))
+        (Ligo.mul_int_nat (lqt_to_denomination_int cfmm.lqt) (ctok_to_denomination_nat ctok_amount))
         (Ligo.mul_int_nat lqt_scaling_factor_int cfmm_ctok) in
     let kit_deposited =
       kit_of_fraction_ceil
-        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctok_to_muctok_nat ctok_amount))
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctok_to_denomination_nat ctok_amount))
         (Ligo.mul_int_nat kit_scaling_factor_int cfmm_ctok) in
     (* Since (a) ctok_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
      * computing kit_deposited, it should be impossible to trigger the
@@ -281,7 +281,7 @@ let cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
   else
     let ctok_withdrawn =
       ctok_of_fraction_floor
-        (Ligo.mul_nat_int (ctok_to_muctok_nat cfmm.ctok) (lqt_to_denomination_int lqt_burned))
+        (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) (lqt_to_denomination_int lqt_burned))
         (Ligo.mul_int_nat ctok_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     let kit_withdrawn =

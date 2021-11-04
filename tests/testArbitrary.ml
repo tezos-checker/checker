@@ -41,7 +41,7 @@ let arb_small_positive_tez =
     (fun x -> Ligo.tez_from_literal ((string_of_int x) ^ "mutez"))
     QCheck.(1 -- 10_000_000_000)
 
-let arb_positive_ctok = QCheck.map (fun x -> ctok_of_muctok (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
+let arb_positive_ctok = QCheck.map (fun x -> ctok_of_denomination (Ligo.nat_from_literal (string_of_int x ^ "n"))) QCheck.(1 -- max_int)
 
 let arb_address = QCheck.map Ligo.address_of_string QCheck.(string_of_size (Gen.return 36))
 

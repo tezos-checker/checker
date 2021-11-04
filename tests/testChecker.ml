@@ -374,7 +374,7 @@ let suite =
        let ops, _ = Checker.entrypoint_add_liquidity
            (checker,
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
-            ( ctok_of_muctok (Ligo.nat_from_literal "5_000_000n")
+            ( ctok_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
@@ -653,7 +653,7 @@ let suite =
        let _, checker = Checker.entrypoint_add_liquidity
            (checker,
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
-            ( ctok_of_muctok (Ligo.nat_from_literal "5_000_000n")
+            ( ctok_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
@@ -665,7 +665,7 @@ let suite =
            (checker,
             (* Note: all values here were arbitrarily chosen based on the amount of kit we minted above *)
             ( lqt_of_denomination (Ligo.nat_from_literal "5_000_000n")
-            , ctok_of_muctok (Ligo.nat_from_literal "5_000_000n")
+            , ctok_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
             , Ligo.timestamp_from_seconds_literal 999
             )
@@ -904,7 +904,7 @@ let suite =
           begin
             assert_address_equal ~expected:sender ~real:transfer.address_from;
             assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(ctok_to_muctok_nat ctok_amount) ~real:transfer.value;
+            assert_nat_equal ~expected:(ctok_to_denomination_nat ctok_amount) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -941,7 +941,7 @@ let suite =
           begin
             assert_address_equal ~expected:sender ~real:transfer.address_from;
             assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(ctok_to_muctok_nat ctok_amount) ~real:transfer.value;
+            assert_nat_equal ~expected:(ctok_to_denomination_nat ctok_amount) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -996,7 +996,7 @@ let suite =
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
-      ctok_of_muctok bought_muctok >= min_ctok_expected
+      ctok_of_denomination bought_muctok >= min_ctok_expected
     );
 
     (
@@ -1054,12 +1054,12 @@ let suite =
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       in
-      ctok_add new_checker.cfmm.ctok (ctok_of_muctok bought_muctok) = checker.cfmm.ctok
+      ctok_add new_checker.cfmm.ctok (ctok_of_denomination bought_muctok) = checker.cfmm.ctok
     );
 
     (
       let cfmm_kit = Ligo.nat_from_literal ("1_000n") in
-      let cfmm_ctok = ctok_of_muctok (Ligo.nat_from_literal ("1_000n")) in
+      let cfmm_ctok = ctok_of_denomination (Ligo.nat_from_literal ("1_000n")) in
       (* The maximum amount of kit that you can buy with a finite amount of tez is
        * (1 - fee) * cfmm.kit - 1
       *)
@@ -1096,19 +1096,19 @@ let suite =
           ) in
       let minimum_tez = Ligo.mul_nat_tez (Ligo.abs (Common.cdiv_int_int ratio_minimum_tez.num ratio_minimum_tez.den)) (Ligo.tez_from_literal "1mutez") in
       (* Adjust transaction by a random amount of extra tez *)
-      let tez_provided = Ligo.add_tez_tez minimum_tez additional_tez in
+      let ctok_provided = Ctok.ctok_of_denomination (Common.tez_to_mutez_nat (Ligo.add_tez_tez minimum_tez additional_tez)) in (* UNSAFE CAST *)
 
       let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
-      let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_from_tez tez_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
+      let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
 
       begin match ops with
         | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
           begin
             assert_address_equal ~expected:sender ~real:transfer.address_from;
             assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(Ligo.abs (Common.tez_to_mutez tez_provided)) ~real:transfer.value;
+            assert_nat_equal ~expected:(Ctok.ctok_to_denomination_nat ctok_provided) ~real:transfer.value;
           end
         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
@@ -1130,12 +1130,12 @@ let suite =
        let checker =
          empty_checker_with_cfmm
            { empty_checker.cfmm with
-             ctok = ctok_of_muctok (Ligo.nat_from_literal "2n");
+             ctok = ctok_of_denomination (Ligo.nat_from_literal "2n");
              kit = kit_of_denomination (Ligo.nat_from_literal "2n");
            } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"), kit_of_denomination (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
+       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"), kit_of_denomination (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
        let kit = get_balance_of checker alice_addr kit_token_id in
 
        let expected_ops = [
@@ -1158,13 +1158,13 @@ let suite =
        Ligo.Tezos.reset ();
 
        let kit_to_sell = kit_of_denomination (Ligo.nat_from_literal "1_000_000n") in
-       let min_ctok_expected = ctok_of_muctok (Ligo.nat_from_literal "1n") in
+       let min_ctok_expected = ctok_of_denomination (Ligo.nat_from_literal "1n") in
 
        let checker =
          let checker =
            empty_checker_with_cfmm
              { empty_checker.cfmm with
-               ctok = ctok_of_muctok (Ligo.nat_from_literal "2n");
+               ctok = ctok_of_denomination (Ligo.nat_from_literal "2n");
                kit = kit_of_denomination (Ligo.nat_from_literal "2n");
                lqt = lqt_of_denomination (Ligo.nat_from_literal "1n");
              } in
@@ -1197,7 +1197,7 @@ let suite =
        Ligo.Tezos.reset ();
 
        let min_kit_expected = kit_of_denomination (Ligo.nat_from_literal "1n") in
-       let min_ctok_expected = ctok_of_muctok (Ligo.nat_from_literal "1n") in
+       let min_ctok_expected = ctok_of_denomination (Ligo.nat_from_literal "1n") in
        let my_liquidity_tokens = lqt_of_denomination (Ligo.nat_from_literal "1n") in
        let sender = alice_addr in
 
@@ -1207,7 +1207,7 @@ let suite =
            parameters = { empty_checker.parameters with circulating_kit = kit_of_denomination (Ligo.nat_from_literal "1n")};
            cfmm =
              { empty_checker.cfmm with
-               ctok = ctok_of_muctok (Ligo.nat_from_literal "2n");
+               ctok = ctok_of_denomination (Ligo.nat_from_literal "2n");
                kit = kit_of_denomination (Ligo.nat_from_literal "2n");
                lqt = lqt_of_denomination (Ligo.nat_from_literal "2n");
              };
@@ -1259,7 +1259,7 @@ let suite =
        let _, checker =
          Checker.entrypoint_add_liquidity
            ( checker,
-             ( ctok_of_muctok (Ligo.nat_from_literal "5_000_000n")
+             ( ctok_of_denomination (Ligo.nat_from_literal "5_000_000n")
              , kit_of_denomination (Ligo.nat_from_literal "5_000_000n")
              , lqt_of_denomination (Ligo.nat_from_literal "5n")
              , Ligo.timestamp_from_seconds_literal 999
@@ -1416,7 +1416,7 @@ let suite =
        let _lqt_minted_ret_kit_ops, checker =
          Checker.entrypoint_add_liquidity
            ( checker
-           , ( ctok_of_muctok (Ligo.nat_from_literal "1_000_000n")
+           , ( ctok_of_denomination (Ligo.nat_from_literal "1_000_000n")
              , kit_one
              , lqt_of_denomination (Ligo.nat_from_literal "1n")
              , Ligo.timestamp_from_seconds_literal 1
@@ -1915,7 +1915,7 @@ let suite =
          let _ops, checker = Checker.entrypoint_mint_kit (checker, (burrow_id, kit_one)) in
          (* Add some liquidity *)
          Ligo.Tezos.new_transaction ~seconds_passed:121 ~blocks_passed:2 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-         let ctok_to_give = Ctok.ctok_of_muctok (Ligo.nat_from_literal "400_000n") in
+         let ctok_to_give = Ctok.ctok_of_denomination (Ligo.nat_from_literal "400_000n") in
          let kit_to_give = Kit.kit_of_denomination (Ligo.nat_from_literal "400_000n") in
          let min_lqt_to_mint = Lqt.lqt_of_denomination (Ligo.nat_from_literal "5n") in
          let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
@@ -1927,7 +1927,7 @@ let suite =
      [
        "view_buy_kit_min_kit_expected" >:: with_cfmm_setup
          (fun checker ->
-            let ctok_to_sell = Ctok.ctok_of_muctok (Ligo.nat_from_literal "100_000n") in
+            let ctok_to_sell = Ctok.ctok_of_denomination (Ligo.nat_from_literal "100_000n") in
             let min_kit_to_buy = Checker.view_buy_kit_min_kit_expected (ctok_to_sell, checker) in
             let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in
             (* must succeed, otherwise view_buy_kit_min_kit_expected overapproximated *)
@@ -1957,7 +1957,7 @@ let suite =
 
        "view_add_liquidity_max_kit_deposited / view_add_liquidity_min_lqt_minted" >:: with_cfmm_setup
          (fun checker ->
-            let ctok_to_sell = Ctok.ctok_of_muctok (Ligo.nat_from_literal "100_000n") in
+            let ctok_to_sell = Ctok.ctok_of_denomination (Ligo.nat_from_literal "100_000n") in
             let max_kit_to_sell = Checker.view_add_liquidity_max_kit_deposited (ctok_to_sell, checker) in
             let min_lqt_to_buy = Checker.view_add_liquidity_min_lqt_minted (ctok_to_sell, checker) in
             let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "20") in

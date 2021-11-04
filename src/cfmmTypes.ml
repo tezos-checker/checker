@@ -22,7 +22,7 @@ type cfmm =
     should, but this saves us from having the first/non-first liquidity
     provider separation, and all division-by-zero checks. *)
 let initial_cfmm () : cfmm =
-  { ctok = ctok_of_muctok (Ligo.nat_from_literal "1n");
+  { ctok = ctok_of_denomination (Ligo.nat_from_literal "1n");
     kit = kit_of_denomination (Ligo.nat_from_literal "1n");
     lqt = lqt_of_denomination (Ligo.nat_from_literal "1n");
     kit_in_ctok_in_prev_block = one_ratio; (* Same as ctok/kit now. *)

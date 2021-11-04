@@ -34,12 +34,12 @@ let make_inputs_for_add_liquidity_to_succeed =
     (fun ((ctok, kit, lqt, cfmm), amount) ->
        let max_kit_deposited =
          let { num = x_num; den = x_den; } =
-           mul_ratio (kit_to_ratio kit) (make_ratio (ctok_to_muctok_int amount) (ctok_to_muctok_int ctok)) in
+           mul_ratio (kit_to_ratio kit) (make_ratio (ctok_to_denomination_int amount) (ctok_to_denomination_int ctok)) in
          kit_of_fraction_ceil x_num x_den
        in
        let min_lqt_minted =
          let { num = x_num; den = x_den; } =
-           mul_ratio (lqt_to_ratio lqt) (make_ratio (ctok_to_muctok_int amount) (ctok_to_muctok_int ctok)) in
+           mul_ratio (lqt_to_ratio lqt) (make_ratio (ctok_to_denomination_int amount) (ctok_to_denomination_int ctok)) in
          lqt_of_fraction_floor x_num x_den
        in
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
@@ -82,7 +82,7 @@ let make_inputs_for_remove_liquidity_to_succeed =
          if lqt_to_burn = lqt_zero || min_ctok_withdrawn = ctok_zero || min_kit_withdrawn = kit_zero then
            let lqt_to_burn =
              let least_kit_percentage = (div_ratio (kit_to_ratio (kit_of_denomination (Ligo.nat_from_literal "1n"))) (kit_to_ratio kit)) in
-             let least_ctok_percentage = make_ratio (ctok_to_muctok_int (ctok_of_muctok (Ligo.nat_from_literal "1n"))) (ctok_to_muctok_int ctok) in
+             let least_ctok_percentage = make_ratio (ctok_to_denomination_int (ctok_of_denomination (Ligo.nat_from_literal "1n"))) (ctok_to_denomination_int ctok) in
              let as_q = (mul_ratio (lqt_to_ratio lqt) (max_ratio least_kit_percentage least_ctok_percentage)) in
              lqt_of_fraction_ceil as_q.num as_q.den in
            let lqt_burned = lqt_to_burn in
@@ -198,7 +198,7 @@ let buy_kit_unit_test =
     Ligo.Tezos.reset ();
     let cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "10_000_000n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "5_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:one_ratio
@@ -208,7 +208,7 @@ let buy_kit_unit_test =
     let expected_returned_kit = kit_of_denomination (Ligo.nat_from_literal "453_636n") in
     let expected_updated_cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "11_000_000n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "11_000_000n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "4_546_364n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
@@ -221,7 +221,7 @@ let buy_kit_unit_test =
     let returned_kit, updated_cfmm =
       cfmm_buy_kit
         cfmm
-        (ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"))
+        (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
@@ -233,7 +233,7 @@ let buy_kit_unit_test =
     let returned_kit, updated_cfmm =
       cfmm_buy_kit
         cfmm
-        (ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"))
+        (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
@@ -247,7 +247,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
            (kit_of_denomination (Ligo.nat_from_literal "453_637n"))
            (Ligo.timestamp_from_seconds_literal 2)
       );
@@ -260,7 +260,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
            (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
       );
@@ -286,7 +286,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
            (Ligo.timestamp_from_seconds_literal 10)
       )
@@ -379,16 +379,16 @@ let sell_kit_unit_test =
     Ligo.Tezos.reset ();
     let cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "10_000_000n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "10_000_000n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "5_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n")
     in
-    let expected_returned_ctok = (ctok_of_muctok (Ligo.nat_from_literal "1_663_333n")) in
+    let expected_returned_ctok = (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n")) in
     let expected_updated_cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "8_336_667n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "8_336_667n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "6_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
@@ -402,7 +402,7 @@ let sell_kit_unit_test =
       cfmm_sell_kit
         cfmm
         kit_one
-        (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+        (ctok_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
     assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
     assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
@@ -414,7 +414,7 @@ let sell_kit_unit_test =
       cfmm_sell_kit
         cfmm
         kit_one
-        (ctok_of_muctok (Ligo.nat_from_literal "1_663_333n"))
+        (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
         (Ligo.timestamp_from_seconds_literal 2) in
     assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
     assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
@@ -428,7 +428,7 @@ let sell_kit_unit_test =
          cfmm_sell_kit
            cfmm
            kit_one
-           (ctok_of_muctok (Ligo.nat_from_literal "1_663_334n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1_663_334n"))
            (Ligo.timestamp_from_seconds_literal 2)
       );
 
@@ -441,7 +441,7 @@ let sell_kit_unit_test =
          cfmm_sell_kit
            cfmm
            kit_one
-           (ctok_of_muctok (Ligo.nat_from_literal "1_663_333n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 1)
       );
 
@@ -454,7 +454,7 @@ let sell_kit_unit_test =
          cfmm_sell_kit
            cfmm
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
-           (ctok_of_muctok (Ligo.nat_from_literal "1_663_333n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 10)
       );
 
@@ -563,7 +563,7 @@ let add_liquidity_unit_test =
     Ligo.Tezos.reset ();
     let cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "8_336_667n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "8_336_667n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "6_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:one_ratio
@@ -573,7 +573,7 @@ let add_liquidity_unit_test =
     let expected_returned_kit = kit_of_denomination (Ligo.nat_from_literal "5_605_758n") in
     let expected_updated_cfmm : cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "28_336_667n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "28_336_667n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "20_394_242n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "3n"))
         ~kit_in_ctok_in_prev_block:one_ratio
@@ -583,7 +583,7 @@ let add_liquidity_unit_test =
     let returned_liquidity, returned_kit, updated_cfmm =
       cfmm_add_liquidity
         cfmm
-        (ctok_of_muctok (Ligo.nat_from_literal "20_000_000n"))
+        (ctok_of_denomination (Ligo.nat_from_literal "20_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "20_000_000n"))
         (lqt_of_denomination (Ligo.nat_from_literal "2n"))
         (Ligo.timestamp_from_seconds_literal 1) in
@@ -596,7 +596,7 @@ let test_add_liquidity_failures =
     Ligo.Tezos.reset ();
     let cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "1000_000_000n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "1000_000_000n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "5000_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1000n"))
         ~kit_in_ctok_in_prev_block:one_ratio
@@ -616,7 +616,7 @@ let test_add_liquidity_failures =
       (fun () ->
          cfmm_add_liquidity
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
            (lqt_of_denomination (Ligo.nat_from_literal "2n"))
            (Ligo.timestamp_from_seconds_literal 1)
@@ -626,7 +626,7 @@ let test_add_liquidity_failures =
       (fun () ->
          cfmm_add_liquidity
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            lqt_zero
            (Ligo.timestamp_from_seconds_literal 1)
@@ -638,7 +638,7 @@ let test_add_liquidity_failures =
          let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "0") in (* No time passed; failure (tests equality) *)
          cfmm_add_liquidity
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            lqt_zero
            deadline
@@ -651,7 +651,7 @@ let test_add_liquidity_failures =
          Ligo.Tezos.new_transaction ~seconds_passed:2 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
          cfmm_add_liquidity
            cfmm
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            lqt_zero
            deadline
@@ -749,15 +749,15 @@ let test_remove_liquidity_failures =
     Ligo.Tezos.reset ();
     let cfmm =
       cfmm_make_for_test
-        ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "1000_000_000n"))
+        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "1000_000_000n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "5000_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1000n"))
         ~kit_in_ctok_in_prev_block:one_ratio
         ~last_level:(Ligo.nat_from_literal "0n") in
     let (liq, _kit, cfmm) =
       cfmm_add_liquidity
-        { cfmm with ctok = ctok_add cfmm.ctok (ctok_of_muctok (Ligo.nat_from_literal "10_000_000n")) }
-        (ctok_of_muctok (Ligo.nat_from_literal "101_000_000n"))
+        { cfmm with ctok = ctok_add cfmm.ctok (ctok_of_denomination (Ligo.nat_from_literal "10_000_000n")) }
+        (ctok_of_denomination (Ligo.nat_from_literal "101_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "500_000_000n"))
         (lqt_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 1) in
@@ -767,7 +767,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            lqt_zero
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            (Ligo.timestamp_from_seconds_literal 100)
       );
@@ -787,7 +787,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            liq
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
            (Ligo.timestamp_from_seconds_literal 100)
       );
@@ -799,7 +799,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            liq
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            deadline
       );
@@ -812,7 +812,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            liq
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            deadline
       );
@@ -825,7 +825,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            liq
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            deadline
       );
@@ -838,7 +838,7 @@ let test_remove_liquidity_failures =
          cfmm_remove_liquidity
            cfmm
            liq
-           (ctok_of_muctok (Ligo.nat_from_literal "1n"))
+           (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            deadline
       )
@@ -866,7 +866,7 @@ let cfmm_tests_from_mutations =
        Ligo.Tezos.reset ();
        let cfmm =
          cfmm_make_for_test
-           ~ctok:(ctok_of_muctok (Ligo.nat_from_literal "999_999_000_000n"))
+           ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "999_999_000_000n"))
            ~kit:(kit_of_denomination (Ligo.nat_from_literal "999_999_000_000n"))
            ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "999_999n"))
            ~kit_in_ctok_in_prev_block:one_ratio
@@ -877,7 +877,7 @@ let cfmm_tests_from_mutations =
            cfmm
            lqt_burned in
        assert_ctok_equal
-         ~expected:(Ctok.ctok_of_muctok (Ligo.nat_from_literal "1_000_000n"))
+         ~expected:(Ctok.ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
          ~real:ctok_withdrawn
     );
 
@@ -887,7 +887,7 @@ let cfmm_tests_from_mutations =
     ("cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (kit_sub => kit_min)" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_ctok = ctok_of_muctok (Ligo.nat_from_literal "123_456_789n") in
+       let total_ctok = ctok_of_denomination (Ligo.nat_from_literal "123_456_789n") in
        let total_kit = kit_of_denomination (Ligo.nat_from_literal "37_194_834n") in
        let total_lqt = lqt_of_denomination (Ligo.nat_from_literal "999_999n") in
        let cfmm =
@@ -915,14 +915,14 @@ let cfmm_tests_from_mutations =
          ~real:(Lqt.lqt_add lqt_burned updated_cfmm.lqt);
        (* To give *)
        assert_ctok_equal
-         ~expected:(Ctok.ctok_of_muctok (Ligo.nat_from_literal "38_575_964n"))
+         ~expected:(Ctok.ctok_of_denomination (Ligo.nat_from_literal "38_575_964n"))
          ~real:ctok_withdrawn;
        assert_kit_equal
          ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "11_622_095n"))
          ~real:kit_withdrawn;
        (* Updated cfmm *)
        assert_ctok_equal
-         ~expected:(Ctok.ctok_of_muctok (Ligo.nat_from_literal "84_880_825n"))
+         ~expected:(Ctok.ctok_of_denomination (Ligo.nat_from_literal "84_880_825n"))
          ~real:updated_cfmm.ctok;
        assert_kit_equal
          ~expected:(Kit.kit_of_denomination (Ligo.nat_from_literal "25_572_739n"))
@@ -939,7 +939,7 @@ let cfmm_tests_from_mutations =
     ("cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity (kit_sub => kit_min)" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_ctok = ctok_of_muctok (Ligo.nat_from_literal "123_456_789n") in
+       let total_ctok = ctok_of_denomination (Ligo.nat_from_literal "123_456_789n") in
        let total_kit = kit_of_denomination (Ligo.nat_from_literal "37_194_834n") in
        let total_lqt = lqt_of_denomination (Ligo.nat_from_literal "999_999n") in
        let cfmm =

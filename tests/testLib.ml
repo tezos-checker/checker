@@ -111,7 +111,7 @@ let make_inputs_for_buy_kit_to_succeed =
     (fun (ctok, _kit, _lqt, cfmm) ->
        let amount =
          let { Common.num = x_num; Common.den = x_den; } =
-           Ratio.div_ratio (Ratio.mul_ratio (Ctok.ratio_of_ctok ctok) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
+           Ratio.div_ratio (Ratio.mul_ratio (Ratio.ratio_of_ctok ctok) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
          Ctok.ctok_of_fraction_ceil x_num x_den in
        let min_kit_expected = Kit.kit_of_denomination (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
@@ -131,7 +131,7 @@ let make_inputs_for_sell_kit_to_succeed =
            Ratio.div_ratio (Ratio.mul_ratio (Kit.kit_to_ratio kit) (Ratio.sub_ratio Common.one_ratio Constants.cfmm_fee)) Constants.cfmm_fee in
          Kit.kit_of_fraction_ceil x_num x_den
        in
-       let min_ctok_expected = Ctok.ctok_of_muctok (Ligo.nat_from_literal "1n") in (* absolute minimum *)
+       let min_ctok_expected = Ctok.ctok_of_denomination (Ligo.nat_from_literal "1n") in (* absolute minimum *)
        let deadline = Ligo.add_timestamp_int !Ligo.Tezos.now (Ligo.int_from_literal "1") in (* always one second later *)
        (cfmm, token, min_ctok_expected, deadline)
     )

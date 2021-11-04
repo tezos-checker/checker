@@ -166,7 +166,7 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Buy_kit" >::
      fun _ ->
-       let ctok = Ctok.ctok_of_muctok (Ligo.nat_from_literal "13n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "13n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "29n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
@@ -176,7 +176,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Sell_kit" >::
      fun _ ->
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "31n") in
-       let ctok = Ctok.ctok_of_muctok (Ligo.nat_from_literal "5n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "5n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
          (Sell_kit (kit, ctok, deadline)) (* note: values randomly chosen *)
@@ -184,7 +184,7 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Add_liquidity" >::
      fun _ ->
-       let ctok = Ctok.ctok_of_muctok (Ligo.nat_from_literal "97n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "97n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "3n") in
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "59n") in
        let deadline = !Ligo.Tezos.now in
@@ -195,7 +195,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Remove_liquidity" >::
      fun _ ->
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "41n") in
-       let ctok = Ctok.ctok_of_muctok (Ligo.nat_from_literal "47n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "47n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "19n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds

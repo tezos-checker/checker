@@ -522,7 +522,7 @@ let entrypoint_buy_kit (state, p: checker * (ctok * kit * Ligo.timestamp)) : Lig
   let transfer =
     { address_from = !Ligo.Tezos.sender;
       address_to = !Ligo.Tezos.self_address;
-      value = ctok_to_muctok_nat ctok;
+      value = ctok_to_denomination_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
@@ -558,7 +558,7 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctok * Ligo.timestamp)) : Li
   let transfer =
     { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
-      value = ctok_to_muctok_nat ctok;
+      value = ctok_to_denomination_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
@@ -592,7 +592,7 @@ let entrypoint_add_liquidity (state, p: checker * (ctok * kit * lqt * Ligo.times
   let transfer =
     { address_from = !Ligo.Tezos.sender;
       address_to = !Ligo.Tezos.self_address;
-      value = ctok_to_muctok_nat ctok_deposited;
+      value = ctok_to_denomination_nat ctok_deposited;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
@@ -630,7 +630,7 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctok * kit * Ligo.ti
   let transfer =
     { address_from = !Ligo.Tezos.self_address;
       address_to = !Ligo.Tezos.sender;
-      value = ctok_to_muctok_nat ctok;
+      value = ctok_to_denomination_nat ctok;
     } in
   let op =
     LigoOp.Tezos.fa12_transfer_transaction
