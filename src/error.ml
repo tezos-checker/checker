@@ -120,6 +120,10 @@ let[@inline] internalError_CtezSubNegative                              : Ligo.i
 let[@inline] internalError_CtezOfFractionCeilNegative                   : Ligo.int = Ligo.int_from_literal "261"
 let[@inline] internalError_CtezOfFractionFloorNegative                  : Ligo.int = Ligo.int_from_literal "262"
 
+let[@inline] internalError_CtokSubNegative                              : Ligo.int = Ligo.int_from_literal "260"
+let[@inline] internalError_CtokOfFractionCeilNegative                   : Ligo.int = Ligo.int_from_literal "261"
+let[@inline] internalError_CtokOfFractionFloorNegative                  : Ligo.int = Ligo.int_from_literal "262"
+
 let[@inline] internalError_KitSubNegative                               : Ligo.int = Ligo.int_from_literal "270"
 let[@inline] internalError_KitOfFractionCeilNegative                    : Ligo.int = Ligo.int_from_literal "271"
 let[@inline] internalError_KitOfFractionFloorNegative                   : Ligo.int = Ligo.int_from_literal "272"
