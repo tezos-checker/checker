@@ -3,6 +3,7 @@ src/checkerEntrypoints.ml
 src/kit.ml
 src/lqt.ml
 src/tok.ml
+src/ctok.ml
 src/constants.ml
 src/burrowOrigination.ml
 src/driftDerivative.ml

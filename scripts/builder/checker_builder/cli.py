@@ -11,7 +11,12 @@ GENERATE_SRCS = {
 # Template used for all token modules
 TOKEN_TEMPLATE = "genericToken.ml.jinja"
 # Mapping of token config fields to their corresponding src modules
-TOKEN_SRCS = {"collateral": "tok.ml", "kit": "kit.ml", "liquidity": "lqt.ml"}
+TOKEN_SRCS = {
+    "collateral": "tok.ml",
+    "kit": "kit.ml",
+    "liquidity": "lqt.ml",
+    "cfmm_token": "ctok.ml",
+}
 
 DRIFT_SRC = "driftDerivative.ml"
 DRIFT_TEMPLATES = {
