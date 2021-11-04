@@ -456,7 +456,7 @@ Get the maximum amount of ctez that can be expected to be received for the
 given amount of kit (when calling ``sell_kit``), based on the current market
 price.
 
-``sell_kit_min_ctez_expected : nat -> nat``
+``sell_kit_min_ctok_expected : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
@@ -504,7 +504,7 @@ Get the maximum amount of ctez that can be expected to be received for the
 given amount of liquidity token (when calling ``remove_liquidity``), based on
 the current market price.
 
-``remove_liquidity_min_ctez_withdrawn : nat -> nat``
+``remove_liquidity_min_ctok_withdrawn : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
