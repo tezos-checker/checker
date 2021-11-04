@@ -29,7 +29,7 @@ open Lqt
 open Tok
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
-open Ctez
+open Ctok
 open Fa2Interface
 open Error
 

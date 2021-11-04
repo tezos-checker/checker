@@ -1,4 +1,4 @@
-open Ctez
+open Ctok
 open Kit
 open Lqt
 open Tok
@@ -31,7 +31,7 @@ val compute_outstanding_dissonance : checker -> kit (* "real" *) * kit (* approx
 (*****************************************************************************)
 
 (**/**)
-val get_transfer_ctez_fa12_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_transfer_ctok_fa12_entrypoint : external_contracts -> fa12_transfer Ligo.contract
 val get_ctez_cfmm_price_entrypoint : external_contracts -> ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract
 val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 val get_transfer_collateral_fa2_entrypoint : external_contracts -> fa2_transfer list Ligo.contract
@@ -168,46 +168,46 @@ val entrypoint_set_burrow_delegate : checker * (Ligo.nat * Ligo.key_hash option)
     cannot be bought or if the deadline has passed.
 
     Parameters:
-    - The amount of ctez to be sold for kit
+    - The amount of ctok to be sold for kit
     - The minimum amount of kit expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_buy_kit : checker * (ctez * kit * Ligo.timestamp) -> LigoOp.operation list * checker
+val entrypoint_buy_kit : checker * (ctok * kit * Ligo.timestamp) -> LigoOp.operation list * checker
 
-(** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
+(** Sell some kit to the cfmm contract. Fail if the desired amount of ctok
     cannot be bought or if the deadline has passed.
 
     Parameters:
-    - The amount of kit to be sold for ctez
-    - The minimum amount of ctez expected to be bought
+    - The amount of kit to be sold for ctok
+    - The minimum amount of ctok expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_sell_kit : checker * (kit * ctez * Ligo.timestamp) -> LigoOp.operation list * checker
+val entrypoint_sell_kit : checker * (kit * ctok * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Buy some liquidity (liquidity tokens) from the cfmm contract, by
-    giving it some ctez and some kit. If the given amounts do not have the
-    right ratio, the cfmm contract keeps as much of the given ctez and kit
+    giving it some ctok and some kit. If the given amounts do not have the
+    right ratio, the cfmm contract keeps as much of the given ctok and kit
     as possible with the right ratio, and returns the leftovers, along with
     the liquidity tokens.
 
     Parameters:
-    - The amount of ctez to be sold
+    - The amount of ctok to be sold
     - The amount of kit to be sold
     - The minimum number of liquidity tokens expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_add_liquidity : checker * (ctez * kit * lqt * Ligo.timestamp) -> LigoOp.operation list * checker
+val entrypoint_add_liquidity : checker * (ctok * kit * lqt * Ligo.timestamp) -> LigoOp.operation list * checker
 
 (** Sell some liquidity (liquidity tokens) to the cfmm contract in
-    exchange for the corresponding ctez and kit of the right ratio.
+    exchange for the corresponding ctok and kit of the right ratio.
 
     Parameters:
     - The number of liquidity tokens to be sold
-    - The minimum amount of ctez expected to be bought
+    - The minimum amount of ctok expected to be bought
     - The minimum amount of kit expected to be bought
     - The deadline for the transaction to be valid
 *)
-val entrypoint_remove_liquidity : checker * (lqt * ctez * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
+val entrypoint_remove_liquidity : checker * (lqt * ctok * kit * Ligo.timestamp) -> (LigoOp.operation list * checker)
 
 (*****************************************************************************)
 (**                      {1 LIQUIDATION AUCTIONS}                            *)
@@ -261,11 +261,11 @@ val entrypoint_update_operators : checker * fa2_update_operator list -> LigoOp.o
 (**                            {1 VIEWS}                                     *)
 (*****************************************************************************)
 
-val view_buy_kit_min_kit_expected : (ctez * checker) -> kit
-val view_sell_kit_min_ctez_expected : (kit * checker) -> ctez
-val view_add_liquidity_max_kit_deposited : (ctez * checker) -> kit
-val view_add_liquidity_min_lqt_minted : (ctez * checker) -> lqt
-val view_remove_liquidity_min_ctez_withdrawn : (lqt * checker) -> ctez
+val view_buy_kit_min_kit_expected : (ctok * checker) -> kit
+val view_sell_kit_min_ctok_expected : (kit * checker) -> ctok
+val view_add_liquidity_max_kit_deposited : (ctok * checker) -> kit
+val view_add_liquidity_min_lqt_minted : (ctok * checker) -> lqt
+val view_remove_liquidity_min_ctok_withdrawn : (lqt * checker) -> ctok
 val view_remove_liquidity_min_kit_withdrawn : (lqt * checker) -> kit
 
 val view_current_liquidation_auction_details: (unit * checker) -> view_current_liquidation_auction_details_result
