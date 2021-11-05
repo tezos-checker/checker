@@ -66,6 +66,17 @@ def assert_fa2_token_balance(
         raise AssertionError(f"Expected {expected} but got {balance}")
 
 
+def assert_fa12_token_balance(
+    contract: ContractInterface,
+    address: str,
+    expected: int,
+):
+    fa12_get_balance = {"owner": address, "callback": None}
+    balance = contract.getBalance(**fa12_get_balance).callback_view()
+    if expected != balance:
+        raise AssertionError(f"Expected {expected} but got {balance}")
+
+
 def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
     """Reads an item from checker's AVL backend using its pointer"""
     return checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
@@ -620,6 +631,144 @@ class TezWrapperTest(SandboxedTestCase):
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         wrapper.balance_of(**fa2_balance_of).callback_view()
+
+        print("Gas costs:")
+        print(json.dumps(gas_costs, indent=4))
+        if WRITE_GAS_COSTS:
+            write_gas_costs(gas_costs, WRITE_GAS_COSTS)
+
+
+class WCtezTest(SandboxedTestCase):
+    def test_wctez(self):
+        gas_costs = {}
+        # Hard-coded in contract, so also hard-coding here
+        wctez_token_id = 0
+
+        print("Deploying ctez contracts.")
+        ctez = deploy_ctez(
+            self.client,
+            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
+        wctez = deploy_wctez(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ctez_fa12_address=ctez["fa12_ctez"].context.address,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+        print("Deployment finished.")
+
+        account = self.client.key.public_key_hash()
+        # Note: using alice's account which is assumed to be already initialized in the sandbox
+        wctez_alice = pytezos.pytezos.using(
+            shell=wctez.shell,
+            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+        ).contract(wctez.address)
+        account_alice = wctez_alice.key.public_key_hash()
+
+        def call_endpoint(
+            name, param, amount=0, client=self.client, contract=wctez, record_gas=True
+        ):
+            print(f"Calling {name} with {param} and mutez={amount}")
+            ret = inject(
+                client,
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
+            )
+            if record_gas:
+                gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def single_fa2_transfer(
+            sender: str, recipient: str, amount: int, token_id=wctez_token_id
+        ):
+            return [
+                {
+                    "from_": sender,
+                    "txs": [
+                        {
+                            "to_": recipient,
+                            "token_id": token_id,
+                            "amount": amount,
+                        },
+                    ],
+                }
+            ]
+
+        # Edge case: this call should succeed, according to the FA2 spec
+        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
+
+        # ===============================================================================
+        # Wrapper-specific entrypoints
+        # ===============================================================================
+        # First have to get some ctez
+        call_endpoint(
+            "create", (1, None, {"any": None}), amount=1_000_000, contract=ctez["ctez"], record_gas=False
+        )
+        call_endpoint("mint_or_burn", (1, 800_000), contract=ctez["ctez"], record_gas=False)
+        # Then approve wctez to spend the ctez
+        call_endpoint(
+            "approve", (wctez.context.address, 800_000), contract=ctez["fa12_ctez"], record_gas=False
+        )
+
+        # Now we can mint wctez
+        call_endpoint("mint", 800_000)
+        assert_fa12_token_balance(ctez["fa12_ctez"], account, 0)
+        assert_fa12_token_balance(ctez["fa12_ctez"], wctez.context.address, 800_000)
+        assert_fa2_token_balance(wctez, account, wctez_token_id, 800_000)
+
+        # And redeem some of it to get ctez back
+        call_endpoint("redeem", 1000)
+        assert_fa2_token_balance(wctez, account, wctez_token_id, 799_000)
+        assert_fa12_token_balance(ctez["fa12_ctez"], wctez.context.address, 799_000)
+        assert_fa12_token_balance(ctez["fa12_ctez"], account, 1000)
+        # ===============================================================================
+        # FA2 interface
+        # ===============================================================================
+        # Transfer from the test account to alice's account
+        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
+        assert_fa2_token_balance(wctez, account, wctez_token_id, 798_910)
+        assert_fa2_token_balance(wctez, account_alice, wctez_token_id, 90)
+        # Add the main account as an operator on alice's account
+        # Note: using a client instance with alice's key for this since she is the
+        # account owner.
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": wctez_alice.key.public_key_hash(),
+                    "operator": account,
+                    "token_id": wctez_token_id,
+                }
+            },
+        ]
+        call_endpoint(
+            "update_operators",
+            update_operators,
+            client=wctez_alice,
+            contract=wctez_alice,
+        )
+
+        # Send some wctez tokens back to the main test account
+        call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
+        assert_fa2_token_balance(wctez, account, wctez_token_id, 798_990)
+
+        # Note: Using callback_view() here since we don't have a contract to use
+        # for the callback.
+        fa2_balance_of = {
+            "requests": [
+                {
+                    "owner": wctez_alice.key.public_key_hash(),
+                    "token_id": wctez_token_id,
+                }
+            ],
+            "callback": None,
+        }
+        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+        wctez.balance_of(**fa2_balance_of).callback_view()
 
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))
