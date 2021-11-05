@@ -667,9 +667,7 @@ class WCtezTest(SandboxedTestCase):
         ).contract(wctez.address)
         account_alice = wctez_alice.key.public_key_hash()
 
-        def call_endpoint(
-            name, param, amount=0, client=self.client, contract=wctez, record_gas=True
-        ):
+        def call_endpoint(contract, name, param, amount=0, client=self.client):
             print(f"Calling {name} with {param} and mutez={amount}")
             ret = inject(
                 client,
@@ -679,8 +677,11 @@ class WCtezTest(SandboxedTestCase):
                 .autofill(ttl=MAX_OPERATIONS_TTL)
                 .sign(),
             )
-            if record_gas:
-                gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def call_wctez_endpoint(name, param, amount=0, client=self.client, wctez=wctez):
+            ret = call_endpoint(wctez, name, param, amount, client)
+            gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         def single_fa2_transfer(
@@ -700,29 +701,27 @@ class WCtezTest(SandboxedTestCase):
             ]
 
         # Edge case: this call should succeed, according to the FA2 spec
-        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
+        call_wctez_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
 
         # ===============================================================================
         # Wrapper-specific entrypoints
         # ===============================================================================
         # First have to get some ctez
         call_endpoint(
-            "create", (1, None, {"any": None}), amount=1_000_000, contract=ctez["ctez"], record_gas=False
+            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
         )
-        call_endpoint("mint_or_burn", (1, 800_000), contract=ctez["ctez"], record_gas=False)
+        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
         # Then approve wctez to spend the ctez
-        call_endpoint(
-            "approve", (wctez.context.address, 800_000), contract=ctez["fa12_ctez"], record_gas=False
-        )
+        call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 800_000))
 
         # Now we can mint wctez
-        call_endpoint("mint", 800_000)
+        call_wctez_endpoint("mint", 800_000)
         assert_fa12_token_balance(ctez["fa12_ctez"], account, 0)
         assert_fa12_token_balance(ctez["fa12_ctez"], wctez.context.address, 800_000)
         assert_fa2_token_balance(wctez, account, wctez_token_id, 800_000)
 
         # And redeem some of it to get ctez back
-        call_endpoint("redeem", 1000)
+        call_wctez_endpoint("redeem", 1000)
         assert_fa2_token_balance(wctez, account, wctez_token_id, 799_000)
         assert_fa12_token_balance(ctez["fa12_ctez"], wctez.context.address, 799_000)
         assert_fa12_token_balance(ctez["fa12_ctez"], account, 1000)
@@ -730,7 +729,7 @@ class WCtezTest(SandboxedTestCase):
         # FA2 interface
         # ===============================================================================
         # Transfer from the test account to alice's account
-        call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
+        call_wctez_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
         assert_fa2_token_balance(wctez, account, wctez_token_id, 798_910)
         assert_fa2_token_balance(wctez, account_alice, wctez_token_id, 90)
         # Add the main account as an operator on alice's account
@@ -745,15 +744,15 @@ class WCtezTest(SandboxedTestCase):
                 }
             },
         ]
-        call_endpoint(
+        call_wctez_endpoint(
             "update_operators",
             update_operators,
             client=wctez_alice,
-            contract=wctez_alice,
+            wctez=wctez_alice,
         )
 
         # Send some wctez tokens back to the main test account
-        call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
+        call_wctez_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
         assert_fa2_token_balance(wctez, account, wctez_token_id, 798_990)
 
         # Note: Using callback_view() here since we don't have a contract to use
