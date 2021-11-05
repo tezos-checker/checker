@@ -46,6 +46,7 @@ class Config:
     oracle_address: str = ""
     checker_address: str = ""
     tez_wrapper_address: str = ""
+    wctez_address: str = ""
 
     @staticmethod
     def load(file: Path):
@@ -67,6 +68,7 @@ class ConfigSchema(Schema):
     oracle_address = fields.String()
     checker_address = fields.String()
     tez_wrapper_address = fields.String()
+    wctez_address = fields.String()
 
     @post_load
     def make(self, data, **kwargs):
@@ -263,6 +265,42 @@ def tez_wrapper(config: Config, checker_dir):
     )
     click.echo(f"Tez wrapper contract deployed with address: {wrapper.context.address}")
     config.tez_wrapper_address = wrapper.context.address
+    config.dump()
+
+
+@deploy.command()
+@click.option(
+    "--src",
+    "checker_dir",
+    type=str,
+    help="Checker michelson src directory",
+    default="generated/michelson",
+    show_default=True,
+)
+@click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
+@click.pass_obj
+def wrapped_ctez(config: Config, checker_dir, ctez_fa12):
+    """
+    Deploy wctez contract (FA2-wrapped ctez).
+    """
+    if not config.ctez_fa12_address and not ctez_fa12:
+        raise ValueError(
+            "ctez fa12 address was neither specified in the CLI config nor provided as an argument."
+        )
+    if ctez_fa12:
+        config.ctez_fa12_address = ctez_fa12
+    shell = construct_url(config.tezos_address, config.tezos_port)
+    click.echo(f"Connecting to tezos node at: {shell}")
+    client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
+    wctez = checker_lib.deploy_wctez(
+        client,
+        checker_dir,
+        config.ctez_fa12_address,
+        ttl=_patch_operation_ttl(config),
+    )
+    click.echo(f"wctez contract deployed with address: {wctez.context.address}")
+    config.wctez_address = wctez.context.address
     config.dump()
 
 
