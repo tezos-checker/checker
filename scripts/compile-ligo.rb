@@ -63,7 +63,7 @@ puts "Compiling the wctez contract."
 ##########################################
 
 compiled_wctez_contract, exit_status = Open3.capture2("ligo", "compile-contract", WCTEZ_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_tez_wrapper_contract}"
+exit_status.success? or raise "compile-contract failed:\n#{compiled_wctez_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
