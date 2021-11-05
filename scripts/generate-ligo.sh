@@ -55,7 +55,17 @@ tez_wrapper_sources=(
   tezWrapper
 )
 
-all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" )
+# Note: order here does matter since it affects the order of #includes in wctezMain.mligo
+wctez_sources=(
+  error
+  fa12Interface
+  common
+  fa2Interface
+  fa2Ledger
+  wctez
+)
+
+all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" "${wctez_sources[@]}")
 all_sources=($(echo "${all_sources[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 for name in "${all_sources[@]}"; do
@@ -147,5 +157,14 @@ echo '#include "ligo.mligo"' > "$target_dir/tezWrapperMain.mligo"
 ( IFS=$'\n'; echo "${tez_wrapper_sources[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> "$target_dir/tezWrapperMain.mligo"
+
+# Generate the wctez contract
+echo "=> wctezMain.mligo" 2>&1
+
+echo '#include "ligo.mligo"' > "$target_dir/wctezMain.mligo"
+
+( IFS=$'\n'; echo "${wctez_sources[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> "$target_dir/wctezMain.mligo"
 
 echo "done." 1>&2

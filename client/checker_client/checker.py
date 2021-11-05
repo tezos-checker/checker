@@ -306,6 +306,27 @@ def deploy_tez_wrapper(
     return wrapper
 
 
+def deploy_wctez(
+    tz: PyTezosClient,
+    checker_dir: str,
+    ctez_fa12_address: str,
+    ttl: Optional[int] = None,
+):
+    print("Deploying the wctez contract.")
+    src = os.path.join(checker_dir, "wctezMain.tz")
+    initial_storage = {
+        "fa2_state": {
+            "ledger": {},
+            "operators": {},
+        },
+        "ctez_fa12_address": ctez_fa12_address,
+    }
+    wctez = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
+    print("Done.")
+    print(f"wctez address: {wctez.context.address}")
+    return wctez
+
+
 def deploy_checker(
     tz,
     checker_dir,
