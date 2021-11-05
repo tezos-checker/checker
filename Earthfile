@@ -183,6 +183,8 @@ generate-code:
     SAVE ARTIFACT ./src/checkerEntrypoints.ml /
     SAVE ARTIFACT ./src/tok.ml AS LOCAL src/tok.ml
     SAVE ARTIFACT ./src/tok.ml /
+    SAVE ARTIFACT ./src/ctok.ml AS LOCAL src/ctok.ml
+    SAVE ARTIFACT ./src/ctok.ml /
     SAVE ARTIFACT ./src/kit.ml AS LOCAL src/kit.ml
     SAVE ARTIFACT ./src/kit.ml /
     SAVE ARTIFACT ./src/lqt.ml AS LOCAL src/lqt.ml
@@ -201,6 +203,7 @@ build-ocaml:
     COPY src/*.ml src/*.mli src/dune ./src/
     COPY +generate-code/checkerEntrypoints.ml ./src/
     COPY +generate-code/tok.ml ./src/
+    COPY +generate-code/ctok.ml ./src/
     COPY +generate-code/kit.ml ./src/
     COPY +generate-code/lqt.ml ./src/
     COPY +generate-code/constants.ml ./src/
@@ -221,6 +224,7 @@ build-ligo:
 
     COPY ./src/*.ml ./src/*.mligo ./src/
     COPY +generate-code/checkerEntrypoints.ml ./src/
+    COPY +generate-code/ctok.ml ./src/
     COPY +generate-code/tok.ml ./src/
     COPY +generate-code/kit.ml ./src/
     COPY +generate-code/lqt.ml ./src/

@@ -20,7 +20,7 @@
      https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
 *)
 
-open Ctez
+open Ctok
 open Kit
 open Lqt
 open Constants
@@ -35,22 +35,22 @@ open Common
  * implementation of remove_liquidity currently allows liquidity to reach zero.
  * *)
 let[@inline] cfmm_assert_initialized (u: cfmm) : cfmm =
-  assert (not (u.ctez = ctez_zero));
+  assert (not (u.ctok = ctok_zero));
   assert (not (u.kit = kit_zero));
   assert (not (u.lqt = lqt_zero));
   u
 
-(** Compute the price of kit in ctez (ratio of ctez and kit in the cfmm
+(** Compute the price of kit in ctok (ratio of ctok and kit in the cfmm
     contract), as it was at the end of the last block. This is to be used when
     required for the calculation of the drift derivative instead of up-to-date
-    kit_in_ctez, because it is a little harder to manipulate. *)
-let[@inline] cfmm_kit_in_ctez_in_prev_block (cfmm: cfmm) : ratio =
+    kit_in_ctok, because it is a little harder to manipulate. *)
+let[@inline] cfmm_kit_in_ctok_in_prev_block (cfmm: cfmm) : ratio =
   let cfmm = cfmm_assert_initialized cfmm in
-  cfmm.kit_in_ctez_in_prev_block
+  cfmm.kit_in_ctok_in_prev_block
 
-(* Update the kit_in_ctez cached and last_level, if we just entered a new block.
+(* Update the kit_in_ctok cached and last_level, if we just entered a new block.
  * This should be called before we many any changes to the contract so that we
- * don't lose the last kit_in_ctez at the end of the last block. George: Note
+ * don't lose the last kit_in_ctok at the end of the last block. George: Note
  * that this is not be the previous block, but the last block in which the
  * cfmm contract was touched. *)
 let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
@@ -60,22 +60,22 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
     cfmm
   else
     { cfmm with
-      kit_in_ctez_in_prev_block =
+      kit_in_ctok_in_prev_block =
         make_ratio
-          (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) kit_scaling_factor_int)
-          (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) ctez_scaling_factor_int);
+          (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) kit_scaling_factor_int)
+          (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) ctok_scaling_factor_int);
       last_level = !Ligo.Tezos.level;
     }
 
 (** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
 let cfmm_view_min_kit_expected_buy_kit
     (cfmm: cfmm)
-    (ctez_amount: ctez)
+    (ctok_amount: ctok)
   : (kit (* min_kit_expected *) * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in
-  if (eq_ctez_ctez ctez_amount ctez_zero) then
-    (Ligo.failwith error_BuyKitNoCtezGiven : (kit * cfmm))
+  if (eq_ctok_ctok ctok_amount ctok_zero) then
+    (Ligo.failwith error_BuyKitNoCtokGiven : (kit * cfmm))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -83,15 +83,15 @@ let cfmm_view_min_kit_expected_buy_kit
       let { num = num_uf; den = den_uf; } = cfmm_fee in
       { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - cfmm_fee *)
     in
-    let new_cfmm_ctez = ctez_add cfmm.ctez ctez_amount in
+    let new_cfmm_ctok = ctok_add cfmm.ctok ctok_amount in
     let numerator =
       Ligo.mul_nat_int
-        (ctez_to_muctez_nat ctez_amount)
+        (ctok_to_denomination_nat ctok_amount)
         (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) num_uf) in
     let denominator =
       Ligo.mul_int_int
         kit_scaling_factor_int
-        (Ligo.mul_nat_int (ctez_to_muctez_nat new_cfmm_ctez) den_uf) in
+        (Ligo.mul_nat_int (ctok_to_denomination_nat new_cfmm_ctok) den_uf) in
     let bought_kit = kit_of_fraction_floor numerator denominator in
     (* Due to (a) the constant-factor calculation (which means that to deplete
      * the one amount the other would in effect have to become infinite), (b)
@@ -102,40 +102,40 @@ let cfmm_view_min_kit_expected_buy_kit
     ( bought_kit,
       { cfmm with
         kit = kit_sub cfmm.kit bought_kit;
-        ctez = new_cfmm_ctez;
+        ctok = new_cfmm_ctok;
       }
     )
 
-(** Buy some kit from the cfmm contract by providing some ctez. Fail if the
+(** Buy some kit from the cfmm contract by providing some ctok. Fail if the
     desired amount of kit cannot be bought or if the deadline has passed. *)
 let cfmm_buy_kit
     (cfmm: cfmm)
-    (ctez_amount: ctez)
+    (ctok_amount: ctok)
     (min_kit_expected: kit)
     (deadline: Ligo.timestamp)
   : (kit * cfmm) =
-  if (eq_ctez_ctez ctez_amount ctez_zero) then
-    (Ligo.failwith error_BuyKitNoCtezGiven : (kit * cfmm))
+  if (eq_ctok_ctok ctok_amount ctok_zero) then
+    (Ligo.failwith error_BuyKitNoCtokGiven : (kit * cfmm))
   else if (Ligo.geq_timestamp_timestamp !Ligo.Tezos.now deadline) then
     (Ligo.failwith error_CfmmTooLate : (kit * cfmm))
   else if (eq_kit_kit min_kit_expected kit_zero) then
     (Ligo.failwith error_BuyKitTooLowExpectedKit : (kit * cfmm))
   else
-    let (bought_kit, cfmm) = cfmm_view_min_kit_expected_buy_kit cfmm ctez_amount in
+    let (bought_kit, cfmm) = cfmm_view_min_kit_expected_buy_kit cfmm ctok_amount in
     if lt_kit_kit bought_kit min_kit_expected then
       (Ligo.failwith error_BuyKitPriceFailure : (kit * cfmm))
     else
       (bought_kit, cfmm)
 
-(** Compute the maximum [min_ctez_expected] for [cfmm_sell_kit] to succeed. *)
-let cfmm_view_min_ctez_expected_cfmm_sell_kit
+(** Compute the maximum [min_ctok_expected] for [cfmm_sell_kit] to succeed. *)
+let cfmm_view_min_ctok_expected_cfmm_sell_kit
     (cfmm: cfmm)
     (kit_amount: kit)
-  : (ctez * cfmm) =
+  : (ctok * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in
   if (eq_kit_kit kit_amount kit_zero) then
-    (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
+    (Ligo.failwith error_SellKitNoKitGiven : (ctok * cfmm))
   else
     (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
      * db = da * b / (a + da) * (1 - fee) *)
@@ -147,68 +147,68 @@ let cfmm_view_min_ctez_expected_cfmm_sell_kit
     let numerator =
       Ligo.mul_nat_int
         (kit_to_denomination_nat kit_amount)
-        (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) num_uf) in
+        (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) num_uf) in
     let denominator =
       Ligo.mul_int_int
-        ctez_scaling_factor_int
+        ctok_scaling_factor_int
         (Ligo.mul_nat_int (kit_to_denomination_nat new_cfmm_kit) den_uf) in
-    let bought_ctez = ctez_of_fraction_floor numerator denominator in
+    let bought_ctok = ctok_of_fraction_floor numerator denominator in
 
     (* Due to (a) the constant-factor calculation (which means that to deplete
      * the one amount the other would in effect have to become infinite), (b)
      * the fact that checker owns 1mu of each token, and (c) the fact that we
      * always floor in our calculations, it should be impossible to trigger the
      * following assertion. *)
-    assert (lt_ctez_ctez bought_ctez cfmm.ctez);
-    ( bought_ctez,
+    assert (lt_ctok_ctok bought_ctok cfmm.ctok);
+    ( bought_ctok,
       { cfmm with
         kit = new_cfmm_kit;
-        ctez = ctez_sub cfmm.ctez bought_ctez;
+        ctok = ctok_sub cfmm.ctok bought_ctok;
       }
     )
 
-(** Sell some kit to the cfmm contract. Fail if the desired amount of ctez
+(** Sell some kit to the cfmm contract. Fail if the desired amount of ctok
     cannot be bought or if the deadline has passed. *)
 let cfmm_sell_kit
     (cfmm: cfmm)
     (kit_amount: kit)
-    (min_ctez_expected: ctez)
+    (min_ctok_expected: ctok)
     (deadline: Ligo.timestamp)
-  : (ctez * cfmm) =
+  : (ctok * cfmm) =
   if (eq_kit_kit kit_amount kit_zero) then
-    (Ligo.failwith error_SellKitNoKitGiven : (ctez * cfmm))
+    (Ligo.failwith error_SellKitNoKitGiven : (ctok * cfmm))
   else if Ligo.geq_timestamp_timestamp !Ligo.Tezos.now deadline then
-    (Ligo.failwith error_CfmmTooLate : (ctez * cfmm))
-  else if (eq_ctez_ctez min_ctez_expected ctez_zero) then
-    (Ligo.failwith error_SellKitTooLowExpectedCtez : (ctez * cfmm))
+    (Ligo.failwith error_CfmmTooLate : (ctok * cfmm))
+  else if (eq_ctok_ctok min_ctok_expected ctok_zero) then
+    (Ligo.failwith error_SellKitTooLowExpectedCtok : (ctok * cfmm))
   else
-    let (bought_ctez, cfmm) = cfmm_view_min_ctez_expected_cfmm_sell_kit cfmm kit_amount in
-    if lt_ctez_ctez bought_ctez min_ctez_expected then
-      (Ligo.failwith error_SellKitPriceFailure : (ctez * cfmm))
+    let (bought_ctok, cfmm) = cfmm_view_min_ctok_expected_cfmm_sell_kit cfmm kit_amount in
+    if lt_ctok_ctok bought_ctok min_ctok_expected then
+      (Ligo.failwith error_SellKitPriceFailure : (ctok * cfmm))
     else
-      (bought_ctez, cfmm)
+      (bought_ctok, cfmm)
 
 (** Compute the minimum [max_kit_deposited] and the maximum [min_lqt_minted]
     for [cfmm_add_liquidity] to succeed. *)
 let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
     (cfmm: cfmm)
-    (ctez_amount: ctez)
+    (ctok_amount: ctok)
   : (lqt * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in
-  if eq_ctez_ctez ctez_amount ctez_zero then
-    (Ligo.failwith error_AddLiquidityNoCtezGiven : (lqt * kit * cfmm))
+  if eq_ctok_ctok ctok_amount ctok_zero then
+    (Ligo.failwith error_AddLiquidityNoCtokGiven : (lqt * kit * cfmm))
   else
-    let cfmm_ctez = ctez_to_muctez_nat cfmm.ctez in
+    let cfmm_ctok = ctok_to_denomination_nat cfmm.ctok in
     let lqt_minted =
       lqt_of_fraction_floor
-        (Ligo.mul_int_nat (lqt_to_denomination_int cfmm.lqt) (ctez_to_muctez_nat ctez_amount))
-        (Ligo.mul_int_nat lqt_scaling_factor_int cfmm_ctez) in
+        (Ligo.mul_int_nat (lqt_to_denomination_int cfmm.lqt) (ctok_to_denomination_nat ctok_amount))
+        (Ligo.mul_int_nat lqt_scaling_factor_int cfmm_ctok) in
     let kit_deposited =
       kit_of_fraction_ceil
-        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctez_to_muctez_nat ctez_amount))
-        (Ligo.mul_int_nat kit_scaling_factor_int cfmm_ctez) in
-    (* Since (a) ctez_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
+        (Ligo.mul_int_nat (kit_to_denomination_int cfmm.kit) (ctok_to_denomination_nat ctok_amount))
+        (Ligo.mul_int_nat kit_scaling_factor_int cfmm_ctok) in
+    (* Since (a) ctok_amount > 0, (b) cfmm.kit > 0, and (c) we ceil when
      * computing kit_deposited, it should be impossible to trigger the
      * following assertion. *)
     assert (gt_kit_kit kit_deposited kit_zero);
@@ -216,14 +216,14 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
       kit_deposited,
       { cfmm with
         kit = kit_add cfmm.kit kit_deposited;
-        ctez = ctez_add cfmm.ctez ctez_amount;
+        ctok = ctok_add cfmm.ctok ctok_amount;
         lqt = lqt_add cfmm.lqt lqt_minted;
       }
     )
 
-(** Buy some liquidity from the cfmm contract, by giving it some ctez and
+(** Buy some liquidity from the cfmm contract, by giving it some ctok and
     some kit. If the given amounts does not have the right ratio, we
-    liquidate all the ctez given and as much kit as we can with the right
+    liquidate all the ctok given and as much kit as we can with the right
     ratio, and return the leftovers, along with the liquidity tokens. *)
 (* But where do the assets in cfmm come from? Liquidity providers, or
  * "LP" deposit can deposit a quantity la and lb of assets A and B in the
@@ -237,22 +237,22 @@ let cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity
  * continuously credited with the burrow fee taken from burrow holders. *)
 let cfmm_add_liquidity
     (cfmm: cfmm)
-    (ctez_amount: ctez)
+    (ctok_amount: ctok)
     (max_kit_deposited: kit)
     (min_lqt_minted: lqt)
     (deadline: Ligo.timestamp)
   : (lqt * kit * cfmm) =
   if Ligo.geq_timestamp_timestamp !Ligo.Tezos.now deadline then
     (Ligo.failwith error_CfmmTooLate : (lqt * kit * cfmm))
-  else if eq_ctez_ctez ctez_amount ctez_zero then
-    (Ligo.failwith error_AddLiquidityNoCtezGiven : (lqt * kit * cfmm))
+  else if eq_ctok_ctok ctok_amount ctok_zero then
+    (Ligo.failwith error_AddLiquidityNoCtokGiven : (lqt * kit * cfmm))
   else if eq_kit_kit max_kit_deposited kit_zero then
     (Ligo.failwith error_AddLiquidityNoKitGiven : (lqt * kit * cfmm))
   else if eq_lqt_lqt min_lqt_minted lqt_zero then
     (Ligo.failwith error_AddLiquidityNoLiquidityToBeAdded : (lqt * kit * cfmm))
   else
     let (lqt_minted, kit_deposited, cfmm) =
-      cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity cfmm ctez_amount in
+      cfmm_view_max_kit_deposited_min_lqt_minted_cfmm_add_liquidity cfmm ctok_amount in
     if lt_lqt_lqt lqt_minted min_lqt_minted then
       (Ligo.failwith error_AddLiquidityTooLowLiquidityMinted : (lqt * kit * cfmm))
     else if lt_kit_kit max_kit_deposited kit_deposited then
@@ -266,23 +266,23 @@ let cfmm_add_liquidity
       *)
       (lqt_minted, kit_to_return, cfmm)
 
-(** Compute the maximum [min_ctez_withdrawn] and the minimum
+(** Compute the maximum [min_ctok_withdrawn] and the minimum
     [min_kit_withdrawn] for [cfmm_remove_liquidity] to succeed. *)
-let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
+let cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
     (cfmm: cfmm)
     (lqt_burned: lqt)
-  : (ctez * kit * cfmm) =
+  : (ctok * kit * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
   let cfmm = cfmm_assert_initialized cfmm in
   if eq_lqt_lqt lqt_burned lqt_zero then
-    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctok * kit * cfmm))
   else if geq_lqt_lqt lqt_burned cfmm.lqt then
-    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctok * kit * cfmm))
   else
-    let ctez_withdrawn =
-      ctez_of_fraction_floor
-        (Ligo.mul_nat_int (ctez_to_muctez_nat cfmm.ctez) (lqt_to_denomination_int lqt_burned))
-        (Ligo.mul_int_nat ctez_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
+    let ctok_withdrawn =
+      ctok_of_fraction_floor
+        (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) (lqt_to_denomination_int lqt_burned))
+        (Ligo.mul_int_nat ctok_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     let kit_withdrawn =
       kit_of_fraction_floor
@@ -290,54 +290,54 @@ let cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity
         (Ligo.mul_int_nat kit_scaling_factor_int (lqt_to_denomination_nat cfmm.lqt))
     in
     (* Since (a) 0 < lqt_burned < cfmm.lqt, and (b) we floor for both the kit
-     * and the ctez withdrawn, it should be impossible to trigger the following
+     * and the ctok withdrawn, it should be impossible to trigger the following
      * assertions. *)
-    assert (lt_ctez_ctez ctez_withdrawn cfmm.ctez);
+    assert (lt_ctok_ctok ctok_withdrawn cfmm.ctok);
     assert (lt_kit_kit kit_withdrawn cfmm.kit);
 
-    let remaining_ctez = ctez_sub cfmm.ctez ctez_withdrawn in
+    let remaining_ctok = ctok_sub cfmm.ctok ctok_withdrawn in
     let remaining_lqt = lqt_sub cfmm.lqt lqt_burned in
     let remaining_kit = kit_sub cfmm.kit kit_withdrawn in
     let updated = { cfmm with
-                    ctez = remaining_ctez;
+                    ctok = remaining_ctok;
                     kit = remaining_kit;
                     lqt = remaining_lqt } in
-    (ctez_withdrawn, kit_withdrawn, updated)
+    (ctok_withdrawn, kit_withdrawn, updated)
 
 (** Sell some liquidity to the cfmm contract. Selling liquidity always
-    succeeds, but might leave the contract without ctez and kit if everybody
+    succeeds, but might leave the contract without ctok and kit if everybody
     sells their liquidity. I think it is unlikely to happen, since the last
     liquidity holders wouldn't want to lose the burrow fees. *)
 (* Selling liquidity always succeeds, but might leave the contract
- * without ctez and kit if everybody sells their liquidity. I think
+ * without ctok and kit if everybody sells their liquidity. I think
  * it is unlikely to happen, since the last liquidity holders wouldn't
  * want to lose the burrow fees. *)
 let cfmm_remove_liquidity
     (cfmm: cfmm)
     (lqt_burned: lqt)
-    (min_ctez_withdrawn: ctez)
+    (min_ctok_withdrawn: ctok)
     (min_kit_withdrawn: kit)
     (deadline: Ligo.timestamp)
-  : (ctez * kit * cfmm) =
+  : (ctok * kit * cfmm) =
   if Ligo.geq_timestamp_timestamp !Ligo.Tezos.now deadline then
-    (Ligo.failwith error_CfmmTooLate : (ctez * kit * cfmm))
+    (Ligo.failwith error_CfmmTooLate : (ctok * kit * cfmm))
   else if eq_lqt_lqt lqt_burned lqt_zero then
-    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityNoLiquidityBurned : (ctok * kit * cfmm))
   else if geq_lqt_lqt lqt_burned cfmm.lqt then
-    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctez * kit * cfmm))
-  else if eq_ctez_ctez min_ctez_withdrawn ctez_zero then
-    (Ligo.failwith error_RemoveLiquidityNoCtezWithdrawnExpected : (ctez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityTooMuchLiquidityWithdrawn : (ctok * kit * cfmm))
+  else if eq_ctok_ctok min_ctok_withdrawn ctok_zero then
+    (Ligo.failwith error_RemoveLiquidityNoCtokWithdrawnExpected : (ctok * kit * cfmm))
   else if eq_kit_kit min_kit_withdrawn kit_zero then
-    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (ctez * kit * cfmm))
+    (Ligo.failwith error_RemoveLiquidityNoKitWithdrawnExpected : (ctok * kit * cfmm))
   else
-    let (ctez_withdrawn, kit_withdrawn, cfmm) =
-      cfmm_view_min_ctez_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity cfmm lqt_burned in
-    if lt_ctez_ctez ctez_withdrawn min_ctez_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughCtez : (ctez * kit * cfmm))
+    let (ctok_withdrawn, kit_withdrawn, cfmm) =
+      cfmm_view_min_ctok_withdrawn_min_kit_withdrawn_cfmm_remove_liquidity cfmm lqt_burned in
+    if lt_ctok_ctok ctok_withdrawn min_ctok_withdrawn then
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughCtok : (ctok * kit * cfmm))
     else if lt_kit_kit kit_withdrawn min_kit_withdrawn then
-      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (ctez * kit * cfmm))
+      (Ligo.failwith error_RemoveLiquidityCantWithdrawEnoughKit : (ctok * kit * cfmm))
     else
-      (ctez_withdrawn, kit_withdrawn, cfmm)
+      (ctok_withdrawn, kit_withdrawn, cfmm)
 
 (** Add accrued burrowing fees to the cfmm contract. *)
 let cfmm_add_accrued_kit (cfmm: cfmm) (accrual: kit) : cfmm =

@@ -12,6 +12,20 @@ tokens:
     name: tok (checker dev)
     # Optional FA2 token symbol
     symbol: tok
+  # CFMM token configuration
+  cfmm_token:
+    # The token's FA2 id
+    # FIXME: Currently FA12, actually.
+    # FIXME: No idea what ctez's token_id is, actually (we don't issue it).
+    token_id: 3
+    # Specifies the number of decimal digits used by the token
+    # e.g. tez has 6 decimal digits.
+    decimal_digits: 6
+    # Optional FA2 display name
+    name: ctok (checker dev)
+    # Optional FA2 token symbol
+    # FIXME: Currently FA12, actually.
+    symbol: ctok
   # Collateral token configuration
   kit:
     # The token's FA2 id

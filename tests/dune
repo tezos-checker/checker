@@ -3,7 +3,7 @@
    Ratio ;; utility module
    testBurrow
    testCommon
-   testCtez
+   testCtok
    testFixedPoint
    testTez
    testKit
@@ -36,7 +36,7 @@
 
 (rule (alias run-fast-tests) (action (run %{exe:testBurrow.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCommon.exe})))
-(rule (alias run-fast-tests) (action (run %{exe:testCtez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testCtok.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testFixedPoint.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testTez.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testKit.exe})))

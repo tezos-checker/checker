@@ -68,6 +68,7 @@ class Tokens:
     collateral: TokenConfig
     kit: TokenConfig
     liquidity: TokenConfig
+    cfmm_token: TokenConfig
 
 
 @dataclass(frozen=True)
@@ -183,6 +184,7 @@ class TokensSchema(Schema):
     collateral = fields.Nested(TokenConfigSchema(), required=True)
     kit = fields.Nested(TokenConfigSchema(), required=True)
     liquidity = fields.Nested(TokenConfigSchema(), required=True)
+    cfmm_token = fields.Nested(TokenConfigSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):

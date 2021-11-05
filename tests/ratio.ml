@@ -6,6 +6,8 @@ let[@inline] ratio_of_nat (n: Ligo.nat) : ratio = { num = Ligo.int n; den = Ligo
 let[@inline] ratio_of_int (i: Ligo.int) : ratio = { num = i; den = Ligo.int_from_literal "1"; }
 let[@inline] ratio_of_tez (x: Ligo.tez) : ratio = { num = tez_to_mutez x; den = Ligo.int_from_literal "1_000_000"; }
 
+let[@inline] ratio_of_ctok (x: Ctok.ctok) : ratio = { num = Ctok.ctok_to_denomination_int x; den = Ctok.ctok_scaling_factor_int; }
+
 (* Relational operators *)
 
 let eq_ratio_ratio (x: ratio) (y: ratio) : bool =

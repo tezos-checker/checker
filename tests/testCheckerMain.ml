@@ -166,40 +166,40 @@ let suite =
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Buy_kit" >::
      fun _ ->
-       let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "13n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "13n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "29n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
-         (Buy_kit (ctez, kit, deadline)) (* note: values randomly chosen *)
+         (Buy_kit (ctok, kit, deadline)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Sell_kit" >::
      fun _ ->
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "31n") in
-       let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "5n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "5n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
-         (Sell_kit (kit, ctez, deadline)) (* note: values randomly chosen *)
+         (Sell_kit (kit, ctok, deadline)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Add_liquidity" >::
      fun _ ->
-       let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "97n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "97n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "3n") in
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "59n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
-         (Add_liquidity (ctez, kit, lqt, deadline)) (* note: values randomly chosen *)
+         (Add_liquidity (ctok, kit, lqt, deadline)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Remove_liquidity" >::
      fun _ ->
        let lqt = Lqt.lqt_of_denomination (Ligo.nat_from_literal "41n") in
-       let ctez = Ctez.ctez_of_muctez (Ligo.nat_from_literal "47n") in
+       let ctok = Ctok.ctok_of_denomination (Ligo.nat_from_literal "47n") in
        let kit = Kit.kit_of_denomination (Ligo.nat_from_literal "19n") in
        let deadline = !Ligo.Tezos.now in
        test_deploy_function_with_lazy_params_succeeds
-         (Remove_liquidity (lqt, ctez, kit, deadline)) (* note: values randomly chosen *)
+         (Remove_liquidity (lqt, ctok, kit, deadline)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Liquidation_auction_place_bid" >::
@@ -256,7 +256,7 @@ let suite =
        let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) in
+       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
        assert_raises
          (Failure (Ligo.string_of_int error_UnauthorisedCaller))
          (fun () -> CheckerMain.main (op, wrapper))
@@ -602,7 +602,7 @@ let suite =
     ("SealContract - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctez_fa12_addr, ctez_cfmm_addr) in
+          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
           assert_raises
             (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
             (fun () -> CheckerMain.main (op, sealed_wrapper))
