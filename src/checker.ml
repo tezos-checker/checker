@@ -14,7 +14,6 @@ open Common
 open Constants
 open CheckerTypes
 open Error
-open Fa12Interface
 open Fa2Interface
 open Fa2Ledger
 open Fa2Implementation
@@ -88,10 +87,10 @@ let assert_checker_invariants (state: checker) : unit =
 (**                           EXTERNAL_CONTRACTS                             *)
 (* ************************************************************************* *)
 
-let[@inline] get_transfer_ctok_fa12_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctok_fa12 : fa12_transfer Ligo.contract option) with
+let[@inline] get_transfer_ctok_fa2_entrypoint (external_contracts: external_contracts): (fa2_transfer list) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctok_fa2 : (fa2_transfer list) Ligo.contract option) with
   | Some c -> c
-  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA2Transfer : (fa2_transfer list) Ligo.contract)
 
 let[@inline] get_ctez_cfmm_price_entrypoint (external_contracts: external_contracts): ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract =
   match (LigoOp.Tezos.get_entrypoint_opt "%getMarginalPrice" external_contracts.ctez_cfmm : ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract option) with
@@ -519,15 +518,20 @@ let entrypoint_buy_kit (state, p: checker * (ctok * kit * Ligo.timestamp)) : Lig
   assert_checker_invariants state;
   let ctok, min_kit_expected, deadline = p in
   let (kit_tokens, updated_cfmm) = cfmm_buy_kit state.cfmm ctok min_kit_expected deadline in
+
   let transfer =
-    { address_from = !Ligo.Tezos.sender;
-      address_to = !Ligo.Tezos.self_address;
-      value = ctok_to_denomination_nat ctok;
+    { from_ = !Ligo.Tezos.sender;
+      txs = [
+        { to_ = !Ligo.Tezos.self_address;
+          token_id = ctok_token_id;
+          amount = ctok_to_denomination_nat ctok;
+        }
+      ];
     } in
   let op =
-    LigoOp.Tezos.fa12_transfer_transaction
-      transfer (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctok_fa12_entrypoint state.external_contracts) in
+    LigoOp.Tezos.fa2_transfer_transaction
+      [transfer] (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctok_fa2_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -555,16 +559,20 @@ let entrypoint_sell_kit (state, p: checker * (kit * ctok * Ligo.timestamp)) : Li
   assert_checker_invariants state;
   let kit, min_ctok_expected, deadline = p in
   let (ctok, updated_cfmm) = cfmm_sell_kit state.cfmm kit min_ctok_expected deadline in
+
   let transfer =
-    { address_from = !Ligo.Tezos.self_address;
-      address_to = !Ligo.Tezos.sender;
-      value = ctok_to_denomination_nat ctok;
+    { from_ = !Ligo.Tezos.self_address;
+      txs = [
+        { to_ = !Ligo.Tezos.sender;
+          token_id = ctok_token_id;
+          amount = ctok_to_denomination_nat ctok;
+        }
+      ];
     } in
   let op =
-    LigoOp.Tezos.fa12_transfer_transaction
-      transfer
-      (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctok_fa12_entrypoint state.external_contracts) in
+    LigoOp.Tezos.fa2_transfer_transaction
+      [transfer] (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctok_fa2_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
@@ -589,16 +597,20 @@ let entrypoint_add_liquidity (state, p: checker * (ctok * kit * lqt * Ligo.times
   let ctok_deposited, max_kit_deposited, min_lqt_minted, deadline = p in
   let (lqt_tokens, kit_tokens, updated_cfmm) =
     cfmm_add_liquidity state.cfmm ctok_deposited max_kit_deposited min_lqt_minted deadline in
+
   let transfer =
-    { address_from = !Ligo.Tezos.sender;
-      address_to = !Ligo.Tezos.self_address;
-      value = ctok_to_denomination_nat ctok_deposited;
+    { from_ = !Ligo.Tezos.sender;
+      txs = [
+        { to_ = !Ligo.Tezos.self_address;
+          token_id = ctok_token_id;
+          amount = ctok_to_denomination_nat ctok_deposited;
+        }
+      ];
     } in
   let op =
-    LigoOp.Tezos.fa12_transfer_transaction
-      transfer
-      (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctok_fa12_entrypoint state.external_contracts) in
+    LigoOp.Tezos.fa2_transfer_transaction
+      [transfer] (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctok_fa2_entrypoint state.external_contracts) in
 
   let deposited_kit = kit_sub max_kit_deposited kit_tokens in
 
@@ -627,16 +639,20 @@ let entrypoint_remove_liquidity (state, p: checker * (lqt * ctok * kit * Ligo.ti
   let lqt_burned, min_ctok_withdrawn, min_kit_withdrawn, deadline = p in
   let (ctok, kit_tokens, updated_cfmm) =
     cfmm_remove_liquidity state.cfmm lqt_burned min_ctok_withdrawn min_kit_withdrawn deadline in
+
   let transfer =
-    { address_from = !Ligo.Tezos.self_address;
-      address_to = !Ligo.Tezos.sender;
-      value = ctok_to_denomination_nat ctok;
+    { from_ = !Ligo.Tezos.self_address;
+      txs = [
+        { to_ = !Ligo.Tezos.sender;
+          token_id = ctok_token_id;
+          amount = ctok_to_denomination_nat ctok;
+        }
+      ];
     } in
   let op =
-    LigoOp.Tezos.fa12_transfer_transaction
-      transfer
-      (Ligo.tez_from_literal "0mutez")
-      (get_transfer_ctok_fa12_entrypoint state.external_contracts) in
+    LigoOp.Tezos.fa2_transfer_transaction
+      [transfer] (Ligo.tez_from_literal "0mutez")
+      (get_transfer_ctok_fa2_entrypoint state.external_contracts) in
 
   let state_fa2_state =
     let state_fa2_state = state.fa2_state in
