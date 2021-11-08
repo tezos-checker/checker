@@ -47,6 +47,7 @@ class Config:
     checker_address: str = ""
     tez_wrapper_address: str = ""
     wctez_address: str = ""
+    mock_fa2_address: str = ""
 
     @staticmethod
     def load(file: Path):
@@ -69,6 +70,7 @@ class ConfigSchema(Schema):
     checker_address = fields.String()
     tez_wrapper_address = fields.String()
     wctez_address = fields.String()
+    mock_fa2_address = fields.String()
 
     @post_load
     def make(self, data, **kwargs):
@@ -301,6 +303,34 @@ def wrapped_ctez(config: Config, checker_dir, ctez_fa12):
     )
     click.echo(f"wctez contract deployed with address: {wctez.context.address}")
     config.wctez_address = wctez.context.address
+    config.dump()
+
+
+@deploy.command()
+@click.option(
+    "--src",
+    "checker_dir",
+    type=str,
+    help="Checker michelson src directory",
+    default="generated/michelson",
+    show_default=True,
+)
+@click.pass_obj
+def mock_fa2(config: Config, checker_dir):
+    """
+    Deploy the mock FA2 contract.
+    """
+    shell = construct_url(config.tezos_address, config.tezos_port)
+    click.echo(f"Connecting to tezos node at: {shell}")
+    client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
+    mockFA2 = checker_lib.deploy_mockFA2(
+        client,
+        checker_dir,
+        ttl=_patch_operation_ttl(config),
+    )
+    click.echo(f"mock FA2 contract deployed with address: {mockFA2.context.address}")
+    config.mock_fa2_address = mockFA2.context.address
     config.dump()
 
 
