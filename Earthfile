@@ -330,7 +330,8 @@ test-mutations:
 dev-container:
     FROM +deps-full
 
-    # Extra dependencies for development
+    # Extra dependencies for development.
+    # Note: not running `apt update` here since package list is updated in prior build stage
     RUN apt install -y \
         apt-transport-https \
         ca-certificates \

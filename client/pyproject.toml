@@ -10,7 +10,7 @@ checker = 'checker_client.cli:cli'
 [tool.poetry.dependencies]
 python = "^3.8"
 
-checker_builder = "*"
+checker-builder = { develop=true, path = "../scripts/builder" }
 
 click = "^7.1.2"
 docker = "^4.4.4"
