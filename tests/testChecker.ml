@@ -384,14 +384,14 @@ let suite =
        let expected_ops = [
          (LigoOp.Tezos.fa2_transfer_transaction
             [ Fa2Interface.{
-                from_ = alice_addr;
-                txs = [
-                  { to_ = checker_address;
-                    token_id = Ctok.ctok_token_id;
-                    amount = Ligo.nat_from_literal "5_000_000n";
-                  }
-                ]
-              }
+                  from_ = alice_addr;
+                  txs = [
+                    { to_ = checker_address;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "5_000_000n";
+                    }
+                  ]
+                }
             ]
             (Ligo.tez_from_literal "0mutez")
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
@@ -679,14 +679,14 @@ let suite =
        let expected_ops = [
          (LigoOp.Tezos.fa2_transfer_transaction
             [ Fa2Interface.{
-                from_ = checker_address;
-                txs = [
-                  { to_ = alice_addr;
-                    token_id = Ctok.ctok_token_id;
-                    amount = Ligo.nat_from_literal "5_000_000n";
-                  }
-                ]
-              }
+                  from_ = checker_address;
+                  txs = [
+                    { to_ = alice_addr;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "5_000_000n";
+                    }
+                  ]
+                }
             ]
             (Ligo.tez_from_literal "0mutez")
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
@@ -913,19 +913,19 @@ let suite =
 
       begin match ops with
         | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
-            assert_fa2_transfer_list_equal
-              ~expected:[
-                Fa2Interface.{
-                  from_ = sender;
-                  txs = [
-                    { to_ = checker_address;
-                      token_id = Ctok.ctok_token_id;
-                      amount = ctok_to_denomination_nat ctok_amount;
-                    }
-                  ]
-                }
-              ]
-              ~real:transfer
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = ctok_to_denomination_nat ctok_amount;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
         | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
@@ -958,19 +958,19 @@ let suite =
 
       begin match ops with
         | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
-            assert_fa2_transfer_list_equal
-              ~expected:[
-                Fa2Interface.{
-                  from_ = sender;
-                  txs = [
-                    { to_ = checker_address;
-                      token_id = Ctok.ctok_token_id;
-                      amount = ctok_to_denomination_nat ctok_amount;
-                    }
-                  ]
-                }
-              ]
-              ~real:transfer
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = ctok_to_denomination_nat ctok_amount;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
         | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
@@ -1133,19 +1133,19 @@ let suite =
 
       begin match ops with
         | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
-            assert_fa2_transfer_list_equal
-              ~expected:[
-                Fa2Interface.{
-                  from_ = sender;
-                  txs = [
-                    { to_ = checker_address;
-                      token_id = Ctok.ctok_token_id;
-                      amount = Ctok.ctok_to_denomination_nat ctok_provided;
-                    }
-                  ]
-                }
-              ]
-              ~real:transfer
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = Ctok.ctok_to_denomination_nat ctok_provided;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
         | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
@@ -1177,14 +1177,14 @@ let suite =
        let expected_ops = [
          (LigoOp.Tezos.fa2_transfer_transaction
             [ Fa2Interface.{
-                from_ = alice_addr;
-                txs = [
-                  { to_ = checker_address;
-                    token_id = Ctok.ctok_token_id;
-                    amount = Ligo.nat_from_literal "1_000_000n";
-                  }
-                ]
-              }
+                  from_ = alice_addr;
+                  txs = [
+                    { to_ = checker_address;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "1_000_000n";
+                    }
+                  ]
+                }
             ]
             (Ligo.tez_from_literal "0mutez")
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
@@ -1222,14 +1222,14 @@ let suite =
        let expected_ops = [
          (LigoOp.Tezos.fa2_transfer_transaction
             [ Fa2Interface.{
-                from_ = checker_address;
-                txs = [
-                  { to_ = alice_addr;
-                    token_id = Ctok.ctok_token_id;
-                    amount = Ligo.nat_from_literal "1n";
-                  }
-                ]
-              }
+                  from_ = checker_address;
+                  txs = [
+                    { to_ = alice_addr;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "1n";
+                    }
+                  ]
+                }
             ]
             (Ligo.tez_from_literal "0mutez")
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
