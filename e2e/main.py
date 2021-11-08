@@ -809,7 +809,9 @@ class MockFA2Test(SandboxedTestCase):
             )
             return ret
 
-        def call_mockFA2_endpoint(name, param, amount=0, client=self.client, mockFA2=mockFA2):
+        def call_mockFA2_endpoint(
+            name, param, amount=0, client=self.client, mockFA2=mockFA2
+        ):
             ret = call_endpoint(mockFA2, name, param, amount, client)
             gas_costs[f"mockFA2%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
@@ -831,7 +833,9 @@ class MockFA2Test(SandboxedTestCase):
             ]
 
         # Edge case: this call should succeed, according to the FA2 spec
-        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
+        call_mockFA2_endpoint(
+            "transfer", single_fa2_transfer(account, account_alice, 0)
+        )
 
         # ===============================================================================
         # Contract-specific entrypoints
@@ -847,7 +851,9 @@ class MockFA2Test(SandboxedTestCase):
         # FA2 interface
         # ===============================================================================
         # Transfer from the test account to alice's account
-        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
+        call_mockFA2_endpoint(
+            "transfer", single_fa2_transfer(account, account_alice, 90)
+        )
         assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_910)
         assert_fa2_token_balance(mockFA2, account_alice, mock_fa2_token_id, 90)
         # Add the main account as an operator on alice's account
@@ -870,7 +876,9 @@ class MockFA2Test(SandboxedTestCase):
         )
 
         # Send some tokens back to the main test account
-        call_mockFA2_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
+        call_mockFA2_endpoint(
+            "transfer", single_fa2_transfer(account_alice, account, 80)
+        )
         assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_990)
 
         # Note: Using callback_view() here since we don't have a contract to use
