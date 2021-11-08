@@ -12,8 +12,7 @@ all:
 builder:
     FROM ubuntu:20.04
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
             autoconf \
             bash \
             curl \
@@ -389,8 +388,7 @@ cli:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
           pkg-config autoconf libtool libev4 \
           libgmp-dev openssl libsodium23 libsodium-dev \
           python3-pip python-is-python3
@@ -443,8 +441,7 @@ flextesa:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
         curl \
         git \
         bash \
