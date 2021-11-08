@@ -775,6 +775,124 @@ class WCtezTest(SandboxedTestCase):
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
 
+class MockFA2Test(SandboxedTestCase):
+    def test_mockFA2(self):
+        gas_costs = {}
+        # Hard-coded in contract, so also hard-coding here
+        mock_fa2_token_id = 42
+
+        print("Deploying the mock FA2 contract.")
+        mockFA2 = deploy_mockFA2(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+        print("Deployment finished.")
+
+        account = self.client.key.public_key_hash()
+        # Note: using alice's account which is assumed to be already initialized in the sandbox
+        mockFA2_alice = pytezos.pytezos.using(
+            shell=mockFA2.shell,
+            key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
+        ).contract(mockFA2.address)
+        account_alice = mockFA2_alice.key.public_key_hash()
+
+        def call_endpoint(contract, name, param, amount=0, client=self.client):
+            print(f"Calling {name} with {param} and mutez={amount}")
+            ret = inject(
+                client,
+                getattr(contract, name)(param)
+                .with_amount(amount)
+                .as_transaction()
+                .autofill(ttl=MAX_OPERATIONS_TTL)
+                .sign(),
+            )
+            return ret
+
+        def call_mockFA2_endpoint(name, param, amount=0, client=self.client, mockFA2=mockFA2):
+            ret = call_endpoint(mockFA2, name, param, amount, client)
+            gas_costs[f"mockFA2%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def single_fa2_transfer(
+            sender: str, recipient: str, amount: int, token_id=mock_fa2_token_id
+        ):
+            return [
+                {
+                    "from_": sender,
+                    "txs": [
+                        {
+                            "to_": recipient,
+                            "token_id": token_id,
+                            "amount": amount,
+                        },
+                    ],
+                }
+            ]
+
+        # Edge case: this call should succeed, according to the FA2 spec
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
+
+        # ===============================================================================
+        # Contract-specific entrypoints
+        # ===============================================================================
+        # First we have to mint some tokens
+        call_mockFA2_endpoint("mint", 800_000)
+        assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 800_000)
+
+        # And redeem (destroy) some of it
+        call_mockFA2_endpoint("redeem", 1000)
+        assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 799_000)
+        # ===============================================================================
+        # FA2 interface
+        # ===============================================================================
+        # Transfer from the test account to alice's account
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
+        assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_910)
+        assert_fa2_token_balance(mockFA2, account_alice, mock_fa2_token_id, 90)
+        # Add the main account as an operator on alice's account
+        # Note: using a client instance with alice's key for this since she is the
+        # account owner.
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": mockFA2_alice.key.public_key_hash(),
+                    "operator": account,
+                    "token_id": mock_fa2_token_id,
+                }
+            },
+        ]
+        call_mockFA2_endpoint(
+            "update_operators",
+            update_operators,
+            client=mockFA2_alice,
+            mockFA2=mockFA2_alice,
+        )
+
+        # Send some tokens back to the main test account
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
+        assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_990)
+
+        # Note: Using callback_view() here since we don't have a contract to use
+        # for the callback.
+        fa2_balance_of = {
+            "requests": [
+                {
+                    "owner": mockFA2_alice.key.public_key_hash(),
+                    "token_id": mock_fa2_token_id,
+                }
+            ],
+            "callback": None,
+        }
+        print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
+        mockFA2.balance_of(**fa2_balance_of).callback_view()
+
+        print("Gas costs:")
+        print(json.dumps(gas_costs, indent=4))
+        if WRITE_GAS_COSTS:
+            write_gas_costs(gas_costs, WRITE_GAS_COSTS)
+
+
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         collateral_token_id = self.config.tokens.collateral.token_id
