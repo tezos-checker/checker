@@ -5,7 +5,7 @@ let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"
 let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
-let ctok_fa12_addr = Ligo.address_of_string "ctok_fa12_addr"
+let ctok_fa2_addr = Ligo.address_of_string "ctok_fa2_addr"
 let ctez_cfmm_addr = Ligo.address_of_string "ctez_cfmm_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"
 let collateral_fa2_addr = Ligo.address_of_string "collateral_fa2_addr"
@@ -34,6 +34,9 @@ let assert_ctok_equal ~expected ~real = OUnit2.assert_equal ~printer:Ctok.show_c
 let assert_parameters_equal ~expected ~real = OUnit2.assert_equal ~printer:Parameters.show_parameters expected real (* FIXME: contains a ratio *)
 let assert_liquidation_slice_contents_equal ~expected ~real = OUnit2.assert_equal ~printer:LiquidationAuctionPrimitiveTypes.show_liquidation_slice_contents expected real
 let assert_view_current_liquidation_auction_details_result_equal ~expected ~real = OUnit2.assert_equal ~printer:CheckerTypes.show_view_current_liquidation_auction_details_result expected real
+
+type fa2_transfer_list = Fa2Interface.fa2_transfer list [@@deriving show]
+let assert_fa2_transfer_list_equal ~expected ~real = OUnit2.assert_equal ~printer:show_fa2_transfer_list expected real
 
 type liquidation_auction_id_option = liquidation_auction_id option [@@deriving show]
 let assert_liquidation_auction_id_option_equal ~expected ~real = OUnit2.assert_equal ~printer:show_liquidation_auction_id_option expected real
@@ -82,7 +85,7 @@ let with_sealed_wrapper f =
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
 
   let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
+  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
   let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
   f wrapper
 

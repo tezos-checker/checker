@@ -256,7 +256,7 @@ let suite =
        let wrapper = CheckerMain.initial_wrapper leena_addr in (* unsealed *)
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
+       let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
        assert_raises
          (Failure (Ligo.string_of_int error_UnauthorisedCaller))
          (fun () -> CheckerMain.main (op, wrapper))
@@ -602,7 +602,7 @@ let suite =
     ("SealContract - should fail if the contract is already sealed" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
+          let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
           assert_raises
             (Failure (Ligo.string_of_int error_ContractAlreadyDeployed))
             (fun () -> CheckerMain.main (op, sealed_wrapper))
