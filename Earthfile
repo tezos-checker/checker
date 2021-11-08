@@ -410,7 +410,10 @@ cli:
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
 
-    COPY ./client .
+    RUN mkdir ./scripts
+    COPY ./scripts/builder ./scripts/builder
+    COPY ./client ./client
+    WORKDIR /root/client
     RUN poetry config virtualenvs.in-project true && poetry install
 
     # Required dir for pytezos

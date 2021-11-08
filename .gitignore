@@ -8,9 +8,7 @@ src/constants.ml
 src/burrowOrigination.ml
 src/driftDerivative.ml
 
-generated/michelson/main.tz
-generated/michelson/functions.json
-generated/michelson/tezWrapperMain.tz
+generated/michelson
 generated/ligo
 
 _build
