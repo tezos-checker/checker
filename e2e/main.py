@@ -331,6 +331,14 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        print("Deploying wctez contract.")
+        wctez = deploy_wctez(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
@@ -339,6 +347,7 @@ class E2ETest(SandboxedTestCase):
             tez_wrapper=tez_wrapper.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
+            wctez=wctez.context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -801,6 +810,14 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        print("Deploying wctez contract.")
+        wctez = deploy_wctez(
+            self.client,
+            checker_dir=CHECKER_DIR,
+            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ttl=MAX_OPERATIONS_TTL,
+        )
+
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
@@ -809,6 +826,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             tez_wrapper=tez_wrapper.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
+            wctez=wctez.context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
