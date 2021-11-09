@@ -66,7 +66,6 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
     xs
 
 let[@inline] balance_of (state: wctez_state) (param: fa2_balance_of_param) : LigoOp.operation list * wctez_state =
-  let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (state.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
@@ -103,7 +102,6 @@ let[@inline] fa2_run_transfer (initial_state, xs: wctez_state * fa2_transfer lis
   (state, ([]: LigoOp.operation list))
 
 let[@inline] transfer (state: wctez_state) (xs: fa2_transfer list) : LigoOp.operation list * wctez_state =
-  let _ = ensure_no_tez_given () in
   let state, ops = fa2_run_transfer (state, xs) in
   (ops, state)
 
@@ -148,7 +146,6 @@ let[@inline] fa2_run_update_operators
     xs
 
 let[@inline] update_operators (state: wctez_state) (xs: fa2_update_operator list) : LigoOp.operation list * wctez_state =
-  let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
   (([]: LigoOp.operation list), state)
 
@@ -195,6 +192,7 @@ let[@inline] redeem (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation lis
 (*****************************************************************************)
 
 let main (op, state: wctez_params * wctez_state): LigoOp.operation list * wctez_state =
+  let _ = ensure_no_tez_given () in
   match op with
   (* FA2 entrypoints *)
   | Balance_of param -> balance_of state param
