@@ -377,11 +377,12 @@ dev-container:
     ENV EARTHLY_USE_INLINE_CACHE=true
 
     ENTRYPOINT /root/entrypoint.sh
-    ARG TAG_DEV_CONTAINER = "latest"
+    ARG TAG = "latest"
     # Local image
     SAVE IMAGE checker/dev:latest
     # Published image
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:$TAG_DEV_CONTAINER
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:$TAG
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:latest
 
 # Note: Building CLI independently so that it doesn't include the full closure of all
 # of our dev dependencies
@@ -419,9 +420,12 @@ cli:
     RUN mkdir /root/.tezos-client
     ENV PATH="/root/.venv/bin:$PATH"
     CMD checker
+
+    ARG TAG=latest
     # Local image
     SAVE IMAGE checker-client:latest
     # Published image
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:$TAG
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:master
 
 # =============================================================================
