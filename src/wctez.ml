@@ -15,7 +15,7 @@ type wctez_state =
   }
 
 (** Token id for wrapped ctez tokens. *)
-let[@inline] wctez_token_id : fa2_token_id = Ligo.nat_from_literal "0n"
+let[@inline] wctez_token_id : fa2_token_id = Ligo.nat_from_literal "3n"
 
 (*
 (** Number of decimal digits for wctez tokens, identical to that for ctez. *)

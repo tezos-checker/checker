@@ -307,7 +307,7 @@ class E2ETest(SandboxedTestCase):
         kit_token_id = self.config.tokens.kit.token_id
         collateral_token_id = self.config.tokens.collateral.token_id
         # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 0
+        wctez_token_id = 3
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -526,7 +526,7 @@ class E2ETest(SandboxedTestCase):
         update_operators = [
             {
                 "add_operator": {
-                    "owner": self.client.key.public_key_hash(),
+                    "owner": account,
                     "operator": checker.context.address,
                     "token_id": wctez_token_id,
                 }
@@ -676,7 +676,7 @@ class WCtezTest(SandboxedTestCase):
     def test_wctez(self):
         gas_costs = {}
         # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 0
+        wctez_token_id = 3
 
         print("Deploying ctez contracts.")
         ctez = deploy_ctez(
