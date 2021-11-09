@@ -552,6 +552,7 @@ class E2ETest(SandboxedTestCase):
         if WRITE_GAS_COSTS:
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
+
 class TezWrapperTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
