@@ -1,48 +1,26 @@
-(* Just a plain FA2 contract in which we can make tokens out of thin air, for
- * all cases where we need an example of an FA2 contract (tests mainly). *)
+(* Just a plain FA2 contract in which we can make tokens out of thin air. *)
+(* Mainly to be used in tests. *)
 
 open Fa2Interface
 open Fa2Ledger
 open Common
 
-
-(*****************************************************************************)
-(**                          {1 WRAPPER TYPES}                               *)
-(*****************************************************************************)
-
 (** Token id for the tokens this FA2 contract issues. *)
 let[@inline] token_id : fa2_token_id = Ligo.nat_from_literal "42n"
 
-(*
-(** Number of decimal digits for the tokens. *)
-(* NOTE: Currently unused, and also arbitrary. *)
-let[@inline] token_decimal_digits = Ligo.nat_from_literal "15n"
-*)
+(* Number of decimal digits for the tokens. NOTE: Currently unused, and also
+ * arbitrary. Ideally by setting it to 6 all OCaml tests should pass, and by
+ * setting it to a "similar" value the e2e tests would pass as well. *)
+(* let[@inline] token_decimal_digits = Ligo.nat_from_literal "15n" *)
 
 type params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
   | Transfer of fa2_transfer list
   | Update_operators of fa2_update_operator list
-  (* Wrapper-specific entrypoints *)
+  (* Contract-specific entrypoints *)
   | Mint of Ligo.nat
   | Redeem of Ligo.nat
-
-(*****************************************************************************)
-(**                             {1 LEDGER}                                   *)
-(*****************************************************************************)
-
-let[@inline] ledger_issue_token
-    (st, addr, amnt: fa2_state * Ligo.address * Ligo.nat) : fa2_state =
-  ledger_issue (st, token_id, addr, amnt)
-
-let[@inline] ledger_withdraw_token
-    (st, addr, amnt: fa2_state * Ligo.address * Ligo.nat) : fa2_state =
-  ledger_withdraw (st, token_id, addr, amnt)
-
-(*****************************************************************************)
-(**                        {1 FA2 ENTRYPOINTS}                               *)
-(*****************************************************************************)
 
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
@@ -82,8 +60,8 @@ let[@inline] fa2_run_transfer (state, xs: fa2_state * fa2_transfer list) : fa2_s
               then
                 (* Update FA2 Ledger *)
                 let () = if token_id = token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
-                let state = ledger_withdraw_token (state, from_, amnt) in
-                let state = ledger_issue_token (state, to_, amnt) in
+                let state = ledger_withdraw (state, token_id, from_, amnt) in
+                let state = ledger_issue (state, token_id, to_, amnt) in
                 state
               else
                 (failwith "FA2_NOT_OPERATOR" : fa2_state)
@@ -142,19 +120,11 @@ let[@inline] fa2_run_update_operators
 let[@inline] update_operators (state: fa2_state) (xs: fa2_update_operator list) : LigoOp.operation list * fa2_state =
   (([]: LigoOp.operation list), fa2_run_update_operators (state, xs))
 
-(*****************************************************************************)
-(**                 {1 CONTRACT-SPECIFIC ENTRYPOINTS}                        *)
-(*****************************************************************************)
-
 let[@inline] mint (state: fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * fa2_state =
-  (([]: LigoOp.operation list), ledger_issue_token (state, !Ligo.Tezos.sender, amnt))
+  (([]: LigoOp.operation list), ledger_issue (state, token_id, !Ligo.Tezos.sender, amnt))
 
 let[@inline] redeem (state: fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * fa2_state =
-  (([]: LigoOp.operation list), ledger_withdraw_token (state, !Ligo.Tezos.sender, amnt))
-
-(*****************************************************************************)
-(**                              {1 MAIN}                                    *)
-(*****************************************************************************)
+  (([]: LigoOp.operation list), ledger_withdraw (state, token_id, !Ligo.Tezos.sender, amnt))
 
 let main (op, state: params * fa2_state): LigoOp.operation list * fa2_state =
   let _ = ensure_no_tez_given () in
