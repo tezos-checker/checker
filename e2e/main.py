@@ -812,6 +812,8 @@ class WCtezTest(SandboxedTestCase):
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         collateral_token_id = self.config.tokens.collateral.token_id
+        # Hard-coded in contract, so also hard-coding here
+        wctez_token_id = 3
 
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
@@ -912,12 +914,29 @@ class LiquidationsStressTest(SandboxedTestCase):
         call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
         call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
 
+        # Get some ctez (create an oven and mint some ctez)
         call_endpoint(
             ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
         )
         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
-        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 100_000))
 
+        # Get some wctez (approve wctez to move the ctez and mint some wctez)
+        call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 100_000))
+        call_endpoint(wctez, "mint", 100_000)
+
+        # Approve checker to spend the wctez
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": self.client.key.public_key_hash(),
+                    "operator": checker.context.address,
+                    "token_id": wctez_token_id,
+                }
+            },
+        ]
+        call_endpoint(wctez, "update_operators", update_operators)
+
+        # Add some liquidity
         call_endpoint(
             checker,
             "add_liquidity",
