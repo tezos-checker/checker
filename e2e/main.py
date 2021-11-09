@@ -306,6 +306,8 @@ class E2ETest(SandboxedTestCase):
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.kit.token_id
         collateral_token_id = self.config.tokens.collateral.token_id
+        # Hard-coded in contract, so also hard-coding here
+        wctez_token_id = 0
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -335,7 +337,7 @@ class E2ETest(SandboxedTestCase):
         wctez = deploy_wctez(
             self.client,
             checker_dir=CHECKER_DIR,
-            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ctez_fa12_address=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -370,6 +372,14 @@ class E2ETest(SandboxedTestCase):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
             gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def call_wctez_endpoint(
+            name, param, amount=0, client=wctez, client=self.client
+        ):
+            print("Calling", name, "with", param)
+            ret = call_endpoint(contract, name, param, amount, client=client)
+            gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         def get_tez_tokens_and_make_checker_an_operator(amnt):
@@ -502,14 +512,29 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         # CFMM
         # ===============================================================================
-        # Get some ctez
+        # Get some ctez (create an oven and mint some ctez)
         call_endpoint(
             ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
         )
         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
-        # Approve checker to spend the ctez
-        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 800_000))
 
+        # Get some wctez (approve wctez to move the ctez and mint some wctez)
+        call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 800_000))
+        call_wctez_endpoint("mint", 800_000)
+
+        # Approve checker to spend the wctez
+        update_operators = [
+            {
+                "add_operator": {
+                    "owner": self.client.key.public_key_hash(),
+                    "operator": checker.context.address,
+                    "token_id": wctez_token_id,
+                }
+            },
+        ]
+        call_wctez_endpoint("update_operators", update_operators)
+
+        # Add some liquidity
         call_checker_endpoint(
             "add_liquidity", (400_000, 400_000, 5, int(datetime.now().timestamp()) + 20)
         )
@@ -526,7 +551,6 @@ class E2ETest(SandboxedTestCase):
         print(json.dumps(gas_costs, indent=4))
         if WRITE_GAS_COSTS:
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
-
 
 class TezWrapperTest(SandboxedTestCase):
     def test_e2e(self):
@@ -814,7 +838,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         wctez = deploy_wctez(
             self.client,
             checker_dir=CHECKER_DIR,
-            ctez_fa12=ctez["fa12_ctez"].context.address,
+            ctez_fa12_address=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
