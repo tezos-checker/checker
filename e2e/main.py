@@ -809,287 +809,287 @@ class WCtezTest(SandboxedTestCase):
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
 
-class LiquidationsStressTest(SandboxedTestCase):
-    def test_liquidations(self):
-        collateral_token_id = self.config.tokens.collateral.token_id
-
-        print("Deploying the mock oracle.")
-        oracle = deploy_contract(
-            self.client,
-            source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
-            initial_storage=(self.client.key.public_key_hash(), 1000000),
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
-        print("Deploying the tez wrapper.")
-        tez_wrapper = deploy_tez_wrapper(
-            self.client,
-            checker_dir=CHECKER_DIR,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
-        print("Deploying ctez contract.")
-        ctez = deploy_ctez(
-            self.client,
-            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
-        print("Deploying wctez contract.")
-        wctez = deploy_wctez(
-            self.client,
-            checker_dir=CHECKER_DIR,
-            ctez_fa12_address=ctez["fa12_ctez"].context.address,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
-        print("Deploying Checker.")
-        checker = deploy_checker(
-            self.client,
-            checker_dir=CHECKER_DIR,
-            oracle=oracle.context.address,
-            tez_wrapper=tez_wrapper.context.address,
-            ctez_fa12=ctez["fa12_ctez"].context.address,
-            ctez_cfmm=ctez["cfmm"].context.address,
-            wctez=wctez.context.address,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
-        print("Deployment finished.")
-
-        def call_endpoint(
-            contract, name, param, amount=0, profiler=general_gas_profiler
-        ):
-            # Helper for calling contract endpoints with profiling
-            print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
-            profile = profiler(
-                self.client,
-                contract,
-                [
-                    getattr(contract, name)(param)
-                    .with_amount(amount)
-                    .as_transaction()
-                    .autofill(ttl=MAX_OPERATIONS_TTL)
-                    .sign()
-                ],
-            )
-            self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
-
-        def call_bulk(bulks, *, batch_size, profiler=general_gas_profiler):
-            # Helper for calling operations in batches
-            batches = [
-                bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
-            ]
-            for batch_no, batch in enumerate(batches, 1):
-                print(
-                    "Sending",
-                    len(batches),
-                    "operations as bulk:",
-                    "Batch",
-                    batch_no,
-                    "of",
-                    len(batches),
-                )
-                profile = profiler(self.client, checker, batch)
-                self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
-
-        def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
-            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
-            update_operators = [
-                {
-                    "add_operator": {
-                        "owner": self.client.key.public_key_hash(),
-                        "operator": checker.context.address,
-                        "token_id": collateral_token_id,
-                    }
-                },
-            ]
-            call_endpoint(tez_wrapper, "update_operators", update_operators)
-
-        # Note: the amount of kit minted here and the kit in all other burrows for this account
-        # must be enough to bid on the liquidation auction later in the test.
-        get_tez_tokens_and_make_checker_an_operator(checker, 200_000_000)
-        call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
-        call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
-
-        call_endpoint(
-            ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
-        )
-        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
-        call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 100_000))
-
-        call_endpoint(
-            checker,
-            "add_liquidity",
-            (100_000, 100_000, 5, int(datetime.now().timestamp()) + 20),
-        )
-
-        burrows = list(range(1, 1001))
-
-        get_tez_tokens_and_make_checker_an_operator(
-            checker, 100_000_000 * 1000
-        )  # 1000 = number of burrows
-        call_bulk(
-            [
-                checker.create_burrow((burrow_id, None, 100_000_000))
-                for burrow_id in burrows
-            ],
-            batch_size=115,
-        )
-        # Mint as much as possible from the burrows. All should be identical, so we just query the
-        # first burrow and mint that much kit from all of them.
-        max_mintable_kit = checker.metadata.burrowMaxMintableKit(
-            (self.client.key.public_key_hash(), 1)
-        ).storage_view()
-
-        call_bulk(
-            [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
-            batch_size=350,
-        )
-
-        # Change the index (kits are 10x valuable)
-        #
-        # Keep in mind that we're using a patched checker on tests where the protected index
-        # is much faster to update.
-        call_endpoint(oracle, "update", 10_000_000)
-
-        # Oracle updates lag one touch on checker
-        call_endpoint(checker, "touch", None)
-        call_endpoint(checker, "touch", None)
-        time.sleep(20)
-        call_endpoint(checker, "touch", None)
-
-        # Now burrows should be overburrowed, so we liquidate them all.
-        #
-        # This should use the push_back method of the AVL tree.
-        call_bulk(
-            [
-                checker.mark_for_liquidation(
-                    (self.client.key.public_key_hash(), burrow_no)
-                )
-                for burrow_no in burrows
-            ],
-            batch_size=100,
-            profiler=mark_for_liquidation_profiler,
-        )
-
-        # This touch starts a liquidation auction
-        #
-        # This would use the split method of the AVL tree. However, if the entire queue
-        # has less tez than the limit, the 'split' method would trivially return the entire
-        # tree without much effort. Here we ensure that the liquidation queue has
-        # more tez than the limit.
-        queued_tez = 0
-        for _, leaf in auction_avl_leaves(
-            checker,
-            checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                "queued_slices"
-            ](),
-        ):
-            queued_tez += leaf["leaf"]["value"]["contents"]["tok"]
-        assert (
-            queued_tez > 10_000_000_000
-        ), "queued tez in liquidation auction was not greater than Constants.max_lot_size which is required for this test"
-        print(f"Auction queue currently has {queued_tez} mutez")
-        call_endpoint(checker, "touch", None)
-
-        # Now that there is an auction started in a descending state, we can select a queued slice
-        # and be confident that we can cancel it before it gets added to another auction.
-        # To successfully do this, we also need to either move the index price such that the
-        # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
-        cancel_ops = []
-        get_tez_tokens_and_make_checker_an_operator(
-            checker, 1_000_000_000 * 895
-        )  # the maximum amount of cancel_ops (see below)
-        for i, (queued_leaf_ptr, leaf) in enumerate(
-            auction_avl_leaves(
-                checker,
-                checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                    "queued_slices"
-                ](),
-            )
-        ):
-            cancel_ops.append(
-                (
-                    checker.deposit_collateral(
-                        (leaf["leaf"]["value"]["contents"]["burrow"][1], 1_000_000_000)
-                    ),
-                    checker.cancel_liquidation_slice(queued_leaf_ptr),
-                )
-            )
-            # Note: picking 895 here since it is close to the queue_size
-            # at this point in the test. This number can be tweaked up
-            # or down as desired.
-            if len(cancel_ops) >= 895:
-                break
-        # Shuffle so we aren't only cancelling the oldest slice
-        shuffle(cancel_ops)
-        flattened_cancel_ops = []
-        for op1, op2 in cancel_ops:
-            flattened_cancel_ops += [op1, op2]
-        call_bulk(
-            flattened_cancel_ops,
-            batch_size=100,
-            profiler=cancel_liquidation_slice_profiler,
-        )
-
-        # And we place a bid for the auction we started earlier:
-        auction_details = (
-            checker.metadata.currentLiquidationAuctionDetails().storage_view()
-        )
-
-        auction_id, minimum_bid = auction_details["contents"], auction_details["nat_3"]
-        # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
-        # do not know why we get these names. I think there is an underlying pytezos bug
-        # that we should reproduce and create a bug upstream.
-
-        # Note the auction ptr for later operations
-        current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
-            "liquidation_auctions"
-        ]["current_auction"]()["contents"]
-        call_endpoint(
-            checker, "liquidation_auction_place_bid", (auction_id, minimum_bid)
-        )
-
-        # Once max(max_bid_interval_in_blocks, max_bid_interval_in_seconds) has elapsed, the liquidation auction we
-        # bid on should be complete. Here we go off of level since the patched version of Checker we expect to use
-        # sets max_bid_interval_in_blocks=1 and max_bid_interval_in_seconds=1.
-        # Sleeping a bit extra to add a bit of a buffer.
-        time.sleep(10)
-
-        call_endpoint(checker, "touch", None)
-        assert (
-            checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-                "completed_auctions"
-            ]()
-            is not None
-        )
-
-        # Before we can claim our winning bid, all of the slices in the completed auction must be touched
-        auctioned_slices = []
-        for leaf_ptr, leaf in auction_avl_leaves(checker, current_auctions_ptr):
-            # Double check that we are only working with leaf ptrs
-            assert "leaf" in leaf
-            auctioned_slices.append(leaf_ptr)
-
-        # Note: using smaller batches here to increase the number of samples for profiling.
-        for i in range(0, len(auctioned_slices), 5):
-            slices_to_cancel = auctioned_slices[i : i + 5]
-            call_endpoint(checker, "touch_liquidation_slices", slices_to_cancel)
-
-        # With all of the slices touched, we should now be able to claim our hard-earned winnings
-        call_endpoint(checker, "liquidation_auction_claim_win", current_auctions_ptr)
-
-        # Extra calls for profiling purposes
-        call_bulk(
-            [checker.touch(None) for _ in range(5)],
-            batch_size=2,
-        )
-
-        # Optionally write out gas profile json
-        if WRITE_GAS_PROFILES:
-            with open(WRITE_GAS_PROFILES, "w") as f:
-                json.dump(self.gas_profiles, f, indent=4)
+# class LiquidationsStressTest(SandboxedTestCase):
+#     def test_liquidations(self):
+#         collateral_token_id = self.config.tokens.collateral.token_id
+#
+#         print("Deploying the mock oracle.")
+#         oracle = deploy_contract(
+#             self.client,
+#             source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
+#             initial_storage=(self.client.key.public_key_hash(), 1000000),
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
+#
+#         print("Deploying the tez wrapper.")
+#         tez_wrapper = deploy_tez_wrapper(
+#             self.client,
+#             checker_dir=CHECKER_DIR,
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
+#
+#         print("Deploying ctez contract.")
+#         ctez = deploy_ctez(
+#             self.client,
+#             ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
+#
+#         print("Deploying wctez contract.")
+#         wctez = deploy_wctez(
+#             self.client,
+#             checker_dir=CHECKER_DIR,
+#             ctez_fa12_address=ctez["fa12_ctez"].context.address,
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
+#
+#         print("Deploying Checker.")
+#         checker = deploy_checker(
+#             self.client,
+#             checker_dir=CHECKER_DIR,
+#             oracle=oracle.context.address,
+#             tez_wrapper=tez_wrapper.context.address,
+#             ctez_fa12=ctez["fa12_ctez"].context.address,
+#             ctez_cfmm=ctez["cfmm"].context.address,
+#             wctez=wctez.context.address,
+#             ttl=MAX_OPERATIONS_TTL,
+#         )
+#
+#         print("Deployment finished.")
+#
+#         def call_endpoint(
+#             contract, name, param, amount=0, profiler=general_gas_profiler
+#         ):
+#             # Helper for calling contract endpoints with profiling
+#             print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
+#             profile = profiler(
+#                 self.client,
+#                 contract,
+#                 [
+#                     getattr(contract, name)(param)
+#                     .with_amount(amount)
+#                     .as_transaction()
+#                     .autofill(ttl=MAX_OPERATIONS_TTL)
+#                     .sign()
+#                 ],
+#             )
+#             self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
+#
+#         def call_bulk(bulks, *, batch_size, profiler=general_gas_profiler):
+#             # Helper for calling operations in batches
+#             batches = [
+#                 bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
+#             ]
+#             for batch_no, batch in enumerate(batches, 1):
+#                 print(
+#                     "Sending",
+#                     len(batches),
+#                     "operations as bulk:",
+#                     "Batch",
+#                     batch_no,
+#                     "of",
+#                     len(batches),
+#                 )
+#                 profile = profiler(self.client, checker, batch)
+#                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
+#
+#         def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
+#             call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+#             update_operators = [
+#                 {
+#                     "add_operator": {
+#                         "owner": self.client.key.public_key_hash(),
+#                         "operator": checker.context.address,
+#                         "token_id": collateral_token_id,
+#                     }
+#                 },
+#             ]
+#             call_endpoint(tez_wrapper, "update_operators", update_operators)
+#
+#         # Note: the amount of kit minted here and the kit in all other burrows for this account
+#         # must be enough to bid on the liquidation auction later in the test.
+#         get_tez_tokens_and_make_checker_an_operator(checker, 200_000_000)
+#         call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
+#         call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
+#
+#         call_endpoint(
+#             ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
+#         )
+#         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
+#         call_endpoint(ctez["fa12_ctez"], "approve", (checker.context.address, 100_000))
+#
+#         call_endpoint(
+#             checker,
+#             "add_liquidity",
+#             (100_000, 100_000, 5, int(datetime.now().timestamp()) + 20),
+#         )
+#
+#         burrows = list(range(1, 1001))
+#
+#         get_tez_tokens_and_make_checker_an_operator(
+#             checker, 100_000_000 * 1000
+#         )  # 1000 = number of burrows
+#         call_bulk(
+#             [
+#                 checker.create_burrow((burrow_id, None, 100_000_000))
+#                 for burrow_id in burrows
+#             ],
+#             batch_size=115,
+#         )
+#         # Mint as much as possible from the burrows. All should be identical, so we just query the
+#         # first burrow and mint that much kit from all of them.
+#         max_mintable_kit = checker.metadata.burrowMaxMintableKit(
+#             (self.client.key.public_key_hash(), 1)
+#         ).storage_view()
+#
+#         call_bulk(
+#             [checker.mint_kit(burrow_no, max_mintable_kit) for burrow_no in burrows],
+#             batch_size=350,
+#         )
+#
+#         # Change the index (kits are 10x valuable)
+#         #
+#         # Keep in mind that we're using a patched checker on tests where the protected index
+#         # is much faster to update.
+#         call_endpoint(oracle, "update", 10_000_000)
+#
+#         # Oracle updates lag one touch on checker
+#         call_endpoint(checker, "touch", None)
+#         call_endpoint(checker, "touch", None)
+#         time.sleep(20)
+#         call_endpoint(checker, "touch", None)
+#
+#         # Now burrows should be overburrowed, so we liquidate them all.
+#         #
+#         # This should use the push_back method of the AVL tree.
+#         call_bulk(
+#             [
+#                 checker.mark_for_liquidation(
+#                     (self.client.key.public_key_hash(), burrow_no)
+#                 )
+#                 for burrow_no in burrows
+#             ],
+#             batch_size=100,
+#             profiler=mark_for_liquidation_profiler,
+#         )
+#
+#         # This touch starts a liquidation auction
+#         #
+#         # This would use the split method of the AVL tree. However, if the entire queue
+#         # has less tez than the limit, the 'split' method would trivially return the entire
+#         # tree without much effort. Here we ensure that the liquidation queue has
+#         # more tez than the limit.
+#         queued_tez = 0
+#         for _, leaf in auction_avl_leaves(
+#             checker,
+#             checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+#                 "queued_slices"
+#             ](),
+#         ):
+#             queued_tez += leaf["leaf"]["value"]["contents"]["tok"]
+#         assert (
+#             queued_tez > 10_000_000_000
+#         ), "queued tez in liquidation auction was not greater than Constants.max_lot_size which is required for this test"
+#         print(f"Auction queue currently has {queued_tez} mutez")
+#         call_endpoint(checker, "touch", None)
+#
+#         # Now that there is an auction started in a descending state, we can select a queued slice
+#         # and be confident that we can cancel it before it gets added to another auction.
+#         # To successfully do this, we also need to either move the index price such that the
+#         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
+#         cancel_ops = []
+#         get_tez_tokens_and_make_checker_an_operator(
+#             checker, 1_000_000_000 * 895
+#         )  # the maximum amount of cancel_ops (see below)
+#         for i, (queued_leaf_ptr, leaf) in enumerate(
+#             auction_avl_leaves(
+#                 checker,
+#                 checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+#                     "queued_slices"
+#                 ](),
+#             )
+#         ):
+#             cancel_ops.append(
+#                 (
+#                     checker.deposit_collateral(
+#                         (leaf["leaf"]["value"]["contents"]["burrow"][1], 1_000_000_000)
+#                     ),
+#                     checker.cancel_liquidation_slice(queued_leaf_ptr),
+#                 )
+#             )
+#             # Note: picking 895 here since it is close to the queue_size
+#             # at this point in the test. This number can be tweaked up
+#             # or down as desired.
+#             if len(cancel_ops) >= 895:
+#                 break
+#         # Shuffle so we aren't only cancelling the oldest slice
+#         shuffle(cancel_ops)
+#         flattened_cancel_ops = []
+#         for op1, op2 in cancel_ops:
+#             flattened_cancel_ops += [op1, op2]
+#         call_bulk(
+#             flattened_cancel_ops,
+#             batch_size=100,
+#             profiler=cancel_liquidation_slice_profiler,
+#         )
+#
+#         # And we place a bid for the auction we started earlier:
+#         auction_details = (
+#             checker.metadata.currentLiquidationAuctionDetails().storage_view()
+#         )
+#
+#         auction_id, minimum_bid = auction_details["contents"], auction_details["nat_3"]
+#         # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
+#         # do not know why we get these names. I think there is an underlying pytezos bug
+#         # that we should reproduce and create a bug upstream.
+#
+#         # Note the auction ptr for later operations
+#         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
+#             "liquidation_auctions"
+#         ]["current_auction"]()["contents"]
+#         call_endpoint(
+#             checker, "liquidation_auction_place_bid", (auction_id, minimum_bid)
+#         )
+#
+#         # Once max(max_bid_interval_in_blocks, max_bid_interval_in_seconds) has elapsed, the liquidation auction we
+#         # bid on should be complete. Here we go off of level since the patched version of Checker we expect to use
+#         # sets max_bid_interval_in_blocks=1 and max_bid_interval_in_seconds=1.
+#         # Sleeping a bit extra to add a bit of a buffer.
+#         time.sleep(10)
+#
+#         call_endpoint(checker, "touch", None)
+#         assert (
+#             checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
+#                 "completed_auctions"
+#             ]()
+#             is not None
+#         )
+#
+#         # Before we can claim our winning bid, all of the slices in the completed auction must be touched
+#         auctioned_slices = []
+#         for leaf_ptr, leaf in auction_avl_leaves(checker, current_auctions_ptr):
+#             # Double check that we are only working with leaf ptrs
+#             assert "leaf" in leaf
+#             auctioned_slices.append(leaf_ptr)
+#
+#         # Note: using smaller batches here to increase the number of samples for profiling.
+#         for i in range(0, len(auctioned_slices), 5):
+#             slices_to_cancel = auctioned_slices[i : i + 5]
+#             call_endpoint(checker, "touch_liquidation_slices", slices_to_cancel)
+#
+#         # With all of the slices touched, we should now be able to claim our hard-earned winnings
+#         call_endpoint(checker, "liquidation_auction_claim_win", current_auctions_ptr)
+#
+#         # Extra calls for profiling purposes
+#         call_bulk(
+#             [checker.touch(None) for _ in range(5)],
+#             batch_size=2,
+#         )
+#
+#         # Optionally write out gas profile json
+#         if WRITE_GAS_PROFILES:
+#             with open(WRITE_GAS_PROFILES, "w") as f:
+#                 json.dump(self.gas_profiles, f, indent=4)
 
 
 if __name__ == "__main__":
