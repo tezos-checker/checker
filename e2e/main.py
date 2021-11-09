@@ -375,7 +375,7 @@ class E2ETest(SandboxedTestCase):
             return ret
 
         def call_wctez_endpoint(
-            name, param, amount=0, client=wctez, client=self.client
+            name, param, amount=0, contract=wctez, client=self.client
         ):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
