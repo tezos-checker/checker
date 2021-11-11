@@ -19,7 +19,7 @@ import requests
 from pytezos.client import PyTezosClient
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_builder.config import load_checker_config, CheckerConfig, TokenConfig
+from checker_builder.config import load_checker_config, CheckerConfig, IssuedTokenConfig
 from checker_client.operations import inject
 
 # Time between blocks for sandbox container
@@ -42,7 +42,7 @@ default_token_metadata = {
 }
 
 
-def _token_config_to_metadata(token_config: TokenConfig) -> Tuple[int, Dict]:
+def _token_config_to_metadata(token_config: IssuedTokenConfig) -> Tuple[int, Dict]:
     return token_config.token_id, {
         "name": token_config.name,
         "symbol": token_config.symbol,
@@ -52,8 +52,8 @@ def _token_config_to_metadata(token_config: TokenConfig) -> Tuple[int, Dict]:
 
 def token_metadata_view_from_config(*, config: CheckerConfig):
     metadata = [
-        _token_config_to_metadata(config.tokens.kit),
-        _token_config_to_metadata(config.tokens.liquidity),
+        _token_config_to_metadata(config.tokens.issued.kit),
+        _token_config_to_metadata(config.tokens.issued.liquidity),
     ]
 
     # convert the attributes to bytes
