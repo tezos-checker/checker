@@ -12,8 +12,7 @@ all:
 builder:
     FROM ubuntu:20.04
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
             autoconf \
             bash \
             curl \
@@ -331,7 +330,8 @@ test-mutations:
 dev-container:
     FROM +deps-full
 
-    # Extra dependencies for development
+    # Extra dependencies for development.
+    # Note: not running `apt update` here since package list is updated in prior build stage
     RUN apt install -y \
         apt-transport-https \
         ca-certificates \
@@ -377,11 +377,12 @@ dev-container:
     ENV EARTHLY_USE_INLINE_CACHE=true
 
     ENTRYPOINT /root/entrypoint.sh
-    ARG TAG_DEV_CONTAINER = "latest"
+    ARG TAG = "latest"
     # Local image
     SAVE IMAGE checker/dev:latest
     # Published image
-    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:$TAG_DEV_CONTAINER
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:$TAG
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/dev:latest
 
 # Note: Building CLI independently so that it doesn't include the full closure of all
 # of our dev dependencies
@@ -389,8 +390,7 @@ cli:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
           pkg-config autoconf libtool libev4 \
           libgmp-dev openssl libsodium23 libsodium-dev \
           python3-pip python-is-python3
@@ -410,16 +410,22 @@ cli:
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
 
-    COPY ./client .
+    RUN mkdir ./scripts
+    COPY ./scripts/builder ./scripts/builder
+    COPY ./client ./client
+    WORKDIR /root/client
     RUN poetry config virtualenvs.in-project true && poetry install
 
     # Required dir for pytezos
     RUN mkdir /root/.tezos-client
     ENV PATH="/root/.venv/bin:$PATH"
     CMD checker
+
+    ARG TAG=latest
     # Local image
     SAVE IMAGE checker-client:latest
     # Published image
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:$TAG
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/checker-client:master
 
 # =============================================================================
@@ -440,8 +446,7 @@ flextesa:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update
-    RUN apt install -y \
+    RUN apt update && apt install -y \
         curl \
         git \
         bash \

@@ -53,6 +53,8 @@ jobs:
           earthly --verbose --ci ${{ env.push_flag }} +generate-code
           earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
           earthly --verbose --ci ${{ env.push_flag }} +build-ligo
+          earthly --verbose --ci --build-arg TAG=${{ github.sha }} ${{ env.push_flag }} +dev-container
+          earthly --verbose --ci --build-arg TAG=${{ github.sha }} ${{ env.push_flag }} +cli
       - name: Export lazy entrypoint sizes
         run: |
           earthly --ci --artifact +build-ligo/michelson/functions.json functions.json
