@@ -19,8 +19,6 @@ val tez_of_mutez_nat : Ligo.nat -> Ligo.tez
 val tez_to_mutez : Ligo.tez -> Ligo.int
 
 val tez_zero : Ligo.tez
-val tez_scaling_factor_int : Ligo.int
-val tez_scaling_factor_nat : Ligo.nat
 
 (* OPERATIONS ON nat *)
 val min_nat : Ligo.nat -> Ligo.nat -> Ligo.nat
@@ -37,7 +35,6 @@ val make_ratio : Ligo.int -> Ligo.int -> ratio
 val zero_ratio : ratio
 val one_ratio : ratio
 
-val fraction_to_tez_floor : Ligo.int -> Ligo.int -> Ligo.tez
 val fraction_to_nat_floor : Ligo.int -> Ligo.int -> Ligo.nat
 
 val ensure_no_tez_given : unit -> unit

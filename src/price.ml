@@ -12,7 +12,7 @@ COLLATERAL = FA2
 - KIT/CHF = FA2/CHF (from index) *                        KIT/FA2 (from cfmm)
 *)
 
-let[@inline] calculate_kit_in_tez
+let[@inline] calculate_kit_in_tok
     (state_cfmm: cfmm)
     (state_last_ctez_in_tez: ratio option)
     (state_external_contracts: external_contracts)

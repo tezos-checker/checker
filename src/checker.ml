@@ -800,10 +800,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
     (* Do nothing if up-to-date (idempotence) *)
     (([]: LigoOp.operation list), state)
   else
-    (* TODO: What is the right order in which to do things here? We use the
-     * last observed kit_in_tez price from cfmm to update the parameters,
-     * which return kit to be added to the cfmm contract. Gotta make sure we
-     * do things in the right order here. *)
+    (* TODO: What is the right order in which to do things here? *)
 
     (* 1: Mint some kit out of thin air to reward the contract toucher, and
      * update the circulating kit accordingly.*)
@@ -813,8 +810,8 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
 
     (* 2: Update the system parameters and add accrued burrowing fees to the
      * cfmm sub-contract. *)
-    let kit_in_tez_in_prev_block, ops = calculate_kit_in_tez state_cfmm state_last_ctez_in_tez state_external_contracts in
-    let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tez_in_prev_block state_parameters in
+    let kit_in_tok_in_prev_block, ops = calculate_kit_in_tok state_cfmm state_last_ctez_in_tez state_external_contracts in
+    let total_accrual_to_cfmm, state_parameters = parameters_touch index kit_in_tok_in_prev_block state_parameters in
     (* Note: state_parameters.circulating kit here already includes the accrual to the CFMM. *)
     let state_cfmm = cfmm_add_accrued_kit state_cfmm total_accrual_to_cfmm in
     let state_fa2_state = ledger_issue_kit (state_fa2_state, !Ligo.Tezos.self_address, total_accrual_to_cfmm) in
