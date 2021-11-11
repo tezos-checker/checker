@@ -327,6 +327,23 @@ def deploy_wctez(
     return wctez
 
 
+def deploy_mockFA2(
+    tz: PyTezosClient,
+    checker_dir: str,
+    ttl: Optional[int] = None,
+):
+    print("Deploying the mock FA2 contract.")
+    src = os.path.join(checker_dir, "mockFA2Main.tz")
+    initial_storage = {
+        "ledger": {},
+        "operators": {},
+    }
+    mockFA2 = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
+    print("Done.")
+    print(f"mockFA2 address: {mockFA2.context.address}")
+    return mockFA2
+
+
 def deploy_checker(
     tz,
     checker_dir,
