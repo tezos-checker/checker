@@ -1,5 +1,7 @@
 from pathlib import Path
+
 import click
+
 from checker_builder import config
 
 # Mapping of generated src modules to their templates
@@ -10,12 +12,16 @@ GENERATE_SRCS = {
 
 # Template used for all token modules
 TOKEN_TEMPLATE = "genericToken.ml.jinja"
-# Mapping of token config fields to their corresponding src modules
+# Mappings of token config fields to their corresponding src modules
 TOKEN_SRCS = {
-    "collateral": "tok.ml",
-    "kit": "kit.ml",
-    "liquidity": "lqt.ml",
-    "cfmm_token": "ctok.ml",
+    "issued": {
+        "kit": "kit.ml",
+        "liquidity": "lqt.ml",
+    },
+    "in_use": {
+        "collateral": "tok.ml",
+        "cfmm_token": "ctok.ml",
+    },
 }
 
 DRIFT_SRC = "driftDerivative.ml"
@@ -47,13 +53,16 @@ def generate():
     # the token modules need some more specific info and I would prefer to
     # be explicit about the variables we provide to template when rendering.
     template = env.get_template(TOKEN_TEMPLATE)
-    for token_field, src in TOKEN_SRCS.items():
-        token_config = getattr(checker_config.tokens, token_field)
-        config.generate_token_src_module(
-            base_path.joinpath(src),
-            template,
-            token_config,
-        )
+    for token_type, token_type_srcs in TOKEN_SRCS.items():
+        for token_field, src in token_type_srcs.items():
+            token_config = getattr(
+                getattr(checker_config.tokens, token_type), token_field
+            )
+            config.generate_token_src_module(
+                base_path.joinpath(src),
+                template,
+                token_config,
+            )
 
     for src, template_name in GENERATE_SRCS.items():
         template = env.get_template(template_name)
@@ -62,6 +71,8 @@ def generate():
             template,
             checker_config,
         )
+
+    # FIXME: Generate token metadata module here
 
 
 if __name__ == "__main__":

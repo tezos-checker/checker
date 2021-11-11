@@ -2,9 +2,10 @@
 Configuration file logic for Checker builds
 """
 
-from decimal import Decimal
 import logging
 from dataclasses import dataclass
+from decimal import Decimal
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
 
@@ -51,12 +52,14 @@ def ratio_from_str(ratio_str: str) -> Ratio:
 # ================================================================================================
 # Config classes
 # ================================================================================================
+
+
 @dataclass(frozen=True)
-class TokenConfig:
+class ReferencedTokenConfig:
+    """Config for tokens which contracts in the Checker ecosystem reference internally"""
+
     token_id: int
     decimal_digits: int = 6
-    name: str = ""
-    symbol: str = ""
 
     @property
     def scaling_factor(self) -> int:
@@ -64,11 +67,39 @@ class TokenConfig:
 
 
 @dataclass(frozen=True)
+class IssuedTokenConfig(ReferencedTokenConfig):
+    """Config for tokens which are issued by contracts in the Checker ecosystem"""
+
+    token_id: int
+    decimal_digits: int = 6
+    name: str = ""
+    symbol: str = ""
+
+
+@dataclass(frozen=True)
+class IssuedTokens:
+    kit: IssuedTokenConfig
+    liquidity: IssuedTokenConfig
+    wctez: IssuedTokenConfig
+    wtez: IssuedTokenConfig
+    mock_fa2: IssuedTokenConfig
+
+
+@dataclass(frozen=True)
+class ReferencedTokens:
+    collateral: IssuedTokenConfig
+    cfmm_token: IssuedTokenConfig
+
+
+@dataclass(frozen=True)
 class Tokens:
-    collateral: TokenConfig
-    kit: TokenConfig
-    liquidity: TokenConfig
-    cfmm_token: TokenConfig
+    issued: IssuedTokens
+    in_use: ReferencedTokens
+
+
+class CollateralType(Enum):
+    TEZ = "tez"
+    FA2 = "fa2"
 
 
 @dataclass(frozen=True)
@@ -114,6 +145,7 @@ class Constants:
 
 @dataclass(frozen=True)
 class CheckerConfig:
+    collateral_type: CollateralType
     tokens: Tokens
     constants: Constants
     drift_derivative_curve: Union[BangBang, Continuous]
@@ -149,7 +181,7 @@ class RatioField(fields.Field):
         try:
             ratio = ratio_from_str(value)
         except ValueError as error:
-            raise ValidationError from error
+            raise ValidationError("Unable to parse value to a ratio") from error
         if ratio.den <= 0:
             raise ValidationError(
                 f"Provided ratio had a non-positive denominator: {value}"
@@ -169,7 +201,7 @@ class PositiveRatioField(RatioField):
         return ratio
 
 
-class TokenConfigSchema(Schema):
+class IssuedTokenConfigSchema(Schema):
     token_id = BoundedIntField(lower=0, strict=True, required=True)
     decimal_digits = BoundedIntField(lower=0, strict=True)
     name = fields.String()
@@ -177,14 +209,42 @@ class TokenConfigSchema(Schema):
 
     @post_load
     def make(self, data, **kwargs):
-        return TokenConfig(**data)
+        return IssuedTokenConfig(**data)
+
+
+class ReferencedTokenConfigSchema(Schema):
+    token_id = BoundedIntField(lower=0, strict=True, required=True)
+    decimal_digits = BoundedIntField(lower=0, strict=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        return ReferencedTokenConfig(**data)
+
+
+class IssuedTokensSchema(Schema):
+    kit = fields.Nested(IssuedTokenConfigSchema(), required=True)
+    liquidity = fields.Nested(IssuedTokenConfigSchema(), required=True)
+    wctez = fields.Nested(IssuedTokenConfigSchema(), required=True)
+    wtez = fields.Nested(IssuedTokenConfigSchema(), required=True)
+    mock_fa2 = fields.Nested(IssuedTokenConfigSchema(), required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        return IssuedTokens(**data)
+
+
+class ReferencedTokensSchema(Schema):
+    collateral = fields.Nested(ReferencedTokenConfigSchema(), required=True)
+    cfmm_token = fields.Nested(ReferencedTokenConfigSchema(), required=True)
+
+    @post_load
+    def make(self, data, **kwargs):
+        return ReferencedTokens(**data)
 
 
 class TokensSchema(Schema):
-    collateral = fields.Nested(TokenConfigSchema(), required=True)
-    kit = fields.Nested(TokenConfigSchema(), required=True)
-    liquidity = fields.Nested(TokenConfigSchema(), required=True)
-    cfmm_token = fields.Nested(TokenConfigSchema(), required=True)
+    issued = fields.Nested(IssuedTokensSchema(), required=True)
+    in_use = fields.Nested(ReferencedTokensSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):
@@ -279,13 +339,28 @@ class ConstantsSchema(Schema):
         return Constants(**data)
 
 
+class CollateralTypeField(fields.Field):
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            ct = CollateralType(value)
+        except ValueError as error:
+            raise ValidationError("Invalid collateral type") from error
+        return ct
+
+
 class CheckerConfigSchema(Schema):
+    collateral_type = CollateralTypeField(required=True)
     tokens = fields.Nested(TokensSchema(), required=True)
     constants = fields.Nested(ConstantsSchema(), required=True)
     drift_derivative_curve = fields.Nested(DriftDerivativeCurveSchema(), required=True)
 
     @post_load
     def make(self, data, **kwargs):
+        # FIXME: Remove this check once switchable collateral type logic is fully implemented
+        if data["collateral_type"] == CollateralType.FA2:
+            raise NotImplementedError(
+                "FA2 collateral not yet supported. Can only use 'tez' collateral."
+            )
         return CheckerConfig(**data)
 
 
@@ -313,12 +388,12 @@ def load_template_env() -> Environment:
 
 
 def generate_token_src_module(
-    module: Path, template: Template, token_config: TokenConfig
+    module: Path, template: Template, token_config: ReferencedTokenConfig
 ) -> None:
     """Generates a token source code module using the provided template and configuration
 
     Provides the following variables to the template:
-        * token_config (TokenConfig)
+        * token_config (ReferencedTokenConfig)
         * module_name (str)
     """
     logger.info(

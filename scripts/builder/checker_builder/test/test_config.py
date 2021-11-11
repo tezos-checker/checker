@@ -90,10 +90,17 @@ def test_ratio_from_str_extra_slash_fails():
         ratio_from_str("3/2/4")
 
 
-def test_collateral_config_decimal_digits():
-    from checker_builder.config import TokenConfig
+def test_issued_token_config_decimal_digits():
+    from checker_builder.config import IssuedTokenConfig
 
-    collateral_config = TokenConfig(token_id=0, decimal_digits=3)
+    collateral_config = IssuedTokenConfig(token_id=0, decimal_digits=3)
+    assert collateral_config.scaling_factor == 1000
+
+
+def test_referenced_token_config_decimal_digits():
+    from checker_builder.config import ReferencedTokenConfig
+
+    collateral_config = ReferencedTokenConfig(token_id=0, decimal_digits=3)
     assert collateral_config.scaling_factor == 1000
 
 
