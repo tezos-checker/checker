@@ -708,12 +708,12 @@ let suite =
          (LigoOp.Tezos.nat_contract_transaction
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address))
             (Ligo.tez_from_literal "0mutez")
-            (Checker.get_oracle_entrypoint checker.external_contracts)
+            (CheckerTypes.get_oracle_entrypoint checker.external_contracts)
          );
          (LigoOp.Tezos.nat_nat_contract_transaction
             (Option.get (LigoOp.Tezos.get_entrypoint_opt "%receive_ctez_marginal_price" !Ligo.Tezos.self_address))
             (Ligo.tez_from_literal "0mutez")
-            (Checker.get_ctez_cfmm_price_entrypoint checker.external_contracts)
+            (CheckerTypes.get_ctez_cfmm_price_entrypoint checker.external_contracts)
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops

@@ -6,7 +6,10 @@ open Parameters
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Fa2Ledger
+open Fa2Interface
+open Fa12Interface
 open Common
+open Error
 
 type burrow_map = (burrow_id, burrow) Ligo.big_map
 
@@ -67,3 +70,27 @@ type view_current_liquidation_auction_details_result =
 [@@deriving show]
 
 [@@@coverage on]
+
+(* ************************************************************************* *)
+(**                           EXTERNAL_CONTRACTS                             *)
+(* ************************************************************************* *)
+
+let[@inline] get_transfer_ctok_fa12_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctok_fa12 : fa12_transfer Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
+
+let[@inline] get_ctez_cfmm_price_entrypoint (external_contracts: external_contracts): ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%getMarginalPrice" external_contracts.ctez_cfmm : ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureCtezGetMarginalPrice : ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract)
+
+let[@inline] get_oracle_entrypoint (external_contracts: external_contracts): (Ligo.nat Ligo.contract) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%getPrice" external_contracts.oracle: (Ligo.nat Ligo.contract) Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureOracleEntrypoint: (Ligo.nat Ligo.contract) Ligo.contract)
+
+let[@inline] get_transfer_collateral_fa2_entrypoint (external_contracts: external_contracts): (fa2_transfer list) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.collateral_fa2 : (fa2_transfer list) Ligo.contract option) with
+  | Some c -> c
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA2Transfer : (fa2_transfer list) Ligo.contract)
