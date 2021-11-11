@@ -7,7 +7,6 @@ open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open Fa2Ledger
 open Fa2Interface
-open Fa12Interface
 open Common
 open Error
 
@@ -75,10 +74,10 @@ type view_current_liquidation_auction_details_result =
 (**                           EXTERNAL_CONTRACTS                             *)
 (* ************************************************************************* *)
 
-let[@inline] get_transfer_ctok_fa12_entrypoint (external_contracts: external_contracts): fa12_transfer Ligo.contract =
-  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctok_fa12 : fa12_transfer Ligo.contract option) with
+let[@inline] get_transfer_ctok_fa2_entrypoint (external_contracts: external_contracts): (fa2_transfer list) Ligo.contract =
+  match (LigoOp.Tezos.get_entrypoint_opt "%transfer" external_contracts.ctok_fa2 : (fa2_transfer list) Ligo.contract option) with
   | Some c -> c
-  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA12Transfer : fa12_transfer Ligo.contract)
+  | None -> (Ligo.failwith error_GetEntrypointOptFailureFA2Transfer : (fa2_transfer list) Ligo.contract)
 
 let[@inline] get_ctez_cfmm_price_entrypoint (external_contracts: external_contracts): ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract =
   match (LigoOp.Tezos.get_entrypoint_opt "%getMarginalPrice" external_contracts.ctez_cfmm : ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract option) with
