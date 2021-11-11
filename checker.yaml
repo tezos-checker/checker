@@ -1,7 +1,8 @@
 ## Configurations for Checker builds and code generation
 
 tokens:
-  # Collateral token configuration
+  # Collateral token configuration (creates tok.ml)
+  # FIXME: Must be aligned with TezWrapper.tez_token_id when collateral = TEZ
   collateral:
     # The token's FA2 id
     token_id: 2
@@ -12,11 +13,10 @@ tokens:
     name: tok (checker dev)
     # Optional FA2 token symbol
     symbol: tok
-  # CFMM token configuration
+  # CFMM token configuration (creates ctok.ml)
+  # FIXME: Must be aligned with Wctez.wctez_token_id when collateral = TEZ
   cfmm_token:
     # The token's FA2 id
-    # FIXME: Currently FA12, actually.
-    # FIXME: No idea what ctez's token_id is, actually (we don't issue it).
     token_id: 3
     # Specifies the number of decimal digits used by the token
     # e.g. tez has 6 decimal digits.
@@ -24,9 +24,8 @@ tokens:
     # Optional FA2 display name
     name: ctok (checker dev)
     # Optional FA2 token symbol
-    # FIXME: Currently FA12, actually.
     symbol: ctok
-  # Collateral token configuration
+  # Issued token configuration (creates kit.ml)
   kit:
     # The token's FA2 id
     token_id: 0
@@ -36,7 +35,7 @@ tokens:
     name: kit (checker dev)
     # Optional FA2 token symbol
     symbol: kit
-  # Liquidity token configuration
+  # Liquidity token configuration (creates lqt.ml)
   liquidity:
     # The token's FA2 id
     token_id: 1

@@ -539,7 +539,7 @@ let suite =
     ("SealContract (main) - fails when unwanted tez is given - sealed state" >::
      assert_sealed_contract_fails_with_unwanted_tez
        (fun sealed_wrapper ->
-          let param = (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
+          let param = (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
           CheckerMain.(main (SealContract (param), sealed_wrapper))
        )
     );
@@ -755,7 +755,7 @@ let suite =
     ("SealContract (main) - fails when unwanted tez is given - unsealed state" >::
      assert_unsealed_contract_fails_with_unwanted_tez
        (fun unsealed_wrapper ->
-          let param = (oracle_addr, collateral_fa2_addr, ctok_fa12_addr, ctez_cfmm_addr) in
+          let param = (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
           CheckerMain.(main (SealContract (param), unsealed_wrapper))
        )
     );

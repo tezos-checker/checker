@@ -5,7 +5,6 @@ open Tok
 open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
-open Fa12Interface
 open Fa2Interface
 
 (** Perform housekeeping tasks on the contract state. This includes:
@@ -31,7 +30,7 @@ val compute_outstanding_dissonance : checker -> kit (* "real" *) * kit (* approx
 (*****************************************************************************)
 
 (**/**)
-val get_transfer_ctok_fa12_entrypoint : external_contracts -> fa12_transfer Ligo.contract
+val get_transfer_ctok_fa2_entrypoint : external_contracts -> fa2_transfer list Ligo.contract
 val get_ctez_cfmm_price_entrypoint : external_contracts -> ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract
 val get_oracle_entrypoint : external_contracts -> (Ligo.nat Ligo.contract) Ligo.contract
 val get_transfer_collateral_fa2_entrypoint : external_contracts -> fa2_transfer list Ligo.contract

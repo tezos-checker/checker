@@ -23,7 +23,7 @@ let checker_address = !Ligo.Tezos.self_address
 
 let empty_checker =
   initial_checker
-    { ctok_fa12 = ctok_fa12_addr;
+    { ctok_fa2 = ctok_fa2_addr;
       ctez_cfmm = ctez_cfmm_addr;
       oracle = oracle_addr;
       collateral_fa2 = collateral_fa2_addr;
@@ -382,14 +382,19 @@ let suite =
            ) in
 
        let expected_ops = [
-         (LigoOp.Tezos.fa12_transfer_transaction
-            Fa12Interface.(
-              {address_to=checker_address;
-               address_from=alice_addr;
-               value=(Ligo.nat_from_literal "5_000_000n")}
-            )
+         (LigoOp.Tezos.fa2_transfer_transaction
+            [ Fa2Interface.{
+                  from_ = alice_addr;
+                  txs = [
+                    { to_ = checker_address;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "5_000_000n";
+                    }
+                  ]
+                }
+            ]
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa12))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -672,14 +677,21 @@ let suite =
            ) in
 
        let expected_ops = [
-         (LigoOp.Tezos.fa12_transfer_transaction
-            Fa12Interface.(
-              {address_to=alice_addr;
-               address_from=checker_address;
-               value=(Ligo.nat_from_literal "5_000_000n")}
-            )
+         (LigoOp.Tezos.fa2_transfer_transaction
+            [ Fa2Interface.{
+                  from_ = checker_address;
+                  txs = [
+                    { to_ = alice_addr;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "5_000_000n";
+                    }
+                  ]
+                }
+            ]
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa12))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
+
+
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -900,13 +912,21 @@ let suite =
       let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
 
       begin match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
-          begin
-            assert_address_equal ~expected:sender ~real:transfer.address_from;
-            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(ctok_to_denomination_nat ctok_amount) ~real:transfer.value;
-          end
-        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+        | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = ctok_to_denomination_nat ctok_amount;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
+        | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
       Ligo.geq_nat_nat
@@ -937,13 +957,21 @@ let suite =
       let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
 
       begin match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
-          begin
-            assert_address_equal ~expected:sender ~real:transfer.address_from;
-            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(ctok_to_denomination_nat ctok_amount) ~real:transfer.value;
-          end
-        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+        | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = ctok_to_denomination_nat ctok_amount;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
+        | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
       Ligo.eq_nat_nat
@@ -988,13 +1016,13 @@ let suite =
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctok_expected, deadline)) in
       let bought_muctok = match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+        | [Transaction (FA2TransferTransactionValue [{from_=from_address; txs=[tx];}], _, _)] ->
           begin
-            assert_address_equal ~expected:checker_address ~real:transfer.address_from;
-            assert_address_equal ~expected:sender ~real:transfer.address_to;
-            transfer.value
+            assert_address_equal ~expected:checker_address ~real:from_address;
+            assert_address_equal ~expected:sender ~real:tx.to_;
+            tx.amount
           end
-        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+        | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue [{from_=_; txs=[_];}], _, _)] but got " ^ show_operation_list ops)
       in
       ctok_of_denomination bought_muctok >= min_ctok_expected
     );
@@ -1046,13 +1074,13 @@ let suite =
       let ops, new_checker = Checker.entrypoint_sell_kit (checker, (kit_amount, min_ctok_expected, deadline)) in
 
       let bought_muctok = match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
+        | [Transaction (FA2TransferTransactionValue [{from_=from_address; txs=[tx];}], _, _)] ->
           begin
-            assert_address_equal ~expected:checker_address ~real:transfer.address_from;
-            assert_address_equal ~expected:sender ~real:transfer.address_to;
-            transfer.value
+            assert_address_equal ~expected:checker_address ~real:from_address;
+            assert_address_equal ~expected:sender ~real:tx.to_;
+            tx.amount
           end
-        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+        | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue [{from_=_; txs=[_];}], _, _)] but got " ^ show_operation_list ops)
       in
       ctok_add new_checker.cfmm.ctok (ctok_of_denomination bought_muctok) = checker.cfmm.ctok
     );
@@ -1104,13 +1132,21 @@ let suite =
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
 
       begin match ops with
-        | [Transaction (FA12TransferTransactionValue transfer, _, _)] ->
-          begin
-            assert_address_equal ~expected:sender ~real:transfer.address_from;
-            assert_address_equal ~expected:checker_address ~real:transfer.address_to;
-            assert_nat_equal ~expected:(Ctok.ctok_to_denomination_nat ctok_provided) ~real:transfer.value;
-          end
-        | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+        | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
+          assert_fa2_transfer_list_equal
+            ~expected:[
+              Fa2Interface.{
+                from_ = sender;
+                txs = [
+                  { to_ = checker_address;
+                    token_id = Ctok.ctok_token_id;
+                    amount = Ctok.ctok_to_denomination_nat ctok_provided;
+                  }
+                ]
+              }
+            ]
+            ~real:transfer
+        | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
       let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
@@ -1139,14 +1175,19 @@ let suite =
        let kit = get_balance_of checker alice_addr kit_token_id in
 
        let expected_ops = [
-         (LigoOp.Tezos.fa12_transfer_transaction
-            Fa12Interface.(
-              {address_to=checker_address;
-               address_from=alice_addr;
-               value=(Ligo.nat_from_literal "1_000_000n")}
-            )
+         (LigoOp.Tezos.fa2_transfer_transaction
+            [ Fa2Interface.{
+                  from_ = alice_addr;
+                  txs = [
+                    { to_ = checker_address;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "1_000_000n";
+                    }
+                  ]
+                }
+            ]
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa12))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
          );
        ] in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
@@ -1179,14 +1220,19 @@ let suite =
        let ops, _ = Checker.entrypoint_sell_kit (checker, (kit_to_sell, min_ctok_expected, Ligo.timestamp_from_seconds_literal 1)) in
 
        let expected_ops = [
-         (LigoOp.Tezos.fa12_transfer_transaction
-            Fa12Interface.(
-              {address_to=alice_addr;
-               address_from=checker_address;
-               value=(Ligo.nat_from_literal "1n")}
-            )
+         (LigoOp.Tezos.fa2_transfer_transaction
+            [ Fa2Interface.{
+                  from_ = checker_address;
+                  txs = [
+                    { to_ = alice_addr;
+                      token_id = Ctok.ctok_token_id;
+                      amount = Ligo.nat_from_literal "1n";
+                    }
+                  ]
+                }
+            ]
             (Ligo.tez_from_literal "0mutez")
-            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa12))
+            (Option.get (LigoOp.Tezos.get_entrypoint_opt "%transfer" checker.external_contracts.ctok_fa2))
          );
        ] in
        assert_operation_list_equal ~expected:expected_ops ~real:ops
@@ -1222,12 +1268,13 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, checker = Checker.entrypoint_remove_liquidity (checker, (my_liquidity_tokens, min_ctok_expected, min_kit_expected, Ligo.timestamp_from_seconds_literal 1)) in
        let ctok = match ops with
-         | [ Transaction (FA12TransferTransactionValue transfer, _, _); ] ->
+         | [Transaction (FA2TransferTransactionValue [{from_=from_address; txs=[tx];}], _, _)] ->
            begin
-             assert_address_equal ~expected:checker_address ~real:transfer.address_from;
-             transfer.value
+             assert_address_equal ~expected:checker_address ~real:from_address;
+             assert_address_equal ~expected:sender ~real:tx.to_;
+             tx.amount
            end
-         | _ -> failwith ("Expected [Transaction (FA12TransferTransactionValue _, _, _); Transaction (KitTransactionValue _, _, _)] but got " ^ show_operation_list ops)
+         | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue [{from_=_; txs=[_];}], _, _)] but got " ^ show_operation_list ops)
        in
        let kit = get_balance_of checker sender kit_token_id in
 

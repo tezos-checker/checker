@@ -183,6 +183,7 @@ def deploy(config: Config, address=None, port=None, key=None):
 @click.option("--tez_wrapper", type=str, help="TezWrapper contract address")
 @click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
 @click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
+@click.option("--wctez", type=str, help="Wrapped ctez contract address")
 @click.option(
     "--checker_config",
     type=click.Path(exists=True),
@@ -191,7 +192,7 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.pass_obj
 def checker(
-    config: Config, checker_dir, oracle, tez_wrapper, ctez_fa12, ctez_cfmm, checker_config
+    config: Config, checker_dir, oracle, tez_wrapper, ctez_fa12, ctez_cfmm, wctez, checker_config
 ):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
@@ -212,6 +213,10 @@ def checker(
         raise ValueError(
             "ctez cfmm address was neither specified in the CLI config nor provided as an argument."
         )
+    if not config.wctez_address and not wctez:
+        raise ValueError(
+            "Wrapped ctez address was neither specified in the CLI config nor provided as an argument."
+        )
     if oracle:
         config.oracle_address = oracle
     if ctez_fa12:
@@ -220,6 +225,8 @@ def checker(
         config.ctez_cfmm_address = ctez_cfmm
     if tez_wrapper:
         config.tez_wrapper_address = tez_wrapper
+    if wctez:
+        config.wctez = wctez
 
     shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
@@ -232,6 +239,7 @@ def checker(
         tez_wrapper=config.tez_wrapper_address,
         ctez_fa12=config.ctez_fa12_address,
         ctez_cfmm=config.ctez_cfmm_address,
+        wctez=config.wctez,
         ttl=_patch_operation_ttl(config),
         checker_config_path=checker_config,
     )
