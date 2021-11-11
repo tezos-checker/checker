@@ -65,7 +65,16 @@ wctez_sources=(
   wctez
 )
 
-all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" "${wctez_sources[@]}")
+# Note: order here does matter since it affects the order of #includes in mockFA2.mligo
+mock_fa2_sources=(
+  error
+  common
+  fa2Interface
+  fa2Ledger
+  mockFA2
+)
+
+all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" "${wctez_sources[@]}" "${mock_fa2_sources[@]}" )
 all_sources=($(echo "${all_sources[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 for name in "${all_sources[@]}"; do
@@ -166,5 +175,14 @@ echo '#include "ligo.mligo"' > "$target_dir/wctezMain.mligo"
 ( IFS=$'\n'; echo "${wctez_sources[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> "$target_dir/wctezMain.mligo"
+
+# Generate the mockFA2 contract
+echo "=> mockFA2Main.mligo" 2>&1
+
+echo '#include "ligo.mligo"' > "$target_dir/mockFA2Main.mligo"
+
+( IFS=$'\n'; echo "${mock_fa2_sources[*]}" ) |
+  sed -E 's/(.*)/#include "\1.mligo"/g' |
+  cat >> "$target_dir/mockFA2Main.mligo"
 
 echo "done." 1>&2

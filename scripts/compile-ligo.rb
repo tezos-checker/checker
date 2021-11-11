@@ -19,6 +19,9 @@ TEZ_WRAPPER_CONTRACT_TARGET="#{MICHELSON_DIR}/tezWrapperMain.tz"
 WCTEZ_FILE="#{LIGO_DIR}/wctezMain.mligo"
 WCTEZ_CONTRACT_TARGET="#{MICHELSON_DIR}/wctezMain.tz"
 
+MOCK_FA2_FILE="#{LIGO_DIR}/mockFA2Main.mligo"
+MOCK_FA2_CONTRACT_TARGET="#{MICHELSON_DIR}/mockFA2Main.tz"
+
 PROTOCOL = "PsFLoren"
 protocol_arg = ["--protocol", PROTOCOL]
 
@@ -69,6 +72,24 @@ begin
   # Convert the contract to binary to measure the size.
   # (we don't want to generate it as binary because it's nice to have it human-readable)
   output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_wctez_contract, "from", "michelson", "to", "binary")
+rescue
+  puts "  Can't run tezos-client, skipping measurement."
+else
+  status.success? or raise "tezos-client convert to binary failed:\n#{output}, #{err}"
+  puts "  ~#{output.length / 2} bytes"
+end
+
+##########################################
+puts "Compiling the mock FA2 contract."
+##########################################
+
+compiled_mock_fa2_contract, exit_status = Open3.capture2("ligo", "compile-contract", MOCK_FA2_FILE, "main")
+exit_status.success? or raise "compile-contract failed:\n#{compiled_mock_fa2_contract}"
+
+begin
+  # Convert the contract to binary to measure the size.
+  # (we don't want to generate it as binary because it's nice to have it human-readable)
+  output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_mock_fa2_contract, "from", "michelson", "to", "binary")
 rescue
   puts "  Can't run tezos-client, skipping measurement."
 else
@@ -184,6 +205,8 @@ File.write(TEZ_WRAPPER_CONTRACT_TARGET, compiled_tez_wrapper_contract)
 puts "Wrote #{TEZ_WRAPPER_CONTRACT_TARGET}"
 File.write(WCTEZ_CONTRACT_TARGET, compiled_wctez_contract)
 puts "Wrote #{WCTEZ_CONTRACT_TARGET}"
+File.write(MOCK_FA2_CONTRACT_TARGET, compiled_mock_fa2_contract)
+puts "Wrote #{MOCK_FA2_CONTRACT_TARGET}"
 File.write(FUNCTIONS_TARGET, functions_json)
 puts "Wrote #{FUNCTIONS_TARGET}"
 
