@@ -53,9 +53,8 @@ jobs:
           earthly --verbose --ci ${{ env.push_flag }} +generate-code
           earthly --verbose --ci ${{ env.push_flag }} +build-ocaml
           earthly --verbose --ci ${{ env.push_flag }} +build-ligo
-          # Note: Building these without pushing since we have not run all tests yet
-          earthly --verbose --ci --build-arg TAG=${{ github.sha }} +dev-container
-          earthly --verbose --ci --build-arg TAG=${{ github.sha }} +cli
+          earthly --verbose --ci --build-arg TAG=${{ github.sha }} ${{ env.push_flag }} +dev-container
+          earthly --verbose --ci --build-arg TAG=${{ github.sha }} ${{ env.push_flag }} +cli
       - name: Export lazy entrypoint sizes
         run: |
           earthly --ci --artifact +build-ligo/michelson/functions.json functions.json
@@ -76,11 +75,6 @@ jobs:
           name: stats
           path: test-coverage.json
           if-no-files-found: error
-      - name: Push Docker images to registry
-        # Note: These should already be built and cached locally following the above stages
-        run: |
-          earthly --ci ${{ env.push_flag }} --build-arg TAG=${{ github.sha }} +dev-container
-          earthly --ci ${{ env.push_flag }} --build-arg TAG=${{ github.sha }} +cli
   e2e:
     runs-on: ubuntu-latest
     steps:
