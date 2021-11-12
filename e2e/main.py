@@ -304,8 +304,8 @@ class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         account = self.client.key.public_key_hash()
-        kit_token_id = self.config.tokens.kit.token_id
-        collateral_token_id = self.config.tokens.collateral.token_id
+        kit_token_id = self.config.tokens.issued.kit.token_id
+        collateral_token_id = self.config.tokens.in_use.collateral.token_id
         # Hard-coded in contract, so also hard-coding here
         wctez_token_id = 3
         # ===============================================================================
@@ -556,7 +556,7 @@ class E2ETest(SandboxedTestCase):
 class TezWrapperTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
-        collateral_token_id = self.config.tokens.collateral.token_id
+        collateral_token_id = self.config.tokens.in_use.collateral.token_id
 
         wrapper = deploy_tez_wrapper(
             self.client,
@@ -937,7 +937,7 @@ class MockFA2Test(SandboxedTestCase):
 
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
-        collateral_token_id = self.config.tokens.collateral.token_id
+        collateral_token_id = self.config.tokens.in_use.collateral.token_id
         # Hard-coded in contract, so also hard-coding here
         wctez_token_id = 3
 
