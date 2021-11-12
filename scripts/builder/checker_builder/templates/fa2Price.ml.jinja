@@ -1,0 +1,17 @@
+open Cfmm
+open CfmmTypes
+open Common
+open CheckerTypes
+
+(* If COLLATERAL = FA2 then
+ *   KIT/CHF = FA2/CHF (from index)
+ *           * KIT/FA2 (from cfmm)
+*)
+let[@inline] calculate_kit_in_tok
+    (state_cfmm: cfmm)
+    (_state_last_ctez_in_tez: ratio option)
+    (_state_external_contracts: external_contracts)
+  : (ratio * LigoOp.operation list) =
+  (* If collateral = FA2 then ctok = tok so the price from the CFMM suffices. *)
+  let price = cfmm_kit_in_ctok_in_prev_block state_cfmm in
+  (price, ([]: LigoOp.operation list))
