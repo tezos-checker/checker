@@ -32,8 +32,8 @@ DRIFT_TEMPLATES = {
 
 PRICE_SRC = "price.ml"
 PRICE_TEMPLATES = {
-    "tez": "tezPrice.ml.jinja",
-    "fa2": "fa2Price.ml.jinja", # FIXME: currently non-existent
+    config.CollateralType.TEZ: "tezPrice.ml.jinja",
+    config.CollateralType.FA2: "fa2Price.ml.jinja", # FIXME: currently non-existent
 }
 
 
@@ -56,7 +56,7 @@ def generate():
     ]
 
     # Select the price calculation module at runtime based on config
-    GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES["tez"] # FIXME: currently hardwired
+    GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES[checker_config.collateral_type]
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to
