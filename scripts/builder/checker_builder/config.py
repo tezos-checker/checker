@@ -156,14 +156,16 @@ class CheckerConfig:
         cfmm_token = self.tokens.in_use.cfmm_token
 
         if self.collateral_type == CollateralType.TEZ:
-            if not (collateral.token_id == wtez.token_id) and (
-                collateral.decimal_digits == wtez.decimal_digits
+            if not (
+                (collateral.token_id == wtez.token_id)
+                and (collateral.decimal_digits == wtez.decimal_digits)
             ):
                 raise ValueError(
                     "collateral config must be identical to wtez config when collateral_type=tez"
                 )
-            if not (cfmm_token.token_id == wctez.token_id) and (
-                cfmm_token.decimal_digits == wctez.decimal_digits
+            if not (
+                (cfmm_token.token_id == wctez.token_id)
+                and (cfmm_token.decimal_digits == wctez.decimal_digits)
             ):
                 raise ValueError(
                     "cfmm_token config must be identical to wctez config when collateral_type=tez"
