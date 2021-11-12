@@ -70,8 +70,6 @@ class ReferencedTokenConfig:
 class IssuedTokenConfig(ReferencedTokenConfig):
     """Config for tokens which are issued by contracts in the Checker ecosystem"""
 
-    token_id: int
-    decimal_digits: int = 6
     name: str = ""
     symbol: str = ""
 
