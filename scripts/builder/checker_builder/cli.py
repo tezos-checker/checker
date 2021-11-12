@@ -33,7 +33,7 @@ DRIFT_TEMPLATES = {
 PRICE_SRC = "price.ml"
 PRICE_TEMPLATES = {
     config.CollateralType.TEZ: "tezPrice.ml.jinja",
-    config.CollateralType.FA2: "fa2Price.ml.jinja", # FIXME: currently non-existent
+    config.CollateralType.FA2: "fa2Price.ml.jinja",  # FIXME: currently non-existent
 }
 
 
