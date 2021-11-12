@@ -7,6 +7,7 @@ src/ctok.ml
 src/constants.ml
 src/burrowOrigination.ml
 src/driftDerivative.ml
+src/price.ml
 
 generated/michelson
 generated/ligo
