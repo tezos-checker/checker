@@ -75,7 +75,7 @@ tokens:
     # Note: Must be configured with same values as wctez when collateral_type=tez
     cfmm_token:
       # The token's FA2 id
-      token_id: 42
+      token_id: 3
       # Specifies the number of decimal digits used by the token
       decimal_digits: 6
 

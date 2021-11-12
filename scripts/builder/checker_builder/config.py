@@ -150,6 +150,32 @@ class CheckerConfig:
     constants: Constants
     drift_derivative_curve: Union[BangBang, Continuous]
 
+    def __post_init__(self) -> None:
+        # Validation logic
+        wtez = self.tokens.issued.wtez
+        wctez = self.tokens.issued.wctez
+        collateral = self.tokens.in_use.collateral
+        cfmm_token = self.tokens.in_use.cfmm_token
+
+        if self.collateral_type == CollateralType.TEZ:
+            if not (collateral.token_id == wtez.token_id) and (
+                collateral.decimal_digits == wtez.decimal_digits
+            ):
+                raise ValueError(
+                    "collateral config must be identical to wtez config when collateral_type=tez"
+                )
+            if not (cfmm_token.token_id == wctez.token_id) and (
+                cfmm_token.decimal_digits == wctez.decimal_digits
+            ):
+                raise ValueError(
+                    "cfmm_token config must be identical to wctez config when collateral_type=tez"
+                )
+        elif self.collateral_type == CollateralType.FA2:
+            if collateral != cfmm_token:
+                raise ValueError(
+                    "collateral and cfmm_token config must be identical when collateral_type=fa2"
+                )
+
 
 # ================================================================================================
 # Schemas
@@ -248,9 +274,6 @@ class TokensSchema(Schema):
 
     @post_load
     def make(self, data, **kwargs):
-        # FIXME: Once we add a switch for indicating whether we are using
-        # the tez wrapper for collateral we can add logic here checking
-        # that all of the token ids are unique.
         return Tokens(**data)
 
 
