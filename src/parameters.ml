@@ -3,6 +3,7 @@ open FixedPoint
 open Common
 open Constants
 open DriftDerivative
+open Tok
 
 [@@@coverage off]
 
@@ -26,8 +27,8 @@ type parameters =
 (** Initial state of the parameters. *)
 let initial_parameters : parameters =
   { q = fixedpoint_one;
-    index = tez_scaling_factor_nat;
-    protected_index = tez_scaling_factor_nat;
+    index = tok_scaling_factor_nat;
+    protected_index = tok_scaling_factor_nat;
     target = fixedpoint_one;
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -38,23 +39,23 @@ let initial_parameters : parameters =
     last_touched = !Ligo.Tezos.now;
   }
 
-(** Compute the current minting index (in tez). To get tez/kit must multiply with q. *)
+(** Compute the current minting index (in tok). To get tok/kit must multiply with q. *)
 let[@inline] tz_minting (p: parameters) : Ligo.nat = max_nat p.index p.protected_index
 
-(** Compute the current liquidation index (in tez). To get tez/kit must multiply with q. *)
+(** Compute the current liquidation index (in tok). To get tok/kit must multiply with q. *)
 let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.protected_index
 
-(** Current minting price (in tez/kit). *)
+(** Current minting price (in tok/kit). *)
 let minting_price (p: parameters) : ratio =
   make_ratio
     (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_minting p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tez_scaling_factor_int)
+    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
 
-(** Current liquidation price (in tez/kit). *)
+(** Current liquidation price (in tok/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
     (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_liquidation p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tez_scaling_factor_int)
+    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
 
 (** Given the amount of kit necessary to close all existing burrows
     (outstanding) and the amount of kit that is currently in circulation
@@ -244,14 +245,13 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
     )
 
 (** Calculate the current target based on the current quantity, the current
-    index, and the current price of kit in tez (as provided by the cfmm
-    sub-contract, from the previous block).
+    index, and the current price of kit in tok.
     {[
-      target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tez_{i+1})
+      target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tok_{i+1})
     ]}
 *)
-let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.nat) (current_kit_in_tez: ratio) : fixedpoint =
-  let { num = num; den = den; } = current_kit_in_tez in
+let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.nat) (current_kit_in_tok: ratio) : fixedpoint =
+  let { num = num; den = den; } = current_kit_in_tok in
   fixedpoint_of_raw
     (fdiv_int_int
        (Ligo.mul_int_int
@@ -262,7 +262,7 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo
           )
        )
        (Ligo.mul_int_int
-          tez_scaling_factor_int
+          tok_scaling_factor_int
           num
        )
     )
@@ -331,11 +331,10 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
 
 (** Update the checker's parameters, given (a) the current timestamp
     (Tezos.now), (b) the current index (the median of the oracles right now),
-    and (c) the current price of kit in tez, as given by the cfmm
-    sub-contract. *)
+    and (c) the current price of kit in tok. *)
 let parameters_touch
     (current_index: Ligo.nat)
-    (current_kit_in_tez: ratio)
+    (current_kit_in_tok: ratio)
     (parameters: parameters)
   : kit * parameters =
   let
@@ -372,7 +371,7 @@ let parameters_touch
   let current_q =
     compute_current_q parameters_q parameters_drift parameters_drift_derivative current_drift_derivative duration_in_seconds in
   let current_target =
-    compute_current_target current_q current_index current_kit_in_tez in
+    compute_current_target current_q current_index current_kit_in_tok in
   let current_outstanding_with_fees =
     compute_current_outstanding_with_fees parameters_outstanding_kit parameters_burrow_fee_index current_burrow_fee_index in
   let accrual_to_cfmm = kit_sub current_outstanding_with_fees parameters_outstanding_kit in (* NOTE: can this be negative? *)

@@ -64,8 +64,6 @@ let[@inline] tez_of_mutez_nat (amnt: Ligo.nat) = Ligo.mul_nat_tez amnt (Ligo.tez
 let tez_to_mutez (x: Ligo.tez) = Ligo.int (tez_to_mutez_nat x)
 
 let tez_zero : Ligo.tez = Ligo.tez_from_literal "0mutez"
-let tez_scaling_factor_int : Ligo.int = Ligo.int_from_literal "1_000_000"
-let tez_scaling_factor_nat : Ligo.nat = Ligo.nat_from_literal "1_000_000n"
 
 (* OPERATIONS ON nat *)
 let min_nat (x: Ligo.nat) (y: Ligo.nat) = if Ligo.leq_nat_nat x y then x else y
@@ -90,25 +88,6 @@ let[@inline] zero_ratio : ratio = { num = Ligo.int_from_literal "0"; den = Ligo.
 
 (* one: 1/1 *)
 let[@inline] one_ratio : ratio = { num = Ligo.int_from_literal "1"; den = Ligo.int_from_literal "1"; }
-
-(* Floor a fraction to an amount of tez. NOTE: this function deals in tez, not
- * in mutez. So, for example, fraction_to_tez_floor (1/1) = 1tez and
- * fraction_to_tez_floor (1/3) = 333_333mutez. *)
-let fraction_to_tez_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.tez =
-  assert (Ligo.gt_int_int x_den (Ligo.int_from_literal "0"));
-  match Ligo.is_nat x_num with
-  | None -> (Ligo.failwith internalError_FractionToTezFloorNegative : Ligo.tez)
-  | Some n ->
-    let n = Ligo.mul_nat_nat n tez_scaling_factor_nat in
-    let d = Ligo.abs x_den in
-    (match Ligo.ediv_nat_nat n d with
-     (* Note: Ignoring coverage for the case below since the assertion above makes it unreachable in OCaml *)
-     | None -> (Ligo.failwith internalError_FractionToTezFloorZeroDenominator : Ligo.tez)
-               [@coverage off]
-     | Some quot_and_rem ->
-       let (quot, _) = quot_and_rem in
-       Ligo.mul_nat_tez quot (Ligo.tez_from_literal "1mutez") (* ignore the remainder; we floor towards zero here *)
-    )
 
 (* Floor a fraction to a natural number. *)
 let fraction_to_nat_floor (x_num: Ligo.int) (x_den: Ligo.int) : Ligo.nat =

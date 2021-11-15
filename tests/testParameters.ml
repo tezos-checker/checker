@@ -11,7 +11,7 @@ let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 
 let rec call_touch_times
     (index: Ligo.nat)
-    (kit_in_tez: Common.ratio)
+    (kit_in_tok: Common.ratio)
     (n: int)
     (params: parameters)
   : parameters =
@@ -19,8 +19,8 @@ let rec call_touch_times
   then params
   else begin
     Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
-    call_touch_times index kit_in_tez (pred n) new_params
+    let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
+    call_touch_times index kit_in_tok (pred n) new_params
   end
 
 let sort_three_kit_amounts_increasing_order kit1 kit2 kit3 =
@@ -292,8 +292,8 @@ let test_protected_index_follows_index =
   (* initial *)
   let params = initial_parameters in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Common.one_ratio in
+  (* Neutral kit_in_tok (same as initial) *)
+  let kit_in_tok = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -307,7 +307,7 @@ let test_protected_index_follows_index =
   let lvl = lvl+1 in
   Ligo.Tezos.new_transaction ~seconds_passed:(lvl*60) ~blocks_passed:lvl ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
 
   assert_stdlib_int_equal
     ~expected:(compare new_params.index params.index)
@@ -323,8 +323,8 @@ let test_protected_index_pace =
 
     let params = initial_parameters in
 
-    (* Neutral kit_in_tez (same as initial) *)
-    let kit_in_tez = Common.one_ratio in
+    (* Neutral kit_in_tok (same as initial) *)
+    let kit_in_tok = Common.one_ratio in
 
     (* UPWARD MOVES *)
     let very_high_index = Ligo.abs (Ligo.mul_int_int (Ligo.int_from_literal "1000") (Ligo.int params.index)) in
@@ -332,13 +332,13 @@ let test_protected_index_pace =
     (* Initial : 1.000000 *)
     (* Final   : 1.030420 (=103.0420% of initial; slightly over 3%) *)
     Ligo.Tezos.reset();
-    let new_params = call_touch_times very_high_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
+    let new_params = call_touch_times very_high_index kit_in_tok (60 (* 60 blocks ~ 1h *)) params in
     assert_nat_equal ~expected:(Ligo.nat_from_literal "1_030_420n") ~real:new_params.protected_index;
     (* One day, upward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 2.053031 (=205.3031% of initial; slightly over double) *)
     Ligo.Tezos.reset();
-    let new_params = call_touch_times very_high_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
+    let new_params = call_touch_times very_high_index kit_in_tok (60 * 24 (* 60 blocks ~ 1h *)) params in
     assert_nat_equal ~expected:(Ligo.nat_from_literal "2_053_031n") ~real:new_params.protected_index;
 
     (* DOWNWARD MOVES *)
@@ -350,13 +350,13 @@ let test_protected_index_pace =
     (* Initial : 1.000000 *)
     (* Final   : 0.970407 (=2.9593% less than initial; slightly under 3% *)
     Ligo.Tezos.reset();
-    let new_params = call_touch_times very_low_index kit_in_tez (60 (* 60 blocks ~ 1h *)) params in
+    let new_params = call_touch_times very_low_index kit_in_tok (60 (* 60 blocks ~ 1h *)) params in
     assert_nat_equal ~expected:(Ligo.nat_from_literal "970_407n") ~real:new_params.protected_index;
     (* One day, downward move, touched in every block *)
     (* Initial : 1.000000 *)
     (* Final   : 0.486151 (=51.3849% less than initial; slightly more than halved) *)
     Ligo.Tezos.reset();
-    let new_params = call_touch_times very_low_index kit_in_tez (60 * 24 (* 60 blocks ~ 1h *)) params in
+    let new_params = call_touch_times very_low_index kit_in_tok (60 * 24 (* 60 blocks ~ 1h *)) params in
     assert_nat_equal ~expected:(Ligo.nat_from_literal "486_151n") ~real:new_params.protected_index
 
 (* ************************************************************************* *)
@@ -378,8 +378,8 @@ let test_minting_index_low_bounded =
   (* initial *)
   let params = initial_parameters in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Common.one_ratio in
+  (* Neutral kit_in_tok (same as initial) *)
+  let kit_in_tok = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -392,7 +392,7 @@ let test_minting_index_low_bounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
 
   (tz_minting new_params >= Ligo.nat_from_literal "999_500n") (* 0.05% down, at "best" *)
 
@@ -403,8 +403,8 @@ let test_minting_index_high_unbounded =
   (* initial *)
   let params = initial_parameters in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Common.one_ratio in
+  (* Neutral kit_in_tok (same as initial) *)
+  let kit_in_tok = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -416,7 +416,7 @@ let test_minting_index_high_unbounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
   assert_nat_equal
     ~expected:index
     ~real:(tz_minting new_params);
@@ -429,8 +429,8 @@ let test_liquidation_index_high_bounded =
   (* initial *)
   let params = initial_parameters in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Common.one_ratio in
+  (* Neutral kit_in_tok (same as initial) *)
+  let kit_in_tok = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -442,7 +442,7 @@ let test_liquidation_index_high_bounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
   (* not very likely to hit the < case here I think;
    * perhaps we need a different generator *)
   (tz_liquidation new_params <= Ligo.nat_from_literal "1_000_500n") (* 0.05% up, at "best" *)
@@ -455,8 +455,8 @@ let test_liquidation_index_low_unbounded =
   Ligo.Tezos.reset ();
   let params = initial_parameters in
 
-  (* Neutral kit_in_tez (same as initial) *)
-  let kit_in_tez = Common.one_ratio in
+  (* Neutral kit_in_tok (same as initial) *)
+  let kit_in_tok = Common.one_ratio in
 
   qcheck_to_ounit
   @@ QCheck.Test.make
@@ -467,7 +467,7 @@ let test_liquidation_index_low_unbounded =
   (* just the next block *)
   Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tez params in
+  let _total_accrual_to_cfmm, new_params = parameters_touch index kit_in_tok params in
   assert_nat_equal
     ~expected:index
     ~real:(tz_liquidation new_params);
@@ -513,11 +513,11 @@ let test_touch_0 =
       } in
 
     (* Non-trivial values for the arguments. *)
-    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "3") (Ligo.int_from_literal "1") in
+    let kit_in_tok = Common.make_ratio (Ligo.int_from_literal "3") (Ligo.int_from_literal "1") in
     let index = Ligo.nat_from_literal "500_000n" in
     (* Touch in the same block. I wonder if we wish to allow this for a local function such as parameters_touch. *)
     Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let total_accrual_to_cfmm, out_params = parameters_touch index kit_in_tez in_params in
+    let total_accrual_to_cfmm, out_params = parameters_touch index kit_in_tok in_params in
 
     assert_kit_equal
       ~expected:kit_zero
@@ -547,8 +547,8 @@ let test_touch_1 =
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.nat_from_literal "340_000n" in
-    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
-    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
+    let kit_in_tok = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tok initial_parameters in
     assert_parameters_equal
       ~expected:{
         q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5"; (* 0.90000013020828555983 *)
@@ -586,8 +586,8 @@ let test_touch_2 =
     Ligo.Tezos.new_transaction ~seconds_passed:3600 ~blocks_passed:60 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
     let new_index = Ligo.nat_from_literal "340_000n" in
-    let kit_in_tez = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
-    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tez initial_parameters in
+    let kit_in_tok = Common.make_ratio (Ligo.int_from_literal "305") (Ligo.int_from_literal "1000") in
+    let total_accrual_to_cfmm, new_parameters = parameters_touch new_index kit_in_tok initial_parameters in
     assert_parameters_equal
       ~expected:{
         q = fixedpoint_of_hex_string "0.E6666895A3EC8BA5";
