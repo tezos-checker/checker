@@ -1,6 +1,4 @@
 [submodule "vendor/ctez"]
 	path = vendor/ctez
-	url = https://github.com/gkaracha/ctez
-	branch = main
-	# FIXME: eventually this should be replaced by:
-	#   url = https://github.com/tezos-checker/ctez
+	url = https://github.com/tezos-checker/ctez
+	branch = next
