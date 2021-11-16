@@ -43,14 +43,6 @@ class SandboxedTestCase(unittest.TestCase):
         self.teardownFun()
 
 
-def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
-    # TODO: There might be a way to get this from contract metadata
-    kit_token_id = 0
-    kit_balance = checker.metadata.getBalance((address, kit_token_id)).storage_view()
-    if expected_kit != kit_balance:
-        raise AssertionError(f"Expected {expected_kit} but got {kit_balance}")
-
-
 def assert_fa2_token_balance(
     wrapper: ContractInterface,
     address: str,
@@ -306,8 +298,7 @@ class E2ETest(SandboxedTestCase):
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.issued.kit.token_id
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -401,15 +392,15 @@ class E2ETest(SandboxedTestCase):
         # Create a burrow
         get_tez_tokens_and_make_checker_an_operator(10_000_000)
         call_checker_endpoint("create_burrow", (1, None, 10_000_000))
-        assert_kit_balance(checker, account, 0)
+        assert_fa2_token_balance(checker, account, kit_token_id, 0)
 
         # Get some kit
         call_checker_endpoint("mint_kit", (1, 1_000_000))
-        assert_kit_balance(checker, account, 1_000_000)
+        assert_fa2_token_balance(checker, account, kit_token_id, 1_000_000)
 
         # Burn some kit
         call_checker_endpoint("burn_kit", (1, 10))
-        assert_kit_balance(checker, account, 999_990)
+        assert_fa2_token_balance(checker, account, kit_token_id, 999_990)
 
         # Deposit tez
         get_tez_tokens_and_make_checker_an_operator(2_000_000)
@@ -457,7 +448,7 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
+        assert_fa2_token_balance(checker, checker_alice.key.public_key_hash(), kit_token_id, 90)
 
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
@@ -490,7 +481,7 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
+        assert_fa2_token_balance(checker, checker_alice.key.public_key_hash(), kit_token_id, 10)
 
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
@@ -505,8 +496,8 @@ class E2ETest(SandboxedTestCase):
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         balance = checker.balance_of(**fa2_balance_of).callback_view()
         # Check that this balance agrees with the kit balance view
-        assert_kit_balance(
-            checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
+        assert_fa2_token_balance(
+            checker, checker_alice.key.public_key_hash(), kit_token_id, balance[0]["nat_2"]
         )
 
         # ===============================================================================
@@ -675,8 +666,7 @@ class WTezTest(SandboxedTestCase):
 class WCtezTest(SandboxedTestCase):
     def test_wctez(self):
         gas_costs = {}
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
 
         print("Deploying ctez contracts.")
         ctez = deploy_ctez(
@@ -812,8 +802,7 @@ class WCtezTest(SandboxedTestCase):
 class MockFA2Test(SandboxedTestCase):
     def test_mockFA2(self):
         gas_costs = {}
-        # Hard-coded in contract, so also hard-coding here
-        mock_fa2_token_id = 42
+        mock_fa2_token_id = self.config.tokens.issued.mock_fa2.token_id
 
         print("Deploying the mock FA2 contract.")
         mockFA2 = deploy_mockFA2(
@@ -938,8 +927,7 @@ class MockFA2Test(SandboxedTestCase):
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
 
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
