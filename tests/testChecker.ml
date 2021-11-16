@@ -346,7 +346,7 @@ let suite =
                   { from_ = alice_addr;
                     txs = [
                       { to_ = burrow_address burrow;
-                        token_id = Tok.tok_token_id;
+                        token_id = TokenMetadata.tok_token_id;
                         amount = Ligo.nat_from_literal "1_000_000n";
                       };
                     ];
@@ -387,7 +387,7 @@ let suite =
                   from_ = alice_addr;
                   txs = [
                     { to_ = checker_address;
-                      token_id = Ctok.ctok_token_id;
+                      token_id = TokenMetadata.ctok_token_id;
                       amount = Ligo.nat_from_literal "5_000_000n";
                     }
                   ]
@@ -441,7 +441,7 @@ let suite =
                      { from_ = alice_addr;
                        txs = [
                          { to_ = burrow_address burrow;
-                           token_id = Tok.tok_token_id;
+                           token_id = TokenMetadata.tok_token_id;
                            amount = tok_to_denomination_nat amnt;
                          };
                        ];
@@ -490,7 +490,7 @@ let suite =
                   { from_ = alice_addr;
                     txs = [
                       { to_ = burrow_address burrow;
-                        token_id = Tok.tok_token_id;
+                        token_id = TokenMetadata.tok_token_id;
                         amount = Ligo.nat_from_literal "3_000_000n";
                       };
                     ];
@@ -588,7 +588,7 @@ let suite =
                   { from_ = !Ligo.Tezos.self_address;
                     txs = [
                       { to_ = winning_bidder;
-                        token_id = Tok.tok_token_id;
+                        token_id = TokenMetadata.tok_token_id;
                         amount = tok_to_denomination_nat sold_tok;
                       };
                     ];
@@ -682,7 +682,7 @@ let suite =
                   from_ = checker_address;
                   txs = [
                     { to_ = alice_addr;
-                      token_id = Ctok.ctok_token_id;
+                      token_id = TokenMetadata.ctok_token_id;
                       amount = Ligo.nat_from_literal "5_000_000n";
                     }
                   ]
@@ -854,7 +854,7 @@ let suite =
        assert_operation_list_equal ~expected:[] ~real:ops;
 
        (* The owner should be able to burn it back. *)
-       let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender)) in
+       let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender)) in
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token)) in
 
@@ -883,7 +883,7 @@ let suite =
        assert_raises
          (Failure (Ligo.string_of_int error_NonExistentBurrow))
          (fun () ->
-            let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, bob_addr)) in
+            let kit_token = kit_of_denomination (Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, bob_addr)) in
             Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
             Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_token))
          );
@@ -904,12 +904,12 @@ let suite =
       let sender = alice_addr in
       let checker = empty_checker_with_cfmm cfmm in
 
-      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_amount, min_kit_expected, deadline)) in
 
-      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
@@ -919,7 +919,7 @@ let suite =
                 from_ = sender;
                 txs = [
                   { to_ = checker_address;
-                    token_id = Ctok.ctok_token_id;
+                    token_id = TokenMetadata.ctok_token_id;
                     amount = ctok_to_denomination_nat ctok_amount;
                   }
                 ]
@@ -948,13 +948,13 @@ let suite =
       let sender = alice_addr in
 
       let checker_cfmm_old_kit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_amount, min_kit_expected, deadline)) in
 
       let checker_cfmm_new_kit = kit_to_denomination_nat checker.cfmm.kit in
-      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* after *)
 
       begin match ops with
         | [Transaction (FA2TransferTransactionValue transfer, _, _)] ->
@@ -964,7 +964,7 @@ let suite =
                 from_ = sender;
                 txs = [
                   { to_ = checker_address;
-                    token_id = Ctok.ctok_token_id;
+                    token_id = TokenMetadata.ctok_token_id;
                     amount = ctok_to_denomination_nat ctok_amount;
                   }
                 ]
@@ -1126,7 +1126,7 @@ let suite =
       (* Adjust transaction by a random amount of extra tez *)
       let ctok_provided = Ctok.ctok_of_denomination (Common.tez_to_mutez_nat (Ligo.add_tez_tez minimum_tez additional_tez)) in (* UNSAFE CAST *)
 
-      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* before *)
+      let senders_old_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* before *)
 
       Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:sender ~amount:(Ligo.tez_from_literal "0mutez");
       let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_provided, min_expected_kit, Ligo.timestamp_from_seconds_literal 1)) in
@@ -1139,7 +1139,7 @@ let suite =
                 from_ = sender;
                 txs = [
                   { to_ = checker_address;
-                    token_id = Ctok.ctok_token_id;
+                    token_id = TokenMetadata.ctok_token_id;
                     amount = Ctok.ctok_to_denomination_nat ctok_provided;
                   }
                 ]
@@ -1149,7 +1149,7 @@ let suite =
         | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue _, _, _)] but got " ^ show_operation_list ops)
       end;
 
-      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (Kit.kit_token_id, sender) in (* after *)
+      let senders_new_kit = Fa2Ledger.get_fa2_ledger_value checker.fa2_state.ledger (TokenMetadata.kit_token_id, sender) in (* after *)
 
       Ligo.geq_nat_nat
         senders_new_kit
@@ -1172,7 +1172,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let ops, checker = Checker.entrypoint_buy_kit (checker, (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"), kit_of_denomination (Ligo.nat_from_literal "1n"), Ligo.timestamp_from_seconds_literal 1)) in
-       let kit = get_balance_of checker alice_addr kit_token_id in
+       let kit = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
 
        let expected_ops = [
          (LigoOp.Tezos.fa2_transfer_transaction
@@ -1180,7 +1180,7 @@ let suite =
                   from_ = alice_addr;
                   txs = [
                     { to_ = checker_address;
-                      token_id = Ctok.ctok_token_id;
+                      token_id = TokenMetadata.ctok_token_id;
                       amount = Ligo.nat_from_literal "1_000_000n";
                     }
                   ]
@@ -1225,7 +1225,7 @@ let suite =
                   from_ = checker_address;
                   txs = [
                     { to_ = alice_addr;
-                      token_id = Ctok.ctok_token_id;
+                      token_id = TokenMetadata.ctok_token_id;
                       amount = Ligo.nat_from_literal "1n";
                     }
                   ]
@@ -1276,7 +1276,7 @@ let suite =
            end
          | _ -> failwith ("Expected [Transaction (FA2TransferTransactionValue [{from_=_; txs=[_];}], _, _)] but got " ^ show_operation_list ops)
        in
-       let kit = get_balance_of checker sender kit_token_id in
+       let kit = get_balance_of checker sender TokenMetadata.kit_token_id in
 
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:kit;
        assert_nat_equal ~expected:(Ligo.nat_from_literal "1n") ~real:ctok;
@@ -1318,71 +1318,71 @@ let suite =
        let _, checker = Checker.strict_entrypoint_transfer (checker, [
            { from_ = initial_addr;
              txs = [
-               { to_ = alice_addr; token_id = kit_token_id; amount = Ligo.nat_from_literal "5n" };
-               { to_ = bob_addr; token_id = lqt_token_id; amount = Ligo.nat_from_literal "5n" }
+               { to_ = alice_addr; token_id = TokenMetadata.kit_token_id; amount = Ligo.nat_from_literal "5n" };
+               { to_ = bob_addr; token_id = TokenMetadata.lqt_token_id; amount = Ligo.nat_from_literal "5n" }
              ];
            }]) in
 
        let balance chk addr tok = Checker.view_get_balance ((addr, tok), chk) in
 
        (* you can see the initial balances here for reference *)
-       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "5n");
-       assert_nat_equal ~real:(balance checker alice_addr lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker alice_addr TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "5n");
+       assert_nat_equal ~real:(balance checker alice_addr TokenMetadata.lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
 
-       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
-       assert_nat_equal ~real:(balance checker bob_addr   lqt_token_id) ~expected:(Ligo.nat_from_literal "5n");
+       assert_nat_equal ~real:(balance checker bob_addr   TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker bob_addr   TokenMetadata.lqt_token_id) ~expected:(Ligo.nat_from_literal "5n");
 
-       assert_nat_equal ~real:(balance checker leena_addr kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
-       assert_nat_equal ~real:(balance checker leena_addr lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker leena_addr TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "0n");
+       assert_nat_equal ~real:(balance checker leena_addr TokenMetadata.lqt_token_id) ~expected:(Ligo.nat_from_literal "0n");
 
        (* make leena an operator of bob for kit *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_update_operators (checker, [
-           (Add_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
+           (Add_operator { owner = bob_addr; operator = leena_addr; token_id = TokenMetadata.kit_token_id })]) in
 
-       assert_equal true (Checker.view_is_operator ((bob_addr, (leena_addr, kit_token_id)), checker));
-       assert_equal false (Checker.view_is_operator ((bob_addr, (leena_addr, lqt_token_id)), checker));
-       assert_equal false (Checker.view_is_operator ((leena_addr, (bob_addr, kit_token_id)), checker));
+       assert_equal true (Checker.view_is_operator ((bob_addr, (leena_addr, TokenMetadata.kit_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((bob_addr, (leena_addr, TokenMetadata.lqt_token_id)), checker));
+       assert_equal false (Checker.view_is_operator ((leena_addr, (bob_addr, TokenMetadata.kit_token_id)), checker));
 
        (* alice can transfer some kit to bob *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.strict_entrypoint_transfer (checker, [
-           { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id;amount=Ligo.nat_from_literal "2n"}]}]) in
+           { from_=alice_addr; txs=[{to_=bob_addr; token_id=TokenMetadata.kit_token_id;amount=Ligo.nat_from_literal "2n"}]}]) in
 
-       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "3n");
-       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "2n");
+       assert_nat_equal ~real:(balance checker alice_addr TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "3n");
+       assert_nat_equal ~real:(balance checker bob_addr   TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "2n");
 
        (* but she can not transfer more than she has *)
        assert_raises
          (Failure "FA2_INSUFFICIENT_BALANCE")
          (fun () -> Checker.strict_entrypoint_transfer (checker, [
-              { from_=alice_addr; txs=[{to_=bob_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "10n"}]}]));
+              { from_=alice_addr; txs=[{to_=bob_addr; token_id=TokenMetadata.kit_token_id; amount=Ligo.nat_from_literal "10n"}]}]));
 
        (* and leena can send some of that kit back to alice *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.strict_entrypoint_transfer (checker, [
-           { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]) in
+           { from_=bob_addr; txs=[{to_=alice_addr; token_id=TokenMetadata.kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]) in
 
-       assert_nat_equal ~real:(balance checker alice_addr kit_token_id) ~expected:(Ligo.nat_from_literal "4n");
-       assert_nat_equal ~real:(balance checker bob_addr   kit_token_id) ~expected:(Ligo.nat_from_literal "1n");
+       assert_nat_equal ~real:(balance checker alice_addr TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "4n");
+       assert_nat_equal ~real:(balance checker bob_addr   TokenMetadata.kit_token_id) ~expected:(Ligo.nat_from_literal "1n");
 
        (* but leena can not even send a single kit from bob's account when he's not an operator anymore *)
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_update_operators (checker, [
-           (Remove_operator { owner = bob_addr; operator = leena_addr; token_id = kit_token_id })]) in
+           (Remove_operator { owner = bob_addr; operator = leena_addr; token_id = TokenMetadata.kit_token_id })]) in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:leena_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        assert_raises
          (Failure "FA2_NOT_OPERATOR")
          (fun () -> Checker.strict_entrypoint_transfer (checker, [
-              { from_=bob_addr; txs=[{to_=alice_addr; token_id=kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]));
+              { from_=bob_addr; txs=[{to_=alice_addr; token_id=TokenMetadata.kit_token_id; amount=Ligo.nat_from_literal "1n"}]}]));
        ()
     );
 
     ("view_total_supply (FA2) - initial kit supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_kit_amount = Checker.view_total_supply (Kit.kit_token_id, empty_checker) in
+       let total_kit_amount = Checker.view_total_supply (TokenMetadata.kit_token_id, empty_checker) in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_kit_amount;
        ()
     );
@@ -1390,7 +1390,7 @@ let suite =
     ("view_total_supply (FA2) - initial lqt supply" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let total_lqt_amount = Checker.view_total_supply (Lqt.lqt_token_id, empty_checker) in
+       let total_lqt_amount = Checker.view_total_supply (TokenMetadata.lqt_token_id, empty_checker) in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "0n") ~real:total_lqt_amount;
        ()
     );
@@ -1407,7 +1407,7 @@ let suite =
        Ligo.Tezos.reset ();
        let all_tokens = Checker.view_all_tokens ((), empty_checker) in
        assert_nat_list_equal
-         ~expected:[ Kit.kit_token_id; Lqt.lqt_token_id ]
+         ~expected:[ TokenMetadata.kit_token_id; TokenMetadata.lqt_token_id ]
          ~real:all_tokens;
        ()
     );
@@ -1496,7 +1496,7 @@ let suite =
                          { from_ = bob_addr;
                            txs = [
                              { to_ = burrow_addr;
-                               token_id = Tok.tok_token_id;
+                               token_id = TokenMetadata.tok_token_id;
                                amount = tok_to_denomination_nat tez;
                              };
                            ];
@@ -1541,7 +1541,7 @@ let suite =
            , (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "4_285_714n"))
            ) in
 
-       let kit = get_balance_of checker bob_addr kit_token_id in
+       let kit = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
        assert_nat_equal ~expected:(Ligo.nat_from_literal "4_285_714n") ~real:kit;
 
        assert_bool
@@ -1583,9 +1583,9 @@ let suite =
        (* If enough time passes and the index remains up, then the burrow is even liquidatable. *)
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
+       let kit_before_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
-       let kit_after_reward = get_balance_of checker bob_addr kit_token_id in
+       let kit_after_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
@@ -1634,9 +1634,9 @@ let suite =
          (Failure (Ligo.string_of_int error_NoOpenAuction))
          (fun () -> Checker.view_current_liquidation_auction_details ((), checker));
 
-       let kit_before_reward = get_balance_of checker bob_addr kit_token_id in
+       let kit_before_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
-       let kit_after_reward = get_balance_of checker bob_addr kit_token_id in
+       let kit_after_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
@@ -1649,9 +1649,9 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
+       let kit_before_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
        let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
-       let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
+       let kit_after_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
        let min_bid = Checker.view_current_liquidation_auction_details ((), checker) in
@@ -1687,9 +1687,9 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let kit_before_reward = get_balance_of checker alice_addr kit_token_id in
+       let kit_before_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
        let ops, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
-       let kit_after_reward = get_balance_of checker alice_addr kit_token_id in
+       let kit_after_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
 
@@ -1736,7 +1736,7 @@ let suite =
                     { from_ = checker_address;
                       txs = [
                         { to_ = alice_addr;
-                          token_id = Tok.tok_token_id;
+                          token_id = TokenMetadata.tok_token_id;
                           amount = Ligo.nat_from_literal "3_156_446n";
                         };
                       ];

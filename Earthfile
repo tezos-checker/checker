@@ -196,6 +196,8 @@ generate-code:
     SAVE ARTIFACT ./src/driftDerivative.ml /
     SAVE ARTIFACT ./src/price.ml AS LOCAL src/price.ml
     SAVE ARTIFACT ./src/price.ml /
+    SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
+    SAVE ARTIFACT ./src/tokenMetadata.ml /
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
@@ -211,6 +213,7 @@ build-ocaml:
     COPY +generate-code/burrowOrigination.ml ./src/
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
+    COPY +generate-code/tokenMetadata.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -234,6 +237,7 @@ build-ligo:
     COPY +generate-code/burrowOrigination.ml ./src/
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
+    COPY +generate-code/tokenMetadata.ml ./src/
 
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/

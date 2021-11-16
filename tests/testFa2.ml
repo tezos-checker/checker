@@ -6,6 +6,7 @@ open Fa2Ledger
 open Fa2Implementation
 open Kit
 open Lqt
+open TokenMetadata
 
 let property_test_count = 100
 

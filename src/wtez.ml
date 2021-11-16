@@ -3,6 +3,7 @@ open Fa2Ledger
 open Common
 open VaultTypes
 open Error
+open TokenMetadata
 
 (* TODO: Expose FA2 metadata for tez_tokens. *)
 
@@ -61,18 +62,6 @@ type wtez_state =
   { fa2_state : fa2_state;
     vaults : vault_map;
   }
-
-(** Token id for tez tokens. Note that this could have been 0n instead, but I'd
-  * like to think of checker as a family of contracts, in which case I'd like
-  * all valid tokens to be distinct. Either way, the choice of token_id is
-  * arbitrary, so 2n is just as good as 0n. *)
-let[@inline] wtez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
-
-(*
-(** Number of decimal digits for tez tokens, identical to that for tez. *)
-(* NOTE: Currently unused. *)
-let[@inline] tez_token_decimal_digits = Ligo.nat_from_literal "6n"
-*)
 
 type wtez_params =
   (* FA2 entrypoints *)

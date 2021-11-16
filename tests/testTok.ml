@@ -2,6 +2,7 @@ open OUnit2
 open Tok
 open TestLib
 open Error
+open TokenMetadata
 
 let suite =
   "TokTests" >::: [

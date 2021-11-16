@@ -4,6 +4,7 @@ open FixedPoint
 open Kit
 open TestLib
 open Error
+open TokenMetadata
 
 let suite =
   "KitTests" >::: [

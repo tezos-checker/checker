@@ -17,6 +17,7 @@ checker_sources=(
   common
   fixedPoint
   fa2Interface
+  tokenMetadata
   ctok
   kit
   lqt
@@ -50,6 +51,7 @@ wtez_sources=(
   error
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   vaultTypes
   wtez
@@ -61,6 +63,7 @@ wctez_sources=(
   fa12Interface
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   wctez
 )
@@ -70,6 +73,7 @@ mock_fa2_sources=(
   error
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   mockFA2
 )

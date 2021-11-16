@@ -4,14 +4,7 @@
 open Fa2Interface
 open Fa2Ledger
 open Common
-
-(** Token id for the tokens this FA2 contract issues. *)
-let[@inline] mock_fa2_token_id : fa2_token_id = Ligo.nat_from_literal "42n"
-
-(* Number of decimal digits for the tokens. NOTE: Currently unused, and also
- * arbitrary. Ideally by setting it to 6 all OCaml tests should pass, and by
- * setting it to a "similar" value the e2e tests would pass as well. *)
-(* let[@inline] token_decimal_digits = Ligo.nat_from_literal "15n" *)
+open TokenMetadata
 
 type params =
   (* FA2 entrypoints *)

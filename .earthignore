@@ -8,6 +8,7 @@ src/constants.ml
 src/burrowOrigination.ml
 src/driftDerivative.ml
 src/price.ml
+src/tokenMetadata.ml
 
 generated/michelson
 generated/ligo
