@@ -66,7 +66,7 @@ type wtez_state =
   * like to think of checker as a family of contracts, in which case I'd like
   * all valid tokens to be distinct. Either way, the choice of token_id is
   * arbitrary, so 2n is just as good as 0n. *)
-let[@inline] tez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
+let[@inline] wtez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
 
 (*
 (** Number of decimal digits for tez tokens, identical to that for tez. *)
@@ -106,11 +106,11 @@ let[@inline] find_vault_address_append (vaults: vault_map) (user: Ligo.address) 
 
 let[@inline] ledger_issue_tez_token
     (st, addr, amnt: fa2_state * Ligo.address * Ligo.tez) : fa2_state =
-  ledger_issue (st, tez_token_id, addr, tez_to_mutez_nat amnt)
+  ledger_issue (st, wtez_token_id, addr, tez_to_mutez_nat amnt)
 
 let[@inline] ledger_withdraw_tez_token
     (st, addr, amnt: fa2_state * Ligo.address * Ligo.tez) : fa2_state =
-  ledger_withdraw (st, tez_token_id, addr, tez_to_mutez_nat amnt)
+  ledger_withdraw (st, wtez_token_id, addr, tez_to_mutez_nat amnt)
 
 (*****************************************************************************)
 (**                        {1 FA2 ENTRYPOINTS}                               *)
@@ -119,7 +119,7 @@ let[@inline] ledger_withdraw_tez_token
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
-  let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
+  let () = if token_id = wtez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
   get_fa2_ledger_value ledger key
 
 let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list)
@@ -164,7 +164,7 @@ let[@inline] fa2_run_transfer (st, xs: wtez_state * fa2_transfer list) : wtez_st
               if fa2_is_operator (fa2_state, !Ligo.Tezos.sender, from_, token_id)
               then
                 (* FA2-related changes *)
-                let () = if token_id = tez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
+                let () = if token_id = wtez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
                 let fa2_state = ledger_withdraw (fa2_state, token_id, from_, amnt) in
                 let fa2_state = ledger_issue (fa2_state, token_id, to_, amnt) in
                 (* Origination of the to_ vault, if needed *)
