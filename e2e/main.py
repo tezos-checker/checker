@@ -448,7 +448,9 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_fa2_token_balance(checker, checker_alice.key.public_key_hash(), kit_token_id, 90)
+        assert_fa2_token_balance(
+            checker, checker_alice.key.public_key_hash(), kit_token_id, 90
+        )
 
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
@@ -481,7 +483,9 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_fa2_token_balance(checker, checker_alice.key.public_key_hash(), kit_token_id, 10)
+        assert_fa2_token_balance(
+            checker, checker_alice.key.public_key_hash(), kit_token_id, 10
+        )
 
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
@@ -497,7 +501,10 @@ class E2ETest(SandboxedTestCase):
         balance = checker.balance_of(**fa2_balance_of).callback_view()
         # Check that this balance agrees with the kit balance view
         assert_fa2_token_balance(
-            checker, checker_alice.key.public_key_hash(), kit_token_id, balance[0]["nat_2"]
+            checker,
+            checker_alice.key.public_key_hash(),
+            kit_token_id,
+            balance[0]["nat_2"],
         )
 
         # ===============================================================================
