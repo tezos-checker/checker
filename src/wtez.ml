@@ -57,7 +57,7 @@ let[@inline] originate_vault (owner: Ligo.address) : LigoOp.operation * Ligo.add
 (** Map from vault owner addresses to vault addresses. *)
 type vault_map = (Ligo.address, Ligo.address) Ligo.big_map
 
-type tez_wrapper_state =
+type wtez_state =
   { fa2_state : fa2_state;
     vaults : vault_map;
   }
@@ -74,7 +74,7 @@ let[@inline] tez_token_id : fa2_token_id = Ligo.nat_from_literal "2n"
 let[@inline] tez_token_decimal_digits = Ligo.nat_from_literal "6n"
 *)
 
-type tez_wrapper_params =
+type wtez_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
   | Transfer of fa2_transfer list
@@ -132,7 +132,7 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
     )
     xs
 
-let[@inline] balance_of (state: tez_wrapper_state) (param: fa2_balance_of_param) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] balance_of (state: wtez_state) (param: fa2_balance_of_param) : LigoOp.operation list * wtez_state =
   let _ = ensure_no_tez_given () in
   let { requests = requests; callback = callback; } = param in
   let response = fa2_run_balance_of (state.fa2_state, requests) in
@@ -145,10 +145,10 @@ let[@inline] reverse_op_list (ops: LigoOp.operation list) : LigoOp.operation lis
     ([] : LigoOp.operation list)
     ops
 
-let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : tez_wrapper_state * LigoOp.operation list =
+let[@inline] fa2_run_transfer (st, xs: wtez_state * fa2_transfer list) : wtez_state * LigoOp.operation list =
   let state, rev_ops =
     Ligo.List.fold_left
-      (fun (((st, ops), tx): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer) ->
+      (fun (((st, ops), tx): (wtez_state * LigoOp.operation list) * fa2_transfer) ->
          let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
          let { from_ = from_; txs = txs; } = tx in
 
@@ -157,7 +157,7 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
          let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
 
          Ligo.List.fold_left
-           (fun (((st, ops), x): (tez_wrapper_state * LigoOp.operation list) * fa2_transfer_destination) ->
+           (fun (((st, ops), x): (wtez_state * LigoOp.operation list) * fa2_transfer_destination) ->
               let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
               let { to_ = to_; token_id = token_id; amount = amnt; } = x in
 
@@ -188,7 +188,7 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
                 let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
                 (st, ops)
               else
-                (failwith "FA2_NOT_OPERATOR" : tez_wrapper_state * LigoOp.operation list)
+                (failwith "FA2_NOT_OPERATOR" : wtez_state * LigoOp.operation list)
            )
            (st, ops)
            txs
@@ -197,7 +197,7 @@ let[@inline] fa2_run_transfer (st, xs: tez_wrapper_state * fa2_transfer list) : 
       xs in
   (state, reverse_op_list rev_ops)
 
-let[@inline] transfer (state: tez_wrapper_state) (xs: fa2_transfer list) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] transfer (state: wtez_state) (xs: fa2_transfer list) : LigoOp.operation list * wtez_state =
   let _ = ensure_no_tez_given () in
   let state, ops = fa2_run_transfer (state, xs) in
   (ops, state)
@@ -242,7 +242,7 @@ let[@inline] fa2_run_update_operators
     st
     xs
 
-let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operator list) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] update_operators (state: wtez_state) (xs: fa2_update_operator list) : LigoOp.operation list * wtez_state =
   let _ = ensure_no_tez_given () in
   let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
   (([]: LigoOp.operation list), state) (* no need to originate vaults *)
@@ -251,7 +251,7 @@ let[@inline] update_operators (state: tez_wrapper_state) (xs: fa2_update_operato
 (**                      {1 WRAPPER ENTRYPOINTS}                             *)
 (*****************************************************************************)
 
-let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] deposit (state: wtez_state) (_: unit) : LigoOp.operation list * wtez_state =
   let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   let fa2_state = ledger_issue_tez_token (fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
@@ -275,7 +275,7 @@ let[@inline] deposit (state: tez_wrapper_state) (_: unit) : LigoOp.operation lis
       | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultReceiveTez : LigoOp.operation) in
     ([origination; op], state)
 
-let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] withdraw (state: wtez_state) (amnt: Ligo.tez) : LigoOp.operation list * wtez_state =
   let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   let _ = ensure_no_tez_given () in
   let fa2_state = ledger_withdraw_tez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
@@ -300,7 +300,7 @@ let[@inline] withdraw (state: tez_wrapper_state) (amnt: Ligo.tez) : LigoOp.opera
       | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSendTezToContract : LigoOp.operation) in
     ([origination; op], state)
 
-let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] set_delegate (state: wtez_state) (kho: Ligo.key_hash option) : LigoOp.operation list * wtez_state =
   let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
   let _ = ensure_no_tez_given () in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
@@ -327,36 +327,36 @@ let[@inline] set_delegate (state: tez_wrapper_state) (kho: Ligo.key_hash option)
 (**                      {1 INTERNAL ENTRYPOINTS}                            *)
 (*****************************************************************************)
 
-let[@inline] call_vault_receive_tez (state: tez_wrapper_state) (vault_address, amnt : Ligo.address * Ligo.tez) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] call_vault_receive_tez (state: wtez_state) (vault_address, amnt : Ligo.address * Ligo.tez) : LigoOp.operation list * wtez_state =
   if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
-    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * wtez_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () amnt c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultReceiveTez : LigoOp.operation) in
     ([op], state)
 
-let[@inline] call_vault_send_tez_to_contract (state: tez_wrapper_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] call_vault_send_tez_to_contract (state: wtez_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * wtez_state =
   if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
-    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * wtez_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, recipient) (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToContract : LigoOp.operation) in
     ([op], state)
 
-let[@inline] call_vault_send_tez_to_vault (state: tez_wrapper_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] call_vault_send_tez_to_vault (state: wtez_state) (vault_address, amnt, recipient : Ligo.address * Ligo.tez * Ligo.address) : LigoOp.operation list * wtez_state =
   if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
-    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * wtez_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_vault" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, recipient) (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToVault : LigoOp.operation) in
     ([op], state)
 
-let[@inline] call_vault_set_delegate (state: tez_wrapper_state) (vault_address, kho : Ligo.address * Ligo.key_hash option) : LigoOp.operation list * tez_wrapper_state =
+let[@inline] call_vault_set_delegate (state: wtez_state) (vault_address, kho : Ligo.address * Ligo.key_hash option) : LigoOp.operation list * wtez_state =
   if !Ligo.Tezos.sender <> !Ligo.Tezos.self_address then
-    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * tez_wrapper_state)
+    (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * wtez_state)
   else
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_set_delegate" vault_address : Ligo.key_hash option Ligo.contract option) with
       | Some c -> LigoOp.Tezos.opt_key_hash_transaction kho (Ligo.tez_from_literal "0mutez") c
@@ -367,7 +367,7 @@ let[@inline] call_vault_set_delegate (state: tez_wrapper_state) (vault_address, 
 (**                              {1 MAIN}                                    *)
 (*****************************************************************************)
 
-let main (op, state: tez_wrapper_params * tez_wrapper_state): LigoOp.operation list * tez_wrapper_state =
+let main (op, state: wtez_params * wtez_state): LigoOp.operation list * wtez_state =
   match op with
   (* FA2 entrypoints *)
   | Balance_of param -> balance_of state param

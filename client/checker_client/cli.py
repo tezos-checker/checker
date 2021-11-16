@@ -45,7 +45,7 @@ class Config:
     ctez_cfmm_address: str = ""
     oracle_address: str = ""
     checker_address: str = ""
-    tez_wrapper_address: str = ""
+    wtez_address: str = ""
     wctez_address: str = ""
     mock_fa2_address: str = ""
 
@@ -68,7 +68,7 @@ class ConfigSchema(Schema):
     ctez_cfmm_address = fields.String()
     oracle_address = fields.String()
     checker_address = fields.String()
-    tez_wrapper_address = fields.String()
+    wtez_address = fields.String()
     wctez_address = fields.String()
     mock_fa2_address = fields.String()
 
@@ -182,7 +182,7 @@ def deploy(config: Config, address=None, port=None, key=None):
     show_default=True,
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
-@click.option("--tez_wrapper", type=str, help="TezWrapper contract address")
+@click.option("--wtez", type=str, help="Wrapped tez contract address")
 @click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
 @click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
 @click.option("--wctez", type=str, help="Wrapped ctez contract address")
@@ -194,7 +194,7 @@ def deploy(config: Config, address=None, port=None, key=None):
 )
 @click.pass_obj
 def checker(
-    config: Config, checker_dir, oracle, tez_wrapper, ctez_fa12, ctez_cfmm, wctez, checker_config
+    config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wctez, checker_config
 ):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
@@ -203,9 +203,9 @@ def checker(
         raise ValueError(
             "Oracle address was neither specified in the CLI config nor provided as an argument."
         )
-    if not config.tez_wrapper_address and not tez_wrapper:
+    if not config.wtez_address and not wtez:
         raise ValueError(
-            "TezWrapper address was neither specified in the CLI config nor provided as an argument."
+            "Wrapped tez address was neither specified in the CLI config nor provided as an argument."
         )
     if not config.ctez_fa12_address and not ctez_fa12:
         raise ValueError(
@@ -225,8 +225,8 @@ def checker(
         config.ctez_fa12_address = ctez_fa12
     if ctez_cfmm:
         config.ctez_cfmm_address = ctez_cfmm
-    if tez_wrapper:
-        config.tez_wrapper_address = tez_wrapper
+    if wtez:
+        config.wtez_address = wtez
     if wctez:
         config.wctez = wctez
 
@@ -238,7 +238,7 @@ def checker(
         client,
         checker_dir,
         oracle=config.oracle_address,
-        tez_wrapper=config.tez_wrapper_address,
+        wtez=config.wtez_address,
         ctez_fa12=config.ctez_fa12_address,
         ctez_cfmm=config.ctez_cfmm_address,
         wctez=config.wctez,
@@ -260,7 +260,7 @@ def checker(
     show_default=True,
 )
 @click.pass_obj
-def tez_wrapper(config: Config, checker_dir):
+def wtez(config: Config, checker_dir):
     """
     Deploy Tez FA2 wrapper contract.
     """
@@ -268,13 +268,13 @@ def tez_wrapper(config: Config, checker_dir):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
-    wrapper = checker_lib.deploy_tez_wrapper(
+    wrapper = checker_lib.deploy_wtez(
         client,
         checker_dir,
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"Tez wrapper contract deployed with address: {wrapper.context.address}")
-    config.tez_wrapper_address = wrapper.context.address
+    config.wtez_address = wrapper.context.address
     config.dump()
 
 

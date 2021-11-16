@@ -13,8 +13,8 @@ MAIN_FILE="#{LIGO_DIR}/main.mligo"
 MAIN_CONTRACT_TARGET="#{MICHELSON_DIR}/main.tz"
 FUNCTIONS_TARGET="#{MICHELSON_DIR}/functions.json"
 
-TEZ_WRAPPER_FILE="#{LIGO_DIR}/tezWrapperMain.mligo"
-TEZ_WRAPPER_CONTRACT_TARGET="#{MICHELSON_DIR}/tezWrapperMain.tz"
+WTEZ_FILE="#{LIGO_DIR}/wtezMain.mligo"
+WTEZ_CONTRACT_TARGET="#{MICHELSON_DIR}/wtezMain.tz"
 
 WCTEZ_FILE="#{LIGO_DIR}/wctezMain.mligo"
 WCTEZ_CONTRACT_TARGET="#{MICHELSON_DIR}/wctezMain.tz"
@@ -47,13 +47,13 @@ end
 puts "Compiling the tez wrapper contract."
 ##########################################
 
-compiled_tez_wrapper_contract, exit_status = Open3.capture2("ligo", "compile-contract", TEZ_WRAPPER_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_tez_wrapper_contract}"
+compiled_wtez_contract, exit_status = Open3.capture2("ligo", "compile-contract", WTEZ_FILE, "main")
+exit_status.success? or raise "compile-contract failed:\n#{compiled_wtez_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
   # (we don't want to generate it as binary because it's nice to have it human-readable)
-  output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_tez_wrapper_contract, "from", "michelson", "to", "binary")
+  output, err, status = Open3.capture3("tezos-client", *protocol_arg, "convert", "data", compiled_wtez_contract, "from", "michelson", "to", "binary")
 rescue
   puts "  Can't run tezos-client, skipping measurement."
 else
@@ -201,8 +201,8 @@ functions_json = JSON.pretty_generate(functions_json)
 system("mkdir", "-p", MICHELSON_DIR)
 File.write(MAIN_CONTRACT_TARGET, compiled_contract)
 puts "Wrote #{MAIN_CONTRACT_TARGET}"
-File.write(TEZ_WRAPPER_CONTRACT_TARGET, compiled_tez_wrapper_contract)
-puts "Wrote #{TEZ_WRAPPER_CONTRACT_TARGET}"
+File.write(WTEZ_CONTRACT_TARGET, compiled_wtez_contract)
+puts "Wrote #{WTEZ_CONTRACT_TARGET}"
 File.write(WCTEZ_CONTRACT_TARGET, compiled_wctez_contract)
 puts "Wrote #{WCTEZ_CONTRACT_TARGET}"
 File.write(MOCK_FA2_CONTRACT_TARGET, compiled_mock_fa2_contract)

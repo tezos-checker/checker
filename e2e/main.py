@@ -320,7 +320,7 @@ class E2ETest(SandboxedTestCase):
         )
 
         print("Deploying the tez wrapper.")
-        tez_wrapper = deploy_tez_wrapper(
+        wtez = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -346,7 +346,7 @@ class E2ETest(SandboxedTestCase):
             self.client,
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
-            tez_wrapper=tez_wrapper.context.address,
+            wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
             wctez=wctez.context.address,
@@ -383,7 +383,7 @@ class E2ETest(SandboxedTestCase):
             return ret
 
         def get_tez_tokens_and_make_checker_an_operator(amnt):
-            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            call_endpoint(wtez, "deposit", None, amount=amnt)
             update_operators = [
                 {
                     "add_operator": {
@@ -393,7 +393,7 @@ class E2ETest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(tez_wrapper, "update_operators", update_operators)
+            call_endpoint(wtez, "update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
@@ -553,12 +553,12 @@ class E2ETest(SandboxedTestCase):
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
 
-class TezWrapperTest(SandboxedTestCase):
+class WTezTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
 
-        wrapper = deploy_tez_wrapper(
+        wrapper = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -583,7 +583,7 @@ class TezWrapperTest(SandboxedTestCase):
                 .autofill(ttl=MAX_OPERATIONS_TTL)
                 .sign(),
             )
-            gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
+            gas_costs[f"wtez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         def single_fa2_transfer(
@@ -605,7 +605,7 @@ class TezWrapperTest(SandboxedTestCase):
         # Edge case: this call should succeed, according to the FA2 spec. It
         # must come first: by trying to transfer zero tokens before either the
         # source or the target account is created, we ensure that
-        # TezWrapper.transfer does not fail due to non-originated vault
+        # Wtez.transfer does not fail due to non-originated vault
         # contracts.
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
 
@@ -950,7 +950,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         print("Deploying the tez wrapper.")
-        tez_wrapper = deploy_tez_wrapper(
+        wtez = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -976,7 +976,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             self.client,
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
-            tez_wrapper=tez_wrapper.context.address,
+            wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
             wctez=wctez.context.address,
@@ -1022,7 +1022,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
         def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
-            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            call_endpoint(wtez, "deposit", None, amount=amnt)
             update_operators = [
                 {
                     "add_operator": {
@@ -1032,7 +1032,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(tez_wrapper, "update_operators", update_operators)
+            call_endpoint(wtez, "update_operators", update_operators)
 
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.
