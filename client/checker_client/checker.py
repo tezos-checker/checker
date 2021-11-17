@@ -19,8 +19,7 @@ import requests
 from pytezos.client import PyTezosClient
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_builder.cli import OUTPUT_CONFIG_NAME
-from checker_builder.config import load_checker_config, CheckerConfig, IssuedTokenConfig
+from checker_builder.config import load_input_config, CheckerConfig, IssuedTokenConfig
 from checker_client.operations import inject
 
 # Time between blocks for sandbox container
@@ -356,9 +355,7 @@ def deploy_checker(
     wctez,
     ttl: Optional[int] = None,
 ):
-    checker_config_path = Path(checker_dir).joinpath(OUTPUT_CONFIG_NAME)
-    print(f"Loading checker configuration file at {checker_config_path}")
-    config = load_checker_config(checker_config_path)
+    config = load_input_config()
 
     print("Deploying the wrapper.")
 

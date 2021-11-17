@@ -39,7 +39,6 @@ PRICE_TEMPLATES = {
 
 TOKEN_METADATA_SRC = "tokenMetadata.ml"
 TOKEN_METADATA_TEMPLATE = "tokenMetadata.ml.jinja"
-OUTPUT_CONFIG_NAME = "_input_checker.yaml"
 
 
 @click.group()
@@ -91,7 +90,7 @@ def generate():
         )
 
     # Store the input configuration file for downstream processes to use (e.g. for deployment)
-    shutil.copy(config.DEFAULT_CONFIG, base_path.joinpath(OUTPUT_CONFIG_NAME))
+    shutil.copy(config.DEFAULT_CONFIG, config.INPUT_CONFIG)
 
 
 if __name__ == "__main__":

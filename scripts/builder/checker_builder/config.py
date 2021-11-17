@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG = Path("checker.yaml")
 
+INPUT_CONFIG = Path("src").joinpath("_input_checker.yaml")
+
 
 @dataclass(frozen=True)
 class Ratio:
@@ -395,10 +397,40 @@ Loader = yaml.SafeLoader
 
 
 def load_checker_config(path: Optional[Path] = None) -> CheckerConfig:
+    """Loads a checker yaml configuration file
+
+    Args:
+        path: The path to the config file. If none is specified a default is used.
+
+    Returns:
+        The parsed CheckerConfig
+    """
     if path is None:
         path = DEFAULT_CONFIG
     logger.info(f"Loading config from {path}")
     with path.open() as f:
+        raw_config = yaml.load(f, Loader=Loader)
+    return CheckerConfigSchema().load(raw_config)
+
+
+def load_input_config() -> CheckerConfig:
+    """Loads the checker configuration file used as the input for code generation
+
+    Args:
+        None
+
+    Returns:
+        The parsed CheckerConfig
+
+    Raises:
+        FileNotFoundError: If no input config is found.
+    """
+    if not INPUT_CONFIG.exists():
+        raise FileNotFoundError(
+            f"No configuration file found at {INPUT_CONFIG}. This file should be automatically "
+            f"generated as a part of the code generation process."
+        )
+    with INPUT_CONFIG.open() as f:
         raw_config = yaml.load(f, Loader=Loader)
     return CheckerConfigSchema().load(raw_config)
 
