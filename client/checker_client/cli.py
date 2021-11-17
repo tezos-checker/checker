@@ -186,16 +186,8 @@ def deploy(config: Config, address=None, port=None, key=None):
 @click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
 @click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
 @click.option("--wctez", type=str, help="Wrapped ctez contract address")
-@click.option(
-    "--checker_config",
-    type=click.Path(exists=True),
-    default=Path("checker.yaml"),
-    help="optional path to the checker.yaml config file. Defaults to ./checker.yaml",
-)
 @click.pass_obj
-def checker(
-    config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wctez, checker_config
-):
+def checker(config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wctez):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -243,7 +235,6 @@ def checker(
         ctez_cfmm=config.ctez_cfmm_address,
         wctez=config.wctez,
         ttl=_patch_operation_ttl(config),
-        checker_config_path=checker_config,
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
