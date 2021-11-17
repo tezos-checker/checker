@@ -9,7 +9,9 @@ from checker_builder import config
 GENERATE_SRCS = {
     "constants.ml": "constants.ml.jinja",
     "burrowOrigination.ml": "burrowOrigination.ml.jinja",
+    "tokenMetadata.ml": "tokenMetadata.ml.jinja",
 }
+
 
 # Template used for all token modules
 TOKEN_TEMPLATE = "genericToken.ml.jinja"
@@ -37,9 +39,6 @@ PRICE_TEMPLATES = {
     config.CollateralType.FA2: "fa2Price.ml.jinja",
 }
 
-TOKEN_METADATA_SRC = "tokenMetadata.ml"
-TOKEN_METADATA_TEMPLATE = "tokenMetadata.ml.jinja"
-
 
 @click.group()
 def cli():
@@ -61,10 +60,6 @@ def generate():
 
     # Select the price calculation module at runtime based on config
     GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES[checker_config.collateral_type]
-
-    # Generate the token metadata module at runtime based on config
-
-    GENERATE_SRCS[TOKEN_METADATA_SRC] = TOKEN_METADATA_TEMPLATE
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to
