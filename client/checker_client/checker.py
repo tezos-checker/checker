@@ -299,6 +299,7 @@ def deploy_wtez(
             "operators": {},
         },
         "vaults": {},
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wtez token
     }
     wrapper = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")

@@ -61,6 +61,7 @@ type vault_map = (Ligo.address, Ligo.address) Ligo.big_map
 type wtez_state =
   { fa2_state : fa2_state;
     vaults : vault_map;
+    metadata: (string, Ligo.bytes) Ligo.big_map;
   }
 
 type wtez_params =
@@ -138,16 +139,16 @@ let[@inline] fa2_run_transfer (st, xs: wtez_state * fa2_transfer list) : wtez_st
   let state, rev_ops =
     Ligo.List.fold_left
       (fun (((st, ops), tx): (wtez_state * LigoOp.operation list) * fa2_transfer) ->
-         let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
+         let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = st in (* deconstruct *)
          let { from_ = from_; txs = txs; } = tx in
 
          (* Origination of the from_ vault, if needed *)
          let from_vault_found, ops, vaults, from_vault_address = find_vault_address_append vaults from_ ops in
-         let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+         let st = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
 
          Ligo.List.fold_left
            (fun (((st, ops), x): (wtez_state * LigoOp.operation list) * fa2_transfer_destination) ->
-              let { fa2_state = fa2_state; vaults = vaults; } = st in (* deconstruct *)
+              let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = st in (* deconstruct *)
               let { to_ = to_; token_id = token_id; amount = amnt; } = x in
 
               if fa2_is_operator (fa2_state, !Ligo.Tezos.sender, from_, token_id)
@@ -174,7 +175,7 @@ let[@inline] fa2_run_transfer (st, xs: wtez_state * fa2_transfer list) : wtez_st
                     end in
                 let ops = (op :: ops) in
 
-                let st = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+                let st = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
                 (st, ops)
               else
                 (failwith "FA2_NOT_OPERATOR" : wtez_state * LigoOp.operation list)
@@ -241,7 +242,7 @@ let[@inline] update_operators (state: wtez_state) (xs: fa2_update_operator list)
 (*****************************************************************************)
 
 let[@inline] deposit (state: wtez_state) (_: unit) : LigoOp.operation list * wtez_state =
-  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = state in (* deconstruct *)
   let fa2_state = ledger_issue_tez_token (fa2_state, !Ligo.Tezos.sender, !Ligo.Tezos.amount) in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
   | Some vault_address ->
@@ -250,7 +251,7 @@ let[@inline] deposit (state: wtez_state) (_: unit) : LigoOp.operation list * wte
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_receive_tez" vault_address : unit Ligo.contract option) with
       | Some c -> LigoOp.Tezos.unit_transaction () !Ligo.Tezos.amount c (* !!! *)
       | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultReceiveTez : LigoOp.operation) in
-    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
     ([op], state)
   | None ->
     (* Case 2: The vault does not exist yet. We need to create it, and then
@@ -258,14 +259,14 @@ let[@inline] deposit (state: wtez_state) (_: unit) : LigoOp.operation list * wte
      * first time. *)
     let origination, vault_address = originate_vault !Ligo.Tezos.self_address in
     let vaults = Ligo.Big_map.update !Ligo.Tezos.sender (Some vault_address) vaults in
-    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_receive_tez" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.address_tez_transaction (vault_address, !Ligo.Tezos.amount) (Ligo.tez_from_literal "0mutez") c (* !!! *)
       | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultReceiveTez : LigoOp.operation) in
     ([origination; op], state)
 
 let[@inline] withdraw (state: wtez_state) (amnt: Ligo.tez) : LigoOp.operation list * wtez_state =
-  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = state in (* deconstruct *)
   let _ = ensure_no_tez_given () in
   let fa2_state = ledger_withdraw_tez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
@@ -275,7 +276,7 @@ let[@inline] withdraw (state: wtez_state) (amnt: Ligo.tez) : LigoOp.operation li
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%vault_send_tez_to_contract" vault_address : (Ligo.tez * Ligo.address) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.tez_address_transaction (amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureVaultSendTezToContract : LigoOp.operation) in
-    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
     ([op], state)
   | None ->
     (* Case 2: The vault does not exist yet. We need to create it, and then
@@ -283,14 +284,14 @@ let[@inline] withdraw (state: wtez_state) (amnt: Ligo.tez) : LigoOp.operation li
      * This can be expensive the first time. *)
     let origination, vault_address = originate_vault !Ligo.Tezos.self_address in
     let vaults = Ligo.Big_map.update !Ligo.Tezos.sender (Some vault_address) vaults in
-    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_send_tez_to_contract" !Ligo.Tezos.self_address : (Ligo.address * Ligo.tez * Ligo.address) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.address_tez_address_transaction (vault_address, amnt, !Ligo.Tezos.sender) (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSendTezToContract : LigoOp.operation) in
     ([origination; op], state)
 
 let[@inline] set_delegate (state: wtez_state) (kho: Ligo.key_hash option) : LigoOp.operation list * wtez_state =
-  let { fa2_state = fa2_state; vaults = vaults; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = state in (* deconstruct *)
   let _ = ensure_no_tez_given () in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
   | Some vault_address ->
@@ -306,7 +307,7 @@ let[@inline] set_delegate (state: wtez_state) (kho: Ligo.key_hash option) : Ligo
      * expensive the first time. *)
     let origination, vault_address = originate_vault !Ligo.Tezos.self_address in
     let vaults = Ligo.Big_map.update !Ligo.Tezos.sender (Some vault_address) vaults in
-    let state = { fa2_state = fa2_state; vaults = vaults; } in (* reconstruct *)
+    let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
     let op = match (LigoOp.Tezos.get_entrypoint_opt "%call_vault_set_delegate" !Ligo.Tezos.self_address : (Ligo.address * Ligo.key_hash option) Ligo.contract option) with
       | Some c -> LigoOp.Tezos.address_opt_key_hash_transaction (vault_address, kho) (Ligo.tez_from_literal "0mutez") c
       | None -> (Ligo.failwith error_GetEntrypointOptFailureCallVaultSetDelegate : LigoOp.operation) in
