@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import time
 from urllib.parse import urlparse, urlunparse
+from checker_builder.config import CheckerRepo
 
 import click
 import pytezos
@@ -175,10 +176,10 @@ def deploy(config: Config, address=None, port=None, key=None):
 @deploy.command()
 @click.option(
     "--src",
-    "checker_dir",
+    "repo_path",
     type=str,
-    help="Checker michelson src directory",
-    default="generated/michelson",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
@@ -187,7 +188,7 @@ def deploy(config: Config, address=None, port=None, key=None):
 @click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
 @click.option("--wctez", type=str, help="Wrapped ctez contract address")
 @click.pass_obj
-def checker(config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wctez):
+def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -228,7 +229,7 @@ def checker(config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wct
     client.loglevel = logging.WARNING
     checker = checker_lib.deploy_checker(
         client,
-        checker_dir,
+        CheckerRepo(repo_path),
         oracle=config.oracle_address,
         wtez=config.wtez_address,
         ctez_fa12=config.ctez_fa12_address,
@@ -244,14 +245,14 @@ def checker(config: Config, checker_dir, oracle, wtez, ctez_fa12, ctez_cfmm, wct
 @deploy.command()
 @click.option(
     "--src",
-    "checker_dir",
+    "repo_path",
     type=str,
-    help="Checker michelson src directory",
-    default="generated/michelson",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.pass_obj
-def wtez(config: Config, checker_dir):
+def wtez(config: Config, repo_path):
     """
     Deploy Tez FA2 wrapper contract.
     """
@@ -261,7 +262,7 @@ def wtez(config: Config, checker_dir):
     client.loglevel = logging.WARNING
     wrapper = checker_lib.deploy_wtez(
         client,
-        checker_dir,
+        CheckerRepo(repo_path),
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"Tez wrapper contract deployed with address: {wrapper.context.address}")
@@ -272,15 +273,15 @@ def wtez(config: Config, checker_dir):
 @deploy.command()
 @click.option(
     "--src",
-    "checker_dir",
+    "repo_path",
     type=str,
-    help="Checker michelson src directory",
-    default="generated/michelson",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
 @click.pass_obj
-def wrapped_ctez(config: Config, checker_dir, ctez_fa12):
+def wrapped_ctez(config: Config, repo_path, ctez_fa12):
     """
     Deploy wctez contract (FA2-wrapped ctez).
     """
@@ -296,7 +297,7 @@ def wrapped_ctez(config: Config, checker_dir, ctez_fa12):
     client.loglevel = logging.WARNING
     wctez = checker_lib.deploy_wctez(
         client,
-        checker_dir,
+        CheckerRepo(repo_path),
         config.ctez_fa12_address,
         ttl=_patch_operation_ttl(config),
     )
@@ -308,14 +309,14 @@ def wrapped_ctez(config: Config, checker_dir, ctez_fa12):
 @deploy.command()
 @click.option(
     "--src",
-    "checker_dir",
+    "repo_path",
     type=str,
-    help="Checker michelson src directory",
-    default="generated/michelson",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.pass_obj
-def mock_fa2(config: Config, checker_dir):
+def mock_fa2(config: Config, repo_path):
     """
     Deploy the mock FA2 contract.
     """
@@ -325,7 +326,7 @@ def mock_fa2(config: Config, checker_dir):
     client.loglevel = logging.WARNING
     mockFA2 = checker_lib.deploy_mockFA2(
         client,
-        checker_dir,
+        CheckerRepo(repo_path),
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"mock FA2 contract deployed with address: {mockFA2.context.address}")
@@ -336,14 +337,14 @@ def mock_fa2(config: Config, checker_dir):
 @deploy.command()
 @click.option(
     "--src",
-    "ctez_dir",
+    "repo_path",
     type=str,
-    help="ctez michelson src directory",
-    default="vendor/ctez",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.pass_obj
-def ctez(config: Config, ctez_dir):
+def ctez(config: Config, repo_path):
     """
     Deploy a ctez contract (dev only)
     """
@@ -351,7 +352,9 @@ def ctez(config: Config, ctez_dir):
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
-    ctez = checker_lib.deploy_ctez(client, ctez_dir=ctez_dir, ttl=_patch_operation_ttl(config))
+    ctez = checker_lib.deploy_ctez(
+        client, repo=CheckerRepo(repo_path), ttl=_patch_operation_ttl(config)
+    )
     click.echo(
         f"ctez contract deployed with FA1.2 address: {ctez['fa12_ctez'].context.address} and cfmm address: {ctez['cfmm'].context.address}"
     )
@@ -363,14 +366,14 @@ def ctez(config: Config, ctez_dir):
 @deploy.command()
 @click.option(
     "--src",
-    "oracle_src",
+    "repo_path",
     type=str,
-    help="oracle michelson src file",
-    default="util/mock_oracle.tz",
+    help="Path to the checker repo",
+    default=".",
     show_default=True,
 )
 @click.pass_obj
-def mock_oracle(config: Config, oracle_src):
+def mock_oracle(config: Config, repo_path):
     """
     Deploy the mock oracle contract (dev only)
     """
@@ -380,7 +383,7 @@ def mock_oracle(config: Config, oracle_src):
     client.loglevel = logging.WARNING
     oracle = checker_lib.deploy_contract(
         client,
-        source_file=oracle_src,
+        source_file=CheckerRepo(repo_path).mock_oracle_contract,
         initial_storage=(client.key.public_key_hash(), 1000000),
         ttl=_patch_operation_ttl(config),
     )
