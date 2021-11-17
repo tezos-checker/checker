@@ -173,7 +173,7 @@ generate-code:
     # Generate other src modules using newer code generation tool
     RUN poetry run checker-build generate
     # Ensure that the generated modules obey formatting rules:
-    RUN opam exec -- ocp-indent -i ./src/*
+    RUN opam exec -- ocp-indent -i ./src/*.ml*
 
     # TODO: Find a way to drop all generated code in one directory
     # so that we can extract it without having to explicitly name
@@ -198,6 +198,8 @@ generate-code:
     SAVE ARTIFACT ./src/price.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml
+    SAVE ARTIFACT ./src/_input_checker.yaml AS LOCAL src/_input_checker.yaml
+    SAVE ARTIFACT ./src/_input_checker.yaml
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
@@ -308,7 +310,8 @@ test-e2e:
     # And the checker contract itself
     COPY --build-arg E2E_TESTS_HACK=true +build-ligo/michelson ./generated/michelson
     # Also need checker config file
-    COPY checker.yaml .
+    RUN mkdir ./src
+    COPY +generate-code/_input_checker.yaml ./src/_input_checker.yaml
 
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
