@@ -337,8 +337,11 @@ def deploy_mockFA2(
     print("Deploying the mock FA2 contract.")
     src = os.path.join(checker_dir, "mockFA2Main.tz")
     initial_storage = {
-        "ledger": {},
-        "operators": {},
+        "fa2_state": {
+            "ledger": {},
+            "operators": {},
+        },
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for mock_fa2 token
     }
     mockFA2 = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
