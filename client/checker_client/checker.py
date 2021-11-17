@@ -320,6 +320,7 @@ def deploy_wctez(
             "operators": {},
         },
         "ctez_fa12_address": ctez_fa12_address,
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wctez token
     }
     wctez = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
