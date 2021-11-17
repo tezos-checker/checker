@@ -179,25 +179,25 @@ generate-code:
     # so that we can extract it without having to explicitly name
     # each file.
     SAVE ARTIFACT ./src/checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
-    SAVE ARTIFACT ./src/checkerEntrypoints.ml /
+    SAVE ARTIFACT ./src/checkerEntrypoints.ml
     SAVE ARTIFACT ./src/tok.ml AS LOCAL src/tok.ml
-    SAVE ARTIFACT ./src/tok.ml /
+    SAVE ARTIFACT ./src/tok.ml
     SAVE ARTIFACT ./src/ctok.ml AS LOCAL src/ctok.ml
-    SAVE ARTIFACT ./src/ctok.ml /
+    SAVE ARTIFACT ./src/ctok.ml
     SAVE ARTIFACT ./src/kit.ml AS LOCAL src/kit.ml
-    SAVE ARTIFACT ./src/kit.ml /
+    SAVE ARTIFACT ./src/kit.ml
     SAVE ARTIFACT ./src/lqt.ml AS LOCAL src/lqt.ml
-    SAVE ARTIFACT ./src/lqt.ml /
+    SAVE ARTIFACT ./src/lqt.ml
     SAVE ARTIFACT ./src/constants.ml AS LOCAL src/constants.ml
-    SAVE ARTIFACT ./src/constants.ml /
+    SAVE ARTIFACT ./src/constants.ml
     SAVE ARTIFACT ./src/burrowOrigination.ml AS LOCAL src/burrowOrigination.ml
-    SAVE ARTIFACT ./src/burrowOrigination.ml /
+    SAVE ARTIFACT ./src/burrowOrigination.ml
     SAVE ARTIFACT ./src/driftDerivative.ml AS LOCAL src/driftDerivative.ml
-    SAVE ARTIFACT ./src/driftDerivative.ml /
+    SAVE ARTIFACT ./src/driftDerivative.ml
     SAVE ARTIFACT ./src/price.ml AS LOCAL src/price.ml
-    SAVE ARTIFACT ./src/price.ml /
+    SAVE ARTIFACT ./src/price.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
-    SAVE ARTIFACT ./src/tokenMetadata.ml /
+    SAVE ARTIFACT ./src/tokenMetadata.ml
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
@@ -288,7 +288,7 @@ test-coverage:
     SAVE ARTIFACT _coverage AS LOCAL ./_coverage
     SAVE ARTIFACT test-coverage.json AS LOCAL test-coverage.json
     SAVE ARTIFACT _coverage /_coverage
-    SAVE ARTIFACT test-coverage.json /
+    SAVE ARTIFACT test-coverage.json
 
 test-builder:
     FROM +deps-full
@@ -518,6 +518,6 @@ flextesa:
         cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" "./tezos-endorser-$(echo $PROTO_DIR | tr '_' '-')" && \
         cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe" "./tezos-accuser-$(echo $PROTO_DIR | tr '_' '-')"
 
-    SAVE ARTIFACT tezos-* /
-    SAVE ARTIFACT flextesa /
+    SAVE ARTIFACT tezos-*
+    SAVE ARTIFACT flextesa
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:flextesa
