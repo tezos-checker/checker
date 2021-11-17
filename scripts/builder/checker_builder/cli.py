@@ -8,7 +8,9 @@ from checker_builder import config
 GENERATE_SRCS = {
     "constants.ml": "constants.ml.jinja",
     "burrowOrigination.ml": "burrowOrigination.ml.jinja",
+    "tokenMetadata.ml": "tokenMetadata.ml.jinja",
 }
+
 
 # Template used for all token modules
 TOKEN_TEMPLATE = "genericToken.ml.jinja"
@@ -80,8 +82,6 @@ def generate():
             template,
             checker_config,
         )
-
-    # FIXME: Generate token metadata module here
 
 
 if __name__ == "__main__":

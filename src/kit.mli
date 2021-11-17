@@ -1,8 +1,5 @@
 type kit
 
-val kit_token_id : Fa2Interface.fa2_token_id
-
-val kit_decimal_digits : Ligo.nat
 val kit_scaling_factor_int : Ligo.int
 val kit_scaling_factor_nat : Ligo.nat
 

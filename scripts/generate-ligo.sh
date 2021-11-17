@@ -17,6 +17,7 @@ checker_sources=(
   common
   fixedPoint
   fa2Interface
+  tokenMetadata
   ctok
   kit
   lqt
@@ -45,14 +46,15 @@ checker_sources=(
   checkerMain
 )
 
-# Note: order here does matter since it affects the order of #includes in tezWrapperMain.mligo
-tez_wrapper_sources=(
+# Note: order here does matter since it affects the order of #includes in wtezMain.mligo
+wtez_sources=(
   error
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   vaultTypes
-  tezWrapper
+  wtez
 )
 
 # Note: order here does matter since it affects the order of #includes in wctezMain.mligo
@@ -61,6 +63,7 @@ wctez_sources=(
   fa12Interface
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   wctez
 )
@@ -70,11 +73,12 @@ mock_fa2_sources=(
   error
   common
   fa2Interface
+  tokenMetadata
   fa2Ledger
   mockFA2
 )
 
-all_sources=( "${checker_sources[@]}" "${tez_wrapper_sources[@]}" "${wctez_sources[@]}" "${mock_fa2_sources[@]}" )
+all_sources=( "${checker_sources[@]}" "${wtez_sources[@]}" "${wctez_sources[@]}" "${mock_fa2_sources[@]}" )
 all_sources=($(echo "${all_sources[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 for name in "${all_sources[@]}"; do
@@ -158,14 +162,14 @@ echo '#include "ligo.mligo"' > "$target_dir/main.mligo"
   sed -E 's/(.*)/#include "\1.mligo"/g' |
   cat >> "$target_dir/main.mligo"
 
-# Generate the TezWrapper contract
-echo "=> tezWrapperMain.mligo" 2>&1
+# Generate the wtez contract
+echo "=> wtezMain.mligo" 2>&1
 
-echo '#include "ligo.mligo"' > "$target_dir/tezWrapperMain.mligo"
+echo '#include "ligo.mligo"' > "$target_dir/wtezMain.mligo"
 
-( IFS=$'\n'; echo "${tez_wrapper_sources[*]}" ) |
+( IFS=$'\n'; echo "${wtez_sources[*]}" ) |
   sed -E 's/(.*)/#include "\1.mligo"/g' |
-  cat >> "$target_dir/tezWrapperMain.mligo"
+  cat >> "$target_dir/wtezMain.mligo"
 
 # Generate the wctez contract
 echo "=> wctezMain.mligo" 2>&1

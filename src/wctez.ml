@@ -4,6 +4,7 @@ open Fa2Ledger
 open Fa12Interface
 open Common
 open Error
+open TokenMetadata
 
 (*****************************************************************************)
 (**                          {1 WRAPPER TYPES}                               *)
@@ -13,15 +14,6 @@ type wctez_state =
   { fa2_state : fa2_state;
     ctez_fa12_address : Ligo.address;
   }
-
-(** Token id for wrapped ctez tokens. *)
-let[@inline] wctez_token_id : fa2_token_id = Ligo.nat_from_literal "3n"
-
-(*
-(** Number of decimal digits for wctez tokens, identical to that for ctez. *)
-(* NOTE: Currently unused. *)
-let[@inline] wctez_token_decimal_digits = Ligo.nat_from_literal "6n"
-*)
 
 type wctez_params =
   (* FA2 entrypoints *)

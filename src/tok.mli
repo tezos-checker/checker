@@ -1,8 +1,5 @@
 type tok
 
-val tok_token_id : Fa2Interface.fa2_token_id
-
-val tok_decimal_digits : Ligo.nat
 val tok_scaling_factor_int : Ligo.int
 val tok_scaling_factor_nat : Ligo.nat
 

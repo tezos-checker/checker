@@ -43,14 +43,6 @@ class SandboxedTestCase(unittest.TestCase):
         self.teardownFun()
 
 
-def assert_kit_balance(checker: ContractInterface, address: str, expected_kit: int):
-    # TODO: There might be a way to get this from contract metadata
-    kit_token_id = 0
-    kit_balance = checker.metadata.getBalance((address, kit_token_id)).storage_view()
-    if expected_kit != kit_balance:
-        raise AssertionError(f"Expected {expected_kit} but got {kit_balance}")
-
-
 def assert_fa2_token_balance(
     wrapper: ContractInterface,
     address: str,
@@ -306,8 +298,7 @@ class E2ETest(SandboxedTestCase):
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.issued.kit.token_id
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -320,7 +311,7 @@ class E2ETest(SandboxedTestCase):
         )
 
         print("Deploying the tez wrapper.")
-        tez_wrapper = deploy_tez_wrapper(
+        wtez = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -346,7 +337,7 @@ class E2ETest(SandboxedTestCase):
             self.client,
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
-            tez_wrapper=tez_wrapper.context.address,
+            wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
             wctez=wctez.context.address,
@@ -383,7 +374,7 @@ class E2ETest(SandboxedTestCase):
             return ret
 
         def get_tez_tokens_and_make_checker_an_operator(amnt):
-            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            call_endpoint(wtez, "deposit", None, amount=amnt)
             update_operators = [
                 {
                     "add_operator": {
@@ -393,7 +384,7 @@ class E2ETest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(tez_wrapper, "update_operators", update_operators)
+            call_endpoint(wtez, "update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
@@ -401,15 +392,15 @@ class E2ETest(SandboxedTestCase):
         # Create a burrow
         get_tez_tokens_and_make_checker_an_operator(10_000_000)
         call_checker_endpoint("create_burrow", (1, None, 10_000_000))
-        assert_kit_balance(checker, account, 0)
+        assert_fa2_token_balance(checker, account, kit_token_id, 0)
 
         # Get some kit
         call_checker_endpoint("mint_kit", (1, 1_000_000))
-        assert_kit_balance(checker, account, 1_000_000)
+        assert_fa2_token_balance(checker, account, kit_token_id, 1_000_000)
 
         # Burn some kit
         call_checker_endpoint("burn_kit", (1, 10))
-        assert_kit_balance(checker, account, 999_990)
+        assert_fa2_token_balance(checker, account, kit_token_id, 999_990)
 
         # Deposit tez
         get_tez_tokens_and_make_checker_an_operator(2_000_000)
@@ -457,7 +448,9 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 90)
+        assert_fa2_token_balance(
+            checker, checker_alice.key.public_key_hash(), kit_token_id, 90
+        )
 
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
@@ -490,7 +483,9 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_kit_balance(checker, checker_alice.key.public_key_hash(), 10)
+        assert_fa2_token_balance(
+            checker, checker_alice.key.public_key_hash(), kit_token_id, 10
+        )
 
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
@@ -505,8 +500,11 @@ class E2ETest(SandboxedTestCase):
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         balance = checker.balance_of(**fa2_balance_of).callback_view()
         # Check that this balance agrees with the kit balance view
-        assert_kit_balance(
-            checker, checker_alice.key.public_key_hash(), balance[0]["nat_2"]
+        assert_fa2_token_balance(
+            checker,
+            checker_alice.key.public_key_hash(),
+            kit_token_id,
+            balance[0]["nat_2"],
         )
 
         # ===============================================================================
@@ -553,12 +551,12 @@ class E2ETest(SandboxedTestCase):
             write_gas_costs(gas_costs, WRITE_GAS_COSTS)
 
 
-class TezWrapperTest(SandboxedTestCase):
+class WTezTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
 
-        wrapper = deploy_tez_wrapper(
+        wrapper = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -583,7 +581,7 @@ class TezWrapperTest(SandboxedTestCase):
                 .autofill(ttl=MAX_OPERATIONS_TTL)
                 .sign(),
             )
-            gas_costs[f"tezWrapper%{name}"] = int(ret["contents"][0]["gas_limit"])
+            gas_costs[f"wtez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
         def single_fa2_transfer(
@@ -605,7 +603,7 @@ class TezWrapperTest(SandboxedTestCase):
         # Edge case: this call should succeed, according to the FA2 spec. It
         # must come first: by trying to transfer zero tokens before either the
         # source or the target account is created, we ensure that
-        # TezWrapper.transfer does not fail due to non-originated vault
+        # Wtez.transfer does not fail due to non-originated vault
         # contracts.
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
 
@@ -675,8 +673,7 @@ class TezWrapperTest(SandboxedTestCase):
 class WCtezTest(SandboxedTestCase):
     def test_wctez(self):
         gas_costs = {}
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
 
         print("Deploying ctez contracts.")
         ctez = deploy_ctez(
@@ -812,8 +809,7 @@ class WCtezTest(SandboxedTestCase):
 class MockFA2Test(SandboxedTestCase):
     def test_mockFA2(self):
         gas_costs = {}
-        # Hard-coded in contract, so also hard-coding here
-        mock_fa2_token_id = 42
+        mock_fa2_token_id = self.config.tokens.issued.mock_fa2.token_id
 
         print("Deploying the mock FA2 contract.")
         mockFA2 = deploy_mockFA2(
@@ -938,8 +934,7 @@ class MockFA2Test(SandboxedTestCase):
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        # Hard-coded in contract, so also hard-coding here
-        wctez_token_id = 3
+        wctez_token_id = self.config.tokens.issued.wctez.token_id
 
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
@@ -950,7 +945,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         print("Deploying the tez wrapper.")
-        tez_wrapper = deploy_tez_wrapper(
+        wtez = deploy_wtez(
             self.client,
             checker_dir=CHECKER_DIR,
             ttl=MAX_OPERATIONS_TTL,
@@ -976,7 +971,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             self.client,
             checker_dir=CHECKER_DIR,
             oracle=oracle.context.address,
-            tez_wrapper=tez_wrapper.context.address,
+            wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
             wctez=wctez.context.address,
@@ -1022,7 +1017,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
         def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
-            call_endpoint(tez_wrapper, "deposit", None, amount=amnt)
+            call_endpoint(wtez, "deposit", None, amount=amnt)
             update_operators = [
                 {
                     "add_operator": {
@@ -1032,7 +1027,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(tez_wrapper, "update_operators", update_operators)
+            call_endpoint(wtez, "update_operators", update_operators)
 
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.

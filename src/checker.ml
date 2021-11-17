@@ -20,6 +20,7 @@ open Fa2Implementation
 open Mem
 open BurrowOrigination
 open Price
+open TokenMetadata
 
 (* BEGIN_OCAML *)
 [@@@coverage off]

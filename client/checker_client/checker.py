@@ -286,13 +286,13 @@ def deploy_contract(
     return tz.contract(addr)
 
 
-def deploy_tez_wrapper(
+def deploy_wtez(
     tz: PyTezosClient,
     checker_dir: str,
     ttl: Optional[int] = None,
 ):
-    print("Deploying the Tez FA2 wrapper.")
-    src = os.path.join(checker_dir, "tezWrapperMain.tz")
+    print("Deploying the wtez contract.")
+    src = os.path.join(checker_dir, "wtezMain.tz")
     initial_storage = {
         "fa2_state": {
             "ledger": {},
@@ -349,7 +349,7 @@ def deploy_checker(
     checker_dir,
     *,
     oracle,
-    tez_wrapper,
+    wtez,
     ctez_fa12,
     ctez_cfmm,
     wctez,
@@ -416,7 +416,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, tez_wrapper, wctez, ctez_cfmm))
+        checker.sealContract((oracle, wtez, wctez, ctez_cfmm))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),

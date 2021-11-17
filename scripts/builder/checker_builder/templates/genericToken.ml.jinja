@@ -2,15 +2,11 @@
 
 open Common
 open Error
-open Fa2Interface
 open FixedPoint
+open TokenMetadata
 
 type {{ module_name }} = Ligo.nat
 
-(* FA2 token id for this token *)
-let[@inline] {{ module_name }}_token_id  : fa2_token_id = Ligo.nat_from_literal "{{ token_config.token_id }}n"
-
-let[@inline] {{ module_name }}_decimal_digits = Ligo.nat_from_literal "{{ token_config.decimal_digits }}n"
 let[@inline] {{ module_name }}_scaling_factor_int = Ligo.int_from_literal "{{ token_config.scaling_factor }}"
 let[@inline] {{ module_name }}_scaling_factor_nat = Ligo.nat_from_literal "{{ token_config.scaling_factor }}n"
 
@@ -19,7 +15,6 @@ let[@inline] {{ module_name }}_add (x: {{ module_name }}) (y: {{ module_name }})
 let {{ module_name }}_sub (x: {{ module_name }}) (y: {{ module_name }}) =
   match Ligo.is_nat (Ligo.sub_nat_nat x y) with
   | Some n -> n
-  (* FIXME: Need unique errors per token type *)
   | None -> (Ligo.failwith internalError_{{ module_name.capitalize() }}SubNegative : {{ module_name }})
 
 let[@inline] {{ module_name }}_min (x: {{ module_name }}) (y: {{ module_name }}) = if Ligo.leq_nat_nat x y then x else y

@@ -52,10 +52,10 @@ tokens:
     # Mock FA2 tokens (use for testing only)
     mock_fa2:
       # The token's FA2 id
-      token_id: 42
+      token_id: 43
       # Specifies the number of decimal digits used by the token
       # e.g. tez has 6 decimal digits.
-      decimal_digits: 11
+      decimal_digits: 13
       # Optional FA2 display name
       name: mock_fa2 (checker dev)
       # Optional FA2 token symbol

@@ -1,8 +1,5 @@
 type lqt
 
-val lqt_token_id : Fa2Interface.fa2_token_id
-
-val lqt_decimal_digits : Ligo.nat
 val lqt_scaling_factor_int : Ligo.int
 val lqt_scaling_factor_nat : Ligo.nat
 

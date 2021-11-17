@@ -2,6 +2,7 @@ open OUnit2
 open Lqt
 open TestLib
 open Error
+open TokenMetadata
 
 let suite =
   "LqtTests" >::: [

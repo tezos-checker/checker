@@ -2,6 +2,7 @@ open Kit
 open Lqt
 open Fa2Interface
 open Fa2Ledger
+open TokenMetadata
 
 let[@inline] fa2_all_tokens : Ligo.nat list =
   [ kit_token_id; lqt_token_id ]

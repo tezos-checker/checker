@@ -1,8 +1,5 @@
 type ctok
 
-val ctok_token_id : Fa2Interface.fa2_token_id
-
-val ctok_decimal_digits : Ligo.nat
 val ctok_scaling_factor_int : Ligo.int
 val ctok_scaling_factor_nat : Ligo.nat
 

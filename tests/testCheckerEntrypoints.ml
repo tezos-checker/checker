@@ -117,12 +117,12 @@ let suite =
 
     ("wrapper_view_get_balance - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Lqt.lqt_token_id), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, TokenMetadata.lqt_token_id), init_wrapper));
     );
 
     ("wrapper_view_total_supply - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_total_supply (Kit.kit_token_id, init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_total_supply (TokenMetadata.kit_token_id, init_wrapper));
     );
 
     ("wrapper_view_all_tokens - unsealed" >::
@@ -132,7 +132,7 @@ let suite =
 
     ("wrapper_view_is_operator - unsealed" >::
      assert_unsealed_contract_raises_not_deployed_error
-       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (alice_addr, Kit.kit_token_id)), init_wrapper));
+       (fun (init_wrapper) -> CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (alice_addr, TokenMetadata.kit_token_id)), init_wrapper));
     );
 
     (* Test views on sealed checker *)
@@ -297,7 +297,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_nat_equal
             ~expected:(Ligo.nat_from_literal "0n")
-            ~real:(CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, Lqt.lqt_token_id), sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_get_balance ((bob_addr, TokenMetadata.lqt_token_id), sealed_wrapper))
        )
     );
 
@@ -306,7 +306,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_nat_equal
             ~expected:(Ligo.nat_from_literal "0n")
-            ~real:(CheckerEntrypoints.wrapper_view_total_supply (Kit.kit_token_id, sealed_wrapper))
+            ~real:(CheckerEntrypoints.wrapper_view_total_supply (TokenMetadata.kit_token_id, sealed_wrapper))
        )
     );
 
@@ -314,7 +314,7 @@ let suite =
      with_sealed_wrapper
        (fun sealed_wrapper ->
           assert_nat_list_equal
-            ~expected:[Kit.kit_token_id; Lqt.lqt_token_id]
+            ~expected:[TokenMetadata.kit_token_id; TokenMetadata.lqt_token_id]
             ~real:(CheckerEntrypoints.wrapper_view_all_tokens ((), sealed_wrapper))
        )
     );
@@ -324,7 +324,7 @@ let suite =
        (fun sealed_wrapper ->
           assert_bool
             "no operators had been set"
-            (not (CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (leena_addr, Kit.kit_token_id)), sealed_wrapper)))
+            (not (CheckerEntrypoints.wrapper_view_is_operator ((bob_addr, (leena_addr, TokenMetadata.kit_token_id)), sealed_wrapper)))
        )
     );
 
