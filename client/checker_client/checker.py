@@ -301,6 +301,7 @@ def deploy_wtez(
             "operators": {},
         },
         "vaults": {},
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wtez token
     }
     wrapper = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -322,6 +323,7 @@ def deploy_wctez(
             "operators": {},
         },
         "ctez_fa12_address": ctez_fa12_address,
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wctez token
     }
     wctez = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -337,8 +339,11 @@ def deploy_mockFA2(
     print("Deploying the mock FA2 contract.")
     src = repo.mock_fa2_contract
     initial_storage = {
-        "ledger": {},
-        "operators": {},
+        "fa2_state": {
+            "ledger": {},
+            "operators": {},
+        },
+        "metadata": {},  # FIXME: populate with TZIP-016 metadata for mock_fa2 token
     }
     mockFA2 = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")

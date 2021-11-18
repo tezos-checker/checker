@@ -6,7 +6,7 @@ open Fa2Ledger
 open Common
 open TokenMetadata
 
-type params =
+type mock_fa2_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
   | Transfer of fa2_transfer list
@@ -14,6 +14,11 @@ type params =
   (* Contract-specific entrypoints *)
   | Mint of Ligo.nat
   | Redeem of Ligo.nat
+
+type mock_fa2_state =
+  { fa2_state : fa2_state;
+    metadata: (string, Ligo.bytes) Ligo.big_map;
+  }
 
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
@@ -31,12 +36,11 @@ let[@inline] fa2_run_balance_of (st, xs: fa2_state * fa2_balance_of_request list
     )
     xs
 
-let[@inline] balance_of (state: fa2_state) (param: fa2_balance_of_param) : LigoOp.operation list * fa2_state =
+let[@inline] balance_of (state: mock_fa2_state) (param: fa2_balance_of_param) : LigoOp.operation list * mock_fa2_state =
   let { requests = requests; callback = callback; } = param in
-  let response = fa2_run_balance_of (state, requests) in
+  let response = fa2_run_balance_of (state.fa2_state, requests) in
   let op = LigoOp.Tezos.fa2_balance_of_response_transaction response (Ligo.tez_from_literal "0mutez") callback in
   ([op], state) (* unchanged state *)
-
 
 let[@inline] fa2_run_transfer (state, xs: fa2_state * fa2_transfer list) : fa2_state * LigoOp.operation list =
   let state =
@@ -66,8 +70,10 @@ let[@inline] fa2_run_transfer (state, xs: fa2_state * fa2_transfer list) : fa2_s
       xs in
   (state, ([]: LigoOp.operation list))
 
-let[@inline] transfer (state: fa2_state) (xs: fa2_transfer list) : LigoOp.operation list * fa2_state =
-  let state, ops = fa2_run_transfer (state, xs) in
+let[@inline] transfer (state: mock_fa2_state) (xs: fa2_transfer list) : LigoOp.operation list * mock_fa2_state =
+  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state, ops = fa2_run_transfer (fa2_state, xs) in
+  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
   (ops, state)
 
 let[@inline] fa2_run_update_operators
@@ -110,16 +116,25 @@ let[@inline] fa2_run_update_operators
     st
     xs
 
-let[@inline] update_operators (state: fa2_state) (xs: fa2_update_operator list) : LigoOp.operation list * fa2_state =
-  (([]: LigoOp.operation list), fa2_run_update_operators (state, xs))
+let[@inline] update_operators (state: mock_fa2_state) (xs: fa2_update_operator list) : LigoOp.operation list * mock_fa2_state =
+  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state = fa2_run_update_operators (fa2_state, xs) in
+  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  (([]: LigoOp.operation list), state)
 
-let[@inline] mint (state: fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * fa2_state =
-  (([]: LigoOp.operation list), ledger_issue (state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt))
+let[@inline] mint (state: mock_fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * mock_fa2_state =
+  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state = ledger_issue (fa2_state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt) in
+  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  (([]: LigoOp.operation list), state)
 
-let[@inline] redeem (state: fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * fa2_state =
-  (([]: LigoOp.operation list), ledger_withdraw (state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt))
+let[@inline] redeem (state: mock_fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * mock_fa2_state =
+  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state = ledger_withdraw (fa2_state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt) in
+  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  (([]: LigoOp.operation list), state)
 
-let main (op, state: params * fa2_state): LigoOp.operation list * fa2_state =
+let main (op, state: mock_fa2_params * mock_fa2_state): LigoOp.operation list * mock_fa2_state =
   let _ = ensure_no_tez_given () in
   match op with
   (* FA2 entrypoints *)
