@@ -75,7 +75,7 @@ let[@inline] fa2_run_transfer (initial_state, xs: wctez_state * fa2_transfer lis
          (* Fold over the transactions in each FA2 Transfer *)
          Ligo.List.fold_left
            (fun ((st, x): (wctez_state * fa2_transfer_destination)) ->
-              let { fa2_state = fa2_state; ctez_fa12_address = _; metadata = _; } = st in (* deconstruct *)
+              let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } = st in (* deconstruct *)
               let { to_ = to_; token_id = token_id; amount = amnt; } = x in
 
               if fa2_is_operator (fa2_state, !Ligo.Tezos.sender, from_, token_id)
@@ -84,7 +84,8 @@ let[@inline] fa2_run_transfer (initial_state, xs: wctez_state * fa2_transfer lis
                 let () = if token_id = wctez_token_id then () else failwith "FA2_TOKEN_UNDEFINED" in
                 let fa2_state = ledger_withdraw (fa2_state, token_id, from_, amnt) in
                 let fa2_state = ledger_issue (fa2_state, token_id, to_, amnt) in
-                { st with fa2_state = fa2_state; } (* reconstruct *)
+                let st = { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } in (* reconstruct *)
+                st
               else
                 (failwith "FA2_NOT_OPERATOR" : wctez_state)
            )
@@ -142,7 +143,9 @@ let[@inline] fa2_run_update_operators
 
 let[@inline] update_operators (state: wctez_state) (xs: fa2_update_operator list) : LigoOp.operation list * wctez_state =
   let _ = ensure_no_tez_given () in
-  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
+  let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state = fa2_run_update_operators (fa2_state, xs) in
+  let state = { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } in (* reconstruct *)
   (([]: LigoOp.operation list), state)
 
 (*****************************************************************************)
@@ -150,7 +153,7 @@ let[@inline] update_operators (state: wctez_state) (xs: fa2_update_operator list
 (*****************************************************************************)
 
 let[@inline] mint (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation list * wctez_state =
-  let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = _; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } = state in (* deconstruct *)
   (* Emit an operation to ctez transfering amnt of the caller's ctez to this contract *)
   let ctez_fa12_contract = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : fa12_transfer Ligo.contract option) with
     | Some c -> c
@@ -163,11 +166,11 @@ let[@inline] mint (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation list 
   in
   (* Issue the specified amount of tokens to the caller *)
   let fa2_state = ledger_issue_wctez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
-  let state = { state with fa2_state = fa2_state; } in (* reconstruct *)
+  let state = { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } in (* reconstruct *)
   ([op], state)
 
 let[@inline] redeem (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation list * wctez_state =
-  let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = _; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } = state in (* deconstruct *)
   (* Emit an operation to ctez transfering amnt of the caller's ctez to this contract *)
   let ctez_fa12_contract = match (LigoOp.Tezos.get_entrypoint_opt "%transfer" ctez_fa12_address : fa12_transfer Ligo.contract option) with
     | Some c -> c
@@ -180,7 +183,7 @@ let[@inline] redeem (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation lis
   in
   (* Remove the specified amount of tokens for the caller *)
   let fa2_state = ledger_withdraw_wctez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
-  let state = { state with fa2_state = fa2_state; } in (* reconstruct *)
+  let state = { fa2_state = fa2_state; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } in (* reconstruct *)
   ([op], state)
 
 (*****************************************************************************)

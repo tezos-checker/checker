@@ -234,7 +234,9 @@ let[@inline] fa2_run_update_operators
 
 let[@inline] update_operators (state: wtez_state) (xs: fa2_update_operator list) : LigoOp.operation list * wtez_state =
   let _ = ensure_no_tez_given () in
-  let state = { state with fa2_state = fa2_run_update_operators (state.fa2_state, xs) } in
+  let { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } = state in (* deconstruct *)
+  let fa2_state = fa2_run_update_operators (fa2_state, xs) in
+  let state = { fa2_state = fa2_state; vaults = vaults; metadata = metadata; } in (* reconstruct *)
   (([]: LigoOp.operation list), state) (* no need to originate vaults *)
 
 (*****************************************************************************)
