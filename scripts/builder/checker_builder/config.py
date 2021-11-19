@@ -6,6 +6,7 @@ import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+from os import PathLike
 from pathlib import Path
 from typing import Optional, Union
 
@@ -17,8 +18,6 @@ from marshmallow.decorators import post_load
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
-
-DEFAULT_CONFIG = Path("checker.yaml")
 
 
 @dataclass(frozen=True)
@@ -394,11 +393,98 @@ class CheckerConfigSchema(Schema):
 Loader = yaml.SafeLoader
 
 
+class CheckerRepo:
+    """File paths for key items in the Checker repo"""
+
+    def __init__(self, path: PathLike):
+        self.root = Path(path)
+
+    @property
+    def default_config(self) -> Path:
+        return self.root.joinpath("checker.yaml")
+
+    @property
+    def src(self) -> Path:
+        return self.root.joinpath("src")
+
+    @property
+    def input_config(self) -> Path:
+        return self.src.joinpath("_input_checker.yaml")
+
+    @property
+    def generated_ligo(self) -> Path:
+        return self.root.joinpath("generated").joinpath("ligo")
+
+    @property
+    def generated_michelson(self) -> Path:
+        return self.root.joinpath("generated").joinpath("michelson")
+
+    @property
+    def checker_contract(self) -> Path:
+        return self.generated_michelson.joinpath("main.tz")
+
+    @property
+    def checker_functions(self) -> Path:
+        return self.generated_michelson.joinpath("functions.json")
+
+    @property
+    def mock_fa2_contract(self) -> Path:
+        return self.generated_michelson.joinpath("mockFA2Main.tz")
+
+    @property
+    def wtez_contract(self) -> Path:
+        return self.generated_michelson.joinpath("wtezMain.tz")
+
+    @property
+    def wctez_contract(self) -> Path:
+        return self.generated_michelson.joinpath("wctezMain.tz")
+
+    @property
+    def mock_oracle_contract(self) -> Path:
+        return self.root.joinpath("util").joinpath("mock_oracle.tz")
+
+    @property
+    def ctez(self) -> Path:
+        return self.root.joinpath("vendor").joinpath("ctez")
+
+
 def load_checker_config(path: Optional[Path] = None) -> CheckerConfig:
+    """Loads a checker yaml configuration file
+
+    Args:
+        path: The path to the config file. If none is specified a default is used.
+
+    Returns:
+        The parsed CheckerConfig
+    """
     if path is None:
-        path = DEFAULT_CONFIG
+        path = CheckerRepo(".").default_config
     logger.info(f"Loading config from {path}")
     with path.open() as f:
+        raw_config = yaml.load(f, Loader=Loader)
+    return CheckerConfigSchema().load(raw_config)
+
+
+def load_input_config(repo: Optional[CheckerRepo] = None) -> CheckerConfig:
+    """Loads the checker configuration file used as the input for code generation
+
+    Args:
+        repo_root: The Checker repository root directory. Defaults to the current working directory.
+
+    Returns:
+        The parsed CheckerConfig
+
+    Raises:
+        FileNotFoundError: If no input config is found.
+    """
+    if repo is None:
+        repo = CheckerRepo(".")
+    if not repo.input_config.exists():
+        raise FileNotFoundError(
+            f"No configuration file found at {repo.input_config}. This file should be automatically "
+            f"generated as a part of the code generation process."
+        )
+    with repo.input_config.open() as f:
         raw_config = yaml.load(f, Loader=Loader)
     return CheckerConfigSchema().load(raw_config)
 

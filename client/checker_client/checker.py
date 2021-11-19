@@ -11,16 +11,18 @@ import signal
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import docker
 import pytezos
+from pytezos.contract.interface import ContractInterface
 import requests
 from pytezos.client import PyTezosClient
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_builder.config import load_checker_config, CheckerConfig, IssuedTokenConfig
+from checker_builder.config import CheckerRepo, load_input_config, CheckerConfig, IssuedTokenConfig
 from checker_client.operations import inject
+
 
 # Time between blocks for sandbox container
 SANDBOX_TIME_BETWEEN_BLOCKS = "1,1"
@@ -266,10 +268,10 @@ def is_sandbox_container_running(name: str):
 def deploy_contract(
     tz: PyTezosClient,
     *,
-    source_file,
-    initial_storage,
-    initial_balance=0,
-    ttl=MAX_OPERATIONS_TTL,
+    source_file: Path,
+    initial_storage: Any,
+    initial_balance: int = 0,
+    ttl: int = MAX_OPERATIONS_TTL,
 ):
     script = pytezos.ContractInterface.from_file(source_file).script(
         initial_storage=initial_storage
@@ -288,11 +290,11 @@ def deploy_contract(
 
 def deploy_wtez(
     tz: PyTezosClient,
-    checker_dir: str,
+    repo: CheckerRepo,
     ttl: Optional[int] = None,
 ):
     print("Deploying the wtez contract.")
-    src = os.path.join(checker_dir, "wtezMain.tz")
+    src = repo.wtez_contract
     initial_storage = {
         "fa2_state": {
             "ledger": {},
@@ -309,12 +311,12 @@ def deploy_wtez(
 
 def deploy_wctez(
     tz: PyTezosClient,
-    checker_dir: str,
+    repo: CheckerRepo,
     ctez_fa12_address: str,
     ttl: Optional[int] = None,
 ):
     print("Deploying the wctez contract.")
-    src = os.path.join(checker_dir, "wctezMain.tz")
+    src = repo.wctez_contract
     initial_storage = {
         "fa2_state": {
             "ledger": {},
@@ -331,11 +333,11 @@ def deploy_wctez(
 
 def deploy_mockFA2(
     tz: PyTezosClient,
-    checker_dir: str,
+    repo: CheckerRepo,
     ttl: Optional[int] = None,
 ):
     print("Deploying the mock FA2 contract.")
-    src = os.path.join(checker_dir, "mockFA2Main.tz")
+    src = repo.mock_fa2_contract
     initial_storage = {
         "fa2_state": {
             "ledger": {},
@@ -350,30 +352,29 @@ def deploy_mockFA2(
 
 
 def deploy_checker(
-    tz,
-    checker_dir,
+    tz: PyTezosClient,
+    repo: CheckerRepo,
     *,
-    oracle,
-    wtez,
-    ctez_fa12,
-    ctez_cfmm,
-    wctez,
+    oracle: ContractInterface,
+    wtez: ContractInterface,
+    ctez_fa12: ContractInterface,
+    ctez_cfmm: ContractInterface,
+    wctez: ContractInterface,
     ttl: Optional[int] = None,
-    checker_config_path: Optional[Path] = None,
 ):
-    config = load_checker_config(checker_config_path)
+    config = load_input_config()
 
     print("Deploying the wrapper.")
 
     checker = deploy_contract(
         tz,
-        source_file=os.path.join(checker_dir, "main.tz"),
+        source_file=repo.checker_contract,
         initial_storage=({}, {}, {"unsealed": tz.key.public_key_hash()}),
         ttl=ttl,
     )
     print("Checker address: {}".format(checker.context.address))
 
-    with open(os.path.join(checker_dir, "functions.json")) as f:
+    with repo.checker_functions.open() as f:
         functions = json.load(f)
 
     print("Deploying the TZIP-16 metadata.")
@@ -446,11 +447,12 @@ def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
         f.write(res.stdout)
 
 
-def deploy_ctez(tz: PyTezosClient, ctez_dir, ttl: Optional[int] = None):
+def deploy_ctez(tz: PyTezosClient, repo: CheckerRepo, ttl: Optional[int] = None):
     """Compiles and deploys the ctez contracts.
 
     Should probably eventually be moved to the ctez repo itself...
     """
+    ctez_dir = repo.ctez
     tmpdir = tempfile.TemporaryDirectory(suffix="-checker-ctez")
     with tempfile.TemporaryDirectory(suffix="-checker-ctez") as tmpdir:
         tmpdir = Path(tmpdir)

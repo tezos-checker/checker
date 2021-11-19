@@ -13,6 +13,8 @@ src/tokenMetadata.ml
 generated/michelson
 generated/ligo
 
+src/_input_checker.yaml
+
 # Local dune directories and opam switches
 **/_build
 **/_coverage

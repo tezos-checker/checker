@@ -1,4 +1,4 @@
-from pathlib import Path
+import shutil
 
 import click
 
@@ -48,9 +48,11 @@ def cli():
 @cli.command()
 def generate():
     """Run code generation"""
-    checker_config = config.load_checker_config()
+    repo = config.CheckerRepo(".")
+    base_path = repo.src
+    config_path = repo.default_config
+    checker_config = config.load_checker_config(config_path)
     env = config.load_template_env()
-    base_path = Path("./src")
 
     # Select the drift derivative template at runtime based on config
     GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[
@@ -82,6 +84,9 @@ def generate():
             template,
             checker_config,
         )
+
+    # Store the input configuration file for downstream processes to use (e.g. for deployment)
+    shutil.copy(config_path, repo.input_config)
 
 
 if __name__ == "__main__":

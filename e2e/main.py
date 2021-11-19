@@ -9,16 +9,13 @@ from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
+from checker_builder.config import load_input_config
 from checker_client.checker import *
-from checker_builder.config import load_checker_config
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 from pytezos.operation.group import OperationGroup
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
-CHECKER_DIR = os.getenv(
-    "CHECKER_DIR", default=os.path.join(PROJECT_ROOT, "generated/michelson")
-)
 # Optional file at which to output gas costs in end to end tests
 WRITE_GAS_COSTS = os.getenv("WRITE_GAS_COSTS")
 # Optional file at which to output profiles of gas costs from liquidation auction stress
@@ -28,8 +25,10 @@ WRITE_GAS_PROFILES = os.getenv("WRITE_GAS_PROFILES")
 
 class SandboxedTestCase(unittest.TestCase):
     def setUp(self):
-        self.config = load_checker_config()
-        #  sometimes doesn't work, needs investigation:
+        self.repo = CheckerRepo(PROJECT_ROOT)
+        self.config = load_input_config(self.repo)
+        # FIXME: sometimes doesn't work (flextesa runs node on a different port the one specified),
+        # needs investigation:
         #    port = portpicker.pick_unused_port()
         port = 20000
         client, teardownFun = start_sandbox(
@@ -305,7 +304,7 @@ class E2ETest(SandboxedTestCase):
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
             self.client,
-            source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
+            source_file=self.repo.mock_oracle_contract,
             initial_storage=(self.client.key.public_key_hash(), 1000000),
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -313,21 +312,21 @@ class E2ETest(SandboxedTestCase):
         print("Deploying the tez wrapper.")
         wtez = deploy_wtez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
-            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying wctez contract.")
         wctez = deploy_wctez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ctez_fa12_address=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -335,7 +334,7 @@ class E2ETest(SandboxedTestCase):
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             oracle=oracle.context.address,
             wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
@@ -558,7 +557,7 @@ class WTezTest(SandboxedTestCase):
 
         wrapper = deploy_wtez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
         print("Deployment finished.")
@@ -678,13 +677,13 @@ class WCtezTest(SandboxedTestCase):
         print("Deploying ctez contracts.")
         ctez = deploy_ctez(
             self.client,
-            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
 
         wctez = deploy_wctez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ctez_fa12_address=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -814,7 +813,7 @@ class MockFA2Test(SandboxedTestCase):
         print("Deploying the mock FA2 contract.")
         mockFA2 = deploy_mockFA2(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
         print("Deployment finished.")
@@ -939,7 +938,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
             self.client,
-            source_file=os.path.join(PROJECT_ROOT, "util/mock_oracle.tz"),
+            source_file=self.repo.mock_oracle_contract,
             initial_storage=(self.client.key.public_key_hash(), 1000000),
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -947,21 +946,21 @@ class LiquidationsStressTest(SandboxedTestCase):
         print("Deploying the tez wrapper.")
         wtez = deploy_wtez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
-            ctez_dir=os.path.join(PROJECT_ROOT, "vendor/ctez"),
+            repo=self.repo,
             ttl=MAX_OPERATIONS_TTL,
         )
 
         print("Deploying wctez contract.")
         wctez = deploy_wctez(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             ctez_fa12_address=ctez["fa12_ctez"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
@@ -969,7 +968,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
-            checker_dir=CHECKER_DIR,
+            repo=self.repo,
             oracle=oracle.context.address,
             wtez=wtez.context.address,
             ctez_fa12=ctez["fa12_ctez"].context.address,
