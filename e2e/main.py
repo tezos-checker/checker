@@ -416,20 +416,20 @@ class E2ETest(SandboxedTestCase):
                 call_collateral_fa2_endpoint("deposit", None, amount=amnt)
             elif self.config.collateral_type == CollateralType.FA2:
                 call_collateral_fa2_endpoint("mint", amnt)
-                update_operators = [
-                    {
-                        "add_operator": {
-                            "owner": account,
-                            "operator": checker.context.address,
-                            "token_id": collateral_token_id,
-                        }
-                    },
-                ]
-                call_collateral_fa2_endpoint("update_operators", update_operators)
             else:
                 raise ValueError(
                     f"Unexpected value for collateral_type: {self.config.collateral_type}"
                 )
+            update_operators = [
+                {
+                    "add_operator": {
+                        "owner": account,
+                        "operator": checker.context.address,
+                        "token_id": collateral_token_id,
+                    }
+                },
+            ]
+            call_collateral_fa2_endpoint("update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
@@ -991,13 +991,6 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying the mock FA2 contract.")
-        mock_fa2 = deploy_mockFA2(
-            self.client,
-            repo=self.repo,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
@@ -1006,16 +999,49 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        if self.config.collateral_type == CollateralType.TEZ:
+            print("Deploying the tez wrapper.")
+            collateral_fa2 = deploy_wtez(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+
+            print("Deploying wctez contract.")
+            cfmm_token_fa2 = deploy_wctez(
+                self.client,
+                repo=self.repo,
+                ctez_fa12_address=ctez["fa12_ctez"].context.address,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+        elif self.config.collateral_type == CollateralType.FA2:
+            print("Deploying the mock FA2 contract.")
+            mock_fa2 = deploy_mockFA2(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_fa2 = mock_fa2
+            collateral_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+
+            cfmm_token_fa2 = mock_fa2
+            cfmm_token_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+
+        else:
+            raise ValueError(
+                f"Unexpected value for collateral_type: {self.config.collateral_type}"
+            )
+
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            collateral_fa2=mock_fa2.context.address,
-            cfmm_token_fa2=mock_fa2.context.address,
-            ctez_cfmm=ctez[
-                "cfmm"
-            ].context.address,  # FIXME: Only to get the cfmm address...
+            collateral_fa2=collateral_fa2.context.address,
+            cfmm_token_fa2=cfmm_token_fa2.context.address,
+            ctez_cfmm=ctez["cfmm"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -1057,8 +1083,15 @@ class LiquidationsStressTest(SandboxedTestCase):
                 profile = profiler(self.client, checker, batch)
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
-        def get_mock_fa2_tokens_and_make_checker_an_operator(checker, amnt):
-            call_endpoint(mock_fa2, "mint", amnt)
+        def get_collateral_tokens_and_make_checker_an_operator(checker, amnt):
+            if self.config.collateral_type == CollateralType.TEZ:
+                call_endpoint(collateral_fa2, "deposit", None, amount=amnt)
+            elif self.config.collateral_type == CollateralType.FA2:
+                call_endpoint(collateral_fa2, "mint", amnt)
+            else:
+                raise ValueError(
+                    f"Unexpected value for collateral_type: {self.config.collateral_type}"
+                )
             update_operators = [
                 {
                     "add_operator": {
@@ -1068,18 +1101,26 @@ class LiquidationsStressTest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(mock_fa2, "update_operators", update_operators)
+            call_endpoint(collateral_fa2, "update_operators", update_operators)
 
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.
-        get_mock_fa2_tokens_and_make_checker_an_operator(checker, 200_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(checker, 200_000_000)
         call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
         call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
 
-        # Get some mock_fa2 tokens
-        call_endpoint(mock_fa2, "mint", 100_000)
+        # Get some cfmm tokens and allow checker to spend it
+        if self.config.collateral_type == CollateralType.TEZ:
+            # Logic specific to ctez
+            call_endpoint(
+                ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
+            )
+            call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
+            call_endpoint(
+                ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 100_000)
+            )
 
-        # Approve checker to spend the mock_fa2 tokens
+        call_endpoint(cfmm_token_fa2, "mint", 100_000)
         update_operators = [
             {
                 "add_operator": {
@@ -1089,7 +1130,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 }
             },
         ]
-        call_endpoint(mock_fa2, "update_operators", update_operators)
+        call_endpoint(cfmm_token_fa2, "update_operators", update_operators)
 
         # Add some liquidity
         call_endpoint(
@@ -1100,7 +1141,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         burrows = list(range(1, 1001))
 
-        get_mock_fa2_tokens_and_make_checker_an_operator(
+        get_collateral_tokens_and_make_checker_an_operator(
             checker, 100_000_000 * 1000
         )  # 1000 = number of burrows
         call_bulk(
@@ -1172,7 +1213,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
         cancel_ops = []
-        get_mock_fa2_tokens_and_make_checker_an_operator(
+        get_collateral_tokens_and_make_checker_an_operator(
             checker, 1_000_000_000 * 895
         )  # the maximum amount of cancel_ops (see below)
         for i, (queued_leaf_ptr, leaf) in enumerate(
