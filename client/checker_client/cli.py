@@ -173,6 +173,9 @@ def deploy(config: Config, address=None, port=None, key=None):
     config.dump()
 
 
+# FIXME: This function is totally out of date. We have to figure out how to
+# change the command-line tool to be able to (a) deploy all the helper
+# contracts we want and (b) deploy checker using different configurations.
 @deploy.command()
 @click.option(
     "--src",
