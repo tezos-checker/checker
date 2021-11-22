@@ -1,0 +1,176 @@
+## Configurations for Checker builds, code generation, and deployment
+
+collateral_type: fa2 # One of `tez` or `fa2`
+
+# Token configuration
+tokens:
+  # Config for tokens which are issued by contracts in the Checker ecosystem. Used in
+  # source code generation and in populating contracts with FA2 metadata at deploy time.
+  issued:
+    # Issued token configuration (creates kit.ml)
+    kit:
+      # The token's FA2 id
+      token_id: 0
+      # Specifies the number of decimal digits used by the token
+      decimal_digits: 6
+      # Optional FA2 display name
+      name: kit (checker dev)
+      # Optional FA2 token symbol
+      symbol: kit
+    # Liquidity token configuration (creates lqt.ml)
+    liquidity:
+      # The token's FA2 id
+      token_id: 1
+      # Specifies the number of decimal digits used by the token
+      decimal_digits: 6
+      # Optional FA2 display name
+      name: liquidity (checker dev)
+      # Optional FA2 token symbol
+      symbol: lqt
+    # Wrapped tez tokens
+    wtez:
+      # The token's FA2 id
+      token_id: 2
+      # Specifies the number of decimal digits used by the token
+      # e.g. tez has 6 decimal digits.
+      decimal_digits: 6
+      # Optional FA2 display name
+      name: wtez (checker dev)
+      # Optional FA2 token symbol
+      symbol: wtez
+    # Wrapped ctez tokens
+    wctez:
+      # The token's FA2 id
+      token_id: 3
+      # Specifies the number of decimal digits used by the token
+      # e.g. tez has 6 decimal digits.
+      decimal_digits: 6
+      # Optional FA2 display name
+      name: wctez (checker dev)
+      # Optional FA2 token symbol
+      symbol: wctez
+    # Mock FA2 tokens (use for testing only)
+    mock_fa2:
+      # The token's FA2 id
+      token_id: 63
+      # Specifies the number of decimal digits used by the token
+      # e.g. tez has 6 decimal digits.
+      decimal_digits: 6
+      # Optional FA2 display name
+      name: mock_fa2 (checker dev)
+      # Optional FA2 token symbol
+      symbol: mock_fa2
+
+  # Config for tokens which are referenced internally in Checker.
+  # Note: collateral and cfmm_token config must be identical when collateral_type is set to fa2
+  in_use:
+    # Collateral token (creates tok.ml).
+    # Note: Must be configured with same values as wtez when collateral_type is set to tez
+    collateral:
+      # The token's FA2 id
+      token_id: 63
+      # Specifies the number of decimal digits used by the token
+      decimal_digits: 6
+    # CFMM token (creates ctok.ml).
+    # Note: Must be configured with same values as wctez when collateral_type=tez
+    cfmm_token:
+      # The token's FA2 id
+      token_id: 63
+      # Specifies the number of decimal digits used by the token
+      decimal_digits: 6
+
+# Drift derivative curve type and respective parameters
+drift_derivative_curve:
+  # Default configuration for the bang-bang (default) curve
+  curve_type: bang-bang
+  parameters:
+    # [cNp] - target value defining the start of the low bracket
+    target_low_bracket: 5/1000
+    # [cNp] - target value defining the start of the high bracket
+    target_high_bracket: 5/100
+    # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the low bracket
+    low_acceleration: 247111
+    # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the high bracket
+    high_acceleration: 1235555
+  # Default configuration for the continuous curve
+  # curve_type: continuous
+  # parameters:
+  #   # [cNp] - target value defining the start of the high bracket (saturated)
+  #   target_bracket: 5/100
+  #   # [fixedpoint, cNp / day^2 ] - fixedpoint representation of the value of the high bracket
+  #   max_acceleration: 1235555
+
+# Checker system constants
+constants:
+  # ====================================================================================
+  # General constants
+  # ====================================================================================
+  # [percent] - Yearly burrow fee percentage
+  burrow_fee_percentage: 5/1000
+  # [percent] - Percentage kept by the cfmm contract from the return asset
+  cfmm_fee: 2/1000
+  # [tok] - Number of collateral tokens to be given for the creation of a burrow.
+  #   Does NOT count towards the burrow's collateral balance.
+  creation_deposit: 1_000_000
+  # [dimensionless] - Factor used for setting the liquidation limit
+  fliquidation: 19/10
+  # [dimensionless] - Factor used for setting the minting limit
+  fminting: 21/10
+  # [dimensionless?] - Maximum yearly imbalance rate
+  imbalance_limit: 5/100
+  # [dimensionless] - Factor used to scale down the imbalance rate. The higher the value, the
+  #   faster the imbalance rate saturates.
+  imbalance_scaling_factor: 3/4
+  # [percent] - The percentage of additional collateral that we charge when liquidating a burrow
+  #   in order to penalize it for liquidation
+  liquidation_penalty: 1/10
+  # [percent] - The percentage of a burrow's collateral that we offer to whoever triggers
+  #   the burrow's liquidation
+  liquidation_reward_percentage: 1/1000
+  # [cNp/s] - Protected index epsilon. The higher this value is, the faster the protected
+  #   index catches up with the actual index. Currently calculated as 0.05cNp
+  #   per minute. Basically {[(0.05 / 100) / 60 = 5/600_000 = 1/120_000]}
+  #   so the inverse is simply 120_000.
+  protected_index_inverse_epsilon: 120_000
+  # ====================================================================================
+  # Touch constants
+  # ====================================================================================
+  # The number of liquidation slices to process every time `touch` is called
+  number_of_slices_to_process: 5
+  # [kit/s] - We want the reward in the first bracket to be 0.1 kit / minute, so we just
+  #   divide by 60 to get roughly how much should it be per second.
+  #   See {!Checker.calculate_touch_reward} for its use.
+  touch_low_reward: 1/600
+  # [kit/s] - We want the reward in the second bracket to be 1 kit / minute, so we just
+  #   divide by 60 to get roughly how much should it be per second.
+  #   See {!Checker.calculate_touch_reward} for its use.
+  touch_high_reward: 1/60
+  # [s] - Parameter used for calculating the current reward for touching the checker
+  #   contract. See {!Checker.calculate_touch_reward} for its use.
+  touch_reward_low_bracket: 600
+  # ====================================================================================
+  # Liquidation auction constants
+  # ====================================================================================
+  # [nP/s?] - How fast a descending option price drops per second. Currently we want it
+  #   to drop by around 1cNp per minute, so we just divide by 60 to get roughly
+  #   how much it should be per second.
+  auction_decay_rate: 1/6000
+  # [nP] - Every bid in an ascending auction needs to improve over the previous bid by
+  #  at least 0.33 cNp.
+  bid_improvement_factor: 33/10000
+  # [blocks] - The maximum number of blocks that can pass between two (ascending) bids
+  #   during an auction. The auction should expire if more blocks than this
+  #   number pass between two bids.
+  max_bid_interval_in_blocks: 20
+  # [s] - The maximum number of seconds that can pass between two (ascending) bids
+  #   during an auction. The auction should expire if more than this many seconds
+  #   pass between two bids. Currently set to 20min ([20min * 60sec/min = 1200s]).
+  max_bid_interval_in_seconds: 1200
+  # Maximum height of the tree used as liquidation queue.
+  #   The maximum number of elements will be between [2**(n-1)] and [2**(n-2)].
+  max_liquidation_queue_height: 12
+  # [tok] - Maximum amount of collateral tokens which can be in an auction lot
+  max_lot_size: 10_000_000_000
+  # [dimensionless] The minimum fraction of the auction queue which **must**
+  #   go into a new auction lot.
+  min_lot_auction_queue_fraction: 5/100
