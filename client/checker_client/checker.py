@@ -351,12 +351,13 @@ def deploy_mockFA2(
     return mockFA2
 
 
-def deploy_fa2_checker(
+def deploy_checker(
     tz: PyTezosClient,
     repo: CheckerRepo,
     *,
     oracle: ContractInterface,
-    mock_fa2: ContractInterface,
+    collateral_fa2: ContractInterface,
+    cfmm_token_fa2: ContractInterface,
     ctez_cfmm: ContractInterface,  # FIXME: Wish we didn't need this one
     ttl: Optional[int] = None,
 ):
@@ -420,7 +421,7 @@ def deploy_fa2_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, mock_fa2, mock_fa2, ctez_cfmm))
+        checker.sealContract((oracle, collateral_fa2, cfmm_token_fa2, ctez_cfmm))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),

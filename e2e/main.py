@@ -325,11 +325,12 @@ class E2ETest(SandboxedTestCase):
         )
 
         print("Deploying Checker.")
-        checker = deploy_fa2_checker(
+        checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            mock_fa2=mock_fa2.context.address,
+            collateral_fa2=mock_fa2.context.address,
+            cfmm_token_fa2=mock_fa2.context.address,
             ctez_cfmm=ctez[
                 "cfmm"
             ].context.address,  # FIXME: Only to get the cfmm address...
@@ -946,11 +947,12 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         print("Deploying Checker.")
-        checker = deploy_fa2_checker(
+        checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            mock_fa2=mock_fa2.context.address,
+            collateral_fa2=mock_fa2.context.address,
+            cfmm_token_fa2=mock_fa2.context.address,
             ctez_cfmm=ctez[
                 "cfmm"
             ].context.address,  # FIXME: Only to get the cfmm address...

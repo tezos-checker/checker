@@ -697,7 +697,7 @@ let suite =
        assert_operation_list_equal ~expected:expected_ops ~real:ops
     );
 
-    (* FIXME:
+    (* FIXME: Operations differ between the FA2 deployment and the TEZ deployment
         ("entrypoint_touch - emits expected operations when checker needs to be touched" >::
          fun _ ->
            Ligo.Tezos.reset ();
@@ -1702,7 +1702,7 @@ let suite =
          ~expected:(Ligo.int_from_literal "21_000_000")
          ~real:touch_reward;
 
-       (* FIXME:
+       (* FIXME: Operations differ between the FA2 deployment and the TEZ deployment
               (* Check that all the requests for burrows to send tez come _before_ the
                * request to the oracle to update the index. *)
               begin match ops with

@@ -227,13 +227,12 @@ def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
-    checker = checker_lib.deploy_tez_checker(
-        # FIXME: Ill-formed (also deploy_tez_checker does not exist at the moment)
+    checker = checker_lib.deploy_checker(
         client,
         CheckerRepo(repo_path),
         oracle=config.oracle_address,
-        wtez=config.wtez_address,
-        ctez_fa12=config.ctez_fa12_address,
+        collateral_fa2=config.wtez_address,  # FIXME: only TEZ deployment at the moment
+        cfmm_token_fa2=config.wctez_address,  # FIXME: only TEZ deployment at the moment
         ctez_cfmm=config.ctez_cfmm_address,
         wctez=config.wctez,
         ttl=_patch_operation_ttl(config),
