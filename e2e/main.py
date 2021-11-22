@@ -342,10 +342,10 @@ class E2ETest(SandboxedTestCase):
                 ttl=MAX_OPERATIONS_TTL,
             )
             collateral_fa2 = mock_fa2
-            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+            collateral_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
 
             cfmm_token_fa2 = mock_fa2
-            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+            cfmm_token_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
 
         else:
             raise ValueError(
