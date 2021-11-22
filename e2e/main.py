@@ -9,7 +9,7 @@ from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
-from checker_builder.config import load_input_config
+from checker_builder.config import load_input_config, CollateralType
 from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
@@ -297,7 +297,7 @@ class E2ETest(SandboxedTestCase):
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.issued.kit.token_id
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        mock_fa2_token_id = self.config.tokens.issued.mock_fa2.token_id
+        cfmm_token_token_id = self.config.tokens.in_use.cfmm_token.token_id
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -309,13 +309,6 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying the mock FA2 contract.")
-        mock_fa2 = deploy_mockFA2(
-            self.client,
-            repo=self.repo,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
@@ -324,16 +317,49 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
+        if self.config.collateral_type == CollateralType.TEZ:
+            print("Deploying the tez wrapper.")
+            collateral_fa2 = deploy_wtez(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+
+            print("Deploying wctez contract.")
+            cfmm_token_fa2 = deploy_wctez(
+                self.client,
+                repo=self.repo,
+                ctez_fa12_address=ctez["fa12_ctez"].context.address,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+        elif self.config.collateral_type == CollateralType.FA2:
+            print("Deploying the mock FA2 contract.")
+            mock_fa2 = deploy_mockFA2(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_fa2 = mock_fa2
+            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+
+            cfmm_token_fa2 = mock_fa2
+            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+
+        else:
+            raise ValueError(
+                f"Unexpected value for collateral_type: {self.config.collateral_type}"
+            )
+
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            collateral_fa2=mock_fa2.context.address,
-            cfmm_token_fa2=mock_fa2.context.address,
-            ctez_cfmm=ctez[
-                "cfmm"
-            ].context.address,  # FIXME: Only to get the cfmm address...
+            collateral_fa2=collateral_fa2.context.address,
+            cfmm_token_fa2=cfmm_token_fa2.context.address,
+            ctez_cfmm=ctez["cfmm"].context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -358,16 +384,35 @@ class E2ETest(SandboxedTestCase):
             gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def call_mock_fa2_endpoint(
-            name, param, amount=0, contract=mock_fa2, client=self.client
+        def call_collateral_fa2_endpoint(
+            name,
+            param,
+            amount=0,
+            contract=collateral_fa2,
+            contract_name=collateral_name,
+            client=self.client,
         ):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
-            gas_costs[f"mock_fa2%{name}"] = int(ret["contents"][0]["gas_limit"])
+            gas_costs[f"{contract_name}%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def get_mock_fa2_tokens_and_make_checker_an_operator(amnt):
-            call_mock_fa2_endpoint("mint", amnt)
+        # FIXME: Might be nicer to not duplicate this
+        def call_cfmm_token_fa2_endpoint(
+            name,
+            param,
+            amount=0,
+            contract=cfmm_token_fa2,
+            contract_name=cfmm_token_name,
+            client=self.client,
+        ):
+            print("Calling", name, "with", param)
+            ret = call_endpoint(contract, name, param, amount, client=client)
+            gas_costs[f"{contract_name}%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def get_collateral_tokens_and_make_checker_an_operator(amnt):
+            call_collateral_fa2_endpoint("mint", amnt)
             update_operators = [
                 {
                     "add_operator": {
@@ -377,13 +422,13 @@ class E2ETest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(mock_fa2, "update_operators", update_operators)
+            call_endpoint(collateral_fa2, "update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
         # ===============================================================================
         # Create a burrow
-        get_mock_fa2_tokens_and_make_checker_an_operator(10_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(10_000_000)
         call_checker_endpoint("create_burrow", (1, None, 10_000_000))
         assert_fa2_token_balance(checker, account, kit_token_id, 0)
 
@@ -396,7 +441,7 @@ class E2ETest(SandboxedTestCase):
         assert_fa2_token_balance(checker, account, kit_token_id, 999_990)
 
         # Deposit collateral
-        get_mock_fa2_tokens_and_make_checker_an_operator(2_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(2_000_000)
         call_checker_endpoint("deposit_collateral", (1, 2_000_000))
 
         # Withdraw collateral
@@ -407,12 +452,12 @@ class E2ETest(SandboxedTestCase):
         # call_checker_endpoint("set_burrow_delegate", (1, account))
 
         # Deactivate a burrow
-        get_mock_fa2_tokens_and_make_checker_an_operator(3_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(3_000_000)
         call_checker_endpoint("create_burrow", (2, None, 3_000_000))
         call_checker_endpoint("deactivate_burrow", (2, account))
 
         # Re-activate a burrow
-        get_mock_fa2_tokens_and_make_checker_an_operator(1_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(1_000_000)
         call_checker_endpoint("activate_burrow", (2, 1_000_000))
 
         # Touch checker
@@ -504,20 +549,21 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         # CFMM
         # ===============================================================================
-        # Get some mock_fa2 tokens
-        call_mock_fa2_endpoint("mint", 800_000)
+        # Get some cfmm tokens
+        # FIXME: Calls in this section differ a lot when collateral = tez
+        call_cfmm_token_fa2_endpoint("mint", 800_000)
 
-        # Approve checker to spend the mock_fa2 tokens
+        # Approve checker to spend the cfmm token
         update_operators = [
             {
                 "add_operator": {
                     "owner": account,
                     "operator": checker.context.address,
-                    "token_id": mock_fa2_token_id,
+                    "token_id": cfmm_token_token_id,
                 }
             },
         ]
-        call_mock_fa2_endpoint("update_operators", update_operators)
+        call_cfmm_token_fa2_endpoint("update_operators", update_operators)
 
         # Add some liquidity
         call_checker_endpoint(
