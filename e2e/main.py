@@ -422,7 +422,22 @@ class E2ETest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(collateral_fa2, "update_operators", update_operators)
+            call_collateral_fa2_endpoint("update_operators", update_operators)
+
+        def get_cfmm_token_tokens_and_make_checker_an_operator(amnt):
+            # FIXME: This one needs to branch actually. If the collateral type
+            # is tez we need to do some work on the ctez side as well.
+            call_cfmm_token_fa2_endpoint("mint", amnt)
+            update_operators = [
+                {
+                    "add_operator": {
+                        "owner": account,
+                        "operator": checker.context.address,
+                        "token_id": cfmm_token_token_id,
+                    }
+                },
+            ]
+            call_cfmm_token_fa2_endpoint("update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
@@ -549,21 +564,8 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         # CFMM
         # ===============================================================================
-        # Get some cfmm tokens
-        # FIXME: Calls in this section differ a lot when collateral = tez
-        call_cfmm_token_fa2_endpoint("mint", 800_000)
-
-        # Approve checker to spend the cfmm token
-        update_operators = [
-            {
-                "add_operator": {
-                    "owner": account,
-                    "operator": checker.context.address,
-                    "token_id": cfmm_token_token_id,
-                }
-            },
-        ]
-        call_cfmm_token_fa2_endpoint("update_operators", update_operators)
+        # Get some cfmm tokens and allow checker to spend it
+        get_cfmm_token_tokens_and_make_checker_an_operator(800_000)
 
         # Add some liquidity
         call_checker_endpoint(
