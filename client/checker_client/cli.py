@@ -228,6 +228,7 @@ def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
     checker = checker_lib.deploy_tez_checker(
+        # FIXME: Ill-formed (also deploy_tez_checker does not exist at the moment)
         client,
         CheckerRepo(repo_path),
         oracle=config.oracle_address,
