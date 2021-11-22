@@ -324,7 +324,7 @@ class E2ETest(SandboxedTestCase):
                 repo=self.repo,
                 ttl=MAX_OPERATIONS_TTL,
             )
-            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+            collateral_name = "wtez"
 
             print("Deploying wctez contract.")
             cfmm_token_fa2 = deploy_wctez(
@@ -333,7 +333,7 @@ class E2ETest(SandboxedTestCase):
                 ctez_fa12_address=ctez["fa12_ctez"].context.address,
                 ttl=MAX_OPERATIONS_TTL,
             )
-            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+            cfmm_token_name = "wctez"
         elif self.config.collateral_type == CollateralType.FA2:
             print("Deploying the mock FA2 contract.")
             mock_fa2 = deploy_mockFA2(
@@ -342,11 +342,10 @@ class E2ETest(SandboxedTestCase):
                 ttl=MAX_OPERATIONS_TTL,
             )
             collateral_fa2 = mock_fa2
-            collateral_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+            collateral_name = "mock_fa2"
 
             cfmm_token_fa2 = mock_fa2
-            cfmm_token_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
-
+            cfmm_token_name = "mock_fa2"
         else:
             raise ValueError(
                 f"Unexpected value for collateral_type: {self.config.collateral_type}"
@@ -1006,7 +1005,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 repo=self.repo,
                 ttl=MAX_OPERATIONS_TTL,
             )
-            collateral_name = "wtez"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+            collateral_name = "wtez"
 
             print("Deploying wctez contract.")
             cfmm_token_fa2 = deploy_wctez(
@@ -1015,7 +1014,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 ctez_fa12_address=ctez["fa12_ctez"].context.address,
                 ttl=MAX_OPERATIONS_TTL,
             )
-            cfmm_token_name = "wctez"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
+            cfmm_token_name = "wctez"
         elif self.config.collateral_type == CollateralType.FA2:
             print("Deploying the mock FA2 contract.")
             mock_fa2 = deploy_mockFA2(
@@ -1024,11 +1023,10 @@ class LiquidationsStressTest(SandboxedTestCase):
                 ttl=MAX_OPERATIONS_TTL,
             )
             collateral_fa2 = mock_fa2
-            collateral_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.collateral.symbol
+            collateral_name = "mock_fa2"
 
             cfmm_token_fa2 = mock_fa2
-            cfmm_token_name = "mock_fa2"  # FIXME: would have liked this as config.tokens.in_use.cfmm_token.symbol
-
+            cfmm_token_name = "mock_fa2"
         else:
             raise ValueError(
                 f"Unexpected value for collateral_type: {self.config.collateral_type}"
