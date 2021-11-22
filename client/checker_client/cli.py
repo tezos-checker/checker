@@ -227,7 +227,7 @@ def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez
     click.echo(f"Connecting to tezos node at: {shell}")
     client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
     client.loglevel = logging.WARNING
-    checker = checker_lib.deploy_checker(
+    checker = checker_lib.deploy_tez_checker(
         client,
         CheckerRepo(repo_path),
         oracle=config.oracle_address,

@@ -1,6 +1,6 @@
 ## Configurations for Checker builds, code generation, and deployment
 
-collateral_type: fa2 # One of `tez` or `fa2`
+collateral_type: tez # One of `tez` or `fa2`
 
 # Token configuration
 tokens:
@@ -52,10 +52,10 @@ tokens:
     # Mock FA2 tokens (use for testing only)
     mock_fa2:
       # The token's FA2 id
-      token_id: 63
+      token_id: 42
       # Specifies the number of decimal digits used by the token
       # e.g. tez has 6 decimal digits.
-      decimal_digits: 6
+      decimal_digits: 11
       # Optional FA2 display name
       name: mock_fa2 (checker dev)
       # Optional FA2 token symbol
@@ -68,14 +68,14 @@ tokens:
     # Note: Must be configured with same values as wtez when collateral_type is set to tez
     collateral:
       # The token's FA2 id
-      token_id: 63
+      token_id: 2
       # Specifies the number of decimal digits used by the token
       decimal_digits: 6
     # CFMM token (creates ctok.ml).
     # Note: Must be configured with same values as wctez when collateral_type=tez
     cfmm_token:
       # The token's FA2 id
-      token_id: 63
+      token_id: 3
       # Specifies the number of decimal digits used by the token
       decimal_digits: 6
 

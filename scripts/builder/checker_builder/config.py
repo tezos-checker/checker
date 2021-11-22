@@ -378,11 +378,6 @@ class CheckerConfigSchema(Schema):
 
     @post_load
     def make(self, data, **kwargs):
-        # FIXME: Remove this check once switchable collateral type logic is fully implemented
-        if data["collateral_type"] == CollateralType.FA2:
-            raise NotImplementedError(
-                "FA2 collateral not yet supported. Can only use 'tez' collateral."
-            )
         return CheckerConfig(**data)
 
 
