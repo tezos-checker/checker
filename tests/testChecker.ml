@@ -617,6 +617,7 @@ let suite =
 
     ("entrypoint_set_burrow_delegate - emits expected operations" >::
      fun _ ->
+       (* NOTE: In a collateral=FA2 deployment this would actually fail. *)
        Ligo.Tezos.reset ();
        (* Create the burrow with no delegate *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
@@ -1937,6 +1938,7 @@ let suite =
 
     ("entrypoint_set_burrow_delegate - does not fail on untouched burrows" >::
      fun _ ->
+       (* NOTE: In a collateral=FA2 deployment this would actually fail. *)
        Ligo.Tezos.reset ();
        let amount = Constants.creation_deposit in
        (* Create a burrow *)
