@@ -10,9 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -41,8 +38,6 @@ jobs:
         run: echo "push_flag=--push" >> $GITHUB_ENV
         name: Enable push to build cache
 
-      - name: Choose configuration file
-        run: cp ${{ matrix.configuration_file }} checker.yaml
       - name: Build dependencies
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
@@ -82,9 +77,6 @@ jobs:
           if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -109,8 +101,6 @@ jobs:
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       # Note: Not pushing here to avoid clashing with pushes from the main `build` job
-      - name: Choose configuration file
-        run: cp ${{ matrix.configuration_file }} checker.yaml
       - name: Run e2e tests
         run: earthly --ci --artifact +test-e2e/ e2e-outputs
       - uses: actions/upload-artifact@v2.2.4
