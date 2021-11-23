@@ -453,9 +453,9 @@ class E2ETest(SandboxedTestCase):
         # Withdraw collateral
         call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
 
-        # FIXME: Gives (-3) as expected when collateral=fa2!
-        # # Set delegate
-        # call_checker_endpoint("set_burrow_delegate", (1, account))
+        # Set delegate (only if collateral = tez); otherwise it fails, as expected
+        if self.config.collateral_type == CollateralType.TEZ:
+            call_checker_endpoint("set_burrow_delegate", (1, account))
 
         # Deactivate a burrow
         get_collateral_tokens_and_make_checker_an_operator(3_000_000)
