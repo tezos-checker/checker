@@ -429,7 +429,7 @@ cli:
 
     # Required dir for pytezos
     RUN mkdir /root/.tezos-client
-    ENV PATH="/root/.venv/bin:$PATH"
+    ENV PATH="/root/client/.venv/bin:$PATH"
     CMD checker
 
     ARG TAG=latest
