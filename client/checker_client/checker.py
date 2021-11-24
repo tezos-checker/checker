@@ -356,10 +356,9 @@ def deploy_checker(
     repo: CheckerRepo,
     *,
     oracle: ContractInterface,
-    wtez: ContractInterface,
-    ctez_fa12: ContractInterface,
-    ctez_cfmm: ContractInterface,
-    wctez: ContractInterface,
+    collateral_fa2: ContractInterface,
+    cfmm_token_fa2: ContractInterface,
+    ctez_cfmm: ContractInterface,  # FIXME: Wish we didn't need this one
     ttl: Optional[int] = None,
 ):
     config = load_input_config()
@@ -422,7 +421,7 @@ def deploy_checker(
     print("Sealing.")
     inject(
         tz,
-        checker.sealContract((oracle, wtez, wctez, ctez_cfmm))
+        checker.sealContract((oracle, collateral_fa2, cfmm_token_fa2, ctez_cfmm))
         .as_transaction()
         .autofill(ttl=ttl)
         .sign(),

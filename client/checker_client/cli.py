@@ -173,6 +173,9 @@ def deploy(config: Config, address=None, port=None, key=None):
     config.dump()
 
 
+# FIXME: This function is totally out of date. We have to figure out how to
+# change the command-line tool to be able to (a) deploy all the helper
+# contracts we want and (b) deploy checker using different configurations.
 @deploy.command()
 @click.option(
     "--src",
@@ -183,12 +186,11 @@ def deploy(config: Config, address=None, port=None, key=None):
     show_default=True,
 )
 @click.option("--oracle", type=str, help="Oracle contract address")
-@click.option("--wtez", type=str, help="Wrapped tez contract address")
-@click.option("--ctez_fa12", type=str, help="ctez FA1.2 contract address")
+@click.option("--collateral_fa2", type=str, help="Collateral FA2 contract address")
+@click.option("--cfmm_token_fa2", type=str, help="CFMM FA2 contract address")
 @click.option("--ctez_cfmm", type=str, help="ctez CFMM contract address")
-@click.option("--wctez", type=str, help="Wrapped ctez contract address")
 @click.pass_obj
-def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez):
+def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, ctez_cfmm):
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
@@ -196,32 +198,18 @@ def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez
         raise ValueError(
             "Oracle address was neither specified in the CLI config nor provided as an argument."
         )
-    if not config.wtez_address and not wtez:
-        raise ValueError(
-            "Wrapped tez address was neither specified in the CLI config nor provided as an argument."
-        )
-    if not config.ctez_fa12_address and not ctez_fa12:
-        raise ValueError(
-            "ctez fa12 address was neither specified in the CLI config nor provided as an argument."
-        )
+    if not collateral_fa2:
+        raise ValueError("Collateral FA2 contract address was not provided as an argument.")
+    if not cfmm_token_fa2:
+        raise ValueError("CFMM FA2 contract address was not provided as an argument.")
     if not config.ctez_cfmm_address and not ctez_cfmm:
         raise ValueError(
             "ctez cfmm address was neither specified in the CLI config nor provided as an argument."
         )
-    if not config.wctez_address and not wctez:
-        raise ValueError(
-            "Wrapped ctez address was neither specified in the CLI config nor provided as an argument."
-        )
     if oracle:
         config.oracle_address = oracle
-    if ctez_fa12:
-        config.ctez_fa12_address = ctez_fa12
     if ctez_cfmm:
         config.ctez_cfmm_address = ctez_cfmm
-    if wtez:
-        config.wtez_address = wtez
-    if wctez:
-        config.wctez = wctez
 
     shell = construct_url(config.tezos_address, config.tezos_port)
     click.echo(f"Connecting to tezos node at: {shell}")
@@ -231,14 +219,14 @@ def checker(config: Config, repo_path, oracle, wtez, ctez_fa12, ctez_cfmm, wctez
         client,
         CheckerRepo(repo_path),
         oracle=config.oracle_address,
-        wtez=config.wtez_address,
-        ctez_fa12=config.ctez_fa12_address,
+        collateral_fa2=collateral_fa2,
+        cfmm_token_fa2=cfmm_token_fa2,
         ctez_cfmm=config.ctez_cfmm_address,
-        wctez=config.wctez,
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"Checker contract deployed with address: {checker.context.address}")
     config.checker_address = checker.context.address
+    # FIXME: Do we need a separate configuration file? This is troublesome.
     config.dump()
 
 

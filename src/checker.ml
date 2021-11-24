@@ -864,7 +864,7 @@ let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.opera
 let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * checker) =
   let index = match state.last_index with
     | None -> state.parameters.index (* use the old one *)
-    | Some i -> i in (* FIXME: Is the nat supposed to represent tez? *)
+    | Some i -> i in (* tez/chf (or chf in tez) *)
   touch_with_index state index
 
 (* ************************************************************************* *)

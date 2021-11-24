@@ -9,7 +9,7 @@ from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
-from checker_builder.config import load_input_config
+from checker_builder.config import load_input_config, CollateralType
 from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
@@ -297,7 +297,7 @@ class E2ETest(SandboxedTestCase):
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.issued.kit.token_id
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        wctez_token_id = self.config.tokens.issued.wctez.token_id
+        cfmm_token_token_id = self.config.tokens.in_use.cfmm_token.token_id
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
@@ -309,13 +309,7 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying the tez wrapper.")
-        wtez = deploy_wtez(
-            self.client,
-            repo=self.repo,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
+        # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
@@ -323,23 +317,48 @@ class E2ETest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying wctez contract.")
-        wctez = deploy_wctez(
-            self.client,
-            repo=self.repo,
-            ctez_fa12_address=ctez["fa12_ctez"].context.address,
-            ttl=MAX_OPERATIONS_TTL,
-        )
+        if self.config.collateral_type == CollateralType.TEZ:
+            print("Deploying the tez wrapper.")
+            collateral_fa2 = deploy_wtez(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_name = "wtez"
+
+            print("Deploying wctez contract.")
+            cfmm_token_fa2 = deploy_wctez(
+                self.client,
+                repo=self.repo,
+                ctez_fa12_address=ctez["fa12_ctez"].context.address,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            cfmm_token_name = "wctez"
+        elif self.config.collateral_type == CollateralType.FA2:
+            print("Deploying the mock FA2 contract.")
+            mock_fa2 = deploy_mockFA2(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_fa2 = mock_fa2
+            collateral_name = "mock_fa2"
+
+            cfmm_token_fa2 = mock_fa2
+            cfmm_token_name = "mock_fa2"
+        else:
+            raise ValueError(
+                f"Unexpected value for collateral_type: {self.config.collateral_type}"
+            )
 
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            wtez=wtez.context.address,
-            ctez_fa12=ctez["fa12_ctez"].context.address,
+            collateral_fa2=collateral_fa2.context.address,
+            cfmm_token_fa2=cfmm_token_fa2.context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
-            wctez=wctez.context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -364,16 +383,42 @@ class E2ETest(SandboxedTestCase):
             gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def call_wctez_endpoint(
-            name, param, amount=0, contract=wctez, client=self.client
+        def call_collateral_fa2_endpoint(
+            name,
+            param,
+            amount=0,
+            contract=collateral_fa2,
+            contract_name=collateral_name,
+            client=self.client,
         ):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
-            gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
+            gas_costs[f"{contract_name}%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def get_tez_tokens_and_make_checker_an_operator(amnt):
-            call_endpoint(wtez, "deposit", None, amount=amnt)
+        # FIXME: Might be nicer to not duplicate this
+        def call_cfmm_token_fa2_endpoint(
+            name,
+            param,
+            amount=0,
+            contract=cfmm_token_fa2,
+            contract_name=cfmm_token_name,
+            client=self.client,
+        ):
+            print("Calling", name, "with", param)
+            ret = call_endpoint(contract, name, param, amount, client=client)
+            gas_costs[f"{contract_name}%{name}"] = int(ret["contents"][0]["gas_limit"])
+            return ret
+
+        def get_collateral_tokens_and_make_checker_an_operator(amnt):
+            if self.config.collateral_type == CollateralType.TEZ:
+                call_collateral_fa2_endpoint("deposit", None, amount=amnt)
+            elif self.config.collateral_type == CollateralType.FA2:
+                call_collateral_fa2_endpoint("mint", amnt)
+            else:
+                raise ValueError(
+                    f"Unexpected value for collateral_type: {self.config.collateral_type}"
+                )
             update_operators = [
                 {
                     "add_operator": {
@@ -383,13 +428,13 @@ class E2ETest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(wtez, "update_operators", update_operators)
+            call_collateral_fa2_endpoint("update_operators", update_operators)
 
         # ===============================================================================
         # Burrows
         # ===============================================================================
         # Create a burrow
-        get_tez_tokens_and_make_checker_an_operator(10_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(10_000_000)
         call_checker_endpoint("create_burrow", (1, None, 10_000_000))
         assert_fa2_token_balance(checker, account, kit_token_id, 0)
 
@@ -401,23 +446,24 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("burn_kit", (1, 10))
         assert_fa2_token_balance(checker, account, kit_token_id, 999_990)
 
-        # Deposit tez
-        get_tez_tokens_and_make_checker_an_operator(2_000_000)
+        # Deposit collateral
+        get_collateral_tokens_and_make_checker_an_operator(2_000_000)
         call_checker_endpoint("deposit_collateral", (1, 2_000_000))
 
-        # Withdraw tez
+        # Withdraw collateral
         call_checker_endpoint("withdraw_collateral", (1, 2_000_000))
 
-        # Set delegate
-        call_checker_endpoint("set_burrow_delegate", (1, account))
+        # Set delegate (only if collateral = tez); otherwise it fails, as expected
+        if self.config.collateral_type == CollateralType.TEZ:
+            call_checker_endpoint("set_burrow_delegate", (1, account))
 
         # Deactivate a burrow
-        get_tez_tokens_and_make_checker_an_operator(3_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(3_000_000)
         call_checker_endpoint("create_burrow", (2, None, 3_000_000))
         call_checker_endpoint("deactivate_burrow", (2, account))
 
         # Re-activate a burrow
-        get_tez_tokens_and_make_checker_an_operator(1_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(1_000_000)
         call_checker_endpoint("activate_burrow", (2, 1_000_000))
 
         # Touch checker
@@ -509,27 +555,28 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         # CFMM
         # ===============================================================================
-        # Get some ctez (create an oven and mint some ctez)
-        call_endpoint(
-            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
-        )
-        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+        # Get some cfmm tokens and allow checker to spend it
+        if self.config.collateral_type == CollateralType.TEZ:
+            # Logic specific to ctez
+            call_endpoint(
+                ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
+            )
+            call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
+            call_endpoint(
+                ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 800_000)
+            )
 
-        # Get some wctez (approve wctez to move the ctez and mint some wctez)
-        call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 800_000))
-        call_wctez_endpoint("mint", 800_000)
-
-        # Approve checker to spend the wctez
+        call_cfmm_token_fa2_endpoint("mint", 800_000)
         update_operators = [
             {
                 "add_operator": {
                     "owner": account,
                     "operator": checker.context.address,
-                    "token_id": wctez_token_id,
+                    "token_id": cfmm_token_token_id,
                 }
             },
         ]
-        call_wctez_endpoint("update_operators", update_operators)
+        call_cfmm_token_fa2_endpoint("update_operators", update_operators)
 
         # Add some liquidity
         call_checker_endpoint(
@@ -553,7 +600,7 @@ class E2ETest(SandboxedTestCase):
 class WTezTest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
-        collateral_token_id = self.config.tokens.in_use.collateral.token_id
+        wtez_token_id = self.config.tokens.issued.wtez.token_id
 
         wrapper = deploy_wtez(
             self.client,
@@ -584,7 +631,7 @@ class WTezTest(SandboxedTestCase):
             return ret
 
         def single_fa2_transfer(
-            sender: str, recipient: str, amount: int, token_id=collateral_token_id
+            sender: str, recipient: str, amount: int, token_id=wtez_token_id
         ):
             return [
                 {
@@ -611,10 +658,10 @@ class WTezTest(SandboxedTestCase):
         # ===============================================================================
         # Deposit some tez into the test account's vault
         call_endpoint("deposit", None, amount=2_000_000)
-        assert_fa2_token_balance(wrapper, account, collateral_token_id, 2_000_000)
+        assert_fa2_token_balance(wrapper, account, wtez_token_id, 2_000_000)
         # Withdraw some tez from the test account's vault
         call_endpoint("withdraw", 100)
-        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_900)
+        assert_fa2_token_balance(wrapper, account, wtez_token_id, 1_999_900)
         # Set test account vault's delegate
         call_endpoint("set_delegate", None)
 
@@ -623,8 +670,8 @@ class WTezTest(SandboxedTestCase):
         # ===============================================================================
         # Transfer from the test account to alice's account
         call_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
-        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_810)
-        assert_fa2_token_balance(wrapper, account_alice, collateral_token_id, 90)
+        assert_fa2_token_balance(wrapper, account, wtez_token_id, 1_999_810)
+        assert_fa2_token_balance(wrapper, account_alice, wtez_token_id, 90)
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
         # account owner.
@@ -633,7 +680,7 @@ class WTezTest(SandboxedTestCase):
                 "add_operator": {
                     "owner": wrapper_alice.key.public_key_hash(),
                     "operator": account,
-                    "token_id": collateral_token_id,
+                    "token_id": wtez_token_id,
                 }
             },
         ]
@@ -646,7 +693,7 @@ class WTezTest(SandboxedTestCase):
 
         # Send some tez tokens back to the main test account
         call_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
-        assert_fa2_token_balance(wrapper, account, collateral_token_id, 1_999_890)
+        assert_fa2_token_balance(wrapper, account, wtez_token_id, 1_999_890)
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
         # This comes with a downside, however, since using a view means that we don't get an
@@ -655,7 +702,7 @@ class WTezTest(SandboxedTestCase):
             "requests": [
                 {
                     "owner": wrapper_alice.key.public_key_hash(),
-                    "token_id": collateral_token_id,
+                    "token_id": wtez_token_id,
                 }
             ],
             "callback": None,
@@ -933,7 +980,7 @@ class MockFA2Test(SandboxedTestCase):
 class LiquidationsStressTest(SandboxedTestCase):
     def test_liquidations(self):
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
-        wctez_token_id = self.config.tokens.issued.wctez.token_id
+        cfmm_token_token_id = self.config.tokens.in_use.cfmm_token.token_id
 
         print("Deploying the mock oracle.")
         oracle = deploy_contract(
@@ -943,13 +990,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying the tez wrapper.")
-        wtez = deploy_wtez(
-            self.client,
-            repo=self.repo,
-            ttl=MAX_OPERATIONS_TTL,
-        )
-
+        # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
         ctez = deploy_ctez(
             self.client,
@@ -957,23 +998,48 @@ class LiquidationsStressTest(SandboxedTestCase):
             ttl=MAX_OPERATIONS_TTL,
         )
 
-        print("Deploying wctez contract.")
-        wctez = deploy_wctez(
-            self.client,
-            repo=self.repo,
-            ctez_fa12_address=ctez["fa12_ctez"].context.address,
-            ttl=MAX_OPERATIONS_TTL,
-        )
+        if self.config.collateral_type == CollateralType.TEZ:
+            print("Deploying the tez wrapper.")
+            collateral_fa2 = deploy_wtez(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_name = "wtez"
+
+            print("Deploying wctez contract.")
+            cfmm_token_fa2 = deploy_wctez(
+                self.client,
+                repo=self.repo,
+                ctez_fa12_address=ctez["fa12_ctez"].context.address,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            cfmm_token_name = "wctez"
+        elif self.config.collateral_type == CollateralType.FA2:
+            print("Deploying the mock FA2 contract.")
+            mock_fa2 = deploy_mockFA2(
+                self.client,
+                repo=self.repo,
+                ttl=MAX_OPERATIONS_TTL,
+            )
+            collateral_fa2 = mock_fa2
+            collateral_name = "mock_fa2"
+
+            cfmm_token_fa2 = mock_fa2
+            cfmm_token_name = "mock_fa2"
+        else:
+            raise ValueError(
+                f"Unexpected value for collateral_type: {self.config.collateral_type}"
+            )
 
         print("Deploying Checker.")
         checker = deploy_checker(
             self.client,
             repo=self.repo,
             oracle=oracle.context.address,
-            wtez=wtez.context.address,
-            ctez_fa12=ctez["fa12_ctez"].context.address,
+            collateral_fa2=collateral_fa2.context.address,
+            cfmm_token_fa2=cfmm_token_fa2.context.address,
             ctez_cfmm=ctez["cfmm"].context.address,
-            wctez=wctez.context.address,
             ttl=MAX_OPERATIONS_TTL,
         )
 
@@ -1015,8 +1081,15 @@ class LiquidationsStressTest(SandboxedTestCase):
                 profile = profiler(self.client, checker, batch)
                 self.gas_profiles = merge_gas_profiles(self.gas_profiles, profile)
 
-        def get_tez_tokens_and_make_checker_an_operator(checker, amnt):
-            call_endpoint(wtez, "deposit", None, amount=amnt)
+        def get_collateral_tokens_and_make_checker_an_operator(checker, amnt):
+            if self.config.collateral_type == CollateralType.TEZ:
+                call_endpoint(collateral_fa2, "deposit", None, amount=amnt)
+            elif self.config.collateral_type == CollateralType.FA2:
+                call_endpoint(collateral_fa2, "mint", amnt)
+            else:
+                raise ValueError(
+                    f"Unexpected value for collateral_type: {self.config.collateral_type}"
+                )
             update_operators = [
                 {
                     "add_operator": {
@@ -1026,35 +1099,36 @@ class LiquidationsStressTest(SandboxedTestCase):
                     }
                 },
             ]
-            call_endpoint(wtez, "update_operators", update_operators)
+            call_endpoint(collateral_fa2, "update_operators", update_operators)
 
         # Note: the amount of kit minted here and the kit in all other burrows for this account
         # must be enough to bid on the liquidation auction later in the test.
-        get_tez_tokens_and_make_checker_an_operator(checker, 200_000_000)
+        get_collateral_tokens_and_make_checker_an_operator(checker, 200_000_000)
         call_endpoint(checker, "create_burrow", (0, None, 200_000_000))
         call_endpoint(checker, "mint_kit", (0, 80_000_000), amount=0)
 
-        # Get some ctez (create an oven and mint some ctez)
-        call_endpoint(
-            ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
-        )
-        call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
+        # Get some cfmm tokens and allow checker to spend it
+        if self.config.collateral_type == CollateralType.TEZ:
+            # Logic specific to ctez
+            call_endpoint(
+                ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
+            )
+            call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
+            call_endpoint(
+                ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 100_000)
+            )
 
-        # Get some wctez (approve wctez to move the ctez and mint some wctez)
-        call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 100_000))
-        call_endpoint(wctez, "mint", 100_000)
-
-        # Approve checker to spend the wctez
+        call_endpoint(cfmm_token_fa2, "mint", 100_000)
         update_operators = [
             {
                 "add_operator": {
                     "owner": self.client.key.public_key_hash(),
                     "operator": checker.context.address,
-                    "token_id": wctez_token_id,
+                    "token_id": cfmm_token_token_id,
                 }
             },
         ]
-        call_endpoint(wctez, "update_operators", update_operators)
+        call_endpoint(cfmm_token_fa2, "update_operators", update_operators)
 
         # Add some liquidity
         call_endpoint(
@@ -1065,7 +1139,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         burrows = list(range(1, 1001))
 
-        get_tez_tokens_and_make_checker_an_operator(
+        get_collateral_tokens_and_make_checker_an_operator(
             checker, 100_000_000 * 1000
         )  # 1000 = number of burrows
         call_bulk(
@@ -1137,7 +1211,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # To successfully do this, we also need to either move the index price such that the
         # cancellation is warranted or deposit extra collateral to the burrow. Here we do the latter.
         cancel_ops = []
-        get_tez_tokens_and_make_checker_an_operator(
+        get_collateral_tokens_and_make_checker_an_operator(
             checker, 1_000_000_000 * 895
         )  # the maximum amount of cancel_ops (see below)
         for i, (queued_leaf_ptr, leaf) in enumerate(
