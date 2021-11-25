@@ -402,7 +402,7 @@ cli:
 
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt update && apt install -y \
-          pkg-config autoconf libtool libev4 \
+          curl net-tools pkg-config autoconf libtool libev4 \
           libgmp-dev openssl libsodium23 libsodium-dev \
           python3-pip python-is-python3
 
@@ -430,6 +430,7 @@ cli:
     # Required dir for pytezos
     RUN mkdir /root/.tezos-client
     ENV PATH="/root/client/.venv/bin:$PATH"
+    WORKDIR /root
     CMD checker
 
     ARG TAG=latest
