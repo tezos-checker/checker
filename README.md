@@ -163,11 +163,13 @@ $ docker exec -it checker-dev-container bash
 ```console
 $ checker deploy mock-oracle
 $ checker deploy ctez
+$ checker deploy wrapped-ctez
+$ checker deploy wtez
 ```
 
 And finally, deploy checker itself:
 ```console
-$ checker deploy checker
+$ checker deploy checker --collateral_fa2 <wtez-address> --cfmm_token_fa2 <wctez-address>
 ```
 
 # Deployment to a Testnet (Manually)
