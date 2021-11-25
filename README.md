@@ -163,11 +163,13 @@ $ docker exec -it checker-dev-container bash
 ```console
 $ checker deploy mock-oracle
 $ checker deploy ctez
+$ checker deploy wrapped-ctez
+$ checker deploy wtez
 ```
 
 And finally, deploy checker itself:
 ```console
-$ checker deploy checker
+$ checker deploy checker --collateral_fa2 <wtez-address> --cfmm_token_fa2 <wctez-address>
 ```
 
 # Deployment to a Testnet (Manually)
@@ -216,82 +218,66 @@ $ tezos-client reveal key for alice
 
 While Checker can be deployed from within the dev container using the `checker`
 CLI, the CLI is also available as a standalone Docker image which includes the
-latest version of the contract. To use the image, you'll want to mount your
-account's json file to the Docker container to ensure that it is
-available to the CLI as shown in the examples below.
+latest version of the contract and its dependencies. To use the image, you'll
+want to mount your account's json file to the Docker container to ensure that it
+is available to the CLI as shown in the examples below.
 
-To deploy the version of the contract bundled in the CLI image (assuming your
-key file is `./my-account.json`):
+To deploy the version of the contract bundled in the CLI image, first make sure
+that your account JSON file is available at `./my-account.json`.
+
+Then, set your node address and port:
 
 ```console
-  docker run --rm \
-    -v $PWD/my-account.json:/my-account.json \
-    ghcr.io/tezos-checker/checker/checker-client:master \
-      checker \
-      deploy \
-      --address <node-address> \
-      --port <node-port> \
-      --key /my-account.json \
-      checker \
-      --ctez-fa12 <ctez-fa12-address> \
+  export NODE_ADDRESS=<desired-node-address>
+  export NODE_PORT=<desired-node-port>
+```
+
+In this example, `<desired-node-address>` could be replaced with
+ `https://granadanet.api.tez.ie` and `desired-node-port` could be replaced with
+ `443` (i.e., the standard https port).
+
+We provide a small wrapper to shorten the calls to docker:
+`scripts/deploy-master.sh`. You can edit the docker command there if you need to
+adjust any docker flags, etc.
+
+To deploy different versions of Checker, you can set the `$VERSION` environment
+variable to either `master` (the current HEAD of the master branch) or a
+specific git commit on master (e.g. `d6ea806e3cf90009c45af51e2dc5a1595fc81d27`)
+
+To deploy the contract:
+
+```console
+  ./scripts/deploy-master.sh checker \
+      --cfmm_token_fa2 <cfmm-fa2-address> \
+      --collateral_fa2 <collateral-fa2-address> \
       --ctez-cfmm <ctez-cfmm-address> \
       --oracle <oracle-address>
 ```
 
-In this example, `<node-address>` could be replaced with
- `https://granadanet.api.tez.ie` and `port` could be replaced with `443` (i.e.,
- the standard https port).
+The CLI image bundles the corresponding versions of Checker's supporting
+contracts in case you also need to deploy them.
 
-To deploy local copies of the contract (e.g. in `./generated/michelson`):
+To deploy ctez (vendored version):
 
 ```console
-  docker run --rm \
-    -v $PWD/my-account.json:/my-account.json \
-    -v $PWD/generated:/generated \
-    ghcr.io/tezos-checker/checker/checker-client:master \
-      checker \
-      deploy \
-      --address <node-address> \
-      --port <node-port> \
-      --key /my-account.json \
-      checker \
-      --ctez-fa12 <ctez-fa12-address> \
-      --ctez-cfmm <ctez-cfmm-address> \
-      --oracle <oracle-address> \
-      --src /generated/michelson
+  ./scripts/deploy-master.sh ctez
 ```
 
-If you need to deploy the `ctez` or mock oracle contracts, you'll want to also
-mount their source code to the container.
-
-Deploy ctez (vendored version):
+To deploy the ctez FA2 wrapper (wctez):
 
 ```console
-  docker run --rm \
-    -v $PWD/my-account.json:/my-account.json \
-    -v $PWD/vendor/ctez:/ctez \
-    ghcr.io/tezos-checker/checker/checker-client:master \
-      checker \
-      deploy \
-      --address <node-address> \
-      --port <node-port> \
-      --key /my-account.json \
-      ctez \
-      --src /ctez
+  ./scripts/deploy-master.sh wrapped-ctez --ctez_fa12 <ctez-fa12-address>
 ```
 
-Deploy mock oracle:
+To deploy mock oracle:
 
 ```console
-  docker run --rm \
-    -v $PWD/my-account.json:/my-account.json \
-    -v $PWD/util/mock_oracle.tz:/mock_oracle.tz \
-    ghcr.io/tezos-checker/checker/checker-client:master \
-      checker \
-      deploy \
-      --address <node-address> \
-      --port <node-port> \
-      --key /my-account.json \
-      mock-oracle \
-      --src /mock_oracle.tz
+  ./scripts/deploy-master.sh mock-oracle
+```
+
+
+To deploy the tez FA2 wrapper (wtez):
+
+```console
+  ./scripts/deploy-master.sh wtez
 ```
