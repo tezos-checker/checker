@@ -30,10 +30,9 @@ else
 fi
 
 
-#FIXME: --pull always / image name
-docker run --rm \
+docker run --rm --pull always \
       -v $PWD/my-account.json:/my-account.json \
-      checker-client:$VERSION \
+      ghcr.io/tezos-checker/checker/checker-client:$VERSION \
         checker \
         deploy \
         --address $NODE_ADDRESS \
