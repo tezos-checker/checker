@@ -52,11 +52,8 @@ def _token_config_to_metadata(token_config: IssuedTokenConfig) -> Tuple[int, Dic
     }
 
 
-def token_metadata_view_from_config(*, config: CheckerConfig):
-    metadata = [
-        _token_config_to_metadata(config.tokens.issued.kit),
-        _token_config_to_metadata(config.tokens.issued.liquidity),
-    ]
+def token_metadata_view_from_issued_token_config(token_configs: List[IssuedTokenConfig]):
+    metadata = [_token_config_to_metadata(token_config) for token_config in token_configs]
 
     # convert the attributes to bytes
     for _, attrs in metadata:
@@ -78,6 +75,14 @@ def token_metadata_view_from_config(*, config: CheckerConfig):
 
     # compile and return the view
     return compile_view_fa2_token_metadata(tokens)
+
+
+def checker_token_metadata_view_from_config(*, config: CheckerConfig):
+    tokens = [
+        config.tokens.issued.kit,
+        config.tokens.issued.liquidity,
+    ]
+    token_metadata_view_from_issued_token_config(tokens)
 
 
 # attrs should be a dict from strings to bytes.
@@ -378,7 +383,7 @@ def deploy_checker(
 
     print("Deploying the TZIP-16 metadata.")
 
-    token_metadata_view = token_metadata_view_from_config(config=config)
+    token_metadata_view = checker_token_metadata_view_from_config(config=config)
 
     metadata = {
         "interfaces": ["TZIP-012-4b3c67aad5abb"],
