@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -38,6 +41,8 @@ jobs:
         run: echo "push_flag=--push" >> $GITHUB_ENV
         name: Enable push to build cache
 
+      - name: Choose configuration file
+        run: cp ${{ matrix.configuration_file }} checker.yaml
       - name: Build dependencies
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
@@ -62,7 +67,7 @@ jobs:
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
             | tee entrypoint-sizes.json
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
         with:
           name: stats
           path: entrypoint-sizes.json
@@ -70,13 +75,16 @@ jobs:
       - name: Test
         run: earthly --verbose --ci ${{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
         with:
           name: stats
           path: test-coverage.json
           if-no-files-found: error
   e2e:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -101,18 +109,20 @@ jobs:
       - name: Install earthly
         run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
       # Note: Not pushing here to avoid clashing with pushes from the main `build` job
+      - name: Choose configuration file
+        run: cp ${{ matrix.configuration_file }} checker.yaml
       - name: Run e2e tests
         run: earthly --ci --artifact +test-e2e/ e2e-outputs
       - uses: actions/upload-artifact@v2.2.4
         # We only upload artifacts on 'push' events, this is simply to have one set of artifacts
         # per commit.
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
         with:
           name: stats
           path: e2e-outputs/gas-costs.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
         with:
           name: gas-profile-plots
           path: e2e-outputs/auction-gas-profiles.png
