@@ -82,7 +82,15 @@ def checker_token_metadata_view_from_config(*, config: CheckerConfig):
         config.tokens.issued.kit,
         config.tokens.issued.liquidity,
     ]
-    token_metadata_view_from_issued_token_config(tokens)
+    return token_metadata_view_from_issued_token_config(tokens)
+
+
+def wtez_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.wtez])
+
+
+def wctez_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.wctez])
 
 
 # attrs should be a dict from strings to bytes.
@@ -155,6 +163,31 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
                 {"prim": "map", "args": [{"prim": "string"}, {"prim": "bytes"}]},
             ],
         },
+    }
+
+
+# FIXME: TYPE?
+def tzip16_metadata_from_views(views):
+    return {
+        "interfaces": ["TZIP-012-4b3c67aad5abb"],
+        "views": [
+            {
+                "name": view["name"],
+                "implementations": [
+                    {
+                        "michelsonStorageView": {
+                            "parameter": view["parameter"],
+                            "returnType": view["returnType"],
+                            "code": view["code"],
+                        }
+                    }
+                ],
+            }
+            for view in views
+        ],
+        # This field is supposed to be optional but it mistakenly was required before
+        # pytezos commit 12911835
+        "errors": [],
     }
 
 
@@ -385,27 +418,8 @@ def deploy_checker(
 
     token_metadata_view = checker_token_metadata_view_from_config(config=config)
 
-    metadata = {
-        "interfaces": ["TZIP-012-4b3c67aad5abb"],
-        "views": [
-            {
-                "name": view["name"],
-                "implementations": [
-                    {
-                        "michelsonStorageView": {
-                            "parameter": view["parameter"],
-                            "returnType": view["returnType"],
-                            "code": view["code"],
-                        }
-                    }
-                ],
-            }
-            for view in functions["views"] + [token_metadata_view]
-        ],
-        # This field is supposed to be optional but it mistakenly was required before
-        # pytezos commit 12911835
-        "errors": [],
-    }
+    metadata = tzip16_metadata_from_views(functions["views"] + [token_metadata_view])
+
     metadata_ser = json.dumps(metadata).encode("utf-8")
     chunk_size = 10 * 1024
     metadata_chunks = [
