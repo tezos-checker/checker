@@ -3,14 +3,13 @@ open FixedPoint
 open Common
 open Constants
 open DriftDerivative
-open Tok
 
 [@@@coverage off]
 
 type parameters =
   { q : fixedpoint; (* 1/kit, really *)
-    index: Ligo.nat;
-    protected_index: Ligo.nat;
+    index: ratio;
+    protected_index: ratio;
     target: fixedpoint;
     drift_derivative: fixedpoint;
     drift: fixedpoint;
@@ -27,8 +26,8 @@ type parameters =
 (** Initial state of the parameters. *)
 let initial_parameters : parameters =
   { q = fixedpoint_one;
-    index = tok_scaling_factor_nat;
-    protected_index = tok_scaling_factor_nat;
+    index = one_ratio;
+    protected_index = one_ratio;
     target = fixedpoint_one;
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -39,23 +38,35 @@ let initial_parameters : parameters =
     last_touched = !Ligo.Tezos.now;
   }
 
+let[@inline] max_ratio (x: ratio) (y: ratio) : ratio =
+  if Ligo.gt_int_int (Ligo.mul_int_int x.num y.den) (Ligo.mul_int_int y.num x.den) then x else y
+
+let[@inline] min_ratio (x: ratio) (y: ratio) : ratio =
+  if Ligo.gt_int_int (Ligo.mul_int_int x.num y.den) (Ligo.mul_int_int y.num x.den) then y else x
+
+let clamp_ratio (v: ratio) (lower: ratio) (upper: ratio) : ratio =
+  (* FIXME: assert (Ligo.leq_int_int lower upper); *)
+  min_ratio upper (max_ratio v lower)
+
 (** Compute the current minting index (in tok). To get tok/kit must multiply with q. *)
-let[@inline] tz_minting (p: parameters) : Ligo.nat = max_nat p.index p.protected_index
+let[@inline] tz_minting (p: parameters) : ratio = max_ratio p.index p.protected_index
 
 (** Compute the current liquidation index (in tok). To get tok/kit must multiply with q. *)
-let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.protected_index
+let[@inline] tz_liquidation (p: parameters) : ratio = min_ratio p.index p.protected_index
 
 (** Current minting price (in tok/kit). *)
 let minting_price (p: parameters) : ratio =
+  let tz_m = tz_minting p in
   make_ratio
-    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_minting p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) tz_m.num)
+    (Ligo.mul_int_int fixedpoint_scaling_factor tz_m.den)
 
 (** Current liquidation price (in tok/kit). *)
 let liquidation_price (p: parameters) : ratio =
+  let tz_p = tz_liquidation p in
   make_ratio
-    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_liquidation p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) tz_p.num)
+    (Ligo.mul_int_int fixedpoint_scaling_factor tz_p.den)
 
 (** Given the amount of kit necessary to close all existing burrows
     (outstanding) and the amount of kit that is currently in circulation
@@ -156,30 +167,21 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
       )
     ]}
 *)
-let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
-  assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
-  fraction_to_nat_floor
-    (clamp_int
-       (Ligo.mul_nat_int
-          current_index
-          protected_index_inverse_epsilon
-       )
-       (Ligo.mul_nat_int
-          last_protected_index
-          (Ligo.sub_int_int
-             protected_index_inverse_epsilon
-             duration_in_seconds
-          )
-       )
-       (Ligo.mul_nat_int
-          last_protected_index
-          (Ligo.add_int_int
-             protected_index_inverse_epsilon
-             duration_in_seconds
-          )
-       )
+let[@inline] compute_current_protected_index (last_protected_index: ratio) (current_index: ratio) (duration_in_seconds: Ligo.int) : ratio =
+  assert (Ligo.gt_int_int last_protected_index.num (Ligo.int_from_literal "0"));
+  assert (Ligo.gt_int_int current_index.num (Ligo.int_from_literal "0"));
+  let { num = num_pi; den = den_pi; } = last_protected_index in
+  (* FIXME: Hmmm, I think we now need fraction simplification :/ *)
+  clamp_ratio
+    current_index
+    (make_ratio
+       (Ligo.mul_int_int num_pi (Ligo.sub_int_int protected_index_inverse_epsilon duration_in_seconds))
+       (Ligo.mul_int_int den_pi protected_index_inverse_epsilon)
     )
-    protected_index_inverse_epsilon
+    (make_ratio
+       (Ligo.mul_int_int num_pi (Ligo.add_int_int protected_index_inverse_epsilon duration_in_seconds))
+       (Ligo.mul_int_int den_pi protected_index_inverse_epsilon)
+    )
 
 (** Calculate the current drift based on the last drift, the last drift
     derivative, the current drift derivative, and the number of seconds that
@@ -250,20 +252,21 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
       target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tok_{i+1})
     ]}
 *)
-let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.nat) (current_kit_in_tok: ratio) : fixedpoint =
-  let { num = num; den = den; } = current_kit_in_tok in
+let[@inline] compute_current_target (current_q: fixedpoint) (current_index: ratio) (current_kit_in_tok: ratio) : fixedpoint =
+  let { num = i_num; den = i_den; } = current_index in
+  let { num = num_tok; den = den_kit; } = current_kit_in_tok in
   fixedpoint_of_raw
     (fdiv_int_int
        (Ligo.mul_int_int
-          den
-          (Ligo.mul_int_nat
+          den_kit
+          (Ligo.mul_int_int
              (fixedpoint_to_raw current_q)
-             current_index
+             i_num
           )
        )
        (Ligo.mul_int_int
-          tok_scaling_factor_int
-          num
+          i_den
+          num_tok
        )
     )
 
@@ -333,7 +336,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
     (Tezos.now), (b) the current index (the median of the oracles right now),
     and (c) the current price of kit in tok. *)
 let parameters_touch
-    (current_index: Ligo.nat)
+    (current_index: ratio)
     (current_kit_in_tok: ratio)
     (parameters: parameters)
   : kit * parameters =

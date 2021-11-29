@@ -784,7 +784,7 @@ let rec touch_oldest
  * exceptions (1. setting the delegate, and 2. call/callback to the oract), all
  * of the operations are outwards calls, to other contracts (no callbacks). It
  * should be safe to leave the order of the transaction reversed. *)
-let[@inline] touch_with_index (state: checker) (index: Ligo.nat) : (LigoOp.operation list * checker) =
+let[@inline] touch_with_index (state: checker) (index: ratio) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   let
     { burrows = state_burrows;
@@ -871,11 +871,12 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 (**                               ORACLE                                     *)
 (* ************************************************************************* *)
 
-let entrypoint_receive_price (state, price: checker * Ligo.nat) : (LigoOp.operation list * checker) =
+let entrypoint_receive_price (state, idx: checker * Ligo.nat) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
+    let price = make_ratio (Ligo.int idx) tok_scaling_factor_int in
     (([]: LigoOp.operation list), {state with last_index = Some price})
 
 let entrypoint_receive_ctez_marginal_price (state, price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
