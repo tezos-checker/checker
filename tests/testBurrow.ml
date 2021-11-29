@@ -685,7 +685,7 @@ let suite =
         *  potentially obscured by rounding. This high of a difference between the
         *  index and protected index is unlikely to occur in real-world scenarios.
        *)
-       let parameters = Parameters.({initial_parameters with index=(Ligo.nat_from_literal "100_000_000_000n");}) in
+       let parameters = Parameters.({initial_parameters with index=TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "100_000_000_000n");}) in
        assert_int_equal
          ~expected:(Ligo.int_from_literal "707856")
          ~real:(Burrow.compute_collateral_to_auction parameters burrow)
