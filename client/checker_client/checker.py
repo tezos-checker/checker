@@ -350,18 +350,10 @@ def deploy_wtez(
             "operators": {},
         },
         "vaults": {},
-        "metadata": BigMapType.from_items(
-            [
-                (
-                    StringType.from_value(""),
-                    BytesType.from_value(b"tezos-storage:m".hex()),
-                ),
-                (
-                    StringType.from_value("m"),
-                    BytesType.from_value(metadata_ser),
-                ),
-            ],
-        ),
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     wrapper = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
