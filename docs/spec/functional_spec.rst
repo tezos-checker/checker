@@ -4,26 +4,25 @@ Functional Specification
 Working with burrows
 ====================
 
-Burrows are implicitly associated with their owner via the caller's address
-upon their creation. A caller can operate multiple burrows over time: owners
+Burrows are implicitly associated with their owner via the sender's address
+upon their creation. A sender can operate multiple burrows over time: owners
 are expected to identify each burrow uniquely with an arbitrary numeric ID they
 supply. These numbers need not be contiguous.
 
 Create a burrow
 ---------------
 
-Create and return a new burrow containing the supplied amount of token as
+Create and return a new burrow containing the supplied amount of FA2 token as
 collateral, minus the creation deposit. Fails if the collateral given is not
 enough to cover the creation deposit, if the sender does not own said amount of
-collateral, or if Checker is not authorized to transfer said amount of
-collateral.
+collateral, or if Checker is not authorized as an operator for the sender's collateral.
 
 ``create_burrow: (pair (pair nat (option key_hash)) nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | An arbitrary number to identify the burrow among the caller's burrows   |
+| id            | nat                   | An arbitrary number to identify the burrow among the sender's burrows   |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | delegate      | option key_hash       | An optional delegate for the created burrow contract                    |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -34,19 +33,19 @@ collateral.
 Deposit collateral in a burrow
 ------------------------------
 
-Deposit an amount of token as collateral to a burrow. Fails if the burrow does
+Deposit an amount of FA2 token as collateral to a burrow. Fails if the burrow does
 not exist, if the sender does not own said collateral, or if Checker is not
-authorized to transfer said collateral.
+authorized as an operator for the sender's collateral.
 
 ``deposit_collateral: (pair nat nat)``
 
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| Parameter     |      Field Type       | Description                                                             |
-+===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow in which to deposit the tez              |
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| tok           | nat                   | The amount of token supplied to be used as collateral                   |
-+---------------+-----------------------+-------------------------------------------------------------------------+
++---------------+-----------------------+---------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                               |
++===============+=======================+===========================================================================+
+| id            | nat                   | The sender's ID for the burrow in which to deposit the collateral tokens  |
++---------------+-----------------------+---------------------------------------------------------------------------+
+| tok           | nat                   | The amount of token supplied to be used as collateral                     |
++---------------+-----------------------+---------------------------------------------------------------------------+
 
 
 Withdraw collateral from a burrow
@@ -58,13 +57,13 @@ owner.
 
 ``withdraw_collateral: (pair nat nat)``
 
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| Parameter     |      Field Type       | Description                                                             |
-+===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow from which to withdraw the tez           |
-+---------------+-----------------------+-------------------------------------------------------------------------+
-| amount        | nat                   | The amount of collateral to withdraw                                    |
-+---------------+-----------------------+-------------------------------------------------------------------------+
++---------------+-----------------------+-----------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                                 |
++===============+=======================+=============================================================================+
+| id            | nat                   | The sender's ID for the burrow from which to withdraw the collateral tokens |
++---------------+-----------------------+-----------------------------------------------------------------------------+
+| amount        | nat                   | The amount of collateral to withdraw                                        |
++---------------+-----------------------+-----------------------------------------------------------------------------+
 
 
 Mint kit
@@ -79,7 +78,7 @@ owner.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow in which to mint the kit                 |
+| id            | nat                   | The sender's ID for the burrow in which to mint the kit                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | amount        | nat                   | The amount of kit to mint                                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -98,7 +97,7 @@ the burrow owner.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow in which to burn the kit                 |
+| id            | nat                   | The sender's ID for the burrow in which to burn the kit                 |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | amount        | nat                   | The amount of kit to burn                                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -107,17 +106,17 @@ the burrow owner.
 Activate an inactive burrow
 ---------------------------
 
-Activate a currently inactive burrow. Fails if the burrow does not exist, if
-the burrow is already active, if the amount of collateral given is not enough
-to cover the creation deposit, if the sender does not own said collateral, or
-if Checker is not authorized to transfer said collateral.
+Activate a currently inactive burrow. Fails if the burrow does not exist, if the
+burrow is already active, if the amount of collateral given is not enough to
+cover the creation deposit, if the sender does not own said collateral, or if
+Checker is not authorized as an operator for the sender's collateral.
 
 ``activate_burrow: (pair nat nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow to activate                              |
+| id            | nat                   | The sender's ID for the burrow to activate                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | tok           | nat                   | The amount of token supplied as collateral (including creation deposit) |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -136,7 +135,7 @@ FA2 transfer to the given address.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow to deactivate                            |
+| id            | nat                   | The sender's ID for the burrow to deactivate                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | receiver      | address               | The address to send the burrow's collateral and creation deposit to     |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -156,7 +155,7 @@ burrow was operated on). Fails if the burrow does not exist.
 +===============+=======================+=========================================================================+
 | owner         | address               | The burrow owner's address                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow to deactivate                            |
+| id            | nat                   | The sender's ID for the burrow to deactivate                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -171,7 +170,7 @@ if the deployed checker instance does not use tez as collateral.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| id            | nat                   | The caller's ID for the burrow                                          |
+| id            | nat                   | The sender's ID for the burrow                                          |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | delegate      | option key_hash       | The key_hash of the new delegate's address, or none                     |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -180,11 +179,11 @@ if the deployed checker instance does not use tez as collateral.
 CFMM Exchange
 =============
 
-Buy kit using ctez
-------------------
+Buy kit using cfmm token
+------------------------
 
-Buy some kit from the CFMM contract in exchange for ctez. Fails if checker is
-not authorized to transfer the specified amount of ctez, if the desired amount
+Buy some kit from the CFMM contract in exchange for the FA2 token used in the cfmm. Fails if
+Checker is not authorized as an operator for the sender's cfmm token, if the desired amount
 of kit cannot be bought, or if the deadline has passed.
 
 ``buy_kit: (pair (pair nat nat) timestamp)``
@@ -192,7 +191,7 @@ of kit cannot be bought, or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | An amount of ctez to be sold for kit                                    |
+| ctok          | nat                   | An amount of cfmm token to be sold for kit                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected to be bought                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -200,12 +199,12 @@ of kit cannot be bought, or if the deadline has passed.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
-Sell kit for ctez
------------------
+Sell kit for cfmm token
+-----------------------
 
-Sell some kit in exchange for ctez. Fails if the sender does not own the
-specified amount of kit, if the desired amount of ctez cannot be bought, or if
-the deadline has passed.
+Sell some kit in exchange for the FA2 token used in the cfmm. Fails if the
+sender does not own the specified amount of kit, if the desired amount of cfmm
+token cannot be bought, or if the deadline has passed.
 
 ``sell_kit: (pair (pair nat nat) timestamp)``
 
@@ -214,7 +213,7 @@ the deadline has passed.
 +===============+=======================+=========================================================================+
 | kit           | nat                   | The amount of kit to be sold                                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected to be bought                        |
+| ctok          | nat                   | The minimum amount of cfmm token expected to be bought                  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | deadline      | timestamp             | The deadline for the transaction to be valid                            |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -222,11 +221,11 @@ the deadline has passed.
 Provide liquidity
 -----------------
 
-Deposit some ctez and kit for liquidity in exchange for receiving liquidity
+Deposit some cfmm token and kit for liquidity in exchange for receiving liquidity
 tokens. If the given amounts do not have the right ratio, the CFMM contract
-keeps all the ctez given and as much of the given kit as possible with the
-right ratio, and returns the leftovers, along with the liquidity tokens. Fails
-if checker is not authorized to transfer the specified amount of ctez, or if
+keeps all the cfmm token given and as much of the given kit as possible with the
+right ratio, and returns the leftovers, along with the liquidity tokens. Fails if
+Checker is not authorized as an operator for the sender's cfmm token, or if
 the sender does not own the specified amount of kit.
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``
@@ -234,7 +233,7 @@ the sender does not own the specified amount of kit.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to supply as liquidity                               |
+| ctok          | nat                   | The amount of cfmm token to supply as liquidity                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The maximum amount of kit to supply as liquidity                        |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -247,7 +246,7 @@ the sender does not own the specified amount of kit.
 Withdraw liquidity
 ------------------
 
-Redeem some liquidity tokens in exchange for ctez and kit in the right ratio.
+Redeem some liquidity tokens in exchange for cfmm tokens and kit in the right ratio.
 Fails if the sender does not own the specified liquidity tokens.
 
 ``remove_liquidity: (pair (pair nat nat) nat timestamp)``
@@ -257,7 +256,7 @@ Fails if the sender does not own the specified liquidity tokens.
 +===============+=======================+=========================================================================+
 | amount        | nat                   | The number of liquidity tokens to redeem                                |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| ctez          | nat                   | The minimum amount of ctez expected                                     |
+| ctok          | nat                   | The minimum amount of cfmm token expected                               |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | kit           | nat                   | The minimum amount of kit expected                                      |
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -282,14 +281,14 @@ made to ``Tezos.sender`` with the liquidation reward.
 +===============+=======================+=========================================================================+
 | owner         | address               | The burrow owner's address                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow to mark for liquidation                  |
+| id            | nat                   | The sender's ID for the burrow to mark for liquidation                  |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
 Process completed liquidation slices
 ------------------------------------
 
-Process a number of liquidation slices (i.e., amounts of tez that have been
+Process a number of liquidation slices (i.e., amounts of collateral that have been
 auctioned off as part of completed liquidation auctions). Fails if any of the
 identifiers given are not valid. Pointers to slices of incomplete auctions are
 ignored.
@@ -343,7 +342,7 @@ Claim the collateral from a winning auction bid
 Claim the rewards of a completed liquidation auction. Fails if the sender is
 not the auction winner, if the auction is still ongoing, or if the completed
 auction still has unprocessed liquidation slices. If the operation is
-successful, a tez payment is made to ``Tezos.sender`` with the auction
+successful, an FA2 transfer of the collateral is made to ``Tezos.sender`` with the auction
 winnings.
 
 ``liquidation_auction_claim_win: nat``
@@ -434,25 +433,25 @@ The following standard FA2 views are supported:
 * ``is_operator``
 
 
-Estimate yield when buying kit with ctez
-----------------------------------------
+Estimate yield when buying kit with cfmm tokens
+-----------------------------------------------
 
 Get the maximum amount of kit that can be expected to be received for the given
-amount of ctez (when calling ``buy_kit``), based on the current market price.
+amount of cfmm token (when calling ``buy_kit``), based on the current market price.
 
 ``buy_kit_min_kit_expected : nat -> nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to be sold to the cfmm                               |
+| ctok          | nat                   | The amount of cfmm token to be sold to the cfmm                         |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
-Estimate yield when selling kit for ctez
-----------------------------------------
+Estimate yield when selling kit for cfmm tokens
+-----------------------------------------------
 
-Get the maximum amount of ctez that can be expected to be received for the
+Get the maximum amount of cfmm token that can be expected to be received for the
 given amount of kit (when calling ``sell_kit``), based on the current market
 price.
 
@@ -469,7 +468,7 @@ Estimate kit requirements when adding liquidity
 -----------------------------------------------
 
 Get the minimum amount of kit that needs to be deposited when adding liquidity
-for the given amount of ctez (when calling ``add_liquidity``), based on the
+for the given amount of cfmm token (when calling ``add_liquidity``), based on the
 current market price.
 
 ``add_liquidity_max_kit_deposited : nat -> nat``
@@ -477,7 +476,7 @@ current market price.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to be given as liquidity                             |
+| ctok          | nat                   | The amount of cfmm token to be given as liquidity                       |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -485,7 +484,7 @@ Estimate yield when adding liquidity
 ------------------------------------
 
 Get the maximum amount of the liquidity token that can be expected to be
-received for the given amount of ctez (when calling ``add_liquidity``), based
+received for the given amount of cfmm token (when calling ``add_liquidity``), based
 on the current market price.
 
 ``add_liquidity_min_lqt_minted : nat -> nat``
@@ -493,14 +492,14 @@ on the current market price.
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| ctez          | nat                   | The amount of ctez to be given as liquidity                             |
+| ctok          | nat                   | The amount of cfmm token to be given as liquidity                       |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
-Estimate ctez yield when removing liquidity
+Estimate cfmm token yield when removing liquidity
 -------------------------------------------
 
-Get the maximum amount of ctez that can be expected to be received for the
+Get the maximum amount of cfmm token that can be expected to be received for the
 given amount of liquidity token (when calling ``remove_liquidity``), based on
 the current market price.
 
@@ -541,7 +540,7 @@ Returns the maximum amount of kit that can be minted from the given burrow.
 +===============+=======================+=========================================================================+
 | owner         | address               | The burrow owner's address                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow in question                              |
+| id            | nat                   | The sender's ID for the burrow in question                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -555,7 +554,7 @@ Check whether a burrow is overburrowed
 +===============+=======================+=========================================================================+
 | owner         | address               | The burrow owner's address                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow in question                              |
+| id            | nat                   | The sender's ID for the burrow in question                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
@@ -569,7 +568,7 @@ Check whether a burrow can be liquidated
 +===============+=======================+=========================================================================+
 | owner         | address               | The burrow owner's address                                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
-| id            | nat                   | The caller's ID for the burrow in question                              |
+| id            | nat                   | The sender's ID for the burrow in question                              |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 
