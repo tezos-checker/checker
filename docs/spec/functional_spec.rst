@@ -1,6 +1,9 @@
 Functional Specification
 ########################
 
+Checker
+*******
+
 Working with burrows
 ====================
 
@@ -607,3 +610,148 @@ Seal the contract and make it ready for use
 -------------------------------------------
 
 ``sealContract: (pair (pair (pair address address) address) address)``
+
+wtez
+****
+
+Overview
+========
+
+wtez is a wrapper contract which issues ``wtez`` FA2 tokens which are always equal in
+value to ``tez``. It is designed for use cases where users wish to use ``tez`` collateral
+in Checker. In this case Checker deals with the ``wtez`` FA2 tokens instead of
+with ``tez`` directly.
+
+Each account can have up to exactly one vault contract associated with it which holds
+the tez deposited from that account.
+
+Deposits and withdrawals
+========================
+
+Deposit tez
+-----------
+
+Deposit the amount of ``tez`` in the transaction to the sender's vault in
+exhange for ``wtez`` tokens. If the account does not already have a vault
+contract an operation will be emitted originating it.
+
+``deposit: unit``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| unit          | unit                  | ()                                                                      |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Withdraw tez
+------------
+
+Withdraw the specified amount of ``tez`` from the sender's vault in exhange for
+``wtez`` tokens. Fails if ``amount`` is greater than the sender's ``wtez``
+balance. If the account does not already have a vault contract an operation will
+be emitted originating it.
+
+``withdraw: nat``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| amount        | nat                   | The amount of tez to withdraw                                           |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Set the delegate for a vault
+----------------------------
+
+Set the delegate of the sender's vault. If the account does not already have a
+vault contract an operation will be emitted originating it.
+
+``set_delegate: (pair nat (option key_hash))``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| delegate      | option key_hash       | The key_hash of the new delegate's address, or none                     |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+FA2 Interface
+=============
+
+# TODO: fa2 entrypoints
+
+``balance_of``
+
+``transfer``
+
+``update_operators``
+
+Internal entrypoints
+====================
+
+# TODO: callVaultReceiveTez
+
+``call_vault_receive_tez``
+
+``call_vault_send_tez_to_contract``
+
+``call_vault_send_tez_to_vault``
+
+``call_vault_set_delegate``
+
+wctez
+*****
+
+Overview
+========
+
+wctez is a wrapper contract which issues ``wctez`` FA2 tokens in exhange for
+``ctez`` tokens. It was designed for use in Checker's CFMM which only works with
+FA2 tokens since ``ctez`` itself only provides an FA1.2 interface.
+
+Each ``wctez`` token is always worth exactly one ``ctez`` token.
+
+Minting and redeeming tokens
+============================
+
+Minting tokens
+--------------
+
+Mint ``wctez`` tokens by transfering the corresponding amount of ``ctez`` tokens
+from the sender to the contract. Fails if the contract is not approved to spend
+the specified amount of ``ctez`` tokens on the sender's behalf or if the
+sender's ``ctez`` balance is less than the specified amount.
+
+``mint: unit``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| amount        | nat                   | The amount of ctez tokens to transfer to the contract                   |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Redeeming tokens
+----------------
+
+Redeem the specified amount of ``wctez`` tokens for the same amount of ``ctez``
+tokens. Fails if the sender's ``wctez`` balance is less than the specified
+amount.
+
+``withdraw: nat``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| amount        | nat                   | The amount of wctez tokens to redeem                                    |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+FA2 Interface
+=============
+
+# TODO: fa2 entrypoints
+
+``balance_of``
+
+``transfer``
+
+``update_operators``
