@@ -93,6 +93,10 @@ def wctez_token_metadata_view_from_config(*, config: CheckerConfig):
     return token_metadata_view_from_issued_token_config([config.tokens.issued.wctez])
 
 
+def mock_fa2_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.mock_fa2])
+
+
 # attrs should be a dict from strings to bytes.
 TokenMetadata = namedtuple("TokenMetadata", ["id", "attrs"])
 
@@ -397,13 +401,24 @@ def deploy_mockFA2(
     ttl: Optional[int] = None,
 ):
     print("Deploying the mock FA2 contract.")
+    config = load_input_config()
     src = repo.mock_fa2_contract
+
+    # Compute the TZIP-16 metadata
+    token_metadata_view = mock_fa2_token_metadata_view_from_config(config=config)
+    # FIXME: We also need specific offline views here
+    metadata = tzip16_metadata_from_views([token_metadata_view])
+    metadata_ser = json.dumps(metadata).encode("utf-8")
+
     initial_storage = {
         "fa2_state": {
             "ledger": {},
             "operators": {},
         },
-        "metadata": {},  # FIXME: populate with TZIP-016 metadata for mock_fa2 token
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     mockFA2 = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
