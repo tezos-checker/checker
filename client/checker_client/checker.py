@@ -331,16 +331,13 @@ def deploy_wtez(
     repo: CheckerRepo,
     ttl: Optional[int] = None,
 ):
-    from pytezos.michelson.types.core import BytesType, StringType
-    from pytezos.michelson.types.big_map import BigMapType
-
-    config = load_input_config()
-
     print("Deploying the wtez contract.")
+    config = load_input_config()
     src = repo.wtez_contract
 
     # Compute the TZIP-16 metadata
     token_metadata_view = wtez_token_metadata_view_from_config(config=config)
+    # FIXME: We also need specific offline views here
     metadata = tzip16_metadata_from_views([token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
 
@@ -368,20 +365,14 @@ def deploy_wctez(
     ttl: Optional[int] = None,
 ):
     print("Deploying the wctez contract.")
-    src = repo.wctez_contract
-
     config = load_input_config()
+    src = repo.wctez_contract
 
     # Compute the TZIP-16 metadata
     token_metadata_view = wctez_token_metadata_view_from_config(config=config)
+    # FIXME: We also need specific offline views here
     metadata = tzip16_metadata_from_views([token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
-    # FIXME: We also need specific offline views here
-    # FIXME: We also need the "m" entry; re-read TZIP16
-    #   (* add the metadata boilerplate *)
-    #   (* Python: b"tezos-storage:m".hex() *)
-    #   let metadata_url = Ligo.bytes_from_literal "0x74657a6f732d73746f726167653a6d" in
-    #   let metadata = Ligo.Big_map.add "" metadata_url metadata in
 
     initial_storage = {
         "fa2_state": {
@@ -389,7 +380,10 @@ def deploy_wctez(
             "operators": {},
         },
         "ctez_fa12_address": ctez_fa12_address,
-        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wctez token
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     wctez = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -427,9 +421,8 @@ def deploy_checker(
     ctez_cfmm: ContractInterface,  # FIXME: Wish we didn't need this one
     ttl: Optional[int] = None,
 ):
-    config = load_input_config()
-
     print("Deploying the wrapper.")
+    config = load_input_config()
 
     checker = deploy_contract(
         tz,
