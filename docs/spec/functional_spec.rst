@@ -20,6 +20,12 @@ collateral, minus the creation deposit. Fails if the collateral given is not
 enough to cover the creation deposit, if the sender does not own said amount of
 collateral, or if Checker is not authorized as an operator for the sender's collateral.
 
+**Before calling:**
+  * In all cases, you will need to ensure that Checker is authorized in the collateral's FA2 contract
+    as an operator.
+  * For ``collateral_type=tez``, wtez is used as collateral in Checker. Please refer to
+    the wtez documentation for depositing tez and getting wtez tokens: [:ref:`Deposit tez`].
+
 ``create_burrow: (pair (pair nat (option key_hash)) nat)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -39,6 +45,12 @@ Deposit collateral in a burrow
 Deposit an amount of FA2 token as collateral to a burrow. Fails if the burrow does
 not exist, if the sender does not own said collateral, or if Checker is not
 authorized as an operator for the sender's collateral.
+
+**Before calling:**
+  * In all cases, you will need to ensure that Checker is authorized in the collateral's FA2 contract
+    as an operator.
+  * For ``collateral_type=tez``, wtez is used as collateral in Checker. Please refer to
+    the wtez documentation for depositing tez and getting wtez tokens: [:ref:`Deposit tez`].
 
 ``deposit_collateral: (pair nat nat)``
 
@@ -113,6 +125,12 @@ Activate a currently inactive burrow. Fails if the burrow does not exist, if the
 burrow is already active, if the amount of collateral given is not enough to
 cover the creation deposit, if the sender does not own said collateral, or if
 Checker is not authorized as an operator for the sender's collateral.
+
+**Before calling:**
+  * In all cases, you will need to ensure that Checker is authorized in the collateral's FA2 contract
+    as an operator.
+  * For ``collateral_type=tez``, wtez is used as collateral in Checker. Please refer to
+    the wtez documentation for depositing tez and getting wtez tokens: [:ref:`Deposit tez`].
 
 ``activate_burrow: (pair nat nat)``
 
@@ -189,6 +207,12 @@ Buy some kit from the CFMM contract in exchange for the FA2 token used in the cf
 Checker is not authorized as an operator for the sender's cfmm token, if the desired amount
 of kit cannot be bought, or if the deadline has passed.
 
+**Before calling:**
+  * In all cases, you will need to ensure that Checker is authorized in the cfmm token's FA2 contract
+    as an operator.
+  * For ``collateral_type=tez``, wctez is used as the cfmm token. Please refer to
+    the wctez documentation for depositing ctez and getting wctez tokens: [:ref:`Mint tokens`].
+
 ``buy_kit: (pair (pair nat nat) timestamp)``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
@@ -230,6 +254,12 @@ keeps all the cfmm token given and as much of the given kit as possible with the
 right ratio, and returns the leftovers, along with the liquidity tokens. Fails if
 Checker is not authorized as an operator for the sender's cfmm token, or if
 the sender does not own the specified amount of kit.
+
+**Before calling:**
+  * In all cases, you will need to ensure that Checker is authorized in the cfmm token's FA2 contract
+    as an operator.
+  * For ``collateral_type=tez``, wctez is used as the cfmm token. Please refer to
+    the wctez documentation for depositing ctez and getting wctez tokens: [:ref:`Mint tokens`].
 
 ``add_liquidity: (pair (pair nat nat) nat timestamp)``
 
@@ -824,6 +854,16 @@ Mint ``wctez`` tokens by transfering the corresponding amount of ``ctez`` tokens
 from the sender to the contract. Fails if the contract is not approved to spend
 the specified amount of ``ctez`` tokens on the sender's behalf or if the
 sender's ``ctez`` balance is less than the specified amount.
+
+**Before calling:**
+  * In order to mint ``wctez``:
+
+    * You must already have some ``ctez``. This is generally
+      done by calling ctez's ``%create`` entrypoint to create an oven then
+      calling its ``%mint_or_burn`` entrypoint to mint ctez. Please refer to the
+      `ctez project <https://github.com/tezos-checker/ctez>`_ for more details.
+    * You must also approve wctez to spend the specified amount of ctez by
+      calling ctez's FA1.2 contract's ``%approve`` entrypoint.
 
 ``mint: unit``
 
