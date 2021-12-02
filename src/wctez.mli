@@ -52,3 +52,14 @@ val redeem : wctez_state -> Ligo.nat -> (LigoOp.operation list * wctez_state)
 (*****************************************************************************)
 
 val main : (wctez_params * wctez_state) -> (LigoOp.operation list * wctez_state)
+
+(*****************************************************************************)
+(**                       {1 OFFLINE FA2 VIEWS}                              *)
+(*****************************************************************************)
+
+val view_get_balance : ((Ligo.address * fa2_token_id) * wctez_state) -> Ligo.nat
+(* FIXME: We'll need to extend the state to get this one to work:
+ * val view_total_supply : (fa2_token_id * checker) -> Ligo.nat
+*)
+val view_all_tokens : (unit * wctez_state) -> fa2_token_id list
+val view_is_operator : ((Ligo.address * (Ligo.address * fa2_token_id)) * wctez_state) -> bool
