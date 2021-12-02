@@ -33,7 +33,6 @@ let[@inline] ledger_issue_wctez_token
     (st, addr, amnt: fa2_state * Ligo.address * Ligo.nat) : fa2_state =
   ledger_issue (st, wctez_token_id, addr, amnt)
 
-(* TODO: Might name this redeem instead of withdraw *)
 let[@inline] ledger_withdraw_wctez_token
     (st, addr, amnt: fa2_state * Ligo.address * Ligo.nat) : fa2_state =
   ledger_withdraw (st, wctez_token_id, addr, amnt)

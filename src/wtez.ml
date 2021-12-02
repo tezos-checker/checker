@@ -5,8 +5,6 @@ open VaultTypes
 open Error
 open TokenMetadata
 
-(* TODO: Expose FA2 metadata for tez_tokens. *)
-
 (** Originate a vault contract with no delegate and zero tez. This way we can
   * originate vaults pretty easily, everytime we look one up: if it's not
   * there, just originate it now. *)
