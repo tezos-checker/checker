@@ -144,3 +144,23 @@ let main (op, state: mock_fa2_params * mock_fa2_state): LigoOp.operation list * 
   (* Contract-specific entrypoints *)
   | Mint amnt -> mint state amnt
   | Redeem amnt -> redeem state amnt
+
+let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * mock_fa2_state) : Ligo.nat =
+  fa2_get_balance (state.fa2_state, owner, token_id)
+
+(* FIXME: We'll need to extend the state to get this one to work.
+   let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
+   assert_checker_invariants state;
+   if token_id = kit_token_id then
+    kit_to_denomination_nat state.parameters.circulating_kit
+   else if token_id = lqt_token_id then
+    lqt_to_denomination_nat (lqt_sub state.cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")))
+   else
+    failwith "FA2_TOKEN_UNDEFINED"
+*)
+
+let view_all_tokens ((), _state: unit * mock_fa2_state) : fa2_token_id list =
+  [ mock_fa2_token_id ]
+
+let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * mock_fa2_state): bool =
+  fa2_is_operator (state.fa2_state, operator, owner, token_id)

@@ -28,3 +28,10 @@ val mint : mock_fa2_state -> Ligo.nat -> (LigoOp.operation list * mock_fa2_state
 val redeem : mock_fa2_state -> Ligo.nat -> (LigoOp.operation list * mock_fa2_state)
 
 val main : (mock_fa2_params * mock_fa2_state) -> (LigoOp.operation list * mock_fa2_state)
+
+val view_get_balance : ((Ligo.address * fa2_token_id) * mock_fa2_state) -> Ligo.nat
+(* FIXME: We'll need to extend the state to get this one to work:
+ * val view_total_supply : (fa2_token_id * checker) -> Ligo.nat
+*)
+val view_all_tokens : (unit * mock_fa2_state) -> fa2_token_id list
+val view_is_operator : ((Ligo.address * (Ligo.address * fa2_token_id)) * mock_fa2_state) -> bool
