@@ -677,13 +677,44 @@ vault contract an operation will be emitted originating it.
 FA2 Interface
 =============
 
-# TODO: fa2 entrypoints
+Query balance
+-------------
 
-``balance_of``
+::
 
-``transfer``
+    balance_of: (pair (list %requests (pair (address %owner) (nat %token_id)))
+                      (contract %callback
+                         (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))
 
-``update_operators``
+Update operators
+----------------
+
+::
+
+     update_operators: (list (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
+                                (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
+
+
+Transfer tokens
+---------------
+
+::
+
+    transfer: (list %transfer
+                (pair
+                    (address %from_)
+                    (list %txs
+                        (pair
+                            (address %to_)
+                            (pair
+                                (nat %token_id)
+                                (nat %amount)
+                            )
+                        )
+                    )
+                )
+              )
+
 
 Internal entrypoints
 ====================
@@ -713,8 +744,8 @@ Each ``wctez`` token is always worth exactly one ``ctez`` token.
 Minting and redeeming tokens
 ============================
 
-Minting tokens
---------------
+Mint tokens
+-----------
 
 Mint ``wctez`` tokens by transfering the corresponding amount of ``ctez`` tokens
 from the sender to the contract. Fails if the contract is not approved to spend
@@ -729,8 +760,8 @@ sender's ``ctez`` balance is less than the specified amount.
 | amount        | nat                   | The amount of ctez tokens to transfer to the contract                   |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-Redeeming tokens
-----------------
+Redeem tokens
+-------------
 
 Redeem the specified amount of ``wctez`` tokens for the same amount of ``ctez``
 tokens. Fails if the sender's ``wctez`` balance is less than the specified
@@ -748,10 +779,40 @@ amount.
 FA2 Interface
 =============
 
-# TODO: fa2 entrypoints
+Query balance
+-------------
 
-``balance_of``
+::
 
-``transfer``
+    balance_of: (pair (list %requests (pair (address %owner) (nat %token_id)))
+                      (contract %callback
+                         (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))
 
-``update_operators``
+Update operators
+----------------
+
+::
+
+     update_operators: (list (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
+                                (pair %remove_operator (address %owner) (address %operator) (nat %token_id))))
+
+
+Transfer tokens
+---------------
+
+::
+
+    transfer: (list %transfer
+                (pair
+                    (address %from_)
+                    (list %txs
+                        (pair
+                            (address %to_)
+                            (pair
+                                (nat %token_id)
+                                (nat %amount)
+                            )
+                        )
+                    )
+                )
+              )
