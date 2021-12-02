@@ -339,10 +339,12 @@ def deploy_wtez(
     config = load_input_config()
     src = repo.wtez_contract
 
+    with repo.wtez_metadata.open() as f:
+        views = json.load(f)["views"]
+
     # Compute the TZIP-16 metadata
     token_metadata_view = wtez_token_metadata_view_from_config(config=config)
-    # FIXME: We also need specific offline views here
-    metadata = tzip16_metadata_from_views([token_metadata_view])
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
 
     initial_storage = {
@@ -372,10 +374,12 @@ def deploy_wctez(
     config = load_input_config()
     src = repo.wctez_contract
 
+    with repo.wctez_metadata.open() as f:
+        views = json.load(f)["views"]
+
     # Compute the TZIP-16 metadata
     token_metadata_view = wctez_token_metadata_view_from_config(config=config)
-    # FIXME: We also need specific offline views here
-    metadata = tzip16_metadata_from_views([token_metadata_view])
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
 
     initial_storage = {
@@ -404,10 +408,12 @@ def deploy_mockFA2(
     config = load_input_config()
     src = repo.mock_fa2_contract
 
+    with repo.mock_fa2_metadata.open() as f:
+        views = json.load(f)["views"]
+
     # Compute the TZIP-16 metadata
     token_metadata_view = mock_fa2_token_metadata_view_from_config(config=config)
-    # FIXME: We also need specific offline views here
-    metadata = tzip16_metadata_from_views([token_metadata_view])
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
 
     initial_storage = {
