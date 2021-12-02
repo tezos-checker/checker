@@ -396,5 +396,5 @@ let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * 
 let view_all_tokens ((), _state: unit * wtez_state) : fa2_token_id list =
   [ wtez_token_id ]
 
-let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * wtez_state): bool =
+let view_is_operator ((owner, (operator, token_id)), state: (Ligo.address * (Ligo.address * fa2_token_id)) * wtez_state) : bool =
   fa2_is_operator (state.fa2_state, operator, owner, token_id)
