@@ -611,6 +611,10 @@ Seal the contract and make it ready for use
 
 ``sealContract: (pair (pair (pair address address) address) address)``
 
+.. raw:: html
+
+   <hr style="height:2px;border:none;color:#333;background-color:#333;" />
+
 wtez
 ****
 
@@ -719,15 +723,84 @@ Transfer tokens
 Internal entrypoints
 ====================
 
-# TODO: callVaultReceiveTez
+The following entrypoints are used internally in wtez and cannot be called by anyone accept
+the wtez contract itself.
 
-``call_vault_receive_tez``
+Send tez to a vault
+--------------------
 
-``call_vault_send_tez_to_contract``
+Internal. Calls the specified vault's ``%vault_receive_tez`` entrypoint with the
+specified amount of ``mutez``. Fails if the sender is not the wtez contract.
 
-``call_vault_send_tez_to_vault``
+``call_vault_receive_tez: (pair address tez)``
 
-``call_vault_set_delegate``
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| vault_address | address               | The address of the vault                                                |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| amount        | mutez                 | The amount of mutez to send from the main contract to the vault         |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+Send tez from a vault to a contract
+-----------------------------------
+
+Internal. Calls the specified vault's ``%vault_send_tez_to_contract``
+entrypoint, sending the specified amount of ``mutez``. from the vault to the
+provided contract address. Fails if the sender is not the wtez contract.
+
+``call_vault_send_tez_to_contract: (pair address (pair tez address))``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| vault_address | address               | The address of the vault                                                |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| amount        | tez                   | The amount of mutez to send from the main contract to the vault         |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| recipient     | address               | The address of the contract which will receive the mutez                |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+
+Send tez from a vault to another vault
+--------------------------------------
+
+Internal. Calls the specified vault's ``%vault_send_tez_to_vault``
+entrypoint, sending the specified amount of ``mutez``. from the vault to the
+provided vault address. Fails if the sender is not the wtez contract.
+
+``call_vault_send_tez_to_vault: (pair address (pair tez address))``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| vault_address | address               | The address of the vault                                                |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| amount        | tez                   | The amount of mutez to send from the main contract to the vault         |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| recipient     | address               | The address of the vault which will receive the mutez                   |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+Set a vault's optional delegate
+-------------------------------
+
+Internal. Calls the specified vault's ``%vault_set_delegate`` entrypoint with
+the provided delegate. Fails if the sender is not the wtez contract.
+
+``call_vault_set_delegate: (pair address (option key_hash))``
+
++---------------+-----------------------+-------------------------------------------------------------------------+
+| Parameter     |      Field Type       | Description                                                             |
++===============+=======================+=========================================================================+
+| vault_address | address               | The address of the vault                                                |
++---------------+-----------------------+-------------------------------------------------------------------------+
+| delegate      | option key_hash       | An optional delegate for the vault contract                             |
++---------------+-----------------------+-------------------------------------------------------------------------+
+
+.. raw:: html
+
+   <hr style="height:2px;border:none;color:#333;background-color:#333;" />
 
 wctez
 *****
