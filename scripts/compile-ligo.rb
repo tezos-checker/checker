@@ -101,10 +101,6 @@ end
 puts "Compiling the views."
 ###########################
 
-views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
-  .scan(/let wrapper_view_(\S+) *\([^:]*: *(.*) \* wrapper\): *([^=]*)/)
-  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
-
 def compile_type_json(type)
   # TZIP-16 requires us to specify the argument and the return type of views, however
   # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
@@ -131,13 +127,21 @@ def compile_code_json(expr)
   JSON.parse(stdout)
 end
 
-packed_views = []
+#####################################
+puts "Compiling the views (checker)."
+#####################################
+
+checker_views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+  .scan(/let wrapper_view_(\S+) *\([^:]*: *(.*) \* wrapper\): *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+packed_checker_views = []
 
 threads = []
-views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
+checker_views.each_slice([checker_views.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |view|
-      packed_views << {
+      packed_checker_views << {
         :name => view[:name],
         :parameter => compile_type_json(view[:param_ty]),
         :returnType => compile_type_json(view[:return_ty]),
@@ -147,6 +151,24 @@ views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
   }
 }
 threads.each(&:join)
+
+##################################
+puts "Compiling the views (wtez)."
+##################################
+
+# TODO
+
+###################################
+puts "Compiling the views (wctez)."
+###################################
+
+# TODO
+
+#####################################
+puts "Compiling the views (mockFA2)."
+#####################################
+
+# TODO
 
 #################################
 puts "Compiling the entrypoints."
@@ -193,7 +215,7 @@ puts "Saving the result."
 
 functions_json = {
   lazy_functions: chunked_entrypoints,
-  views: packed_views,
+  views: packed_checker_views,
 }
 
 functions_json = JSON.pretty_generate(functions_json)
