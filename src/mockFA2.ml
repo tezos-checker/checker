@@ -17,6 +17,7 @@ type mock_fa2_params =
 
 type mock_fa2_state =
   { fa2_state : fa2_state;
+    total_token : Ligo.nat;
     metadata: (string, Ligo.bytes) Ligo.big_map;
   }
 
@@ -71,9 +72,9 @@ let[@inline] fa2_run_transfer (state, xs: fa2_state * fa2_transfer list) : fa2_s
   (state, ([]: LigoOp.operation list))
 
 let[@inline] transfer (state: mock_fa2_state) (xs: fa2_transfer list) : LigoOp.operation list * mock_fa2_state =
-  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } = state in (* deconstruct *)
   let fa2_state, ops = fa2_run_transfer (fa2_state, xs) in
-  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  let state = { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } in (* reconstruct *)
   (ops, state)
 
 let[@inline] fa2_run_update_operators
@@ -117,21 +118,26 @@ let[@inline] fa2_run_update_operators
     xs
 
 let[@inline] update_operators (state: mock_fa2_state) (xs: fa2_update_operator list) : LigoOp.operation list * mock_fa2_state =
-  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } = state in (* deconstruct *)
   let fa2_state = fa2_run_update_operators (fa2_state, xs) in
-  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  let state = { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } in (* reconstruct *)
   (([]: LigoOp.operation list), state)
 
 let[@inline] mint (state: mock_fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * mock_fa2_state =
-  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } = state in (* deconstruct *)
   let fa2_state = ledger_issue (fa2_state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt) in
-  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  let total_token = Ligo.add_nat_nat total_token amnt in
+  let state = { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } in (* reconstruct *)
   (([]: LigoOp.operation list), state)
 
 let[@inline] redeem (state: mock_fa2_state) (amnt: Ligo.nat) : LigoOp.operation list * mock_fa2_state =
-  let { fa2_state = fa2_state; metadata = metadata; } = state in (* deconstruct *)
+  let { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } = state in (* deconstruct *)
   let fa2_state = ledger_withdraw (fa2_state, mock_fa2_token_id, !Ligo.Tezos.sender, amnt) in
-  let state = { fa2_state = fa2_state; metadata = metadata; } in (* reconstruct *)
+  let total_token =
+    match Ligo.is_nat (Ligo.sub_nat_nat total_token amnt) with
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : Ligo.nat)
+    | Some tt -> tt in
+  let state = { fa2_state = fa2_state; total_token = total_token; metadata = metadata; } in (* reconstruct *)
   (([]: LigoOp.operation list), state)
 
 let main (op, state: mock_fa2_params * mock_fa2_state): LigoOp.operation list * mock_fa2_state =
@@ -148,16 +154,11 @@ let main (op, state: mock_fa2_params * mock_fa2_state): LigoOp.operation list * 
 let view_get_balance ((owner, token_id), state: (Ligo.address * fa2_token_id) * mock_fa2_state) : Ligo.nat =
   fa2_get_balance (state.fa2_state, owner, token_id)
 
-(* FIXME: We'll need to extend the state to get this one to work.
-   let view_total_supply (token_id, state: fa2_token_id * checker) : Ligo.nat =
-   assert_checker_invariants state;
-   if token_id = kit_token_id then
-    kit_to_denomination_nat state.parameters.circulating_kit
-   else if token_id = lqt_token_id then
-    lqt_to_denomination_nat (lqt_sub state.cfmm.lqt (lqt_of_denomination (Ligo.nat_from_literal "1n")))
-   else
+let view_total_supply (token_id, state: fa2_token_id * mock_fa2_state) : Ligo.nat =
+  if token_id = mock_fa2_token_id then
+    state.total_token
+  else
     failwith "FA2_TOKEN_UNDEFINED"
-*)
 
 let view_all_tokens ((), _state: unit * mock_fa2_state) : fa2_token_id list =
   [ mock_fa2_token_id ]
