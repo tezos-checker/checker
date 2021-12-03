@@ -47,8 +47,8 @@ System overview of a Checker deployment
 
 .. image:: _static/system-diagram.svg
 
-At its core, Checker is a single smart contract which is tied at build time
-to the following external contracts:
+At its core, Checker is a single smart contract which is tied at build and
+deployment time to the following external contracts:
 
 1. An oracle contract that will be periodically queried for the value
    of its external target measure.
