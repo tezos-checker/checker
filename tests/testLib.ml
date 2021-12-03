@@ -11,11 +11,11 @@ let oracle_addr = Ligo.address_of_string "oracle_addr"
 let collateral_fa2_addr = Ligo.address_of_string "collateral_fa2_addr"
 
 let external_contracts = CheckerTypes.{
-  oracle = oracle_addr;
-  collateral_fa2 = collateral_fa2_addr;
-  ctok_fa2 = ctok_fa2_addr;
-  ctez_cfmm = ctez_cfmm_addr;
-}
+    oracle = oracle_addr;
+    collateral_fa2 = collateral_fa2_addr;
+    ctok_fa2 = ctok_fa2_addr;
+    ctez_cfmm = ctez_cfmm_addr;
+  }
 
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
