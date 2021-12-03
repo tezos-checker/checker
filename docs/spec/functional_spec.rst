@@ -777,7 +777,7 @@ Send tez from a vault to a contract
 -----------------------------------
 
 Internal. Calls the specified vault's ``%vault_send_tez_to_contract``
-entrypoint, sending the specified amount of ``mutez``. from the vault to the
+entrypoint, sending the specified amount of ``mutez`` from the vault to the
 provided contract address. Fails if the sender is not the wtez contract.
 
 ``call_vault_send_tez_to_contract: (pair address (pair tez address))``
