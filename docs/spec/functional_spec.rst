@@ -812,8 +812,8 @@ provided vault address. Fails if the sender is not the wtez contract.
 | recipient     | address               | The address of the vault which will receive the mutez                   |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
-Set a vault's optional delegate
--------------------------------
+Set a vault's delegate
+----------------------
 
 Internal. Calls the specified vault's ``%vault_set_delegate`` entrypoint with
 the provided delegate. Fails if the sender is not the wtez contract.
