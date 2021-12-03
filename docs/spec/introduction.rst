@@ -47,34 +47,70 @@ System overview of a Checker deployment
 
 .. image:: _static/system-diagram.svg
 
-Checker is a single smart contract which is tied at deployment time to
-two external contracts:
+At its core, Checker is a single smart contract which is tied at build and
+deployment time to the following external contracts:
 
 1. An oracle contract that will be periodically queried for the value
    of its external target measure.
 
-2. The new `ctez <https://github.com/tezos-checker/ctez>`_ system,
-   which provides the ``ctez`` token: this token has a value which
-   tracks that of Tez itself, but without affording the holder any
-   baking rights.
+2. An FA2 token contract which is used as collateral within Checker. Users
+   transfer these tokens to Checker when creating burrows or depositing
+   collateral and receive tokens when making withdrawals from their burrows.
 
-A Checker deployment enables its users to mint and burn its robocoin:
-Checker manages peripheral "burrow" contracts on those users' behalf, and
-places their Tez collateral deposits there.
+3. An FA2 token contract which is used in Checker's CFMM.
 
-For users who wish to exchange the robocoin with other commodities, or
-who wish to provide liquidity for such exchanges, the deployment
-includes a CFMM (Constant Function Market Maker) facility. This allows
-an exchange between the robocoin and ``ctez``.
+4. The new `ctez <https://github.com/tezos-checker/ctez>`_ system,
+   which provides the ``ctez`` token: this token has a value which tracks that
+   of Tez itself, but without affording the holder any baking rights. ``ctez``
+   is used in Checker's CFMM for instances of Checker configured to use ``tez``
+   collateral.
 
-Finally, the deployment allows for liquidation of Tez collateral
-against which depositors have minted robocoins, to manage when
-relative prices changes render the collateral insufficient. A batched
-auction mechanism facilitates this liquidation.
+A Checker deployment enables its users to mint and burn its robocoin: Checker
+manages peripheral "burrow" contracts on those users' behalf, and places their
+collateral deposits there.
 
-The deployment adjusts the terms for minting, burning and
-collateralising its robocoin algorithmically based on its current
-market price and the target oracle feed, such that the price drifts
-towards the target.
+For users who wish to exchange the robocoin with other commodities, or who wish
+to provide liquidity for such exchanges, the deployment includes a CFMM
+(Constant Function Market Maker) facility. This allows an exchange between the
+robocoin and a single other FA2 token which can be configured at build time.
+
+Finally, the deployment allows for liquidation of collateral tokens against
+which depositors have minted robocoins, to manage when relative prices changes
+render the collateral insufficient. A batched auction mechanism facilitates this
+liquidation.
+
+The deployment adjusts the terms for minting, burning and collateralising its
+robocoin algorithmically based on its current market price and the target oracle
+feed, such that the price drifts towards the target.
 
 An FA2 interface is provided for each deployment's robocoin.
+
+Configuring and building Checker for different use-cases
+========================================================
+
+Checker uses a configuration file, ``checker.yaml``, for building the contract for
+different use-cases ``TODO: Add reference to a config file doc section``. While
+some configurations such as system constants do not cause structural differences
+in the Checker contract, other configurations such as the collateral type
+require slight structural variations.
+
+Checker currently supports the following variations:
+
+1. Collateral type
+
+   a. ``collateral_type=fa2`` - In this case, the collateral type is an existing
+      FA2 token and the CFMM is configured to use the same FA2 token.
+
+   b. ``collateral_type=tez`` - A special case of (1). In this case Checker's CFMM is
+      required to use the `wctez` FA2 wrapper for `ctez` and the FA2 collateral
+      contract must use the `wtez` FA2 wrapper for `tez`, both of which are included
+      in the Checker repository.
+
+2. Drift derivative curve type
+
+   a. ``curve_type=bang-bang`` - In this case, the drift derivative implementation
+      uses a "bang-bang" curve which is discontinuous.
+
+   b. ``curve_type=continuous`` - In this case, the drift derivative implementation uses a continuous curve.
+
+3. ``TODO: Oracle type (index vs. token-based)``
