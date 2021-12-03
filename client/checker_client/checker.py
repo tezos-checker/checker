@@ -352,6 +352,7 @@ def deploy_wtez(
             "ledger": {},
             "operators": {},
         },
+        "total_token": 0,
         "vaults": {},
         "metadata": {
             "": b"tezos-storage:m".hex(),
@@ -387,6 +388,7 @@ def deploy_wctez(
             "ledger": {},
             "operators": {},
         },
+        "total_token": 0,
         "ctez_fa12_address": ctez_fa12_address,
         "metadata": {
             "": b"tezos-storage:m".hex(),
@@ -421,6 +423,7 @@ def deploy_mockFA2(
             "ledger": {},
             "operators": {},
         },
+        "total_token": 0,
         "metadata": {
             "": b"tezos-storage:m".hex(),
             "m": metadata_ser,
