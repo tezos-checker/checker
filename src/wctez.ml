@@ -187,7 +187,7 @@ let[@inline] redeem (state: wctez_state) (amnt: Ligo.nat) : LigoOp.operation lis
   (* Remove the specified amount of token from circulation *)
   let total_token =
     match Ligo.is_nat (Ligo.sub_nat_nat total_token amnt) with
-    | None -> (Ligo.failwith (Ligo.int_from_literal "1") : Ligo.nat)  (* FIXME: impossible internal error. name it? *)
+    | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : Ligo.nat)
     | Some tt -> tt in
   let state = { fa2_state = fa2_state; total_token = total_token; ctez_fa12_address = ctez_fa12_address; metadata = metadata; } in (* reconstruct *)
   ([op], state)
