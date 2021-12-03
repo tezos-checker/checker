@@ -419,12 +419,17 @@ def deploy_checker(
             print("  deployed: chunk {}.".format(chunk_no))
 
     print("Sealing.")
+
+    external_contracts = {
+        "oracle": oracle,
+        "collateral_fa2": collateral_fa2,
+        "ctok_fa2": cfmm_token_fa2,
+        "ctez_cfmm": ctez_cfmm,
+    }
+
     inject(
         tz,
-        checker.sealContract((oracle, collateral_fa2, cfmm_token_fa2, ctez_cfmm))
-        .as_transaction()
-        .autofill(ttl=ttl)
-        .sign(),
+        checker.sealContract(external_contracts).as_transaction().autofill(ttl=ttl).sign(),
     )
 
     return checker

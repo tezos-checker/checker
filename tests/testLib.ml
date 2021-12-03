@@ -10,6 +10,13 @@ let ctez_cfmm_addr = Ligo.address_of_string "ctez_cfmm_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"
 let collateral_fa2_addr = Ligo.address_of_string "collateral_fa2_addr"
 
+let external_contracts = CheckerTypes.{
+    oracle = oracle_addr;
+    collateral_fa2 = collateral_fa2_addr;
+    ctok_fa2 = ctok_fa2_addr;
+    ctez_cfmm = ctez_cfmm_addr;
+  }
+
 let qcheck_to_ounit t = OUnit.ounit2_of_ounit1 @@ QCheck_ounit.to_ounit_test t
 let assert_stdlib_int_equal ~expected ~real = OUnit2.assert_equal ~printer:string_of_int expected real
 let assert_string_equal ~expected ~real = OUnit2.assert_equal ~printer:(fun x -> x) expected real
@@ -85,7 +92,7 @@ let with_sealed_wrapper f =
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:checker_deployer ~amount:(Ligo.tez_from_literal "0mutez");
 
   let wrapper = CheckerMain.initial_wrapper checker_deployer in (* unsealed *)
-  let op = CheckerMain.SealContract (oracle_addr, collateral_fa2_addr, ctok_fa2_addr, ctez_cfmm_addr) in
+  let op = CheckerMain.SealContract (external_contracts) in
   let _ops, wrapper = CheckerMain.main (op, wrapper) in (* sealed *)
   f wrapper
 
