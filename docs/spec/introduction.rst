@@ -102,8 +102,9 @@ Checker currently supports the following variations:
       FA2 token and the CFMM is configured to use the same FA2 token.
 
    b. ``collateral_type=tez`` - A special case of (1). In this case Checker's CFMM is
-      required to use `ctez` and the FA2 collateral contract must use the `wtez` FA2
-      wrapper for `tez` which is included in the Checker repository.
+      required to use the `wctez` FA2 wrapper for `ctez` and the FA2 collateral
+      contract must use the `wtez` FA2 wrapper for `tez`, both of which are included
+      in the Checker repository.
 
 2. Drift derivative curve type
 
