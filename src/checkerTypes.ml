@@ -1,5 +1,6 @@
 open Kit
 open Tok
+open FixedPoint
 open Burrow
 open CfmmTypes
 open Parameters
@@ -24,7 +25,7 @@ type checker =
     cfmm : cfmm;
     parameters : parameters;
     liquidation_auctions : liquidation_auctions;
-    last_index : Ligo.nat option;
+    last_index : fixedpoint option;
     last_ctez_in_tez : ratio option;
     fa2_state : fa2_state;
     external_contracts : external_contracts;
@@ -36,7 +37,7 @@ let initial_checker (external_contracts: external_contracts) =
     cfmm = initial_cfmm ();
     parameters = initial_parameters;
     liquidation_auctions = liquidation_auction_empty;
-    last_index = (None : Ligo.nat option);
+    last_index = (None : fixedpoint option);
     last_ctez_in_tez = (None : ratio option);
     fa2_state = initial_fa2_state;
     external_contracts = external_contracts;

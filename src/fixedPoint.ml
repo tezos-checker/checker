@@ -20,6 +20,9 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
       (pow_int_nat x y)
       (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_nat_nat y (Ligo.nat_from_literal "1n"))))
 
+let[@inline] fixedpoint_min (x: fixedpoint) (y: fixedpoint) = min_int x y
+let[@inline] fixedpoint_max (x: fixedpoint) (y: fixedpoint) = max_int x y
+
 (* Conversions to/from other types. *)
 let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
 let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
