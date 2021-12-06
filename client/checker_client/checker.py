@@ -170,7 +170,6 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
     }
 
 
-# FIXME: TYPE?
 def tzip16_metadata_from_views(views):
     return {
         "interfaces": ["TZIP-012-4b3c67aad5abb"],
