@@ -1,6 +1,5 @@
 open LiquidationAuctionPrimitiveTypes
 
-(* FIXME: Temporary patch *)
 let index_from_chf_in_tok (n: Ligo.nat) =
   FixedPoint.fixedpoint_of_ratio_floor
     (Common.make_ratio (Ligo.int n) Tok.tok_scaling_factor_int)
