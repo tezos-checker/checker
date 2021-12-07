@@ -351,7 +351,8 @@ dev-container:
         curl \
         gnupg \
         lsb-release \
-        wget
+        wget \
+        gosu
 
     # Install docker
     ARG TARGETARCH
@@ -361,7 +362,8 @@ dev-container:
     RUN apt update && \
         apt install -y docker-ce docker-ce-cli containerd.io && \
         (getent group docker || groupadd docker) && \
-        usermod -aG docker root
+        usermod -aG docker root && \
+        usermod -aG docker checker
 
     # Install earthly.
     # ** Note: earthly will only be usable if the container is launched with access to docker,
@@ -369,14 +371,12 @@ dev-container:
     # **
     RUN wget "https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-$TARGETARCH" -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly
 
+    # Create default working directory
     RUN mkdir /checker && chown checker /checker
 
-    # Now that installs are out of the way, switch back to our user
-    USER checker
-
-    # Ensure interactive terminal is also already in correct opam switch env
-    RUN echo 'eval $(opam env --switch=/build --set-switch)' >> /home/checker/.bashrc
-    RUN echo 'eval $(opam env --switch=/build --set-switch); /bin/bash $@' > entrypoint.sh && chmod +x entrypoint.sh
+    # Bring in the entrypoint script
+    COPY scripts/docker/entrypoint-dev-container.sh ./entrypoint.sh
+    RUN chmod +x entrypoint.sh
 
     # Extra useful applications for development
     COPY +ligo-binary/ligo /bin/ligo
@@ -385,8 +385,6 @@ dev-container:
 
     WORKDIR /checker
 
-    # Add the pre-installed poetry env to the PATH for convenience
-    ENV PATH=/build/.venv/bin:$PATH
     # Ensure that we restore the debian frontend to dialog since the dev container
     # should be interactive.
     ENV DEBIAN_FRONTEND=dialog

@@ -58,6 +58,7 @@ your local Docker daemon for executing builds.
 ```console
 docker run --rm -it \
   --name checker-dev-container \
+  -e CHECKER_UID=$UID
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $PWD:/checker \
   ghcr.io/tezos-checker/checker/dev
@@ -157,7 +158,7 @@ In a new terminal, deploy the mock oracle and ctez contracts. To get
 a new terminal manually (e.g. if not using VSCode), you can use:
 
 ```console
-$ docker exec -it checker-dev-container bash
+$ docker exec -it -u checker checker-dev-container bash
 ```
 
 ```console
