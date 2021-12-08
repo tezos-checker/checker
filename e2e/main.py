@@ -620,7 +620,9 @@ class E2ETest(SandboxedTestCase):
             call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id))
             == 399996
         )
-        assert call_fa2_offline_view(checker, "totalSupply", liquidity_token_id) == 399996
+        assert (
+            call_fa2_offline_view(checker, "totalSupply", liquidity_token_id) == 399996
+        )
         assert (
             call_fa2_offline_view(
                 checker,
