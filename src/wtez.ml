@@ -272,7 +272,7 @@ let[@inline] withdraw (state: wtez_state) (amnt: Ligo.tez) : LigoOp.operation li
   let _ = ensure_no_tez_given () in
   let fa2_state = ledger_withdraw_tez_token (fa2_state, !Ligo.Tezos.sender, amnt) in
   let total_token =
-    match Ligo.is_nat (Ligo.sub_nat_nat total_token (tez_to_mutez_nat !Ligo.Tezos.amount)) with
+    match Ligo.is_nat (Ligo.sub_nat_nat total_token (tez_to_mutez_nat amnt)) with
     | None -> (failwith "FA2_INSUFFICIENT_BALANCE" : Ligo.nat)
     | Some tt -> tt in
   match Ligo.Big_map.find_opt !Ligo.Tezos.sender vaults with
