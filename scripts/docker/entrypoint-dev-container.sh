@@ -12,7 +12,7 @@ if [ "${EUID}" -ne 0 ]
   exit 1
 fi
 
-# If a speific UID is supplied, make sure that the container user has that UID.
+# If a specific UID is supplied, make sure that the container user has that UID.
 # This helps reduce the frequency of permission-related errors when mounting
 # in host directories for development.
 if [ ! -z "${CHECKER_UID}" ]
@@ -25,7 +25,18 @@ then
     # Restore home directory (permissions for existing files won't be updated)
     usermod --home /home/checker checker
     # Chown any directories we absolutely must WRITE to with our new user id
+    # Note: This allows us to write to home dir but not to pre-existing files there
+    chown checker /home/checker
     chown checker /home/checker/.config
+fi
+
+# To support docker in docker, need to ensure that the docker group in the container
+# has the GID as the docker group on the host (otherwise you can't call docker commands
+# in the container).
+if [ ! -z "${DOCKER_GID}" ]
+then
+    # Update the group id to match the specified one
+    groupmod --gid $DOCKER_GID docker
 fi
 
 # Add opam switch environment variables

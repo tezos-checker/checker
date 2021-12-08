@@ -58,7 +58,8 @@ your local Docker daemon for executing builds.
 ```console
 docker run --rm -it \
   --name checker-dev-container \
-  -e CHECKER_UID=$UID
+  -e CHECKER_UID=$UID \
+  -e DOCKER_GID=$(grep "docker" /etc/group | cut -d: -f3) \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $PWD:/checker \
   ghcr.io/tezos-checker/checker/dev
