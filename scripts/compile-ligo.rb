@@ -104,13 +104,13 @@ end
 puts "Compiling the views."
 ###########################
 
-def compile_type_json(type)
+def compile_type_json(type, file)
   # TZIP-16 requires us to specify the argument and the return type of views, however
   # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
   # in the generated michelson and grab the type from there.
   stdout, stderr, exit_status = Open3.capture3(
     "ligo", "compile-expression", "cameligo",
-    "--init-file", MAIN_FILE,
+    "--init-file", file,
     "--michelson-format", "json",
     "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"
   )
@@ -119,10 +119,10 @@ def compile_type_json(type)
   obj[0]["args"][0]
 end
 
-def compile_code_json(expr)
+def compile_code_json(expr, file)
   stdout, stderr, exit_status = Open3.capture3(
     "ligo", "compile-expression", "cameligo",
-    "--init-file", MAIN_FILE,
+    "--init-file", file,
     "--michelson-format", "json",
     expr
   )
@@ -146,9 +146,9 @@ checker_views.each_slice([checker_views.length / Etc.nprocessors, 1].max) { |bat
     batch.each { |view|
       packed_checker_views << {
         :name => view[:name],
-        :parameter => compile_type_json(view[:param_ty]),
-        :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("wrapper_view_#{view[:name]}")
+        :parameter => compile_type_json(view[:param_ty], MAIN_FILE),
+        :returnType => compile_type_json(view[:return_ty], MAIN_FILE),
+        :code => compile_code_json("wrapper_view_#{view[:name]}", MAIN_FILE)
       }
     }
   }
@@ -171,9 +171,9 @@ wtez_views.each_slice([wtez_views.length / Etc.nprocessors, 1].max) { |batch|
     batch.each { |view|
       packed_wtez_views << {
         :name => view[:name],
-        :parameter => compile_type_json(view[:param_ty]),
-        :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("view_#{view[:name]}")
+        :parameter => compile_type_json(view[:param_ty], WTEZ_FILE),
+        :returnType => compile_type_json(view[:return_ty], WTEZ_FILE),
+        :code => compile_code_json("view_#{view[:name]}", WTEZ_FILE)
       }
     }
   }
@@ -201,9 +201,9 @@ wctez_views.each_slice([wctez_views.length / Etc.nprocessors, 1].max) { |batch|
     batch.each { |view|
       packed_wctez_views << {
         :name => view[:name],
-        :parameter => compile_type_json(view[:param_ty]),
-        :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("view_#{view[:name]}")
+        :parameter => compile_type_json(view[:param_ty], WCTEZ_FILE),
+        :returnType => compile_type_json(view[:return_ty], WCTEZ_FILE),
+        :code => compile_code_json("view_#{view[:name]}", WCTEZ_FILE)
       }
     }
   }
@@ -231,9 +231,9 @@ mock_fa2_views.each_slice([mock_fa2_views.length / Etc.nprocessors, 1].max) { |b
     batch.each { |view|
       packed_mock_fa2_views << {
         :name => view[:name],
-        :parameter => compile_type_json(view[:param_ty]),
-        :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("view_#{view[:name]}")
+        :parameter => compile_type_json(view[:param_ty], MOCK_FA2_FILE),
+        :returnType => compile_type_json(view[:return_ty], MOCK_FA2_FILE),
+        :code => compile_code_json("view_#{view[:name]}", MOCK_FA2_FILE)
       }
     }
   }
