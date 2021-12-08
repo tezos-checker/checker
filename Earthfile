@@ -92,6 +92,8 @@ docs:
 spec:
     FROM +builder
     RUN pip install sphinx-rtd-theme
+    # Add local install path for sphinx since we are running as non-root user
+    ENV PATH=/home/checker/.local/bin:$PATH
     COPY docs docs
     RUN make -C docs/spec html
     SAVE ARTIFACT docs/spec/_build/html AS LOCAL docs/spec/_build/html
