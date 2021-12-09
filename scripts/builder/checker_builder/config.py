@@ -451,6 +451,10 @@ class CheckerRepo:
         return self.root.joinpath("util").joinpath("mock_oracle.tz")
 
     @property
+    def mock_cfmm_oracle_contract(self) -> Path:
+        return self.root.joinpath("util").joinpath("mock_cfmm_oracle.tz")
+
+    @property
     def ctez(self) -> Path:
         return self.root.joinpath("vendor").joinpath("ctez")
 

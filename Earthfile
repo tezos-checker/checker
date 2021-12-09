@@ -308,6 +308,7 @@ test-e2e:
     # Bring ctez contract and mock oracle (for running checker in sandbox)
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
+    COPY ./util/mock_cfmm_oracle.tz ./util/
     # Bring flextesa + tezos-* binaries, which are required by the checker client
     COPY +flextesa/* /usr/bin/
     # And the checker contract itself
@@ -425,6 +426,7 @@ cli:
     COPY +zcash-params/zcash-params /home/checker/.zcash-params
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
+    COPY ./util/mock_cfmm_oracle.tz ./util/
 
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
