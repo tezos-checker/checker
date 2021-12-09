@@ -291,11 +291,17 @@ def write_gas_costs(gas_costs: Dict[str, int], output_path: str) -> None:
         json.dump(gas_costs_sorted, f, indent=4)
 
 
+def call_fa2_offline_view(contract: ContractInterface, view_name: str, *args):
+    print(f"Calling FA2 Offline view %{view_name} with {args}")
+    return getattr(contract.metadata, view_name)(*args).storage_view()
+
+
 class E2ETest(SandboxedTestCase):
     def test_e2e(self):
         gas_costs = {}
         account = self.client.key.public_key_hash()
         kit_token_id = self.config.tokens.issued.kit.token_id
+        liquidity_token_id = self.config.tokens.issued.liquidity.token_id
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
         cfmm_token_token_id = self.config.tokens.in_use.cfmm_token.token_id
         # ===============================================================================
@@ -480,22 +486,20 @@ class E2ETest(SandboxedTestCase):
             shell=checker.shell,
             key="edsk3QoqBuvdamxouPhin7swCvkQNgq4jP5KZPbwWNnwdZpSpJiEbq",
         ).contract(checker.address)
-
+        account_alice = checker_alice.key.public_key_hash()
         # Transfer from the main test account to alice's account
         fa2_transfer = {
             "from_": account,
             "txs": [
                 {
-                    "to_": checker_alice.key.public_key_hash(),
+                    "to_": account_alice,
                     "token_id": kit_token_id,
                     "amount": 90,
                 },
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_fa2_token_balance(
-            checker, checker_alice.key.public_key_hash(), kit_token_id, 90
-        )
+        assert_fa2_token_balance(checker, account_alice, kit_token_id, 90)
 
         # Add the main account as an operator on alice's account
         # Note: using a client instance with alice's key for this since she is the
@@ -503,7 +507,7 @@ class E2ETest(SandboxedTestCase):
         update_operators = [
             {
                 "add_operator": {
-                    "owner": checker_alice.key.public_key_hash(),
+                    "owner": account_alice,
                     "operator": account,
                     "token_id": kit_token_id,
                 }
@@ -518,7 +522,7 @@ class E2ETest(SandboxedTestCase):
 
         # Send some kit back to the main test account
         fa2_transfer = {
-            "from_": checker_alice.key.public_key_hash(),
+            "from_": account_alice,
             "txs": [
                 {
                     "to_": account,
@@ -528,18 +532,14 @@ class E2ETest(SandboxedTestCase):
             ],
         }
         call_checker_endpoint("transfer", [fa2_transfer])
-        assert_fa2_token_balance(
-            checker, checker_alice.key.public_key_hash(), kit_token_id, 10
-        )
+        assert_fa2_token_balance(checker, account_alice, kit_token_id, 10)
 
         # `balance_of` requires a contract callback when executing on-chain. To make tests
         # more light-weight and avoid needing an additional mock contract, we call it as a view.
         # This comes with a downside, however, since using a view means that we don't get an
         # estimate of the gas cost.
         fa2_balance_of = {
-            "requests": [
-                {"owner": checker_alice.key.public_key_hash(), "token_id": kit_token_id}
-            ],
+            "requests": [{"owner": account_alice, "token_id": kit_token_id}],
             "callback": None,
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
@@ -547,7 +547,7 @@ class E2ETest(SandboxedTestCase):
         # Check that this balance agrees with the kit balance view
         assert_fa2_token_balance(
             checker,
-            checker_alice.key.public_key_hash(),
+            account_alice,
             kit_token_id,
             balance[0]["nat_2"],
         )
@@ -588,8 +588,56 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
 
         call_checker_endpoint(
-            "remove_liquidity", (5, 1, 1, int(datetime.now().timestamp()) + 20)
+            "remove_liquidity", (4, 1, 1, int(datetime.now().timestamp()) + 20)
         )
+
+        # ===============================================================================
+        # Offline views
+        # ===============================================================================
+        # Kit
+        assert (
+            call_fa2_offline_view(checker, "getBalance", (account_alice, kit_token_id))
+            == 10
+        )
+        # FIXME: Need to calculate an expected value for kit here (or somehow estimate it)
+        # and add it as an assertion.
+        call_fa2_offline_view(checker, "totalSupply", kit_token_id)
+        assert (
+            call_fa2_offline_view(
+                checker,
+                "isOperator",
+                account_alice,
+                account,
+                kit_token_id,
+            )
+            == True
+        )
+        # Liquidity
+        print(
+            call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id))
+        )
+        assert (
+            call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id))
+            == 399996
+        )
+        assert (
+            call_fa2_offline_view(checker, "totalSupply", liquidity_token_id) == 399996
+        )
+        assert (
+            call_fa2_offline_view(
+                checker,
+                "isOperator",
+                account_alice,
+                account,
+                liquidity_token_id,
+            )
+            == False
+        )
+        # Other
+        assert call_fa2_offline_view(checker, "allTokens") == [
+            kit_token_id,
+            liquidity_token_id,
+        ]
 
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))
@@ -709,6 +757,22 @@ class WTezTest(SandboxedTestCase):
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         wrapper.balance_of(**fa2_balance_of).callback_view()
+
+        # ===============================================================================
+        # Offline views
+        # ===============================================================================
+        assert (
+            call_fa2_offline_view(wrapper, "getBalance", (account, wtez_token_id))
+            == 1_999_890
+        )
+        assert call_fa2_offline_view(wrapper, "totalSupply", wtez_token_id) == 1_999_900
+        assert call_fa2_offline_view(wrapper, "allTokens") == [wtez_token_id]
+        assert (
+            call_fa2_offline_view(
+                wrapper, "isOperator", account_alice, account, wtez_token_id
+            )
+            == True
+        )
 
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))
@@ -846,6 +910,22 @@ class WCtezTest(SandboxedTestCase):
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         wctez.balance_of(**fa2_balance_of).callback_view()
 
+        # ===============================================================================
+        # Offline views
+        # ===============================================================================
+        assert (
+            call_fa2_offline_view(wctez, "getBalance", (account, wctez_token_id))
+            == 798_990
+        )
+        assert call_fa2_offline_view(wctez, "totalSupply", wctez_token_id) == 799000
+        assert call_fa2_offline_view(wctez, "allTokens") == [wctez_token_id]
+        assert (
+            call_fa2_offline_view(
+                wctez, "isOperator", account_alice, account, wctez_token_id
+            )
+            == True
+        )
+
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))
         if WRITE_GAS_COSTS:
@@ -970,6 +1050,24 @@ class MockFA2Test(SandboxedTestCase):
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
         mockFA2.balance_of(**fa2_balance_of).callback_view()
+
+        # ===============================================================================
+        # Offline views
+        # ===============================================================================
+        assert (
+            call_fa2_offline_view(mockFA2, "getBalance", (account, mock_fa2_token_id))
+            == 798_990
+        )
+        assert (
+            call_fa2_offline_view(mockFA2, "totalSupply", mock_fa2_token_id) == 799000
+        )
+        assert call_fa2_offline_view(mockFA2, "allTokens") == [mock_fa2_token_id]
+        assert (
+            call_fa2_offline_view(
+                mockFA2, "isOperator", account_alice, account, mock_fa2_token_id
+            )
+            == True
+        )
 
         print("Gas costs:")
         print(json.dumps(gas_costs, indent=4))

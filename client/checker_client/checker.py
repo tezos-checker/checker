@@ -52,11 +52,8 @@ def _token_config_to_metadata(token_config: IssuedTokenConfig) -> Tuple[int, Dic
     }
 
 
-def token_metadata_view_from_config(*, config: CheckerConfig):
-    metadata = [
-        _token_config_to_metadata(config.tokens.issued.kit),
-        _token_config_to_metadata(config.tokens.issued.liquidity),
-    ]
+def token_metadata_view_from_issued_token_config(token_configs: List[IssuedTokenConfig]):
+    metadata = [_token_config_to_metadata(token_config) for token_config in token_configs]
 
     # convert the attributes to bytes
     for _, attrs in metadata:
@@ -78,6 +75,26 @@ def token_metadata_view_from_config(*, config: CheckerConfig):
 
     # compile and return the view
     return compile_view_fa2_token_metadata(tokens)
+
+
+def checker_token_metadata_view_from_config(*, config: CheckerConfig):
+    tokens = [
+        config.tokens.issued.kit,
+        config.tokens.issued.liquidity,
+    ]
+    return token_metadata_view_from_issued_token_config(tokens)
+
+
+def wtez_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.wtez])
+
+
+def wctez_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.wctez])
+
+
+def mock_fa2_token_metadata_view_from_config(*, config: CheckerConfig):
+    return token_metadata_view_from_issued_token_config([config.tokens.issued.mock_fa2])
 
 
 # attrs should be a dict from strings to bytes.
@@ -150,6 +167,30 @@ def compile_view_fa2_token_metadata(tokens: List[TokenMetadata]):
                 {"prim": "map", "args": [{"prim": "string"}, {"prim": "bytes"}]},
             ],
         },
+    }
+
+
+def tzip16_metadata_from_views(views):
+    return {
+        "interfaces": ["TZIP-012-4b3c67aad5abb"],
+        "views": [
+            {
+                "name": view["name"],
+                "implementations": [
+                    {
+                        "michelsonStorageView": {
+                            "parameter": view["parameter"],
+                            "returnType": view["returnType"],
+                            "code": view["code"],
+                        }
+                    }
+                ],
+            }
+            for view in views
+        ],
+        # This field is supposed to be optional but it mistakenly was required before
+        # pytezos commit 12911835
+        "errors": [],
     }
 
 
@@ -294,14 +335,28 @@ def deploy_wtez(
     ttl: Optional[int] = None,
 ):
     print("Deploying the wtez contract.")
+    config = load_input_config()
     src = repo.wtez_contract
+
+    with repo.wtez_metadata.open() as f:
+        views = json.load(f)["views"]
+
+    # Compute the TZIP-16 metadata
+    token_metadata_view = wtez_token_metadata_view_from_config(config=config)
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
+    metadata_ser = json.dumps(metadata).encode("utf-8")
+
     initial_storage = {
         "fa2_state": {
             "ledger": {},
             "operators": {},
         },
+        "total_token": 0,
         "vaults": {},
-        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wtez token
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     wrapper = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -316,14 +371,28 @@ def deploy_wctez(
     ttl: Optional[int] = None,
 ):
     print("Deploying the wctez contract.")
+    config = load_input_config()
     src = repo.wctez_contract
+
+    with repo.wctez_metadata.open() as f:
+        views = json.load(f)["views"]
+
+    # Compute the TZIP-16 metadata
+    token_metadata_view = wctez_token_metadata_view_from_config(config=config)
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
+    metadata_ser = json.dumps(metadata).encode("utf-8")
+
     initial_storage = {
         "fa2_state": {
             "ledger": {},
             "operators": {},
         },
+        "total_token": 0,
         "ctez_fa12_address": ctez_fa12_address,
-        "metadata": {},  # FIXME: populate with TZIP-016 metadata for wctez token
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     wctez = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -337,13 +406,27 @@ def deploy_mockFA2(
     ttl: Optional[int] = None,
 ):
     print("Deploying the mock FA2 contract.")
+    config = load_input_config()
     src = repo.mock_fa2_contract
+
+    with repo.mock_fa2_metadata.open() as f:
+        views = json.load(f)["views"]
+
+    # Compute the TZIP-16 metadata
+    token_metadata_view = mock_fa2_token_metadata_view_from_config(config=config)
+    metadata = tzip16_metadata_from_views(views + [token_metadata_view])
+    metadata_ser = json.dumps(metadata).encode("utf-8")
+
     initial_storage = {
         "fa2_state": {
             "ledger": {},
             "operators": {},
         },
-        "metadata": {},  # FIXME: populate with TZIP-016 metadata for mock_fa2 token
+        "total_token": 0,
+        "metadata": {
+            "": b"tezos-storage:m".hex(),
+            "m": metadata_ser,
+        },
     }
     mockFA2 = deploy_contract(tz, source_file=src, initial_storage=initial_storage, ttl=ttl)
     print("Done.")
@@ -361,9 +444,8 @@ def deploy_checker(
     ctez_cfmm: ContractInterface,  # FIXME: Wish we didn't need this one
     ttl: Optional[int] = None,
 ):
-    config = load_input_config()
-
     print("Deploying the wrapper.")
+    config = load_input_config()
 
     checker = deploy_contract(
         tz,
@@ -378,30 +460,10 @@ def deploy_checker(
 
     print("Deploying the TZIP-16 metadata.")
 
-    token_metadata_view = token_metadata_view_from_config(config=config)
-
-    metadata = {
-        "interfaces": ["TZIP-012-4b3c67aad5abb"],
-        "views": [
-            {
-                "name": view["name"],
-                "implementations": [
-                    {
-                        "michelsonStorageView": {
-                            "parameter": view["parameter"],
-                            "returnType": view["returnType"],
-                            "code": view["code"],
-                        }
-                    }
-                ],
-            }
-            for view in functions["views"] + [token_metadata_view]
-        ],
-        # This field is supposed to be optional but it mistakenly was required before
-        # pytezos commit 12911835
-        "errors": [],
-    }
+    token_metadata_view = checker_token_metadata_view_from_config(config=config)
+    metadata = tzip16_metadata_from_views(functions["views"] + [token_metadata_view])
     metadata_ser = json.dumps(metadata).encode("utf-8")
+
     chunk_size = 10 * 1024
     metadata_chunks = [
         metadata_ser[i : i + chunk_size] for i in range(0, len(metadata_ser), chunk_size)

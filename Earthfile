@@ -420,6 +420,8 @@ cli:
 
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
+    RUN mkdir ./src
+    COPY +generate-code/_input_checker.yaml ./src/_input_checker.yaml
 
     RUN mkdir ./scripts
     COPY ./scripts/builder ./scripts/builder
