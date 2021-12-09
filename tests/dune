@@ -23,6 +23,7 @@
    testSliceList
    testPtr
    testWtez
+   testWctez
  )
  (libraries checker core_kernel ounit2 qcheck)
  (preprocess
@@ -53,3 +54,4 @@
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testFa2.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testWtez.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testWctez.exe})))

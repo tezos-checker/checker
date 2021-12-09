@@ -5,6 +5,7 @@ let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"
 let charles_key_hash = Ligo.key_hash_from_literal "charles_key_hash"
 
+let ctok_fa12_addr = Ligo.address_of_string "ctok_fa12_addr"
 let ctok_fa2_addr = Ligo.address_of_string "ctok_fa2_addr"
 let ctez_cfmm_addr = Ligo.address_of_string "ctez_cfmm_addr"
 let oracle_addr = Ligo.address_of_string "oracle_addr"

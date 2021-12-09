@@ -17,6 +17,14 @@ type wctez_state =
     metadata: (string, Ligo.bytes) Ligo.big_map;
   }
 
+(** Make a fresh state. *)
+let initial_wctez (ctez_fa12_address: Ligo.address) =
+  { fa2_state = initial_fa2_state;
+    total_token = Ligo.nat_from_literal "0n";
+    ctez_fa12_address = ctez_fa12_address;
+    metadata = (Ligo.Big_map.empty: (string, Ligo.bytes) Ligo.big_map);
+  }
+
 type wctez_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
