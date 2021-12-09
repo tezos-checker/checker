@@ -21,6 +21,13 @@ type mock_fa2_state =
     metadata: (string, Ligo.bytes) Ligo.big_map;
   }
 
+(** Make a fresh state. *)
+let initial_mock_fa2 () =
+  { fa2_state = initial_fa2_state;
+    total_token = Ligo.nat_from_literal "0n";
+    metadata = (Ligo.Big_map.empty: (string, Ligo.bytes) Ligo.big_map);
+  }
+
 let[@inline] fa2_get_balance (st, owner, token_id: fa2_state * Ligo.address * fa2_token_id): Ligo.nat =
   let ledger = st.ledger in
   let key = (token_id, owner) in
