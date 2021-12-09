@@ -3,14 +3,13 @@ open FixedPoint
 open Common
 open Constants
 open DriftDerivative
-open Tok
 
 [@@@coverage off]
 
 type parameters =
   { q : fixedpoint; (* 1/kit, really *)
-    index: Ligo.nat;
-    protected_index: Ligo.nat;
+    index: fixedpoint;
+    protected_index: fixedpoint;
     target: fixedpoint;
     drift_derivative: fixedpoint;
     drift: fixedpoint;
@@ -27,8 +26,8 @@ type parameters =
 (** Initial state of the parameters. *)
 let initial_parameters : parameters =
   { q = fixedpoint_one;
-    index = tok_scaling_factor_nat;
-    protected_index = tok_scaling_factor_nat;
+    index = fixedpoint_one;
+    protected_index = fixedpoint_one;
     target = fixedpoint_one;
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -40,22 +39,22 @@ let initial_parameters : parameters =
   }
 
 (** Compute the current minting index (in tok). To get tok/kit must multiply with q. *)
-let[@inline] tz_minting (p: parameters) : Ligo.nat = max_nat p.index p.protected_index
+let[@inline] tz_minting (p: parameters) : fixedpoint = fixedpoint_max p.index p.protected_index
 
 (** Compute the current liquidation index (in tok). To get tok/kit must multiply with q. *)
-let[@inline] tz_liquidation (p: parameters) : Ligo.nat = min_nat p.index p.protected_index
+let[@inline] tz_liquidation (p: parameters) : fixedpoint = fixedpoint_min p.index p.protected_index
 
 (** Current minting price (in tok/kit). *)
 let minting_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_minting p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (fixedpoint_to_raw (tz_minting p)))
+    (Ligo.mul_int_int fixedpoint_scaling_factor fixedpoint_scaling_factor)
 
 (** Current liquidation price (in tok/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
-    (Ligo.mul_int_nat (fixedpoint_to_raw p.q) (tz_liquidation p))
-    (Ligo.mul_int_int fixedpoint_scaling_factor tok_scaling_factor_int)
+    (Ligo.mul_int_int (fixedpoint_to_raw p.q) (fixedpoint_to_raw (tz_liquidation p)))
+    (Ligo.mul_int_int fixedpoint_scaling_factor fixedpoint_scaling_factor)
 
 (** Given the amount of kit necessary to close all existing burrows
     (outstanding) and the amount of kit that is currently in circulation
@@ -156,30 +155,36 @@ let[@inline] compute_current_burrow_fee_index (last_burrow_fee_index: fixedpoint
       )
     ]}
 *)
-let[@inline] compute_current_protected_index (last_protected_index: Ligo.nat) (current_index: Ligo.nat) (duration_in_seconds: Ligo.int) : Ligo.nat =
-  assert (Ligo.gt_nat_nat last_protected_index (Ligo.nat_from_literal "0n"));
-  fraction_to_nat_floor
-    (clamp_int
-       (Ligo.mul_nat_int
-          current_index
+let[@inline] compute_current_protected_index (last_protected_index: fixedpoint) (current_index: fixedpoint) (duration_in_seconds: Ligo.int) : fixedpoint =
+  assert (Ligo.gt_int_int (fixedpoint_to_raw last_protected_index) (fixedpoint_to_raw fixedpoint_zero));
+  assert (Ligo.gt_int_int (fixedpoint_to_raw current_index) (fixedpoint_to_raw fixedpoint_zero));
+  fixedpoint_of_ratio_floor
+    (make_ratio
+       (clamp_int
+          (Ligo.mul_int_int
+             (fixedpoint_to_raw current_index)
+             protected_index_inverse_epsilon
+          )
+          (Ligo.mul_int_int
+             (fixedpoint_to_raw last_protected_index)
+             (Ligo.sub_int_int
+                protected_index_inverse_epsilon
+                duration_in_seconds
+             )
+          )
+          (Ligo.mul_int_int
+             (fixedpoint_to_raw last_protected_index)
+             (Ligo.add_int_int
+                protected_index_inverse_epsilon
+                duration_in_seconds
+             )
+          )
+       )
+       (Ligo.mul_int_int
           protected_index_inverse_epsilon
-       )
-       (Ligo.mul_nat_int
-          last_protected_index
-          (Ligo.sub_int_int
-             protected_index_inverse_epsilon
-             duration_in_seconds
-          )
-       )
-       (Ligo.mul_nat_int
-          last_protected_index
-          (Ligo.add_int_int
-             protected_index_inverse_epsilon
-             duration_in_seconds
-          )
+          fixedpoint_scaling_factor
        )
     )
-    protected_index_inverse_epsilon
 
 (** Calculate the current drift based on the last drift, the last drift
     derivative, the current drift derivative, and the number of seconds that
@@ -250,19 +255,19 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
       target_{i+1} = FLOOR (q_{i+1} * index_{i+1} / kit_in_tok_{i+1})
     ]}
 *)
-let[@inline] compute_current_target (current_q: fixedpoint) (current_index: Ligo.nat) (current_kit_in_tok: ratio) : fixedpoint =
+let[@inline] compute_current_target (current_q: fixedpoint) (current_index: fixedpoint) (current_kit_in_tok: ratio) : fixedpoint =
   let { num = num; den = den; } = current_kit_in_tok in
   fixedpoint_of_raw
     (fdiv_int_int
        (Ligo.mul_int_int
           den
-          (Ligo.mul_int_nat
+          (Ligo.mul_int_int
              (fixedpoint_to_raw current_q)
-             current_index
+             (fixedpoint_to_raw current_index)
           )
        )
        (Ligo.mul_int_int
-          tok_scaling_factor_int
+          fixedpoint_scaling_factor
           num
        )
     )
@@ -333,7 +338,7 @@ let[@inline] compute_current_outstanding_kit (current_outstanding_with_fees: kit
     (Tezos.now), (b) the current index (the median of the oracles right now),
     and (c) the current price of kit in tok. *)
 let parameters_touch
-    (current_index: Ligo.nat)
+    (current_index: fixedpoint)
     (current_kit_in_tok: ratio)
     (parameters: parameters)
   : kit * parameters =

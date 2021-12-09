@@ -1,5 +1,9 @@
 open LiquidationAuctionPrimitiveTypes
 
+let index_from_chf_in_tok (n: Ligo.nat) =
+  FixedPoint.fixedpoint_of_ratio_floor
+    (Common.make_ratio (Ligo.int n) Tok.tok_scaling_factor_int)
+
 let alice_addr = Ligo.address_from_literal "alice_addr"
 let bob_addr = Ligo.address_from_literal "bob_addr"
 let leena_addr = Ligo.address_from_literal "leena_addr"

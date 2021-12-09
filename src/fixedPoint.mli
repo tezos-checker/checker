@@ -12,6 +12,9 @@ val fixedpoint_add : fixedpoint -> fixedpoint -> fixedpoint
 val fixedpoint_sub : fixedpoint -> fixedpoint -> fixedpoint
 val fixedpoint_pow : fixedpoint -> Ligo.nat -> fixedpoint
 
+val fixedpoint_min : fixedpoint -> fixedpoint -> fixedpoint
+val fixedpoint_max : fixedpoint -> fixedpoint -> fixedpoint
+
 (* Conversions to/from other types. *)
 val fixedpoint_of_ratio_ceil : ratio -> fixedpoint
 val fixedpoint_of_ratio_floor : ratio -> fixedpoint

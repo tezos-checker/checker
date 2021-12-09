@@ -77,8 +77,8 @@ Other properties
 
 let params : parameters =
   { q = fixedpoint_of_ratio_floor (Common.make_ratio (Ligo.int_from_literal "1015") (Ligo.int_from_literal "1000"));
-    index = Ligo.nat_from_literal "320_000n";
-    protected_index = Ligo.nat_from_literal "360_000n";
+    index = TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "320_000n");
+    protected_index = TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "360_000n");
     target = fixedpoint_of_ratio_floor (Common.make_ratio (Ligo.int_from_literal "108") (Ligo.int_from_literal "100"));
     drift = fixedpoint_zero;
     drift_derivative = fixedpoint_zero;
@@ -383,9 +383,9 @@ let barely_liquidatable_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "467912067393300348926951424";
-               den = Ligo.int_from_literal "67404402845334701604000000";
+    let expected_expected_kit = (* ~ 6 *)
+      Common.{ num = Ligo.int_from_literal "8631454156204547535041890260785392200852701184";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -445,9 +445,9 @@ let barely_non_complete_liquidatable_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "67404402845334701604864";
-               den = Ligo.int_from_literal "6740440284533470160400";
+    let expected_expected_kit = (* ~ 10 *)
+      Common.{ num = Ligo.int_from_literal "12433917687291091454951708155556810446602240000";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -505,9 +505,9 @@ let barely_complete_liquidatable_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "674043862432650352662675456";
-               den = Ligo.int_from_literal "67404402845334701604000000";
+    let expected_expected_kit = (* ~ 9 *)
+      Common.{ num = Ligo.int_from_literal "12433914624749789166505536985185343560688336896";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -622,9 +622,9 @@ let barely_close_liquidatable_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "166020530642689301158035456";
-               den = Ligo.int_from_literal "67404402845334701604000000";
+    let expected_expected_kit = (* ~ 2 *)
+      Common.{ num = Ligo.int_from_literal "3062538239747143882724200296514447017190096896";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -690,9 +690,9 @@ let partial_liquidation_unit_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "1185798177338727676948512768";
-               den = Ligo.int_from_literal "67404402845334701604000000";
+    let expected_expected_kit = (* ~ 17 *)
+      Common.{ num = Ligo.int_from_literal "21874115500438762701091585431831567247331033088";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -748,9 +748,9 @@ let complete_liquidation_unit_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "149252606300383982125056";
-               den = Ligo.int_from_literal "6740440284533470160400";
+    let expected_expected_kit = (* ~ 22 *)
+      Common.{ num = Ligo.int_from_literal "27532246307573131078821639487304365988904960000";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 
@@ -808,9 +808,9 @@ let complete_and_close_liquidation_test =
       ~expected:(Some expected_min_kit_for_unwarranted)
       ~real:(compute_min_kit_for_unwarranted params burrow details.collateral_to_auction);
 
-    let expected_expected_kit =
-      Common.{ num = Ligo.int_from_literal "165854675966722578579456";
-               den = Ligo.int_from_literal "67404402845334701604000";
+    let expected_expected_kit = (* ~ 2 *)
+      Common.{ num = Ligo.int_from_literal "3059478760986157724999201095419027989200896000";
+               den = Ligo.int_from_literal "1243391768729109145336934644891400510900000000";
              } in
     let expected_kit = compute_expected_kit params details.collateral_to_auction in
 

@@ -379,7 +379,7 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "100_000_000n")) in
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "100_000_000n"))) in
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -432,7 +432,8 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_357_906n"))) in
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
@@ -487,7 +488,8 @@ let suite =
           let _ops, sealed_wrapper = CheckerMain.main (op, sealed_wrapper) in
 
           (* setup: increase the index significantly (emulate the effects of Receive_price) *)
-          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (Ligo.nat_from_literal "1_357_906n")) in (* lowest value I could get, assuming the rest of the setting. *)
+          (* lowest value I could get, assuming the rest of the setting. *)
+          let sealed_wrapper = set_last_index_in_wrapper sealed_wrapper (Some (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_357_906n"))) in
 
           (* setup: let enough time pass so that the burrow becomes liquidatable *)
           let blocks_passed = 191 in
