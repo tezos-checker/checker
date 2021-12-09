@@ -52,7 +52,7 @@ def assert_fa2_token_balance(
         "requests": [{"owner": address, "token_id": token_id}],
         "callback": None,
     }
-    balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
+    balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["balance"]
     if expected != balance:
         raise AssertionError(f"Expected {expected} but got {balance}")
 
@@ -543,14 +543,7 @@ class E2ETest(SandboxedTestCase):
             "callback": None,
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
-        balance = checker.balance_of(**fa2_balance_of).callback_view()
-        # Check that this balance agrees with the kit balance view
-        assert_fa2_token_balance(
-            checker,
-            checker_alice.key.public_key_hash(),
-            kit_token_id,
-            balance[0]["nat_2"],
-        )
+        checker.balance_of(**fa2_balance_of).callback_view()
 
         # ===============================================================================
         # CFMM
@@ -1250,8 +1243,11 @@ class LiquidationsStressTest(SandboxedTestCase):
         auction_details = (
             checker.metadata.currentLiquidationAuctionDetails().storage_view()
         )
-
-        auction_id, minimum_bid = auction_details["contents"], auction_details["nat_3"]
+        print(auction_details)
+        auction_id, minimum_bid = (
+            auction_details["contents"],
+            auction_details["minimum_bid"],
+        )
         # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
         # do not know why we get these names. I think there is an underlying pytezos bug
         # that we should reproduce and create a bug upstream.
