@@ -10,7 +10,7 @@ checker-build = 'checker_builder.cli:cli'
 [tool.poetry.dependencies]
 python = "^3.8"
 
-click = "^7.1.2"
+click = "^8.0.3"
 Jinja2 = "^3.0.1"
 marshmallow = "^3.12.1"
 PyYAML = "^5.4.1"
