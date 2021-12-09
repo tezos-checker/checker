@@ -22,6 +22,7 @@
    testLiquidationAuction
    testSliceList
    testPtr
+   testWtez
  )
  (libraries checker core_kernel ounit2 qcheck)
  (preprocess
@@ -51,3 +52,4 @@
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerMain.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testCheckerEntrypoints.exe})))
 (rule (alias run-fast-tests) (action (run %{exe:testFa2.exe})))
+(rule (alias run-fast-tests) (action (run %{exe:testWtez.exe})))

@@ -63,6 +63,14 @@ type wtez_state =
     metadata: (string, Ligo.bytes) Ligo.big_map;
   }
 
+(** Make a fresh state. *)
+let initial_wtez () =
+  { fa2_state = initial_fa2_state;
+    total_token = Ligo.nat_from_literal "0n";
+    vaults = (Ligo.Big_map.empty: (Ligo.address, Ligo.address) Ligo.big_map);
+    metadata = (Ligo.Big_map.empty: (string, Ligo.bytes) Ligo.big_map);
+  }
+
 type wtez_params =
   (* FA2 entrypoints *)
   | Balance_of of fa2_balance_of_param
