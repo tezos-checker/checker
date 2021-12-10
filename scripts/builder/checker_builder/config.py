@@ -155,7 +155,7 @@ class CheckerConfig:
 
     def __post_init__(self) -> None:
         # FIXME: Remove the following line
-        print (f"Tracking type: {self.tracking_type}")
+        print(f"Tracking type: {self.tracking_type}")
 
         # Validation logic
         wtez = self.tokens.issued.wtez
