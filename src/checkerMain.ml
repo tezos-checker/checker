@@ -4,6 +4,7 @@ open Checker
 open Fa2Interface
 open Error
 open Common
+open OraclePriceType
 
 (* We can not serialize all of our parameters, since `Balance_of` contains a `contract`. So, we split
  * up parameters we can not serialize here.

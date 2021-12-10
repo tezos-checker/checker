@@ -7,6 +7,7 @@ open LiquidationAuctionTypes
 open LiquidationAuctionPrimitiveTypes
 open CheckerTypes
 open Fa2Interface
+open OraclePriceType
 
 (** Perform housekeeping tasks on the contract state. This includes:
     - Updating the system parameters
@@ -225,10 +226,10 @@ val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id 
 
 (** (INTERNAL) Receive a price from the oracle.
 
-    Parameters:
+    FIXME: OUTDATED TEXT. Parameters:
     - The current index, as a fixedpoint with a scaling factor of 1_000_000
 *)
-val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
+val entrypoint_receive_price : checker * oracle_price_type -> (LigoOp.operation list * checker)
 
 (** (INTERNAL) Receive a price from the ctez (CFMM) contract.
 

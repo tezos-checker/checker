@@ -41,6 +41,7 @@ checker_sources=(
   liquidationAuction
   burrowOrigination
   price
+  oraclePriceType
   checker
   checkerEntrypoints
   checkerMain

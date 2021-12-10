@@ -22,6 +22,7 @@ open Mem
 open BurrowOrigination
 open Price
 open TokenMetadata
+open OraclePriceType
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
@@ -833,14 +834,7 @@ let[@inline] touch_with_index (state: checker) (index: fixedpoint) : (LigoOp.ope
     (* Create an operation to ask the oracles to send updated values. This
        should be the last operation we emit, so that the system parameters do
        not change between touching different slices. *)
-    let op_oracle =
-      let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
-        | Some cb -> cb
-        | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-      LigoOp.Tezos.nat_contract_transaction
-        cb
-        (Ligo.tez_from_literal "0mutez")
-        (get_oracle_entrypoint state_external_contracts) in
+    let op_oracle = call_the_oracle state_external_contracts in
     let ops = (op_oracle :: ops) in
 
     (* TODO: Figure out how many slices we can process per checker entrypoint_touch.*)
@@ -872,12 +866,12 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 (**                               ORACLE                                     *)
 (* ************************************************************************* *)
 
-let entrypoint_receive_price (state, idx: checker * Ligo.nat) : (LigoOp.operation list * checker) =
+let entrypoint_receive_price (state, oracle_price: checker * oracle_price_type) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
-    let price = fixedpoint_of_ratio_floor (make_ratio (Ligo.int idx) tok_scaling_factor_int) in
+    let price = oracle_price_to_fixedpoint oracle_price in
     (([]: LigoOp.operation list), {state with last_index = Some price})
 
 let entrypoint_receive_ctez_marginal_price (state, price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
