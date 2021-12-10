@@ -312,25 +312,26 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         # Deploy contracts
         # ===============================================================================
-        # FIXME: We need a switch for the tracking type (token/index) and turn
-        # this into a conditional. It can still be named "oracle" but it should
-        # be a different contract in each case.
-        # self.config.tracking_type == TrackingType.TOKEN or TrackingType.INDEX
-
-        print("Deploying the mock cfmm oracle.")
-        cfmm_oracle = deploy_contract(
-            self.client,
-            source_file=self.repo.mock_cfmm_oracle_contract,
-            initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
-            ttl=MAX_OPERATIONS_TTL,
-        )
-        print("Deploying the mock oracle.")
-        oracle = deploy_contract(
-            self.client,
-            source_file=self.repo.mock_oracle_contract,
-            initial_storage=(self.client.key.public_key_hash(), 1000000),
-            ttl=MAX_OPERATIONS_TTL,
-        )
+        if self.config.tracking_type == TrackingType.TOKEN:
+            print("Deploying the mock cfmm oracle.")
+            cfmm_oracle = deploy_contract(
+                self.client,
+                source_file=self.repo.mock_cfmm_oracle_contract,
+                initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
+                ttl=MAX_OPERATIONS_TTL,
+            )
+        elif self.config.tracking_type == TrackingType.INDEX:
+            print("Deploying the mock oracle.")
+            oracle = deploy_contract(
+                self.client,
+                source_file=self.repo.mock_oracle_contract,
+                initial_storage=(self.client.key.public_key_hash(), 1000000),
+                ttl=MAX_OPERATIONS_TTL,
+            )
+        else:
+            raise ValueError(
+                f"Unexpected value for tracking_type: {self.config.tracking_type}"
+            )
 
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
@@ -1090,24 +1091,26 @@ class LiquidationsStressTest(SandboxedTestCase):
         collateral_token_id = self.config.tokens.in_use.collateral.token_id
         cfmm_token_token_id = self.config.tokens.in_use.cfmm_token.token_id
 
-        # FIXME: We need a switch for the tracking type (token/index) and turn
-        # this into a conditional. It can still be named "oracle" but it should
-        # be a different contract in each case.
-        # self.config.tracking_type == TrackingType.TOKEN or TrackingType.INDEX
-        print("Deploying the mock cfmm oracle.")
-        cfmm_oracle = deploy_contract(
-            self.client,
-            source_file=self.repo.mock_cfmm_oracle_contract,
-            initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
-            ttl=MAX_OPERATIONS_TTL,
-        )
-        print("Deploying the mock oracle.")
-        oracle = deploy_contract(
-            self.client,
-            source_file=self.repo.mock_oracle_contract,
-            initial_storage=(self.client.key.public_key_hash(), 1000000),
-            ttl=MAX_OPERATIONS_TTL,
-        )
+        if self.config.tracking_type == TrackingType.TOKEN:
+            print("Deploying the mock cfmm oracle.")
+            cfmm_oracle = deploy_contract(
+                self.client,
+                source_file=self.repo.mock_cfmm_oracle_contract,
+                initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
+                ttl=MAX_OPERATIONS_TTL,
+            )
+        elif self.config.tracking_type == TrackingType.INDEX:
+            print("Deploying the mock oracle.")
+            oracle = deploy_contract(
+                self.client,
+                source_file=self.repo.mock_oracle_contract,
+                initial_storage=(self.client.key.public_key_hash(), 1000000),
+                ttl=MAX_OPERATIONS_TTL,
+            )
+        else:
+            raise ValueError(
+                f"Unexpected value for tracking_type: {self.config.tracking_type}"
+            )
 
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
@@ -1288,8 +1291,14 @@ class LiquidationsStressTest(SandboxedTestCase):
         #
         # Keep in mind that we're using a patched checker on tests where the protected index
         # is much faster to update.
-        # FIXME: This should also work conditionally.
-        call_endpoint(oracle, "update", 10_000_000)
+        if self.config.tracking_type == TrackingType.TOKEN:
+            call_endpoint(oracle, "update", (10_000_000, 1_000_000))
+        elif self.config.tracking_type == TrackingType.INDEX:
+            call_endpoint(oracle, "update", 10_000_000)
+        else:
+            raise ValueError(
+                f"Unexpected value for tracking_type: {self.config.tracking_type}"
+            )
 
         # Oracle updates lag one touch on checker
         call_endpoint(checker, "touch", None)
