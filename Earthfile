@@ -205,6 +205,8 @@ generate-code:
     SAVE ARTIFACT ./src/price.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml
+    SAVE ARTIFACT ./src/oraclePriceType.ml AS LOCAL src/oraclePriceType.ml
+    SAVE ARTIFACT ./src/oraclePriceType.ml
     SAVE ARTIFACT ./src/_input_checker.yaml AS LOCAL src/_input_checker.yaml
     SAVE ARTIFACT ./src/_input_checker.yaml
     # Image for inline caching
@@ -223,6 +225,7 @@ build-ocaml:
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
     COPY +generate-code/tokenMetadata.ml ./src/
+    COPY +generate-code/oraclePriceType.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -244,6 +247,7 @@ build-ligo:
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
     COPY +generate-code/tokenMetadata.ml ./src/
+    COPY +generate-code/oraclePriceType.ml ./src/
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
     COPY ./patches/e2e-tests-hack.patch .

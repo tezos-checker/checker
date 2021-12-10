@@ -38,6 +38,12 @@ PRICE_TEMPLATES = {
     config.CollateralType.FA2: "fa2Price.ml.jinja",
 }
 
+ORACLE_PRICE_TYPE_SRC = "oraclePriceType.ml"
+ORACLE_PRICE_TYPE_TEMPLATES = {
+    config.TrackingType.INDEX: "indexOraclePriceType.ml.jinja",
+    config.TrackingType.TOKEN: "tokenOraclePriceType.ml.jinja",
+}
+
 
 @click.group()
 def cli():
@@ -61,6 +67,11 @@ def generate():
 
     # Select the price calculation module at runtime based on config
     GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES[checker_config.collateral_type]
+
+    # Select the oracle configuration at runtime based on config
+    GENERATE_SRCS[ORACLE_PRICE_TYPE_SRC] = ORACLE_PRICE_TYPE_TEMPLATES[
+        checker_config.tracking_type
+    ]
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to
