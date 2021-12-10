@@ -1,5 +1,7 @@
 ## Configurations for Checker builds, code generation, and deployment
 
+tracking_type: index # One of `index` or `token`
+
 collateral_type: fa2 # One of `tez` or `fa2`
 
 # Token configuration

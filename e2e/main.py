@@ -9,7 +9,7 @@ from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
 import portpicker
-from checker_builder.config import load_input_config, CollateralType
+from checker_builder.config import load_input_config, CollateralType, TrackingType
 from checker_client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
@@ -315,6 +315,8 @@ class E2ETest(SandboxedTestCase):
         # FIXME: We need a switch for the tracking type (token/index) and turn
         # this into a conditional. It can still be named "oracle" but it should
         # be a different contract in each case.
+        # self.config.tracking_type == TrackingType.TOKEN or TrackingType.INDEX
+
         print("Deploying the mock cfmm oracle.")
         cfmm_oracle = deploy_contract(
             self.client,
@@ -1091,6 +1093,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # FIXME: We need a switch for the tracking type (token/index) and turn
         # this into a conditional. It can still be named "oracle" but it should
         # be a different contract in each case.
+        # self.config.tracking_type == TrackingType.TOKEN or TrackingType.INDEX
         print("Deploying the mock cfmm oracle.")
         cfmm_oracle = deploy_contract(
             self.client,

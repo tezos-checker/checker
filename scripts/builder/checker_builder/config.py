@@ -99,6 +99,11 @@ class CollateralType(Enum):
     FA2 = "fa2"
 
 
+class TrackingType(Enum):
+    INDEX = "index"
+    TOKEN = "token"
+
+
 @dataclass(frozen=True)
 class Continuous:
     target_bracket: Ratio
@@ -142,12 +147,16 @@ class Constants:
 
 @dataclass(frozen=True)
 class CheckerConfig:
+    tracking_type: TrackingType
     collateral_type: CollateralType
     tokens: Tokens
     constants: Constants
     drift_derivative_curve: Union[BangBang, Continuous]
 
     def __post_init__(self) -> None:
+        # FIXME: Remove the following line
+        print (f"Tracking type: {self.tracking_type}")
+
         # Validation logic
         wtez = self.tokens.issued.wtez
         wctez = self.tokens.issued.wctez
@@ -370,7 +379,17 @@ class CollateralTypeField(fields.Field):
         return ct
 
 
+class TrackingTypeField(fields.Field):
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            tt = TrackingType(value)
+        except ValueError as error:
+            raise ValidationError("Invalid tracking type") from error
+        return tt
+
+
 class CheckerConfigSchema(Schema):
+    tracking_type = TrackingTypeField(required=True)
     collateral_type = CollateralTypeField(required=True)
     tokens = fields.Nested(TokensSchema(), required=True)
     constants = fields.Nested(ConstantsSchema(), required=True)
