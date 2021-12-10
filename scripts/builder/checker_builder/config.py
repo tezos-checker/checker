@@ -154,9 +154,6 @@ class CheckerConfig:
     drift_derivative_curve: Union[BangBang, Continuous]
 
     def __post_init__(self) -> None:
-        # FIXME: Remove the following line
-        print(f"Tracking type: {self.tracking_type}")
-
         # Validation logic
         wtez = self.tokens.issued.wtez
         wctez = self.tokens.issued.wctez
@@ -183,6 +180,13 @@ class CheckerConfig:
                 raise ValueError(
                     "collateral and cfmm_token config must be identical when collateral_type=fa2"
                 )
+
+        if (self.tracking_type == TrackingType.TOKEN) and (
+            self.collateral_type == CollateralType.TEZ
+        ):
+            raise ValueError(
+                'tracking_type cannot be set to "token" when collateral_type is set to "tez"'
+            )
 
 
 # ================================================================================================
