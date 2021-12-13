@@ -9,8 +9,8 @@ open FixedPoint
 *)
 let[@inline] compute_current_target (current_q: fixedpoint) (current_index: fixedpoint) (current_kit_in_tok: ratio) : fixedpoint =
   let { num = num; den = den; } = current_kit_in_tok in
-  fixedpoint_of_raw
-    (fdiv_int_int
+  fixedpoint_of_ratio_floor
+    (make_ratio
        (Ligo.mul_int_int
           den
           (Ligo.mul_int_int
@@ -19,7 +19,10 @@ let[@inline] compute_current_target (current_q: fixedpoint) (current_index: fixe
           )
        )
        (Ligo.mul_int_int
-          fixedpoint_scaling_factor
           num
+          (Ligo.mul_int_int
+             fixedpoint_scaling_factor
+             fixedpoint_scaling_factor
+          )
        )
     )
