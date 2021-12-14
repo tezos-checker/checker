@@ -427,12 +427,24 @@ class CheckerRepo:
         return self.generated_michelson.joinpath("mockFA2Main.tz")
 
     @property
+    def mock_fa2_metadata(self) -> Path:
+        return self.generated_michelson.joinpath("mock_fa2_metadata.json")
+
+    @property
     def wtez_contract(self) -> Path:
         return self.generated_michelson.joinpath("wtezMain.tz")
 
     @property
+    def wtez_metadata(self) -> Path:
+        return self.generated_michelson.joinpath("wtez_metadata.json")
+
+    @property
     def wctez_contract(self) -> Path:
         return self.generated_michelson.joinpath("wctezMain.tz")
+
+    @property
+    def wctez_metadata(self) -> Path:
+        return self.generated_michelson.joinpath("wctez_metadata.json")
 
     @property
     def mock_oracle_contract(self) -> Path:

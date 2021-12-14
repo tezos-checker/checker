@@ -43,10 +43,15 @@ builder:
     ARG POETRY_VERSION="==1.1.8"
     RUN pip install poetry"$POETRY_VERSION"
 
+    RUN mkdir /build
+    WORKDIR /build
+
+    # Note: opam prefers that the user has a home directory
+    RUN useradd -m checker && chown checker /build
+    USER checker
+
     RUN opam init --disable-sandboxing --bare
     RUN opam update --all
-
-    WORKDIR /root
 
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:builder
@@ -87,6 +92,8 @@ docs:
 spec:
     FROM +builder
     RUN pip install sphinx-rtd-theme
+    # Add local install path for sphinx since we are running as non-root user
+    ENV PATH=/home/checker/.local/bin:$PATH
     COPY docs docs
     RUN make -C docs/spec html
     SAVE ARTIFACT docs/spec/_build/html AS LOCAL docs/spec/_build/html
@@ -226,9 +233,6 @@ build-ligo:
     FROM +builder
 
     COPY +ligo-binary/ligo /bin/ligo
-
-    WORKDIR /root
-
     COPY ./src/*.ml ./src/*.mligo ./src/
     COPY +generate-code/checkerEntrypoints.ml ./src/
     COPY +generate-code/ctok.ml ./src/
@@ -240,7 +244,6 @@ build-ligo:
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
     COPY +generate-code/tokenMetadata.ml ./src/
-
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
     COPY ./patches/e2e-tests-hack.patch .
@@ -301,7 +304,7 @@ test-e2e:
     # Bring ligo, which is required for ctez deployment
     COPY +ligo-binary/ligo /bin/ligo
     # Bring ZCash parameters necessary for the node
-    COPY +zcash-params/zcash-params /root/.zcash-params
+    COPY +zcash-params/zcash-params /home/checker/.zcash-params
     # Bring ctez contract and mock oracle (for running checker in sandbox)
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
@@ -343,17 +346,15 @@ dev-container:
 
     # Extra dependencies for development.
     # Note: not running `apt update` here since package list is updated in prior build stage
+    USER root
     RUN apt install -y \
         apt-transport-https \
         ca-certificates \
         curl \
         gnupg \
         lsb-release \
-        wget
-
-    # Ensure interactive terminal is also already in correct opam switch env
-    RUN echo 'eval $(opam env --switch=/root --set-switch)' >> /root/.bashrc
-    RUN echo 'eval $(opam env --switch=/root --set-switch); /bin/bash $@' > entrypoint.sh && chmod +x entrypoint.sh
+        wget \
+        gosu
 
     # Install docker
     ARG TARGETARCH
@@ -363,7 +364,8 @@ dev-container:
     RUN apt update && \
         apt install -y docker-ce docker-ce-cli containerd.io && \
         (getent group docker || groupadd docker) && \
-        usermod -aG docker root
+        usermod -aG docker root && \
+        usermod -aG docker checker
 
     # Install earthly.
     # ** Note: earthly will only be usable if the container is launched with access to docker,
@@ -371,23 +373,27 @@ dev-container:
     # **
     RUN wget "https://github.com/earthly/earthly/releases/download/v0.5.23/earthly-linux-$TARGETARCH" -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly
 
+    # Create default working directory
+    RUN mkdir /checker && chown checker /checker
+
+    # Bring in the entrypoint script
+    COPY scripts/docker/entrypoint-dev-container.sh ./entrypoint.sh
+    RUN chmod +x entrypoint.sh
+
     # Extra useful applications for development
     COPY +ligo-binary/ligo /bin/ligo
-    COPY +zcash-params/zcash-params /root/.zcash-params
+    COPY +zcash-params/zcash-params /home/checker/.zcash-params
     COPY +flextesa/* /usr/bin/
 
-    RUN mkdir /checker
     WORKDIR /checker
 
-    # Add the pre-installed poetry env to the PATH for convenience
-    ENV PATH=/root/.venv/bin:$PATH
     # Ensure that we restore the debian frontend to dialog since the dev container
     # should be interactive.
     ENV DEBIAN_FRONTEND=dialog
     # Set earthly to use caching by default
     ENV EARTHLY_USE_INLINE_CACHE=true
 
-    ENTRYPOINT /root/entrypoint.sh
+    ENTRYPOINT /build/entrypoint.sh
     ARG TAG = "latest"
     # Local image
     SAVE IMAGE checker/dev:latest
@@ -410,27 +416,31 @@ cli:
     ARG POETRY_VERSION="==1.1.8"
     RUN pip install poetry"$POETRY_VERSION"
 
-    WORKDIR /root
+    RUN useradd -m checker
+    USER checker
+    WORKDIR /home/checker
 
     COPY +ligo-binary/ligo /bin/ligo
     COPY +flextesa/* /usr/bin/
-    COPY +zcash-params/zcash-params /root/.zcash-params
+    COPY +zcash-params/zcash-params /home/checker/.zcash-params
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
 
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
+    RUN mkdir ./src
+    COPY +generate-code/_input_checker.yaml ./src/_input_checker.yaml
 
     RUN mkdir ./scripts
     COPY ./scripts/builder ./scripts/builder
     COPY ./client ./client
-    WORKDIR /root/client
+    WORKDIR /home/checker/client
     RUN poetry config virtualenvs.in-project true && poetry install
 
     # Required dir for pytezos
-    RUN mkdir /root/.tezos-client
-    ENV PATH="/root/client/.venv/bin:$PATH"
-    WORKDIR /root
+    RUN mkdir /home/checker/.tezos-client
+    ENV PATH="/home/checker/client/.venv/bin:$PATH"
+    WORKDIR /home/checker
     CMD checker
 
     ARG TAG=latest

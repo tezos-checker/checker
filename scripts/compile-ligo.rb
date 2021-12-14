@@ -15,12 +15,15 @@ FUNCTIONS_TARGET="#{MICHELSON_DIR}/functions.json"
 
 WTEZ_FILE="#{LIGO_DIR}/wtezMain.mligo"
 WTEZ_CONTRACT_TARGET="#{MICHELSON_DIR}/wtezMain.tz"
+WTEZ_METADATA_TARGET="#{MICHELSON_DIR}/wtez_metadata.json"
 
 WCTEZ_FILE="#{LIGO_DIR}/wctezMain.mligo"
 WCTEZ_CONTRACT_TARGET="#{MICHELSON_DIR}/wctezMain.tz"
+WCTEZ_METADATA_TARGET="#{MICHELSON_DIR}/wctez_metadata.json"
 
 MOCK_FA2_FILE="#{LIGO_DIR}/mockFA2Main.mligo"
 MOCK_FA2_CONTRACT_TARGET="#{MICHELSON_DIR}/mockFA2Main.tz"
+MOCK_FA2_METADATA_TARGET="#{MICHELSON_DIR}/mock_fa2_metadata.json"
 
 PROTOCOL = "PsFLoren"
 protocol_arg = ["--protocol", PROTOCOL]
@@ -101,17 +104,13 @@ end
 puts "Compiling the views."
 ###########################
 
-views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
-  .scan(/let wrapper_view_(\S+) *\([^:]*: *(.*) \* wrapper\): *([^=]*)/)
-  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
-
-def compile_type_json(type)
+def compile_type_json(type, file)
   # TZIP-16 requires us to specify the argument and the return type of views, however
   # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
   # in the generated michelson and grab the type from there.
   stdout, stderr, exit_status = Open3.capture3(
     "ligo", "compile-expression", "cameligo",
-    "--init-file", MAIN_FILE,
+    "--init-file", file,
     "--michelson-format", "json",
     "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"
   )
@@ -120,10 +119,10 @@ def compile_type_json(type)
   obj[0]["args"][0]
 end
 
-def compile_code_json(expr)
+def compile_code_json(expr, file)
   stdout, stderr, exit_status = Open3.capture3(
     "ligo", "compile-expression", "cameligo",
-    "--init-file", MAIN_FILE,
+    "--init-file", file,
     "--michelson-format", "json",
     expr
   )
@@ -131,22 +130,120 @@ def compile_code_json(expr)
   JSON.parse(stdout)
 end
 
-packed_views = []
+#####################################
+puts "Compiling the views (checker)."
+#####################################
+
+checker_views = File.read("#{LIGO_DIR}/checkerEntrypoints.mligo")
+  .scan(/let wrapper_view_(\S+) *\([^:]*: *(.*) \* wrapper\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+packed_checker_views = []
 
 threads = []
-views.each_slice([views.length / Etc.nprocessors, 1].max) { |batch|
+checker_views.each_slice([checker_views.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |view|
-      packed_views << {
+      packed_checker_views << {
         :name => view[:name],
-        :parameter => compile_type_json(view[:param_ty]),
-        :returnType => compile_type_json(view[:return_ty]),
-        :code => compile_code_json("wrapper_view_#{view[:name]}")
+        :parameter => compile_type_json(view[:param_ty], MAIN_FILE),
+        :returnType => compile_type_json(view[:return_ty], MAIN_FILE),
+        :code => compile_code_json("wrapper_view_#{view[:name]}", MAIN_FILE)
       }
     }
   }
 }
 threads.each(&:join)
+
+##################################
+puts "Compiling the views (wtez)."
+##################################
+
+wtez_views = File.read("#{LIGO_DIR}/wtez.mligo")
+  .scan(/let view_(\S+) *\([^:]*: *(.*) \* wtez_state\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+packed_wtez_views = []
+
+threads = []
+wtez_views.each_slice([wtez_views.length / Etc.nprocessors, 1].max) { |batch|
+  threads << Thread.new {
+    batch.each { |view|
+      packed_wtez_views << {
+        :name => view[:name],
+        :parameter => compile_type_json(view[:param_ty], WTEZ_FILE),
+        :returnType => compile_type_json(view[:return_ty], WTEZ_FILE),
+        :code => compile_code_json("view_#{view[:name]}", WTEZ_FILE)
+      }
+    }
+  }
+}
+threads.each(&:join)
+
+wtez_metadata_json = {
+  views: packed_wtez_views,
+}
+wtez_metadata_json = JSON.pretty_generate(wtez_metadata_json)
+
+###################################
+puts "Compiling the views (wctez)."
+###################################
+
+wctez_views = File.read("#{LIGO_DIR}/wctez.mligo")
+  .scan(/let view_(\S+) *\([^:]*: *(.*) \* wctez_state\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+packed_wctez_views = []
+
+threads = []
+wctez_views.each_slice([wctez_views.length / Etc.nprocessors, 1].max) { |batch|
+  threads << Thread.new {
+    batch.each { |view|
+      packed_wctez_views << {
+        :name => view[:name],
+        :parameter => compile_type_json(view[:param_ty], WCTEZ_FILE),
+        :returnType => compile_type_json(view[:return_ty], WCTEZ_FILE),
+        :code => compile_code_json("view_#{view[:name]}", WCTEZ_FILE)
+      }
+    }
+  }
+}
+threads.each(&:join)
+
+wctez_metadata_json = {
+  views: packed_wctez_views,
+}
+wctez_metadata_json = JSON.pretty_generate(wctez_metadata_json)
+
+#####################################
+puts "Compiling the views (mockFA2)."
+#####################################
+
+mock_fa2_views = File.read("#{LIGO_DIR}/mockFA2.mligo")
+  .scan(/let view_(\S+) *\([^:]*: *(.*) \* mock_fa2_state\) *: *([^=]*)/)
+  .map { |g| { name: g[0], param_ty: g[1].strip, return_ty: g[2].strip }}
+
+packed_mock_fa2_views = []
+
+threads = []
+mock_fa2_views.each_slice([mock_fa2_views.length / Etc.nprocessors, 1].max) { |batch|
+  threads << Thread.new {
+    batch.each { |view|
+      packed_mock_fa2_views << {
+        :name => view[:name],
+        :parameter => compile_type_json(view[:param_ty], MOCK_FA2_FILE),
+        :returnType => compile_type_json(view[:return_ty], MOCK_FA2_FILE),
+        :code => compile_code_json("view_#{view[:name]}", MOCK_FA2_FILE)
+      }
+    }
+  }
+}
+threads.each(&:join)
+
+mock_fa2_metadata_json = {
+  views: packed_mock_fa2_views,
+}
+mock_fa2_metadata_json = JSON.pretty_generate(mock_fa2_metadata_json)
 
 #################################
 puts "Compiling the entrypoints."
@@ -193,21 +290,30 @@ puts "Saving the result."
 
 functions_json = {
   lazy_functions: chunked_entrypoints,
-  views: packed_views,
+  views: packed_checker_views,
 }
-
 functions_json = JSON.pretty_generate(functions_json)
 
 system("mkdir", "-p", MICHELSON_DIR)
+
 File.write(MAIN_CONTRACT_TARGET, compiled_contract)
 puts "Wrote #{MAIN_CONTRACT_TARGET}"
-File.write(WTEZ_CONTRACT_TARGET, compiled_wtez_contract)
-puts "Wrote #{WTEZ_CONTRACT_TARGET}"
-File.write(WCTEZ_CONTRACT_TARGET, compiled_wctez_contract)
-puts "Wrote #{WCTEZ_CONTRACT_TARGET}"
-File.write(MOCK_FA2_CONTRACT_TARGET, compiled_mock_fa2_contract)
-puts "Wrote #{MOCK_FA2_CONTRACT_TARGET}"
 File.write(FUNCTIONS_TARGET, functions_json)
 puts "Wrote #{FUNCTIONS_TARGET}"
+
+File.write(WTEZ_CONTRACT_TARGET, compiled_wtez_contract)
+puts "Wrote #{WTEZ_CONTRACT_TARGET}"
+File.write(WTEZ_METADATA_TARGET, wtez_metadata_json)
+puts "Wrote #{WTEZ_METADATA_TARGET}"
+
+File.write(WCTEZ_CONTRACT_TARGET, compiled_wctez_contract)
+puts "Wrote #{WCTEZ_CONTRACT_TARGET}"
+File.write(WCTEZ_METADATA_TARGET, wctez_metadata_json)
+puts "Wrote #{WCTEZ_METADATA_TARGET}"
+
+File.write(MOCK_FA2_CONTRACT_TARGET, compiled_mock_fa2_contract)
+puts "Wrote #{MOCK_FA2_CONTRACT_TARGET}"
+File.write(MOCK_FA2_METADATA_TARGET, mock_fa2_metadata_json)
+puts "Wrote #{MOCK_FA2_METADATA_TARGET}"
 
 puts "Done."

@@ -90,7 +90,7 @@ let checker_with_liquidatable_burrows () =
    * for the burrows to be liquidatable.
   *)
   Ligo.Tezos.new_transaction ~seconds_passed:10_000_000 ~blocks_passed:100_000 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-  let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_100_000n") in
+  let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_100_000n")) in
   (* Touch burrows *)
   Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
   let _, checker = Checker.entrypoint_touch_burrow (checker, (alice_addr, alice_burrow_1)) in
@@ -206,7 +206,7 @@ let suite =
      fun _ ->
        Ligo.Tezos.reset ();
        let checker1 = empty_checker in
-       let ops, checker2 = Checker.touch_with_index checker1 (Ligo.nat_from_literal "0n") in
+       let ops, checker2 = Checker.touch_with_index checker1 (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "0n")) in
 
        assert_operation_list_equal ~expected:[] ~real:ops;
        assert_equal checker1 checker2; (* NOTE: we really want them to be identical here, hence the '='. *)
@@ -1421,7 +1421,7 @@ let suite =
     ("entrypoint_liquidation_auction_place_bid: should only allow the current auction" >::
      fun _ ->
        Ligo.Tezos.reset ();
-       let checker = { empty_checker with last_index = Some (Ligo.nat_from_literal "1_000_000n") } in
+       let checker = { empty_checker with last_index = Some (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) } in
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_touch (checker, ()) in
@@ -1432,7 +1432,7 @@ let suite =
 
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", max_kit)) in
-       let checker = { checker with last_index = Some (Ligo.nat_from_literal "10_000_000n") } in
+       let checker = { checker with last_index = Some (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "10_000_000n")) } in
        let _, checker = Checker.entrypoint_touch (checker, ()) in
 
        Ligo.Tezos.new_transaction ~seconds_passed:1_000_000 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -1571,7 +1571,7 @@ let suite =
           	* take more time I guess). *)
        Ligo.Tezos.new_transaction ~seconds_passed:60 ~blocks_passed:1 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
-       let _ops, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_001n") in
+       let _ops, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_001n")) in
 
        let ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
        assert_operation_list_equal ~expected:[] ~real:ops;
@@ -1587,7 +1587,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(211*60) ~blocks_passed:211 ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let kit_before_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_200_000n")) in
        let kit_after_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -1638,7 +1638,7 @@ let suite =
          (fun () -> Checker.view_current_liquidation_auction_details ((), checker));
 
        let kit_before_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_200_000n")) in
        let kit_after_reward = get_balance_of checker bob_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -1653,7 +1653,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(5*60) ~blocks_passed:5 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let kit_before_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_200_000n")) in
        let kit_after_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -1662,7 +1662,7 @@ let suite =
        let auction_id =
          min_bid.auction_id in
        assert_kit_equal
-         ~expected:(kit_of_denomination (Ligo.nat_from_literal "2_709_185n"))
+         ~expected:(kit_of_denomination (Ligo.nat_from_literal "2_709_183n"))
          ~real:min_bid.minimum_bid;
 
        (* Bid the minimum first *)
@@ -1691,7 +1691,7 @@ let suite =
        Ligo.Tezos.new_transaction ~seconds_passed:(30*60) ~blocks_passed:30 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
 
        let kit_before_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
-       let _ops, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_200_000n") in
+       let _ops, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_200_000n")) in
        let kit_after_reward = get_balance_of checker alice_addr TokenMetadata.kit_token_id in
 
        let touch_reward = Ligo.sub_nat_nat kit_after_reward kit_before_reward in
@@ -1790,7 +1790,7 @@ let suite =
           	* fees alone if the index remains the same. *)
        let blocks_passed = 211 in (* NOTE: I am a little surprised/worried about this being again 211... *)
        Ligo.Tezos.new_transaction ~seconds_passed:(60*blocks_passed) ~blocks_passed:blocks_passed ~sender:bob_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _ops, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_105_283n") in (* sup *)
+       let _ops, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_105_283n")) in (* sup *)
        let _ops, checker = Checker.entrypoint_touch_burrow (checker, burrow_id) in
 
        (* Ensure that the burrow is liquidatable. *)
@@ -1821,7 +1821,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None, amount)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to deposit some tez to the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
        let _ = Checker.entrypoint_deposit_collateral (checker, (Ligo.nat_from_literal "0n", amount)) in
@@ -1837,7 +1837,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None, amount)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to withdraw some tez from the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
        let _ = Checker.entrypoint_withdraw_collateral (checker, (Ligo.nat_from_literal "0n", Constants.creation_deposit)) in
@@ -1853,7 +1853,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None, amount)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to mint some kit out of the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
@@ -1872,7 +1872,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_mint_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to burn some kit into the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_burn_kit (checker, (Ligo.nat_from_literal "0n", kit_of_denomination (Ligo.nat_from_literal "1n"))) in
@@ -1891,7 +1891,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", !Ligo.Tezos.sender)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to activate the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:Common.tez_zero;
        let _ = Checker.entrypoint_activate_burrow (checker, (Ligo.nat_from_literal "0n", amount)) in
@@ -1907,7 +1907,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None, amount)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to deactivate the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_deactivate_burrow (checker, (Ligo.nat_from_literal "0n", !Ligo.Tezos.sender)) in
@@ -1924,7 +1924,7 @@ let suite =
        let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to mark the untouched burrow for liquidation *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        (* TODO: Would be nice to create the conditions for entrypoint_mark_for_liquidation
@@ -1946,7 +1946,7 @@ let suite =
        let _ops, checker = Checker.entrypoint_create_burrow (empty_checker, (Ligo.nat_from_literal "0n", None, amount)) in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to set the delegate of the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.entrypoint_set_burrow_delegate (checker, (Ligo.nat_from_literal "0n", None)) in
@@ -2102,7 +2102,7 @@ let suite =
        let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to view the max mintable kit from the untouched burrow *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.view_burrow_max_mintable_kit (burrow_id, checker) in
@@ -2119,7 +2119,7 @@ let suite =
        let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to view whether the untouched burrow is overburrowed *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.view_is_burrow_overburrowed (burrow_id, checker) in
@@ -2136,7 +2136,7 @@ let suite =
        let burrow_id = (!Ligo.Tezos.sender, Ligo.nat_from_literal "0n") in
        (* Touch checker *)
        Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-       let _, checker = Checker.touch_with_index checker (Ligo.nat_from_literal "1_000_000n") in
+       let _, checker = Checker.touch_with_index checker (TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "1_000_000n")) in
        (* Try to view whether the untouched burrow is liquidatable *)
        Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
        let _ = Checker.view_is_burrow_liquidatable (burrow_id, checker) in
