@@ -1144,6 +1144,11 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
+        # FIXME: Re-instantiating the contract here due to an issue where
+        # the call to storage_view() passes an older version of the contract storage
+        # than the true current state.
+        # https://github.com/baking-bad/pytezos/issues/271
+        checker = self.client.contract(checker.address)
         max_mintable_kit = checker.metadata.burrowMaxMintableKit(
             (self.client.key.public_key_hash(), 1)
         ).storage_view()
@@ -1240,18 +1245,18 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         # And we place a bid for the auction we started earlier:
+        # FIXME: Re-instantiating the contract here due to an issue where
+        # the call to storage_view() passes an older version of the contract storage
+        # than the true current state.
+        # https://github.com/baking-bad/pytezos/issues/271
+        checker = self.client.contract(checker.address)
         auction_details = (
             checker.metadata.currentLiquidationAuctionDetails().storage_view()
         )
-        print(auction_details)
         auction_id, minimum_bid = (
-            auction_details["contents"],
+            auction_details["auction_id"],
             auction_details["minimum_bid"],
         )
-        # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
-        # do not know why we get these names. I think there is an underlying pytezos bug
-        # that we should reproduce and create a bug upstream.
-
         # Note the auction ptr for later operations
         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
             "liquidation_auctions"
