@@ -8,7 +8,7 @@ python-versions = "*"
 
 [[package]]
 name = "argon2-cffi"
-version = "21.2.0"
+version = "21.3.0"
 description = "The secure Argon2 password hashing algorithm."
 category = "main"
 optional = false
@@ -742,7 +742,7 @@ twisted = ["twisted"]
 
 [[package]]
 name = "prompt-toolkit"
-version = "3.0.23"
+version = "3.0.24"
 description = "Library for building powerful interactive command lines in Python"
 category = "main"
 optional = false
@@ -855,7 +855,7 @@ python-versions = "*"
 
 [[package]]
 name = "pytezos"
-version = "3.3.1"
+version = "3.3.2"
 description = "Python toolkit for Tezos"
 category = "main"
 optional = false
@@ -1210,7 +1210,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "a53fbdfdd76ce7f1b61768aafe4f13bebbcb2f362a84368c5322c8a4d04ce675"
+content-hash = "41699764bcc02409e0e96bbcf958f5a74562fae88f68e87f6464f3518565324f"
 
 [metadata.files]
 appnope = [
@@ -1218,8 +1218,8 @@ appnope = [
     {file = "appnope-0.1.2.tar.gz", hash = "sha256:dd83cd4b5b460958838f6eb3000c660b1f9caf2a5b1de4264e941512f603258a"},
 ]
 argon2-cffi = [
-    {file = "argon2-cffi-21.2.0.tar.gz", hash = "sha256:50936e5ad9e860c5a6678063c5ac732c2fc8a178994cca9e1e7220351f930e9a"},
-    {file = "argon2_cffi-21.2.0-py3-none-any.whl", hash = "sha256:d5d7b9d38963c2769cd0dbfc5901ae00eb9bb98a9cb5a2ea0c9c7c4fec3e6b98"},
+    {file = "argon2-cffi-21.3.0.tar.gz", hash = "sha256:d384164d944190a7dd7ef22c6aa3ff197da12962bd04b17f64d4e93d934dba5b"},
+    {file = "argon2_cffi-21.3.0-py3-none-any.whl", hash = "sha256:8c976986f2c5c0e5000919e6de187906cfd81fb1c72bf9d88c01177e77da7f80"},
 ]
 argon2-cffi-bindings = [
     {file = "argon2-cffi-bindings-21.2.0.tar.gz", hash = "sha256:bb89ceffa6c791807d1305ceb77dbfacc5aa499891d2c55661c6459651fc39e3"},
@@ -1562,8 +1562,8 @@ prometheus-client = [
     {file = "prometheus_client-0.12.0.tar.gz", hash = "sha256:1b12ba48cee33b9b0b9de64a1047cbd3c5f2d0ab6ebcead7ddda613a750ec3c5"},
 ]
 prompt-toolkit = [
-    {file = "prompt_toolkit-3.0.23-py3-none-any.whl", hash = "sha256:5f29d62cb7a0ecacfa3d8ceea05a63cd22500543472d64298fc06ddda906b25d"},
-    {file = "prompt_toolkit-3.0.23.tar.gz", hash = "sha256:7053aba00895473cb357819358ef33f11aa97e4ac83d38efb123e5649ceeecaf"},
+    {file = "prompt_toolkit-3.0.24-py3-none-any.whl", hash = "sha256:e56f2ff799bacecd3e88165b1e2f5ebf9bcd59e80e06d395fa0cc4b8bd7bb506"},
+    {file = "prompt_toolkit-3.0.24.tar.gz", hash = "sha256:1bb05628c7d87b645974a1bad3f17612be0c29fa39af9f7688030163f680bad6"},
 ]
 ptyprocess = [
     {file = "ptyprocess-0.7.0-py2.py3-none-any.whl", hash = "sha256:4b41f3967fce3af57cc7e94b888626c18bf37a083e3651ca8feeb66d492fef35"},
@@ -1653,8 +1653,8 @@ pytest-runner = [
     {file = "pytest-runner-2.6.2.tar.gz", hash = "sha256:e775a40ee4a3a1d45018b199c44cc20bbe7f3df2dc8882f61465bb4141c78cdb"},
 ]
 pytezos = [
-    {file = "pytezos-3.3.1-py3-none-any.whl", hash = "sha256:3eb059f8c4f0a36427387e2a09e5c4772fb98b8ff31b086ac0b1dcbbdf3df3e8"},
-    {file = "pytezos-3.3.1.tar.gz", hash = "sha256:e86f8b5825823b7cf304af2991d0bac8ac71ab2bea8ea01f74c15e5de96f12c7"},
+    {file = "pytezos-3.3.2-py3-none-any.whl", hash = "sha256:d86571005f3446dfcda86ebb1707123d958a13e7b0dd4cd156e9b2e9a2f2867b"},
+    {file = "pytezos-3.3.2.tar.gz", hash = "sha256:ead5b35e89014852ae079dd55c2fe5bbb7ad476eeb5e840835ee592dcef5d931"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},

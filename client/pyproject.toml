@@ -17,7 +17,7 @@ docker = "^5.0.3"
 eth-hash = "*"
 marshmallow = "^3.12.1"
 pytest-runner = "2.6.2"
-pytezos = "^3.3.1"
+pytezos = "^3.3.2"
 
 [tool.poetry.dev-dependencies]
 
