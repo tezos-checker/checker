@@ -292,6 +292,11 @@ def write_gas_costs(gas_costs: Dict[str, int], output_path: str) -> None:
 
 
 def call_fa2_offline_view(contract: ContractInterface, view_name: str, *args):
+    # FIXME: Re-instantiating the contract here due to an issue where
+    # the call to storage_view() passes an older version of the contract storage
+    # than the true current state.
+    # https://github.com/baking-bad/pytezos/issues/271
+    contract = contract.using()
     print(f"Calling FA2 Offline view %{view_name} with {args}")
     return getattr(contract.metadata, view_name)(*args).storage_view()
 
