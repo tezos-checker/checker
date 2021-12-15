@@ -32,7 +32,6 @@ open LiquidationAuctionPrimitiveTypes
 open Ctok
 open Fa2Interface
 open Error
-open OraclePriceType
 
 EOF
 
