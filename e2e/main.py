@@ -52,7 +52,7 @@ def assert_fa2_token_balance(
         "requests": [{"owner": address, "token_id": token_id}],
         "callback": None,
     }
-    balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["nat_2"]
+    balance = wrapper.balance_of(**fa2_balance_of).callback_view()[0]["balance"]
     if expected != balance:
         raise AssertionError(f"Expected {expected} but got {balance}")
 
@@ -292,6 +292,11 @@ def write_gas_costs(gas_costs: Dict[str, int], output_path: str) -> None:
 
 
 def call_fa2_offline_view(contract: ContractInterface, view_name: str, *args):
+    # FIXME: Re-instantiating the contract here due to an issue where
+    # the call to storage_view() passes an older version of the contract storage
+    # than the true current state.
+    # https://github.com/baking-bad/pytezos/issues/271
+    contract = contract.using()
     print(f"Calling FA2 Offline view %{view_name} with {args}")
     return getattr(contract.metadata, view_name)(*args).storage_view()
 
@@ -543,14 +548,7 @@ class E2ETest(SandboxedTestCase):
             "callback": None,
         }
         print(f"Calling balance_of as an off-chain view with {fa2_balance_of}")
-        balance = checker.balance_of(**fa2_balance_of).callback_view()
-        # Check that this balance agrees with the kit balance view
-        assert_fa2_token_balance(
-            checker,
-            account_alice,
-            kit_token_id,
-            balance[0]["nat_2"],
-        )
+        checker.balance_of(**fa2_balance_of).callback_view()
 
         # ===============================================================================
         # CFMM
@@ -1249,6 +1247,11 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
         # Mint as much as possible from the burrows. All should be identical, so we just query the
         # first burrow and mint that much kit from all of them.
+        # FIXME: Re-instantiating the contract here due to an issue where
+        # the call to storage_view() passes an older version of the contract storage
+        # than the true current state.
+        # https://github.com/baking-bad/pytezos/issues/271
+        checker = self.client.contract(checker.address)
         max_mintable_kit = checker.metadata.burrowMaxMintableKit(
             (self.client.key.public_key_hash(), 1)
         ).storage_view()
@@ -1345,15 +1348,18 @@ class LiquidationsStressTest(SandboxedTestCase):
         )
 
         # And we place a bid for the auction we started earlier:
+        # FIXME: Re-instantiating the contract here due to an issue where
+        # the call to storage_view() passes an older version of the contract storage
+        # than the true current state.
+        # https://github.com/baking-bad/pytezos/issues/271
+        checker = self.client.contract(checker.address)
         auction_details = (
             checker.metadata.currentLiquidationAuctionDetails().storage_view()
         )
-
-        auction_id, minimum_bid = auction_details["contents"], auction_details["nat_3"]
-        # FIXME: The return value is supposed to be annotated as "auction_id" and "minimum_bid", I
-        # do not know why we get these names. I think there is an underlying pytezos bug
-        # that we should reproduce and create a bug upstream.
-
+        auction_id, minimum_bid = (
+            auction_details["auction_id"],
+            auction_details["minimum_bid"],
+        )
         # Note the auction ptr for later operations
         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
             "liquidation_auctions"

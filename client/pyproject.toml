@@ -12,12 +12,12 @@ python = "^3.8"
 
 checker-builder = { develop=true, path = "../scripts/builder" }
 
-click = "^7.1.2"
-docker = "^4.4.4"
+click = "^8.0.3"
+docker = "^5.0.3"
 eth-hash = "*"
 marshmallow = "^3.12.1"
 pytest-runner = "2.6.2"
-pytezos = "^3.2.2"
+pytezos = "^3.3.2"
 
 [tool.poetry.dev-dependencies]
 
