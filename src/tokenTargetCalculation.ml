@@ -1,8 +1,6 @@
 open Common
 open FixedPoint
 
-(* FIXME: I'M GOING MAD *)
-
 (** Calculate the current target based on the current quantity, and the current
     price of kit in ctok (as given by the CFMM).
     {[
@@ -13,18 +11,6 @@ let[@inline] compute_current_target (current_q: fixedpoint) (_current_index: fix
   let { num = num; den = den; } = current_kit_in_ctok in
   fixedpoint_of_ratio_floor
     (make_ratio
-       (Ligo.mul_int_int
-          den
-          (Ligo.mul_int_int
-             (fixedpoint_to_raw current_q)
-             (fixedpoint_to_raw current_index)
-          )
-       )
-       (Ligo.mul_int_int
-          num
-          (Ligo.mul_int_int
-             fixedpoint_scaling_factor
-             fixedpoint_scaling_factor
-          )
-       )
+       (Ligo.mul_int_int den (fixedpoint_to_raw current_q))
+       (Ligo.mul_int_int num fixedpoint_scaling_factor)
     )
