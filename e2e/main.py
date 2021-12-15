@@ -325,7 +325,7 @@ class E2ETest(SandboxedTestCase):
             oracle = deploy_contract(
                 self.client,
                 source_file=self.repo.mock_oracle_contract,
-                initial_storage=(self.client.key.public_key_hash(), 1000000),
+                initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
                 ttl=MAX_OPERATIONS_TTL,
             )
         else:
@@ -1104,7 +1104,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             oracle = deploy_contract(
                 self.client,
                 source_file=self.repo.mock_oracle_contract,
-                initial_storage=(self.client.key.public_key_hash(), 1000000),
+                initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
                 ttl=MAX_OPERATIONS_TTL,
             )
         else:
@@ -1294,7 +1294,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         if self.config.tracking_type == TrackingType.TOKEN:
             call_endpoint(oracle, "update", (10_000_000, 1_000_000))
         elif self.config.tracking_type == TrackingType.INDEX:
-            call_endpoint(oracle, "update", 10_000_000)
+            call_endpoint(oracle, "update", (10_000_000, 1_000_000))
         else:
             raise ValueError(
                 f"Unexpected value for tracking_type: {self.config.tracking_type}"

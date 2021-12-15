@@ -1,11 +1,11 @@
 type state =
-  { price: nat;
+  { price: (nat * nat);
     owner: address;
   }
 
 type params =
-  | Update of nat
-  | GetPrice of nat contract
+  | Update of (nat * nat)
+  | GetPrice of (nat * nat) contract
 
 let main (op, state: params * state): operation list * state =
   match op with

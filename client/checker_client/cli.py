@@ -375,7 +375,7 @@ def mock_oracle(config: Config, repo_path):
     oracle = checker_lib.deploy_contract(
         client,
         source_file=CheckerRepo(repo_path).mock_oracle_contract,
-        initial_storage=(client.key.public_key_hash(), 1000000),
+        initial_storage=(client.key.public_key_hash(), (1000000, 1000000)),
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
