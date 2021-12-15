@@ -40,7 +40,7 @@ jobs:
         run: |
           docker run \
             -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
-            -v $PWD/scripts:/root/scripts \
+            -v $PWD/scripts:/home/checker/scripts \
             -v $HOME/.config/hub:/home/checker/.config/hub \
             checker/deps-full:latest \
             poetry run python scripts/comment-prs.py
