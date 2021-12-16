@@ -22,7 +22,7 @@ open Mem
 open BurrowOrigination
 open Price
 open TokenMetadata
-open OraclePriceType
+open GetOracleEntrypoint
 
 (* BEGIN_OCAML *)
 [@@@coverage off]

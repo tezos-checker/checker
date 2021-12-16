@@ -38,10 +38,10 @@ PRICE_TEMPLATES = {
     config.CollateralType.FA2: "fa2Price.ml.jinja",
 }
 
-ORACLE_PRICE_TYPE_SRC = "oraclePriceType.ml"
+ORACLE_PRICE_TYPE_SRC = "getOracleEntrypoint.ml"
 ORACLE_PRICE_TYPE_TEMPLATES = {
-    config.TrackingType.INDEX: "indexOraclePriceType.ml.jinja",
-    config.TrackingType.TOKEN: "tokenOraclePriceType.ml.jinja",
+    config.TrackingType.INDEX: "indexGetOracleEntrypoint.ml.jinja",
+    config.TrackingType.TOKEN: "tokenGetOracleEntrypoint.ml.jinja",
 }
 
 
