@@ -3,7 +3,7 @@
 open CheckerTypes
 open Error
 
-(* token-tracking (in FIXME/FIXME) *)
+(* token-tracking (in TOK/CTOK) *)
 
 let[@inline] get_oracle_entrypoint (external_contracts: external_contracts): ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract =
   match (LigoOp.Tezos.get_entrypoint_opt "%getCfmmPrice" external_contracts.oracle: ((Ligo.nat * Ligo.nat) Ligo.contract) Ligo.contract option) with
