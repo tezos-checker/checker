@@ -38,10 +38,16 @@ PRICE_TEMPLATES = {
     config.CollateralType.FA2: "fa2Price.ml.jinja",
 }
 
-ORACLE_PRICE_TYPE_SRC = "getOracleEntrypoint.ml"
-ORACLE_PRICE_TYPE_TEMPLATES = {
+GET_ORACLE_ENTRYPOINT_SRC = "getOracleEntrypoint.ml"
+GET_ORACLE_ENTRYPOINT_TEMPLATES = {
     config.TrackingType.INDEX: "indexGetOracleEntrypoint.ml.jinja",
     config.TrackingType.TOKEN: "tokenGetOracleEntrypoint.ml.jinja",
+}
+
+TARGET_CALCULATION_SRC = "targetCalculation.ml"
+TARGET_CALCULATION_TEMPLATES = {
+    config.TrackingType.INDEX: "indexTargetCalculation.ml.jinja",
+    config.TrackingType.TOKEN: "tokenTargetCalculation.ml.jinja",
 }
 
 
@@ -69,7 +75,12 @@ def generate():
     GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES[checker_config.collateral_type]
 
     # Select the oracle configuration at runtime based on config
-    GENERATE_SRCS[ORACLE_PRICE_TYPE_SRC] = ORACLE_PRICE_TYPE_TEMPLATES[
+    GENERATE_SRCS[GET_ORACLE_ENTRYPOINT_SRC] = GET_ORACLE_ENTRYPOINT_TEMPLATES[
+        checker_config.tracking_type
+    ]
+
+    # Select the target calculation at runtime based on config
+    GENERATE_SRCS[TARGET_CALCULATION_SRC] = TARGET_CALCULATION_TEMPLATES[
         checker_config.tracking_type
     ]
 
