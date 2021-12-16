@@ -641,7 +641,7 @@ let suite =
        Ligo.Tezos.reset ();
        let checker = empty_checker in
        Ligo.Tezos.new_transaction ~seconds_passed:10 ~blocks_passed:1 ~sender:(checker.external_contracts.oracle) ~amount:(Ligo.tez_from_literal "0mutez");
-       let ops, _ = Checker.entrypoint_receive_price (checker, Ligo.nat_from_literal "42n") in
+       let ops, _ = Checker.entrypoint_receive_price (checker, (Ligo.nat_from_literal "42n", Tok.tok_scaling_factor_nat)) in
        assert_operation_list_equal ~expected:[] ~real:ops
     );
 
