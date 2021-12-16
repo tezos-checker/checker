@@ -314,7 +314,7 @@ class E2ETest(SandboxedTestCase):
         # ===============================================================================
         if self.config.tracking_type == TrackingType.TOKEN:
             print("Deploying the mock cfmm oracle.")
-            cfmm_oracle = deploy_contract(
+            oracle = deploy_contract(
                 self.client,
                 source_file=self.repo.mock_cfmm_oracle_contract,
                 initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),
@@ -1093,7 +1093,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         if self.config.tracking_type == TrackingType.TOKEN:
             print("Deploying the mock cfmm oracle.")
-            cfmm_oracle = deploy_contract(
+            oracle = deploy_contract(
                 self.client,
                 source_file=self.repo.mock_cfmm_oracle_contract,
                 initial_storage=(self.client.key.public_key_hash(), (1000000, 1000000)),

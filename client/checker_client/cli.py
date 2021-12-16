@@ -175,9 +175,6 @@ def deploy(config: Config, address=None, port=None, key=None):
     config.dump()
 
 
-# FIXME: This function is totally out of date. We have to figure out how to
-# change the command-line tool to be able to (a) deploy all the helper
-# contracts we want and (b) deploy checker using different configurations.
 @deploy.command()
 @click.option(
     "--src",
@@ -196,11 +193,8 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
-    # FIXME: This also probably needs to take into account the different options
-    if not config.oracle_address and not oracle:
-        raise ValueError(
-            "Oracle address was neither specified in the CLI config nor provided as an argument."
-        )
+    if not oracle:
+        raise ValueError("Oracle address was not provided as an argument.")
     if not collateral_fa2:
         raise ValueError("Collateral FA2 contract address was not provided as an argument.")
     if not cfmm_token_fa2:
@@ -209,8 +203,6 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
         raise ValueError(
             "ctez cfmm address was neither specified in the CLI config nor provided as an argument."
         )
-    if oracle:
-        config.oracle_address = oracle
     if ctez_cfmm:
         config.ctez_cfmm_address = ctez_cfmm
 
@@ -221,7 +213,7 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
     checker = checker_lib.deploy_checker(
         client,
         CheckerRepo(repo_path),
-        oracle=config.oracle_address,
+        oracle=oracle,
         collateral_fa2=collateral_fa2,
         cfmm_token_fa2=cfmm_token_fa2,
         ctez_cfmm=config.ctez_cfmm_address,
