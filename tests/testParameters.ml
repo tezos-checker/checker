@@ -498,11 +498,11 @@ let test_liquidation_index_low_unbounded =
 (* ************************************************************************* *)
 
 (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-(* Just a simple unit test, where the parameters are touched again without any
+   (* Just a simple unit test, where the parameters are touched again without any
  * time passing. In fact, in checker.ml we make sure to update nothing at all,
  * if no time has passed (cf. touch_with_index). *)
-let test_touch_0 =
-  "test_touch_0" >:: fun _ ->
+   let test_touch_0 =
+   "test_touch_0" >:: fun _ ->
     Ligo.Tezos.reset ();
     let in_params =
       Parameters.{
@@ -550,9 +550,9 @@ let test_touch_0 =
 *)
 
 (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-(* Just a simple unit test, testing nothing specific, really. *)
-let test_touch_1 =
-  "test_touch_1" >:: fun _ ->
+   (* Just a simple unit test, testing nothing specific, really. *)
+   let test_touch_1 =
+   "test_touch_1" >:: fun _ ->
     let initial_parameters : parameters =
       { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
         index = TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "360_000n");
@@ -591,9 +591,9 @@ let test_touch_1 =
 *)
 
 (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-(* Just a simple unit test, testing nothing specific, really. *)
-let test_touch_2 =
-  "test_touch_2" >:: fun _ ->
+   (* Just a simple unit test, testing nothing specific, really. *)
+   let test_touch_2 =
+   "test_touch_2" >:: fun _ ->
     let initial_parameters : parameters =
       { q = fixedpoint_of_hex_string "0.E666666666666666"; (* 0.9 *)
         index = TestLib.index_from_chf_in_tok (Ligo.nat_from_literal "360_000n");
@@ -1019,15 +1019,15 @@ let suite =
     test_liquidation_index_low_unbounded;
 
     (* touch *)
-(* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-    test_touch_0;
-*)
-(* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-    test_touch_1;
-*)
-(* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
-    test_touch_2;
-*)
+    (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
+        test_touch_0;
+    *)
+    (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
+        test_touch_1;
+    *)
+    (* FIXME: Values differ between the TOKEN deployment and the INDEX deployment
+        test_touch_2;
+    *)
 
     (* add/remove circulating_kit/outstanding_kit (property-based random tests) *)
     test_add_remove_circulating_kit_inverses;
