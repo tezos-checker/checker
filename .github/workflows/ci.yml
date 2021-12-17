@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
+        configuration_file: ["checker-index-tez.yaml", "checker-index-fa2.yaml", "checker-token-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -67,7 +67,7 @@ jobs:
             | jq --sort-keys '.lazy_functions | map({ key: .name, value: .chunks|add|length|(./2) }) | from_entries' \
             | tee entrypoint-sizes.json
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-index-tez.yaml"
         with:
           name: stats
           path: entrypoint-sizes.json
@@ -75,7 +75,7 @@ jobs:
       - name: Test
         run: earthly --verbose --ci ${{ env.push_flag }} --artifact +test-coverage/test-coverage.json test-coverage.json
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-index-tez.yaml"
         with:
           name: stats
           path: test-coverage.json
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        configuration_file: ["checker-tez.yaml", "checker-fa2.yaml"]
+        configuration_file: ["checker-index-tez.yaml", "checker-index-fa2.yaml", "checker-token-fa2.yaml"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -116,13 +116,13 @@ jobs:
       - uses: actions/upload-artifact@v2.2.4
         # We only upload artifacts on 'push' events, this is simply to have one set of artifacts
         # per commit.
-        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-index-tez.yaml"
         with:
           name: stats
           path: e2e-outputs/gas-costs.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v2.2.4
-        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-tez.yaml"
+        if: github.event_name == 'push' && ${{ matrix.configuration_file }} == "checker-index-tez.yaml"
         with:
           name: gas-profile-plots
           path: e2e-outputs/auction-gas-profiles.png

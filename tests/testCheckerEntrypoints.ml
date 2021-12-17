@@ -517,7 +517,7 @@ let suite =
 
     ("entrypoint_receive_price (main) - fails when unwanted tez is given - sealed state" >::
      assert_sealed_contract_fails_with_unwanted_tez
-       (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n"))), sealed_wrapper)))
+       (fun sealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n", Tok.tok_scaling_factor_nat))), sealed_wrapper)))
     );
 
     ("DeployFunction (main) - fails when unwanted tez is given - sealed state" >::
@@ -733,7 +733,7 @@ let suite =
 
     ("entrypoint_receive_price (main) - fails when unwanted tez is given - unsealed state" >::
      assert_unsealed_contract_fails_with_unwanted_tez
-       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n"))), unsealed_wrapper)))
+       (fun unsealed_wrapper -> CheckerMain.(main (CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "63534655n", Tok.tok_scaling_factor_nat))), unsealed_wrapper)))
     );
 
     ("DeployFunction (main) - fails when unwanted tez is given - unsealed state" >::

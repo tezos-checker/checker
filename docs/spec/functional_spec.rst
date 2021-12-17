@@ -418,12 +418,12 @@ Apply an Oracle update
 
 Internal. Receive a price update from the registered oracle.
 
-``receive_price: nat``
+``receive_price: pair nat nat``
 
 +---------------+-----------------------+-------------------------------------------------------------------------+
 | Parameter     |      Field Type       | Description                                                             |
 +===============+=======================+=========================================================================+
-| price         | nat                   | The current index, as a fixedpoint with a scaling factor of 1000000     |
+| price         | pair nat nat          | The current index, as a pair of the numerator and the denominator       |
 +---------------+-----------------------+-------------------------------------------------------------------------+
 
 

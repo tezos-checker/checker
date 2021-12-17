@@ -226,9 +226,9 @@ val entrypoint_liquidation_auction_claim_win : checker * liquidation_auction_id 
 (** (INTERNAL) Receive a price from the oracle.
 
     Parameters:
-    - The current index, as a fixedpoint with a scaling factor of 1_000_000
+    - The current index of tok/chf or tok/ctok, as a fraction
 *)
-val entrypoint_receive_price : checker * Ligo.nat -> (LigoOp.operation list * checker)
+val entrypoint_receive_price : checker * (Ligo.nat * Ligo.nat) -> (LigoOp.operation list * checker)
 
 (** (INTERNAL) Receive a price from the ctez (CFMM) contract.
 

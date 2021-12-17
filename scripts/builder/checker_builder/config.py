@@ -99,6 +99,11 @@ class CollateralType(Enum):
     FA2 = "fa2"
 
 
+class TrackingType(Enum):
+    INDEX = "index"
+    TOKEN = "token"
+
+
 @dataclass(frozen=True)
 class Continuous:
     target_bracket: Ratio
@@ -142,6 +147,7 @@ class Constants:
 
 @dataclass(frozen=True)
 class CheckerConfig:
+    tracking_type: TrackingType
     collateral_type: CollateralType
     tokens: Tokens
     constants: Constants
@@ -174,6 +180,13 @@ class CheckerConfig:
                 raise ValueError(
                     "collateral and cfmm_token config must be identical when collateral_type=fa2"
                 )
+
+        if (self.tracking_type == TrackingType.TOKEN) and (
+            self.collateral_type == CollateralType.TEZ
+        ):
+            raise ValueError(
+                'tracking_type cannot be set to "token" when collateral_type is set to "tez"'
+            )
 
 
 # ================================================================================================
@@ -370,7 +383,17 @@ class CollateralTypeField(fields.Field):
         return ct
 
 
+class TrackingTypeField(fields.Field):
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            tt = TrackingType(value)
+        except ValueError as error:
+            raise ValidationError("Invalid tracking type") from error
+        return tt
+
+
 class CheckerConfigSchema(Schema):
+    tracking_type = TrackingTypeField(required=True)
     collateral_type = CollateralTypeField(required=True)
     tokens = fields.Nested(TokensSchema(), required=True)
     constants = fields.Nested(ConstantsSchema(), required=True)
@@ -449,6 +472,10 @@ class CheckerRepo:
     @property
     def mock_oracle_contract(self) -> Path:
         return self.root.joinpath("util").joinpath("mock_oracle.tz")
+
+    @property
+    def mock_cfmm_oracle_contract(self) -> Path:
+        return self.root.joinpath("util").joinpath("mock_cfmm_oracle.tz")
 
     @property
     def ctez(self) -> Path:

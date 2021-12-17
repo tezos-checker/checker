@@ -205,6 +205,10 @@ generate-code:
     SAVE ARTIFACT ./src/price.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
     SAVE ARTIFACT ./src/tokenMetadata.ml
+    SAVE ARTIFACT ./src/getOracleEntrypoint.ml AS LOCAL src/getOracleEntrypoint.ml
+    SAVE ARTIFACT ./src/getOracleEntrypoint.ml
+    SAVE ARTIFACT ./src/targetCalculation.ml AS LOCAL src/targetCalculation.ml
+    SAVE ARTIFACT ./src/targetCalculation.ml
     SAVE ARTIFACT ./src/_input_checker.yaml AS LOCAL src/_input_checker.yaml
     SAVE ARTIFACT ./src/_input_checker.yaml
     # Image for inline caching
@@ -223,6 +227,8 @@ build-ocaml:
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
     COPY +generate-code/tokenMetadata.ml ./src/
+    COPY +generate-code/getOracleEntrypoint.ml ./src/
+    COPY +generate-code/targetCalculation.ml ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -244,6 +250,8 @@ build-ligo:
     COPY +generate-code/driftDerivative.ml ./src/
     COPY +generate-code/price.ml ./src/
     COPY +generate-code/tokenMetadata.ml ./src/
+    COPY +generate-code/getOracleEntrypoint.ml ./src/
+    COPY +generate-code/targetCalculation.ml ./src/
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
     COPY ./patches/e2e-tests-hack.patch .
@@ -308,6 +316,7 @@ test-e2e:
     # Bring ctez contract and mock oracle (for running checker in sandbox)
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
+    COPY ./util/mock_cfmm_oracle.tz ./util/
     # Bring flextesa + tezos-* binaries, which are required by the checker client
     COPY +flextesa/* /usr/bin/
     # And the checker contract itself
@@ -425,6 +434,7 @@ cli:
     COPY +zcash-params/zcash-params /home/checker/.zcash-params
     COPY ./vendor/ctez ./vendor/ctez
     COPY ./util/mock_oracle.tz ./util/
+    COPY ./util/mock_cfmm_oracle.tz ./util/
 
     # Baking in the current version of Checker for convenience
     COPY +build-ligo/michelson ./generated/michelson
