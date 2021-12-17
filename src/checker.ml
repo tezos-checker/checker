@@ -878,6 +878,12 @@ let entrypoint_receive_price (state, oracle_price: checker * (Ligo.nat * Ligo.na
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
+    (* NOTE: By storing the price as a fixedpoint we lose some precision here.
+     * However, keeping the original fraction here could become much more
+     * costly in other places (in the calculation of the index and the
+     * protected index, for example). Another alternative (with more-or-less
+     * the same effect) would be to keep the last_index field as a fraction and
+     * convert it in the call to touch. *)
     let price =
       let (num, den) = oracle_price in
       fixedpoint_of_ratio_floor (make_ratio (Ligo.int num) (Ligo.int den)) in
