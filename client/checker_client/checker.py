@@ -272,8 +272,8 @@ def start_local_sandbox(name: str, port: int):
         "--no-daemons-for=alice",
         "--no-daemons-for=bob",
         "--until-level=200_000_000",
-        "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
-        "--protocol-kind=Granada",
+        "--protocol-hash=PtHangz2aRngywmSRGGvrcTyMbbdpWdpFKuS4uMWxg2RaH9i1qx",
+        "--protocol-kind=Hangzhou",
     ]
 
     handle = subprocess.Popen(args)
