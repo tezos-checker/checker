@@ -178,7 +178,7 @@ generate-code:
     # Generate entrypoints
     RUN mkdir generated_src && ./generate-entrypoints.rb ./src/checker.mli > ./generated_src/checkerEntrypoints.ml
     # Generate other src modules using newer code generation tool
-    RUN poetry run checker-build generate --out generated_src
+    RUN poetry run checker-build generate --out generated_src && cp ./src/_input_checker.yaml ./generated_src
     # Ensure that the generated modules obey formatting rules:
     RUN opam exec -- ocp-indent -i ./generated_src/*.ml*
     SAVE ARTIFACT ./generated_src/*
