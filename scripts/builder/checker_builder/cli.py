@@ -59,7 +59,12 @@ def cli():
 
 
 @cli.command()
-@click.option("--out", required=True, type=click.Path(file_okay=False), help="The directory to write the generated modules to. Created if it does not exist already.")
+@click.option(
+    "--out",
+    required=True,
+    type=click.Path(file_okay=False),
+    help="The directory to write the generated modules to. Created if it does not exist already.",
+)
 def generate(out: str):
     """Run code generation"""
     repo = config.CheckerRepo(".")
