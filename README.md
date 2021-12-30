@@ -164,6 +164,7 @@ $ docker exec -it -u checker checker-dev-container bash
 
 ```console
 $ checker deploy mock-oracle
+$ checker deploy mock-cfmm-oracle
 $ checker deploy ctez
 $ checker deploy wrapped-ctez
 $ checker deploy wtez
@@ -171,7 +172,10 @@ $ checker deploy wtez
 
 And finally, deploy checker itself:
 ```console
-$ checker deploy checker --collateral_fa2 <wtez-address> --cfmm_token_fa2 <wctez-address>
+$ checker deploy checker \
+      --cfmm_token_fa2 <cfmm-fa2-address> \
+      --collateral_fa2 <collateral-fa2-address> \
+      --oracle <mock-oracle-address>
 ```
 
 # Deployment to a Testnet (Manually)
@@ -271,12 +275,17 @@ To deploy the ctez FA2 wrapper (wctez):
   ./scripts/deploy-master.sh wrapped-ctez --ctez_fa12 <ctez-fa12-address>
 ```
 
-To deploy mock oracle:
+To deploy the mock oracle:
 
 ```console
   ./scripts/deploy-master.sh mock-oracle
 ```
 
+To deploy the mock cfmm oracle:
+
+```console
+  ./scripts/deploy-master.sh mock-cfmm-oracle
+```
 
 To deploy the tez FA2 wrapper (wtez):
 

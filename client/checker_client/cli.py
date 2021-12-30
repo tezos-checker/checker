@@ -45,6 +45,7 @@ class Config:
     ctez_fa12_address: str = ""
     ctez_cfmm_address: str = ""
     oracle_address: str = ""
+    cfmm_oracle_address: str = ""
     checker_address: str = ""
     wtez_address: str = ""
     wctez_address: str = ""
@@ -68,6 +69,7 @@ class ConfigSchema(Schema):
     ctez_fa12_address = fields.String()
     ctez_cfmm_address = fields.String()
     oracle_address = fields.String()
+    cfmm_oracle_address = fields.String()
     checker_address = fields.String()
     wtez_address = fields.String()
     wctez_address = fields.String()
@@ -173,9 +175,6 @@ def deploy(config: Config, address=None, port=None, key=None):
     config.dump()
 
 
-# FIXME: This function is totally out of date. We have to figure out how to
-# change the command-line tool to be able to (a) deploy all the helper
-# contracts we want and (b) deploy checker using different configurations.
 @deploy.command()
 @click.option(
     "--src",
@@ -194,10 +193,8 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
     """
     Deploy checker. Requires addresses for oracle and ctez contracts.
     """
-    if not config.oracle_address and not oracle:
-        raise ValueError(
-            "Oracle address was neither specified in the CLI config nor provided as an argument."
-        )
+    if not oracle:
+        raise ValueError("Oracle address was not provided as an argument.")
     if not collateral_fa2:
         raise ValueError("Collateral FA2 contract address was not provided as an argument.")
     if not cfmm_token_fa2:
@@ -206,8 +203,6 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
         raise ValueError(
             "ctez cfmm address was neither specified in the CLI config nor provided as an argument."
         )
-    if oracle:
-        config.oracle_address = oracle
     if ctez_cfmm:
         config.ctez_cfmm_address = ctez_cfmm
 
@@ -218,7 +213,7 @@ def checker(config: Config, repo_path, oracle, collateral_fa2, cfmm_token_fa2, c
     checker = checker_lib.deploy_checker(
         client,
         CheckerRepo(repo_path),
-        oracle=config.oracle_address,
+        oracle=oracle,
         collateral_fa2=collateral_fa2,
         cfmm_token_fa2=cfmm_token_fa2,
         ctez_cfmm=config.ctez_cfmm_address,
@@ -372,11 +367,40 @@ def mock_oracle(config: Config, repo_path):
     oracle = checker_lib.deploy_contract(
         client,
         source_file=CheckerRepo(repo_path).mock_oracle_contract,
-        initial_storage=(client.key.public_key_hash(), 1000000),
+        initial_storage=(client.key.public_key_hash(), (1000000, 1000000)),
         ttl=_patch_operation_ttl(config),
     )
     click.echo(f"mock oracle contract deployed with address: {oracle.context.address}")
     config.oracle_address = oracle.context.address
+    config.dump()
+
+
+@deploy.command()
+@click.option(
+    "--src",
+    "repo_path",
+    type=str,
+    help="Path to the checker repo",
+    default=".",
+    show_default=True,
+)
+@click.pass_obj
+def mock_cfmm_oracle(config: Config, repo_path):
+    """
+    Deploy the mock cfmm oracle contract (dev only)
+    """
+    shell = construct_url(config.tezos_address, config.tezos_port)
+    click.echo(f"Connecting to tezos node at: {shell}")
+    client = pytezos.pytezos.using(shell=shell, key=config.tezos_key)
+    client.loglevel = logging.WARNING
+    cfmm_oracle = checker_lib.deploy_contract(
+        client,
+        source_file=CheckerRepo(repo_path).mock_cfmm_oracle_contract,
+        initial_storage=(client.key.public_key_hash(), (1000000, 1000000)),
+        ttl=_patch_operation_ttl(config),
+    )
+    click.echo(f"mock cfmm oracle contract deployed with address: {cfmm_oracle.context.address}")
+    config.cfmm_oracle_address = cfmm_oracle.context.address
     config.dump()
 
 

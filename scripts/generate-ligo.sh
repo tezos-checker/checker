@@ -33,6 +33,7 @@ checker_sources=(
   vaultTypes
   constants
   driftDerivative
+  targetCalculation
   parameters
   burrow
   checkerTypes
@@ -41,6 +42,7 @@ checker_sources=(
   liquidationAuction
   burrowOrigination
   price
+  getOracleEntrypoint
   checker
   checkerEntrypoints
   checkerMain

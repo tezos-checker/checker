@@ -220,7 +220,7 @@ let suite =
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Receive_price" >::
      fun _ ->
        test_deploy_function_with_lazy_params_succeeds
-         (Receive_price (Ligo.nat_from_literal "4_234n")) (* note: values randomly chosen *)
+         (Receive_price (Ligo.nat_from_literal "4_234n", Tok.tok_scaling_factor_nat)) (* note: values randomly chosen *)
     );
 
     ("If checker is not sealed, the deployer should be able to call DeployFunction - Update_operators" >::
@@ -564,7 +564,7 @@ let suite =
     ("If checker is sealed, users should be able to call CheckerEntrypoint/LazyParams/Receive_price" >::
      with_sealed_wrapper
        (fun sealed_wrapper ->
-          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "756n")))) in
+          let op = CheckerMain.(CheckerEntrypoint (LazyParams (Receive_price (Ligo.nat_from_literal "756n", Tok.tok_scaling_factor_nat)))) in
           (* This call should succeed *)
           Ligo.Tezos.new_transaction ~seconds_passed:0 ~blocks_passed:0 ~sender:oracle_addr ~amount:(Ligo.tez_from_literal "0mutez");
           let _ops, _wrapper = CheckerMain.main (op, sealed_wrapper) in

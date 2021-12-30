@@ -9,6 +9,8 @@ src/burrowOrigination.ml
 src/driftDerivative.ml
 src/price.ml
 src/tokenMetadata.ml
+src/getOracleEntrypoint.ml
+src/targetCalculation.ml
 
 generated/michelson
 generated/ligo

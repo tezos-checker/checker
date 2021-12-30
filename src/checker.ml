@@ -22,6 +22,7 @@ open Mem
 open BurrowOrigination
 open Price
 open TokenMetadata
+open GetOracleEntrypoint
 
 (* BEGIN_OCAML *)
 [@@@coverage off]
@@ -834,10 +835,10 @@ let[@inline] touch_with_index (state: checker) (index: fixedpoint) : (LigoOp.ope
        should be the last operation we emit, so that the system parameters do
        not change between touching different slices. *)
     let op_oracle =
-      let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : (Ligo.nat Ligo.contract) option) with
+      let cb = match (LigoOp.Tezos.get_entrypoint_opt "%receive_price" !Ligo.Tezos.self_address : ((Ligo.nat * Ligo.nat) Ligo.contract) option) with
         | Some cb -> cb
-        | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : Ligo.nat Ligo.contract) in
-      LigoOp.Tezos.nat_contract_transaction
+        | None -> (Ligo.failwith error_GetEntrypointOptFailureReceivePrice : (Ligo.nat * Ligo.nat) Ligo.contract) in
+      LigoOp.Tezos.nat_nat_contract_transaction
         cb
         (Ligo.tez_from_literal "0mutez")
         (get_oracle_entrypoint state_external_contracts) in
@@ -872,12 +873,20 @@ let entrypoint_touch (state, _: checker * unit) : (LigoOp.operation list * check
 (**                               ORACLE                                     *)
 (* ************************************************************************* *)
 
-let entrypoint_receive_price (state, idx: checker * Ligo.nat) : (LigoOp.operation list * checker) =
+let entrypoint_receive_price (state, oracle_price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
   assert_checker_invariants state;
   if !Ligo.Tezos.sender <> state.external_contracts.oracle then
     (Ligo.failwith error_UnauthorisedCaller : LigoOp.operation list * checker)
   else
-    let price = fixedpoint_of_ratio_floor (make_ratio (Ligo.int idx) tok_scaling_factor_int) in
+    (* NOTE: By storing the price as a fixedpoint we lose some precision here.
+     * However, keeping the original fraction here could become much more
+     * costly in other places (in the calculation of the index and the
+     * protected index, for example). Another alternative (with more-or-less
+     * the same effect) would be to keep the last_index field as a fraction and
+     * convert it in the call to touch. *)
+    let price =
+      let (num, den) = oracle_price in
+      fixedpoint_of_ratio_floor (make_ratio (Ligo.int num) (Ligo.int den)) in
     (([]: LigoOp.operation list), {state with last_index = Some price})
 
 let entrypoint_receive_ctez_marginal_price (state, price: checker * (Ligo.nat * Ligo.nat)) : (LigoOp.operation list * checker) =
