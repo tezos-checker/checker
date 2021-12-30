@@ -526,7 +526,7 @@ def load_input_config(repo: Optional[CheckerRepo] = None) -> CheckerConfig:
 def load_template_env() -> Environment:
     """Gets the default jinja2 environment"""
     return Environment(
-        loader=PackageLoader("checker_builder"), autoescape=select_autoescape()
+        loader=PackageLoader("checker_tools.builder"), autoescape=select_autoescape()
     )
 
 

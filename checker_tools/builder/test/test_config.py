@@ -12,34 +12,34 @@ some_ratio: 1/42
 
 
 def test_serialize_ratio():
-    from checker_builder.config import Ratio, RatioField
+    from checker_tools.builder.config import Ratio, RatioField
 
     input = Ratio(1, 3)
     assert RatioField().serialize("ratio", obj={"ratio": input}) == "1/3"
 
 
 def test_deserialize_ratio():
-    from checker_builder.config import Ratio, RatioField
+    from checker_tools.builder.config import Ratio, RatioField
 
     assert RatioField().deserialize("1/9") == Ratio(1, 9)
 
 
 def test_deserialize_ratio_zero_den_fails():
-    from checker_builder.config import RatioField
+    from checker_tools.builder.config import RatioField
 
     with pytest.raises(ValidationError):
         RatioField().deserialize("1/0")
 
 
 def test_deserialize_ratio_negative_den_fails():
-    from checker_builder.config import RatioField
+    from checker_tools.builder.config import RatioField
 
     with pytest.raises(ValidationError):
         RatioField().deserialize("1/-1")
 
 
 def test_serialiation_roundtrip_ratio():
-    from checker_builder.config import Ratio, RatioField
+    from checker_tools.builder.config import Ratio, RatioField
 
     input = Ratio(-3, 997)
     field = RatioField()
@@ -47,13 +47,13 @@ def test_serialiation_roundtrip_ratio():
 
 
 def test_deserialize_positive_ratio():
-    from checker_builder.config import PositiveRatioField, Ratio
+    from checker_tools.builder.config import PositiveRatioField, Ratio
 
     assert PositiveRatioField().deserialize("1/9") == Ratio(1, 9)
 
 
 def test_deserialize_positive_ratio_negative_fails():
-    from checker_builder.config import PositiveRatioField
+    from checker_tools.builder.config import PositiveRatioField
 
     field = PositiveRatioField()
 
@@ -64,74 +64,74 @@ def test_deserialize_positive_ratio_negative_fails():
 
 
 def test_deserialize_positive_ratio_zero_fails():
-    from checker_builder.config import PositiveRatioField
+    from checker_tools.builder.config import PositiveRatioField
 
     with pytest.raises(ValidationError):
         PositiveRatioField().deserialize("0/1")
 
 
 def test_ratio_from_str():
-    from checker_builder.config import Ratio, ratio_from_str
+    from checker_tools.builder.config import Ratio, ratio_from_str
 
     assert ratio_from_str(" 1 /  2 ") == Ratio(1, 2)
 
 
 def test_ratio_from_str_only_numerator_fails():
-    from checker_builder.config import ratio_from_str
+    from checker_tools.builder.config import ratio_from_str
 
     with pytest.raises(ValueError):
         ratio_from_str("3")
 
 
 def test_ratio_from_str_extra_slash_fails():
-    from checker_builder.config import ratio_from_str
+    from checker_tools.builder.config import ratio_from_str
 
     with pytest.raises(ValueError):
         ratio_from_str("3/2/4")
 
 
 def test_issued_token_config_decimal_digits():
-    from checker_builder.config import IssuedTokenConfig
+    from checker_tools.builder.config import IssuedTokenConfig
 
     collateral_config = IssuedTokenConfig(token_id=0, decimal_digits=3)
     assert collateral_config.scaling_factor == 1000
 
 
 def test_referenced_token_config_decimal_digits():
-    from checker_builder.config import ReferencedTokenConfig
+    from checker_tools.builder.config import ReferencedTokenConfig
 
     collateral_config = ReferencedTokenConfig(token_id=0, decimal_digits=3)
     assert collateral_config.scaling_factor == 1000
 
 
 def test_bounded_int_field_lower_inclusive():
-    from checker_builder.config import BoundedIntField
+    from checker_tools.builder.config import BoundedIntField
 
     assert BoundedIntField(lower=-1).deserialize("-1") == -1
 
 
 def test_bounded_int_field_upper_inclusive():
-    from checker_builder.config import BoundedIntField
+    from checker_tools.builder.config import BoundedIntField
 
     assert BoundedIntField(upper=-1).deserialize("-1") == -1
 
 
 def test_bounded_int_field_lower():
-    from checker_builder.config import BoundedIntField
+    from checker_tools.builder.config import BoundedIntField
 
     with pytest.raises(ValidationError):
         BoundedIntField(lower=-1).deserialize("-2")
 
 
 def test_bounded_int_field_upper():
-    from checker_builder.config import BoundedIntField
+    from checker_tools.builder.config import BoundedIntField
 
     with pytest.raises(ValidationError):
         BoundedIntField(upper=-1).deserialize("0")
 
 
 def test_bounded_int_field_lower_and_upper():
-    from checker_builder.config import BoundedIntField
+    from checker_tools.builder.config import BoundedIntField
 
     with pytest.raises(ValidationError):
         BoundedIntField(lower=-1, upper=3).deserialize("-2")
@@ -140,7 +140,7 @@ def test_bounded_int_field_lower_and_upper():
 
 
 def test_yaml_loader_loads_ratio_as_str():
-    from checker_builder.config import Loader
+    from checker_tools.builder.config import Loader
 
     f = StringIO(DECIMAL_YAML)
     data = yaml.load(f, Loader=Loader)

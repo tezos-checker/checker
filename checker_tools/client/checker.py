@@ -20,8 +20,8 @@ import requests
 from pytezos.client import PyTezosClient
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_builder.config import CheckerRepo, load_input_config, CheckerConfig, IssuedTokenConfig
-from checker_client.operations import inject
+from checker_tools.builder.config import CheckerRepo, load_input_config, CheckerConfig, IssuedTokenConfig
+from checker_tools.client.operations import inject
 
 
 # Time between blocks for sandbox container

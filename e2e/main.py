@@ -8,9 +8,8 @@ from datetime import datetime
 from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
-import portpicker
-from checker_builder.config import load_input_config, CollateralType, TrackingType
-from checker_client.checker import *
+from checker_tools.builder.config import load_input_config, CollateralType, TrackingType
+from checker_tools.client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 from pytezos.operation.group import OperationGroup

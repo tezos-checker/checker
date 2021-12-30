@@ -3,7 +3,7 @@ import shutil
 
 import click
 
-from checker_builder import config
+from checker_tools.builder import config
 
 # Mapping of generated src modules to their templates
 GENERATE_SRCS = {
