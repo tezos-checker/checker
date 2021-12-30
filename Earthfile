@@ -468,70 +468,48 @@ flextesa:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update && apt install -y \
-        curl \
-        git \
-        bash \
-        opam \
-        pkg-config \
-        cargo \
-        autoconf \
-        zlib1g-dev \
-        libev-dev \
-        libffi-dev \
-        libusb-dev \
-        libhidapi-dev \
-        libgmp-dev
-    # TODO: Clear package cache here
-
-    # Install rust (required by tezos)
-    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init && chmod +x /usr/bin/rustup-init
-    RUN rustup-init -y
+    RUN apt update && \
+        apt install -y \
+            curl \
+            git \
+            bash \
+            opam \
+            pkg-config \
+            cargo \
+            autoconf \
+            zlib1g-dev \
+            libev-dev \
+            libffi-dev \
+            libusb-dev \
+            libhidapi-dev \
+            libgmp-dev && \
+        rm -rf /var/lib/apt/lists/*
 
     # Checkout flextesa
     WORKDIR /root
-    RUN git clone https://gitlab.com/tezos/flextesa.git
+    ARG FLEXTESA_REV = "fc7a1672fce26bc74c092629260d437af7fa2945"
+    RUN git clone https://gitlab.com/tezos/flextesa.git && cd ./flextesa && git checkout "$FLEXTESA_REV"
     WORKDIR /root/flextesa
 
-    ARG FLEXTESA_REV = "95a2badf3b226b121f6281f98d86aaee1de5b6e8"
-
-    RUN git checkout "$FLEXTESA_REV"
-
     # Create opam switch and install flextesa deps
-    ARG OCAML_VERSION = "4.10.2"
+    ARG OCAML_VERSION = "4.13.1"
     ENV OPAM_SWITCH="flextesa"
     RUN opam init --disable-sandboxing --bare
     RUN opam switch create "$OPAM_SWITCH" "$OCAML_VERSION"
-    RUN opam switch import src/tezos-master.opam-switch
+    RUN opam install -y --deps-only \
+            ./tezai-base58-digest.opam ./tezai-tz1-crypto.opam \
+            ./flextesa.opam ./flextesa-cli.opam
 
     # Build flextesa
-    RUN eval $(opam env) && make vendors
     RUN eval $(opam env) && \
-        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
-        make build
+        make build && \
+        mkdir ./bin && \
+        cp -L ./flextesa ./bin
 
-    # Unfortunately unless we want write logic to get the top N protocol exes this will
-    # have to be updated whenever we bump the protocol in our end to end tests.
-    ARG PROTO_DIR = "010_PtGRANAD"
+    # Fetch the tezos exes which are required by flextesa at runtime
+    # (using the script provided with flextesa for this)
+    RUN src/scripts/get-octez-static-binaries.sh ./bin
 
-    # Build tezos exes which are required by flextesa at runtime
-    RUN eval $(opam env) && \
-        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
-        cd local-vendor/tezos-master && \
-        dune build src/bin_node/main.exe && \
-        dune build src/bin_client/main_client.exe && \
-        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe"
-
-    # Create expected binary names
-    RUN cp "local-vendor/tezos-master/_build/default/src/bin_node/main.exe" ./tezos-node && \
-        cp "local-vendor/tezos-master/_build/default/src/bin_client/main_client.exe" ./tezos-client && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" "./tezos-baker-$(echo $PROTO_DIR | tr '_' '-')" && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" "./tezos-endorser-$(echo $PROTO_DIR | tr '_' '-')" && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe" "./tezos-accuser-$(echo $PROTO_DIR | tr '_' '-')"
-
-    SAVE ARTIFACT tezos-*
-    SAVE ARTIFACT flextesa
+    SAVE ARTIFACT ./bin/*
+    SAVE ARTIFACT ./bin AS LOCAL ./bin
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:flextesa
