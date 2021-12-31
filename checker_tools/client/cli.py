@@ -1,11 +1,10 @@
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
-import time
 from urllib.parse import urlparse, urlunparse
-from checker_builder.config import CheckerRepo
 
 import click
 import pytezos
@@ -13,7 +12,8 @@ from marshmallow import Schema, fields
 from marshmallow.decorators import post_load
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_client import checker as checker_lib
+from checker_tools.builder.config import CheckerRepo
+from checker_tools.client import checker as checker_lib
 
 CONFIG_FILE_BASE = Path(".checker")
 CONFIG_DIR = os.getenv("XDG_CONFIG_HOME")

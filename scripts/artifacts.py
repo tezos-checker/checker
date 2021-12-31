@@ -1,35 +1,31 @@
 #!/usr/bin/env python
 
 import io
-import sys
-import json
-import yaml
-import zipfile
-import os.path
 import itertools as it
-from pprint import pprint
+import json
+import os.path
+import sys
+import zipfile
 from collections import namedtuple
+from pprint import pprint
 
 import click
-import requests
-from tqdm import tqdm
 import matplotlib.pyplot as plt
+import requests
+import yaml
+from tqdm import tqdm
 
 ENDPOINT_GRAPHQL = f"https://api.github.com/graphql"
 ENDPOINT_REST = f"https://api.github.com"
 
 CommitInfo = namedtuple("CommitInfo", ["message", "ref", "rev", "workflow_ids"])
-CommitStats = namedtuple(
-    "CommitStats", ["info", "gas_costs", "entrypoint_sizes", "test_coverage"]
-)
+CommitStats = namedtuple("CommitStats", ["info", "gas_costs", "entrypoint_sizes", "test_coverage"])
 Diff = namedtuple("Diff", ["key", "previous", "next"])
 
 accessToken = os.getenv("GITHUB_TOKEN")
 if not accessToken:
     with open(os.path.expanduser("~/.config/hub")) as f:
-        accessToken = yaml.load(f, Loader=yaml.SafeLoader)["github.com"][0][
-            "oauth_token"
-        ]
+        accessToken = yaml.load(f, Loader=yaml.SafeLoader)["github.com"][0]["oauth_token"]
 headers = {"Authorization": f"Bearer {accessToken}"}
 del accessToken
 
@@ -164,9 +160,7 @@ def fetch_commit_infos(ref, *, limit):
             if commit["statusCheckRollup"]
             else [],
         )
-        for i, commit in enumerate(
-            ret["data"]["repository"]["object"]["history"]["nodes"]
-        )
+        for i, commit in enumerate(ret["data"]["repository"]["object"]["history"]["nodes"])
         if commit["statusCheckRollup"]
     ]
 
@@ -204,10 +198,7 @@ def download_stats(workflow_ids):
 
     # fetch all artifacts archive urls
     for workflow_id in workflow_ids:
-        url = (
-            ENDPOINT_REST
-            + f"/repos/tezos-checker/checker/actions/runs/{workflow_id}/artifacts"
-        )
+        url = ENDPOINT_REST + f"/repos/tezos-checker/checker/actions/runs/{workflow_id}/artifacts"
         ret = requests.get(url, headers=headers)
         ret.raise_for_status()
         ret = ret.json()

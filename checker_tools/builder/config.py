@@ -221,9 +221,7 @@ class RatioField(fields.Field):
         except ValueError as error:
             raise ValidationError("Unable to parse value to a ratio") from error
         if ratio.den <= 0:
-            raise ValidationError(
-                f"Provided ratio had a non-positive denominator: {value}"
-            )
+            raise ValidationError(f"Provided ratio had a non-positive denominator: {value}")
         return ratio
 
 
@@ -340,9 +338,7 @@ class ConstantsSchema(Schema):
     imbalance_scaling_factor = PositiveRatioField(required=True)  # positive
     liquidation_penalty = PositiveRatioField(required=True)  # positive
     liquidation_reward_percentage = PositiveRatioField(required=True)  # positive
-    protected_index_inverse_epsilon = BoundedIntField(
-        lower=1, strict=True, required=True
-    )
+    protected_index_inverse_epsilon = BoundedIntField(lower=1, strict=True, required=True)
 
     auction_decay_rate = PositiveRatioField(required=True)  # positive
     bid_improvement_factor = PositiveRatioField(required=True)  # positive
@@ -362,15 +358,11 @@ class ConstantsSchema(Schema):
         # Note: This comparison is only precise to the (fixed) precision used by Decimal, but since this
         # is a "soft" check this should be acceptable.
         fminting = Decimal(data["fminting"].num) / Decimal(data["fminting"].den)
-        fliquidation = Decimal(data["fliquidation"].num) / Decimal(
-            data["fliquidation"].den
-        )
+        fliquidation = Decimal(data["fliquidation"].num) / Decimal(data["fliquidation"].den)
         if fminting <= fliquidation:
             raise ValidationError("fminting must be > fliquidation")
         if fminting <= 1 or fliquidation <= 1:
-            raise ValidationError(
-                "Both fminting and fliquidation must be greater than 1"
-            )
+            raise ValidationError("Both fminting and fliquidation must be greater than 1")
         return Constants(**data)
 
 
@@ -526,7 +518,7 @@ def load_input_config(repo: Optional[CheckerRepo] = None) -> CheckerConfig:
 def load_template_env() -> Environment:
     """Gets the default jinja2 environment"""
     return Environment(
-        loader=PackageLoader("checker_builder"), autoescape=select_autoescape()
+        loader=PackageLoader("checker_tools.builder"), autoescape=select_autoescape()
     )
 
 
@@ -539,9 +531,7 @@ def generate_token_src_module(
         * token_config (ReferencedTokenConfig)
         * module_name (str)
     """
-    logger.info(
-        f"Rendering token src module template '{template.name}' using provided config"
-    )
+    logger.info(f"Rendering token src module template '{template.name}' using provided config")
     module_name = module.name.split(".")[0]
     rendered = template.render(module_name=module_name, token_config=token_config)
     logger.info(f"Writing rendered module at {module}")
@@ -549,17 +539,13 @@ def generate_token_src_module(
         f.write(rendered)
 
 
-def generate_src_module(
-    module: Path, template: Template, config: CheckerConfig
-) -> None:
+def generate_src_module(module: Path, template: Template, config: CheckerConfig) -> None:
     """Generates a source code module using the provided template and configuration
 
     Provides the following variables to the template:
         * config (CheckerConfig)
     """
-    logger.info(
-        f"Rendering src module template '{template.name}' using provided config"
-    )
+    logger.info(f"Rendering src module template '{template.name}' using provided config")
     rendered = template.render(config=config)
     logger.info(f"Writing rendered module at {module}")
     with module.open("w") as f:

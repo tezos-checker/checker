@@ -1,9 +1,9 @@
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import click
 
-from checker_builder import config
+from checker_tools.builder import config
 
 # Mapping of generated src modules to their templates
 GENERATE_SRCS = {
@@ -78,9 +78,7 @@ def generate(out: str):
     env = config.load_template_env()
 
     # Select the drift derivative template at runtime based on config
-    GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[
-        type(checker_config.drift_derivative_curve)
-    ]
+    GENERATE_SRCS[DRIFT_SRC] = DRIFT_TEMPLATES[type(checker_config.drift_derivative_curve)]
 
     # Select the price calculation module at runtime based on config
     GENERATE_SRCS[PRICE_SRC] = PRICE_TEMPLATES[checker_config.collateral_type]
@@ -101,9 +99,7 @@ def generate(out: str):
     template = env.get_template(TOKEN_TEMPLATE)
     for token_type, token_type_srcs in TOKEN_SRCS.items():
         for token_field, src in token_type_srcs.items():
-            token_config = getattr(
-                getattr(checker_config.tokens, token_type), token_field
-            )
+            token_config = getattr(getattr(checker_config.tokens, token_type), token_field)
             config.generate_token_src_module(
                 out.joinpath(src),
                 template,

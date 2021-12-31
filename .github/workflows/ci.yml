@@ -12,7 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        configuration_file: ["checker-index-tez.yaml", "checker-index-fa2.yaml", "checker-token-fa2.yaml"]
+        configuration_file:
+          [
+            'checker-index-tez.yaml',
+            'checker-index-fa2.yaml',
+            'checker-token-fa2.yaml',
+          ]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -47,8 +52,8 @@ jobs:
         run: |
           earthly --verbose --ci ${{ env.push_flag }} +flextesa
           earthly --verbose --ci ${{ env.push_flag }} +deps-full
-      - name: Test build scripts
-        run: earthly --verbose --ci ${{ env.push_flag }} +test-builder
+      - name: Test checker_tools
+        run: earthly --verbose --ci ${{ env.push_flag }} +test-tools
       - name: Formatting
         run: |
           earthly --verbose --ci +format-python-check
@@ -84,7 +89,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        configuration_file: ["checker-index-tez.yaml", "checker-index-fa2.yaml", "checker-token-fa2.yaml"]
+        configuration_file:
+          [
+            'checker-index-tez.yaml',
+            'checker-index-fa2.yaml',
+            'checker-token-fa2.yaml',
+          ]
     steps:
       - uses: actions/checkout@v2
         with:

@@ -1,18 +1,31 @@
 [tool.poetry]
-name = "checker"
+name = "checker-tools"
 version = "0.1.0"
-description = ""
-authors = [""]
+description = "A collection of tools for building and interacting with Checker"
+authors = []
+
+packages = [
+    { include = "checker_tools" }
+]
+
+[tool.poetry.scripts]
+checker-build = 'checker_tools.builder.cli:cli'
+checker = 'checker_tools.client.cli:cli'
 
 [tool.poetry.dependencies]
 python = "^3.8"
-checker-client = { develop=true, path = "./client" }
-checker-e2e = { develop=true, path = "./e2e" }
-checker-builder = { develop=true, path = "./scripts/builder" }
 
-tqdm = "*"
+click = "^8.0.3"
+docker = "^5.0.3"
+eth-hash = "*"
+Jinja2 = "^3.0.1"
+marshmallow = "^3.12.1"
 matplotlib = "=3.3.4"
+portpicker = "^1.3.9"
 PyGithub = "^1.55"
+pytezos = "^3.3.2"
+PyYAML = "^5.4.1"
+tqdm = "*"
 
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"
@@ -22,3 +35,10 @@ pytest = "^6.2.5"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+
+[flake8]
+max-line-length = 99
+
+[tool.black]
+line-length = 99
+target-version = ["py38"]

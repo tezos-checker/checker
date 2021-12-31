@@ -239,7 +239,7 @@ Then, set your node address and port:
 ```
 
 In this example, `<desired-node-address>` could be replaced with
- `https://granadanet.api.tez.ie` and `desired-node-port` could be replaced with
+ `https://hangzhounet.api.tez.ie` and `desired-node-port` could be replaced with
  `443` (i.e., the standard https port).
 
 We provide a small wrapper to shorten the calls to docker:

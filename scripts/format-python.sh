@@ -3,6 +3,7 @@
 set -o xtrace
 set -o errexit
 
-FD="fdfind -E vendor/"
-
-$FD -e '.py' -x black
+# Sort imports
+isort . --extend-skip-glob vendor
+# Run formatting
+black . --extend-exclude vendor
