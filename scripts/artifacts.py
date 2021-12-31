@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
 import io
-import sys
-import json
-import yaml
-import zipfile
-import os.path
 import itertools as it
-from pprint import pprint
+import json
+import os.path
+import sys
+import zipfile
 from collections import namedtuple
+from pprint import pprint
 
 import click
-import requests
-from tqdm import tqdm
 import matplotlib.pyplot as plt
+import requests
+import yaml
+from tqdm import tqdm
 
 ENDPOINT_GRAPHQL = f"https://api.github.com/graphql"
 ENDPOINT_REST = f"https://api.github.com"

@@ -18,16 +18,15 @@ using git. If the script exits ungracefully you might need to clean up your
 working tree.
 """
 
+import argparse
 import os
 import random
 import re
 import subprocess
-import argparse
-from enum import Enum, auto
 from contextlib import contextmanager
+from enum import Enum, auto
 from pprint import pprint
-from typing import Optional, Tuple
-from typing import Callable
+from typing import Callable, Optional, Tuple
 
 # Custom type aliases can go here
 MutationFormatter = Callable[[str], str]

@@ -8,11 +8,12 @@ from datetime import datetime
 from random import shuffle
 from typing import Callable, Dict, Generator, Tuple
 
-from checker_tools.builder.config import load_input_config, CollateralType, TrackingType
-from checker_tools.client.checker import *
 from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 from pytezos.operation.group import OperationGroup
+
+from checker_tools.builder.config import CollateralType, TrackingType, load_input_config
+from checker_tools.client.checker import *
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "../")
 # Optional file at which to output gas costs in end to end tests

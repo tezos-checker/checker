@@ -2,12 +2,12 @@ import json
 import logging
 import math
 import os
-import sys
-import subprocess
-import tempfile
 import shutil
-import time
 import signal
+import subprocess
+import sys
+import tempfile
+import time
 from collections import namedtuple
 from decimal import Decimal
 from pathlib import Path
@@ -15,14 +15,18 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import docker
 import pytezos
-from pytezos.contract.interface import ContractInterface
 import requests
 from pytezos.client import PyTezosClient
+from pytezos.contract.interface import ContractInterface
 from pytezos.operation import MAX_OPERATIONS_TTL
 
-from checker_tools.builder.config import CheckerRepo, load_input_config, CheckerConfig, IssuedTokenConfig
+from checker_tools.builder.config import (
+    CheckerConfig,
+    CheckerRepo,
+    IssuedTokenConfig,
+    load_input_config,
+)
 from checker_tools.client.operations import inject
-
 
 # Time between blocks for sandbox container
 SANDBOX_TIME_BETWEEN_BLOCKS = "1,1"
