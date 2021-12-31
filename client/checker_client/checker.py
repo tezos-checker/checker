@@ -266,15 +266,14 @@ def start_local_sandbox(name: str, port: int):
         f"--base-port={port}",
         "--size=1",
         "--set-history-mode=N000:archive",
-        f"--time-between-blocks={SANDBOX_TIME_BETWEEN_BLOCKS}",
-        f"--minimal-block-delay=1",
+        f"--time-between-blocks=1,{SANDBOX_TIME_BETWEEN_BLOCKS}",
         f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
         f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
         "--no-daemons-for=alice",
         "--no-daemons-for=bob",
         "--until-level=200_000_000",
-        "--protocol-hash=PtGRANADsDU8R9daYKAgWnQYAJ64omN1o3KMGVCykShA97vQbvV",
-        "--protocol-kind=Granada",
+        "--protocol-hash=PtHangz2aRngywmSRGGvrcTyMbbdpWdpFKuS4uMWxg2RaH9i1qx",
+        "--protocol-kind=Hangzhou",
     ]
 
     handle = subprocess.Popen(args)

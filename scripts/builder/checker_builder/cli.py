@@ -1,3 +1,4 @@
+from pathlib import Path
 import shutil
 
 import click
@@ -58,11 +59,21 @@ def cli():
 
 
 @cli.command()
-def generate():
+@click.option(
+    "--out",
+    required=True,
+    type=click.Path(file_okay=False),
+    help="The directory to write the generated modules to. Created if it does not exist already.",
+)
+def generate(out: str):
     """Run code generation"""
     repo = config.CheckerRepo(".")
-    base_path = repo.src
     config_path = repo.default_config
+    out = Path(out)
+
+    if not out.exists():
+        out.mkdir()
+
     checker_config = config.load_checker_config(config_path)
     env = config.load_template_env()
 
@@ -94,7 +105,7 @@ def generate():
                 getattr(checker_config.tokens, token_type), token_field
             )
             config.generate_token_src_module(
-                base_path.joinpath(src),
+                out.joinpath(src),
                 template,
                 token_config,
             )
@@ -102,7 +113,7 @@ def generate():
     for src, template_name in GENERATE_SRCS.items():
         template = env.get_template(template_name)
         config.generate_src_module(
-            base_path.joinpath(src),
+            out.joinpath(src),
             template,
             checker_config,
         )

@@ -176,59 +176,20 @@ generate-code:
     COPY ./src/checker.mli ./src/checker.mli
     COPY ./checker.yaml checker.yaml
     # Generate entrypoints
-    RUN ./generate-entrypoints.rb ./src/checker.mli > ./src/checkerEntrypoints.ml
+    RUN mkdir generated_src && ./generate-entrypoints.rb ./src/checker.mli > ./generated_src/checkerEntrypoints.ml
     # Generate other src modules using newer code generation tool
-    RUN poetry run checker-build generate
+    RUN poetry run checker-build generate --out generated_src && cp ./src/_input_checker.yaml ./generated_src
     # Ensure that the generated modules obey formatting rules:
-    RUN opam exec -- ocp-indent -i ./src/*.ml*
-
-    # TODO: Find a way to drop all generated code in one directory
-    # so that we can extract it without having to explicitly name
-    # each file.
-    SAVE ARTIFACT ./src/checkerEntrypoints.ml AS LOCAL src/checkerEntrypoints.ml
-    SAVE ARTIFACT ./src/checkerEntrypoints.ml
-    SAVE ARTIFACT ./src/tok.ml AS LOCAL src/tok.ml
-    SAVE ARTIFACT ./src/tok.ml
-    SAVE ARTIFACT ./src/ctok.ml AS LOCAL src/ctok.ml
-    SAVE ARTIFACT ./src/ctok.ml
-    SAVE ARTIFACT ./src/kit.ml AS LOCAL src/kit.ml
-    SAVE ARTIFACT ./src/kit.ml
-    SAVE ARTIFACT ./src/lqt.ml AS LOCAL src/lqt.ml
-    SAVE ARTIFACT ./src/lqt.ml
-    SAVE ARTIFACT ./src/constants.ml AS LOCAL src/constants.ml
-    SAVE ARTIFACT ./src/constants.ml
-    SAVE ARTIFACT ./src/burrowOrigination.ml AS LOCAL src/burrowOrigination.ml
-    SAVE ARTIFACT ./src/burrowOrigination.ml
-    SAVE ARTIFACT ./src/driftDerivative.ml AS LOCAL src/driftDerivative.ml
-    SAVE ARTIFACT ./src/driftDerivative.ml
-    SAVE ARTIFACT ./src/price.ml AS LOCAL src/price.ml
-    SAVE ARTIFACT ./src/price.ml
-    SAVE ARTIFACT ./src/tokenMetadata.ml AS LOCAL src/tokenMetadata.ml
-    SAVE ARTIFACT ./src/tokenMetadata.ml
-    SAVE ARTIFACT ./src/getOracleEntrypoint.ml AS LOCAL src/getOracleEntrypoint.ml
-    SAVE ARTIFACT ./src/getOracleEntrypoint.ml
-    SAVE ARTIFACT ./src/targetCalculation.ml AS LOCAL src/targetCalculation.ml
-    SAVE ARTIFACT ./src/targetCalculation.ml
-    SAVE ARTIFACT ./src/_input_checker.yaml AS LOCAL src/_input_checker.yaml
-    SAVE ARTIFACT ./src/_input_checker.yaml
+    RUN opam exec -- ocp-indent -i ./generated_src/*.ml*
+    SAVE ARTIFACT ./generated_src/*
+    SAVE ARTIFACT ./generated_src/* AS LOCAL src/
     # Image for inline caching
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:generate-code
 
 build-ocaml:
     FROM +deps-ocaml
     COPY src/*.ml src/*.mli src/dune ./src/
-    COPY +generate-code/checkerEntrypoints.ml ./src/
-    COPY +generate-code/tok.ml ./src/
-    COPY +generate-code/ctok.ml ./src/
-    COPY +generate-code/kit.ml ./src/
-    COPY +generate-code/lqt.ml ./src/
-    COPY +generate-code/constants.ml ./src/
-    COPY +generate-code/burrowOrigination.ml ./src/
-    COPY +generate-code/driftDerivative.ml ./src/
-    COPY +generate-code/price.ml ./src/
-    COPY +generate-code/tokenMetadata.ml ./src/
-    COPY +generate-code/getOracleEntrypoint.ml ./src/
-    COPY +generate-code/targetCalculation.ml ./src/
+    COPY +generate-code/* ./src/
     COPY tests/*.ml tests/dune ./tests/
     COPY dune-project ./
     RUN opam exec -- dune build @install
@@ -240,18 +201,7 @@ build-ligo:
 
     COPY +ligo-binary/ligo /bin/ligo
     COPY ./src/*.ml ./src/*.mligo ./src/
-    COPY +generate-code/checkerEntrypoints.ml ./src/
-    COPY +generate-code/ctok.ml ./src/
-    COPY +generate-code/tok.ml ./src/
-    COPY +generate-code/kit.ml ./src/
-    COPY +generate-code/lqt.ml ./src/
-    COPY +generate-code/constants.ml ./src/
-    COPY +generate-code/burrowOrigination.ml ./src/
-    COPY +generate-code/driftDerivative.ml ./src/
-    COPY +generate-code/price.ml ./src/
-    COPY +generate-code/tokenMetadata.ml ./src/
-    COPY +generate-code/getOracleEntrypoint.ml ./src/
-    COPY +generate-code/targetCalculation.ml ./src/
+    COPY +generate-code/* ./src/
     COPY ./scripts/compile-ligo.rb ./scripts/
     COPY ./scripts/generate-ligo.sh ./scripts/
     COPY ./patches/e2e-tests-hack.patch .
@@ -478,70 +428,48 @@ flextesa:
     FROM ubuntu:20.04
 
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt update && apt install -y \
-        curl \
-        git \
-        bash \
-        opam \
-        pkg-config \
-        cargo \
-        autoconf \
-        zlib1g-dev \
-        libev-dev \
-        libffi-dev \
-        libusb-dev \
-        libhidapi-dev \
-        libgmp-dev
-    # TODO: Clear package cache here
-
-    # Install rust (required by tezos)
-    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /usr/bin/rustup-init && chmod +x /usr/bin/rustup-init
-    RUN rustup-init -y
+    RUN apt update && \
+        apt install -y \
+            curl \
+            git \
+            bash \
+            opam \
+            pkg-config \
+            cargo \
+            autoconf \
+            zlib1g-dev \
+            libev-dev \
+            libffi-dev \
+            libusb-dev \
+            libhidapi-dev \
+            libgmp-dev && \
+        rm -rf /var/lib/apt/lists/*
 
     # Checkout flextesa
     WORKDIR /root
-    RUN git clone https://gitlab.com/tezos/flextesa.git
+    ARG FLEXTESA_REV = "fc7a1672fce26bc74c092629260d437af7fa2945"
+    RUN git clone https://gitlab.com/tezos/flextesa.git && cd ./flextesa && git checkout "$FLEXTESA_REV"
     WORKDIR /root/flextesa
 
-    ARG FLEXTESA_REV = "95a2badf3b226b121f6281f98d86aaee1de5b6e8"
-
-    RUN git checkout "$FLEXTESA_REV"
-
     # Create opam switch and install flextesa deps
-    ARG OCAML_VERSION = "4.10.2"
+    ARG OCAML_VERSION = "4.13.1"
     ENV OPAM_SWITCH="flextesa"
     RUN opam init --disable-sandboxing --bare
     RUN opam switch create "$OPAM_SWITCH" "$OCAML_VERSION"
-    RUN opam switch import src/tezos-master.opam-switch
+    RUN opam install -y --deps-only \
+            ./tezai-base58-digest.opam ./tezai-tz1-crypto.opam \
+            ./flextesa.opam ./flextesa-cli.opam
 
     # Build flextesa
-    RUN eval $(opam env) && make vendors
     RUN eval $(opam env) && \
-        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
-        make build
+        make build && \
+        mkdir ./bin && \
+        cp -L ./flextesa ./bin
 
-    # Unfortunately unless we want write logic to get the top N protocol exes this will
-    # have to be updated whenever we bump the protocol in our end to end tests.
-    ARG PROTO_DIR = "010_PtGRANAD"
+    # Fetch the tezos exes which are required by flextesa at runtime
+    # (using the script provided with flextesa for this)
+    RUN src/scripts/get-octez-static-binaries.sh ./bin
 
-    # Build tezos exes which are required by flextesa at runtime
-    RUN eval $(opam env) && \
-        export CAML_LD_LIBRARY_PATH="/root/.opam/$OPAM_SWITCH/lib/tezos-rust-libs:$CAML_LD_LIBRARY_PATH" && \
-        cd local-vendor/tezos-master && \
-        dune build src/bin_node/main.exe && \
-        dune build src/bin_client/main_client.exe && \
-        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" && \
-        dune build "src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe"
-
-    # Create expected binary names
-    RUN cp "local-vendor/tezos-master/_build/default/src/bin_node/main.exe" ./tezos-node && \
-        cp "local-vendor/tezos-master/_build/default/src/bin_client/main_client.exe" ./tezos-client && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_baker/main_baker_$PROTO_DIR.exe" "./tezos-baker-$(echo $PROTO_DIR | tr '_' '-')" && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_endorser/main_endorser_$PROTO_DIR.exe" "./tezos-endorser-$(echo $PROTO_DIR | tr '_' '-')" && \
-        cp "local-vendor/tezos-master/_build/default/src/proto_$PROTO_DIR/bin_accuser/main_accuser_$PROTO_DIR.exe" "./tezos-accuser-$(echo $PROTO_DIR | tr '_' '-')"
-
-    SAVE ARTIFACT tezos-*
-    SAVE ARTIFACT flextesa
+    SAVE ARTIFACT ./bin/*
+    SAVE ARTIFACT ./bin AS LOCAL ./bin
     SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:flextesa
