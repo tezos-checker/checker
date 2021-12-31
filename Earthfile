@@ -67,13 +67,12 @@ deps-ocaml:
 # Note: nesting this below `deps-ocaml` since it is likely to change more often
 deps-full:
     FROM +deps-ocaml
-    COPY pyproject.toml poetry.lock ./
-    COPY ./e2e ./e2e
-    COPY ./client ./client
-    RUN mkdir ./scripts
-    COPY ./scripts/builder ./scripts/builder
-    # Ensure that venv gets created in a known directory
-    RUN poetry config virtualenvs.in-project true
+    # To improve caching, first install dependencies only
+    COPY pyproject.toml .
+    COPY poetry.lock .
+    RUN poetry config virtualenvs.in-project true && poetry install --no-root
+    # Then install the package itself
+    COPY ./checker_tools ./checker_tools
     RUN poetry install
     # Image for local use
     SAVE IMAGE checker/deps-full:latest
@@ -133,6 +132,7 @@ format-ocaml:
 format-python:
     FROM +deps-full
     COPY ./scripts ./scripts
+    COPY ./e2e ./e2e
     RUN poetry run ./scripts/format-python.sh
     SAVE ARTIFACT scripts AS LOCAL ./scripts
     SAVE ARTIFACT client AS LOCAL ./client
@@ -155,6 +155,7 @@ format-python-check:
     FROM +deps-full
     COPY .git .git
     COPY ./scripts ./scripts
+    COPY ./e2e ./e2e
     RUN poetry run ./scripts/format-python.sh && \
         diff="$(git status --porcelain | grep ' M ')" bash -c 'if [ -n "$diff" ]; then echo "Some files require formatting, run \"scripts/format-python.sh\":"; echo "$diff"; exit 1; fi'
 
@@ -274,6 +275,8 @@ test-e2e:
     # Also need checker config file
     RUN mkdir ./src
     COPY +generate-code/_input_checker.yaml ./src/_input_checker.yaml
+    # Finally, need the e2e tests themselves
+    COPY ./e2e ./e2e
 
     RUN WRITE_GAS_PROFILES=$PWD/gas_profiles.json \
         WRITE_GAS_COSTS=$PWD/gas-costs.json \
@@ -391,15 +394,17 @@ cli:
     RUN mkdir ./src
     COPY +generate-code/_input_checker.yaml ./src/_input_checker.yaml
 
-    RUN mkdir ./scripts
-    COPY ./scripts/builder ./scripts/builder
-    COPY ./client ./client
-    WORKDIR /home/checker/client
-    RUN poetry config virtualenvs.in-project true && poetry install
+    # To improve caching, first install dependencies only
+    COPY pyproject.toml .
+    COPY poetry.lock .
+    RUN poetry config virtualenvs.in-project true && poetry install --no-root
+    # Then install the package itself
+    COPY ./checker_tools ./checker_tools
+    RUN poetry install
 
     # Required dir for pytezos
     RUN mkdir /home/checker/.tezos-client
-    ENV PATH="/home/checker/client/.venv/bin:$PATH"
+    ENV PATH="/home/checker/.venv/bin:$PATH"
     WORKDIR /home/checker
     CMD checker
 
