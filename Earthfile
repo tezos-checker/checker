@@ -168,7 +168,7 @@ build:
 
 test:
     BUILD +test-ocaml
-    BUILD +test-builder
+    BUILD +test-tools
 
 generate-code:
     FROM +deps-full
@@ -254,9 +254,9 @@ test-coverage:
     SAVE ARTIFACT _coverage /_coverage
     SAVE ARTIFACT test-coverage.json
 
-test-builder:
+test-tools:
     FROM +deps-full
-    RUN poetry run pytest ./scripts/builder
+    RUN poetry run pytest checker_tools
 
 test-e2e:
     FROM +deps-full
