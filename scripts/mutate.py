@@ -108,8 +108,7 @@ for group in MUTATION_GROUPS:
         from_regex = re.compile(f"^.*(?:\.|\s|=)({from_mutation}).*$")
         to_mutations = {m for m in group if m != from_mutation}
         MUTATION_MAPPINGS += [
-            (MutationType.SWAP_FUNCTION, (from_mutation, from_regex, m))
-            for m in to_mutations
+            (MutationType.SWAP_FUNCTION, (from_mutation, from_regex, m)) for m in to_mutations
         ]
 
 ## Add mapping for integer (tez, nat, int) mutations
@@ -198,9 +197,7 @@ def mutate(
 
     if not matching_lines:
         return False, None, None, None
-    i_match, before, (start, stop) = matching_lines[
-        random.randint(0, len(matching_lines) - 1)
-    ]
+    i_match, before, (start, stop) = matching_lines[random.randint(0, len(matching_lines) - 1)]
     after = formatter(before)
     old_line = lines[i_match]
     new_line = old_line[:start] + after + old_line[stop:]
@@ -304,9 +301,7 @@ parser.add_argument(
     help="Command to execute for testing the change",
 )
 
-parser.add_argument(
-    "--num-mutations", type=int, help="Number of mutations to test", default=25
-)
+parser.add_argument("--num-mutations", type=int, help="Number of mutations to test", default=25)
 
 parser.add_argument("--seed", type=int, help="Random seed", default=42)
 

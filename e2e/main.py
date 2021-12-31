@@ -69,9 +69,9 @@ def assert_fa12_token_balance(
 
 def avl_storage(checker: ContractInterface, ptr: int) -> Dict:
     """Reads an item from checker's AVL backend using its pointer"""
-    return checker.storage["deployment_state"]["sealed"]["liquidation_auctions"][
-        "avl_storage"
-    ]["mem"][ptr]()
+    return checker.storage["deployment_state"]["sealed"]["liquidation_auctions"]["avl_storage"][
+        "mem"
+    ][ptr]()
 
 
 AvlPtr = int
@@ -281,9 +281,7 @@ def write_gas_costs(gas_costs: Dict[str, int], output_path: str) -> None:
     existing_data.update(gas_costs)
 
     gas_costs_sorted = OrderedDict()
-    for k, v in sorted(
-        existing_data.items(), key=lambda tup: int(tup[1]), reverse=True
-    ):
+    for k, v in sorted(existing_data.items(), key=lambda tup: int(tup[1]), reverse=True):
         gas_costs_sorted[k] = v
 
     with open(output_path, "w") as f:
@@ -328,9 +326,7 @@ class E2ETest(SandboxedTestCase):
                 ttl=MAX_OPERATIONS_TTL,
             )
         else:
-            raise ValueError(
-                f"Unexpected value for tracking_type: {self.config.tracking_type}"
-            )
+            raise ValueError(f"Unexpected value for tracking_type: {self.config.tracking_type}")
 
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
@@ -398,9 +394,7 @@ class E2ETest(SandboxedTestCase):
                 .sign(),
             )
 
-        def call_checker_endpoint(
-            name, param, amount=0, contract=checker, client=self.client
-        ):
+        def call_checker_endpoint(name, param, amount=0, contract=checker, client=self.client):
             print("Calling", name, "with", param)
             ret = call_endpoint(contract, name, param, amount, client=client)
             gas_costs[f"checker%{name}"] = int(ret["contents"][0]["gas_limit"])
@@ -568,13 +562,9 @@ class E2ETest(SandboxedTestCase):
         # Get some cfmm tokens and allow checker to spend it
         if self.config.collateral_type == CollateralType.TEZ:
             # Logic specific to ctez
-            call_endpoint(
-                ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
-            )
+            call_endpoint(ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000)
             call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
-            call_endpoint(
-                ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 800_000)
-            )
+            call_endpoint(ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 800_000))
 
         call_cfmm_token_fa2_endpoint("mint", 800_000)
         update_operators = [
@@ -597,18 +587,13 @@ class E2ETest(SandboxedTestCase):
         call_checker_endpoint("buy_kit", (10, 5, int(datetime.now().timestamp()) + 20))
         call_checker_endpoint("sell_kit", (5, 1, int(datetime.now().timestamp()) + 20))
 
-        call_checker_endpoint(
-            "remove_liquidity", (4, 1, 1, int(datetime.now().timestamp()) + 20)
-        )
+        call_checker_endpoint("remove_liquidity", (4, 1, 1, int(datetime.now().timestamp()) + 20))
 
         # ===============================================================================
         # Offline views
         # ===============================================================================
         # Kit
-        assert (
-            call_fa2_offline_view(checker, "getBalance", (account_alice, kit_token_id))
-            == 10
-        )
+        assert call_fa2_offline_view(checker, "getBalance", (account_alice, kit_token_id)) == 10
         # FIXME: Need to calculate an expected value for kit here (or somehow estimate it)
         # and add it as an assertion.
         call_fa2_offline_view(checker, "totalSupply", kit_token_id)
@@ -623,16 +608,11 @@ class E2ETest(SandboxedTestCase):
             == True
         )
         # Liquidity
-        print(
-            call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id))
-        )
+        print(call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id)))
         assert (
-            call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id))
-            == 399996
+            call_fa2_offline_view(checker, "getBalance", (account, liquidity_token_id)) == 399996
         )
-        assert (
-            call_fa2_offline_view(checker, "totalSupply", liquidity_token_id) == 399996
-        )
+        assert call_fa2_offline_view(checker, "totalSupply", liquidity_token_id) == 399996
         assert (
             call_fa2_offline_view(
                 checker,
@@ -688,9 +668,7 @@ class WTezTest(SandboxedTestCase):
             gas_costs[f"wtez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def single_fa2_transfer(
-            sender: str, recipient: str, amount: int, token_id=wtez_token_id
-        ):
+        def single_fa2_transfer(sender: str, recipient: str, amount: int, token_id=wtez_token_id):
             return [
                 {
                     "from_": sender,
@@ -771,16 +749,11 @@ class WTezTest(SandboxedTestCase):
         # ===============================================================================
         # Offline views
         # ===============================================================================
-        assert (
-            call_fa2_offline_view(wrapper, "getBalance", (account, wtez_token_id))
-            == 1_999_890
-        )
+        assert call_fa2_offline_view(wrapper, "getBalance", (account, wtez_token_id)) == 1_999_890
         assert call_fa2_offline_view(wrapper, "totalSupply", wtez_token_id) == 1_999_900
         assert call_fa2_offline_view(wrapper, "allTokens") == [wtez_token_id]
         assert (
-            call_fa2_offline_view(
-                wrapper, "isOperator", account_alice, account, wtez_token_id
-            )
+            call_fa2_offline_view(wrapper, "isOperator", account_alice, account, wtez_token_id)
             == True
         )
 
@@ -835,9 +808,7 @@ class WCtezTest(SandboxedTestCase):
             gas_costs[f"wctez%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
 
-        def single_fa2_transfer(
-            sender: str, recipient: str, amount: int, token_id=wctez_token_id
-        ):
+        def single_fa2_transfer(sender: str, recipient: str, amount: int, token_id=wctez_token_id):
             return [
                 {
                     "from_": sender,
@@ -858,9 +829,7 @@ class WCtezTest(SandboxedTestCase):
         # Wrapper-specific entrypoints
         # ===============================================================================
         # First have to get some ctez
-        call_endpoint(
-            ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000
-        )
+        call_endpoint(ctez["ctez"], "create", (1, None, {"any": None}), amount=1_000_000)
         call_endpoint(ctez["ctez"], "mint_or_burn", (1, 800_000))
         # Then approve wctez to spend the ctez
         call_endpoint(ctez["fa12_ctez"], "approve", (wctez.context.address, 800_000))
@@ -923,16 +892,11 @@ class WCtezTest(SandboxedTestCase):
         # ===============================================================================
         # Offline views
         # ===============================================================================
-        assert (
-            call_fa2_offline_view(wctez, "getBalance", (account, wctez_token_id))
-            == 798_990
-        )
+        assert call_fa2_offline_view(wctez, "getBalance", (account, wctez_token_id)) == 798_990
         assert call_fa2_offline_view(wctez, "totalSupply", wctez_token_id) == 799000
         assert call_fa2_offline_view(wctez, "allTokens") == [wctez_token_id]
         assert (
-            call_fa2_offline_view(
-                wctez, "isOperator", account_alice, account, wctez_token_id
-            )
+            call_fa2_offline_view(wctez, "isOperator", account_alice, account, wctez_token_id)
             == True
         )
 
@@ -975,9 +939,7 @@ class MockFA2Test(SandboxedTestCase):
             )
             return ret
 
-        def call_mockFA2_endpoint(
-            name, param, amount=0, client=self.client, mockFA2=mockFA2
-        ):
+        def call_mockFA2_endpoint(name, param, amount=0, client=self.client, mockFA2=mockFA2):
             ret = call_endpoint(mockFA2, name, param, amount, client)
             gas_costs[f"mockFA2%{name}"] = int(ret["contents"][0]["gas_limit"])
             return ret
@@ -999,9 +961,7 @@ class MockFA2Test(SandboxedTestCase):
             ]
 
         # Edge case: this call should succeed, according to the FA2 spec
-        call_mockFA2_endpoint(
-            "transfer", single_fa2_transfer(account, account_alice, 0)
-        )
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 0))
 
         # ===============================================================================
         # Contract-specific entrypoints
@@ -1017,9 +977,7 @@ class MockFA2Test(SandboxedTestCase):
         # FA2 interface
         # ===============================================================================
         # Transfer from the test account to alice's account
-        call_mockFA2_endpoint(
-            "transfer", single_fa2_transfer(account, account_alice, 90)
-        )
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account, account_alice, 90))
         assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_910)
         assert_fa2_token_balance(mockFA2, account_alice, mock_fa2_token_id, 90)
         # Add the main account as an operator on alice's account
@@ -1042,9 +1000,7 @@ class MockFA2Test(SandboxedTestCase):
         )
 
         # Send some tokens back to the main test account
-        call_mockFA2_endpoint(
-            "transfer", single_fa2_transfer(account_alice, account, 80)
-        )
+        call_mockFA2_endpoint("transfer", single_fa2_transfer(account_alice, account, 80))
         assert_fa2_token_balance(mockFA2, account, mock_fa2_token_id, 798_990)
 
         # Note: Using callback_view() here since we don't have a contract to use
@@ -1065,17 +1021,12 @@ class MockFA2Test(SandboxedTestCase):
         # Offline views
         # ===============================================================================
         assert (
-            call_fa2_offline_view(mockFA2, "getBalance", (account, mock_fa2_token_id))
-            == 798_990
+            call_fa2_offline_view(mockFA2, "getBalance", (account, mock_fa2_token_id)) == 798_990
         )
-        assert (
-            call_fa2_offline_view(mockFA2, "totalSupply", mock_fa2_token_id) == 799000
-        )
+        assert call_fa2_offline_view(mockFA2, "totalSupply", mock_fa2_token_id) == 799000
         assert call_fa2_offline_view(mockFA2, "allTokens") == [mock_fa2_token_id]
         assert (
-            call_fa2_offline_view(
-                mockFA2, "isOperator", account_alice, account, mock_fa2_token_id
-            )
+            call_fa2_offline_view(mockFA2, "isOperator", account_alice, account, mock_fa2_token_id)
             == True
         )
 
@@ -1107,9 +1058,7 @@ class LiquidationsStressTest(SandboxedTestCase):
                 ttl=MAX_OPERATIONS_TTL,
             )
         else:
-            raise ValueError(
-                f"Unexpected value for tracking_type: {self.config.tracking_type}"
-            )
+            raise ValueError(f"Unexpected value for tracking_type: {self.config.tracking_type}")
 
         # FIXME: Only to get the cfmm address...
         print("Deploying ctez contract.")
@@ -1166,9 +1115,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         print("Deployment finished.")
 
-        def call_endpoint(
-            contract, name, param, amount=0, profiler=general_gas_profiler
-        ):
+        def call_endpoint(contract, name, param, amount=0, profiler=general_gas_profiler):
             # Helper for calling contract endpoints with profiling
             print("Calling", contract.key.public_key_hash(), "/", name, "with", param)
             profile = profiler(
@@ -1186,9 +1133,7 @@ class LiquidationsStressTest(SandboxedTestCase):
 
         def call_bulk(bulks, *, batch_size, profiler=general_gas_profiler):
             # Helper for calling operations in batches
-            batches = [
-                bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)
-            ]
+            batches = [bulks[i : i + batch_size] for i in range(0, len(bulks), batch_size)]
             for batch_no, batch in enumerate(batches, 1):
                 print(
                     "Sending",
@@ -1231,13 +1176,9 @@ class LiquidationsStressTest(SandboxedTestCase):
         # Get some cfmm tokens and allow checker to spend it
         if self.config.collateral_type == CollateralType.TEZ:
             # Logic specific to ctez
-            call_endpoint(
-                ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000
-            )
+            call_endpoint(ctez["ctez"], "create", (1, None, {"any": None}), amount=2_000_000)
             call_endpoint(ctez["ctez"], "mint_or_burn", (1, 100_000))
-            call_endpoint(
-                ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 100_000)
-            )
+            call_endpoint(ctez["fa12_ctez"], "approve", (cfmm_token_fa2.context.address, 100_000))
 
         call_endpoint(cfmm_token_fa2, "mint", 100_000)
         update_operators = [
@@ -1264,10 +1205,7 @@ class LiquidationsStressTest(SandboxedTestCase):
             checker, 100_000_000 * 1000
         )  # 1000 = number of burrows
         call_bulk(
-            [
-                checker.create_burrow((burrow_id, None, 100_000_000))
-                for burrow_id in burrows
-            ],
+            [checker.create_burrow((burrow_id, None, 100_000_000)) for burrow_id in burrows],
             batch_size=115,
         )
         # Mint as much as possible from the burrows. All should be identical, so we just query the
@@ -1295,9 +1233,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         elif self.config.tracking_type == TrackingType.INDEX:
             call_endpoint(oracle, "update", (10_000_000, 1_000_000))
         else:
-            raise ValueError(
-                f"Unexpected value for tracking_type: {self.config.tracking_type}"
-            )
+            raise ValueError(f"Unexpected value for tracking_type: {self.config.tracking_type}")
 
         # Oracle updates lag one touch on checker
         call_endpoint(checker, "touch", None)
@@ -1310,9 +1246,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # This should use the push_back method of the AVL tree.
         call_bulk(
             [
-                checker.mark_for_liquidation(
-                    (self.client.key.public_key_hash(), burrow_no)
-                )
+                checker.mark_for_liquidation((self.client.key.public_key_hash(), burrow_no))
                 for burrow_no in burrows
             ],
             batch_size=100,
@@ -1385,9 +1319,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         # than the true current state.
         # https://github.com/baking-bad/pytezos/issues/271
         checker = self.client.contract(checker.address)
-        auction_details = (
-            checker.metadata.currentLiquidationAuctionDetails().storage_view()
-        )
+        auction_details = checker.metadata.currentLiquidationAuctionDetails().storage_view()
         auction_id, minimum_bid = (
             auction_details["auction_id"],
             auction_details["minimum_bid"],
@@ -1396,9 +1328,7 @@ class LiquidationsStressTest(SandboxedTestCase):
         current_auctions_ptr = checker.storage["deployment_state"]["sealed"][
             "liquidation_auctions"
         ]["current_auction"]()["contents"]
-        call_endpoint(
-            checker, "liquidation_auction_place_bid", (auction_id, minimum_bid)
-        )
+        call_endpoint(checker, "liquidation_auction_place_bid", (auction_id, minimum_bid))
 
         # Once max(max_bid_interval_in_blocks, max_bid_interval_in_seconds) has elapsed, the liquidation auction we
         # bid on should be complete. Here we go off of level since the patched version of Checker we expect to use

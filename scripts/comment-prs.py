@@ -20,9 +20,7 @@ def ci_passed(commit_sha: str, repo: Repository) -> bool:
     for check in CI_CHECK_NAMES:
         check_runs += [r for r in commit.get_check_runs(check_name=check)]
     if not check_runs:
-        logging.info(
-            f"Commit {commit_sha} has no check runs. Marking CI as not passing."
-        )
+        logging.info(f"Commit {commit_sha} has no check runs. Marking CI as not passing.")
         return False
     return all(run.conclusion == "success" for run in check_runs)
 
@@ -64,9 +62,7 @@ def main():
         res = subprocess.run(cmd, capture_output=True)
         if res.returncode != 0:
             logging.error(res.stderr)
-            logging.info(
-                f"Call to artifact script failed for PR #{pr.number}. Skipping."
-            )
+            logging.info(f"Call to artifact script failed for PR #{pr.number}. Skipping.")
             continue
 
         # Create comment
