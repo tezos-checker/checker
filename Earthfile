@@ -135,7 +135,7 @@ format-python:
     COPY ./e2e ./e2e
     RUN poetry run ./scripts/format-python.sh
     SAVE ARTIFACT scripts AS LOCAL ./scripts
-    SAVE ARTIFACT client AS LOCAL ./client
+    SAVE ARTIFACT checker_tools AS LOCAL ./checker_tools
     SAVE ARTIFACT e2e AS LOCAL ./e2e
 
 format-check:
