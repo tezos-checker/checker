@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "A collection of tools for building and interacting with Checker"
 authors = []
 
+packages = [
+    { include = "checker_tools" }
+]
+
 [tool.poetry.scripts]
 checker-build = 'checker_tools.builder.cli:cli'
 checker = 'checker_tools.client.cli:cli'
