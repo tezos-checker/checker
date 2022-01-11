@@ -51,6 +51,12 @@ TARGET_CALCULATION_TEMPLATES = {
     config.TrackingType.TOKEN: "tokenTargetCalculation.ml.jinja",
 }
 
+CFMM_SRC = "cfmm.ml"
+CFMM_TEMPLATES = {
+    config.TrackingType.INDEX: "indexCfmm.ml.jinja",
+    config.TrackingType.TOKEN: "tokenCfmm.ml.jinja",
+}
+
 
 @click.group()
 def cli():
@@ -92,6 +98,9 @@ def generate(out: str):
     GENERATE_SRCS[TARGET_CALCULATION_SRC] = TARGET_CALCULATION_TEMPLATES[
         checker_config.tracking_type
     ]
+
+    # Select the cfmm module at runtime based on config
+    GENERATE_SRCS[CFMM_SRC] = CFMM_TEMPLATES[checker_config.tracking_type]
 
     # Note: separating out generation of tokens vs general src modules since
     # the token modules need some more specific info and I would prefer to
