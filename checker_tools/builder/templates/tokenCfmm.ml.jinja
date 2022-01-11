@@ -2,6 +2,53 @@
 
 (* TOKEN *)
 
+(* Functions for the isoutility curve (x + y)^8 - (x - y)^8 = k *)
+
+(* TODO: Add more primitive operations to avoid calls to Ligo.int. *)
+
+let util (x: Ligo.nat) (y: Ligo.nat) : (Ligo.nat * Ligo.nat) =
+  let plus_1 = Ligo.add_nat_nat x y in (* (x + y)^1 *)
+  let plus_2 = Ligo.mul_nat_nat plus_1 plus_1 in (* (x + y)^2 *)
+  let plus_4 = Ligo.mul_nat_nat plus_2 plus_2 in (* (x + y)^4 *)
+  let plus_8 = Ligo.mul_nat_nat plus_4 plus_4 in (* (x + y)^8 *)
+  let plus_7 = Ligo.mul_nat_nat (Ligo.mul_nat_nat plus_4 plus_2) plus_1 in (* (x + y)^7 *)
+  let minus_1 = Ligo.sub_nat_nat x y in (* (x - y)^1 *)
+  let minus_2 = Ligo.mul_int_int minus_1 minus_1 in (* (x - y)^2 *)
+  let minus_4 = Ligo.mul_int_int minus_2 minus_2 in (* (x - y)^4 *)
+  let minus_8 = Ligo.mul_int_int minus_4 minus_4 in (* (x - y)^8 *)
+  let minus_7 = Ligo.mul_int_int (Ligo.mul_int_int minus_4 minus_2) minus_1 in (* (x - y)^7 *)
+  (* minus_7 + plus_7 should always be positive *)
+  (* since x > 0 and y > 0, x + y > x - y and therefore (x + y)^7 > (x - y)^7 and (x + y)^7 - (x - y)^7 > 0 *)
+  ( Ligo.abs (Ligo.sub_int_int (Ligo.int plus_8) minus_8)
+  , Ligo.mul_nat_nat
+      (Ligo.nat_from_literal "8n")
+      (Ligo.abs (Ligo.add_int_int minus_7 (Ligo.int plus_7)))
+  )
+
+(* TODO: I don't like having such short names for the fields; it's easy to overlap them. *)
+type newton_param =
+  { x : Ligo.nat;
+    y : Ligo.nat;
+    dx : Ligo.nat;
+    dy : Ligo.nat;
+    u : Ligo.nat;
+    n : Ligo.int;
+  }
+
+let rec newton (p: newton_param) : Ligo.nat =
+  if Ligo.eq_int_int p.n (Ligo.int_from_literal "0") then
+    p.dy
+  else
+    let new_u, new_du_dy = util (Ligo.add_nat_nat p.x p.dx) (Ligo.abs (Ligo.sub_nat_nat p.y p.dy)) in
+    (* new_u - p.u > 0 because dy remains an underestimate *)
+    let dy = Ligo.add_nat_nat p.dy (Ligo.abs (Ligo.div_int_int (Ligo.sub_nat_nat new_u p.u) (Ligo.int new_du_dy))) in
+    (* dy is an underestimate because we start at 0 and the utility curve is convex *)
+    newton { p with dy = dy; n = Ligo.sub_int_int p.n (Ligo.int_from_literal "1"); }
+
+let newton_dx_to_dy (x, y, dx, rounds : Ligo.nat * Ligo.nat * Ligo.nat * Ligo.int) : Ligo.nat =
+  let u, _ = util x y in
+  newton {x = x; y = y; dx = dx; dy = Ligo.nat_from_literal "0n"; u = u; n = rounds; }
+
 (* The general concept of cfmm is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
  * the product a * b constant. So if someone wants to sell a quantity da of
