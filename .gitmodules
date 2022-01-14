@@ -1,4 +1,4 @@
 [submodule "vendor/ctez"]
 	path = vendor/ctez
 	url = https://github.com/tezos-checker/ctez
-	branch = next
+	branch = next_next
