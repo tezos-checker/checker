@@ -49,6 +49,8 @@ let newton_dx_to_dy (x, y, dx, rounds : Ligo.nat * Ligo.nat * Ligo.nat * Ligo.in
   let u, _ = util x y in
   newton {x = x; y = y; dx = dx; dy = Ligo.nat_from_literal "0n"; u = u; n = rounds; }
 
+let[@inline] default_rounds = Ligo.int_from_literal "4"
+
 (* The general concept of cfmm is that you have quantity a of an asset A
  * and b of an asset B and you process buy and sell requests by maintaining
  * the product a * b constant. So if someone wants to sell a quantity da of
