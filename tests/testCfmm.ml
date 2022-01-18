@@ -11,6 +11,10 @@ open Common
 
 let property_test_count = 100
 
+(* NOTE: Currently set to (-1) which is in general invalid as a target, to prevent accidental passes. *)
+let dummy_target : FixedPoint.fixedpoint =
+  FixedPoint.(fixedpoint_sub fixedpoint_zero fixedpoint_one)
+
 (* Compute the current price of kit in ctok, as estimated using the ratio of ctok and kit
  * currently in the cfmm contract. *)
 let cfmm_kit_in_ctok (u: cfmm) =
@@ -122,7 +126,7 @@ let test_buy_kit_increases_price =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   gt_ratio_ratio (cfmm_kit_in_ctok new_cfmm) (cfmm_kit_in_ctok cfmm)
 
 (* If successful, cfmm_buy_kit always increases the product
@@ -135,7 +139,7 @@ let test_buy_kit_increases_product =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   gt_ratio_ratio (cfmm_kit_times_ctok new_cfmm) (cfmm_kit_times_ctok cfmm)
 
 (* Successful or not, cfmm_buy_kit should never affect the number of
@@ -148,7 +152,7 @@ let test_buy_kit_does_not_affect_liquidity =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_buy_kit respects min_kit_expected. *)
@@ -160,7 +164,7 @@ let test_buy_kit_respects_min_kit_expected =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let bought_kit, _new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   bought_kit >= min_kit_expected
 
 (* If successful, cfmm_buy_kit doesn't lose kit.
@@ -174,7 +178,7 @@ let test_buy_kit_preserves_kit =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let bought_kit, new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   cfmm.kit = kit_add new_cfmm.kit bought_kit
 
 (* If successful, cfmm_buy_kit doesn't lose ctok. *)
@@ -186,7 +190,7 @@ let test_buy_kit_preserves_ctok =
     make_inputs_for_buy_kit_to_succeed
   @@ fun (cfmm, amount, min_kit_expected, deadline) ->
   let _bought_kit, new_cfmm =
-    cfmm_buy_kit cfmm amount min_kit_expected deadline in
+    cfmm_buy_kit cfmm dummy_target amount min_kit_expected deadline in
   ctok_add cfmm.ctok amount = new_cfmm.ctok
 
 (* ************************************************************************* *)
@@ -221,6 +225,7 @@ let buy_kit_unit_test =
     let returned_kit, updated_cfmm =
       cfmm_buy_kit
         cfmm
+        dummy_target
         (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
@@ -233,6 +238,7 @@ let buy_kit_unit_test =
     let returned_kit, updated_cfmm =
       cfmm_buy_kit
         cfmm
+        dummy_target
         (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
         (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
         (Ligo.timestamp_from_seconds_literal 2) in
@@ -247,6 +253,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
+           dummy_target
            (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
            (kit_of_denomination (Ligo.nat_from_literal "453_637n"))
            (Ligo.timestamp_from_seconds_literal 2)
@@ -260,6 +267,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
+           dummy_target
            (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
            (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
            (Ligo.timestamp_from_seconds_literal 1)
@@ -273,6 +281,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
+           dummy_target
            ctok_zero
            (kit_of_denomination (Ligo.nat_from_literal "1n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -286,6 +295,7 @@ let buy_kit_unit_test =
       (fun () ->
          cfmm_buy_kit
            cfmm
+           dummy_target
            (ctok_of_denomination (Ligo.nat_from_literal "1n"))
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -305,7 +315,7 @@ let test_sell_kit_decreases_price =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let _bought_ctok, new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   lt_ratio_ratio (cfmm_kit_in_ctok new_cfmm) (cfmm_kit_in_ctok cfmm)
 
 (* If successful, cfmm_sell_kit always increases the product
@@ -318,7 +328,7 @@ let test_sell_kit_increases_product =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let _bought_ctok, new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   gt_ratio_ratio (cfmm_kit_times_ctok new_cfmm) (cfmm_kit_times_ctok cfmm)
 
 (* Successful or not, cfmm_sell_kit should never affect the number of
@@ -331,7 +341,7 @@ let test_sell_kit_does_not_affect_liquidity =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let _bought_ctok, new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   cfmm_liquidity_tokens_extant new_cfmm = cfmm_liquidity_tokens_extant cfmm
 
 (* If successful, cfmm_sell_kit respects min_ctok_expected. *)
@@ -343,7 +353,7 @@ let test_sell_kit_respects_min_ctok_expected =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let bought_ctok, _new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   bought_ctok >= min_ctok_expected
 
 (* If successful, selling kit preserves kit. *)
@@ -355,7 +365,7 @@ let test_sell_kit_preserves_kit =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let _bought_ctok, new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   new_cfmm.kit = kit_add cfmm.kit kit_amount
 
 (* If successful, selling kit preserves ctok. *)
@@ -367,7 +377,7 @@ let test_sell_kit_preserves_ctok =
     make_inputs_for_sell_kit_to_succeed
   @@ fun (cfmm, kit_amount, min_ctok_expected, deadline) ->
   let bought_ctok, new_cfmm =
-    cfmm_sell_kit cfmm kit_amount min_ctok_expected deadline in
+    cfmm_sell_kit cfmm dummy_target kit_amount min_ctok_expected deadline in
   ctok_add new_cfmm.ctok bought_ctok = cfmm.ctok
 
 (* ************************************************************************* *)
@@ -401,6 +411,7 @@ let sell_kit_unit_test =
     let returned_ctok, updated_cfmm =
       cfmm_sell_kit
         cfmm
+        dummy_target
         kit_one
         (ctok_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
@@ -413,6 +424,7 @@ let sell_kit_unit_test =
     let returned_ctok, updated_cfmm =
       cfmm_sell_kit
         cfmm
+        dummy_target
         kit_one
         (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
         (Ligo.timestamp_from_seconds_literal 2) in
@@ -427,6 +439,7 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
+           dummy_target
            kit_one
            (ctok_of_denomination (Ligo.nat_from_literal "1_663_334n"))
            (Ligo.timestamp_from_seconds_literal 2)
@@ -440,6 +453,7 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
+           dummy_target
            kit_one
            (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 1)
@@ -453,6 +467,7 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
+           dummy_target
            (kit_of_denomination (Ligo.nat_from_literal "0n"))
            (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 10)
@@ -466,6 +481,7 @@ let sell_kit_unit_test =
       (fun () ->
          cfmm_sell_kit
            cfmm
+           dummy_target
            kit_one
            ctok_zero
            (Ligo.timestamp_from_seconds_literal 10)
