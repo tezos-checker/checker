@@ -76,6 +76,7 @@ let[@inline] default_rounds = Ligo.int_from_literal "4"
 open Ctok
 open Kit
 open Lqt
+open FixedPoint
 open Constants
 open CfmmTypes
 open Error
@@ -123,6 +124,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
 (** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
 let cfmm_view_min_kit_expected_buy_kit
     (cfmm: cfmm)
+    (_target: fixedpoint)
     (ctok_amount: ctok)
   : (kit (* min_kit_expected *) * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
@@ -163,6 +165,7 @@ let cfmm_view_min_kit_expected_buy_kit
     desired amount of kit cannot be bought or if the deadline has passed. *)
 let cfmm_buy_kit
     (cfmm: cfmm)
+    (target: fixedpoint)
     (ctok_amount: ctok)
     (min_kit_expected: kit)
     (deadline: Ligo.timestamp)
@@ -174,7 +177,7 @@ let cfmm_buy_kit
   else if (eq_kit_kit min_kit_expected kit_zero) then
     (Ligo.failwith error_BuyKitTooLowExpectedKit : (kit * cfmm))
   else
-    let (bought_kit, cfmm) = cfmm_view_min_kit_expected_buy_kit cfmm ctok_amount in
+    let (bought_kit, cfmm) = cfmm_view_min_kit_expected_buy_kit cfmm target ctok_amount in
     if lt_kit_kit bought_kit min_kit_expected then
       (Ligo.failwith error_BuyKitPriceFailure : (kit * cfmm))
     else
@@ -183,6 +186,7 @@ let cfmm_buy_kit
 (** Compute the maximum [min_ctok_expected] for [cfmm_sell_kit] to succeed. *)
 let cfmm_view_min_ctok_expected_cfmm_sell_kit
     (cfmm: cfmm)
+    (_target: fixedpoint)
     (kit_amount: kit)
   : (ctok * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
@@ -224,6 +228,7 @@ let cfmm_view_min_ctok_expected_cfmm_sell_kit
     cannot be bought or if the deadline has passed. *)
 let cfmm_sell_kit
     (cfmm: cfmm)
+    (target: fixedpoint)
     (kit_amount: kit)
     (min_ctok_expected: ctok)
     (deadline: Ligo.timestamp)
@@ -235,7 +240,7 @@ let cfmm_sell_kit
   else if (eq_ctok_ctok min_ctok_expected ctok_zero) then
     (Ligo.failwith error_SellKitTooLowExpectedCtok : (ctok * cfmm))
   else
-    let (bought_ctok, cfmm) = cfmm_view_min_ctok_expected_cfmm_sell_kit cfmm kit_amount in
+    let (bought_ctok, cfmm) = cfmm_view_min_ctok_expected_cfmm_sell_kit cfmm target kit_amount in
     if lt_ctok_ctok bought_ctok min_ctok_expected then
       (Ligo.failwith error_SellKitPriceFailure : (ctok * cfmm))
     else
