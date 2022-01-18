@@ -4,7 +4,13 @@
 
 (* Functions for the isoutility curve (x + y)^8 - (x - y)^8 = k *)
 
+(* TODO: We should probably move the functions that are
+ * tracking_type-independent into a separate OCaml module that is not generated
+ * at build time. *)
+
 (* TODO: Add more primitive operations to avoid calls to Ligo.int. *)
+
+(* TODO: Double-check the claims in the comments and check whether they are applicable to Checker. *)
 
 let util (x: Ligo.nat) (y: Ligo.nat) : (Ligo.nat * Ligo.nat) =
   let plus_1 = Ligo.add_nat_nat x y in (* (x + y)^1 *)
@@ -49,6 +55,7 @@ let newton_dx_to_dy (x, y, dx, rounds : Ligo.nat * Ligo.nat * Ligo.nat * Ligo.in
   let u, _ = util x y in
   newton {x = x; y = y; dx = dx; dy = Ligo.nat_from_literal "0n"; u = u; n = rounds; }
 
+(* TODO: I'd also consider unrolling the recursion here, if the number of rounds is gonna be hard-coded. *)
 let[@inline] default_rounds = Ligo.int_from_literal "4"
 
 (* The general concept of cfmm is that you have quantity a of an asset A
