@@ -110,11 +110,24 @@ let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint
   let y = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
   let dx = Ligo.mul_nat_nat (kit_to_denomination_nat dkit) (Ligo.abs fixedpoint_scaling_factor) in
   let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
-  let dctok_approx = Ligo.div_nat_nat dy_approx (Ligo.abs (fixedpoint_to_raw target)) in
-  if Ligo.leq_nat_nat (ctok_to_denomination_nat ctok) dctok_approx then
+  let dctok_approx = ctok_of_denomination (Ligo.div_nat_nat dy_approx (Ligo.abs (fixedpoint_to_raw target))) in
+  if leq_ctok_ctok ctok dctok_approx then
     (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : ctok)
   else
-    ctok_of_denomination dctok_approx
+    dctok_approx
+
+(* A function that outputs dx (diff_tez) given target, x, y, and dy *)
+let trade_dctok_for_dkit (kit: kit) (ctok: ctok) (dctok: ctok) (target: fixedpoint) : kit =
+  (* TODO: validate all concerns for this function too *)
+  let x = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
+  let y = Ligo.mul_nat_nat (kit_to_denomination_nat kit) (Ligo.abs fixedpoint_scaling_factor) in
+  let dx = Ligo.mul_nat_nat (ctok_to_denomination_nat dctok) (Ligo.abs (fixedpoint_to_raw target)) in
+  let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
+  let dkit_approx = kit_of_denomination (Ligo.div_nat_nat dy_approx (Ligo.abs fixedpoint_scaling_factor)) in
+  if leq_kit_kit kit dkit_approx then
+    (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : kit) (* should never happen *) (* TODO: verify this? *)
+  else
+    dkit_approx
 
 (* ************************************************************************ *)
 
