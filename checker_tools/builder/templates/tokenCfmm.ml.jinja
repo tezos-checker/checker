@@ -2,6 +2,39 @@
 
 (* TOKEN *)
 
+(* The general concept of cfmm is that you have quantity a of an asset A
+ * and b of an asset B and you process buy and sell requests by maintaining
+ * the product a * b constant. So if someone wants to sell a quantity da of
+ * asset A to the contract, the balance would become (a + da) so you can
+ * give that person a quantity db of asset B in exchange such that (a +
+ * da)(b - db) = a * b. Solving for db gives db  = da * b / (a + da). We
+ * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
+ * represents the  "price" before the order and a / (a + da)  represents
+ * the "slippage". Indeed, a property of cfmm is that with arbitrageurs
+ * around, the ratio (a / b) gives you the market price of A in terms of B.
+ *
+ * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
+ * something like db = da * b / (a + da) * (1 - 0.2/100) (note that this
+ * formula is a first-order approximation in the sense that two orders of size
+ * da / 2 will give you a better price than one order of size da, but the
+ * difference is far smaller than typical fees or any amount we care about.
+*)
+(* Check out dexter for technical details:
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/ligo/dexter.ligo
+     https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
+*)
+
+open Ctok
+open Kit
+open Lqt
+open FixedPoint
+open Constants
+open CfmmTypes
+open Error
+open Common
+
+(* ************************************************************************ *)
+
 (* Functions for the isoutility curve (x + y)^8 - (x - y)^8 = k *)
 
 (* TODO: We should probably move the functions that are
@@ -58,36 +91,32 @@ let newton_dx_to_dy (x, y, dx, rounds : Ligo.nat * Ligo.nat * Ligo.nat * Ligo.in
 (* TODO: I'd also consider unrolling the recursion here, if the number of rounds is gonna be hard-coded. *)
 let[@inline] default_rounds = Ligo.int_from_literal "4"
 
-(* The general concept of cfmm is that you have quantity a of an asset A
- * and b of an asset B and you process buy and sell requests by maintaining
- * the product a * b constant. So if someone wants to sell a quantity da of
- * asset A to the contract, the balance would become (a + da) so you can
- * give that person a quantity db of asset B in exchange such that (a +
- * da)(b - db) = a * b. Solving for db gives db  = da * b / (a + da). We
- * can rewrite this as db = da * (b / a) * (a / (a + da)) where (b / a)
- * represents the  "price" before the order and a / (a + da)  represents
- * the "slippage". Indeed, a property of cfmm is that with arbitrageurs
- * around, the ratio (a / b) gives you the market price of A in terms of B.
- *
- * On top of that, we can add some fees of 0.2 cNp. So the equation becomes
- * something like db = da * b / (a + da) * (1 - 0.2/100) (note that this
- * formula is a first-order approximation in the sense that two orders of size
- * da / 2 will give you a better price than one order of size da, but the
- * difference is far smaller than typical fees or any amount we care about.
-*)
-(* Check out dexter for technical details:
-     https://gitlab.com/camlcase-dev/dexter/-/blob/master/ligo/dexter.ligo
-     https://gitlab.com/camlcase-dev/dexter/-/blob/master/docs/dexter-informal-specification.md
-*)
+(* TODO: In the ctez implementation I don't see how the two quantities are
+treated equally. Unless they have the same scaling factor, perhaps? *)
 
-open Ctok
-open Kit
-open Lqt
-open FixedPoint
-open Constants
-open CfmmTypes
-open Error
-open Common
+(* A function that outputs dy (diff_cash) given x, y, and dx *)
+let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint) : ctok =
+  (* target is expressed in ctok_in_kit (kit/ctok) so we get kit if we multiply it with ctok. *)
+  (* TODO: Remove the Ligo.abs calls; expose the nat scaling factor instead. *)
+  (* TODO: What about scaling factors?? *)
+  (* TODO: What about units of measure?? *)
+  (*
+       _kit    : kit  / kit_sf    (kit)
+       _ctok   : ctok / ctok_sf   (ctok)
+       _dkit   : kit  / kit_sf    (kit)
+       _target : target / fp_sf   (kit/ctok)
+  *)
+  let x = Ligo.mul_nat_nat (kit_to_denomination_nat kit) (Ligo.abs fixedpoint_scaling_factor) in
+  let y = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
+  let dx = Ligo.mul_nat_nat (kit_to_denomination_nat dkit) (Ligo.abs fixedpoint_scaling_factor) in
+  let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
+  let dctok_approx = Ligo.div_nat_nat dy_approx (Ligo.abs (fixedpoint_to_raw target)) in
+  if Ligo.leq_nat_nat (ctok_to_denomination_nat ctok) dctok_approx then
+    (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : ctok)
+  else
+    ctok_of_denomination dctok_approx
+
+(* ************************************************************************ *)
 
 (* When the cfmm is uninitialized, we should not be able to query prices
  * and/or do other things. George: I assume that the only thing we should allow
