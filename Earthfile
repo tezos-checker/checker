@@ -421,6 +421,7 @@ cli:
 ligo-binary:
     FROM ghcr.io/tezos-checker/ligo:0.22.0-checker
     SAVE ARTIFACT /root/ligo ligo
+    SAVE ARTIFACT /root/ligo AS LOCAL ./bin/ligo
 
 zcash-params:
     FROM alpine:3.14
@@ -452,7 +453,7 @@ flextesa:
 
     # Checkout flextesa
     WORKDIR /root
-    ARG FLEXTESA_REV = "fc7a1672fce26bc74c092629260d437af7fa2945"
+    ARG FLEXTESA_REV = "0d2c0c95e1d745416b191b399b760c98b440e0fd"
     RUN git clone https://gitlab.com/tezos/flextesa.git && cd ./flextesa && git checkout "$FLEXTESA_REV"
     WORKDIR /root/flextesa
 
@@ -472,8 +473,18 @@ flextesa:
         cp -L ./flextesa ./bin
 
     # Fetch the tezos exes which are required by flextesa at runtime
-    # (using the script provided with flextesa for this)
-    RUN src/scripts/get-octez-static-binaries.sh ./bin
+    ARG TARGETARCH
+    ARG OCTEZ_VERSION = "11.1.0"
+    IF [ "$TARGETARCH" = "amd64" ]
+        ARG ARCH_PREFIX = "x86_64"
+    ELSE
+        ARG ARCH_PREFIX = $TARGETARCH
+    END
+
+    RUN echo "Downloading tezos binaries from: https://gitlab.com/api/v4/projects/3836952/packages/generic/tezos/$OCTEZ_VERSION/$ARCH_PREFIX-tezos-binaries.tar.gz"
+    RUN curl -s https://gitlab.com/api/v4/projects/3836952/packages/generic/tezos/$OCTEZ_VERSION/$ARCH_PREFIX-tezos-binaries.tar.gz | tar xvz -C . && \
+        cp ./tezos-binaries/* ./bin
+
 
     SAVE ARTIFACT ./bin/*
     SAVE ARTIFACT ./bin AS LOCAL ./bin
