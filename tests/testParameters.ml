@@ -332,7 +332,7 @@ let test_protected_index_pace =
       fixedpoint_of_ratio_floor
         (Common.make_ratio
            (Ligo.mul_int_int (Ligo.int_from_literal "1000") (fixedpoint_to_raw params.index))
-           fixedpoint_scaling_factor
+           fixedpoint_scaling_factor_int
         ) in
     (* One hour, upward move, touched in every block *)
     (* Initial : 1.000000 *)
@@ -356,7 +356,7 @@ let test_protected_index_pace =
       fixedpoint_of_ratio_floor
         (Common.make_ratio
            (fixedpoint_to_raw params.index)
-           (Ligo.mul_int_int (Ligo.int_from_literal "1000") fixedpoint_scaling_factor)
+           (Ligo.mul_int_int (Ligo.int_from_literal "1000") fixedpoint_scaling_factor_int)
         ) in
     (* One hour, downward move, touched in every block *)
     (* Initial : 1.000000 *)

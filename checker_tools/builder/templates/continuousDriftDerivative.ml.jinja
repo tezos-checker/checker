@@ -45,11 +45,11 @@ let[@inline] compute_drift_derivative (target : fixedpoint) : fixedpoint =
     d'(x) = min (+A, +A * ((p_t - sf)^2 * den_c^2) / (sf^2 * num_c^2))   , if 1 < p_t < +infinity
   *)
   let numerator =
-    let sub_target_sf = Ligo.sub_int_int target fixedpoint_scaling_factor in
+    let sub_target_sf = Ligo.sub_int_int target fixedpoint_scaling_factor_int in
     let mul_sub_target_sf_den_c = Ligo.mul_int_int sub_target_sf den_c in
     Ligo.mul_int_int amplitude (Ligo.mul_int_int mul_sub_target_sf_den_c mul_sub_target_sf_den_c) in
   let denominator =
-    let mul_num_c_sf = Ligo.mul_int_int num_c fixedpoint_scaling_factor in
+    let mul_num_c_sf = Ligo.mul_int_int num_c fixedpoint_scaling_factor_int in
     Ligo.mul_int_int mul_num_c_sf mul_num_c_sf in
 
   let actual = fdiv_int_int numerator denominator in
