@@ -37,13 +37,21 @@ open Common
 
 (* Functions for the isoutility curve (x + y)^8 - (x - y)^8 = k *)
 
-(* TODO: We should probably move the functions that are
- * tracking_type-independent into a separate OCaml module that is not generated
- * at build time. *)
-
-(* TODO: Add more primitive operations to avoid calls to Ligo.int. *)
-
-(* TODO: Double-check the claims in the comments and check whether they are applicable to Checker. *)
+(* TODO: Some concerns/thoughts:
+ * - Do things still work out if the scaling factors change?
+ * - What about units of measure? Currently I'm thinking of it this way:
+ *     _kit    : kit  / kit_sf    (kit)
+ *     _ctok   : ctok / ctok_sf   (ctok)
+ *     _dkit   : kit  / kit_sf    (kit)
+ *     _target : target / fp_sf   (kit/ctok)
+ * - Would it be worth it unrolling the recursion (n=4, always) to lower gas costs?
+ * - We should probably move the functions that are tracking_type-independent
+ *   into a separate OCaml module that is not generated at build time.
+ * - newton_param uses very short names that are easily overlappable. Check
+ *   whether this can cause trouble.
+ * - Are the claims in the comments correct? Are they correct for Checker
+ *   specifically?
+*)
 
 let util (x: Ligo.nat) (y: Ligo.nat) : (Ligo.nat * Ligo.nat) =
   let plus_1 = Ligo.add_nat_nat x y in (* (x + y)^1 *)
@@ -64,7 +72,6 @@ let util (x: Ligo.nat) (y: Ligo.nat) : (Ligo.nat * Ligo.nat) =
       (Ligo.abs (Ligo.add_int_nat minus_7 plus_7))
   )
 
-(* TODO: I don't like having such short names for the fields; it's easy to overlap them. *)
 type newton_param =
   { x : Ligo.nat;
     y : Ligo.nat;
@@ -88,23 +95,10 @@ let newton_dx_to_dy (x, y, dx, rounds : Ligo.nat * Ligo.nat * Ligo.nat * Ligo.in
   let u, _ = util x y in
   newton {x = x; y = y; dx = dx; dy = Ligo.nat_from_literal "0n"; u = u; n = rounds; }
 
-(* TODO: I'd also consider unrolling the recursion here, if the number of rounds is gonna be hard-coded. *)
 let[@inline] default_rounds = Ligo.int_from_literal "4"
-
-(* TODO: In the ctez implementation I don't see how the two quantities are
-treated equally. Unless they have the same scaling factor, perhaps? *)
 
 (* A function that outputs dy (diff_cash) given x, y, and dx *)
 let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint) : ctok =
-  (* target is expressed in ctok_in_kit (kit/ctok) so we get kit if we multiply it with ctok. *)
-  (* TODO: What about scaling factors?? *)
-  (* TODO: What about units of measure?? *)
-  (*
-       _kit    : kit  / kit_sf    (kit)
-       _ctok   : ctok / ctok_sf   (ctok)
-       _dkit   : kit  / kit_sf    (kit)
-       _target : target / fp_sf   (kit/ctok)
-  *)
   let x = Ligo.mul_nat_nat (kit_to_denomination_nat kit) fixedpoint_scaling_factor_nat in
   let y = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
   let dx = Ligo.mul_nat_nat (kit_to_denomination_nat dkit) fixedpoint_scaling_factor_nat in
