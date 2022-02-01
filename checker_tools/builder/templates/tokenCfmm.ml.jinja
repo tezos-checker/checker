@@ -61,7 +61,7 @@ let util (x: Ligo.nat) (y: Ligo.nat) : (Ligo.nat * Ligo.nat) =
   ( Ligo.abs (Ligo.sub_int_int (Ligo.int plus_8) minus_8)
   , Ligo.mul_nat_nat
       (Ligo.nat_from_literal "8n")
-      (Ligo.abs (Ligo.add_int_int minus_7 (Ligo.int plus_7)))
+      (Ligo.abs (Ligo.add_int_nat minus_7 plus_7))
   )
 
 (* TODO: I don't like having such short names for the fields; it's easy to overlap them. *)

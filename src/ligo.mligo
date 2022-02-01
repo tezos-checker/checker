@@ -1,4 +1,5 @@
 [@inline] let add_int_int (i: int) (j: int) : int = i + j
+[@inline] let add_int_nat (i: int) (j: nat) : int = i + j
 [@inline] let add_nat_nat (i: nat) (j: nat) : nat = i + j
 [@inline] let add_tez_tez (i: tez) (j: tez) : tez = i + j
 [@inline] let add_timestamp_int (i: timestamp) (j: int) : timestamp = i + j
