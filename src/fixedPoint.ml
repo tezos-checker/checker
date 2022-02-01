@@ -2,7 +2,8 @@ open Common
 
 type fixedpoint = Ligo.int
 
-let fixedpoint_scaling_factor_int = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let fixedpoint_scaling_factor_int = Ligo.int_from_literal "18446744073709551616"  (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let fixedpoint_scaling_factor_nat = Ligo.nat_from_literal "18446744073709551616n" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
 let[@inline] fixedpoint_zero = Ligo.int_from_literal "0"

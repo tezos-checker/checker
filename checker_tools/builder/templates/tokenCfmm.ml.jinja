@@ -97,7 +97,6 @@ treated equally. Unless they have the same scaling factor, perhaps? *)
 (* A function that outputs dy (diff_cash) given x, y, and dx *)
 let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint) : ctok =
   (* target is expressed in ctok_in_kit (kit/ctok) so we get kit if we multiply it with ctok. *)
-  (* TODO: Remove the Ligo.abs calls; expose the nat scaling factor instead. *)
   (* TODO: What about scaling factors?? *)
   (* TODO: What about units of measure?? *)
   (*
@@ -106,9 +105,9 @@ let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint
        _dkit   : kit  / kit_sf    (kit)
        _target : target / fp_sf   (kit/ctok)
   *)
-  let x = Ligo.mul_nat_nat (kit_to_denomination_nat kit) (Ligo.abs fixedpoint_scaling_factor_int) in
+  let x = Ligo.mul_nat_nat (kit_to_denomination_nat kit) fixedpoint_scaling_factor_nat in
   let y = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
-  let dx = Ligo.mul_nat_nat (kit_to_denomination_nat dkit) (Ligo.abs fixedpoint_scaling_factor_int) in
+  let dx = Ligo.mul_nat_nat (kit_to_denomination_nat dkit) fixedpoint_scaling_factor_nat in
   let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
   let dctok_approx = ctok_of_denomination (Ligo.div_nat_nat dy_approx (Ligo.abs (fixedpoint_to_raw target))) in
   if leq_ctok_ctok ctok dctok_approx then
@@ -120,10 +119,10 @@ let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint
 let trade_dctok_for_dkit (kit: kit) (ctok: ctok) (dctok: ctok) (target: fixedpoint) : kit =
   (* TODO: validate all concerns for this function too *)
   let x = Ligo.mul_nat_nat (ctok_to_denomination_nat ctok) (Ligo.abs (fixedpoint_to_raw target)) in
-  let y = Ligo.mul_nat_nat (kit_to_denomination_nat kit) (Ligo.abs fixedpoint_scaling_factor_int) in
+  let y = Ligo.mul_nat_nat (kit_to_denomination_nat kit) fixedpoint_scaling_factor_nat in
   let dx = Ligo.mul_nat_nat (ctok_to_denomination_nat dctok) (Ligo.abs (fixedpoint_to_raw target)) in
   let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
-  let dkit_approx = kit_of_denomination (Ligo.div_nat_nat dy_approx (Ligo.abs fixedpoint_scaling_factor_int)) in
+  let dkit_approx = kit_of_denomination (Ligo.div_nat_nat dy_approx fixedpoint_scaling_factor_nat) in
   if leq_kit_kit kit dkit_approx then
     (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : kit) (* should never happen *) (* TODO: verify this? *)
   else
