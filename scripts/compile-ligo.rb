@@ -32,8 +32,8 @@ protocol_arg = ["--protocol", PROTOCOL]
 puts "Compiling the main contract."
 ###################################
 
-compiled_contract, exit_status = Open3.capture2("ligo", "compile-contract", MAIN_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_contract}"
+compiled_contract, exit_status = Open3.capture2("ligo", "compile", "contract", MAIN_FILE, "--entry-point", "main")
+exit_status.success? or raise "compile contract failed:\n#{compiled_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
@@ -50,8 +50,8 @@ end
 puts "Compiling the tez wrapper contract."
 ##########################################
 
-compiled_wtez_contract, exit_status = Open3.capture2("ligo", "compile-contract", WTEZ_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_wtez_contract}"
+compiled_wtez_contract, exit_status = Open3.capture2("ligo", "compile", "contract", WTEZ_FILE, "--entry-point", "main")
+exit_status.success? or raise "compile contract failed:\n#{compiled_wtez_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
@@ -68,8 +68,8 @@ end
 puts "Compiling the wctez contract."
 ##########################################
 
-compiled_wctez_contract, exit_status = Open3.capture2("ligo", "compile-contract", WCTEZ_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_wctez_contract}"
+compiled_wctez_contract, exit_status = Open3.capture2("ligo", "compile", "contract", WCTEZ_FILE, "--entry-point", "main")
+exit_status.success? or raise "compile contract failed:\n#{compiled_wctez_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
@@ -86,8 +86,8 @@ end
 puts "Compiling the mock FA2 contract."
 ##########################################
 
-compiled_mock_fa2_contract, exit_status = Open3.capture2("ligo", "compile-contract", MOCK_FA2_FILE, "main")
-exit_status.success? or raise "compile-contract failed:\n#{compiled_mock_fa2_contract}"
+compiled_mock_fa2_contract, exit_status = Open3.capture2("ligo", "compile", "contract", MOCK_FA2_FILE, "--entry-point", "main")
+exit_status.success? or raise "compile contract failed:\n#{compiled_mock_fa2_contract}"
 
 begin
   # Convert the contract to binary to measure the size.
@@ -109,7 +109,7 @@ def compile_type_json(type, file)
   # ligo does not have a compile-type command. So, we use UNPACK to make the type appear
   # in the generated michelson and grab the type from there.
   stdout, stderr, exit_status = Open3.capture3(
-    "ligo", "compile-expression", "cameligo",
+    "ligo", "compile", "expression", "cameligo",
     "--init-file", file,
     "--michelson-format", "json",
     "fun (i: bytes) -> (Bytes.unpack i: (#{type}) option)"
@@ -121,7 +121,7 @@ end
 
 def compile_code_json(expr, file)
   stdout, stderr, exit_status = Open3.capture3(
-    "ligo", "compile-expression", "cameligo",
+    "ligo", "compile", "expression", "cameligo",
     "--init-file", file,
     "--michelson-format", "json",
     expr
@@ -260,7 +260,7 @@ entrypoints.each_slice([entrypoints.length / Etc.nprocessors, 1].max) { |batch|
   threads << Thread.new {
     batch.each { |entrypoint|
       stdout, stderr, exit_status = Open3.capture3(
-        "ligo", "compile-expression", "cameligo",
+        "ligo", "compile", "expression", "cameligo",
         "--init-file", MAIN_FILE,
         "Bytes.pack lazy_fun_#{entrypoint[:name]}"
       )
