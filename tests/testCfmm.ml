@@ -209,73 +209,73 @@ let buy_kit_unit_test =
         ~last_level:(Ligo.nat_from_literal "0n")
     in
 
-  (* FIXME: DISABLING THIS UNIT TEST. Disabled this unit test which was written for the case of indexCfmm.ml. Once we have
-     a better way of testing different concrete cfmm implementations we should be able to re-enable this.
+    (* FIXME: DISABLING THIS UNIT TEST. Disabled this unit test which was written for the case of indexCfmm.ml. Once we have
+       a better way of testing different concrete cfmm implementations we should be able to re-enable this.
 
-    let expected_returned_kit = kit_of_denomination (Ligo.nat_from_literal "453_636n") in
-    let expected_updated_cfmm : cfmm =
-      cfmm_make_for_test
-        ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "11_000_000n"))
-        ~kit:(kit_of_denomination (Ligo.nat_from_literal "4_546_364n"))
-        ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
-        ~kit_in_ctok_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
-        ~last_level:(Ligo.nat_from_literal "1n")
-    in
+       let expected_returned_kit = kit_of_denomination (Ligo.nat_from_literal "453_636n") in
+       let expected_updated_cfmm : cfmm =
+        cfmm_make_for_test
+          ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "11_000_000n"))
+          ~kit:(kit_of_denomination (Ligo.nat_from_literal "4_546_364n"))
+          ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
+          ~kit_in_ctok_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
+          ~last_level:(Ligo.nat_from_literal "1n")
+       in
 
-    (* Low expectations and on time (lax): pass *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_cfmm =
-      cfmm_buy_kit
-        cfmm
-        dummy_target
-        (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
-        (kit_of_denomination (Ligo.nat_from_literal "1n"))
-        (Ligo.timestamp_from_seconds_literal 10) in
-    assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
-    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
+       (* Low expectations and on time (lax): pass *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let returned_kit, updated_cfmm =
+        cfmm_buy_kit
+          cfmm
+          dummy_target
+          (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
+          (kit_of_denomination (Ligo.nat_from_literal "1n"))
+          (Ligo.timestamp_from_seconds_literal 10) in
+       assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
+       assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
-    (* Low expectations and on time (tight): pass *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_kit, updated_cfmm =
-      cfmm_buy_kit
-        cfmm
-        dummy_target
-        (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
-        (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
-        (Ligo.timestamp_from_seconds_literal 2) in
-    assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
-    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
+       (* Low expectations and on time (tight): pass *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let returned_kit, updated_cfmm =
+        cfmm_buy_kit
+          cfmm
+          dummy_target
+          (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
+          (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
+          (Ligo.timestamp_from_seconds_literal 2) in
+       assert_kit_equal ~expected:expected_returned_kit ~real:returned_kit;
+       assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
-    (* High expectations but on time (tight): fail *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_raises
-      (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
-      (fun () ->
-         cfmm_buy_kit
-           cfmm
-           dummy_target
-           (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
-           (kit_of_denomination (Ligo.nat_from_literal "453_637n"))
-           (Ligo.timestamp_from_seconds_literal 2)
-      );
+       (* High expectations but on time (tight): fail *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+        (Failure (Ligo.string_of_int error_BuyKitPriceFailure))
+        (fun () ->
+           cfmm_buy_kit
+             cfmm
+             dummy_target
+             (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
+             (kit_of_denomination (Ligo.nat_from_literal "453_637n"))
+             (Ligo.timestamp_from_seconds_literal 2)
+        );
 
-    (* Low expectations but too late (tight): fail *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_raises
-      (Failure (Ligo.string_of_int error_CfmmTooLate))
-      (fun () ->
-         cfmm_buy_kit
-           cfmm
-           dummy_target
-           (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
-           (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
-           (Ligo.timestamp_from_seconds_literal 1)
-      );
-  *)
+       (* Low expectations but too late (tight): fail *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+        (Failure (Ligo.string_of_int error_CfmmTooLate))
+        (fun () ->
+           cfmm_buy_kit
+             cfmm
+             dummy_target
+             (ctok_of_denomination (Ligo.nat_from_literal "1_000_000n"))
+             (kit_of_denomination (Ligo.nat_from_literal "453_636n"))
+             (Ligo.timestamp_from_seconds_literal 1)
+        );
+    *)
     (* No ctok given: fail *)
     Ligo.Tezos.reset ();
     Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
@@ -400,71 +400,71 @@ let sell_kit_unit_test =
     in
 
     (* FIXME: DISABLING THIS UNIT TEST. Disabled this unit test which was written for the case of indexCfmm.ml. Once we have
-     a better way of testing different concrete cfmm implementations we should be able to re-enable this.
+       a better way of testing different concrete cfmm implementations we should be able to re-enable this.
 
-    let expected_returned_ctok = (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n")) in
-    let expected_updated_cfmm : cfmm =
-      cfmm_make_for_test
+       let expected_returned_ctok = (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n")) in
+       let expected_updated_cfmm : cfmm =
+       cfmm_make_for_test
         ~ctok:(ctok_of_denomination (Ligo.nat_from_literal "8_336_667n"))
         ~kit:(kit_of_denomination (Ligo.nat_from_literal "6_000_000n"))
         ~lqt:(lqt_of_denomination (Ligo.nat_from_literal "1n"))
         ~kit_in_ctok_in_prev_block:(ratio_of_int (Ligo.int_from_literal "2"))
         ~last_level:(Ligo.nat_from_literal "1n")
-    in
+       in
 
-    (* Low expectations and on time (lax): pass *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_ctok, updated_cfmm =
-      cfmm_sell_kit
+       (* Low expectations and on time (lax): pass *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let returned_ctok, updated_cfmm =
+       cfmm_sell_kit
         cfmm
         dummy_target
         kit_one
         (ctok_of_denomination (Ligo.nat_from_literal "1n"))
         (Ligo.timestamp_from_seconds_literal 10) in
-    assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
-    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
+       assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
+       assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
-    (* Low expectations and on time (tight): pass *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    let returned_ctok, updated_cfmm =
-      cfmm_sell_kit
+       (* Low expectations and on time (tight): pass *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       let returned_ctok, updated_cfmm =
+       cfmm_sell_kit
         cfmm
         dummy_target
         kit_one
         (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
         (Ligo.timestamp_from_seconds_literal 2) in
-    assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
-    assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
+       assert_ctok_equal ~expected:expected_returned_ctok ~real:returned_ctok;
+       assert_cfmm_equal ~expected:expected_updated_cfmm ~real:updated_cfmm;
 
-    (* High expectations but on time (tight): fail *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_raises
-      (Failure (Ligo.string_of_int error_SellKitPriceFailure))
-      (fun () ->
+       (* High expectations but on time (tight): fail *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+       (Failure (Ligo.string_of_int error_SellKitPriceFailure))
+       (fun () ->
          cfmm_sell_kit
            cfmm
            dummy_target
            kit_one
            (ctok_of_denomination (Ligo.nat_from_literal "1_663_334n"))
            (Ligo.timestamp_from_seconds_literal 2)
-      );
+       );
 
-    (* Low expectations but too late (tight): fail *)
-    Ligo.Tezos.reset ();
-    Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
-    assert_raises
-      (Failure (Ligo.string_of_int error_CfmmTooLate))
-      (fun () ->
+       (* Low expectations but too late (tight): fail *)
+       Ligo.Tezos.reset ();
+       Ligo.Tezos.new_transaction ~seconds_passed:1 ~blocks_passed:1 ~sender:alice_addr ~amount:(Ligo.tez_from_literal "0mutez");
+       assert_raises
+       (Failure (Ligo.string_of_int error_CfmmTooLate))
+       (fun () ->
          cfmm_sell_kit
            cfmm
            dummy_target
            kit_one
            (ctok_of_denomination (Ligo.nat_from_literal "1_663_333n"))
            (Ligo.timestamp_from_seconds_literal 1)
-      );
+       );
     *)
 
     (* No kit given: fail *)
