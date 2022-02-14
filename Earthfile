@@ -513,6 +513,8 @@ flextesa:
 
     # Build flextesa
     RUN eval $(opam env) && \
+        # Note: setting profile to `dune` to disable deprecation alerts as errors
+        export DUNE_PROFILE=dune && \
         make build && \
         mkdir ./bin && \
         cp -L ./flextesa ./bin
