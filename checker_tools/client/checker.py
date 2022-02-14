@@ -504,7 +504,7 @@ def ligo_compile(src_file: Path, entrypoint: str, out_file: Path):
     """Compiles an mligo file into michelson using ligo"""
     try:
         res = subprocess.run(
-            ["ligo", "compile-contract", str(src_file), entrypoint],
+            ["ligo", "compile", "contract", str(src_file), "--entry-point", entrypoint],
             check=True,
             capture_output=True,
         )

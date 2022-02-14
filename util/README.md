@@ -4,7 +4,7 @@
 Example commands:
 
 ```
-ligo compile-contract mock_oracle.mligo main > mock_oracle.tz
+ligo compile contract mock_oracle.mligo --entrypoint main > mock_oracle.tz
 ```
 
 ```
@@ -12,7 +12,7 @@ tezos-client originate contract mock_oracle transferring 0 from bob running mock
 ```
 
 ```
-ligo compile-contract mock_cfmm_oracle.mligo main > mock_cfmm_oracle.tz
+ligo compile contract mock_cfmm_oracle.mligo --entrypoint main > mock_cfmm_oracle.tz
 ```
 
 ```
