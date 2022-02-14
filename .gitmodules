@@ -2,3 +2,6 @@
 	path = vendor/ctez
 	url = https://github.com/tezos-checker/ctez
 	branch = next_next
+[submodule "vendor/ligo"]
+	path = vendor/ligo
+	url = https://gitlab.com/ligolang/ligo.git
