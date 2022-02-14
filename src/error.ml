@@ -140,3 +140,6 @@ let[@inline] internalError_MemGetElementNotFound                        : Ligo.i
 let[@inline] internalError_TokSubNegative                               : Ligo.int = Ligo.int_from_literal "320"
 let[@inline] internalError_TokOfFractionCeilNegative                    : Ligo.int = Ligo.int_from_literal "321"
 let[@inline] internalError_TokOfFractionFloorNegative                   : Ligo.int = Ligo.int_from_literal "322"
+
+let[@inline] internalError_DctokGeqCfmmCtok                             : Ligo.int = Ligo.int_from_literal "330"
+let[@inline] internalError_DkitGeqCfmmCkit                              : Ligo.int = Ligo.int_from_literal "331"

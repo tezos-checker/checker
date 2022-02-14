@@ -37,7 +37,8 @@ open Common
 
 (* Functions for the isoutility curve (x + y)^8 - (x - y)^8 = k *)
 
-(* TODO: Some concerns/thoughts:
+(* TODO: Some concerns/thoughts on this cfmm implementation:
+ *
  * - Do things still work out if the scaling factors change?
  * - What about units of measure? Currently I'm thinking of it this way:
  *     _kit    : kit  / kit_sf    (kit)
@@ -105,7 +106,7 @@ let trade_dkit_for_dctok (kit: kit) (ctok: ctok) (dkit: kit) (target: fixedpoint
   let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
   let dctok_approx = ctok_of_denomination (Ligo.div_nat_nat dy_approx (Ligo.abs (fixedpoint_to_raw target))) in
   if leq_ctok_ctok ctok dctok_approx then
-    (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : ctok)
+    (failwith internalError_DctokGeqCfmmCtok : ctok)  (* TODO: verify whether it is possible to reach this branch *)
   else
     dctok_approx
 
@@ -118,7 +119,7 @@ let trade_dctok_for_dkit (kit: kit) (ctok: ctok) (dctok: ctok) (target: fixedpoi
   let dy_approx = newton_dx_to_dy (x, y, dx, default_rounds) in
   let dkit_approx = kit_of_denomination (Ligo.div_nat_nat dy_approx fixedpoint_scaling_factor_nat) in
   if leq_kit_kit kit dkit_approx then
-    (failwith "TODO: WHICH IS THE EQUIVALENT ERROR HERE?" : kit) (* should never happen *) (* TODO: verify this? *)
+    (failwith internalError_DkitGeqCfmmCkit : kit) (* should never happen *) (* TODO: verify this? *)
   else
     dkit_approx
 
