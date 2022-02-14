@@ -166,7 +166,7 @@ let cfmm_sync_last_observed (cfmm: cfmm) : cfmm =
 (** Compute the maximum [min_kit_expected] for [cfmm_buy_kit] to succeed. *)
 let cfmm_view_min_kit_expected_buy_kit
     (cfmm: cfmm)
-    (_target: fixedpoint)
+    (target: fixedpoint)
     (ctok_amount: ctok)
   : (kit (* min_kit_expected *) * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
@@ -174,22 +174,25 @@ let cfmm_view_min_kit_expected_buy_kit
   if (eq_ctok_ctok ctok_amount ctok_zero) then
     (Ligo.failwith error_BuyKitNoCtokGiven : (kit * cfmm))
   else
-    (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
-     * db = da * b / (a + da) * (1 - fee) *)
     let { num = num_uf; den = den_uf; } =
       let { num = num_uf; den = den_uf; } = cfmm_fee in
       { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - cfmm_fee *)
     in
     let new_cfmm_ctok = ctok_add cfmm.ctok ctok_amount in
-    let numerator =
-      Ligo.mul_nat_int
-        (ctok_to_denomination_nat ctok_amount)
-        (Ligo.mul_nat_int (kit_to_denomination_nat cfmm.kit) num_uf) in
-    let denominator =
-      Ligo.mul_int_int
-        kit_scaling_factor_int
-        (Ligo.mul_nat_int (ctok_to_denomination_nat new_cfmm_ctok) den_uf) in
-    let bought_kit = kit_of_fraction_floor numerator denominator in
+
+    (* The amount of kit bought is calculated as the kit approximated by trade_dctok_for_dkit
+     * multiplied by (1 - cfmm_fee). Note that there are two instances of rounding occuring here -
+     * one in trade_dctok_for_dkit and another here (both round down though).
+    *)
+    let bought_kit =
+      kit_of_fraction_floor
+        (Ligo.mul_nat_int
+          (kit_to_denomination_nat (trade_dctok_for_dkit cfmm.kit cfmm.ctok ctok_amount target))
+          num_uf
+        )
+        (Ligo.mul_int_int den_uf kit_scaling_factor_int)
+    in
+
     (* Due to (a) the constant-factor calculation (which means that to deplete
      * the one amount the other would in effect have to become infinite), (b)
      * the fact that checker owns 1mu of each token, and (c) the fact that we
@@ -228,7 +231,7 @@ let cfmm_buy_kit
 (** Compute the maximum [min_ctok_expected] for [cfmm_sell_kit] to succeed. *)
 let cfmm_view_min_ctok_expected_cfmm_sell_kit
     (cfmm: cfmm)
-    (_target: fixedpoint)
+    (target: fixedpoint)
     (kit_amount: kit)
   : (ctok * cfmm) =
   let cfmm = cfmm_sync_last_observed cfmm in
@@ -236,22 +239,23 @@ let cfmm_view_min_ctok_expected_cfmm_sell_kit
   if (eq_kit_kit kit_amount kit_zero) then
     (Ligo.failwith error_SellKitNoKitGiven : (ctok * cfmm))
   else
-    (* db = da * (b / a) * (a / (a + da)) * (1 - fee) or
-     * db = da * b / (a + da) * (1 - fee) *)
     let { num = num_uf; den = den_uf; } =
       let { num = num_uf; den = den_uf; } = cfmm_fee in
       { num = Ligo.sub_int_int den_uf num_uf; den = den_uf; } (* 1 - cfmm_fee *)
     in
     let new_cfmm_kit = kit_add cfmm.kit kit_amount in
-    let numerator =
-      Ligo.mul_nat_int
-        (kit_to_denomination_nat kit_amount)
-        (Ligo.mul_nat_int (ctok_to_denomination_nat cfmm.ctok) num_uf) in
-    let denominator =
-      Ligo.mul_int_int
-        ctok_scaling_factor_int
-        (Ligo.mul_nat_int (kit_to_denomination_nat new_cfmm_kit) den_uf) in
-    let bought_ctok = ctok_of_fraction_floor numerator denominator in
+   (* The amount of ctok bought is calculated as the ctok approximated by trade_dkit_for_dctok
+     * multiplied by (1 - cfmm_fee). Note that there are two instances of rounding occuring here -
+     * one in trade_dkit_for_dctok and another here (both round down though).
+    *)
+    let bought_ctok =
+      ctok_of_fraction_floor
+        (Ligo.mul_nat_int
+          (ctok_to_denomination_nat (trade_dkit_for_dctok cfmm.kit cfmm.ctok kit_amount target))
+          num_uf
+        )
+        (Ligo.mul_int_int den_uf ctok_scaling_factor_int)
+    in
 
     (* Due to (a) the constant-factor calculation (which means that to deplete
      * the one amount the other would in effect have to become infinite), (b)
