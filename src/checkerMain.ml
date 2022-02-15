@@ -55,8 +55,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
 
   let ops, lazy_functions, metadata, deployment_state = match deployment_state with
     | Unsealed deployer ->
-      begin match !Ligo.Tezos.sender = deployer with
-        | true ->
+      begin if !Ligo.Tezos.sender = deployer then
           begin match op with
             | DeployFunction p ->
               let lfi, bs = p in
@@ -98,7 +97,7 @@ let main (op, state: params * wrapper): LigoOp.operation list * wrapper =
                * accessibility is sufficiently marked on the pattern itself. *)
               ((Ligo.failwith error_ContractNotDeployed [@coverage off]): LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)
           end
-        | false ->
+        else
           (* Note: disabling coverage for the unreported but accessed right-hand side;
            * accessibility is sufficiently marked on the pattern itself. *)
           ((Ligo.failwith error_UnauthorisedCaller [@coverage off]): LigoOp.operation list * lazy_function_map * (string, Ligo.bytes) Ligo.big_map * deployment_state)

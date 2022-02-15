@@ -419,9 +419,54 @@ cli:
 # Utilities
 # =============================================================================
 ligo-binary:
-    FROM ghcr.io/tezos-checker/ligo:0.22.0-checker
+    FROM +ligo
     SAVE ARTIFACT /root/ligo ligo
     SAVE ARTIFACT /root/ligo AS LOCAL ./bin/ligo
+
+ligo:
+    # Sadly, the ligo Dockerfile expects that a changelog.txt file exists
+    # which does not exist in the git repo. This makes it nearly impossible to
+    # integrate with the earthly build here. Running the build scripts ourselves
+    # instead...
+    # Mostly copy-pasted from https://gitlab.com/ligolang/ligo/-/blob/0.34.0/Dockerfile
+    FROM alpine:3.12
+
+    RUN apk update && apk upgrade && apk --no-cache add \
+        build-base snappy-dev alpine-sdk wget \
+        bash ncurses-dev xz m4 git pkgconfig findutils rsync \
+        gmp-dev libev-dev libressl-dev linux-headers pcre-dev perl zlib-dev hidapi-dev \
+        libffi-dev \
+        cargo
+
+    WORKDIR /ligo
+
+    RUN wget -O /usr/local/bin/opam https://github.com/ocaml/opam/releases/download/2.1.0/opam-2.1.0-x86_64-linux
+    RUN chmod u+x /usr/local/bin/opam
+    RUN opam init --disable-sandboxing --bare
+
+    ENV RUSTFLAGS='--codegen target-feature=-crt-static'
+
+    # Install opam switch & deps
+    COPY /vendor/ligo/scripts/setup_switch.sh /ligo/scripts/setup_switch.sh
+    RUN opam update && sh scripts/setup_switch.sh
+    COPY /vendor/ligo/scripts/install_opam_deps.sh /ligo/scripts/install_opam_deps.sh
+    COPY /vendor/ligo/ligo.opam /ligo
+    COPY /vendor/ligo/ligo.opam.locked /ligo
+    COPY /vendor/ligo/vendors /ligo/vendors
+
+    # install all transitive deps
+    RUN opam update && sh scripts/install_opam_deps.sh
+    ENV PATH=/home/root/.cargo/bin:$PATH
+
+    # Install LIGO
+    COPY /vendor/ligo/src /ligo/src
+    COPY /vendor/ligo/dune /ligo
+    COPY /vendor/ligo/dune-project /ligo/dune-project
+    # COPY /vendor/ligo/scripts/version.sh /ligo/scripts/version.sh
+    RUN LIGO_VERSION=checker opam exec -- dune build -p ligo --profile static
+
+    RUN cp /ligo/_build/install/default/bin/ligo /root/ligo
+    SAVE IMAGE --push ghcr.io/tezos-checker/checker/earthly-cache:ligo
 
 zcash-params:
     FROM alpine:3.14
@@ -468,6 +513,8 @@ flextesa:
 
     # Build flextesa
     RUN eval $(opam env) && \
+        # Note: setting profile to `dune` to disable deprecation alerts as errors
+        export DUNE_PROFILE=dune && \
         make build && \
         mkdir ./bin && \
         cp -L ./flextesa ./bin
