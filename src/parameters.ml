@@ -49,13 +49,13 @@ let[@inline] tz_liquidation (p: parameters) : fixedpoint = fixedpoint_min p.inde
 let minting_price (p: parameters) : ratio =
   make_ratio
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (fixedpoint_to_raw (tz_minting p)))
-    (Ligo.mul_int_int fixedpoint_scaling_factor fixedpoint_scaling_factor)
+    (Ligo.mul_int_int fixedpoint_scaling_factor_int fixedpoint_scaling_factor_int)
 
 (** Current liquidation price (in tok/kit). *)
 let liquidation_price (p: parameters) : ratio =
   make_ratio
     (Ligo.mul_int_int (fixedpoint_to_raw p.q) (fixedpoint_to_raw (tz_liquidation p)))
-    (Ligo.mul_int_int fixedpoint_scaling_factor fixedpoint_scaling_factor)
+    (Ligo.mul_int_int fixedpoint_scaling_factor_int fixedpoint_scaling_factor_int)
 
 (** Given the amount of kit necessary to close all existing burrows
     (outstanding) and the amount of kit that is currently in circulation
@@ -122,7 +122,7 @@ let compute_adjustment_index (p: parameters) : fixedpoint =
           (fixedpoint_to_raw p.burrow_fee_index)
           (fixedpoint_to_raw p.imbalance_index)
        )
-       fixedpoint_scaling_factor
+       fixedpoint_scaling_factor_int
     )
 
 (** Calculate the current burrow fee index based on the last index and the
@@ -183,7 +183,7 @@ let[@inline] compute_current_protected_index (last_protected_index: fixedpoint) 
        )
        (Ligo.mul_int_int
           protected_index_inverse_epsilon
-          fixedpoint_scaling_factor
+          fixedpoint_scaling_factor_int
        )
     )
 
@@ -219,7 +219,7 @@ let[@inline] compute_current_q (last_q: fixedpoint) (last_drift: fixedpoint) (la
   let six_sf =
     Ligo.mul_int_int
       (Ligo.int_from_literal "6")
-      fixedpoint_scaling_factor in
+      fixedpoint_scaling_factor_int in
   fixedpoint_of_raw
     (fdiv_int_int
        (Ligo.mul_int_int

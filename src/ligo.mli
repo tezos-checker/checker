@@ -172,6 +172,7 @@ val timestamp_from_seconds_literal : Int.t -> timestamp (* NON-LIGO: in LIGO the
 
 (* OPERATIONS ON int *)
 val add_int_int : int -> int -> int  (* IN LIGO: ( + ) *)
+val add_int_nat : int -> nat -> int  (* IN LIGO: ( + ) *)
 val sub_int_int : int -> int -> int  (* IN LIGO: ( - ) *)
 val mul_int_int : int -> int -> int  (* IN LIGO: ( * ) *)
 val div_int_int : int -> int -> int  (* IN LIGO: ( / ) *)

@@ -153,6 +153,8 @@ let nat_from_int64 (t: Int64.t) =
 
 let add_int_int = Z.add
 
+let add_int_nat = Z.add
+
 let sub_int_int = Z.sub
 
 let mul_int_int = Z.mul

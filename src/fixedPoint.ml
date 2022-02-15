@@ -2,11 +2,12 @@ open Common
 
 type fixedpoint = Ligo.int
 
-let fixedpoint_scaling_factor = Ligo.int_from_literal "18446744073709551616" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let fixedpoint_scaling_factor_int = Ligo.int_from_literal "18446744073709551616"  (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
+let fixedpoint_scaling_factor_nat = Ligo.nat_from_literal "18446744073709551616n" (* 2 (scaling_base) ^ 64 (scaling_exponent) *)
 
 (* Predefined values. *)
 let[@inline] fixedpoint_zero = Ligo.int_from_literal "0"
-let[@inline] fixedpoint_one = fixedpoint_scaling_factor
+let[@inline] fixedpoint_one = fixedpoint_scaling_factor_int
 
 (* Arithmetic operations. *)
 let[@inline] fixedpoint_add (x: fixedpoint) (y: fixedpoint) = Ligo.add_int_int x y
@@ -18,14 +19,14 @@ let fixedpoint_pow (x: fixedpoint) (y: Ligo.nat) =
   else
     Ligo.div_int_int
       (pow_int_nat x y)
-      (pow_int_nat fixedpoint_scaling_factor (Ligo.abs (Ligo.sub_nat_nat y (Ligo.nat_from_literal "1n"))))
+      (pow_int_nat fixedpoint_scaling_factor_int (Ligo.abs (Ligo.sub_nat_nat y (Ligo.nat_from_literal "1n"))))
 
 let[@inline] fixedpoint_min (x: fixedpoint) (y: fixedpoint) = min_int x y
 let[@inline] fixedpoint_max (x: fixedpoint) (y: fixedpoint) = max_int x y
 
 (* Conversions to/from other types. *)
-let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
-let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor) amnt.den
+let fixedpoint_of_ratio_ceil  (amnt: ratio) = cdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor_int) amnt.den
+let fixedpoint_of_ratio_floor (amnt: ratio) = fdiv_int_int (Ligo.mul_int_int amnt.num fixedpoint_scaling_factor_int) amnt.den
 (* George: do we need flooring-division or truncating-division? more thought is needed *)
 
 let[@inline] fixedpoint_of_raw (amnt: Ligo.int) : fixedpoint = amnt
@@ -35,7 +36,7 @@ let[@inline] fixedpoint_to_raw (amnt: fixedpoint) : Ligo.int = amnt
 [@@@coverage off]
 let fixedpoint_scaling_exponent = 64
 
-let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor
+let fixedpoint_to_ratio (amnt: fixedpoint) = make_ratio amnt fixedpoint_scaling_factor_int
 
 let fixedpoint_of_hex_string str =
   let without_dot = Str.replace_first (Str.regexp (Str.quote ".")) "" str in
@@ -43,7 +44,7 @@ let fixedpoint_of_hex_string str =
   let mantissa = match dotpos with
     | None -> Ligo.int_from_literal "1"
     | Some pos -> pow_int_nat (Ligo.int_from_literal "16") (Ligo.abs (Ligo.int_from_literal (string_of_int (String.length str - pos - 1)))) in
-  Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) fixedpoint_scaling_factor) mantissa
+  Ligo.div_int_int (Ligo.mul_int_int (Ligo.of_string_base_int 16 without_dot) fixedpoint_scaling_factor_int) mantissa
 
 let show_fixedpoint amnt =
   let zfill s width =
@@ -53,7 +54,7 @@ let show_fixedpoint amnt =
     else (String.make to_fill '0') ^ s in
 
   let sign = if amnt < Ligo.int_from_literal "0" then "-" else "" in
-  let (upper, lower) = Ligo.div_rem_int_int (Ligo.int (Ligo.abs amnt)) fixedpoint_scaling_factor in
+  let (upper, lower) = Ligo.div_rem_int_int (Ligo.int (Ligo.abs amnt)) fixedpoint_scaling_factor_int in
 
   (* in hex, otherwise it's massive *)
   Format.sprintf "%s%s.%s"

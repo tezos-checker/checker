@@ -43,7 +43,7 @@ let {{ module_name }}_of_fraction_floor (x_num: Ligo.int) (x_den: Ligo.int) : {{
 let[@inline] {{ module_name }}_scale (amnt: {{ module_name }}) (fp: fixedpoint) =
   {{ module_name }}_of_fraction_floor
     (Ligo.mul_int_nat (fixedpoint_to_raw fp) amnt)
-    (Ligo.mul_int_int fixedpoint_scaling_factor {{ module_name }}_scaling_factor_int)
+    (Ligo.mul_int_int fixedpoint_scaling_factor_int {{ module_name }}_scaling_factor_int)
 
 let[@inline] geq_{{ module_name }}_{{ module_name }} = Ligo.geq_nat_nat
 let[@inline] leq_{{ module_name }}_{{ module_name }} = Ligo.leq_nat_nat
