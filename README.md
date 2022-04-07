@@ -47,7 +47,7 @@ also need the [ctez](https://github.com/tezos-checker/ctez) git submodule. To
 fetch all submodules, run:
 
 ```console
-$ git submodule update --init
+$ git submodule update --init --recursive
 ```
 
 With that out of the way you can start up the dev container. We use

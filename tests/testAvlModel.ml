@@ -2,7 +2,7 @@
    the same results as a model implementation.
 *)
 open OUnit2
-open Core_kernel.Deque
+open Core.Deque
 open LiquidationAuctionPrimitiveTypes
 open TestLib
 open Tok
@@ -76,7 +76,7 @@ let arb_op = QCheck.make op_gen
 (* ========================================================================= *)
 (* Model queue *)
 (* ========================================================================= *)
-type model = liquidation_slice Core_kernel.Deque.t
+type model = liquidation_slice Core.Deque.t
 
 let show_model queue =
   let _ = Format.printf "[" in
@@ -84,7 +84,7 @@ let show_model queue =
   let _ = Format.printf "]" in
   ()
 
-let model_empty () = (Core_kernel.Deque.create (): (liquidation_slice Core_kernel.Deque.t))
+let model_empty () = (Core.Deque.create (): (liquidation_slice Core.Deque.t))
 
 (* Deletes the element with the provided index (if it exists) and returns a new queue and
  *  list of indices.
