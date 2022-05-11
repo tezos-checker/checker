@@ -28,7 +28,7 @@ Any computation on a blockchain happens in discrete time. We note the
 timestamps at which the Checker system is updated as a series of
 increasing timestamps, :math:`t_i`. Ideally, these updates happen every
 time a new block is added to the blockchain and thus, under the current
-economic protocol, those timestamps are separated by about a minute
+economic protocol, those timestamps are separated by about 30 seconds
 each.
 
 That said, the system is designed to be resilient to changes in the
