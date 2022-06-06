@@ -5,7 +5,10 @@
 [@inline] let add_timestamp_int (i: timestamp) (j: int) : timestamp = i + j
 
 [@inline] let sub_int_int (i: int) (j: int) : int = i - j
-[@inline] let sub_tez_tez (i: tez) (j: tez) : tez = i - j
+[@inline] let sub_tez_tez (i: tez) (j: tez) : tez =
+  match i - j with
+  | Some (v) -> v
+  | None -> failwith("sub_tez_tez: underflow")
 [@inline] let sub_nat_nat (i: nat) (j: nat) : int = i - j
 [@inline] let sub_timestamp_timestamp (i: timestamp) (j: timestamp) : int = i - j
 

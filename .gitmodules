@@ -1,7 +1,7 @@
 [submodule "vendor/ctez"]
 	path = vendor/ctez
-	url = https://github.com/tezos-checker/ctez
-	branch = next_next
+	url = https://github.com/emturner/ctez
+	branch = next_next_checker_ref
 [submodule "vendor/ligo"]
 	path = vendor/ligo
 	url = https://gitlab.com/ligolang/ligo.git
