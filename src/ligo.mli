@@ -214,7 +214,7 @@ val geq_timestamp_timestamp : timestamp -> timestamp -> bool (* IN LIGO: ( >= ) 
 
 (* OPERATIONS ON tez *)
 val add_tez_tez : tez -> tez -> tez (* IN LIGO: ( + ) *)
-val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( - ) *)
+val sub_tez_tez : tez -> tez -> tez (* IN LIGO: ( -, assert_some ) *)
 val mul_nat_tez : nat -> tez -> tez (* IN LIGO: ( * ) *)
 val mul_tez_nat : tez -> nat -> tez (* IN LIGO: ( * ) *)
 val div_tez_tez : tez -> tez -> nat (* IN LIGO: ( / ) *)

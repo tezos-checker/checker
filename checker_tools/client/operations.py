@@ -112,7 +112,7 @@ def await_operations(
         )
         # Note: This is only a *minimum* bound.
         block_expected_starting_at = current_block_timestamp.timestamp() + int(
-            tz.shell.blocks[current_level].context.constants()["time_between_blocks"][0]
+            tz.shell.blocks[current_level].context.constants()["minimal_block_delay"][0]
         )
         sleep_for = max(1, block_expected_starting_at - datetime.utcnow().timestamp())
         if sleep_for > MAX_BLOCK_TIME:
@@ -145,10 +145,12 @@ def inject(
     Returns:
         The confirmed operation group's metadata
     """
-    level = tz.shell.head.header()["level"]
-    op_hash = op_group.inject(min_confirmations=0)["hash"]
-    for attempt in range(1, N_ALLOWED_REORGS + 1):
+    reorg_attempt = 1
+    rpc_attempt = 1
+    while reorg_attempt <= N_ALLOWED_REORGS + 1 and rpc_attempt < 20:
         try:
+            level = tz.shell.head.header()["level"]
+            op_hash = op_group.inject()["hash"]
             all_confirmed, op_levels = await_operations(
                 tz,
                 [op_hash],
@@ -156,11 +158,19 @@ def inject(
                 max_blocks=max_wait_blocks,
                 min_confirmations=min_confirmations,
             )
-            break
+            if not all_confirmed:
+                raise Exception(f"Operation {op_hash} was not confirmed.")
+            return _get_op_data(tz, op_hash, op_levels[op_hash])
+        except RpcError as e:
+            if rpc_attempt >= 20:
+                raise e
+            time.sleep(2)
+            rpc_attempt += 1
+            continue
         except BlockchainReorg as e:
-            if attempt >= N_ALLOWED_REORGS:
+            if reorg_attempt >= N_ALLOWED_REORGS:
                 raise e
             time.sleep(1)
-    if not all_confirmed:
-        raise Exception(f"Operation {op_hash} was not confirmed.")
-    return _get_op_data(tz, op_hash, op_levels[op_hash])
+            reorg_attempt += 1
+            rpc_attempt = 1
+            continue

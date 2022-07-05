@@ -428,19 +428,21 @@ ligo:
     # which does not exist in the git repo. This makes it nearly impossible to
     # integrate with the earthly build here. Running the build scripts ourselves
     # instead...
-    # Mostly copy-pasted from https://gitlab.com/ligolang/ligo/-/blob/0.34.0/Dockerfile
+    # Mostly copy-pasted from https://gitlab.com/ligolang/ligo/-/blob/0.43.0/Dockerfile
     FROM alpine:3.12
 
     RUN apk update && apk upgrade && apk --no-cache add \
-        build-base snappy-dev alpine-sdk wget \
+        build-base snappy-dev alpine-sdk \
         bash ncurses-dev xz m4 git pkgconfig findutils rsync \
         gmp-dev libev-dev libressl-dev linux-headers pcre-dev perl zlib-dev hidapi-dev \
         libffi-dev \
-        cargo
+        cargo py3-pip
+    RUN pip3 install jsonschema
 
     WORKDIR /ligo
 
-    RUN wget -O /usr/local/bin/opam https://github.com/ocaml/opam/releases/download/2.1.0/opam-2.1.0-x86_64-linux
+    RUN wget -O /usr/local/bin/opam \
+        https://github.com/ocaml/opam/releases/download/2.1.0/opam-2.1.0-x86_64-linux
     RUN chmod u+x /usr/local/bin/opam
     RUN opam init --disable-sandboxing --bare
 
@@ -462,7 +464,6 @@ ligo:
     COPY /vendor/ligo/src /ligo/src
     COPY /vendor/ligo/dune /ligo
     COPY /vendor/ligo/dune-project /ligo/dune-project
-    # COPY /vendor/ligo/scripts/version.sh /ligo/scripts/version.sh
     RUN LIGO_VERSION=checker opam exec -- dune build -p ligo --profile static
 
     RUN cp /ligo/_build/install/default/bin/ligo /root/ligo
@@ -498,7 +499,7 @@ flextesa:
 
     # Checkout flextesa
     WORKDIR /root
-    ARG FLEXTESA_REV = "0d2c0c95e1d745416b191b399b760c98b440e0fd"
+    ARG FLEXTESA_REV = "0acbeec5e25491231f4976085c5b5f488bfda96f"
     RUN git clone https://gitlab.com/tezos/flextesa.git && cd ./flextesa && git checkout "$FLEXTESA_REV"
     WORKDIR /root/flextesa
 
@@ -506,10 +507,16 @@ flextesa:
     ARG OCAML_VERSION = "4.13.1"
     ENV OPAM_SWITCH="flextesa"
     RUN opam init --disable-sandboxing --bare
-    RUN opam switch create "$OPAM_SWITCH" "$OCAML_VERSION"
+    RUN opam update --all
+    RUN opam switch create --deps-only "$OPAM_SWITCH" "$OCAML_VERSION"
+    RUN opam pin add -y tezai-base58-digest \
+             https://gitlab.com/oxheadalpha/tezai-base58-digest.git
     RUN opam install -y --deps-only \
-            ./tezai-base58-digest.opam ./tezai-tz1-crypto.opam \
+            ./tezai-tz1-crypto.opam \
             ./flextesa.opam ./flextesa-cli.opam
+
+    # 1.0.2 release breaks flextesa build
+    RUN opam pin -y add dum 1.0.1
 
     # Build flextesa
     RUN eval $(opam env) && \
@@ -521,7 +528,7 @@ flextesa:
 
     # Fetch the tezos exes which are required by flextesa at runtime
     ARG TARGETARCH
-    ARG OCTEZ_VERSION = "11.1.0"
+    ARG OCTEZ_VERSION = "12.4.0"
     IF [ "$TARGETARCH" = "amd64" ]
         ARG ARCH_PREFIX = "x86_64"
     ELSE
