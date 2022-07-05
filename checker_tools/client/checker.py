@@ -250,7 +250,6 @@ def start_local_sandbox(name: str, port: int):
         "--size=1",
         "--set-history-mode=N000:archive",
         f"--time-b={SANDBOX_MINIMAL_BLOCK_DELAY}",
-        f"--balance-of-bootstrap-accounts tez:100_000_000"
         f"--add-bootstrap-account={alice_key}@2_000_000_000_000",
         f"--add-bootstrap-account={bob_key}@2_000_000_000_000",
         "--no-daemons-for=alice",
