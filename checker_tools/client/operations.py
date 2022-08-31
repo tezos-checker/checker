@@ -112,7 +112,7 @@ def await_operations(
         )
         # Note: This is only a *minimum* bound.
         block_expected_starting_at = current_block_timestamp.timestamp() + int(
-            tz.shell.blocks[current_level].context.constants()["time_between_blocks"][0]
+            tz.shell.blocks[current_level].context.constants()["minimal_block_delay"][0]
         )
         sleep_for = max(1, block_expected_starting_at - datetime.utcnow().timestamp())
         if sleep_for > MAX_BLOCK_TIME:
